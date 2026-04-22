@@ -2,46 +2,62 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
-# Configuração da página
+# Configuração da página - Isso deve ser a primeira coisa no código
 st.set_page_config(page_title="FinançasPro", layout="wide")
 
-# Conexão com o Google Sheets
-url = "https://docs.google.com/spreadsheets/d/147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4/edit?usp=sharing"
-conn = st.connection("gsheets", type=GSheetsConnection)
+# --- CONEXÃO COM A PLANILHA ---
+# Usando o seu link direto que está funcionando e com acesso público
+url = "https://docs.google.com/spreadsheets/d/147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4/edit#gid=0"
 
-try:
-    # Lendo diretamente pela URL e especificando a aba
-    df = conn.read(spreadsheet=url, worksheet="LANCAMENTOS")
-    # Limpa nomes de colunas (tira espaços e deixa em maiúsculo)
-    df.columns = [str(c).upper().strip() for c in df.columns]
-except Exception as e:
-    st.error(f"Erro de conexão: {e}")
-    st.stop()
+def carregar_dados():
+    try:
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        # Tenta ler a aba LANCAMENTOS
+        dados = conn.read(spreadsheet=url, worksheet="LANCAMENTOS")
+        # Padroniza as colunas para MAIÚSCULO e tira espaços
+        dados.columns = [str(c).upper().strip() for c in dados.columns]
+        return dados
+    except Exception as e:
+        st.error(f"Erro ao conectar com a planilha: {e}")
+        return pd.DataFrame()
 
-# --- LOGIN SIMPLES ---
+# --- SISTEMA DE LOGIN ---
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
 
 if not st.session_state.autenticado:
-    senha = st.text_input("Digite a senha para acessar o FinançasPro:", type="password")
-    if senha == "1234":
-        st.session_state.autenticado = True
-        st.rerun()
-    else:
-        if senha:
-            st.warning("Senha incorreta!")
-        st.stop()
+    st.title("🔐 Acesso ao FinançasPro")
+    senha = st.text_input("Digite a senha secreta:", type="password")
+    if st.button("Entrar"):
+        if senha == "1234":
+            st.session_state.autenticado = True
+            st.rerun()
+        else:
+            st.error("Senha incorreta! Tente novamente.")
+    st.stop()
 
-# --- SEU SISTEMA DAQUI PARA BAIXO ---
-st.title("💰 FinançasPro")
+# --- SE O USUÁRIO CHEGOU AQUI, ELE ESTÁ LOGADO ---
+df = carregar_dados()
+
+st.title("💰 FinançasPro - Dashboard")
+st.write(f"Olá, Wilson! Sistema conectado com sucesso.")
 
 if not df.empty:
-    # Garante que a coluna DT seja data
-    df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
+    # Mostra um resumo rápido para testar
+    col1, col2, col3 = st.columns(3)
     
-    st.write("### Últimos Lançamentos")
-    st.dataframe(df.head())
+    # Tentando calcular o total se a coluna VALOR existir
+    if 'VALOR' in df.columns:
+        total = df['VALOR'].sum()
+        col1.metric("Saldo Total", f"R$ {total:,.2f}")
+    
+    st.write("### Suas últimas movimentações:")
+    st.dataframe(df)
 else:
-    st.info("A planilha está vazia. Comece a lançar seus gastos!")
+    st.warning("A planilha foi lida, mas parece estar sem dados na aba 'LANCAMENTOS'.")
 
-st.success("Sistema conectado com sucesso à aba LANCAMENTOS!")
+# Rodapé lateral
+st.sidebar.success("Conectado à planilha Google")
+if st.sidebar.button("Sair/Logoff"):
+    st.session_state.autenticado = False
+    st.rerun()
