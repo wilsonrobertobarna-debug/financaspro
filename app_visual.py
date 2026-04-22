@@ -1,111 +1,93 @@
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-from datetime import date, timedelta
-import smtplib
-import urllib.parse
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from fpdf import FPDF
-from streamlit_gsheets import GSheetsConnection
 
-# --- CONFIGURAÇÃO DE ACESSO ---
-st.set_page_config(page_title="FinançasPro Wilson V601", layout="wide")
-SENHA_ACESSO = "1234"
+# Configuração da Página
+st.set_page_config(page_title="FinançasPro - Wilson", layout="wide")
 
-if 'autenticado' not in st.session_state:
-    st.session_state.autenticado = False
+# Título Principal
+st.markdown("<h1 style='text-align: center; color: #2E7D32;'>💰 FinançasPro - Wilson</h1>", unsafe_allow_html=True)
+st.divider()
 
-def tela_login():
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
-    c1, c2, c3 = st.columns([1, 1, 1])
-    with c2:
-        st.subheader("🔐 Acesso FinançasPro")
-        senha = st.text_input("Senha:", type="password", key="login_pass")
-        if st.button("Entrar", key="btn_login"):
-            if senha == SENHA_ACESSO:
-                st.session_state.autenticado = True
-                st.rerun()
-            else: st.error("Incorreta!")
-    st.stop()
+# Conexão com Google Sheets (Puxa tudo do Secrets)
+conn = st.connection("gsheets", type=GSheetsConnection)
 
-if not st.session_state.autenticado: tela_login()
+def carregar_dados():
+    return conn.read(worksheet="LANCAMENTOS", ttl="0")
 
-# --- 1. BANCO DE DADOS (GOOGLE SHEETS) ---
-URL_PLANILHA = "https://docs.google.com/spreadsheets/d/147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4/edit#gid=0"
-
-def carregar_dados_google(aba):
-    try:
-        conn = st.connection("gsheets", type=GSheetsConnection)
-        df = conn.read(spreadsheet=URL_PLANILHA, worksheet=aba, ttl=0)
-        if aba == "LANCAMENTOS" and df is not None and not df.empty:
-            df['DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-        return df if df is not None else pd.DataFrame()
-    except:
-        return pd.DataFrame()
-
-def salvar_dados_google(df, aba):
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    df_s = df.copy()
-    if 'DT' in df_s.columns: df_s = df_s.drop(columns=['DT'])
-    conn.update(spreadsheet=URL_PLANILHA, worksheet=aba, data=df_s)
+def salvar_dados(df_novo):
+    conn.update(worksheet="LANCAMENTOS", data=df_novo)
+    st.cache_data.clear()
 
 # Carregamento Inicial
-df_g = carregar_dados_google("LANCAMENTOS")
-df_b = carregar_dados_google("BANCOS")
-df_m = carregar_dados_google("METAS")
+try:
+    df_atual = carregar_dados()
+except Exception as e:
+    st.error("Erro ao conectar na Planilha. Verifique os Secrets.")
+    st.stop()
 
-lista_contas = sorted(list(set(["Dinheiro", "Pix"] + (df_b['Banco'].dropna().tolist() if not df_b.empty else []))))
-lista_cats = sorted(list(set(["Mercado", "Ração", "Combustível", "Lazer", "Saúde"] + (df_m['Categoria'].dropna().tolist() if not df_m.empty else []))))
+# --- MENU LATERAL ---
+aba = st.sidebar.radio("Navegação", ["Lançar Dados", "Extrato & Gráficos"])
 
-def formatar_br(v):
-    return f"R$ {float(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-# --- 2. INTERFACE WILSON ---
-st.markdown("<h1 style='text-align: center; color: #2E86C1;'>🐾 FinançasPro Wilson - V601</h1>", unsafe_allow_html=True)
-t1, t2, t3, t4 = st.tabs(["💰 Lançar", "✅ Baixas", "📊 Gráficos", "📋 Extrato"])
-
-with t1:
-    with st.container(border=True):
-        c1, c2 = st.columns(2)
-        dt_l = c1.date_input("Data:", date.today())
-        tipo = c2.radio("Tipo:", ["🔴 Despesa", "🟢 Receita", "💎 Rendimento"], horizontal=True)
+if aba == "Lançar Dados":
+    st.subheader("📝 Novo Lançamento")
+    
+    with st.form("form_lancamento", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            data = st.date_input("Data")
+            valor = st.number_input("Valor (R$)", min_value=0.0, step=0.01)
+            tipo = st.selectbox("Tipo", ["Receita", "Despesa"])
+        with col2:
+            categoria = st.text_input("Categoria (Ex: Mercado, Salário)")
+            descricao = st.text_input("Descrição")
+            banco = st.selectbox("Banco/Cartão", ["NuBank", "Itaú", "Inter", "Dinheiro"])
         
-        c3, c4 = st.columns(2)
-        benef = c3.text_input("Beneficiário:")
-        valor = c4.number_input("Valor:", 0.0)
+        btn_gravar = st.form_submit_button("🚀 GRAVAR NO GOOGLE SHEETS")
+
+    if btn_gravar:
+        novo_registro = pd.DataFrame([{
+            "DATA": data.strftime("%d/%m/%Y"),
+            "VALOR": valor if tipo == "Receita" else -valor,
+            "CATEGORIA": categoria,
+            "DESCRICAO": descricao,
+            "BANCO": banco,
+            "TIPO": tipo
+        }])
         
-        c5, c6 = st.columns(2)
-        cat = c5.selectbox("Categoria:", lista_cats)
-        conta = c6.selectbox("Conta:", lista_contas)
+        df_final = pd.concat([df_atual, novo_registro], ignore_index=True)
+        salvar_dados(df_final)
+        st.success("✅ Lançamento gravado com sucesso!")
+        st.balloons()
+
+elif aba == "Extrato & Gráficos":
+    st.subheader("📊 Resumo Financeiro")
+    
+    if not df_atual.empty:
+        # Cálculos Rápidos
+        receitas = df_atual[df_atual['VALOR'] > 0]['VALOR'].sum()
+        despesas = df_atual[df_atual['VALOR'] < 0]['VALOR'].sum()
+        saldo = receitas + despesas
         
-        status = st.selectbox("Status:", ["⏳ Pendente", "✅ Pago"])
-        desc = st.text_area("Descrição:")
-
-        if st.button("🚀 GRAVAR NO GOOGLE", use_container_width=True):
-            novo = pd.DataFrame([{
-                "Data": dt_l.strftime('%d/%m/%Y'),
-                "Tipo": tipo,
-                "Categoria": cat,
-                "Valor": valor,
-                "Pagamento": conta,
-                "Beneficiário": benef,
-                "Status": status,
-                "Descrição": desc
-            }])
-            df_g = pd.concat([df_g, novo], ignore_index=True)
-            salvar_dados_google(df_g, "LANCAMENTOS")
-            st.success("✅ Gravado com sucesso!")
-            st.rerun()
-
-with t3:
-    if not df_g.empty:
-        despesas = df_g[df_g['Tipo'].str.contains("Despesa", na=False)]
-        if not despesas.empty:
-            fig = px.pie(despesas, values='Valor', names='Categoria', title='Meus Gastos')
-            st.plotly_chart(fig, use_container_width=True)
-
-with t4:
-    st.subheader("📋 Extrato do Google Sheets")
-    st.dataframe(df_g.drop(columns=['DT']) if 'DT' in df_g.columns else df_g, use_container_width=True)
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Receitas", f"R$ {receitas:,.2f}")
+        c2.metric("Despesas", f"R$ {abs(despesas):,.2f}", delta_color="inverse")
+        c3.metric("Saldo Atual", f"R$ {saldo:,.2f}")
+        
+        st.divider()
+        
+        # Tabela e Gráfico
+        col_tab, col_gra = st.columns([1.2, 1])
+        with col_tab:
+            st.write("📋 Últimos Lançamentos")
+            st.dataframe(df_atual.sort_index(ascending=False), use_container_width=True)
+        
+        with col_gra:
+            st.write("💡 Despesas por Categoria")
+            df_gastos = df_atual[df_atual['VALOR'] < 0]
+            if not df_gastos.empty:
+                fig = px.pie(df_gastos, values=abs(df_gastos['VALOR']), names='CATEGORIA', hole=0.4)
+                st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Nenhum dado encontrado na planilha.")
