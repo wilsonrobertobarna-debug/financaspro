@@ -1,55 +1,85 @@
 import streamlit as st
 import pandas as pd
-from datetime import date
+from datetime import date, timedelta
 from streamlit_gsheets import GSheetsConnection
 
-st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
+# 1. CONFIGURAÇÃO E LOGIN
+st.set_page_config(page_title="FinançasPro Wilson V601", layout="wide")
 
-# --- CONEXÃO ---
+if 'autenticado' not in st.session_state:
+    st.session_state.autenticado = False
+
+if not st.session_state.autenticado:
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns([1, 1, 1])
+    with c2:
+        st.subheader("🔐 Acesso FinançasPro")
+        senha = st.text_input("Senha:", type="password")
+        if st.button("Entrar"):
+            if senha == "1234":
+                st.session_state.autenticado = True
+                st.rerun()
+            else: st.error("Incorreta!")
+    st.stop()
+
+# 2. CONEXÃO COM O GOOGLE
 URL_PLANILHA = "https://docs.google.com/spreadsheets/d/147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4/edit#gid=0"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-def carregar_dados():
+def carregar_dados(aba):
     try:
-        # Tenta ler a aba LANCAMENTOS
-        df = conn.read(spreadsheet=URL_PLANILHA, worksheet="LANCAMENTOS", ttl=0)
-        return df
+        df = conn.read(spreadsheet=URL_PLANILHA, worksheet=aba, ttl=0)
+        return df if df is not None else pd.DataFrame()
     except:
-        return pd.DataFrame(columns=['Data', 'Tipo', 'Categoria', 'Valor', 'Beneficiário'])
+        return pd.DataFrame()
 
-df_g = carregar_dados()
+# Carregando as informações
+df_g = carregar_dados("LANCAMENTOS")
+df_b = carregar_dados("BANCOS")
 
-# --- INTERFACE ---
-st.title("🐾 FinançasPro Wilson")
+# 3. INTERFACE WILSON V601
+st.markdown("<h1 style='text-align: center; color: #2E86C1;'>🐾 FinançasPro Wilson</h1>", unsafe_allow_html=True)
 
-with st.form("meu_formulario", clear_on_submit=True):
-    c1, c2 = st.columns(2)
-    dt = c1.date_input("Data", date.today())
-    tp = c2.selectbox("Tipo", ["🔴 Despesa", "🟢 Receita"])
-    
-    ben = st.text_input("Beneficiário")
-    val = st.number_input("Valor", 0.0)
-    
-    enviar = st.form_submit_button("🚀 GRAVAR NO GOOGLE")
+# Aqui as abas voltam a existir!
+t1, t2, t3, t4 = st.tabs(["💰 Lançar", "✅ Baixas", "📊 Gráficos", "📋 Extrato"])
 
-    if enviar:
-        novo_dado = pd.DataFrame([{
-            "Data": dt.strftime('%d/%m/%Y'),
-            "Tipo": tp,
-            "Beneficiário": ben,
-            "Valor": val
-        }])
+with t1:
+    with st.container(border=True):
+        c1, c2 = st.columns(2)
+        dt_l = c1.date_input("Data:", date.today())
+        tipo = c2.radio("Tipo:", ["🔴 Despesa", "🟢 Receita", "💎 Rendimento"], horizontal=True)
         
-        # Junta o novo com o antigo
-        df_atualizado = pd.concat([df_g, novo_dado], ignore_index=True)
+        c3, c4 = st.columns(2)
+        benef = c3.text_input("Beneficiário:")
+        valor = c4.number_input("Valor:", 0.0)
         
-        # Tenta atualizar
-        try:
-            conn.update(spreadsheet=URL_PLANILHA, worksheet="LANCAMENTOS", data=df_atualizado)
-            st.success("✅ Gravado! Atualize a página.")
-        except Exception as e:
-            st.error(f"Erro ao gravar: {e}")
-            st.info("Dica: Verifique se a planilha está aberta e com acesso de EDIÇÃO para qualquer pessoa com o link.")
+        c5, c6 = st.columns(2)
+        cat = c5.selectbox("Categoria:", ["Mercado", "Ração", "Combustível", "Saúde", "Lazer", "Outros"])
+        conta = c6.selectbox("Conta/Banco:", ["Dinheiro", "Pix", "Conta Corrente"])
+        
+        status = st.selectbox("Status:", ["⏳ Pendente", "✅ Pago"])
+        desc = st.text_area("Descrição:")
 
-st.subheader("Visualização da Planilha")
-st.dataframe(df_g)
+        if st.button("🚀 GRAVAR NO GOOGLE", use_container_width=True):
+            novo = pd.DataFrame([{
+                "Data": dt_l.strftime('%d/%m/%Y'),
+                "Tipo": tipo,
+                "Categoria": cat,
+                "Valor": valor,
+                "Pagamento": conta,
+                "Beneficiário": benef,
+                "Status": status,
+                "KM": 0,
+                "Descrição": desc
+            }])
+            df_final = pd.concat([df_g, novo], ignore_index=True)
+            try:
+                conn.update(spreadsheet=URL_PLANILHA, worksheet="LANCAMENTOS", data=df_final)
+                st.success("✅ Gravado com sucesso!")
+                st.rerun()
+            except:
+                st.error("Erro ao gravar. Verifique se a planilha está como EDITOR.")
+
+with t4:
+    st.subheader("📋 Extrato Completo")
+    st.dataframe(df_g, use_container_width=True)
