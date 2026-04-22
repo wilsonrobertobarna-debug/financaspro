@@ -6,15 +6,16 @@ import pandas as pd
 st.set_page_config(page_title="FinançasPro", layout="wide")
 
 # Conexão com o Google Sheets
+url = "https://docs.google.com/spreadsheets/d/147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4/edit?usp=sharing"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# Tenta ler os dados da aba "LANCAMENTOS"
 try:
-    df = conn.read(worksheet="LANCAMENTOS")
-    # Padroniza os nomes das colunas para MAIÚSCULO para evitar erros
+    # Lendo diretamente pela URL e especificando a aba
+    df = conn.read(spreadsheet=url, worksheet="LANCAMENTOS")
+    # Limpa nomes de colunas (tira espaços e deixa em maiúsculo)
     df.columns = [str(c).upper().strip() for c in df.columns]
 except Exception as e:
-    st.error(f"Erro ao ler a aba 'LANCAMENTOS'. Verifique se o nome na planilha está correto.")
+    st.error(f"Erro de conexão: {e}")
     st.stop()
 
 # --- LOGIN SIMPLES ---
