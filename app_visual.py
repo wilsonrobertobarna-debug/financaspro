@@ -4,12 +4,11 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (PK_LIST)
+# 2. CHAVE DE ACESSO
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -53,92 +52,50 @@ def conectar():
     creds = Credentials.from_service_account_info(info, scopes=scope)
     return gspread.authorize(creds)
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=10)
 def get_data_safe(spreadsheet_id, worksheet_name):
-    client = conectar()
-    sh = client.open_by_key(spreadsheet_id)
-    ws = sh.worksheet(worksheet_name)
-    raw_data = ws.get_all_records()
-    if not raw_data: return pd.DataFrame()
-    df = pd.DataFrame(raw_data)
-    # LIMPEZA PROFUNDA: Remove espaços extras e força título para comparação
-    df.columns = [str(c).strip() for c in df.columns]
-    return df
+    try:
+        client = conectar()
+        sh = client.open_by_key(spreadsheet_id)
+        ws = sh.worksheet(worksheet_name)
+        data = ws.get_all_records()
+        if not data: return pd.DataFrame()
+        df = pd.DataFrame(data)
+        df.columns = [str(c).strip() for c in df.columns] # Limpa espaços
+        return df
+    except:
+        return pd.DataFrame()
 
-def limpar_cache():
-    st.cache_data.clear()
+SHEET_ID = "147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4"
 
-try:
-    SHEET_ID = "147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4"
-    sh = conectar().open_by_key(SHEET_ID)
+tab_lanc, tab_bancos, tab_cartoes, tab_metas, tab_relat = st.tabs([
+    "🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas", "📊 Relatórios"
+])
 
-    tab_lanc, tab_bancos, tab_cartoes, tab_metas, tab_relat = st.tabs([
-        "🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas", "📊 Relatórios"
-    ])
+# --- ABA BANCOS (Exemplo de correção) ---
+with tab_bancos:
+    st.subheader("🏦 Suas Contas")
+    df_b = get_data_safe(SHEET_ID, "bancos")
+    if not df_b.empty:
+        st.dataframe(df_b, use_container_width=True)
+    else:
+        st.info("Aba 'bancos' não encontrada ou vazia na planilha.")
 
-    with tab_lanc:
-        col_f, col_h = st.columns([1, 2])
-        with col_f:
-            st.subheader("📝 Novo Lançamento")
-            with st.form("form_gasto", clear_on_submit=True):
-                tipo = st.selectbox("Tipo", ["Despesa", "Receita"])
-                dt_l = st.date_input("Data", datetime.now())
-                vl_l = st.number_input("Valor", min_value=0.0)
-                ds_l = st.text_input("Descrição")
-                
-                df_b = get_data_safe(SHEET_ID, "bancos")
-                col_banco = next((c for c in df_b.columns if 'Nome' in c or 'Banco' in c), "Nome")
-                bancos = df_b[col_banco].tolist() if not df_b.empty else ["Dinheiro"]
-                
-                origem = st.selectbox("Conta", bancos)
-                if st.form_submit_button("🚀 Salvar"):
-                    ws_g = sh.get_worksheet(0)
-                    ws_g.append_row([dt_l.strftime('%d/%m/%Y'), vl_l, ds_l, origem, tipo])
-                    limpar_cache()
-                    st.success("Salvo!")
-                    st.rerun()
-        with col_h:
-            df_hist = get_data_safe(SHEET_ID, sh.get_worksheet(0).title)
-            if not df_hist.empty: st.dataframe(df_hist.tail(15), use_container_width=True)
-
-    with tab_metas:
-        st.subheader("🎯 Metas Financeiras")
-        df_m = get_data_safe(SHEET_ID, "metas")
+# --- ABA RELATÓRIOS (Gráfico de Barras) ---
+with tab_relat:
+    st.subheader("📊 Gráfico Mensal")
+    df_r = get_data_safe(SHEET_ID, "lancamentos") # Nome da primeira aba
+    if not df_r.empty and 'Tipo' in df_r.columns:
+        df_r['Data'] = pd.to_datetime(df_r['Data'], dayfirst=True, errors='coerce')
+        df_r = df_r.dropna(subset=['Data'])
+        df_r['Mes'] = df_r['Data'].dt.strftime('%m/%Y')
         
-        if not df_m.empty:
-            # Busca dinâmica robusta para as colunas
-            col_x = next((c for c in df_m.columns if any(k in c.lower() for k in ['nome', 'objetivo', 'meta'])), df_m.columns[0])
-            col_y_alvo = next((c for c in df_m.columns if any(k in c.lower() for k in ['alvo', 'total', 'limite'])), None)
-            col_y_atual = next((c for c in df_m.columns if any(k in c.lower() for k in ['atual', 'guardado', 'poupado'])), None)
-
-            if col_y_alvo and col_y_atual:
-                fig_meta = px.bar(df_m, x=col_x, y=[col_y_atual, col_y_alvo], 
-                                  barmode='group', title="Progresso das Metas",
-                                  labels={col_x: "Meta", "value": "Valor R$", "variable": "Status"},
-                                  color_discrete_map={col_y_atual: '#00CC96', col_y_alvo: '#636EFA'})
-                st.plotly_chart(fig_meta, use_container_width=True)
-            st.table(df_m)
-
-    with tab_relat:
-        st.header("📊 Comparativo Mensal")
-        df_rel = get_data_safe(SHEET_ID, sh.get_worksheet(0).title)
+        # Agrupar por Mês e Tipo (Receita/Despesa)
+        df_agrupado = df_r.groupby(['Mes', 'Tipo'])['Valor'].sum().reset_index()
         
-        if not df_rel.empty:
-            c_data = next((c for c in df_rel.columns if 'Data' in c), None)
-            c_valor = next((c for c in df_rel.columns if 'Valor' in c), None)
-            c_tipo = next((c for c in df_rel.columns if 'Tipo' in c), None)
-
-            if c_data and c_valor and c_tipo:
-                df_rel[c_data] = pd.to_datetime(df_rel[c_data], dayfirst=True, errors='coerce')
-                df_rel = df_rel.dropna(subset=[c_data])
-                df_rel['Mes'] = df_rel[c_data].dt.strftime('%m/%Y')
-                df_rel[c_valor] = pd.to_numeric(df_rel[c_valor], errors='coerce').fillna(0)
-
-                df_mes = df_rel.groupby(['Mes', c_tipo])[c_valor].sum().reset_index()
-                fig_evol = px.bar(df_mes, x='Mes', y=c_valor, color=c_tipo, 
-                                  barmode='group', title="Receitas vs Despesas",
-                                  color_discrete_map={'Receita': '#00CC96', 'Despesa': '#EF553B'})
-                st.plotly_chart(fig_evol, use_container_width=True)
-
-except Exception as e:
-    st.error(f"Erro detectado: {e}")
+        fig = px.bar(df_agrupado, x='Mes', y='Valor', color='Tipo', barmode='group',
+                     title="Receitas vs Despesas",
+                     color_discrete_map={'Receita': '#00CC96', 'Despesa': '#EF553B'})
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("Verifique se a aba de lançamentos tem a coluna 'Tipo' (Receita/Despesa).")
