@@ -2,12 +2,13 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Tua chave funcional)
+# 2. CHAVE DE ACESSO (Sua chave funcional)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -53,39 +54,66 @@ def conectar_google():
     creds = Credentials.from_service_account_info(creds_info, scopes=scope)
     return gspread.authorize(creds)
 
+# 3. EXECUÇÃO
 try:
     client = conectar_google()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws = sh.get_worksheet(0)
     
-    st.title("💰 FinançasPro - Wilson")
+    st.title("💰 FinançasPro - Wilson (Parcelamentos)")
 
     with st.sidebar:
-        st.header("📝 Novo Lançamento")
-        data_sel = st.date_input("Data", datetime.now())
-        valor = st.number_input("Valor (R$)", min_value=0.0, step=1.0)
-        cat = st.selectbox("Categoria", ["Alimentação", "Transporte", "Casa", "Lazer", "Outros"])
-        banco = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
-        forma = st.selectbox("Forma", ["Crédito", "Débito", "Pix", "Dinheiro"])
+        st.header("📝 Novo Registro")
+        data_sel = st.date_input("Data da 1ª Parcela", datetime.now())
+        valor_total = st.number_input("Valor Total (R$)", min_value=0.0, step=1.0)
         
-        if st.button("🚀 Salvar"):
-            ws.append_row([data_sel.strftime('%d/%m/%Y'), valor, cat, banco, forma])
-            st.success("Salvo!")
+        # --- NOVO CAMPO DE PARCELAS ---
+        parcelas = st.number_input("Quantidade de Parcelas", min_value=1, max_value=48, value=1)
+        
+        cat = st.selectbox("Categoria", ["Alimentação", "Transporte", "Casa", "Lazer", "Saúde", "Educação", "Outros"])
+        banco = st.selectbox("Banco/Cartão", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
+        forma = st.selectbox("Forma", ["Cartão de Crédito", "Débito", "Pix", "Dinheiro"])
+        
+        if st.button("🚀 Salvar Lançamento"):
+            valor_parcela = valor_total / parcelas
+            
+            # Loop para gerar cada parcela
+            for i in range(parcelas):
+                # Calcula a data somando os meses
+                data_parcela = data_sel + relativedelta(months=i)
+                data_str = data_parcela.strftime('%d/%m/%Y')
+                
+                # Identifica a parcela no texto (ex: 1/3, 2/3...)
+                obs = f"{cat} ({i+1}/{parcelas})" if parcelas > 1 else cat
+                
+                # Envia para a planilha
+                ws.append_row([data_str, round(valor_parcela, 2), obs, banco, forma])
+            
+            st.success(f"Registradas {parcelas} parcelas com sucesso!")
             st.rerun()
 
+    # VISUALIZAÇÃO
     dados = ws.get_all_records()
     if dados:
         df = pd.DataFrame(dados)
-        # Normaliza nomes de colunas para evitar erros de maiúsculas
         df.columns = [c.strip().capitalize() for c in df.columns]
         
         if 'Valor' in df.columns:
             df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
-            st.metric("Total Gasto", f"R$ {df['Valor'].sum():,.2f}")
+            
+            # Métrica apenas do mês atual
+            mes_atual = datetime.now().strftime('%m/%Y')
+            df_mes = df[df['Data'].str.contains(mes_atual, na=False)]
+            
+            col1, col2 = st.columns(2)
+            col1.metric("Total Geral", f"R$ {df['Valor'].sum():,.2f}")
+            col2.metric(f"Total em {mes_atual}", f"R$ {df_mes['Valor'].sum():,.2f}")
         
-        st.dataframe(df, use_container_width=True)
+        st.divider()
+        st.subheader("📊 Histórico de Transações")
+        st.dataframe(df, use_container_width=True, hide_index=True)
     else:
-        st.info("Planilha vazia ou sem cabeçalhos corretos.")
+        st.info("Planilha vazia.")
 
 except Exception as e:
-    st.error(f"Erro no sistema: {e}")
+    st.error(f"Erro: {e}")
