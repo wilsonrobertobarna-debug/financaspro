@@ -2,11 +2,13 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
+from datetime import datetime
 
-st.set_page_config(page_title="FinançasPro Wilson", page_icon="💰")
-st.title("💰 FinançasPro - Diagnóstico")
+# CONFIGURAÇÃO DA PÁGINA
+st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
+st.title("💰 FinançasPro - Painel de Controlo")
 
-# 1. Lista de linhas da chave (Protege contra erros de escape/caracteres ocultos)
+# CONFIGURAÇÃO DE ACESSO (A tua chave vencedora)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -38,35 +40,51 @@ PK_LIST = [
     "-----END PRIVATE KEY-----"
 ]
 
-# 2. Conexão em bloco ÚNICO para evitar PermissionError
-try:
+@st.cache_resource
+def conectar_google():
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    
-    # Limpando a chave de qualquer espaço extra indesejado
-    private_key = "\n".join([line.strip() for line in PK_LIST])
-    
     creds_info = {
         "type": "service_account",
         "project_id": "financaspro-wilson",
         "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
         "token_uri": "https://oauth2.googleapis.com/token",
-        "private_key": private_key
+        "private_key": "\n".join(PK_LIST)
     }
-    
     creds = Credentials.from_service_account_info(creds_info, scopes=scope)
-    client = gspread.authorize(creds)
-    
-    # Abrindo pelo ID (mais seguro contra erros de sistema de arquivos)
-    SHEET_ID = "147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4"
-    sh = client.open_by_key(SHEET_ID)
+    return gspread.authorize(creds)
+
+# EXECUÇÃO PRINCIPAL
+try:
+    client = conectar_google()
+    sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws = sh.get_worksheet(0)
     
-    st.success("✅ Conectado com sucesso!")
-    
-    # Mostra os dados
-    df = pd.DataFrame(ws.get_all_records())
-    st.dataframe(df)
+    # BARRA LATERAL - FORMULÁRIO
+    with st.sidebar:
+        st.header("Novo Lançamento")
+        data = st.date_input("Data", datetime.now())
+        valor = st.number_input("Valor (R$)", min_value=0.0, step=0.01)
+        categoria = st.selectbox("Categoria", ["Alimentação", "Lazer", "Casa", "Transporte", "Outros"])
+        
+        if st.button("Salvar na Planilha"):
+            ws.append_row([str(data), valor, categoria])
+            st.success("Lançado com sucesso!")
+            st.rerun()
+
+    # ÁREA PRINCIPAL - TABELA
+    dados = ws.get_all_records()
+    if dados:
+        df = pd.DataFrame(dados)
+        
+        # Resumo visual
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Total Lançado", f"R$ {df['Valor'].sum() if 'Valor' in df.columns else 0:,.2f}")
+        
+        st.subheader("Histórico de Transações")
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.info("Planilha vazia. Comece a lançar dados na barra lateral!")
 
 except Exception as e:
-    st.error(f"Erro ao abrir planilha: {str(e)}")
-    st.info("💡 Se o erro sumir e aparecer 'Permission Denied', tente compartilhar a planilha novamente com o e-mail da conta de serviço.")
+    st.error(f"Erro no sistema: {e}")
