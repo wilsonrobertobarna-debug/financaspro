@@ -6,9 +6,9 @@ from datetime import datetime
 
 # CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
-st.title("💰 FinançasPro - Painel de Controlo")
+st.title("💰 FinançasPro - Sistema de Trabalho")
 
-# CONFIGURAÇÃO DE ACESSO (A tua chave vencedora)
+# CHAVE DE ACESSO (Tua chave funcional)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -43,48 +43,57 @@ PK_LIST = [
 @st.cache_resource
 def conectar_google():
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    private_key = "\n".join(PK_LIST)
     creds_info = {
         "type": "service_account",
         "project_id": "financaspro-wilson",
         "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
         "token_uri": "https://oauth2.googleapis.com/token",
-        "private_key": "\n".join(PK_LIST)
+        "private_key": private_key
     }
     creds = Credentials.from_service_account_info(creds_info, scopes=scope)
     return gspread.authorize(creds)
 
-# EXECUÇÃO PRINCIPAL
+# EXECUÇÃO DO APP
 try:
     client = conectar_google()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws = sh.get_worksheet(0)
     
-    # BARRA LATERAL - FORMULÁRIO
+    # --- FORMULÁRIO LATERAL ---
     with st.sidebar:
-        st.header("Novo Lançamento")
-        data = st.date_input("Data", datetime.now())
-        valor = st.number_input("Valor (R$)", min_value=0.0, step=0.01)
-        categoria = st.selectbox("Categoria", ["Alimentação", "Lazer", "Casa", "Transporte", "Outros"])
+        st.header("📝 Novo Registro")
+        data = st.date_input("Data da Compra", datetime.now())
+        valor = st.number_input("Valor (R$)", min_value=0.0, step=0.10, format="%.2f")
+        categoria = st.selectbox("Categoria", ["Alimentação", "Lazer", "Casa", "Transporte", "Saúde", "Educação", "Outros"])
+        banco = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro Vivo"])
+        forma = st.selectbox("Forma de Pagamento", ["Cartão de Crédito", "Débito", "Pix", "Dinheiro"])
         
-        if st.button("Salvar na Planilha"):
-            ws.append_row([str(data), valor, categoria])
-            st.success("Lançado com sucesso!")
+        if st.button("🚀 Salvar no Sistema"):
+            # Envia exatamente nesta ordem para a planilha
+            ws.append_row([str(data), valor, categoria, banco, forma])
+            st.success("Dados salvos!")
             st.rerun()
 
-    # ÁREA PRINCIPAL - TABELA
+    # --- ÁREA PRINCIPAL ---
     dados = ws.get_all_records()
     if dados:
         df = pd.DataFrame(dados)
         
-        # Resumo visual
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Total Lançado", f"R$ {df['Valor'].sum() if 'Valor' in df.columns else 0:,.2f}")
+        # Limpeza e Conversão (Garante que a soma funcione)
+        if 'Valor' in df.columns:
+            df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
         
-        st.subheader("Histórico de Transações")
+        # Dashboard Rápido
+        total_gasto = df['Valor'].sum() if 'Valor' in df.columns else 0
+        st.metric(label="Total Acumulado", value=f"R$ {total_gasto:,.2f}")
+        
+        st.subheader("📊 Histórico de Lançamentos")
+        # Mostra a tabela com estilo formatado
         st.dataframe(df, use_container_width=True)
+        
     else:
-        st.info("Planilha vazia. Comece a lançar dados na barra lateral!")
+        st.info("Ainda não existem lançamentos. Use a barra lateral para começar!")
 
 except Exception as e:
-    st.error(f"Erro no sistema: {e}")
+    st.error(f"Erro detectado: {e}")
