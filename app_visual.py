@@ -9,7 +9,7 @@ from dateutil.relativedelta import relativedelta
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO
+# 2. CHAVE DE ACESSO (PK_LIST)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -53,7 +53,7 @@ def conectar():
     creds = Credentials.from_service_account_info(info, scopes=scope)
     return gspread.authorize(creds)
 
-@st.cache_data(ttl=20)
+@st.cache_data(ttl=30)
 def get_data_safe(spreadsheet_id, worksheet_name):
     client = conectar()
     sh = client.open_by_key(spreadsheet_id)
@@ -69,14 +69,13 @@ def limpar_cache():
 
 try:
     SHEET_ID = "147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4"
-    client = conectar()
-    sh = client.open_by_key(SHEET_ID)
+    sh = conectar().open_by_key(SHEET_ID)
 
     tab_lanc, tab_bancos, tab_cartoes, tab_metas, tab_relat = st.tabs([
         "🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas", "📊 Relatórios"
     ])
 
-    # --- ABA 1: LANÇAMENTOS (Com campo Tipo para Receita/Despesa) ---
+    # --- ABA 1: LANÇAMENTOS ---
     with tab_lanc:
         col_f, col_h = st.columns([1, 2])
         with col_f:
@@ -95,22 +94,22 @@ try:
                     ws_g = sh.get_worksheet(0)
                     ws_g.append_row([dt_l.strftime('%d/%m/%Y'), vl_l, ds_l, origem, tipo])
                     limpar_cache()
-                    st.success("Salvo!")
+                    st.success("Salvo com sucesso!")
                     st.rerun()
 
         with col_h:
-            st.subheader("📋 Histórico")
+            st.subheader("📋 Histórico Recente")
             df_hist = get_data_safe(SHEET_ID, sh.get_worksheet(0).title)
             if not df_hist.empty:
-                st.dataframe(df_hist.tail(10), use_container_width=True)
+                st.dataframe(df_hist.tail(15), use_container_width=True)
 
-    # --- ABA 4: METAS (Com visualização em Barras) ---
+    # --- ABA 4: METAS (Gráfico de Barras) ---
     with tab_metas:
-        st.subheader("🎯 Metas de Economia")
+        st.subheader("🎯 Metas Financeiras")
         with st.form("f_meta"):
-            obj = st.text_input("Objetivo")
-            alvo = st.number_input("Valor Alvo")
-            atual = st.number_input("Valor Já Guardado", min_value=0.0)
+            obj = st.text_input("Objetivo (Ex: Viagem)")
+            alvo = st.number_input("Quanto você quer juntar?", min_value=0.0)
+            atual = st.number_input("Quanto já tem guardado?", min_value=0.0)
             if st.form_submit_button("Salvar Meta"):
                 sh.worksheet("metas").append_row([obj, alvo, atual])
                 limpar_cache()
@@ -118,24 +117,40 @@ try:
         
         df_m = get_data_safe(SHEET_ID, "metas")
         if not df_m.empty:
-            df_m['Progresso (%)'] = (df_m['Atual'] / df_m['Alvo'] * 100).round(1)
-            fig_meta = px.bar(df_m, x='Objetivo', y=['Atual', 'Alvo'], barmode='group', title="Progresso das Metas")
+            # Gráfico de Barras para Metas
+            fig_meta = px.bar(df_m, x='Objetivo', y=['Atual', 'Alvo'], 
+                              barmode='group', title="Progresso das Metas (Atual vs Alvo)",
+                              color_discrete_sequence=['#00CC96', '#636EFA'])
             st.plotly_chart(fig_meta, use_container_width=True)
             st.table(df_m)
 
-    # --- ABA 5: RELATÓRIOS (Mes a Mes: Receitas vs Despesas) ---
+    # --- ABA 5: RELATÓRIOS (Gráfico de Barras Mes a Mes) ---
     with tab_relat:
-        st.header("📊 Evolução Mensal")
+        st.header("📊 Comparativo Mensal")
         df_rel = get_data_safe(SHEET_ID, sh.get_worksheet(0).title)
         
         if not df_rel.empty and 'Tipo' in df_rel.columns:
+            # Tratamento de dados
             df_rel['Data'] = pd.to_datetime(df_rel['Data'], dayfirst=True, errors='coerce')
+            df_rel = df_rel.dropna(subset=['Data'])
             df_rel['Mes'] = df_rel['Data'].dt.strftime('%Y-%m')
             df_rel['Valor'] = pd.to_numeric(df_rel['Valor'], errors='coerce').fillna(0)
 
-            # Agrupamento Mes a Mes
+            # Agrupamento para Gráfico de Barras
             df_mes = df_rel.groupby(['Mes', 'Tipo'])['Valor'].sum().reset_index()
             
-            fig_evolucao = px.bar(df_mes, x='Mes', y='Valor', color='Tipo', 
-                                  barmode='group', title="Receitas vs Despesas por Mês",
-                                  color_discrete_map={'Receita': '#00CC96', 'Despes
+            fig_evol = px.bar(df_mes, x='Mes', y='Valor', color='Tipo', 
+                              barmode='group', title="Receitas vs Despesas por Mês",
+                              color_discrete_map={'Receita': '#00CC96', 'Despesa': '#EF553B'})
+            
+            st.plotly_chart(fig_evol, use_container_width=True)
+            
+            # Resumo em números
+            resumo = df_rel.groupby('Tipo')['Valor'].sum().reset_index()
+            st.write("### Total Geral")
+            st.table(resumo)
+        else:
+            st.warning("Adicione a coluna 'Tipo' na sua planilha e preencha com 'Receita' ou 'Despesa' para gerar o gráfico.")
+
+except Exception as e:
+    st.error(f"Ocorreu um erro: {e}")
