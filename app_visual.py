@@ -45,11 +45,14 @@ PK_LIST = [
 @st.cache_resource
 def conectar():
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    creds = Credentials.from_service_account_info({
-        "type": "service_account", "project_id": "financaspro-wilson",
+    info = {
+        "type": "service_account",
+        "project_id": "financaspro-wilson",
+        "private_key": "\n".join(PK_LIST),
         "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
-        "token_uri": "https://oauth2.googleapis.com/token", "private_key": "\n".join(PK_LIST)
-    }, scopes=scope)
+        "token_uri": "https://oauth2.googleapis.com/token"
+    }
+    creds = Credentials.from_service_account_info(info, scopes=scope)
     return gspread.authorize(creds)
 
 try:
@@ -62,6 +65,7 @@ try:
     ws_metas = sh.worksheet("metas")
 
     st.title("💼 FinançasPro Wilson")
+    
     tab_lanc, tab_bancos, tab_cartoes, tab_metas, tab_relat = st.tabs([
         "🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas", "📊 Relatórios"
     ])
@@ -74,6 +78,7 @@ try:
             data_sel = st.date_input("Data da Compra", datetime.now())
             valor = st.number_input("Valor Total", min_value=0.0, step=10.0)
             parc = st.number_input("Parcelas", min_value=1, value=1)
+            
             bancos_data = ws_bancos.get_all_records()
             lista_bancos = [r['Nome do Banco'] for r in bancos_data] if bancos_data else ["Dinheiro"]
             banco_escolhido = st.selectbox("Onde pagou?", lista_bancos)
@@ -96,17 +101,67 @@ try:
     # --- ABA 2: BANCOS ---
     with tab_bancos:
         st.subheader("🏦 Cadastro de Bancos")
-        with st.form("form_b"):
+        with st.form("form_bancos"):
             n_b = st.text_input("Nome do Banco")
             s_b = st.number_input("Saldo Inicial")
             if st.form_submit_button("Salvar Banco"):
                 ws_bancos.append_row([n_b, s_b, "Corrente"])
+                st.success("Banco salvo!")
                 st.rerun()
         st.table(pd.DataFrame(ws_bancos.get_all_records()))
 
-    # --- ABA 3: CARTÕES (Onde estava o erro de sintaxe) ---
+    # --- ABA 3: CARTÕES ---
     with tab_cartoes:
         st.subheader("💳 Meus Cartões")
-        with st.form("form_c"):
+        with st.form("form_cartoes"):
             nc = st.text_input("Nome do Cartão")
-            lc
+            lc = st.number_input("Limite Total")
+            vc = st.number_input("Vencimento (Dia)", 1, 31)
+            if st.form_submit_button("Salvar Cartão"):
+                ws_cartoes.append_row([nc, lc, vc])
+                st.success("Cartão salvo!")
+                st.rerun()
+        st.table(pd.DataFrame(ws_cartoes.get_all_records()))
+
+    # --- ABA 4: METAS ---
+    with tab_metas:
+        st.subheader("🎯 Minhas Metas")
+        with st.form("form_metas"):
+            nm = st.text_input("Objetivo")
+            vm = st.number_input("Valor Alvo")
+            if st.form_submit_button("Salvar Meta"):
+                ws_metas.append_row([nm, vm, "Ativo"])
+                st.success("Meta salva!")
+                st.rerun()
+        st.table(pd.DataFrame(ws_metas.get_all_records()))
+
+    # --- ABA 5: RELATÓRIOS ---
+    with tab_relat:
+        st.header("📈 Relatórios")
+        if dados_g:
+            df = pd.DataFrame(dados_g)
+            df.columns = [c.strip() for c in df.columns]
+            col_pag = 'Pagamento' if 'Pagamento' in df.columns else 'Forma'
+            
+            # Tratamento de Data Blindado
+            df['Data'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
+            df = df.dropna(subset=['Data'])
+            df['Mes_Ano'] = df['Data'].dt.strftime('%m/%Y')
+            df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
+            
+            c1, c2 = st.columns(2)
+            with c1:
+                st.subheader("Gasto Mensal")
+                df_m = df.groupby(['Mes_Ano', col_pag])['Valor'].sum().reset_index()
+                fig = px.bar(df_m, x='Mes_Ano', y='Valor', color=col_pag, barmode='stack')
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with c2:
+                st.subheader("Evolução Financeira")
+                fig_line = px.line(df.groupby('Data')['Valor'].sum().reset_index(), x='Data', y='Valor')
+                st.plotly_chart(fig_line, use_container_width=True)
+        else:
+            st.info("Lance dados para ver os gráficos.")
+
+except Exception as e:
+    st.error(f"Erro Crítico no Sistema: {e}")
