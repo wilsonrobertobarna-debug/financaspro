@@ -61,6 +61,7 @@ try:
     ws_cartoes = sh.worksheet("cartoes")
     ws_metas = sh.worksheet("metas")
 
+    st.title("💼 FinançasPro Wilson")
     tab_lanc, tab_bancos, tab_cartoes, tab_metas, tab_relat = st.tabs([
         "🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas", "📊 Relatórios"
     ])
@@ -73,19 +74,15 @@ try:
             data_sel = st.date_input("Data da Compra", datetime.now())
             valor = st.number_input("Valor Total", min_value=0.0, step=10.0)
             parc = st.number_input("Parcelas", min_value=1, value=1)
-            
             bancos_data = ws_bancos.get_all_records()
             lista_bancos = [r['Nome do Banco'] for r in bancos_data] if bancos_data else ["Dinheiro"]
             banco_escolhido = st.selectbox("Onde pagou?", lista_bancos)
-            
-            # Aqui no formulário também mudei para "Pagamento" para combinar com a planilha
-            forma = st.selectbox("Forma de Pagamento", ["Crédito", "Débito", "Pix", "Dinheiro"])
+            forma = st.selectbox("Pagamento", ["Crédito", "Débito", "Pix", "Dinheiro"])
             
             if st.button("🚀 Salvar Gasto", use_container_width=True):
                 valor_p = valor / parc
                 for i in range(parc):
                     dt = (data_sel + relativedelta(months=i)).strftime('%d/%m/%Y')
-                    # Salva na planilha usando o nome da coluna correto
                     ws_gastos.append_row([dt, round(valor_p, 2), f"Gasto ({i+1}/{parc})", banco_escolhido, forma])
                 st.success("Lançamento concluído!")
                 st.rerun()
@@ -96,18 +93,20 @@ try:
             if dados_g:
                 st.dataframe(pd.DataFrame(dados_g).tail(10), use_container_width=True, hide_index=True)
 
-    # --- ABAS DE CADASTRO (BANCOS, CARTÕES, METAS) ---
+    # --- ABA 2: BANCOS ---
     with tab_bancos:
         st.subheader("🏦 Cadastro de Bancos")
-        with st.form("f_b"):
-            n = st.text_input("Banco")
-            s = st.number_input("Saldo")
-            if st.form_submit_button("Salvar"):
-                ws_bancos.append_row([n, s, "Corrente"])
+        with st.form("form_b"):
+            n_b = st.text_input("Nome do Banco")
+            s_b = st.number_input("Saldo Inicial")
+            if st.form_submit_button("Salvar Banco"):
+                ws_bancos.append_row([n_b, s_b, "Corrente"])
                 st.rerun()
         st.table(pd.DataFrame(ws_bancos.get_all_records()))
 
+    # --- ABA 3: CARTÕES (Onde estava o erro de sintaxe) ---
     with tab_cartoes:
         st.subheader("💳 Meus Cartões")
-        with st.form("f_c"):
-            nc = st.
+        with st.form("form_c"):
+            nc = st.text_input("Nome do Cartão")
+            lc
