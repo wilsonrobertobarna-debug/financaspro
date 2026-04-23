@@ -61,7 +61,7 @@ def get_data_safe(spreadsheet_id, worksheet_name):
     raw_data = ws.get_all_records()
     if not raw_data: return pd.DataFrame()
     df = pd.DataFrame(raw_data)
-    # Limpeza de nomes de colunas
+    # LIMPEZA PROFUNDA: Remove espaços extras e força título para comparação
     df.columns = [str(c).strip() for c in df.columns]
     return df
 
@@ -76,7 +76,6 @@ try:
         "🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas", "📊 Relatórios"
     ])
 
-    # --- ABA 1: LANÇAMENTOS ---
     with tab_lanc:
         col_f, col_h = st.columns([1, 2])
         with col_f:
@@ -88,8 +87,7 @@ try:
                 ds_l = st.text_input("Descrição")
                 
                 df_b = get_data_safe(SHEET_ID, "bancos")
-                # Tenta achar a coluna do nome do banco
-                col_banco = next((c for c in df_b.columns if 'Nome' in c or 'Banco' in c), df_b.columns[0] if not df_b.empty else 'Nome')
+                col_banco = next((c for c in df_b.columns if 'Nome' in c or 'Banco' in c), "Nome")
                 bancos = df_b[col_banco].tolist() if not df_b.empty else ["Dinheiro"]
                 
                 origem = st.selectbox("Conta", bancos)
@@ -99,65 +97,48 @@ try:
                     limpar_cache()
                     st.success("Salvo!")
                     st.rerun()
-
         with col_h:
-            st.subheader("📋 Histórico")
             df_hist = get_data_safe(SHEET_ID, sh.get_worksheet(0).title)
-            if not df_hist.empty:
-                st.dataframe(df_hist.tail(15), use_container_width=True)
+            if not df_hist.empty: st.dataframe(df_hist.tail(15), use_container_width=True)
 
-    # --- ABA 4: METAS (Correção do Erro de Coluna) ---
     with tab_metas:
         st.subheader("🎯 Metas Financeiras")
-        with st.form("f_meta"):
-            obj = st.text_input("Nome Da Meta")
-            alvo = st.number_input("Valor Alvo", min_value=0.0)
-            atual = st.number_input("Valor Já Guardado", min_value=0.0)
-            if st.form_submit_button("Salvar Meta"):
-                sh.worksheet("metas").append_row([obj, alvo, atual])
-                limpar_cache()
-                st.rerun()
-        
         df_m = get_data_safe(SHEET_ID, "metas")
+        
         if not df_m.empty:
-            # Lógica para detectar qual coluna é o nome da meta
-            col_x = next((c for c in df_m.columns if 'Nome' in c or 'Objetivo' in c or 'Meta' in c), df_m.columns[0])
-            col_y_alvo = next((c for c in df_m.columns if 'Alvo' in c or 'Total' in c), None)
-            col_y_atual = next((c for c in df_m.columns if 'Atual' in c or 'Guardado' in c), None)
+            # Busca dinâmica robusta para as colunas
+            col_x = next((c for c in df_m.columns if any(k in c.lower() for k in ['nome', 'objetivo', 'meta'])), df_m.columns[0])
+            col_y_alvo = next((c for c in df_m.columns if any(k in c.lower() for k in ['alvo', 'total', 'limite'])), None)
+            col_y_atual = next((c for c in df_m.columns if any(k in c.lower() for k in ['atual', 'guardado', 'poupado'])), None)
 
             if col_y_alvo and col_y_atual:
                 fig_meta = px.bar(df_m, x=col_x, y=[col_y_atual, col_y_alvo], 
                                   barmode='group', title="Progresso das Metas",
-                                  labels={col_x: "Meta", "value": "Valor", "variable": "Tipo"})
+                                  labels={col_x: "Meta", "value": "Valor R$", "variable": "Status"},
+                                  color_discrete_map={col_y_atual: '#00CC96', col_y_alvo: '#636EFA'})
                 st.plotly_chart(fig_meta, use_container_width=True)
-            
             st.table(df_m)
 
-    # --- ABA 5: RELATÓRIOS (Barras Receitas vs Despesas) ---
     with tab_relat:
         st.header("📊 Comparativo Mensal")
         df_rel = get_data_safe(SHEET_ID, sh.get_worksheet(0).title)
         
         if not df_rel.empty:
-            # Padroniza colunas para evitar erros de nomes
-            col_data = next((c for c in df_rel.columns if 'Data' in c), None)
-            col_valor = next((c for c in df_rel.columns if 'Valor' in c), None)
-            col_tipo = next((c for c in df_rel.columns if 'Tipo' in c), None)
+            c_data = next((c for c in df_rel.columns if 'Data' in c), None)
+            c_valor = next((c for c in df_rel.columns if 'Valor' in c), None)
+            c_tipo = next((c for c in df_rel.columns if 'Tipo' in c), None)
 
-            if col_data and col_valor and col_tipo:
-                df_rel[col_data] = pd.to_datetime(df_rel[col_data], dayfirst=True, errors='coerce')
-                df_rel = df_rel.dropna(subset=[col_data])
-                df_rel['Mes'] = df_rel[col_data].dt.strftime('%Y-%m')
-                df_rel[col_valor] = pd.to_numeric(df_rel[col_valor], errors='coerce').fillna(0)
+            if c_data and c_valor and c_tipo:
+                df_rel[c_data] = pd.to_datetime(df_rel[c_data], dayfirst=True, errors='coerce')
+                df_rel = df_rel.dropna(subset=[c_data])
+                df_rel['Mes'] = df_rel[c_data].dt.strftime('%m/%Y')
+                df_rel[c_valor] = pd.to_numeric(df_rel[c_valor], errors='coerce').fillna(0)
 
-                df_mes = df_rel.groupby(['Mes', col_tipo])[col_valor].sum().reset_index()
-                
-                fig_evol = px.bar(df_mes, x='Mes', y=col_valor, color=col_tipo, 
-                                  barmode='group', title="Receitas vs Despesas por Mês",
+                df_mes = df_rel.groupby(['Mes', c_tipo])[c_valor].sum().reset_index()
+                fig_evol = px.bar(df_mes, x='Mes', y=c_valor, color=c_tipo, 
+                                  barmode='group', title="Receitas vs Despesas",
                                   color_discrete_map={'Receita': '#00CC96', 'Despesa': '#EF553B'})
                 st.plotly_chart(fig_evol, use_container_width=True)
-            else:
-                st.warning("Verifique se as colunas 'Data', 'Valor' e 'Tipo' existem na planilha principal.")
 
 except Exception as e:
     st.error(f"Erro detectado: {e}")
