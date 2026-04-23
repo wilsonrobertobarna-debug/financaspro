@@ -5,38 +5,13 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 
-# 1. CONFIGURAÇÃO DA PÁGINA
-st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
+# 1. SETUP INICIAL
+st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
-# 2. CHAVE DE ACESSO
+# 2. CHAVE PRIVADA (Mantenha como você já tem no seu arquivo)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
-    "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
-    "gcN1MxhHMlXJsmswR16gqEtwNmj1s4mLqZhifwA8qu7M16i6q0IU0RnQVufHfqNu",
-    "BPQh74sLQ1/xrvNZ8q/A4fO/QqJCAhlqtYo3djsVRfDI/LOoUiP+clQzN3M+1Qdx",
-    "74Df9cW6ELv3t8WpcCzBgkLX/3+V91dayvp+dr9OGRMTrVqDNRH8AnWDXdWlvhox",
-    "Ke7s3lFgk0JYU1ql6ffs0mdp9fJ6gB/MsKWcwZmbSIUGkrbiN5rfV9s8jANcNa1m",
-    "kJ2tr3XsPsqpGcgOWF4pOrY0P++Xse4pgwppGa3WbBuPg4OzzK1LIgCuIvsGuRhs",
-    "rwn3KZidAgMBAAECggEAB48kDKWPrPW5/BD57DM/xZQz92gzNJw9Dkhu3QGO33b0",
-    "FRusQHKWCTsDtFm1zS717oKPiEeRQSpiRjS1N8iEWDFB7CIgk7ozINvf6Vk7hea7",
-    "nroA5Z5DokvR5nLTz2UXj8NA2NXQtkD/MEgTdTnWy4SREOP5Db/FTbxSHhpY/lpq",
-    "xlTlOIoKkk6gZyt3oCZAUzLo+R0CfG6jEJy+pwwk6stjRVKp8DnP/mrJV8LaU8Au",
-    "fWxytSywY7XRxEjRHp2RplgVpQckuga3vbOcU0Y+FJNpkGT49DdH7PP7EEe/5J/t",
-    "McYkWUR1lvWDdlv/EzbO0GxqZ6FpPIA4MBO/krvPNwKBgQDwVqpWk48OkajwuMUL",
-    "YGFE1dTWk0axmbiZa3bxK+laqBTt0sfuaiKemgRqQSy5kJS7f9qC02Evc+RC7nnQ",
-    "BsSYeijNQiHwNcrjcbq6NGbCzYTcXu7FajM490tet7YF3XfGGTfuyA6GRYYpyNNT",
-    "qwBeVGNtP4iXBeT3DSHaR3n/awKBgQDS3RVh1whP4Cu6CEOheUgQuMxEWdEbnQQS",
-    "Ns8Le56t5Bed2PmfMGXjTLBzDXPYiemGnDnPwm5SErTE0emZUo4+mzljSHAirpTB",
-    "N9sNRi3pnLTnZ4YSHrmQlW3UxkNpgph+VMxmUM+HlKw0lutfoeYIjzIWa2ZImLGw",
-    "GW7W8eJyFwKBgQCkOqR1OqnDy9cEf03uYzK0ZeXlpoflLmTNOXjyfg4ca8S5apJC",
-    "IXZ8qEQiE10rhFeN9GTthuHfGjM9ZVYJx8YpZzhgYjNswGVenEV7nfkmXmfOanSA",
-    "o/xSjfGLzL9uLJL+5BarbTs3l2SBQwDdKHm8+69hZMvCXz3Bb9DVJoh/9wKBgDTz",
-    "MXBdOAgeybwwYRNGSlNwpFKxnzHo7uHIA5vlkgYmlcucdaqE08ENO+3YPfPtRcf4",
-    "qQfD0kIn0l7uO1O2CGQuRG3q/cWnw1D1vrsJmXPlVwQY2fDo6D4nV+orUzhGhBaN",
-    "Irq6pjJsogWetEJSfFo/4xsAIzItrckDyfKN0QhHAoGBAN8pejg4WzSJjwrfTOgA",
-    "VnARRsrH8VVQ8FSpfWTsYnJe/z0K3hxF4OiWM0oIkZsXhj62yjiZDizWApjwlhcW",
-    "O02v3bvgkF+W/VSs/W1Rf0iMdp22KVEhL97fNWcfi/19QH+FRPeRzZpe2ujNcJyb",
-    "1GHhDwH33nMtylvbUkBN8pBU",
+    # ... (sua chave aqui)
     "-----END PRIVATE KEY-----"
 ]
 
@@ -52,50 +27,52 @@ def conectar():
     creds = Credentials.from_service_account_info(info, scopes=scope)
     return gspread.authorize(creds)
 
-@st.cache_data(ttl=10)
-def get_data_safe(spreadsheet_id, worksheet_name):
+def carregar_aba(nome_aba):
+    """Tenta carregar os dados e limpa os nomes das colunas"""
     try:
         client = conectar()
-        sh = client.open_by_key(spreadsheet_id)
-        ws = sh.worksheet(worksheet_name)
-        data = ws.get_all_records()
-        if not data: return pd.DataFrame()
-        df = pd.DataFrame(data)
-        df.columns = [str(c).strip() for c in df.columns] # Limpa espaços
+        sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+        ws = sh.worksheet(nome_aba)
+        df = pd.DataFrame(ws.get_all_records())
+        df.columns = [str(c).strip().lower() for c in df.columns] # Tudo minúsculo para facilitar
         return df
-    except:
-        return pd.DataFrame()
+    except Exception as e:
+        return None
 
-SHEET_ID = "147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4"
-
+# --- INTERFACE ---
 tab_lanc, tab_bancos, tab_cartoes, tab_metas, tab_relat = st.tabs([
     "🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas", "📊 Relatórios"
 ])
 
-# --- ABA BANCOS (Exemplo de correção) ---
 with tab_bancos:
-    st.subheader("🏦 Suas Contas")
-    df_b = get_data_safe(SHEET_ID, "bancos")
-    if not df_b.empty:
+    df_b = carregar_aba("bancos")
+    if df_b is not None and not df_b.empty:
         st.dataframe(df_b, use_container_width=True)
     else:
-        st.info("Aba 'bancos' não encontrada ou vazia na planilha.")
+        st.warning("⚠️ Dados não encontrados na aba 'bancos'. Verifique se ela existe no Google Sheets.")
 
-# --- ABA RELATÓRIOS (Gráfico de Barras) ---
-with tab_relat:
-    st.subheader("📊 Gráfico Mensal")
-    df_r = get_data_safe(SHEET_ID, "lancamentos") # Nome da primeira aba
-    if not df_r.empty and 'Tipo' in df_r.columns:
-        df_r['Data'] = pd.to_datetime(df_r['Data'], dayfirst=True, errors='coerce')
-        df_r = df_r.dropna(subset=['Data'])
-        df_r['Mes'] = df_r['Data'].dt.strftime('%m/%Y')
+with tab_metas:
+    df_m = carregar_aba("metas")
+    if df_m is not None and not df_m.empty:
+        # Tenta identificar colunas de valor
+        col_v = next((c for c in df_m.columns if 'alvo' in c or 'valor' in c), None)
+        col_n = next((c for c in df_m.columns if 'nome' in c or 'meta' in c), df_m.columns[0])
         
-        # Agrupar por Mês e Tipo (Receita/Despesa)
-        df_agrupado = df_r.groupby(['Mes', 'Tipo'])['Valor'].sum().reset_index()
-        
-        fig = px.bar(df_agrupado, x='Mes', y='Valor', color='Tipo', barmode='group',
-                     title="Receitas vs Despesas",
-                     color_discrete_map={'Receita': '#00CC96', 'Despesa': '#EF553B'})
-        st.plotly_chart(fig, use_container_width=True)
+        if col_v:
+            fig = px.bar(df_m, x=col_n, y=col_v, title="Suas Metas")
+            st.plotly_chart(fig, use_container_width=True)
+        st.table(df_m)
     else:
-        st.warning("Verifique se a aba de lançamentos tem a coluna 'Tipo' (Receita/Despesa).")
+        st.info("💡 Adicione metas na sua planilha para visualizá-las aqui.")
+
+with tab_relat:
+    # Carrega a aba de lançamentos (ajuste o nome se for diferente de 'lancamentos')
+    df_l = carregar_aba("lancamentos") 
+    if df_l is not None and not df_l.empty:
+        if 'tipo' in df_l.columns and 'valor' in df_l.columns:
+            # Gráfico simples de Receitas vs Despesas
+            resumo = df_l.groupby('tipo')['valor'].sum().reset_index()
+            fig_r = px.pie(resumo, values='valor', names='tipo', title="Distribuição Financeira")
+            st.plotly_chart(fig_r, use_container_width=True)
+        else:
+            st.error("A aba de lançamentos precisa das colunas 'tipo' e 'valor'.")
