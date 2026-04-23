@@ -26,7 +26,7 @@ PK_LIST = [
     "YGFE1dTWk0axmbiZa3bxK+laqBTt0sfuaiKemgRqQSy5kJS7f9qC02Evc+RC7nnQ",
     "BsSYeijNQiHwNcrjcbq6NGbCzYTcXu7FajM490tet7YF3XfGGTfuyA6GRYYpyNNT",
     "qwBeVGNtP4iXBeT3DSHaR3n/awKBgQDS3RVh1whP4Cu6CEOheUgQuMxEWdEbnQQS",
-    "Ns8Le56t5Bed2PmfMGXjTLBed2PmfMGXjTLBzDXPYiemGnDnPwm5SErTE0emZUo4+mzljSHAirpTB",
+    "Ns8Le56t5Bed2PmfMGXjTLBzDXPYiemGnDnPwm5SErTE0emZUo4+mzljSHAirpTB",
     "N9sNRi3pnLTnZ4YSHrmQlW3UxkNpgph+VMxmUM+HlKw0lutfoeYIjzIWa2ZImLGw",
     "GW7W8eJyFwKBgQCkOqR1OqnDy9cEf03uYzK0ZeXlpoflLmTNOXjyfg4ca8S5apJC",
     "IXZ8qEQiE10rhFeN9GTthuHfGjM9ZVYJx8YpZzhgYjNswGVenEV7nfkmXmfOanSA",
@@ -52,12 +52,12 @@ def conectar():
     creds = Credentials.from_service_account_info(info, scopes=scope)
     return gspread.authorize(creds)
 
-@st.cache_data(ttl=10) # TTL baixo para atualizar rápido se você mexer na planilha
+@st.cache_data(ttl=10)
 def get_data_safe(spreadsheet_id, worksheet_name):
     try:
         client = conectar()
         sh = client.open_by_key(spreadsheet_id)
-        # Busca a aba ignorando maiúsculas/minúsculas
+        # Normaliza busca de abas (case-insensitive)
         all_ws = {w.title.lower().strip(): w for w in sh.worksheets()}
         ws = all_ws.get(worksheet_name.lower().strip())
         
@@ -68,17 +68,16 @@ def get_data_safe(spreadsheet_id, worksheet_name):
             df.columns = [str(c).strip().lower() for c in df.columns]
             return df
         return pd.DataFrame()
-    except Exception as e:
+    except Exception:
         return pd.DataFrame()
 
 def limpar_cache():
     st.cache_data.clear()
 
-# --- INÍCIO DO APP ---
+# --- LÓGICA PRINCIPAL ---
 try:
     SHEET_ID = "147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4"
-    client = conectar()
-    sh = client.open_by_key(SHEET_ID)
+    sh = conectar().open_by_key(SHEET_ID)
 
     tab_lanc, tab_bancos, tab_cartoes, tab_metas, tab_relat = st.tabs([
         "🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas", "📊 Relatórios"
@@ -102,7 +101,7 @@ try:
                 conta = st.selectbox("Qual Conta?", lista_bancos)
                 
                 if st.form_submit_button("Salvar"):
-                    # Salva na primeira aba (Lancamentos)
+                    # Grava na primeira aba (Lancamentos)
                     sh.get_worksheet(0).append_row([data.strftime('%d/%m/%Y'), valor, desc, conta, tipo])
                     limpar_cache()
                     st.success("Lançado com sucesso!")
@@ -115,12 +114,41 @@ try:
         if not df_bancos.empty:
             st.dataframe(df_bancos, use_container_width=True)
         else:
-            st.info("Aba 'bancos' não encontrada ou sem dados.")
+            st.info("Aba 'bancos' não encontrada ou vazia.")
 
-    # 3. ABA METAS
+    # 3. ABA METAS (CORREÇÃO DA SINTAXE AQUI)
     with tab_metas:
         st.subheader("🎯 Suas Metas")
         df_metas = get_data_safe(SHEET_ID, "metas")
         if not df_metas.empty:
+            # Tenta encontrar a coluna do nome da meta
             col_nome = next((c for c in df_metas.columns if 'nome' in c or 'meta' in c), df_metas.columns[0])
-            col_alvo =
+            # Tenta encontrar a coluna do valor alvo
+            col_alvo = next((c for c in df_metas.columns if 'alvo' in c or 'valor' in c), None)
+            
+            if col_alvo:
+                fig_m = px.bar(df_metas, x=col_nome, y=col_alvo, title="Progresso das Metas", color_discrete_sequence=['#636EFA'])
+                st.plotly_chart(fig_m, use_container_width=True)
+            
+            st.table(df_metas)
+        else:
+            st.info("Aba 'metas' não encontrada ou vazia.")
+
+    # 4. ABA RELATÓRIOS
+    with tab_relat:
+        st.subheader("📊 Resumo Financeiro")
+        df_l = get_data_safe(SHEET_ID, sh.get_worksheet(0).title)
+        
+        if not df_l.empty and 'tipo' in df_l.columns and 'valor' in df_l.columns:
+            resumo = df_l.groupby('tipo')['valor'].sum().reset_index()
+            fig_pie = px.pie(resumo, values='valor', names='tipo', hole=.4, 
+                            color_discrete_map={'Receita':'#00CC96', 'Despesa':'#EF553B'})
+            st.plotly_chart(fig_pie, use_container_width=True)
+            st.write("---")
+            st.write("📋 Últimos Lançamentos")
+            st.dataframe(df_l.tail(10), use_container_width=True)
+        else:
+            st.warning("Dados insuficientes para gerar relatórios.")
+
+except Exception as e:
+    st.error(f"Erro no sistema: {e}")
