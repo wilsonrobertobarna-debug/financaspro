@@ -58,13 +58,24 @@ try:
 except Exception as e:
     st.error(f"Erro na Autenticação: {e}")
 
-# 3. Tenta Abrir Planilha
+# 3. Tenta Abrir Planilha com Diagnóstico Detalhado
 try:
-    url = "https://docs.google.com/spreadsheets/d/147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4/edit"
-    sh = client.open_by_url(url)
+    # Usando o ID direto para evitar problemas com parâmetros da URL (?usp=sharing)
+    sheet_id = "147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4"
+    sh = client.open_by_key(sheet_id) 
+    
     ws = sh.get_worksheet(0)
-    df = pd.DataFrame(ws.get_all_records())
-    st.success("✅ Planilha aberta com sucesso!")
-    st.dataframe(df)
+    dados = ws.get_all_records()
+    
+    if dados:
+        st.success("✅ Sucesso! Dados lidos da planilha.")
+        st.dataframe(pd.DataFrame(dados))
+    else:
+        st.warning("⚠️ Conectado, mas a primeira aba parece estar vazia.")
+
+except gspread.exceptions.APIError as e:
+    # Esse bloco captura erros de permissão (403) ou cota (429)
+    st.error(f"Erro de API do Google: {e}")
+    st.info("Dica: Verifique se o e-mail da Service Account foi adicionado como 'Editor' na planilha.")
 except Exception as e:
-    st.error(f"Erro ao abrir planilha: {e}")
+    st.error(f"Erro inesperado: {type(e).__name__} - {str(e)}")
