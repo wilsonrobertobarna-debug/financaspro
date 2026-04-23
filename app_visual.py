@@ -8,7 +8,7 @@ from dateutil.relativedelta import relativedelta
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Sua chave funcional mantida intacta)
+# 2. CHAVE DE ACESSO (Sua chave funcional)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -58,12 +58,22 @@ def conectar_google():
 try:
     client = conectar_google()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-    ws = sh.get_worksheet(0)
+    ws_lanc = sh.get_worksheet(0) # Aba de Lançamentos
     
-    st.title("💼 FinançasPro Wilson - Desktop")
+    # Busca categorias da aba 'categorias' (Crie esta aba na sua planilha!)
+    try:
+        ws_cat = sh.worksheet("categorias")
+        dados_cat = ws_cat.get_all_records()
+        df_cat = pd.DataFrame(dados_cat)
+    except:
+        # Se não existir, cria uma base temporária para não quebrar o app
+        df_cat = pd.DataFrame({"Tipo": ["Receita", "Despesa"], "Nome": ["Salário", "Aluguel"]})
+        st.warning("⚠️ Aba 'categorias' não encontrada. Crie-a na sua planilha com as colunas 'Tipo' e 'Nome'.")
+
+    st.title("💼 FinançasPro Wilson")
     
-    tab_lanc, tab_bancos, tab_cartoes, tab_metas = st.tabs([
-        "🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas"
+    tab_lanc, tab_bancos, tab_metas, tab_config = st.tabs([
+        "🚀 Lançamentos", "🏦 Bancos", "🎯 Metas", "⚙️ Configurações"
     ])
 
     with tab_lanc:
@@ -71,67 +81,61 @@ try:
         
         with col_form:
             st.subheader("📝 Novo Registro")
-            # ADICIONADO: Seletor de Tipo
-            tipo_mov = st.radio("Tipo de Movimentação", ["Despesa", "Receita"], horizontal=True)
+            tipo_mov = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
             
-            data_sel = st.date_input("Data do Lançamento", datetime.now(), key="dt_lanc")
+            # FILTRO DINÂMICO DE CATEGORIA
+            lista_filtrada = df_cat[df_cat['Tipo'] == tipo_mov]['Nome'].tolist()
+            cat = st.selectbox("Categoria", lista_filtrada if lista_filtrada else ["Sem categorias cadastradas"])
+            
+            data_sel = st.date_input("Data", datetime.now())
             valor_total = st.number_input("Valor (R$)", min_value=0.0, step=10.0, format="%.2f")
-            
-            # Parcelas só fazem sentido para Despesas na maioria das vezes, mas mantive livre
-            parcelas = st.number_input("Nº de Parcelas", min_value=1, max_value=48, value=1)
-            
-            cat = st.selectbox("Categoria", ["Salário", "Venda", "Alimentação", "Transporte", "Casa", "Lazer", "Saúde", "Outros"])
-            beneficiario = st.text_input("Beneficiário/Origem", placeholder="Ex: Empresa X, Supermercado...")
-            centro_custo = st.selectbox("Centro de Custo", ["Pessoal", "Família", "Trabalho", "Investimentos"])
+            parcelas = st.number_input("Nº Parcelas", min_value=1, value=1)
+            beneficiario = st.text_input("Beneficiário/Origem")
+            centro_custo = st.selectbox("Centro de Custo", ["Pessoal", "Família", "Trabalho"])
             banco = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
-            forma = st.selectbox("Forma", ["Pix", "Dinheiro", "Cartão de Crédito", "Débito"])
             
-            if st.button("🚀 Salvar no Sistema", use_container_width=True):
+            if st.button("🚀 Salvar", use_container_width=True):
                 valor_parcela = valor_total / parcelas
                 for i in range(parcelas):
                     data_p = data_sel + relativedelta(months=i)
                     data_str = data_p.strftime('%d/%m/%Y')
                     desc = f"{cat} ({i+1}/{parcelas})" if parcelas > 1 else cat
-                    
-                    # SALVANDO: Adicionei o tipo_mov na 8ª coluna (Coluna H)
-                    ws.append_row([data_str, round(valor_parcela, 2), desc, banco, forma, beneficiario, centro_custo, tipo_mov])
-                
-                st.success(f"{tipo_mov} registrada com sucesso!")
+                    ws_lanc.append_row([data_str, round(valor_parcela, 2), desc, banco, "Automático", beneficiario, centro_custo, tipo_mov])
+                st.success("Salvo!")
                 st.rerun()
 
         with col_hist:
-            st.subheader("📊 Últimos Movimentos")
-            dados = ws.get_all_records()
+            st.subheader("📊 Histórico")
+            dados = ws_lanc.get_all_records()
             if dados:
                 df = pd.DataFrame(dados)
-                df.columns = [c.strip().capitalize() for c in df.columns]
-                if 'Valor' in df.columns:
-                    df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
-                    st.dataframe(df.tail(10).style.format({"Valor": "R$ {:.2f}"}), use_container_width=True)
-                else:
-                    st.warning("Coluna 'Valor' não encontrada.")
+                st.dataframe(df.tail(10), use_container_width=True)
 
-    with tab_bancos:
-        st.subheader("🏦 Resumo por Banco")
-        if 'df' in locals() and not df.empty:
-            # LÓGICA DE RECEITA VS DESPESA: 
-            # Se existir a coluna 'Tipo', calculamos o saldo real (Receita - Despesa)
-            if 'Tipo' in df.columns:
-                df['Valor_Final'] = df.apply(lambda x: x['Valor'] if x['Tipo'] == 'Receita' else -x['Valor'], axis=1)
-                resumo = df.groupby('Banco')['Valor_Final'].sum().reset_index()
-                resumo.columns = ['Banco', 'Saldo Atual']
-                st.table(resumo.style.format({"Saldo Atual": "R$ {:.2f}"}))
-            else:
-                st.info("Adicione o campo 'Tipo' na planilha para calcular o saldo corretamente.")
-
-    # Cartões e Metas seguem a mesma lógica simplificada
-    with tab_metas:
-        st.subheader("🎯 Minhas Metas")
-        if 'df' in locals() and not df.empty:
-            # Saldo total considerando entradas e saídas
-            if 'Tipo' in df.columns:
-                saldo_total = df.apply(lambda x: x['Valor'] if x['Tipo'] == 'Receita' else -x['Valor'], axis=1).sum()
-                st.metric("Saldo Líquido Geral", f"R$ {saldo_total:,.2f}")
+    with tab_config:
+        st.subheader("🛠️ Gerenciar Categorias")
+        
+        # Formulário para criar categoria
+        with st.form("nova_cat"):
+            c1, c2 = st.columns(2)
+            nova_cat_nome = c1.text_input("Nome da Categoria")
+            nova_cat_tipo = c2.selectbox("Tipo da Categoria", ["Despesa", "Receita"])
+            if st.form_submit_button("➕ Adicionar"):
+                ws_cat.append_row([nova_cat_tipo, nova_cat_nome])
+                st.success(f"{nova_cat_nome} adicionada!")
+                st.rerun()
+        
+        st.divider()
+        
+        # Lista para excluir categoria
+        st.write("### Lista Atual")
+        if not df_cat.empty:
+            for index, row in df_cat.iterrows():
+                cols = st.columns([3, 1])
+                cols[0].write(f"**{row['Nome']}** ({row['Tipo']})")
+                if cols[1].button("🗑️", key=f"del_{index}"):
+                    # O gspread usa índice começando em 2 (1 é cabeçalho)
+                    ws_cat.delete_rows(index + 2)
+                    st.rerun()
 
 except Exception as e:
     st.error(f"Erro no sistema: {e}")
