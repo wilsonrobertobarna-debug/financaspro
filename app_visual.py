@@ -3,14 +3,13 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="📊")
 
-# 2. CHAVE DE ACESSO (Mantenha sua chave privada aqui)
+# 2. CHAVE DE ACESSO
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -95,8 +94,31 @@ try:
             dados_g = ws_gastos.get_all_records()
             if dados_g:
                 st.dataframe(pd.DataFrame(dados_g).tail(10), use_container_width=True, hide_index=True)
+            else:
+                st.info("Nenhum lançamento encontrado. Comece a registrar seus gastos à esquerda!")
 
-    # --- ABAS DE CADASTRO ---
+    # --- ABA 3: CARTÕES (ATUALIZADA) ---
+    with tab_cartoes:
+        st.subheader("💳 Cadastro de Cartões")
+        with st.form("f_c"):
+            nc = st.text_input("Nome do Cartão (ex: Nubank)")
+            lim = st.number_input("Limite Total")
+            fec = st.number_input("Dia de Fechamento", 1, 31, 1)
+            ven = st.number_input("Dia de Vencimento", 1, 31, 10)
+            if st.form_submit_button("Salvar Cartão"):
+                # Salvando Nome, Limite, Fechamento, Vencimento
+                ws_cartoes.append_row([nc, lim, fec, ven])
+                st.success("Cartão cadastrado!")
+                st.rerun()
+        
+        st.markdown("### Seus Cartões")
+        cartoes_df = pd.DataFrame(ws_cartoes.get_all_records())
+        if not cartoes_df.empty:
+            st.table(cartoes_df)
+        else:
+            st.info("Nenhum cartão cadastrado ainda.")
+
+    # --- ABAS DE APOIO (BANCOS E METAS) ---
     with tab_bancos:
         st.subheader("🏦 Cadastro de Bancos")
         with st.form("f_b"):
@@ -106,17 +128,6 @@ try:
                 ws_bancos.append_row([n, s, "Corrente"])
                 st.rerun()
         st.table(pd.DataFrame(ws_bancos.get_all_records()))
-
-    with tab_cartoes:
-        st.subheader("💳 Meus Cartões")
-        with st.form("f_c"):
-            nc = st.text_input("Nome")
-            lim = st.number_input("Limite")
-            ven = st.number_input("Vencimento", 1, 31)
-            if st.form_submit_button("Salvar"):
-                ws_cartoes.append_row([nc, lim, ven])
-                st.rerun()
-        st.table(pd.DataFrame(ws_cartoes.get_all_records()))
 
     with tab_metas:
         st.subheader("🎯 Minhas Metas")
@@ -128,29 +139,28 @@ try:
                 st.rerun()
         st.table(pd.DataFrame(ws_metas.get_all_records()))
 
-    # --- ABA 5: RELATÓRIOS (ONDE TUDO SE JUNTA) ---
+    # --- ABA 5: RELATÓRIOS (CORRIGIDA) ---
     with tab_relat:
-        st.header("📈 Relatórios e Faturas")
+        st.header("📈 Central de Relatórios")
+        
         if dados_g:
             df = pd.DataFrame(dados_g)
             df.columns = [c.strip() for c in df.columns]
-            
-            # Limpeza de Dados
             df['Data'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
             df = df.dropna(subset=['Data'])
             df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
             df['Mes_Ano'] = df['Data'].dt.strftime('%m/%Y')
 
-            # 1. Visão Mensal Geral
+            # 1. Gráfico de Barras Mensal
             col_pag = 'Pagamento' if 'Pagamento' in df.columns else 'Forma'
-            st.subheader("Resumo por Forma de Pagamento")
+            st.subheader("Total de Gastos por Mês")
             df_m = df.groupby(['Mes_Ano', col_pag])['Valor'].sum().reset_index()
             st.plotly_chart(px.bar(df_m, x='Mes_Ano', y='Valor', color=col_pag, barmode='stack'), use_container_width=True)
 
             st.markdown("---")
 
-            # 2. Relatório de Cartões (Mês Atual)
-            st.subheader("💳 Detalhamento de Faturas (Crédito)")
+            # 2. Relatório de Cartões
+            st.subheader("💳 Faturas por Cartão (Crédito)")
             mes_atual = datetime.now().month
             ano_atual = datetime.now().year
             
@@ -164,16 +174,21 @@ try:
                 resumo_c = df_cartoes.groupby('Banco')['Valor'].sum().reset_index()
                 c1, c2 = st.columns([2, 1])
                 with c1:
-                    fig_c = px.bar(resumo_c, x='Banco', y='Valor', title=f"Fatura: {datetime.now().strftime('%m/%Y')}", color='Banco')
-                    st.plotly_chart(fig_c, use_container_width=True)
+                    st.plotly_chart(px.bar(resumo_c, x='Banco', y='Valor', color='Banco'), use_container_width=True)
                 with c2:
-                    st.write("📋 Valores por Cartão")
                     st.dataframe(resumo_c, hide_index=True)
-                    st.metric("Gasto Total no Crédito", f"R$ {resumo_c['Valor'].sum():,.2f}")
+                    st.metric("Total Cartões", f"R$ {resumo_c['Valor'].sum():,.2f}")
             else:
-                st.info("Nenhum gasto registrado como 'Crédito' para este mês.")
+                st.info("Lance gastos no 'Crédito' para ver o gráfico de faturas.")
         else:
-            st.info("Lance dados para ver os relatórios.")
+            # ESTADO VAZIO: Explica que faltam dados
+            st.warning("⚠️ **Ainda não há dados para gerar gráficos.**")
+            st.markdown("""
+            Para que os gráficos apareçam aqui, você precisa:
+            1.  Cadastrar um Banco na aba **Bancos**.
+            2.  Fazer um lançamento na aba **Lançamentos**.
+            3.  Se quiser ver o relatório de cartões, escolha a forma de pagamento **Crédito**.
+            """)
 
 except Exception as e:
     st.error(f"Erro no sistema: {e}")
