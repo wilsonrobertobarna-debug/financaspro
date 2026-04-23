@@ -7,14 +7,12 @@ from datetime import datetime
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. ÁREA DA CHAVE (SUBSTITUA TUDO ABAIXO PELA SUA CHAVE ORIGINAL)
-# DICA: Verifique se a chave começa com "-----BEGIN PRIVATE KEY-----" 
-# e termina com "-----END PRIVATE KEY-----"
-PK_LIST = [
-    "-----BEGIN PRIVATE KEY-----",
-    "COLE_AQUI_SUA_CHAVE_COMPLETA_DO_ARQUIVO_JSON",
-    "-----END PRIVATE KEY-----"
-]
+# 2. CHAVE ORIGINAL (A "Digital" do seu App)
+# IMPORTANTE: Cole sua chave EXATAMENTE como ela está no arquivo JSON.
+# Se a sua chave no JSON tiver '\n', mantenha. Se for uma linha só, mantenha.
+CHAVE_BRUTA = """-----BEGIN PRIVATE KEY-----
+SUA_CHAVE_AQUI
+-----END PRIVATE KEY-----"""
 
 @st.cache_resource
 def conectar():
@@ -23,51 +21,45 @@ def conectar():
         info = {
             "type": "service_account",
             "project_id": "financaspro-wilson",
-            "private_key": "\n".join(PK_LIST).replace("\\n", "\n"),
+            "private_key": CHAVE_BRUTA.replace("\\n", "\n"),
             "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
             "token_uri": "https://oauth2.googleapis.com/token"
         }
         creds = Credentials.from_service_account_info(info, scopes=scope)
         return gspread.authorize(creds)
     except Exception as e:
-        st.error(f"Erro Crítico na Chave: {str(e)}")
+        st.error(f"Erro na Chave: {str(e)}")
         return None
 
-# --- EXECUÇÃO DO SISTEMA ---
+# --- INTERFACE ---
 try:
     SHEET_ID = "147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4"
     client = conectar()
     
     if client:
         sh = client.open_by_key(SHEET_ID)
-        st.success("✅ Conectado com Sucesso!")
+        st.success("✅ Conexão Restabelecida!")
 
         tab1, tab2 = st.tabs(["🚀 Lançamentos", "🏦 Bancos"])
 
         with tab1:
-            with st.form("registro_simples", clear_on_submit=True):
+            with st.form("lancamento"):
                 tipo = st.selectbox("Tipo", ["Despesa", "Receita"])
-                valor = st.number_input("Valor", min_value=0.0, step=0.01)
+                valor = st.number_input("Valor", min_value=0.0)
                 desc = st.text_input("Descrição")
                 
-                if st.form_submit_button("Salvar na Planilha"):
+                if st.form_submit_button("Salvar"):
                     data_hj = datetime.now().strftime('%d/%m/%Y')
-                    # Grava os dados como strings para evitar erros de tipo
-                    sh.get_worksheet(0).append_row([str(data_hj), str(valor), str(desc), str(tipo)])
-                    st.balloons()
-                    st.info(f"Registrado: {desc} - R$ {valor}")
+                    sh.get_worksheet(0).append_row([data_hj, valor, desc, tipo])
+                    st.success("Lançado!")
 
         with tab2:
-            st.subheader("Visualização de Bancos")
+            # Mostra os bancos sem frescura
             try:
-                # Tenta ler a aba 'bancos', se falhar, avisa sem travar o app
-                dados = sh.worksheet("bancos").get_all_records()
-                if dados:
-                    st.dataframe(pd.DataFrame(dados).astype(str))
-                else:
-                    st.write("Aba 'bancos' encontrada, mas está vazia.")
+                df = pd.DataFrame(sh.worksheet("bancos").get_all_records())
+                st.dataframe(df)
             except:
-                st.warning("⚠️ Aba 'bancos' não detectada na planilha.")
+                st.info("Aba 'bancos' não encontrada.")
 
 except Exception as e:
-    st.error(f"Erro Geral: {str(e)}")
+    st.error(f"Erro de Execução: {str(e)}")
