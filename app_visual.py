@@ -5,8 +5,8 @@ import pandas as pd
 
 st.set_page_config(page_title="FinançasPro Wilson", page_icon="💰")
 
-# Chave montada de forma ultra-segura
-KEY_LIST = [
+# Usando uma lista simples para a chave - evita erros de escape do Python
+KEY_LINES = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
     "gcN1MxhHMlXJsmswR16gqEtwNmj1s4mLqZhifwA8qu7M16i6q0IU0RnQVufHfqNu",
@@ -37,35 +37,29 @@ KEY_LIST = [
     "-----END PRIVATE KEY-----"
 ]
 
-def inicializar():
-    try:
-        scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-        info = {
-            "type": "service_account",
-            "project_id": "financaspro-wilson",
-            "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "private_key": "\n".join(KEY_LIST)
-        }
-        creds = Credentials.from_service_account_info(info, scopes=scope)
-        client = gspread.authorize(creds)
-        url = "https://docs.google.com/spreadsheets/d/147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4/edit"
-        return client.open_by_url(url)
-    except Exception as e:
-        st.error(f"Erro Interno na Conexão: {str(e)}")
-        return None
+def conectar():
+    scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    info = {
+        "type": "service_account",
+        "project_id": "financaspro-wilson",
+        "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "private_key": "\n".join(KEY_LINES)
+    }
+    creds = Credentials.from_service_account_info(info, scopes=scope)
+    return gspread.authorize(creds)
 
-st.title("💰 FinançasPro")
+st.title("💰 FinançasPro - Diagnóstico")
 
-sh = inicializar()
-if sh:
-    try:
-        ws = sh.get_worksheet(0)
-        dados = ws.get_all_records()
-        if dados:
-            st.success("Dados carregados!")
-            st.dataframe(pd.DataFrame(dados))
-        else:
-            st.warning("Conectado, mas a planilha está vazia.")
-    except Exception as e:
-        st.error(f"Erro ao ler a aba: {str(e)}")
+try:
+    client = conectar()
+    url = "https://docs.google.com/spreadsheets/d/147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4/edit"
+    sh = client.open_by_url(url)
+    ws = sh.get_worksheet(0)
+    
+    dados = ws.get_all_records()
+    st.success("Conectado! Veja os dados abaixo:")
+    st.dataframe(pd.DataFrame(dados))
+
+except Exception as e:
+    st.error(f"Erro detectado: {e}")
