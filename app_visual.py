@@ -1,53 +1,181 @@
-# --- ABA 5: RELATÓRIOS (Adicione este bloco para os cartões) ---
-with tab_relat:
-    st.header("💳 Gastos por Cartão de Crédito")
+import streamlit as st
+import gspread
+from google.oauth2.service_account import Credentials
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
+# 1. CONFIGURAÇÃO DA PÁGINA
+st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="📊")
+
+# 2. CHAVE DE ACESSO
+PK_LIST = [
+    "-----BEGIN PRIVATE KEY-----",
+    "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
+    "gcN1MxhHMlXJsmswR16gqEtwNmj1s4mLqZhifwA8qu7M16i6q0IU0RnQVufHfqNu",
+    "BPQh74sLQ1/xrvNZ8q/A4fO/QqJCAhlqtYo3djsVRfDI/LOoUiP+clQzN3M+1Qdx",
+    "74Df9cW6ELv3t8WpcCzBgkLX/3+V91dayvp+dr9OGRMTrVqDNRH8AnWDXdWlvhox",
+    "Ke7s3lFgk0JYU1ql6ffs0mdp9fJ6gB/MsKWcwZmbSIUGkrbiN5rfV9s8jANcNa1m",
+    "kJ2tr3XsPsqpGcgOWF4pOrY0P++Xse4pgwppGa3WbBuPg4OzzK1LIgCuIvsGuRhs",
+    "rwn3KZidAgMBAAECggEAB48kDKWPrPW5/BD57DM/xZQz92gzNJw9Dkhu3QGO33b0",
+    "FRusQHKWCTsDtFm1zS717oKPiEeRQSpiRjS1N8iEWDFB7CIgk7ozINvf6Vk7hea7",
+    "nroA5Z5DokvR5nLTz2UXj8NA2NXQtkD/MEgTdTnWy4SREOP5Db/FTbxSHhpY/lpq",
+    "xlTlOIoKkk6gZyt3oCZAUzLo+R0CfG6jEJy+pwwk6stjRVKp8DnP/mrJV8LaU8Au",
+    "fWxytSywY7XRxEjRHp2RplgVpQckuga3vbOcU0Y+FJNpkGT49DdH7PP7EEe/5J/t",
+    "McYkWUR1lvWDdlv/EzbO0GxqZ6FpPIA4MBO/krvPNwKBgQDwVqpWk48OkajwuMUL",
+    "YGFE1dTWk0axmbiZa3bxK+laqBTt0sfuaiKemgRqQSy5kJS7f9qC02Evc+RC7nnQ",
+    "BsSYeijNQiHwNcrjcbq6NGbCzYTcXu7FajM490tet7YF3XfGGTfuyA6GRYYpyNNT",
+    "qwBeVGNtP4iXBeT3DSHaR3n/awKBgQDS3RVh1whP4Cu6CEOheUgQuMxEWdEbnQQS",
+    "Ns8Le56t5Bed2PmfMGXjTLBzDXPYiemGnDnPwm5SErTE0emZUo4+mzljSHAirpTB",
+    "N9sNRi3pnLTnZ4YSHrmQlW3UxkNpgph+VMxmUM+HlKw0lutfoeYIjzIWa2ZImLGw",
+    "GW7W8eJyFwKBgQCkOqR1OqnDy9cEf03uYzK0ZeXlpoflLmTNOXjyfg4ca8S5apJC",
+    "IXZ8qEQiE10rhFeN9GTthuHfGjM9ZVYJx8YpZzhgYjNswGVenEV7nfkmXmfOanSA",
+    "o/xSjfGLzL9uLJL+5BarbTs3l2SBQwDdKHm8+69hZMvCXz3Bb9DVJoh/9wKBgDTz",
+    "MXBdOAgeybwwYRNGSlNwpFKxnzHo7uHIA5vlkgYmlcucdaqE08ENO+3YPfPtRcf4",
+    "qQfD0kIn0l7uO1O2CGQuRG3q/cWnw1D1vrsJmXPlVwQY2fDo6D4nV+orUzhGhBaN",
+    "Irq6pjJsogWetEJSfFo/4xsAIzItrckDyfKN0QhHAoGBAN8pejg4WzSJjwrfTOgA",
+    "VnARRsrH8VVQ8FSpfWTsYnJe/z0K3hxF4OiWM0oIkZsXhj62yjiZDizWApjwlhcW",
+    "O02v3bvgkF+W/VSs/W1Rf0iMdp22KVEhL97fNWcfi/19QH+FRPeRzZpe2ujNcJyb",
+    "1GHhDwH33nMtylvbUkBN8pBU",
+    "-----END PRIVATE KEY-----"
+]
+
+@st.cache_resource
+def conectar():
+    scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    info = {
+        "type": "service_account", "project_id": "financaspro-wilson",
+        "private_key": "\n".join(PK_LIST),
+        "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
+        "token_uri": "https://oauth2.googleapis.com/token"
+    }
+    creds = Credentials.from_service_account_info(info, scopes=scope)
+    return gspread.authorize(creds)
+
+try:
+    client = conectar()
+    sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     
-    if dados_g:
-        df = pd.DataFrame(dados_g)
-        df.columns = [c.strip() for c in df.columns]
-        
-        # 1. Tratamento de Dados
-        df['Data'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-        df = df.dropna(subset=['Data'])
-        df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
-        
-        # 2. Filtro: Apenas o mês atual e apenas pagamentos via "Crédito"
-        mes_atual = datetime.now().month
-        ano_atual = datetime.now().year
-        
-        # Ajuste 'Pagamento' ou 'Forma' conforme sua planilha
-        col_pag = 'Pagamento' if 'Pagamento' in df.columns else 'Forma'
-        col_banco = 'Banco' # Onde você seleciona o nome do cartão/banco
-        
-        df_cartoes = df[
-            (df['Data'].dt.month == mes_atual) & 
-            (df['Data'].dt.year == ano_atual) & 
-            (df[col_pag] == 'Crédito')
-        ]
-        
-        if not df_cartoes.empty:
-            # 3. Agrupamento por Cartão (Coluna 'Banco')
-            resumo_cartoes = df_cartoes.groupby(col_banco)['Valor'].sum().reset_index()
+    ws_gastos = sh.get_worksheet(0)
+    ws_bancos = sh.worksheet("bancos")
+    ws_cartoes = sh.worksheet("cartoes")
+    ws_metas = sh.worksheet("metas")
+
+    st.title("💼 FinançasPro Wilson")
+    
+    tab_lanc, tab_bancos, tab_cartoes, tab_metas, tab_relat = st.tabs([
+        "🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas", "📊 Relatórios"
+    ])
+
+    # --- ABA 1: LANÇAMENTOS ---
+    with tab_lanc:
+        col_f, col_h = st.columns([1, 2])
+        with col_f:
+            st.subheader("📝 Novo Gasto")
+            data_sel = st.date_input("Data da Compra", datetime.now())
+            valor = st.number_input("Valor Total", min_value=0.0, step=10.0)
+            parc = st.number_input("Parcelas", min_value=1, value=1)
+            bancos_data = ws_bancos.get_all_records()
+            lista_bancos = [r['Nome do Banco'] for r in bancos_data] if bancos_data else ["Dinheiro"]
+            banco_escolhido = st.selectbox("Onde pagou?", lista_bancos)
+            forma = st.selectbox("Pagamento", ["Crédito", "Débito", "Pix", "Dinheiro"])
             
-            c1, c2 = st.columns([2, 1])
-            with c1:
-                # Gráfico de Barras Comparativo
-                fig_cartao = px.bar(
-                    resumo_cartoes, 
-                    x=col_banco, 
-                    y='Valor', 
-                    title=f"Total na Fatura - {datetime.now().strftime('%m/%Y')}",
-                    labels={col_banco: "Cartão", "Valor": "Total (R$)"},
-                    color=col_banco
-                )
-                st.plotly_chart(fig_cartao, use_container_width=True)
+            if st.button("🚀 Salvar Gasto", use_container_width=True):
+                valor_p = valor / parc
+                for i in range(parc):
+                    dt = (data_sel + relativedelta(months=i)).strftime('%d/%m/%Y')
+                    ws_gastos.append_row([dt, round(valor_p, 2), f"Gasto ({i+1}/{parc})", banco_escolhido, forma])
+                st.success("Lançamento concluído!")
+                st.rerun()
+
+        with col_h:
+            st.subheader("📊 Últimos Lançamentos")
+            dados_g = ws_gastos.get_all_records()
+            if dados_g:
+                st.dataframe(pd.DataFrame(dados_g).tail(10), use_container_width=True, hide_index=True)
+
+    # --- ABA 2: BANCOS ---
+    with tab_bancos:
+        st.subheader("🏦 Cadastro de Bancos")
+        with st.form("form_bancos"):
+            n_b = st.text_input("Nome do Banco")
+            s_b = st.number_input("Saldo Inicial")
+            if st.form_submit_button("Salvar Banco"):
+                ws_bancos.append_row([n_b, s_b, "Corrente"])
+                st.rerun()
+        st.table(pd.DataFrame(ws_bancos.get_all_records()))
+
+    # --- ABA 3: CARTÕES ---
+    with tab_cartoes:
+        st.subheader("💳 Meus Cartões")
+        with st.form("form_cartoes"):
+            nc = st.text_input("Nome do Cartão")
+            lc = st.number_input("Limite Total")
+            vc = st.number_input("Vencimento (Dia)", 1, 31)
+            if st.form_submit_button("Salvar Cartão"):
+                ws_cartoes.append_row([nc, lc, vc])
+                st.rerun()
+        st.table(pd.DataFrame(ws_cartoes.get_all_records()))
+
+    # --- ABA 4: METAS ---
+    with tab_metas:
+        st.subheader("🎯 Minhas Metas")
+        with st.form("form_metas"):
+            nm = st.text_input("Objetivo")
+            vm = st.number_input("Valor Alvo")
+            if st.form_submit_button("Salvar Meta"):
+                ws_metas.append_row([nm, vm, "Ativo"])
+                st.rerun()
+        st.table(pd.DataFrame(ws_metas.get_all_records()))
+
+    # --- ABA 5: RELATÓRIOS ---
+    with tab_relat:
+        st.header("📈 Relatórios de Gastos")
+        if dados_g:
+            df = pd.DataFrame(dados_g)
+            df.columns = [c.strip() for c in df.columns]
             
-            with c2:
-                # Tabela de Conferência
-                st.write("📋 Resumo da Fatura")
-                st.dataframe(resumo_cartoes, hide_index=True, use_container_width=True)
-                
-                total_mes = resumo_cartoes['Valor'].sum()
-                st.metric("Total Geral em Cartões", f"R$ {total_mes:,.2f}")
+            # Limpeza de Dados
+            df['Data'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
+            df = df.dropna(subset=['Data'])
+            df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
+            df['Mes_Ano'] = df['Data'].dt.strftime('%m/%Y')
+
+            # Gráfico 1: Visão Geral
+            col_pag = 'Pagamento' if 'Pagamento' in df.columns else 'Forma'
+            st.subheader("Gasto Mensal por Tipo")
+            df_m = df.groupby(['Mes_Ano', col_pag])['Valor'].sum().reset_index()
+            st.plotly_chart(px.bar(df_m, x='Mes_Ano', y='Valor', color=col_pag, barmode='stack'), use_container_width=True)
+
+            st.markdown("---")
+
+            # Gráfico 2: Detalhamento de Cartões (Mês Atual)
+            st.header("💳 Gastos por Cartão (Crédito)")
+            mes_atual = datetime.now().month
+            ano_atual = datetime.now().year
+            
+            df_cartoes = df[
+                (df['Data'].dt.month == mes_atual) & 
+                (df['Data'].dt.year == ano_atual) & 
+                (df[col_pag] == 'Crédito')
+            ]
+            
+            if not df_cartoes.empty:
+                resumo_c = df_cartoes.groupby('Banco')['Valor'].sum().reset_index()
+                c1, c2 = st.columns([2, 1])
+                with c1:
+                    fig_c = px.bar(resumo_c, x='Banco', y='Valor', title=f"Faturas de {datetime.now().strftime('%m/%Y')}", color='Banco')
+                    st.plotly_chart(fig_c, use_container_width=True)
+                with c2:
+                    st.write("📋 Resumo da Fatura")
+                    st.dataframe(resumo_c, hide_index=True)
+                    st.metric("Total em Cartão", f"R$ {resumo_c['Valor'].sum():,.2f}")
+            else:
+                st.info("Lance gastos como 'Crédito' para ver o detalhamento por cartão.")
         else:
-            st.warning("Nenhum gasto no Crédito encontrado para o mês atual.")
+            st.info("Lance dados para ver os relatórios.")
+
+except Exception as e:
+    st.error(f"Erro no sistema: {e}")
