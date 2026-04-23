@@ -80,10 +80,9 @@ try:
             
             cat = st.selectbox("Categoria", ["Alimentação", "Transporte", "Casa", "Lazer", "Saúde", "Educação", "Outros"])
             
-            # --- NOVOS CAMPOS ADICIONADOS AQUI ---
-            beneficiario = st.text_input("Beneficiário", placeholder="Ex: Supermercado, Posto...")
+            # CAMPOS SOLICITADOS
+            beneficiario = st.text_input("Beneficiário", placeholder="Para quem foi o pagamento?")
             centro_custo = st.selectbox("Centro de Custo", ["Pessoal", "Família", "Trabalho", "Investimentos"])
-            # -------------------------------------
 
             banco = st.selectbox("Banco Origem", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
             forma = st.selectbox("Forma de Pagamento", ["Cartão de Crédito", "Débito", "Pix", "Dinheiro"])
@@ -95,10 +94,10 @@ try:
                     data_str = data_p.strftime('%d/%m/%Y')
                     desc = f"{cat} ({i+1}/{parcelas})" if parcelas > 1 else cat
                     
-                    # AGORA SALVANDO COM OS NOVOS CAMPOS (7 COLUNAS)
+                    # SALVANDO TODAS AS 7 COLUNAS
                     ws.append_row([data_str, round(valor_parcela, 2), desc, banco, forma, beneficiario, centro_custo])
                 
-                st.success(f"Registrado: {parcelas}x de R$ {valor_parcela:.2f}")
+                st.success(f"Registrado com sucesso!")
                 st.rerun()
 
         with col_hist:
@@ -106,40 +105,38 @@ try:
             dados = ws.get_all_records()
             if dados:
                 df = pd.DataFrame(dados)
+                # Normaliza os nomes das colunas para exibição
                 df.columns = [c.strip().capitalize() for c in df.columns]
+                
                 if 'Valor' in df.columns:
                     df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
+                    # Exibe o histórico (as últimas 10 linhas da planilha)
                     st.dataframe(df.tail(10).style.format({"Valor": "R$ {:.2f}"}), use_container_width=True)
                 else:
                     st.warning("Coluna 'Valor' não encontrada na planilha.")
             else:
                 st.info("Nenhum dado encontrado.")
 
-    # As outras abas permanecem exatamente iguais para manter a estabilidade
+    # --- ABA 2: BANCOS ---
     with tab_bancos:
-        st.subheader("🏦 Gestão de Contas Bancárias")
-        if 'df' in locals():
-            resumo_bancos = df.groupby('Banco')['Valor'].sum().reset_index()
-            st.table(resumo_bancos.style.format({"Valor": "R$ {:.2f}"}))
+        st.subheader("🏦 Resumo por Banco")
+        if 'df' in locals() and not df.empty:
+            # Verifica se as colunas necessárias existem para evitar erro
+            if 'Banco' in df.columns and 'Valor' in df.columns:
+                resumo_bancos = df.groupby('Banco')['Valor'].sum().reset_index()
+                st.table(resumo_bancos.style.format({"Valor": "R$ {:.2f}"}))
         else:
-            st.info("Lance dados para ver o resumo por banco.")
+            st.info("Lance dados para ver o resumo.")
 
     with tab_cartoes:
         st.subheader("💳 Faturas e Limites")
-        st.info("Em breve: Integração de limites e vencimento de faturas.")
-        col_c1, col_c2 = st.columns(2)
-        col_c1.metric("Fatura Nubank (Prox)", "R$ 1.250,00", delta="R$ 150,00")
-        col_c2.metric("Limite Disponível", "R$ 5.000,00")
+        st.info("Espaço reservado para o controle de cartões.")
 
     with tab_metas:
-        st.subheader("🎯 Minhas Metas Financeiras")
-        meta_nome = "Reserva de Emergência"
-        meta_valor = 10000.00
-        saldo_atual = df['Valor'].sum() if 'df' in locals() else 0
-        progresso = min(saldo_atual / meta_valor, 1.0)
-        st.write(f"**Meta:** {meta_nome}")
-        st.progress(progresso)
-        st.write(f"Você já atingiu {progresso*100:.1f}% da sua meta de R$ {meta_valor:,.2f}")
+        st.subheader("🎯 Minhas Metas")
+        if 'df' in locals() and not df.empty:
+            saldo_total = df['Valor'].sum()
+            st.metric("Saldo Total Acumulado", f"R$ {saldo_total:,.2f}")
 
 except Exception as e:
     st.error(f"Erro no sistema: {e}")
