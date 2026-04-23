@@ -8,7 +8,7 @@ from datetime import datetime
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (PK_LIST)
+# 2. CHAVE DE ACESSO (PK_LIST) - Use a sua chave aqui
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -40,7 +40,6 @@ PK_LIST = [
     "-----END PRIVATE KEY-----"
 ]
 
-@st.cache_resource
 def conectar():
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     info = {
@@ -52,92 +51,36 @@ def conectar():
     creds = Credentials.from_service_account_info(info, scopes=scope)
     return gspread.authorize(creds)
 
-@st.cache_data(ttl=10)
-def get_data_safe(spreadsheet_id, worksheet_name):
-    try:
-        client = conectar()
-        sh = client.open_by_key(spreadsheet_id)
-        all_ws = {w.title.lower().strip(): w for w in sh.worksheets()}
-        ws = all_ws.get(worksheet_name.lower().strip())
-        
-        if ws:
-            data = ws.get_all_records()
-            if not data: return pd.DataFrame()
-            df = pd.DataFrame(data)
-            df.columns = [str(c).strip().lower() for c in df.columns]
-            return df
-        return pd.DataFrame()
-    except Exception:
-        return pd.DataFrame()
-
 # --- INÍCIO DO APP ---
 try:
     SHEET_ID = "147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4"
-    sh = conectar().open_by_key(SHEET_ID)
+    client = conectar()
+    sh = client.open_by_key(SHEET_ID)
 
-    tab_lanc, tab_bancos, tab_cartoes, tab_metas, tab_relat = st.tabs([
-        "🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas", "📊 Relatórios"
-    ])
+    tab_lanc, tab_bancos, tab_relat = st.tabs(["🚀 Lançamentos", "🏦 Bancos", "📊 Relatórios"])
 
-    # 1. ABA LANÇAMENTOS
     with tab_lanc:
-        col_f, col_h = st.columns([1, 2])
-        with col_f:
-            st.subheader("📝 Novo Registro")
-            with st.form("form_registro", clear_on_submit=True):
-                tipo = st.selectbox("Tipo", ["Despesa", "Receita"])
-                data_reg = st.date_input("Data", datetime.now())
-                valor = st.number_input("Valor", min_value=0.0)
-                desc = st.text_input("Descrição")
-                
-                # BUSCA DE BANCOS (Linha Corrigida abaixo)
-                df_b_list = get_data_safe(SHEET_ID, "bancos")
-                col_banco = next((c for c in df_b_list.columns if 'nome' in c or 'banco' in c), "nome")
-                lista_bancos = df_b_list[col_banco].astype(str).tolist() if not df_b_list.empty else ["Dinheiro"]
-                
-                conta = st.selectbox("Qual Conta?", lista_bancos)
-                
-                if st.form_submit_button("Salvar"):
-                    sh.get_worksheet(0).append_row([data_reg.strftime('%d/%m/%Y'), valor, desc, str(conta), tipo])
-                    st.cache_data.clear()
-                    st.success("Lançado com sucesso!")
-                    st.rerun()
+        with st.form("form_simples"):
+            tipo = st.selectbox("Tipo", ["Despesa", "Receita"])
+            valor = st.number_input("Valor", min_value=0.0)
+            desc = st.text_input("Descrição")
+            if st.form_submit_button("Salvar"):
+                # Salva na primeira aba com data automática
+                sh.get_worksheet(0).append_row([datetime.now().strftime('%d/%m/%Y'), valor, desc, tipo])
+                st.success("Salvo com sucesso!")
 
-    # 2. ABA BANCOS
     with tab_bancos:
-        st.subheader("🏦 Suas Contas")
-        df_bancos = get_data_safe(SHEET_ID, "bancos")
-        if not df_bancos.empty:
-            st.dataframe(df_bancos, use_container_width=True)
-        else:
-            st.info("Aba 'bancos' não encontrada ou vazia.")
+        try:
+            df_bancos = pd.DataFrame(sh.worksheet("bancos").get_all_records())
+            st.dataframe(df_bancos)
+        except:
+            st.info("Crie uma aba chamada 'bancos' na sua planilha para ver os dados aqui.")
 
-    # 3. ABA METAS
-    with tab_metas:
-        st.subheader("🎯 Suas Metas")
-        df_metas = get_data_safe(SHEET_ID, "metas")
-        if not df_metas.empty:
-            col_nome = next((c for c in df_metas.columns if 'nome' in c or 'meta' in c), df_metas.columns[0])
-            col_alvo = next((c for c in df_metas.columns if 'alvo' in c or 'valor' in c), None)
-            
-            if col_alvo:
-                fig_m = px.bar(df_metas, x=col_nome, y=col_alvo, title="Objetivos")
-                st.plotly_chart(fig_m, use_container_width=True)
-            st.table(df_metas)
-        else:
-            st.info("Aba 'metas' vazia.")
-
-    # 4. ABA RELATÓRIOS
     with tab_relat:
-        st.subheader("📊 Resumo")
-        df_l = get_data_safe(SHEET_ID, sh.get_worksheet(0).title)
-        if not df_l.empty and 'tipo' in df_l.columns:
-            resumo = df_l.groupby('tipo')['valor'].sum().reset_index()
-            fig_pie = px.pie(resumo, values='valor', names='tipo', hole=.4, 
-                            color_discrete_map={'Receita':'#00CC96', 'Despesa':'#EF553B'})
-            st.plotly_chart(fig_pie, use_container_width=True)
-        else:
-            st.warning("Sem dados para o gráfico.")
+        df_l = pd.DataFrame(sh.get_worksheet(0).get_all_records())
+        if not df_l.empty:
+            fig = px.pie(df_l, values='valor', names='tipo', hole=.4)
+            st.plotly_chart(fig)
 
 except Exception as e:
-    st.error("Erro detectado: " + str(e))
+    st.error(f"Erro no sistema: {str(e)}")
