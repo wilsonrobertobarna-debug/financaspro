@@ -61,7 +61,8 @@ def get_data_safe(spreadsheet_id, worksheet_name):
     raw_data = ws.get_all_records()
     if not raw_data: return pd.DataFrame()
     df = pd.DataFrame(raw_data)
-    df.columns = [str(c).strip().title() for c in df.columns]
+    # Limpeza de nomes de colunas
+    df.columns = [str(c).strip() for c in df.columns]
     return df
 
 def limpar_cache():
@@ -87,29 +88,31 @@ try:
                 ds_l = st.text_input("Descrição")
                 
                 df_b = get_data_safe(SHEET_ID, "bancos")
-                bancos = df_b['Nome'].tolist() if not df_b.empty else ["Dinheiro"]
-                origem = st.selectbox("Conta", bancos)
+                # Tenta achar a coluna do nome do banco
+                col_banco = next((c for c in df_b.columns if 'Nome' in c or 'Banco' in c), df_b.columns[0] if not df_b.empty else 'Nome')
+                bancos = df_b[col_banco].tolist() if not df_b.empty else ["Dinheiro"]
                 
+                origem = st.selectbox("Conta", bancos)
                 if st.form_submit_button("🚀 Salvar"):
                     ws_g = sh.get_worksheet(0)
                     ws_g.append_row([dt_l.strftime('%d/%m/%Y'), vl_l, ds_l, origem, tipo])
                     limpar_cache()
-                    st.success("Salvo com sucesso!")
+                    st.success("Salvo!")
                     st.rerun()
 
         with col_h:
-            st.subheader("📋 Histórico Recente")
+            st.subheader("📋 Histórico")
             df_hist = get_data_safe(SHEET_ID, sh.get_worksheet(0).title)
             if not df_hist.empty:
                 st.dataframe(df_hist.tail(15), use_container_width=True)
 
-    # --- ABA 4: METAS (Gráfico de Barras) ---
+    # --- ABA 4: METAS (Correção do Erro de Coluna) ---
     with tab_metas:
         st.subheader("🎯 Metas Financeiras")
         with st.form("f_meta"):
-            obj = st.text_input("Objetivo (Ex: Viagem)")
-            alvo = st.number_input("Quanto você quer juntar?", min_value=0.0)
-            atual = st.number_input("Quanto já tem guardado?", min_value=0.0)
+            obj = st.text_input("Nome Da Meta")
+            alvo = st.number_input("Valor Alvo", min_value=0.0)
+            atual = st.number_input("Valor Já Guardado", min_value=0.0)
             if st.form_submit_button("Salvar Meta"):
                 sh.worksheet("metas").append_row([obj, alvo, atual])
                 limpar_cache()
@@ -117,40 +120,44 @@ try:
         
         df_m = get_data_safe(SHEET_ID, "metas")
         if not df_m.empty:
-            # Gráfico de Barras para Metas
-            fig_meta = px.bar(df_m, x='Objetivo', y=['Atual', 'Alvo'], 
-                              barmode='group', title="Progresso das Metas (Atual vs Alvo)",
-                              color_discrete_sequence=['#00CC96', '#636EFA'])
-            st.plotly_chart(fig_meta, use_container_width=True)
+            # Lógica para detectar qual coluna é o nome da meta
+            col_x = next((c for c in df_m.columns if 'Nome' in c or 'Objetivo' in c or 'Meta' in c), df_m.columns[0])
+            col_y_alvo = next((c for c in df_m.columns if 'Alvo' in c or 'Total' in c), None)
+            col_y_atual = next((c for c in df_m.columns if 'Atual' in c or 'Guardado' in c), None)
+
+            if col_y_alvo and col_y_atual:
+                fig_meta = px.bar(df_m, x=col_x, y=[col_y_atual, col_y_alvo], 
+                                  barmode='group', title="Progresso das Metas",
+                                  labels={col_x: "Meta", "value": "Valor", "variable": "Tipo"})
+                st.plotly_chart(fig_meta, use_container_width=True)
+            
             st.table(df_m)
 
-    # --- ABA 5: RELATÓRIOS (Gráfico de Barras Mes a Mes) ---
+    # --- ABA 5: RELATÓRIOS (Barras Receitas vs Despesas) ---
     with tab_relat:
         st.header("📊 Comparativo Mensal")
         df_rel = get_data_safe(SHEET_ID, sh.get_worksheet(0).title)
         
-        if not df_rel.empty and 'Tipo' in df_rel.columns:
-            # Tratamento de dados
-            df_rel['Data'] = pd.to_datetime(df_rel['Data'], dayfirst=True, errors='coerce')
-            df_rel = df_rel.dropna(subset=['Data'])
-            df_rel['Mes'] = df_rel['Data'].dt.strftime('%Y-%m')
-            df_rel['Valor'] = pd.to_numeric(df_rel['Valor'], errors='coerce').fillna(0)
+        if not df_rel.empty:
+            # Padroniza colunas para evitar erros de nomes
+            col_data = next((c for c in df_rel.columns if 'Data' in c), None)
+            col_valor = next((c for c in df_rel.columns if 'Valor' in c), None)
+            col_tipo = next((c for c in df_rel.columns if 'Tipo' in c), None)
 
-            # Agrupamento para Gráfico de Barras
-            df_mes = df_rel.groupby(['Mes', 'Tipo'])['Valor'].sum().reset_index()
-            
-            fig_evol = px.bar(df_mes, x='Mes', y='Valor', color='Tipo', 
-                              barmode='group', title="Receitas vs Despesas por Mês",
-                              color_discrete_map={'Receita': '#00CC96', 'Despesa': '#EF553B'})
-            
-            st.plotly_chart(fig_evol, use_container_width=True)
-            
-            # Resumo em números
-            resumo = df_rel.groupby('Tipo')['Valor'].sum().reset_index()
-            st.write("### Total Geral")
-            st.table(resumo)
-        else:
-            st.warning("Adicione a coluna 'Tipo' na sua planilha e preencha com 'Receita' ou 'Despesa' para gerar o gráfico.")
+            if col_data and col_valor and col_tipo:
+                df_rel[col_data] = pd.to_datetime(df_rel[col_data], dayfirst=True, errors='coerce')
+                df_rel = df_rel.dropna(subset=[col_data])
+                df_rel['Mes'] = df_rel[col_data].dt.strftime('%Y-%m')
+                df_rel[col_valor] = pd.to_numeric(df_rel[col_valor], errors='coerce').fillna(0)
+
+                df_mes = df_rel.groupby(['Mes', col_tipo])[col_valor].sum().reset_index()
+                
+                fig_evol = px.bar(df_mes, x='Mes', y=col_valor, color=col_tipo, 
+                                  barmode='group', title="Receitas vs Despesas por Mês",
+                                  color_discrete_map={'Receita': '#00CC96', 'Despesa': '#EF553B'})
+                st.plotly_chart(fig_evol, use_container_width=True)
+            else:
+                st.warning("Verifique se as colunas 'Data', 'Valor' e 'Tipo' existem na planilha principal.")
 
 except Exception as e:
-    st.error(f"Ocorreu um erro: {e}")
+    st.error(f"Erro detectado: {e}")
