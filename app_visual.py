@@ -53,24 +53,29 @@ def conectar():
     creds = Credentials.from_service_account_info(info, scopes=scope)
     return gspread.authorize(creds)
 
-# 3. FUNÇÃO PARA LER DADOS COM LIMPEZA DE COLUNAS
-def get_data_safe(worksheet):
-    raw_data = worksheet.get_all_records()
+# 3. FUNÇÃO PARA LER DADOS COM CACHE (O segredo para evitar o erro 429)
+@st.cache_data(ttl=20) # Atualiza a cada 20 segundos se houver navegação
+def get_data_safe(spreadsheet_id, worksheet_name):
+    client = conectar()
+    sh = client.open_by_key(spreadsheet_id)
+    ws = sh.worksheet(worksheet_name)
+    raw_data = ws.get_all_records()
     if not raw_data:
         return pd.DataFrame()
     df = pd.DataFrame(raw_data)
-    # Remove espaços e padroniza para "Title Case"
     df.columns = [str(c).strip().title() for c in df.columns]
     return df
 
+# 4. FUNÇÃO PARA LIMPAR O CACHE APÓS UM SALVAMENTO
+def limpar_cache():
+    st.cache_data.clear()
+
 try:
+    SHEET_ID = "147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4"
     client = conectar()
-    sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-    
-    ws_gastos = sh.get_worksheet(0)
-    ws_bancos = sh.worksheet("bancos")
-    ws_cartoes = sh.worksheet("cartoes")
-    ws_metas = sh.worksheet("metas")
+    sh = client.open_by_key(SHEET_ID)
+
+    st.title("💼 FinançasPro Wilson")
 
     tab_lanc, tab_bancos, tab_cartoes, tab_metas, tab_relat = st.tabs([
         "🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas", "📊 Relatórios"
@@ -86,11 +91,11 @@ try:
                 vl_l = st.number_input("Valor", min_value=0.0)
                 ds_l = st.text_input("Descrição")
                 
-                df_b_list = get_data_safe(ws_bancos)
-                df_c_list = get_data_safe(ws_cartoes)
+                df_b = get_data_safe(SHEET_ID, "bancos")
+                df_c = get_data_safe(SHEET_ID, "cartoes")
                 
-                bancos = df_b_list['Nome'].tolist() if not df_b_list.empty else ["Dinheiro"]
-                cartoes = df_c_list['Nome'].tolist() if not df_c_list.empty else []
+                bancos = df_b['Nome'].tolist() if not df_b.empty else ["Dinheiro"]
+                cartoes = df_c['Nome'].tolist() if not df_c.empty else []
                 
                 origem = st.selectbox("Conta/Cartão", bancos + cartoes)
                 forma = st.selectbox("Forma", ["Pix", "Crédito", "Débito", "Dinheiro"])
@@ -98,89 +103,103 @@ try:
                 
                 if st.form_submit_button("🚀 Salvar"):
                     v_unit = vl_l / parc
+                    ws_g = sh.get_worksheet(0)
                     for i in range(parc):
                         data_parc = (dt_l + relativedelta(months=i)).strftime('%d/%m/%Y')
-                        ws_gastos.append_row([data_parc, round(v_unit, 2), f"{ds_l} ({i+1}/{parc})", origem, forma])
+                        ws_g.append_row([data_parc, round(v_unit, 2), f"{ds_l} ({i+1}/{parc})", origem, forma])
+                    limpar_cache()
                     st.success("Lançado!")
                     st.rerun()
 
         with col_h:
             st.subheader("📋 Histórico")
-            df_g = get_data_safe(ws_gastos)
-            if not df_g.empty:
-                st.dataframe(df_g.tail(10), use_container_width=True)
+            df_hist = get_data_safe(SHEET_ID, sh.get_worksheet(0).title)
+            if not df_hist.empty:
+                st.dataframe(df_hist.tail(10), use_container_width=True)
 
     # --- ABA 2: BANCOS ---
     with tab_bancos:
-        st.subheader("🏦 Bancos")
+        st.subheader("🏦 Gestão de Contas")
         with st.form("f_banco"):
-            nb = st.text_input("Nome")
+            nb = st.text_input("Nome do Banco")
             sb = st.number_input("Saldo")
-            if st.form_submit_button("Salvar"):
-                ws_bancos.append_row([nb, sb])
+            if st.form_submit_button("Adicionar"):
+                sh.worksheet("bancos").append_row([nb, sb])
+                limpar_cache()
                 st.rerun()
-        df_b = get_data_safe(ws_bancos)
-        if not df_b.empty:
-            st.table(df_b)
-            idx_b = st.selectbox("Remover", range(len(df_b)), format_func=lambda x: df_b.iloc[x]['Nome'])
+        
+        df_b_view = get_data_safe(SHEET_ID, "bancos")
+        if not df_b_view.empty:
+            st.table(df_b_view)
+            idx_b = st.selectbox("Selecione para remover", range(len(df_b_view)), format_func=lambda x: df_b_view.iloc[x]['Nome'])
             if st.button("Remover Banco"):
-                ws_bancos.delete_rows(idx_b + 2)
+                sh.worksheet("bancos").delete_rows(idx_b + 2)
+                limpar_cache()
                 st.rerun()
 
     # --- ABA 3: CARTÕES ---
     with tab_cartoes:
         st.subheader("💳 Cartões")
         with st.form("f_cartao"):
-            nc = st.text_input("Nome")
+            nc = st.text_input("Nome do Cartão")
             lc = st.number_input("Limite")
-            fc = st.number_input("Fechamento", 1, 31, 5)
-            vc = st.number_input("Vencimento", 1, 31, 15)
+            fc = st.number_input("Dia Fechamento", 1, 31, 5)
+            vc = st.number_input("Dia Vencimento", 1, 31, 15)
             if st.form_submit_button("Cadastrar"):
-                ws_cartoes.append_row([nc, lc, fc, vc])
+                sh.worksheet("cartoes").append_row([nc, lc, fc, vc])
+                limpar_cache()
                 st.rerun()
-        df_c = get_data_safe(ws_cartoes)
-        if not df_c.empty:
-            st.table(df_c)
-            idx_c = st.selectbox("Remover Cartão", range(len(df_c)), format_func=lambda x: df_c.iloc[x]['Nome'])
+        
+        df_c_view = get_data_safe(SHEET_ID, "cartoes")
+        if not df_c_view.empty:
+            st.table(df_c_view)
+            idx_c = st.selectbox("Selecione para remover", range(len(df_c_view)), format_func=lambda x: df_c_view.iloc[x]['Nome'], key="del_c")
             if st.button("Remover Selecionado"):
-                ws_cartoes.delete_rows(idx_c + 2)
+                sh.worksheet("cartoes").delete_rows(idx_c + 2)
+                limpar_cache()
                 st.rerun()
 
     # --- ABA 4: METAS ---
     with tab_metas:
-        st.subheader("🎯 Metas")
+        st.subheader("🎯 Suas Metas")
         with st.form("f_meta"):
             obj = st.text_input("Objetivo")
-            alvo = st.number_input("Alvo")
-            if st.form_submit_button("Salvar"):
-                ws_metas.append_row([obj, alvo, "Ativo"])
+            alvo = st.number_input("Valor Alvo")
+            if st.form_submit_button("Salvar Meta"):
+                sh.worksheet("metas").append_row([obj, alvo, "Ativo"])
+                limpar_cache()
                 st.rerun()
-        df_m = get_data_safe(ws_metas)
-        if not df_m.empty:
-            st.table(df_m)
-            col_id = 'Objetivo' if 'Objetivo' in df_m.columns else df_m.columns[0]
-            idx_m = st.selectbox("Remover Meta", range(len(df_m)), format_func=lambda x: df_m.iloc[x][col_id])
-            if st.button("Excluir"):
-                ws_metas.delete_rows(idx_m + 2)
+        
+        df_m_view = get_data_safe(SHEET_ID, "metas")
+        if not df_m_view.empty:
+            st.table(df_m_view)
+            col_id = 'Objetivo' if 'Objetivo' in df_m_view.columns else df_m_view.columns[0]
+            idx_m = st.selectbox("Remover", range(len(df_m_view)), format_func=lambda x: df_m_view.iloc[x][col_id])
+            if st.button("Excluir Meta"):
+                sh.worksheet("metas").delete_rows(idx_m + 2)
+                limpar_cache()
                 st.rerun()
 
     # --- ABA 5: RELATÓRIOS ---
     with tab_relat:
-        st.header("📊 Painel")
-        df_r = get_data_safe(ws_gastos)
-        if not df_r.empty:
-            df_r['Data'] = pd.to_datetime(df_r['Data'], dayfirst=True, errors='coerce')
-            df_r = df_r.dropna(subset=['Data'])
-            df_r['Valor'] = pd.to_numeric(df_r['Valor']).fillna(0)
+        st.header("📊 Painel Financeiro")
+        df_rel = get_data_safe(SHEET_ID, sh.get_worksheet(0).title)
+        if not df_rel.empty:
+            df_rel['Data'] = pd.to_datetime(df_rel['Data'], dayfirst=True, errors='coerce')
+            df_rel['Valor'] = pd.to_numeric(df_rel['Valor'], errors='coerce').fillna(0)
             
             c1, c2 = st.columns(2)
             with c1:
-                st.plotly_chart(px.pie(df_r, values='Valor', names='Forma', title="Formas de Pagamento"), use_container_width=True)
+                st.plotly_chart(px.pie(df_rel, values='Valor', names='Forma', title="Gastos por Pagamento"), use_container_width=True)
             with c2:
-                df_mes = df_r.groupby(df_r['Data'].dt.strftime('%m/%Y'))['Valor'].sum().reset_index()
-                st.plotly_chart(px.bar(df_mes, x='Data', y='Valor', title="Gastos Mensais"), use_container_width=True)
+                df_m = df_rel.groupby(df_rel['Data'].dt.strftime('%m/%Y'))['Valor'].sum().reset_index()
+                st.plotly_chart(px.bar(df_m, x='Data', y='Valor', title="Total por Mês"), use_container_width=True)
         else:
-            st.info("Sem dados para gráficos.")
+            st.info("Sem dados para análise.")
 
 except Exception as e:
-    st.error(f"Erro no sistema: {e}")
+    # Se o erro for de cota, mostra uma mensagem amigável
+    if "429" in str(e):
+        st.error("🛑 Limite de leitura do Google atingido. Por favor, aguarde 60 segundos e recarregue a página.")
+    else:
+        st.error(f"Erro inesperado: {e}")
