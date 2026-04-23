@@ -2,7 +2,7 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
 # 1. CONFIGURAÇÃO DA PÁGINA
@@ -54,66 +54,89 @@ def conectar_google():
     creds = Credentials.from_service_account_info(creds_info, scopes=scope)
     return gspread.authorize(creds)
 
-# 3. EXECUÇÃO
+# 3. LÓGICA PRINCIPAL
 try:
     client = conectar_google()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws = sh.get_worksheet(0)
     
-    st.title("💰 FinançasPro - Wilson (Parcelamentos)")
+    st.title("💼 FinançasPro Wilson - Desktop")
+    
+    # CRIANDO AS ABAS NO TOPO
+    tab_lanc, tab_bancos, tab_cartoes, tab_metas = st.tabs([
+        "🚀 Lançamentos", 
+        "🏦 Bancos", 
+        "💳 Cartões", 
+        "🎯 Metas"
+    ])
 
-    with st.sidebar:
-        st.header("📝 Novo Registro")
-        data_sel = st.date_input("Data da 1ª Parcela", datetime.now())
-        valor_total = st.number_input("Valor Total (R$)", min_value=0.0, step=1.0)
+    # --- ABA 1: LANÇAMENTOS ---
+    with tab_lanc:
+        col_form, col_hist = st.columns([1, 2])
         
-        # --- NOVO CAMPO DE PARCELAS ---
-        parcelas = st.number_input("Quantidade de Parcelas", min_value=1, max_value=48, value=1)
-        
-        cat = st.selectbox("Categoria", ["Alimentação", "Transporte", "Casa", "Lazer", "Saúde", "Educação", "Outros"])
-        banco = st.selectbox("Banco/Cartão", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
-        forma = st.selectbox("Forma", ["Cartão de Crédito", "Débito", "Pix", "Dinheiro"])
-        
-        if st.button("🚀 Salvar Lançamento"):
-            valor_parcela = valor_total / parcelas
+        with col_form:
+            st.subheader("📝 Novo Registro")
+            data_sel = st.date_input("Data da 1ª Parcela", datetime.now(), key="dt_lanc")
+            valor_total = st.number_input("Valor Total (R$)", min_value=0.0, step=10.0, format="%.2f")
+            parcelas = st.number_input("Nº de Parcelas", min_value=1, max_value=48, value=1)
             
-            # Loop para gerar cada parcela
-            for i in range(parcelas):
-                # Calcula a data somando os meses
-                data_parcela = data_sel + relativedelta(months=i)
-                data_str = data_parcela.strftime('%d/%m/%Y')
-                
-                # Identifica a parcela no texto (ex: 1/3, 2/3...)
-                obs = f"{cat} ({i+1}/{parcelas})" if parcelas > 1 else cat
-                
-                # Envia para a planilha
-                ws.append_row([data_str, round(valor_parcela, 2), obs, banco, forma])
+            cat = st.selectbox("Categoria", ["Alimentação", "Transporte", "Casa", "Lazer", "Saúde", "Educação", "Outros"])
+            banco = st.selectbox("Banco Origem", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
+            forma = st.selectbox("Forma de Pagamento", ["Cartão de Crédito", "Débito", "Pix", "Dinheiro"])
             
-            st.success(f"Registradas {parcelas} parcelas com sucesso!")
-            st.rerun()
+            if st.button("🚀 Salvar no Sistema", use_container_width=True):
+                valor_parcela = valor_total / parcelas
+                for i in range(parcelas):
+                    data_p = data_sel + relativedelta(months=i)
+                    data_str = data_p.strftime('%d/%m/%Y')
+                    desc = f"{cat} ({i+1}/{parcelas})" if parcelas > 1 else cat
+                    ws.append_row([data_str, round(valor_parcela, 2), desc, banco, forma])
+                st.success(f"Registrado: {parcelas}x de R$ {valor_parcela:.2f}")
+                st.rerun()
 
-    # VISUALIZAÇÃO
-    dados = ws.get_all_records()
-    if dados:
-        df = pd.DataFrame(dados)
-        df.columns = [c.strip().capitalize() for c in df.columns]
+        with col_hist:
+            st.subheader("📊 Últimos Movimentos")
+            dados = ws.get_all_records()
+            if dados:
+                df = pd.DataFrame(dados)
+                df.columns = [c.strip().capitalize() for c in df.columns]
+                if 'Valor' in df.columns:
+                    df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
+                    st.dataframe(df.tail(10).style.format({"Valor": "R$ {:.2f}"}), use_container_width=True)
+                else:
+                    st.warning("Coluna 'Valor' não encontrada na planilha.")
+            else:
+                st.info("Nenhum dado encontrado.")
+
+    # --- ABA 2: BANCOS ---
+    with tab_bancos:
+        st.subheader("🏦 Gestão de Contas Bancárias")
+        if 'df' in locals():
+            resumo_bancos = df.groupby('Banco')['Valor'].sum().reset_index()
+            st.table(resumo_bancos.style.format({"Valor": "R$ {:.2f}"}))
+        else:
+            st.info("Lance dados para ver o resumo por banco.")
+
+    # --- ABA 3: CARTÕES ---
+    with tab_cartoes:
+        st.subheader("💳 Faturas e Limites")
+        st.info("Em breve: Integração de limites e vencimento de faturas.")
+        # Exemplo visual
+        col_c1, col_c2 = st.columns(2)
+        col_c1.metric("Fatura Nubank (Prox)", "R$ 1.250,00", delta="R$ 150,00")
+        col_c2.metric("Limite Disponível", "R$ 5.000,00")
+
+    # --- ABA 4: METAS ---
+    with tab_metas:
+        st.subheader("🎯 Minhas Metas Financeiras")
+        meta_nome = "Reserva de Emergência"
+        meta_valor = 10000.00
+        saldo_atual = df['Valor'].sum() if 'df' in locals() else 0
         
-        if 'Valor' in df.columns:
-            df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
-            
-            # Métrica apenas do mês atual
-            mes_atual = datetime.now().strftime('%m/%Y')
-            df_mes = df[df['Data'].str.contains(mes_atual, na=False)]
-            
-            col1, col2 = st.columns(2)
-            col1.metric("Total Geral", f"R$ {df['Valor'].sum():,.2f}")
-            col2.metric(f"Total em {mes_atual}", f"R$ {df_mes['Valor'].sum():,.2f}")
-        
-        st.divider()
-        st.subheader("📊 Histórico de Transações")
-        st.dataframe(df, use_container_width=True, hide_index=True)
-    else:
-        st.info("Planilha vazia.")
+        progresso = min(saldo_atual / meta_valor, 1.0)
+        st.write(f"**Meta:** {meta_nome}")
+        st.progress(progresso)
+        st.write(f"Você já atingiu {progresso*100:.1f}% da sua meta de R$ {meta_valor:,.2f}")
 
 except Exception as e:
-    st.error(f"Erro: {e}")
+    st.error(f"Erro no sistema: {e}")
