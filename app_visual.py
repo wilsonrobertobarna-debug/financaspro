@@ -8,7 +8,7 @@ from dateutil.relativedelta import relativedelta
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Sua chave funcional)
+# 2. CHAVE DE ACESSO
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -41,102 +41,89 @@ PK_LIST = [
 ]
 
 @st.cache_resource
-def conectar_google():
+def conectar():
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    private_key = "\n".join(PK_LIST)
-    creds_info = {
-        "type": "service_account",
-        "project_id": "financaspro-wilson",
+    creds = Credentials.from_service_account_info({
+        "type": "service_account", "project_id": "financaspro-wilson",
         "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "private_key": private_key
-    }
-    creds = Credentials.from_service_account_info(creds_info, scopes=scope)
+        "token_uri": "https://oauth2.googleapis.com/token", "private_key": "\n".join(PK_LIST)
+    }, scopes=scope)
     return gspread.authorize(creds)
 
-# 3. LÓGICA PRINCIPAL
 try:
-    client = conectar_google()
+    client = conectar()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-    ws = sh.get_worksheet(0)
     
-    st.title("💼 FinançasPro Wilson - Desktop")
-    
-    # CRIANDO AS ABAS NO TOPO
-    tab_lanc, tab_bancos, tab_cartoes, tab_metas = st.tabs([
-        "🚀 Lançamentos", 
-        "🏦 Bancos", 
-        "💳 Cartões", 
-        "🎯 Metas"
-    ])
+    # Conectando as abas
+    ws_gastos = sh.get_worksheet(0)
+    ws_bancos = sh.worksheet("Bancos")
+    ws_cartoes = sh.worksheet("Cartoes")
+    ws_metas = sh.worksheet("Metas")
+
+    tab_lanc, tab_bancos, tab_cartoes, tab_metas = st.tabs(["🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas"])
 
     # --- ABA 1: LANÇAMENTOS ---
     with tab_lanc:
-        col_form, col_hist = st.columns([1, 2])
-        
-        with col_form:
-            st.subheader("📝 Novo Registro")
-            data_sel = st.date_input("Data da 1ª Parcela", datetime.now(), key="dt_lanc")
-            valor_total = st.number_input("Valor Total (R$)", min_value=0.0, step=10.0, format="%.2f")
-            parcelas = st.number_input("Nº de Parcelas", min_value=1, max_value=48, value=1)
+        col_f, col_h = st.columns([1, 2])
+        with col_f:
+            st.subheader("📝 Novo Gasto")
+            data_sel = st.date_input("Data", datetime.now())
+            valor = st.number_input("Valor Total", min_value=0.0)
+            parc = st.number_input("Parcelas", min_value=1, value=1)
             
-            cat = st.selectbox("Categoria", ["Alimentação", "Transporte", "Casa", "Lazer", "Saúde", "Educação", "Outros"])
-            banco = st.selectbox("Banco Origem", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
-            forma = st.selectbox("Forma de Pagamento", ["Cartão de Crédito", "Débito", "Pix", "Dinheiro"])
+            # Puxa bancos cadastrados na aba Bancos
+            lista_bancos = [r['Nome do Banco'] for r in ws_bancos.get_all_records()] or ["Dinheiro"]
+            banco = st.selectbox("Banco", lista_bancos)
             
-            if st.button("🚀 Salvar no Sistema", use_container_width=True):
-                valor_parcela = valor_total / parcelas
-                for i in range(parcelas):
-                    data_p = data_sel + relativedelta(months=i)
-                    data_str = data_p.strftime('%d/%m/%Y')
-                    desc = f"{cat} ({i+1}/{parcelas})" if parcelas > 1 else cat
-                    ws.append_row([data_str, round(valor_parcela, 2), desc, banco, forma])
-                st.success(f"Registrado: {parcelas}x de R$ {valor_parcela:.2f}")
+            forma = st.selectbox("Forma", ["Crédito", "Débito", "Pix"])
+            if st.button("Salvar Gasto"):
+                v_p = valor / parc
+                for i in range(parc):
+                    dt = (data_sel + relativedelta(months=i)).strftime('%d/%m/%Y')
+                    ws_gastos.append_row([dt, round(v_p, 2), f"Gasto ({i+1}/{parc})", banco, forma])
+                st.success("Salvo!")
                 st.rerun()
-
-        with col_hist:
-            st.subheader("📊 Últimos Movimentos")
-            dados = ws.get_all_records()
-            if dados:
-                df = pd.DataFrame(dados)
-                df.columns = [c.strip().capitalize() for c in df.columns]
-                if 'Valor' in df.columns:
-                    df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
-                    st.dataframe(df.tail(10).style.format({"Valor": "R$ {:.2f}"}), use_container_width=True)
-                else:
-                    st.warning("Coluna 'Valor' não encontrada na planilha.")
-            else:
-                st.info("Nenhum dado encontrado.")
 
     # --- ABA 2: BANCOS ---
     with tab_bancos:
-        st.subheader("🏦 Gestão de Contas Bancárias")
-        if 'df' in locals():
-            resumo_bancos = df.groupby('Banco')['Valor'].sum().reset_index()
-            st.table(resumo_bancos.style.format({"Valor": "R$ {:.2f}"}))
-        else:
-            st.info("Lance dados para ver o resumo por banco.")
+        st.subheader("🏦 Cadastrar Novo Banco")
+        with st.form("form_banco"):
+            nome_b = st.text_input("Nome do Banco")
+            saldo = st.number_input("Saldo Inicial")
+            if st.form_submit_button("Cadastrar Banco"):
+                ws_bancos.append_row([nome_b, saldo, "Corrente"])
+                st.success("Banco Cadastrado!")
+                st.rerun()
+        st.write("### Meus Bancos")
+        st.table(pd.DataFrame(ws_bancos.get_all_records()))
 
     # --- ABA 3: CARTÕES ---
     with tab_cartoes:
-        st.subheader("💳 Faturas e Limites")
-        st.info("Em breve: Integração de limites e vencimento de faturas.")
-        # Exemplo visual
-        col_c1, col_c2 = st.columns(2)
-        col_c1.metric("Fatura Nubank (Prox)", "R$ 1.250,00", delta="R$ 150,00")
-        col_c2.metric("Limite Disponível", "R$ 5.000,00")
+        st.subheader("💳 Cadastrar Cartão")
+        with st.form("form_cartao"):
+            nome_c = st.text_input("Nome do Cartão")
+            limite = st.number_input("Limite")
+            venc = st.number_input("Dia de Vencimento", 1, 31)
+            fech = st.number_input("Dia de Fechamento", 1, 31)
+            if st.form_submit_button("Salvar Cartão"):
+                ws_cartoes.append_row([nome_c, limite, venc, fech])
+                st.success("Cartão Salvo!")
+                st.rerun()
+        st.write("### Meus Cartões")
+        st.table(pd.DataFrame(ws_cartoes.get_all_records()))
 
     # --- ABA 4: METAS ---
     with tab_metas:
-        st.subheader("🎯 Minhas Metas Financeiras")
-        meta_nome = "Reserva de Emergência"
-        meta_valor = 10000.00
-        saldo_atual = df['Valor'].sum() if 'df' in locals() else 0
-        
-        progresso = min(saldo_atual / meta_valor, 1.0)
-        st.write(f"**Meta:** {meta_nome}")
-        st.progress(progresso)
-        st.write(f"Você já atingiu {progresso*100:.1f}% da sua meta de R$ {meta_valor:,.2f}")
+        st.subheader("🎯 Definir Meta")
+        with st.form("form_metas"):
+            n_meta = st.text_input("Nome da Meta")
+            v_alvo = st.number_input("Valor Alvo")
+            if st.form_submit_button("Salvar Meta"):
+                ws_metas.append_row([n_meta, v_alvo, "Aberto"])
+                st.success("Meta Salva!")
+                st.rerun()
+        st.write("### Minhas Metas")
+        st.table(pd.DataFrame(ws_metas.get_all_records()))
 
 except Exception as e:
-    st.error(f"Erro no sistema: {e}")
+    st.error(f"Erro: {e}. Verifique se as abas 'Bancos', 'Cartoes' e 'Metas' existem no Google Sheets.")
