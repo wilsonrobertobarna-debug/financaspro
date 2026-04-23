@@ -10,7 +10,7 @@ from dateutil.relativedelta import relativedelta
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="📊")
 
-# 2. CHAVE DE ACESSO (Sua PK funcional)
+# 2. CHAVE DE ACESSO
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -73,15 +73,19 @@ try:
             data_sel = st.date_input("Data da Compra", datetime.now())
             valor = st.number_input("Valor Total", min_value=0.0, step=10.0)
             parc = st.number_input("Parcelas", min_value=1, value=1)
+            
             bancos_data = ws_bancos.get_all_records()
             lista_bancos = [r['Nome do Banco'] for r in bancos_data] if bancos_data else ["Dinheiro"]
             banco_escolhido = st.selectbox("Onde pagou?", lista_bancos)
-            forma = st.selectbox("Como pagou?", ["Crédito", "Débito", "Pix", "Dinheiro"])
+            
+            # Aqui no formulário também mudei para "Pagamento" para combinar com a planilha
+            forma = st.selectbox("Forma de Pagamento", ["Crédito", "Débito", "Pix", "Dinheiro"])
             
             if st.button("🚀 Salvar Gasto", use_container_width=True):
                 valor_p = valor / parc
                 for i in range(parc):
                     dt = (data_sel + relativedelta(months=i)).strftime('%d/%m/%Y')
+                    # Salva na planilha usando o nome da coluna correto
                     ws_gastos.append_row([dt, round(valor_p, 2), f"Gasto ({i+1}/{parc})", banco_escolhido, forma])
                 st.success("Lançamento concluído!")
                 st.rerun()
@@ -106,55 +110,4 @@ try:
     with tab_cartoes:
         st.subheader("💳 Meus Cartões")
         with st.form("f_c"):
-            nc = st.text_input("Nome")
-            lim = st.number_input("Limite")
-            ven = st.number_input("Vencimento", 1, 31)
-            fec = st.number_input("Fechamento", 1, 31)
-            if st.form_submit_button("Salvar"):
-                ws_cartoes.append_row([nc, lim, ven, fec])
-                st.rerun()
-        st.table(pd.DataFrame(ws_cartoes.get_all_records()))
-
-    with tab_metas:
-        st.subheader("🎯 Minhas Metas")
-        with st.form("f_m"):
-            nm = st.text_input("Objetivo")
-            va = st.number_input("Valor")
-            if st.form_submit_button("Salvar"):
-                ws_metas.append_row([nm, va, "Ativo"])
-                st.rerun()
-        st.table(pd.DataFrame(ws_metas.get_all_records()))
-
-    # --- ABA 5: RELATÓRIOS (COM CORREÇÃO PARA DATA ISO) ---
-    with tab_relat:
-        st.header("📈 Relatórios")
-        if dados_g:
-            df = pd.DataFrame(dados_g)
-            
-            # CORREÇÃO DEFINITIVA: Converte qualquer formato e remove lixo
-            df['Data'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-            df = df.dropna(subset=['Data'])
-            
-            df['Mes_Ano'] = df['Data'].dt.strftime('%m/%Y')
-            df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.subheader("Gasto por Mês")
-                df_m = df.groupby(['Mes_Ano', 'Forma'])['Valor'].sum().reset_index()
-                st.plotly_chart(px.bar(df_m, x='Mes_Ano', y='Valor', color='Forma', barmode='stack'), use_container_width=True)
-            
-            with col2:
-                st.subheader("Meta Termômetro")
-                m_data = ws_metas.get_all_records()
-                if m_data:
-                    m_sel = st.selectbox("Selecione a Meta", [m['Nome da Meta'] for m in m_data])
-                    alvo = next(float(m['Valor Alvo']) for m in m_data if m['Nome da Meta'] == m_sel)
-                    atual = df['Valor'].sum() * 0.1 # Simulação 10% economia
-                    fig = go.Figure(go.Indicator(mode="gauge+number", value=atual, gauge={'axis': {'range': [0, alvo]}, 'bar': {'color': "green"}}))
-                    st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("Lance dados para ver gráficos.")
-
-except Exception as e:
-    st.error(f"Erro Crítico: {e}")
+            nc = st.
