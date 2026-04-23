@@ -8,7 +8,7 @@ from dateutil.relativedelta import relativedelta
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO
+# 2. CHAVE DE ACESSO (Sua chave funcional)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -54,12 +54,13 @@ try:
     client = conectar()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     
-    # Conectando as abas
+    # Conectando as abas (agora todas em minúsculo para facilitar)
     ws_gastos = sh.get_worksheet(0)
-    ws_bancos = sh.worksheet("Bancos")
-    ws_cartoes = sh.worksheet("Cartoes")
-    ws_metas = sh.worksheet("Metas")
+    ws_bancos = sh.worksheet("bancos")
+    ws_cartoes = sh.worksheet("cartoes")
+    ws_metas = sh.worksheet("metas")
 
+    st.title("💼 FinançasPro Wilson")
     tab_lanc, tab_bancos, tab_cartoes, tab_metas = st.tabs(["🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas"])
 
     # --- ABA 1: LANÇAMENTOS ---
@@ -67,63 +68,85 @@ try:
         col_f, col_h = st.columns([1, 2])
         with col_f:
             st.subheader("📝 Novo Gasto")
-            data_sel = st.date_input("Data", datetime.now())
-            valor = st.number_input("Valor Total", min_value=0.0)
+            data_sel = st.date_input("Data da Compra", datetime.now())
+            valor = st.number_input("Valor Total", min_value=0.0, step=10.0)
             parc = st.number_input("Parcelas", min_value=1, value=1)
             
-            # Puxa bancos cadastrados na aba Bancos
-            lista_bancos = [r['Nome do Banco'] for r in ws_bancos.get_all_records()] or ["Dinheiro"]
-            banco = st.selectbox("Banco", lista_bancos)
+            # Busca dinâmica: lê a aba 'bancos' para preencher as opções
+            bancos_data = ws_bancos.get_all_records()
+            lista_bancos = [r['Nome do Banco'] for r in bancos_data] if bancos_data else ["Dinheiro"]
+            banco_escolhido = st.selectbox("Onde pagou?", lista_bancos)
             
-            forma = st.selectbox("Forma", ["Crédito", "Débito", "Pix"])
-            if st.button("Salvar Gasto"):
-                v_p = valor / parc
+            forma = st.selectbox("Como pagou?", ["Crédito", "Débito", "Pix", "Dinheiro"])
+            
+            if st.button("🚀 Salvar Gasto", use_container_width=True):
+                valor_p = valor / parc
                 for i in range(parc):
                     dt = (data_sel + relativedelta(months=i)).strftime('%d/%m/%Y')
-                    ws_gastos.append_row([dt, round(v_p, 2), f"Gasto ({i+1}/{parc})", banco, forma])
-                st.success("Salvo!")
+                    desc = f"Gasto ({i+1}/{parc})" if parc > 1 else "Gasto Único"
+                    ws_gastos.append_row([dt, round(valor_p, 2), desc, banco_escolhido, forma])
+                st.success("Lançamento concluído com sucesso!")
                 st.rerun()
+
+        with col_h:
+            st.subheader("📊 Histórico Recente")
+            dados_g = ws_gastos.get_all_records()
+            if dados_g:
+                df_g = pd.DataFrame(dados_g)
+                st.dataframe(df_g.tail(15), use_container_width=True, hide_index=True)
+            else:
+                st.info("Nenhum gasto registrado ainda.")
 
     # --- ABA 2: BANCOS ---
     with tab_bancos:
-        st.subheader("🏦 Cadastrar Novo Banco")
-        with st.form("form_banco"):
-            nome_b = st.text_input("Nome do Banco")
-            saldo = st.number_input("Saldo Inicial")
-            if st.form_submit_button("Cadastrar Banco"):
-                ws_bancos.append_row([nome_b, saldo, "Corrente"])
-                st.success("Banco Cadastrado!")
+        st.subheader("🏦 Cadastro de Bancos")
+        with st.form("form_bancos"):
+            n_banco = st.text_input("Nome do Banco (ex: Itaú)")
+            s_inicial = st.number_input("Saldo Atual", step=100.0)
+            if st.form_submit_button("Cadastrar"):
+                ws_bancos.append_row([n_banco, s_inicial, "Corrente"])
+                st.success("Banco cadastrado!")
                 st.rerun()
-        st.write("### Meus Bancos")
-        st.table(pd.DataFrame(ws_bancos.get_all_records()))
+        
+        st.write("### Meus Bancos Cadastrados")
+        b_list = ws_bancos.get_all_records()
+        if b_list:
+            st.table(pd.DataFrame(b_list))
 
     # --- ABA 3: CARTÕES ---
     with tab_cartoes:
-        st.subheader("💳 Cadastrar Cartão")
+        st.subheader("💳 Meus Cartões")
         with st.form("form_cartao"):
-            nome_c = st.text_input("Nome do Cartão")
-            limite = st.number_input("Limite")
-            venc = st.number_input("Dia de Vencimento", 1, 31)
-            fech = st.number_input("Dia de Fechamento", 1, 31)
+            n_cartao = st.text_input("Nome do Cartão")
+            v_limite = st.number_input("Limite Total")
+            v_venc = st.number_input("Dia de Vencimento", 1, 31, 10)
+            v_fech = st.number_input("Dia de Fechamento", 1, 31, 3)
             if st.form_submit_button("Salvar Cartão"):
-                ws_cartoes.append_row([nome_c, limite, venc, fech])
-                st.success("Cartão Salvo!")
+                ws_cartoes.append_row([n_cartao, v_limite, v_venc, v_fech])
+                st.success("Cartão salvo!")
                 st.rerun()
-        st.write("### Meus Cartões")
-        st.table(pd.DataFrame(ws_cartoes.get_all_records()))
+        
+        st.write("### Cartões Ativos")
+        c_list = ws_cartoes.get_all_records()
+        if c_list:
+            st.table(pd.DataFrame(c_list))
 
     # --- ABA 4: METAS ---
     with tab_metas:
-        st.subheader("🎯 Definir Meta")
+        st.subheader("🎯 Metas de Economia")
         with st.form("form_metas"):
-            n_meta = st.text_input("Nome da Meta")
-            v_alvo = st.number_input("Valor Alvo")
-            if st.form_submit_button("Salvar Meta"):
-                ws_metas.append_row([n_meta, v_alvo, "Aberto"])
-                st.success("Meta Salva!")
+            meta_n = st.text_input("Objetivo (ex: Trocar Carro)")
+            meta_v = st.number_input("Valor Necessário")
+            if st.form_submit_button("Criar Meta"):
+                ws_metas.append_row([meta_n, meta_v, "Em andamento"])
+                st.success("Meta criada!")
                 st.rerun()
-        st.write("### Minhas Metas")
-        st.table(pd.DataFrame(ws_metas.get_all_records()))
+        
+        st.write("### Suas Metas")
+        m_list = ws_metas.get_all_records()
+        if m_list:
+            st.table(pd.DataFrame(m_list))
 
 except Exception as e:
-    st.error(f"Erro: {e}. Verifique se as abas 'Bancos', 'Cartoes' e 'Metas' existem no Google Sheets.")
+    st.error(f"Erro no sistema: {e}")
+    st.info("💡 Verifique se as abas 'bancos', 'cartoes' e 'metas' estão criadas exatamente com esses nomes em minúsculo.")
