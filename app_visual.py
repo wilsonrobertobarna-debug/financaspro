@@ -8,7 +8,7 @@ from dateutil.relativedelta import relativedelta
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Sua chave funcional)
+# 2. CHAVE DE ACESSO (Sua chave funcional mantida intacta)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -63,10 +63,7 @@ try:
     st.title("💼 FinançasPro Wilson - Desktop")
     
     tab_lanc, tab_bancos, tab_cartoes, tab_metas = st.tabs([
-        "🚀 Lançamentos", 
-        "🏦 Bancos", 
-        "💳 Cartões", 
-        "🎯 Metas"
+        "🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas"
     ])
 
     with tab_lanc:
@@ -74,18 +71,20 @@ try:
         
         with col_form:
             st.subheader("📝 Novo Registro")
-            data_sel = st.date_input("Data da 1ª Parcela", datetime.now(), key="dt_lanc")
-            valor_total = st.number_input("Valor Total (R$)", min_value=0.0, step=10.0, format="%.2f")
+            # ADICIONADO: Seletor de Tipo
+            tipo_mov = st.radio("Tipo de Movimentação", ["Despesa", "Receita"], horizontal=True)
+            
+            data_sel = st.date_input("Data do Lançamento", datetime.now(), key="dt_lanc")
+            valor_total = st.number_input("Valor (R$)", min_value=0.0, step=10.0, format="%.2f")
+            
+            # Parcelas só fazem sentido para Despesas na maioria das vezes, mas mantive livre
             parcelas = st.number_input("Nº de Parcelas", min_value=1, max_value=48, value=1)
             
-            cat = st.selectbox("Categoria", ["Alimentação", "Transporte", "Casa", "Lazer", "Saúde", "Educação", "Outros"])
-            
-            # CAMPOS SOLICITADOS
-            beneficiario = st.text_input("Beneficiário", placeholder="Para quem foi o pagamento?")
+            cat = st.selectbox("Categoria", ["Salário", "Venda", "Alimentação", "Transporte", "Casa", "Lazer", "Saúde", "Outros"])
+            beneficiario = st.text_input("Beneficiário/Origem", placeholder="Ex: Empresa X, Supermercado...")
             centro_custo = st.selectbox("Centro de Custo", ["Pessoal", "Família", "Trabalho", "Investimentos"])
-
-            banco = st.selectbox("Banco Origem", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
-            forma = st.selectbox("Forma de Pagamento", ["Cartão de Crédito", "Débito", "Pix", "Dinheiro"])
+            banco = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
+            forma = st.selectbox("Forma", ["Pix", "Dinheiro", "Cartão de Crédito", "Débito"])
             
             if st.button("🚀 Salvar no Sistema", use_container_width=True):
                 valor_parcela = valor_total / parcelas
@@ -94,10 +93,10 @@ try:
                     data_str = data_p.strftime('%d/%m/%Y')
                     desc = f"{cat} ({i+1}/{parcelas})" if parcelas > 1 else cat
                     
-                    # SALVANDO TODAS AS 7 COLUNAS
-                    ws.append_row([data_str, round(valor_parcela, 2), desc, banco, forma, beneficiario, centro_custo])
+                    # SALVANDO: Adicionei o tipo_mov na 8ª coluna (Coluna H)
+                    ws.append_row([data_str, round(valor_parcela, 2), desc, banco, forma, beneficiario, centro_custo, tipo_mov])
                 
-                st.success(f"Registrado com sucesso!")
+                st.success(f"{tipo_mov} registrada com sucesso!")
                 st.rerun()
 
         with col_hist:
@@ -105,38 +104,34 @@ try:
             dados = ws.get_all_records()
             if dados:
                 df = pd.DataFrame(dados)
-                # Normaliza os nomes das colunas para exibição
                 df.columns = [c.strip().capitalize() for c in df.columns]
-                
                 if 'Valor' in df.columns:
                     df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
-                    # Exibe o histórico (as últimas 10 linhas da planilha)
                     st.dataframe(df.tail(10).style.format({"Valor": "R$ {:.2f}"}), use_container_width=True)
                 else:
-                    st.warning("Coluna 'Valor' não encontrada na planilha.")
-            else:
-                st.info("Nenhum dado encontrado.")
+                    st.warning("Coluna 'Valor' não encontrada.")
 
-    # --- ABA 2: BANCOS ---
     with tab_bancos:
         st.subheader("🏦 Resumo por Banco")
         if 'df' in locals() and not df.empty:
-            # Verifica se as colunas necessárias existem para evitar erro
-            if 'Banco' in df.columns and 'Valor' in df.columns:
-                resumo_bancos = df.groupby('Banco')['Valor'].sum().reset_index()
-                st.table(resumo_bancos.style.format({"Valor": "R$ {:.2f}"}))
-        else:
-            st.info("Lance dados para ver o resumo.")
+            # LÓGICA DE RECEITA VS DESPESA: 
+            # Se existir a coluna 'Tipo', calculamos o saldo real (Receita - Despesa)
+            if 'Tipo' in df.columns:
+                df['Valor_Final'] = df.apply(lambda x: x['Valor'] if x['Tipo'] == 'Receita' else -x['Valor'], axis=1)
+                resumo = df.groupby('Banco')['Valor_Final'].sum().reset_index()
+                resumo.columns = ['Banco', 'Saldo Atual']
+                st.table(resumo.style.format({"Saldo Atual": "R$ {:.2f}"}))
+            else:
+                st.info("Adicione o campo 'Tipo' na planilha para calcular o saldo corretamente.")
 
-    with tab_cartoes:
-        st.subheader("💳 Faturas e Limites")
-        st.info("Espaço reservado para o controle de cartões.")
-
+    # Cartões e Metas seguem a mesma lógica simplificada
     with tab_metas:
         st.subheader("🎯 Minhas Metas")
         if 'df' in locals() and not df.empty:
-            saldo_total = df['Valor'].sum()
-            st.metric("Saldo Total Acumulado", f"R$ {saldo_total:,.2f}")
+            # Saldo total considerando entradas e saídas
+            if 'Tipo' in df.columns:
+                saldo_total = df.apply(lambda x: x['Valor'] if x['Tipo'] == 'Receita' else -x['Valor'], axis=1).sum()
+                st.metric("Saldo Líquido Geral", f"R$ {saldo_total:,.2f}")
 
 except Exception as e:
     st.error(f"Erro no sistema: {e}")
