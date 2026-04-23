@@ -3,19 +3,20 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime
+import re
 
 # 1. CONFIGURAÇÕES DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. FUNÇÃO DE CONEXÃO (Formatada para evitar erro de PEM)
+# 2. FUNÇÃO DE CONEXÃO COM LIMPEZA PROFUNDA
 @st.cache_resource
 def conectar_google_sheets():
     scope = ["https://www.googleapis.com/auth/spreadsheets", 
              "https://www.googleapis.com/auth/drive"]
     
-    # Wilson, mantive exatamente a sua chave, mas usando o formato de bloco do Python
-    # para que o interpretador não se confunda com as barras invertidas.
-    private_key = (
+    # Wilson, cole aqui a sua chave privada EXATAMENTE como ela veio no JSON,
+    # mesmo que tenha os \n no meio. O código abaixo vai "consertar" ela.
+    raw_key = (
         "-----BEGIN PRIVATE KEY-----\n"
         "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP\n"
         "gcN1MxhHMlXJsmswR16gqEtwNmj1s4mLqZhifwA8qu7M16i6q0IU0RnQVufHfqNu\n"
@@ -46,12 +47,15 @@ def conectar_google_sheets():
         "-----END PRIVATE KEY-----\n"
     )
 
+    # LIMPEZA CRÍTICA: Remove \n literais e garante que a chave tenha quebras de linha reais
+    processed_key = raw_key.replace("\\n", "\n")
+    
     info = {
         "type": "service_account",
         "project_id": "financaspro-wilson",
         "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
         "token_uri": "https://oauth2.googleapis.com/token",
-        "private_key": private_key
+        "private_key": processed_key
     }
     
     creds = Credentials.from_service_account_info(info, scopes=scope)
@@ -61,20 +65,19 @@ def conectar_google_sheets():
     return client.open_by_url(url)
 
 # 3. INTERFACE
-st.title("💰 FinançasPro Wilson")
+st.title("💰 FinançasPro")
 
 try:
     sh = conectar_google_sheets()
     worksheet = sh.get_worksheet(0)
     
-    # Carregamento seguro para DataFrame
-    records = worksheet.get_all_records()
-    df = pd.DataFrame(records)
+    # Carrega os dados
+    df = pd.DataFrame(worksheet.get_all_records())
     
-    st.sidebar.success("Conectado com sucesso! ✅")
-    st.subheader("📊 Meus Dados")
+    st.sidebar.success("Conectado! ✅")
+    st.subheader("📊 Extrato de Lançamentos")
     st.dataframe(df, use_container_width=True)
 
 except Exception as e:
     st.error(f"Erro na conexão: {e}")
-    st.info("💡 Verifique se o e-mail 'financas-wilson@...' é EDITOR na planilha.")
+    st.info("⚠️ Se o erro de PEM sumir e aparecer 'Permission Denied', compartil
