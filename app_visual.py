@@ -7,9 +7,9 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
 # 1. CONFIGURAÇÃO DA PÁGINA
-st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="📊")
+st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO
+# 2. AUTENTICAÇÃO (Mantenha sua PK_LIST atualizada aqui)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -62,133 +62,138 @@ try:
     ws_cartoes = sh.worksheet("cartoes")
     ws_metas = sh.worksheet("metas")
 
-    st.title("💼 FinançasPro Wilson")
-    
     tab_lanc, tab_bancos, tab_cartoes, tab_metas, tab_relat = st.tabs([
         "🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas", "📊 Relatórios"
     ])
 
-    # --- ABA 1: LANÇAMENTOS ---
+    # --- ABA 1: LANÇAMENTOS (RESTAURADA) ---
     with tab_lanc:
         col_f, col_h = st.columns([1, 2])
         with col_f:
-            st.subheader("📝 Novo Gasto")
-            data_sel = st.date_input("Data da Compra", datetime.now())
-            valor = st.number_input("Valor Total", min_value=0.0, step=10.0)
-            parc = st.number_input("Parcelas", min_value=1, value=1)
-            bancos_data = ws_bancos.get_all_records()
-            lista_bancos = [r['Nome do Banco'] for r in bancos_data] if bancos_data else ["Dinheiro"]
-            banco_escolhido = st.selectbox("Onde pagou?", lista_bancos)
-            forma = st.selectbox("Pagamento", ["Crédito", "Débito", "Pix", "Dinheiro"])
-            
-            if st.button("🚀 Salvar Gasto", use_container_width=True):
-                valor_p = valor / parc
-                for i in range(parc):
-                    dt = (data_sel + relativedelta(months=i)).strftime('%d/%m/%Y')
-                    ws_gastos.append_row([dt, round(valor_p, 2), f"Gasto ({i+1}/{parc})", banco_escolhido, forma])
-                st.success("Lançamento concluído!")
-                st.rerun()
+            st.subheader("📝 Novo Lançamento")
+            with st.form("form_gasto", clear_on_submit=True):
+                data_sel = st.date_input("Data", datetime.now())
+                valor = st.number_input("Valor", min_value=0.0)
+                desc = st.text_input("Descrição (Ex: Mercado)")
+                
+                # Carregar Bancos e Cartões dinamicamente
+                b_list = [r['Nome'] for r in ws_bancos.get_all_records()] if ws_bancos.get_all_records() else ["Dinheiro"]
+                c_list = [r['Nome'] for r in ws_cartoes.get_all_records()] if ws_cartoes.get_all_records() else []
+                
+                origem = st.selectbox("Conta/Cartão", b_list + c_list)
+                forma = st.selectbox("Forma de Pagamento", ["Pix", "Crédito", "Débito", "Dinheiro"])
+                parc = st.number_input("Parcelas", 1, 12, 1)
+                
+                if st.form_submit_button("Salvar"):
+                    v_parc = valor / parc
+                    for i in range(parc):
+                        dt = (data_sel + relativedelta(months=i)).strftime('%d/%m/%Y')
+                        ws_gastos.append_row([dt, round(v_parc, 2), f"{desc} ({i+1}/{parc})", origem, forma])
+                    st.success("Lançado!")
+                    st.rerun()
 
         with col_h:
-            st.subheader("📊 Últimos Lançamentos")
-            dados_g = ws_gastos.get_all_records()
-            if dados_g:
-                st.dataframe(pd.DataFrame(dados_g).tail(10), use_container_width=True, hide_index=True)
-            else:
-                st.info("Nenhum lançamento encontrado. Comece a registrar seus gastos à esquerda!")
+            st.subheader("📋 Histórico")
+            df_g = pd.DataFrame(ws_gastos.get_all_records())
+            if not df_g.empty:
+                st.dataframe(df_g.tail(10), use_container_width=True)
+                if st.button("Limpar último lançamento"):
+                    ws_gastos.delete_rows(len(df_g) + 1)
+                    st.rerun()
 
-    # --- ABA 3: CARTÕES (ATUALIZADA) ---
-    with tab_cartoes:
-        st.subheader("💳 Cadastro de Cartões")
-        with st.form("f_c"):
-            nc = st.text_input("Nome do Cartão (ex: Nubank)")
-            lim = st.number_input("Limite Total")
-            fec = st.number_input("Dia de Fechamento", 1, 31, 1)
-            ven = st.number_input("Dia de Vencimento", 1, 31, 10)
-            if st.form_submit_button("Salvar Cartão"):
-                # Salvando Nome, Limite, Fechamento, Vencimento
-                ws_cartoes.append_row([nc, lim, fec, ven])
-                st.success("Cartão cadastrado!")
-                st.rerun()
-        
-        st.markdown("### Seus Cartões")
-        cartoes_df = pd.DataFrame(ws_cartoes.get_all_records())
-        if not cartoes_df.empty:
-            st.table(cartoes_df)
-        else:
-            st.info("Nenhum cartão cadastrado ainda.")
-
-    # --- ABAS DE APOIO (BANCOS E METAS) ---
+    # --- ABA 2: BANCOS (COM EXCLUSÃO) ---
     with tab_bancos:
-        st.subheader("🏦 Cadastro de Bancos")
-        with st.form("f_b"):
-            n = st.text_input("Banco")
-            s = st.number_input("Saldo")
-            if st.form_submit_button("Salvar"):
-                ws_bancos.append_row([n, s, "Corrente"])
+        st.subheader("🏦 Gerenciar Contas Bancárias")
+        with st.form("f_banco"):
+            n = st.text_input("Nome do Banco")
+            s = st.number_input("Saldo Inicial")
+            if st.form_submit_button("Adicionar"):
+                ws_bancos.append_row([n, s])
                 st.rerun()
-        st.table(pd.DataFrame(ws_bancos.get_all_records()))
-
-    with tab_metas:
-        st.subheader("🎯 Minhas Metas")
-        with st.form("f_m"):
-            nm = st.text_input("Objetivo")
-            va = st.number_input("Valor Alvo")
-            if st.form_submit_button("Salvar"):
-                ws_metas.append_row([nm, va, "Ativo"])
-                st.rerun()
-        st.table(pd.DataFrame(ws_metas.get_all_records()))
-
-    # --- ABA 5: RELATÓRIOS (CORRIGIDA) ---
-    with tab_relat:
-        st.header("📈 Central de Relatórios")
         
-        if dados_g:
-            df = pd.DataFrame(dados_g)
-            df.columns = [c.strip() for c in df.columns]
-            df['Data'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-            df = df.dropna(subset=['Data'])
-            df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
-            df['Mes_Ano'] = df['Data'].dt.strftime('%m/%Y')
+        b_data = ws_bancos.get_all_records()
+        if b_data:
+            df_b = pd.DataFrame(b_data)
+            st.table(df_b)
+            idx_del = st.selectbox("Remover Banco", range(len(df_b)), format_func=lambda x: df_b.iloc[x]['Nome'])
+            if st.button("Excluir Banco Selecionado"):
+                ws_bancos.delete_rows(idx_del + 2)
+                st.rerun()
 
-            # 1. Gráfico de Barras Mensal
-            col_pag = 'Pagamento' if 'Pagamento' in df.columns else 'Forma'
-            st.subheader("Total de Gastos por Mês")
-            df_m = df.groupby(['Mes_Ano', col_pag])['Valor'].sum().reset_index()
-            st.plotly_chart(px.bar(df_m, x='Mes_Ano', y='Valor', color=col_pag, barmode='stack'), use_container_width=True)
+    # --- ABA 3: CARTÕES (COM EXCLUSÃO) ---
+    with tab_cartoes:
+        st.subheader("💳 Gerenciar Cartões")
+        with st.form("f_cartao"):
+            c1, c2 = st.columns(2)
+            n_c = c1.text_input("Nome do Cartão")
+            l_c = c2.number_input("Limite")
+            f_c = c1.number_input("Dia Fechamento", 1, 31, 5)
+            v_c = c2.number_input("Dia Vencimento", 1, 31, 15)
+            if st.form_submit_button("Cadastrar Cartão"):
+                ws_cartoes.append_row([n_c, l_c, f_c, v_c])
+                st.rerun()
+        
+        c_data = ws_cartoes.get_all_records()
+        if c_data:
+            df_c = pd.DataFrame(c_data)
+            st.table(df_c)
+            idx_c_del = st.selectbox("Remover Cartão", range(len(df_c)), format_func=lambda x: df_c.iloc[x]['Nome'])
+            if st.button("Excluir Cartão Selecionado"):
+                ws_cartoes.delete_rows(idx_c_del + 2)
+                st.rerun()
 
+    # --- ABA 4: METAS (COM EXCLUSÃO) ---
+    with tab_metas:
+        st.subheader("🎯 Gerenciar Metas")
+        with st.form("f_meta"):
+            obj = st.text_input("Objetivo")
+            val = st.number_input("Valor Alvo")
+            if st.form_submit_button("Salvar Meta"):
+                ws_metas.append_row([obj, val, "Ativo"])
+                st.rerun()
+        
+        m_data = ws_metas.get_all_records()
+        if m_data:
+            df_m = pd.DataFrame(m_data)
+            st.table(df_m)
+            idx_m_del = st.selectbox("Remover Meta", range(len(df_m)), format_func=lambda x: df_m.iloc[x]['Objetivo'])
+            if st.button("Excluir Meta Selecionada"):
+                ws_metas.delete_rows(idx_m_del + 2)
+                st.rerun()
+
+    # --- ABA 5: RELATÓRIOS (MULTI-GRÁFICOS) ---
+    with tab_relat:
+        st.header("📊 Inteligência Financeira")
+        df_r = pd.DataFrame(ws_gastos.get_all_records())
+        
+        if not df_r.empty:
+            df_r['Data'] = pd.to_datetime(df_r['Data'], dayfirst=True, errors='coerce')
+            df_r['Valor'] = pd.to_numeric(df_r['Valor'])
+            df_r['Mes'] = df_r['Data'].dt.strftime('%m/%Y')
+
+            c1, c2 = st.columns(2)
+            
+            with c1:
+                st.subheader("Gastos por Forma de Pagamento")
+                fig1 = px.pie(df_r, values='Valor', names='Forma', hole=0.4)
+                st.plotly_chart(fig1, use_container_width=True)
+
+            with c2:
+                st.subheader("Evolução Mensal")
+                df_mes = df_r.groupby('Mes')['Valor'].sum().reset_index()
+                fig2 = px.line(df_mes, x='Mes', y='Valor', markers=True)
+                st.plotly_chart(fig2, use_container_width=True)
+                
             st.markdown("---")
-
-            # 2. Relatório de Cartões
-            st.subheader("💳 Faturas por Cartão (Crédito)")
-            mes_atual = datetime.now().month
-            ano_atual = datetime.now().year
-            
-            df_cartoes = df[
-                (df['Data'].dt.month == mes_atual) & 
-                (df['Data'].dt.year == ano_atual) & 
-                (df[col_pag] == 'Crédito')
-            ]
-            
-            if not df_cartoes.empty:
-                resumo_c = df_cartoes.groupby('Banco')['Valor'].sum().reset_index()
-                c1, c2 = st.columns([2, 1])
-                with c1:
-                    st.plotly_chart(px.bar(resumo_c, x='Banco', y='Valor', color='Banco'), use_container_width=True)
-                with c2:
-                    st.dataframe(resumo_c, hide_index=True)
-                    st.metric("Total Cartões", f"R$ {resumo_c['Valor'].sum():,.2f}")
+            st.subheader("💳 Faturas de Cartão (Mês Atual)")
+            df_credito = df_r[(df_r['Forma'] == 'Crédito') & (df_r['Data'].dt.month == datetime.now().month)]
+            if not df_credito.empty:
+                fig3 = px.bar(df_credito.groupby('Banco')['Valor'].sum().reset_index(), x='Banco', y='Valor', color='Banco')
+                st.plotly_chart(fig3, use_container_width=True)
             else:
-                st.info("Lance gastos no 'Crédito' para ver o gráfico de faturas.")
+                st.info("Sem gastos no crédito para este mês.")
         else:
-            # ESTADO VAZIO: Explica que faltam dados
-            st.warning("⚠️ **Ainda não há dados para gerar gráficos.**")
-            st.markdown("""
-            Para que os gráficos apareçam aqui, você precisa:
-            1.  Cadastrar um Banco na aba **Bancos**.
-            2.  Fazer um lançamento na aba **Lançamentos**.
-            3.  Se quiser ver o relatório de cartões, escolha a forma de pagamento **Crédito**.
-            """)
+            st.warning("Nenhum dado para exibir. Faça seu primeiro lançamento!")
 
 except Exception as e:
-    st.error(f"Erro no sistema: {e}")
+    st.error(f"Ocorreu um erro: {e}")
