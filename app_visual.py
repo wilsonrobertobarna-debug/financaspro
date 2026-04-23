@@ -62,7 +62,6 @@ try:
     
     st.title("💼 FinançasPro Wilson - Desktop")
     
-    # CRIANDO AS ABAS NO TOPO
     tab_lanc, tab_bancos, tab_cartoes, tab_metas = st.tabs([
         "🚀 Lançamentos", 
         "🏦 Bancos", 
@@ -70,7 +69,6 @@ try:
         "🎯 Metas"
     ])
 
-    # --- ABA 1: LANÇAMENTOS ---
     with tab_lanc:
         col_form, col_hist = st.columns([1, 2])
         
@@ -81,6 +79,12 @@ try:
             parcelas = st.number_input("Nº de Parcelas", min_value=1, max_value=48, value=1)
             
             cat = st.selectbox("Categoria", ["Alimentação", "Transporte", "Casa", "Lazer", "Saúde", "Educação", "Outros"])
+            
+            # --- NOVOS CAMPOS ADICIONADOS AQUI ---
+            beneficiario = st.text_input("Beneficiário", placeholder="Ex: Supermercado, Posto...")
+            centro_custo = st.selectbox("Centro de Custo", ["Pessoal", "Família", "Trabalho", "Investimentos"])
+            # -------------------------------------
+
             banco = st.selectbox("Banco Origem", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
             forma = st.selectbox("Forma de Pagamento", ["Cartão de Crédito", "Débito", "Pix", "Dinheiro"])
             
@@ -90,7 +94,10 @@ try:
                     data_p = data_sel + relativedelta(months=i)
                     data_str = data_p.strftime('%d/%m/%Y')
                     desc = f"{cat} ({i+1}/{parcelas})" if parcelas > 1 else cat
-                    ws.append_row([data_str, round(valor_parcela, 2), desc, banco, forma])
+                    
+                    # AGORA SALVANDO COM OS NOVOS CAMPOS (7 COLUNAS)
+                    ws.append_row([data_str, round(valor_parcela, 2), desc, banco, forma, beneficiario, centro_custo])
+                
                 st.success(f"Registrado: {parcelas}x de R$ {valor_parcela:.2f}")
                 st.rerun()
 
@@ -108,7 +115,7 @@ try:
             else:
                 st.info("Nenhum dado encontrado.")
 
-    # --- ABA 2: BANCOS ---
+    # As outras abas permanecem exatamente iguais para manter a estabilidade
     with tab_bancos:
         st.subheader("🏦 Gestão de Contas Bancárias")
         if 'df' in locals():
@@ -117,22 +124,18 @@ try:
         else:
             st.info("Lance dados para ver o resumo por banco.")
 
-    # --- ABA 3: CARTÕES ---
     with tab_cartoes:
         st.subheader("💳 Faturas e Limites")
         st.info("Em breve: Integração de limites e vencimento de faturas.")
-        # Exemplo visual
         col_c1, col_c2 = st.columns(2)
         col_c1.metric("Fatura Nubank (Prox)", "R$ 1.250,00", delta="R$ 150,00")
         col_c2.metric("Limite Disponível", "R$ 5.000,00")
 
-    # --- ABA 4: METAS ---
     with tab_metas:
         st.subheader("🎯 Minhas Metas Financeiras")
         meta_nome = "Reserva de Emergência"
         meta_valor = 10000.00
         saldo_atual = df['Valor'].sum() if 'df' in locals() else 0
-        
         progresso = min(saldo_atual / meta_valor, 1.0)
         st.write(f"**Meta:** {meta_nome}")
         st.progress(progresso)
