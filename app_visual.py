@@ -10,7 +10,7 @@ from dateutil.relativedelta import relativedelta
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="📊")
 
-# 2. CHAVE DE ACESSO
+# 2. CHAVE DE ACESSO (Mantenha sua chave privada aqui)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -96,43 +96,41 @@ try:
             if dados_g:
                 st.dataframe(pd.DataFrame(dados_g).tail(10), use_container_width=True, hide_index=True)
 
-    # --- ABA 2: BANCOS ---
+    # --- ABAS DE CADASTRO ---
     with tab_bancos:
         st.subheader("🏦 Cadastro de Bancos")
-        with st.form("form_bancos"):
-            n_b = st.text_input("Nome do Banco")
-            s_b = st.number_input("Saldo Inicial")
-            if st.form_submit_button("Salvar Banco"):
-                ws_bancos.append_row([n_b, s_b, "Corrente"])
+        with st.form("f_b"):
+            n = st.text_input("Banco")
+            s = st.number_input("Saldo")
+            if st.form_submit_button("Salvar"):
+                ws_bancos.append_row([n, s, "Corrente"])
                 st.rerun()
         st.table(pd.DataFrame(ws_bancos.get_all_records()))
 
-    # --- ABA 3: CARTÕES ---
     with tab_cartoes:
         st.subheader("💳 Meus Cartões")
-        with st.form("form_cartoes"):
-            nc = st.text_input("Nome do Cartão")
-            lc = st.number_input("Limite Total")
-            vc = st.number_input("Vencimento (Dia)", 1, 31)
-            if st.form_submit_button("Salvar Cartão"):
-                ws_cartoes.append_row([nc, lc, vc])
+        with st.form("f_c"):
+            nc = st.text_input("Nome")
+            lim = st.number_input("Limite")
+            ven = st.number_input("Vencimento", 1, 31)
+            if st.form_submit_button("Salvar"):
+                ws_cartoes.append_row([nc, lim, ven])
                 st.rerun()
         st.table(pd.DataFrame(ws_cartoes.get_all_records()))
 
-    # --- ABA 4: METAS ---
     with tab_metas:
         st.subheader("🎯 Minhas Metas")
-        with st.form("form_metas"):
+        with st.form("f_m"):
             nm = st.text_input("Objetivo")
-            vm = st.number_input("Valor Alvo")
-            if st.form_submit_button("Salvar Meta"):
-                ws_metas.append_row([nm, vm, "Ativo"])
+            va = st.number_input("Valor Alvo")
+            if st.form_submit_button("Salvar"):
+                ws_metas.append_row([nm, va, "Ativo"])
                 st.rerun()
         st.table(pd.DataFrame(ws_metas.get_all_records()))
 
-    # --- ABA 5: RELATÓRIOS ---
+    # --- ABA 5: RELATÓRIOS (ONDE TUDO SE JUNTA) ---
     with tab_relat:
-        st.header("📈 Relatórios de Gastos")
+        st.header("📈 Relatórios e Faturas")
         if dados_g:
             df = pd.DataFrame(dados_g)
             df.columns = [c.strip() for c in df.columns]
@@ -143,16 +141,16 @@ try:
             df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
             df['Mes_Ano'] = df['Data'].dt.strftime('%m/%Y')
 
-            # Gráfico 1: Visão Geral
+            # 1. Visão Mensal Geral
             col_pag = 'Pagamento' if 'Pagamento' in df.columns else 'Forma'
-            st.subheader("Gasto Mensal por Tipo")
+            st.subheader("Resumo por Forma de Pagamento")
             df_m = df.groupby(['Mes_Ano', col_pag])['Valor'].sum().reset_index()
             st.plotly_chart(px.bar(df_m, x='Mes_Ano', y='Valor', color=col_pag, barmode='stack'), use_container_width=True)
 
             st.markdown("---")
 
-            # Gráfico 2: Detalhamento de Cartões (Mês Atual)
-            st.header("💳 Gastos por Cartão (Crédito)")
+            # 2. Relatório de Cartões (Mês Atual)
+            st.subheader("💳 Detalhamento de Faturas (Crédito)")
             mes_atual = datetime.now().month
             ano_atual = datetime.now().year
             
@@ -166,14 +164,14 @@ try:
                 resumo_c = df_cartoes.groupby('Banco')['Valor'].sum().reset_index()
                 c1, c2 = st.columns([2, 1])
                 with c1:
-                    fig_c = px.bar(resumo_c, x='Banco', y='Valor', title=f"Faturas de {datetime.now().strftime('%m/%Y')}", color='Banco')
+                    fig_c = px.bar(resumo_c, x='Banco', y='Valor', title=f"Fatura: {datetime.now().strftime('%m/%Y')}", color='Banco')
                     st.plotly_chart(fig_c, use_container_width=True)
                 with c2:
-                    st.write("📋 Resumo da Fatura")
+                    st.write("📋 Valores por Cartão")
                     st.dataframe(resumo_c, hide_index=True)
-                    st.metric("Total em Cartão", f"R$ {resumo_c['Valor'].sum():,.2f}")
+                    st.metric("Gasto Total no Crédito", f"R$ {resumo_c['Valor'].sum():,.2f}")
             else:
-                st.info("Lance gastos como 'Crédito' para ver o detalhamento por cartão.")
+                st.info("Nenhum gasto registrado como 'Crédito' para este mês.")
         else:
             st.info("Lance dados para ver os relatórios.")
 
