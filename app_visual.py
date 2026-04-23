@@ -7,7 +7,7 @@ from datetime import datetime
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Sua chave funcional de 26 linhas)
+# 2. CHAVE DE ACESSO (Tua chave funcional)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -42,7 +42,7 @@ PK_LIST = [
 @st.cache_resource
 def conectar_google():
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    private_key = "\n".join([line.strip() for line in PK_LIST])
+    private_key = "\n".join(PK_LIST)
     creds_info = {
         "type": "service_account",
         "project_id": "financaspro-wilson",
@@ -53,77 +53,39 @@ def conectar_google():
     creds = Credentials.from_service_account_info(creds_info, scopes=scope)
     return gspread.authorize(creds)
 
-# 3. EXECUÇÃO DO SISTEMA
 try:
     client = conectar_google()
-    # Usando o ID da sua planilha diretamente
-    SHEET_ID = "147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4"
-    sh = client.open_by_key(SHEET_ID)
+    sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws = sh.get_worksheet(0)
     
-    st.title("💰 FinançasPro - Painel de Controle")
+    st.title("💰 FinançasPro - Wilson")
 
-    # --- BARRA LATERAL: FORMULÁRIO DE CADASTRO ---
     with st.sidebar:
         st.header("📝 Novo Lançamento")
+        data_sel = st.date_input("Data", datetime.now())
+        valor = st.number_input("Valor (R$)", min_value=0.0, step=1.0)
+        cat = st.selectbox("Categoria", ["Alimentação", "Transporte", "Casa", "Lazer", "Outros"])
+        banco = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
+        forma = st.selectbox("Forma", ["Crédito", "Débito", "Pix", "Dinheiro"])
         
-        # Data com formato Brasil
-        data_input = st.date_input("Data do Gasto", datetime.now())
-        data_br = data_input.strftime('%d/%m/%Y')
-        
-        valor = st.number_input("Valor (R$)", min_value=0.0, step=0.50, format="%.2f")
-        
-        categoria = st.selectbox("Categoria", 
-            ["Alimentação", "Lazer", "Casa", "Transporte", "Saúde", "Educação", "Assinaturas", "Outros"])
-        
-        banco = st.selectbox("Banco/Conta", 
-            ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro Vivo", "Santander"])
-        
-        forma = st.selectbox("Forma de Pagamento", 
-            ["Cartão de Crédito", "Cartão de Débito", "Pix", "Dinheiro", "Boleto"])
-
-        if st.button("🚀 Salvar na Planilha"):
-            # Ordem das colunas: Data, Valor, Categoria, Banco, Forma de Pagamento
-            ws.append_row([data_br, valor, categoria, banco, forma])
-            st.success(f"Salvo com sucesso: R$ {valor:.2f} em {data_br}")
+        if st.button("🚀 Salvar"):
+            ws.append_row([data_sel.strftime('%d/%m/%Y'), valor, cat, banco, forma])
+            st.success("Salvo!")
             st.rerun()
 
-    # --- ÁREA PRINCIPAL: VISUALIZAÇÃO ---
     dados = ws.get_all_records()
-    
     if dados:
         df = pd.DataFrame(dados)
+        # Normaliza nomes de colunas para evitar erros de maiúsculas
+        df.columns = [c.strip().capitalize() for c in df.columns]
         
-        # Garante que 'Valor' seja número para não dar erro de soma
         if 'Valor' in df.columns:
             df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
+            st.metric("Total Gasto", f"R$ {df['Valor'].sum():,.2f}")
         
-        # Métricas no topo
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            total = df['Valor'].sum()
-            st.metric("Total Gasto (Geral)", f"R$ {total:,.2f}")
-        with col2:
-            itens = len(df)
-            st.metric("Nº de Lançamentos", itens)
-        with col3:
-            if not df.empty:
-                media = total / itens
-                st.metric("Média por Gasto", f"R$ {media:,.2f}")
-
-        st.divider()
-        st.subheader("📊 Histórico de Transações")
-        
-        # Exibe a tabela formatada
-        st.dataframe(
-            df.style.format({"Valor": "R$ {:.2f}"}), 
-            use_container_width=True,
-            hide_index=True
-        )
-        
+        st.dataframe(df, use_container_width=True)
     else:
-        st.info("A planilha está conectada, mas não há dados. Faça seu primeiro lançamento na lateral!")
+        st.info("Planilha vazia ou sem cabeçalhos corretos.")
 
 except Exception as e:
     st.error(f"Erro no sistema: {e}")
-    st.info("💡 Dica: Verifique se a sua planilha no Google Sheets tem os cabeçalhos: Data, Valor, Categoria, Banco, Forma de Pagamento")
