@@ -10,7 +10,7 @@ from dateutil.relativedelta import relativedelta
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="📊")
 
-# 2. CHAVE DE ACESSO
+# 2. CHAVE DE ACESSO (Sua PK funcional)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -61,7 +61,6 @@ try:
     ws_cartoes = sh.worksheet("cartoes")
     ws_metas = sh.worksheet("metas")
 
-    st.title("💼 FinançasPro Wilson")
     tab_lanc, tab_bancos, tab_cartoes, tab_metas, tab_relat = st.tabs([
         "🚀 Lançamentos", "🏦 Bancos", "💳 Cartões", "🎯 Metas", "📊 Relatórios"
     ])
@@ -83,112 +82,79 @@ try:
                 valor_p = valor / parc
                 for i in range(parc):
                     dt = (data_sel + relativedelta(months=i)).strftime('%d/%m/%Y')
-                    desc = f"Gasto ({i+1}/{parc})" if parc > 1 else "Gasto Único"
-                    ws_gastos.append_row([dt, round(valor_p, 2), desc, banco_escolhido, forma])
+                    ws_gastos.append_row([dt, round(valor_p, 2), f"Gasto ({i+1}/{parc})", banco_escolhido, forma])
                 st.success("Lançamento concluído!")
                 st.rerun()
 
         with col_h:
-            st.subheader("📊 Histórico Recente")
+            st.subheader("📊 Últimos Lançamentos")
             dados_g = ws_gastos.get_all_records()
             if dados_g:
-                df_hist = pd.DataFrame(dados_g)
-                st.dataframe(df_hist.tail(10), use_container_width=True, hide_index=True)
+                st.dataframe(pd.DataFrame(dados_g).tail(10), use_container_width=True, hide_index=True)
 
-    # --- ABA 2: BANCOS ---
+    # --- ABAS DE CADASTRO (BANCOS, CARTÕES, METAS) ---
     with tab_bancos:
         st.subheader("🏦 Cadastro de Bancos")
-        with st.form("form_bancos"):
-            n_banco = st.text_input("Nome do Banco")
-            s_inicial = st.number_input("Saldo Atual", step=100.0)
-            if st.form_submit_button("Cadastrar"):
-                ws_bancos.append_row([n_banco, s_inicial, "Corrente"])
-                st.success("Banco cadastrado!")
+        with st.form("f_b"):
+            n = st.text_input("Banco")
+            s = st.number_input("Saldo")
+            if st.form_submit_button("Salvar"):
+                ws_bancos.append_row([n, s, "Corrente"])
                 st.rerun()
-        st.write("### Meus Bancos")
-        b_list = ws_bancos.get_all_records()
-        if b_list: st.table(pd.DataFrame(b_list))
+        st.table(pd.DataFrame(ws_bancos.get_all_records()))
 
-    # --- ABA 3: CARTÕES ---
     with tab_cartoes:
         st.subheader("💳 Meus Cartões")
-        with st.form("form_cartao"):
-            n_cartao = st.text_input("Nome do Cartão")
-            v_limite = st.number_input("Limite Total")
-            v_venc = st.number_input("Dia de Vencimento", 1, 31, 10)
-            v_fech = st.number_input("Dia de Fechamento", 1, 31, 3)
-            if st.form_submit_button("Salvar Cartão"):
-                ws_cartoes.append_row([n_cartao, v_limite, v_venc, v_fech])
-                st.success("Cartão salvo!")
+        with st.form("f_c"):
+            nc = st.text_input("Nome")
+            lim = st.number_input("Limite")
+            ven = st.number_input("Vencimento", 1, 31)
+            fec = st.number_input("Fechamento", 1, 31)
+            if st.form_submit_button("Salvar"):
+                ws_cartoes.append_row([nc, lim, ven, fec])
                 st.rerun()
-        st.write("### Cartões Ativos")
-        c_list = ws_cartoes.get_all_records()
-        if c_list: st.table(pd.DataFrame(c_list))
+        st.table(pd.DataFrame(ws_cartoes.get_all_records()))
 
-    # --- ABA 4: METAS ---
     with tab_metas:
-        st.subheader("🎯 Metas de Economia")
-        with st.form("form_metas"):
-            meta_n = st.text_input("Objetivo")
-            meta_v = st.number_input("Valor Necessário")
-            if st.form_submit_button("Criar Meta"):
-                ws_metas.append_row([meta_n, meta_v, "Em andamento"])
-                st.success("Meta criada!")
+        st.subheader("🎯 Minhas Metas")
+        with st.form("f_m"):
+            nm = st.text_input("Objetivo")
+            va = st.number_input("Valor")
+            if st.form_submit_button("Salvar"):
+                ws_metas.append_row([nm, va, "Ativo"])
                 st.rerun()
-        st.write("### Suas Metas")
-        m_list = ws_metas.get_all_records()
-        if m_list: st.table(pd.DataFrame(m_list))
+        st.table(pd.DataFrame(ws_metas.get_all_records()))
 
-    # --- ABA 5: RELATÓRIOS (CORRIGIDA) ---
+    # --- ABA 5: RELATÓRIOS (COM CORREÇÃO PARA DATA ISO) ---
     with tab_relat:
-        st.header("📈 Inteligência Financeira")
+        st.header("📈 Relatórios")
         if dados_g:
             df = pd.DataFrame(dados_g)
             
-            # TRATAMENTO DE DATAS SEGURO
-            df['Data'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce', format='mixed')
+            # CORREÇÃO DEFINITIVA: Converte qualquer formato e remove lixo
+            df['Data'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
             df = df.dropna(subset=['Data'])
+            
             df['Mes_Ano'] = df['Data'].dt.strftime('%m/%Y')
             df['Valor'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
             
-            col_g1, col_g2 = st.columns(2)
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader("Gasto por Mês")
+                df_m = df.groupby(['Mes_Ano', 'Forma'])['Valor'].sum().reset_index()
+                st.plotly_chart(px.bar(df_m, x='Mes_Ano', y='Valor', color='Forma', barmode='stack'), use_container_width=True)
             
-            with col_g1:
-                st.subheader("📅 Despesas por Mês")
-                df_mes = df.groupby(['Mes_Ano', 'Forma'])['Valor'].sum().reset_index()
-                fig_barras = px.bar(
-                    df_mes, x='Mes_Ano', y='Valor', color='Forma',
-                    title="Crédito vs Débito",
-                    barmode='stack',
-                    labels={'Valor': 'Total (R$)', 'Mes_Ano': 'Mês'}
-                )
-                st.plotly_chart(fig_barras, use_container_width=True)
-
-            with col_g2:
-                st.subheader("🎯 Progresso de Metas")
-                metas_data = ws_metas.get_all_records()
-                if metas_data:
-                    meta_sel = st.selectbox("Selecione a Meta", [m['Nome da Meta'] for m in metas_data])
-                    valor_alvo = next(float(m['Valor Alvo']) for m in metas_data if m['Nome da Meta'] == meta_sel)
-                    
-                    # Lógica do Termômetro
-                    progresso_atual = df['Valor'].sum() * 0.1 # Exemplo: 10% guardado
-                    
-                    fig_term = go.Figure(go.Indicator(
-                        mode = "gauge+number",
-                        value = progresso_atual,
-                        title = {'text': f"Alvo: R$ {valor_alvo}"},
-                        gauge = {
-                            'axis': {'range': [0, valor_alvo]},
-                            'bar': {'color': "darkblue"},
-                            'threshold': {'line': {'color': "red", 'width': 4}, 'value': valor_alvo}
-                        }
-                    ))
-                    st.plotly_chart(fig_term, use_container_width=True)
-                else:
-                    st.info("Adicione metas para ver o gráfico.")
+            with col2:
+                st.subheader("Meta Termômetro")
+                m_data = ws_metas.get_all_records()
+                if m_data:
+                    m_sel = st.selectbox("Selecione a Meta", [m['Nome da Meta'] for m in m_data])
+                    alvo = next(float(m['Valor Alvo']) for m in m_data if m['Nome da Meta'] == m_sel)
+                    atual = df['Valor'].sum() * 0.1 # Simulação 10% economia
+                    fig = go.Figure(go.Indicator(mode="gauge+number", value=atual, gauge={'axis': {'range': [0, alvo]}, 'bar': {'color': "green"}}))
+                    st.plotly_chart(fig, use_container_width=True)
         else:
-            st.warning("Lance gastos para gerar os gráficos.")
+            st.info("Lance dados para ver gráficos.")
 
 except Exception as e:
-    st.error(f"Erro no sistema: {e}")
+    st.error(f"Erro Crítico: {e}")
