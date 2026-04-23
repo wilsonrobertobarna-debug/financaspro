@@ -8,7 +8,7 @@ from datetime import datetime
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (PK_LIST)
+# 2. CHAVE DE ACESSO (PK_LIST) - Mantenha sua chave original aqui
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -57,7 +57,6 @@ def get_data_safe(spreadsheet_id, worksheet_name):
     try:
         client = conectar()
         sh = client.open_by_key(spreadsheet_id)
-        # Normaliza busca de abas (case-insensitive)
         all_ws = {w.title.lower().strip(): w for w in sh.worksheets()}
         ws = all_ws.get(worksheet_name.lower().strip())
         
@@ -74,7 +73,7 @@ def get_data_safe(spreadsheet_id, worksheet_name):
 def limpar_cache():
     st.cache_data.clear()
 
-# --- LÓGICA PRINCIPAL ---
+# --- INÍCIO DO SISTEMA ---
 try:
     SHEET_ID = "147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4"
     sh = conectar().open_by_key(SHEET_ID)
@@ -90,65 +89,10 @@ try:
             st.subheader("📝 Novo Registro")
             with st.form("form_registro", clear_on_submit=True):
                 tipo = st.selectbox("Tipo", ["Despesa", "Receita"])
-                data = st.date_input("Data", datetime.now())
+                data_reg = st.date_input("Data", datetime.now())
                 valor = st.number_input("Valor", min_value=0.0)
                 desc = st.text_input("Descrição")
                 
-                df_b = get_data_safe(SHEET_ID, "bancos")
-                col_banco = next((c for c in df_b.columns if 'nome' in c or 'banco' in c), "nome")
-                lista_bancos = df_b[col_banco].tolist() if not df_b.empty else ["Dinheiro"]
-                
-                conta = st.selectbox("Qual Conta?", lista_bancos)
-                
-                if st.form_submit_button("Salvar"):
-                    # Grava na primeira aba (Lancamentos)
-                    sh.get_worksheet(0).append_row([data.strftime('%d/%m/%Y'), valor, desc, conta, tipo])
-                    limpar_cache()
-                    st.success("Lançado com sucesso!")
-                    st.rerun()
-
-    # 2. ABA BANCOS
-    with tab_bancos:
-        st.subheader("🏦 Suas Contas")
-        df_bancos = get_data_safe(SHEET_ID, "bancos")
-        if not df_bancos.empty:
-            st.dataframe(df_bancos, use_container_width=True)
-        else:
-            st.info("Aba 'bancos' não encontrada ou vazia.")
-
-    # 3. ABA METAS (CORREÇÃO DA SINTAXE AQUI)
-    with tab_metas:
-        st.subheader("🎯 Suas Metas")
-        df_metas = get_data_safe(SHEET_ID, "metas")
-        if not df_metas.empty:
-            # Tenta encontrar a coluna do nome da meta
-            col_nome = next((c for c in df_metas.columns if 'nome' in c or 'meta' in c), df_metas.columns[0])
-            # Tenta encontrar a coluna do valor alvo
-            col_alvo = next((c for c in df_metas.columns if 'alvo' in c or 'valor' in c), None)
-            
-            if col_alvo:
-                fig_m = px.bar(df_metas, x=col_nome, y=col_alvo, title="Progresso das Metas", color_discrete_sequence=['#636EFA'])
-                st.plotly_chart(fig_m, use_container_width=True)
-            
-            st.table(df_metas)
-        else:
-            st.info("Aba 'metas' não encontrada ou vazia.")
-
-    # 4. ABA RELATÓRIOS
-    with tab_relat:
-        st.subheader("📊 Resumo Financeiro")
-        df_l = get_data_safe(SHEET_ID, sh.get_worksheet(0).title)
-        
-        if not df_l.empty and 'tipo' in df_l.columns and 'valor' in df_l.columns:
-            resumo = df_l.groupby('tipo')['valor'].sum().reset_index()
-            fig_pie = px.pie(resumo, values='valor', names='tipo', hole=.4, 
-                            color_discrete_map={'Receita':'#00CC96', 'Despesa':'#EF553B'})
-            st.plotly_chart(fig_pie, use_container_width=True)
-            st.write("---")
-            st.write("📋 Últimos Lançamentos")
-            st.dataframe(df_l.tail(10), use_container_width=True)
-        else:
-            st.warning("Dados insuficientes para gerar relatórios.")
-
-except Exception as e:
-    st.error(f"Erro no sistema: {e}")
+                # Pega lista de bancos para o Selectbox
+                df_b_list = get_data_safe(SHEET_ID, "bancos")
+                col_banco = next((c for c in df_b_list.columns if 'nome' in c or 'banco' in c), "nome
