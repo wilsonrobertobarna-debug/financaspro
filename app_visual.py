@@ -5,8 +5,8 @@ import pandas as pd
 
 st.set_page_config(page_title="FinançasPro Wilson", page_icon="💰")
 
-# Usando uma lista simples para a chave - evita erros de escape do Python
-KEY_LINES = [
+# Chave privada organizada para evitar erros de leitura
+PK_PARTS = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
     "gcN1MxhHMlXJsmswR16gqEtwNmj1s4mLqZhifwA8qu7M16i6q0IU0RnQVufHfqNu",
@@ -37,29 +37,40 @@ KEY_LINES = [
     "-----END PRIVATE KEY-----"
 ]
 
-def conectar():
-    scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    info = {
-        "type": "service_account",
-        "project_id": "financaspro-wilson",
-        "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "private_key": "\n".join(KEY_LINES)
-    }
-    creds = Credentials.from_service_account_info(info, scopes=scope)
-    return gspread.authorize(creds)
+def testar_conexao():
+    try:
+        scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        
+        # Criando o dicionário de credenciais
+        creds_dict = {
+            "type": "service_account",
+            "project_id": "financaspro-wilson",
+            "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "private_key": "\n".join(PK_PARTS)
+        }
+        
+        creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+        client = gspread.authorize(creds)
+        
+        # Tenta abrir a planilha
+        url = "https://docs.google.com/spreadsheets/d/147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4/edit"
+        sh = client.open_by_url(url)
+        return sh, None
+    except Exception as e:
+        # Força o erro a virar uma string legível
+        return None, str(e)
 
 st.title("💰 FinançasPro - Diagnóstico")
 
-try:
-    client = conectar()
-    url = "https://docs.google.com/spreadsheets/d/147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4/edit"
-    sh = client.open_by_url(url)
-    ws = sh.get_worksheet(0)
-    
-    dados = ws.get_all_records()
-    st.success("Conectado! Veja os dados abaixo:")
-    st.dataframe(pd.DataFrame(dados))
+planilha, erro_msg = testar_conexao()
 
-except Exception as e:
-    st.error(f"Erro detectado: {e}")
+if erro_msg:
+    st.error(f"Erro detalhado: {erro_msg}")
+    if "Permission denied" in erro_msg or "not found" in erro_msg.lower():
+        st.info("💡 Dica: Verifique se você compartilhou a planilha com o e-mail: financas-wilson@financaspro-wilson.iam.gserviceaccount.com")
+elif planilha:
+    st.success("✅ Conexão estabelecida com sucesso!")
+    aba = planilha.get_worksheet(0)
+    st.write("Dados da planilha:")
+    st.table(pd.DataFrame(aba.get_all_records()).head())
