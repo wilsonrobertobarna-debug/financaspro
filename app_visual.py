@@ -4,12 +4,11 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime, date
 import os
-import re
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Sua PK_LIST original)
+# 2. CHAVE DE ACESSO
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -52,105 +51,99 @@ def conectar_google():
     }
     return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
 
-# --- INÍCIO DA EXECUÇÃO ---
 try:
     client = conectar_google()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
-    # Carregamento e União de Dados
-    df = pd.DataFrame(ws_lanc.get_all_records())
+    dados_nuvem = ws_lanc.get_all_records()
+    df = pd.DataFrame(dados_nuvem)
+    
     if os.path.exists('financas_bruta.csv'):
-        df = pd.concat([df, pd.read_csv('financas_bruta.csv')], ignore_index=True)
+        df_bruto = pd.read_csv('financas_bruta.csv')
+        df = pd.concat([df, df_bruto], ignore_index=True)
 
     if not df.empty:
         df.columns = [str(c).strip() for c in df.columns]
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce').dt.date
-        
-        # Limpeza robusta do valor
-        df['Valor_num'] = pd.to_numeric(
-            df['Valor'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip(), 
-            errors='coerce'
-        ).fillna(0)
-        
+        df['Valor_num'] = pd.to_numeric(df['Valor'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip(), errors='coerce').fillna(0)
         df['ID'] = range(2, len(df) + 2)
 
-    # --- INTERFACE VISUAL ---
     st.title("🛡️ FinançasPro Wilson")
-    st.caption("Controle Estratégico & Metas")
 
-    # ZONA DE FILTROS (Calendário e Busca na mesma linha)
-    c_data, c_busca = st.columns([2, 2])
-    with c_data:
-        hoje = date.today()
-        # Inicia no dia 1 do mês atual
-        periodo = st.date_input("📅 Escolha o Período:", value=(date(hoje.year, hoje.month, 1), hoje), format="DD/MM/YYYY")
-    
-    with c_busca:
-        busca = st.text_input("🔎 Pesquisar:", placeholder="Ex: Milo, Mercado, Aluguel...")
+    # --- FILTROS ---
+    if not df.empty:
+        c1, c2 = st.columns([2, 2])
+        with c1:
+            hoje = date.today()
+            periodo = st.date_input("📅 Período:", value=(date(hoje.year, hoje.month, 1), hoje), format="DD/MM/YYYY")
+        with c2:
+            busca = st.text_input("🔎 Pesquisar:", placeholder="Ex: Milo, Aluguel...")
 
-    if isinstance(periodo, tuple) and len(periodo) == 2:
-        d_ini, d_fim = periodo
-        mask = (df['Data_dt'] >= d_ini) & (df['Data_dt'] <= d_fim)
+        if isinstance(periodo, tuple) and len(periodo) == 2:
+            d_ini, d_fim = periodo
+            df_filtrado = df[(df['Data_dt'] >= d_ini) & (df['Data_dt'] <= d_fim)].copy()
+            if busca:
+                df_filtrado = df_filtrado[df_filtrado.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)]
+
+            # CÁLCULOS
+            rec = df_filtrado[df_filtrado['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
+            desp = df_filtrado[df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
+            rend = df_filtrado[df_filtrado['Categoria'].str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
+            pend = df_filtrado[(df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)) & (df_filtrado['Status'] != 'Pago')]['Valor_num'].sum()
+            saldo = rec - desp
+
+            # --- DESTAQUE: SALDO LÍQUIDO (TARJA AZUL) ---
+            st.info(f"### 💰 Saldo Líquido do Período: R$ {saldo:,.2f}")
+
+            # OUTRAS MÉTRICAS
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Receitas", f"R$ {rec:,.2f}")
+            m2.metric("Despesas", f"R$ {desp:,.2f}")
+            m3.metric("Rendimentos", f"R$ {rend:,.2f}")
+            m4.metric("Pendências", f"R$ {pend:,.2f}")
+
+            st.divider()
+
+            # --- GRÁFICOS ---
+            g1, g2 = st.columns(2)
+            with g1:
+                st.subheader("📊 Receitas vs Despesas")
+                st.bar_chart(pd.DataFrame({'Total': [rec, desp]}, index=['Receitas', 'Despesas']))
+            with g2:
+                exibir_metas = st.checkbox("🔑 Ver Metas (Privado)")
+                if exibir_metas:
+                    st.subheader("🎯 Metas de Faturamento")
+                    META = 10000.00
+                    st.bar_chart(pd.DataFrame({'Valor': [META, rec]}, index=['Meta', 'Alcançado']), color="#3498db")
+                else:
+                    st.info("Painel de metas oculto.")
+
+    st.divider()
+
+    # --- FORMULÁRIO (ESTRUTURA ORIGINAL PRESERVADA) ---
+    c_form, c_hist = st.columns([1, 2.5])
+    with c_form:
+        st.subheader("📝 Novo Lançamento")
+        tipo_f = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
+        data_f = st.date_input("Data", date.today())
+        valor_f = st.number_input("Valor (R$)", min_value=0.0, step=0.01)
+        benef_f = st.text_input("Beneficiário")
+        desc_f = st.text_input("Descrição")
+        cat_f = st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Rendimento", "Trabalho", "Outros"])
+        banco_f = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
+        status_f = st.selectbox("Status", ["Pago", "Pendente"])
         
-        if busca:
-            mask = mask & df.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)
-        
-        df_filtrado = df[mask].copy()
+        if st.button("🚀 Salvar na Nuvem", use_container_width=True):
+            if valor_f > 0:
+                ws_lanc.append_row([data_f.strftime('%d/%m/%Y'), valor_f, cat_f, banco_f, desc_f, benef_f, "Pessoal", 0, "", status_f, tipo_f])
+                st.success("Registrado!")
+                st.rerun()
 
-        # MÉTRICAS RÁPIDAS
-        rec = df_filtrado[df_filtrado['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
-        desp = df_filtrado[df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
-        saldo = rec - desp
-
-        st.write("---")
-        m1, m2, m3 = st.columns(3)
-        m1.metric("📈 Entradas", f"R$ {rec:,.2f}")
-        m2.metric("📉 Saídas", f"R$ {desp:,.2f}")
-        m3.metric("💰 Saldo Líquido", f"R$ {saldo:,.2f}", delta=f"{saldo:,.2f}")
-
-        st.divider()
-
-        # --- GRÁFICOS LADO A LADO ---
-        col_g1, col_g2 = st.columns(2)
-
-        with col_g1:
-            st.subheader("📊 Movimentação do Período")
-            chart_data = pd.DataFrame({'Tipo': ['Receitas', 'Despesas'], 'Total': [rec, desp]})
-            st.bar_chart(chart_data.set_index('Tipo'), color="#2ecc71" if rec > desp else "#e74c3c")
-
-        with col_g2:
-            # Trava de Segurança para as Metas
-            exibir_metas = st.checkbox("🔑 Ver Metas (Privado)")
-            
-            if exibir_metas:
-                st.subheader("🎯 Metas de Faturamento")
-                
-                # Wilson, ajuste sua meta aqui (Valor em R$)
-                META_ALVO = 10000.00 
-                
-                progresso = (rec / META_ALVO) * 100 if META_ALVO > 0 else 0
-                
-                meta_data = pd.DataFrame({
-                    'Status': ['Objetivo', 'Alcançado'],
-                    'Valor': [META_ALVO, rec]
-                })
-                
-                st.bar_chart(meta_data.set_index('Status'), color="#3498db")
-                st.info(f"Faturamento atual: {progresso:.1f}% da meta mensal.")
-            else:
-                st.info("Painel de metas oculto.")
-
-        st.divider()
-
-        # TABELA DE DETALHES
-        st.subheader("📋 Detalhamento")
-        colunas_exibir = ['Data', 'Valor', 'Tipo', 'Categoria', 'Descrição', 'Status']
-        st.dataframe(
-            df_filtrado[colunas_exibir].sort_values('Data', ascending=False),
-            use_container_width=True,
-            hide_index=True
-        )
+    with c_hist:
+        st.subheader("📋 Detalhes")
+        if not df_filtrado.empty:
+            st.dataframe(df_filtrado[['Data', 'Valor', 'Descrição', 'Beneficiário', 'Status']].sort_values('Data', ascending=False), use_container_width=True, hide_index=True)
 
 except Exception as e:
-    st.error(f"Erro no sistema: {e}")
+    st.error(f"Erro: {e}")
