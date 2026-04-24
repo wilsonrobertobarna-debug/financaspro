@@ -8,7 +8,7 @@ import os
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Sua chave original)
+# 2. CHAVE DE ACESSO
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -55,7 +55,6 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
-    # --- CARREGAMENTO DOS DADOS ---
     dados_nuvem = ws_lanc.get_all_records()
     df = pd.DataFrame(dados_nuvem)
     
@@ -65,38 +64,35 @@ try:
 
     if not df.empty:
         df.columns = [str(c).strip() for c in df.columns]
-        colunas_vitais = ['Data', 'Valor', 'Tipo', 'Status', 'Categoria', 'Banco', 'Beneficiário', 'Descrição']
-        for col in colunas_vitais:
-            if col not in df.columns: df[col] = ""
-
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
         df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
         df['ID'] = range(2, len(df) + 2)
+        df['Mes_Ano'] = df['Data_dt'].dt.strftime('%m/%Y')
 
-    st.title("🛡️ FinançasPro Wilson (Visão Geral Completa)")
+    st.title("🛡️ FinançasPro Wilson (Filtro por Mês)")
 
-    # --- INDICADORES COMPLETOS ---
+    # --- FILTRO DE MÊS NO TOPO ---
     if not df.empty:
-        hoje = datetime.now()
-        df_mes = df[df['Data_dt'].dt.month == hoje.month].copy()
+        meses_disponiveis = sorted(df['Mes_Ano'].dropna().unique(), reverse=True)
+        mes_selecionado = st.selectbox("📅 Selecione o Mês para Analisar:", meses_disponiveis)
         
-        rec_mes = df_mes[df_mes['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
-        desp_mes = df_mes[df_mes['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
+        # Filtra o DF principal pelo mês selecionado
+        df_filtrado = df[df['Mes_Ano'] == mes_selecionado].copy()
         
-        # Lógica para Rendimento (Categoria que contém a palavra Rendimento)
-        rend_mes = df_mes[df_mes['Categoria'].astype(str).str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
-        
-        # Lógica para Pendências (Tudo que é despesa e não está "Pago")
-        pend_total = df[(df['Tipo'].str.contains('Despesa', case=False, na=False)) & (df['Status'] != 'Pago')]['Valor_num'].sum()
+        # MÉTRICAS DO MÊS SELECIONADO
+        rec_mes = df_filtrado[df_filtrado['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
+        desp_mes = df_filtrado[df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
+        rend_mes = df_filtrado[df_filtrado['Categoria'].astype(str).str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
+        pend_mes = df_filtrado[(df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)) & (df_filtrado['Status'] != 'Pago')]['Valor_num'].sum()
 
         m1, m2, m3, m4, m5 = st.columns(5)
         m1.metric("Receitas", f"R$ {rec_mes:,.2f}")
         m2.metric("Despesas", f"R$ {desp_mes:,.2f}")
         m3.metric("Saldo", f"R$ {rec_mes - desp_mes:,.2f}")
         m4.metric("Rendimentos", f"R$ {rend_mes:,.2f}")
-        m5.metric("Pendências", f"R$ {pend_total:,.2f}")
+        m5.metric("Pendências", f"R$ {pend_mes:,.2f}")
 
-        st.write("### 📊 Balanço Mensal")
+        st.write(f"### 📊 Balanço de {mes_selecionado}")
         chart_df = pd.DataFrame({'Tipo': ['Receitas', 'Despesas'], 'Total': [rec_mes, desp_mes]})
         st.bar_chart(chart_df.set_index('Tipo'))
 
@@ -122,37 +118,37 @@ try:
                 st.rerun()
 
     with c_hist:
-        st.subheader("🔍 Histórico")
+        st.subheader(f"🔍 Histórico de {mes_selecionado}")
         if not df.empty:
             f1, f2 = st.columns(2)
             with f1: btn_pets = st.button("🐶 Filtro Milo & Bolt", use_container_width=True)
             with f2: btn_limpar = st.button("📄 Mostrar Tudo", use_container_width=True)
             
-            busca = st.text_input("🔎 Pesquisar:")
+            busca = st.text_input("🔎 Pesquisar neste mês:")
             
-            df_view = df[['ID', 'Data', 'Valor', 'Descrição', 'Beneficiário', 'Status']].copy()
+            df_view = df_filtrado[['ID', 'Data', 'Valor', 'Descrição', 'Beneficiário', 'Status']].copy()
             
             if btn_pets:
-                mask = df.astype(str).apply(lambda x: x.str.contains('Milo|Bolt', case=False)).any(axis=1)
+                mask = df_filtrado.astype(str).apply(lambda x: x.str.contains('Milo|Bolt', case=False)).any(axis=1)
                 df_view = df_view[mask]
             elif btn_limpar:
                 st.rerun()
             elif busca:
-                mask = df.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)
+                mask = df_filtrado.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)
                 df_view = df_view[mask]
             
             st.dataframe(df_view.sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
 
-            with st.expander("🗑️ Excluir Testes"):
+            with st.expander("🗑️ Lixeira (Excluir por ID)"):
                 id_del = st.number_input("ID para apagar:", min_value=2, step=1)
                 confirma = st.checkbox("Confirmar exclusão")
-                if st.button("🔴 Apagar", use_container_width=True):
+                if st.button("🔴 Apagar Registro", use_container_width=True):
                     if confirma:
                         ws_lanc.delete_rows(int(id_del))
                         st.success(f"ID {id_del} removido!")
                         st.rerun()
         else:
-            st.info("Sem dados.")
+            st.info("Sem dados para este período.")
 
 except Exception as e:
     st.error(f"Erro detectado: {e}")
