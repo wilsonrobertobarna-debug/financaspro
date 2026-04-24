@@ -3,7 +3,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime, date
-import io
+import os
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
@@ -59,48 +59,65 @@ try:
     dados_nuvem = ws_lanc.get_all_records()
     df = pd.DataFrame(dados_nuvem)
     
-    # Barra Lateral para Upload
-    st.sidebar.header("📁 Importação")
-    uploaded_file = st.sidebar.file_uploader("Carregar 'financas_bruta'", type=['csv'])
+    # Barra Lateral para Upload (Resolução do problema do arquivo sumido)
+    st.sidebar.header("📁 Importar Março/Abril")
+    uploaded_file = st.sidebar.file_uploader("Selecione o arquivo financas_bruta", type=['csv'])
 
     if uploaded_file is not None:
-        df_bruto = pd.read_csv(uploaded_file)
-        # Padroniza colunas
-        df_bruto.columns = [str(c).strip() for c in df_bruto.columns]
-        # Garante que a coluna Data seja legível
-        df_bruto['Data'] = pd.to_datetime(df_bruto['Data'], dayfirst=True, errors='coerce').dt.strftime('%d/%m/%Y')
-        df = pd.concat([df, df_bruto], ignore_index=True)
-        st.sidebar.success(f"✅ {len(df_bruto)} registros carregados!")
+        try:
+            # Tenta ler com vírgula, se falhar tenta ponto e vírgula
+            try:
+                df_bruto = pd.read_csv(uploaded_file, sep=',')
+            except:
+                df_bruto = pd.read_csv(uploaded_file, sep=';')
+            
+            # LIMPEZA DAS COLUNAS: Tira espaços e padroniza os nomes
+            df_bruto.columns = [str(c).strip().title() for c in df_bruto.columns]
+            
+            # Verifica se a coluna Data existe após a limpeza
+            if 'Data' in df_bruto.columns:
+                df_bruto['Data_dt'] = pd.to_datetime(df_bruto['Data'], dayfirst=True, errors='coerce')
+                df_bruto['Data'] = df_bruto['Data_dt'].dt.strftime('%d/%m/%Y')
+                df = pd.concat([df, df_bruto], ignore_index=True)
+                st.sidebar.success(f"✅ {len(df_bruto)} registros carregados!")
+            else:
+                st.sidebar.error(f"Coluna 'Data' não encontrada. Colunas lidas: {list(df_bruto.columns)}")
+        except Exception as e:
+            st.sidebar.error(f"Erro ao ler arquivo: {e}")
 
     if not df.empty:
-        df.columns = [str(c).strip() for c in df.columns]
+        df.columns = [str(c).strip().title() for c in df.columns]
+        # Garante colunas mínimas para não dar erro no gráfico
+        for col in ['Data', 'Valor', 'Tipo', 'Status', 'Categoria']:
+            if col not in df.columns: df[col] = ""
+            
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce').dt.date
         df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
         df['ID'] = range(2, len(df) + 2)
 
     st.title("🛡️ FinançasPro Wilson")
 
-    # --- SELETOR DE PERÍODO (CALENDÁRIO) ---
+    # --- SELETOR DE PERÍODO ---
     if not df.empty:
-        data_min = df['Data_dt'].min() if not df['Data_dt'].isnull().all() else date(2026, 3, 1)
+        data_min = df['Data_dt'].min() if not pd.isnull(df['Data_dt'].min()) else date.today()
         data_max = date.today()
         
-        st.info(f"📊 Analisando dados desde {data_min.strftime('%d/%m/%Y')}")
+        st.info(f"📅 Dados disponíveis desde: {data_min.strftime('%d/%m/%Y')}")
         
         periodo = st.date_input(
-            "📅 Selecione o Período no Calendário:",
+            "Selecione o intervalo no calendário:",
             value=(data_min, data_max),
             format="DD/MM/YYYY"
         )
         
         if isinstance(periodo, tuple) and len(periodo) == 2:
-            data_inicio, data_fim = periodo
-            df_filtrado = df[(df['Data_dt'] >= data_inicio) & (df['Data_dt'] <= data_fim)].copy()
+            data_ini, data_fim = periodo
+            df_filtrado = df[(df['Data_dt'] >= data_ini) & (df['Data_dt'] <= data_fim)].copy()
             
-            # MÉTRICAS
+            # CÁLCULO DAS 5 TAGS (Métricas)
             rec = df_filtrado[df_filtrado['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
             desp = df_filtrado[df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
-            rend = df_filtrado[df_filtrado['Categoria'].astype(str).str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
+            rend = df_filtrado[df_filtrado['Categoria'].str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
             pend = df_filtrado[(df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)) & (df_filtrado['Status'] != 'Pago')]['Valor_num'].sum()
 
             m1, m2, m3, m4, m5 = st.columns(5)
@@ -110,21 +127,15 @@ try:
             m4.metric("Rendimentos", f"R$ {rend:,.2f}")
             m5.metric("Pendências", f"R$ {pend:,.2f}")
 
-            st.write(f"### 📈 Balanço de {data_inicio.strftime('%d/%m')} a {data_fim.strftime('%d/%m')}")
+            st.write(f"### 📊 Balanço de {data_ini.strftime('%d/%m')} até {data_fim.strftime('%d/%m')}")
             chart_df = pd.DataFrame({'Tipo': ['Receitas', 'Despesas'], 'Total': [rec, desp]})
             st.bar_chart(chart_df.set_index('Tipo'))
 
             st.divider()
-            st.subheader("🔍 Histórico Detalhado")
-            st.dataframe(df_filtrado[['ID', 'Data', 'Valor', 'Descrição', 'Beneficiário', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
-            
-            # LIXEIRA
-            with st.expander("🗑️ Excluir Lançamentos"):
-                id_del = st.number_input("ID da linha:", min_value=2, step=1)
-                if st.button("🔴 Confirmar Exclusão"):
-                    ws_lanc.delete_rows(int(id_del))
-                    st.success("Excluído!")
-                    st.rerun()
+            st.subheader("🔍 Histórico do Período")
+            st.dataframe(df_filtrado[['ID', 'Data', 'Valor', 'Descrição', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
+        else:
+            st.warning("⚠️ Selecione a data final no calendário.")
 
 except Exception as e:
-    st.error(f"Erro: {e}")
+    st.error(f"Erro crítico no sistema: {e}")
