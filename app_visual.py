@@ -107,25 +107,28 @@ try:
             d_ini, d_fim = periodo
             df_filtrado = df_final[(df_final['data_dt'] >= d_ini) & (df_final['data_dt'] <= d_fim)].copy()
 
-            if not df_
-# Código corrigido para a linha 110 em diante:
+         # --- Trecho Corrigido (Linha 110 em diante) ---
         if isinstance(periodo, tuple) and len(periodo) == 2:
             d_ini, d_fim = periodo
+            # Filtra os dados entre as datas selecionadas
             df_filtrado = df_final[(df_final['data_dt'] >= d_ini) & (df_final['data_dt'] <= d_fim)].copy()
 
             if not df_filtrado.empty:
-                # Se não houver a coluna 'valor_num', cria ela
+                # Garante que a coluna de valor para cálculo exista
                 if 'valor_num' not in df_filtrado.columns:
                     df_filtrado['valor_num'] = pd.to_numeric(df_filtrado['valor'], errors='coerce').fillna(0)
 
+                # Separa Receitas e Despesas (baseado na sua coluna 'tipo')
                 rec = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('receita', case=False, na=False)]['valor_num'].sum()
                 desp = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('despesa', case=False, na=False)]['valor_num'].sum()
                 
+                # Exibe os Cards de Resumo
                 c1, c2, c3 = st.columns(3)
                 c1.metric("Receitas", f"R$ {rec:,.2f}")
                 c2.metric("Despesas", f"R$ {desp:,.2f}")
                 c3.metric("Saldo", f"R$ {rec - desp:,.2f}")
 
+                # Exibe a tabela final
                 st.dataframe(df_filtrado, use_container_width=True)
             else:
-                st.warning("Nenhum dado encontrado para este período.")
+                st.warning(f"Nenhum lançamento encontrado entre {d_ini.strftime('%d/%m')} e {d_fim.strftime('%d/%m')}.")
