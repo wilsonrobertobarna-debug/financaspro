@@ -7,7 +7,7 @@ from datetime import datetime
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Mantenha exatamente como está abaixo)
+# 2. CHAVE DE ACESSO (Mantida)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -54,26 +54,26 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
-    # --- PROCESSAMENTO DE DADOS ---
+    # --- PROCESSAMENTO SEGURO ---
     dados = ws_lanc.get_all_records()
     df = pd.DataFrame(dados)
     
     if not df.empty:
-        # Padroniza nomes das colunas
-        df.columns = [str(c).strip().capitalize() for c in df.columns]
+        # LIMPEZA CRÍTICA: Remove espaços invisíveis e padroniza para "Centro de custo"
+        df.columns = [str(c).strip().replace('  ', ' ') for c in df.columns]
         
-        # Correção da Data (Remove o 00:00:00 na exibição)
+        # Converte Data sem o erro 00:00:00
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
         df['Data_limpa'] = df['Data_dt'].dt.strftime('%d/%m/%Y')
         
-        # Correção do Valor
+        # Valor numérico
         df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
         
-        # Garante coluna de Tipo (Receita/Despesa)
+        # Garante coluna de Tipo
         if 'Tipo' not in df.columns:
             df['Tipo'] = 'Despesa'
 
-    # --- CARDS DO TOPO (ORDEM SOLICITADA) ---
+    # --- CARDS (ORDEM SOLICITADA) ---
     st.title("💼 FinançasPro Wilson")
     c1, c2, c3 = st.columns(3)
     
@@ -81,72 +81,69 @@ try:
         hoje = datetime.now()
         df_mes = df[df['Data_dt'].dt.month == hoje.month]
         
-        receita_mes = df_mes[df_mes['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
-        despesa_mes = df_mes[df_mes['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
+        # Filtros insensíveis a maiúsculas/minúsculas
+        rec = df_mes[df_mes['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
+        desp = df_mes[df_mes['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
         
-        # 1. CARD: RECEITA - DESPESA = SALDO
-        c1.metric("Saldo do Mês (R - D)", f"R$ {receita_mes - despesa_mes:,.2f}")
-        # 2. CARD: RENDIMENTOS
-        c2.metric("Rendimentos (Mês Atual)", f"R$ {receita_mes:,.2f}")
-        # 3. CARD: PENDÊNCIAS (Mês Atual + Anterior)
-        pendencias = df[(df['Tipo'].str.contains('Despesa', case=False, na=False)) & (df['Data_dt'] <= hoje)]['Valor_num'].sum()
-        c3.metric("Pendências (Atual + Anterior)", f"R$ {pendencias:,.2f}")
+        c1.metric("Saldo do Mês (R - D)", f"R$ {rec - desp:,.2f}")
+        c2.metric("Rendimentos (Mês)", f"R$ {rec:,.2f}")
+        pend = df[(df['Tipo'].str.contains('Despesa', case=False, na=False)) & (df['Data_dt'] <= hoje)]['Valor_num'].sum()
+        c3.metric("Pendências (Atual + Anterior)", f"R$ {pend:,.2f}")
 
     st.divider()
 
-    # --- LAYOUT PRINCIPAL ---
+    # --- LAYOUT ---
     col_form, col_hist = st.columns([1, 2.5])
     
     with col_form:
         st.subheader("📝 Novo Registro")
-        tipo_mov = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
-        dt_input = st.date_input("Data", datetime.now())  # LINHA 101 CORRIGIDA
+        t_mov = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
+        dt_input = st.date_input("Data", datetime.now())
         vlr_input = st.number_input("Valor (R$)", min_value=0.0)
         benef_input = st.text_input("Beneficiário")
-        cc_input = st.selectbox("Centro de Custo", ["Pessoal", "Família", "Trabalho"])
+        
+        # Verifica se a coluna existe na planilha para evitar o erro do "índice"
+        lista_cc = ["Pessoal", "Família", "Trabalho"]
+        cc_input = st.selectbox("Centro de Custo", lista_cc)
+        
         banco_input = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
         km_input = st.number_input("KM", min_value=0, value=0)
         
         if st.button("🚀 Salvar", use_container_width=True):
             ws_lanc.append_row([
                 dt_input.strftime('%d/%m/%Y'), vlr_input, "Geral", banco_input, 
-                "Automático", benef_input, cc_input, km_input, "", "", tipo_mov
+                "Automático", benef_input, cc_input, km_input, "", "", t_mov
             ])
-            st.success("Lançamento salvo com sucesso!")
+            st.success("Salvo!")
             st.rerun()
 
     with col_hist:
-        st.subheader("🔍 Filtros e Pesquisa")
-        # Barra de pesquisa única: Data, Mês, Beneficiário ou qualquer termo
-        busca = st.text_input("🔎 Pesquise por data (dd/mm), mês (mm/aaaa), beneficiário ou qualquer termo:")
+        st.subheader("📊 Relatório")
+        busca = st.text_input("🔎 Pesquisa (Data, Mês ou Beneficiário):")
         
-        # Mapeamento para garantir que a categoria (Descrição) apareça
-        col_cat = "Descrição" if "Descrição" in df.columns else ("Categoria" if "Categoria" in df.columns else "Tipo")
+        # Lista de colunas para exibir (apenas as que existirem de fato)
+        cols_desejadas = ['Data_limpa', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Beneficiário', 'Centro de custo', 'Tipo']
+        cols_para_ver = [c for c in cols_desejadas if c in df.columns]
         
-        # Tabela com nomes limpos para o usuário
-        df_view = df[['Data_limpa', 'Valor', col_cat, 'Banco', 'Beneficiário', 'Centro de custo', 'Tipo']].copy()
-        df_view.columns = ['Data', 'Valor', 'Categoria', 'Banco', 'Beneficiário', 'C. Custo', 'Tipo']
+        df_view = df[cols_para_ver].copy()
         
         if busca:
             mask = df_view.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)
             df_view = df_view[mask]
         
-        st.dataframe(df_view.sort_values('Data', ascending=False), use_container_width=True, hide_index=True)
+        st.dataframe(df_view.sort_values('Data_limpa', ascending=False), use_container_width=True, hide_index=True)
 
-    # --- RODAPÉ: SALDO POR BANCO ---
-    st.divider()
-    st.subheader("🏦 Saldo Acumulado por Banco")
+    # --- RODAPÉ: SALDO BANCOS ---
     if not df.empty:
-        # Calcula saldo por banco: Receita soma, Despesa subtrai
-        df['Saldo_calc'] = df.apply(lambda x: x['Valor_num'] if "Receita" in str(x['Tipo']) else -x['Valor_num'], axis=1)
-        resumo_bancos = df.groupby('Banco')['Saldo_calc'].sum().reset_index()
-        resumo_bancos.columns = ['Banco / Cartão', 'Saldo Atual (R$)']
+        st.divider()
+        st.subheader("🏦 Saldo por Banco")
+        df['S_calc'] = df.apply(lambda x: x['Valor_num'] if "Receita" in str(x['Tipo']) else -x['Valor_num'], axis=1)
+        res_banco = df.groupby('Banco')['S_calc'].sum().reset_index()
         
-        # Exibe em colunas pequenas no rodapé para não poluir
-        cols_banco = st.columns(len(resumo_bancos) if len(resumo_bancos) > 0 else 1)
-        for i, row in resumo_bancos.iterrows():
-            with cols_banco[i % len(cols_banco)]:
-                st.metric(row['Banco / Cartão'], f"R$ {row['Saldo Atual (R$)']:,.2f}")
+        cols = st.columns(len(res_banco) if len(res_banco) > 0 else 1)
+        for i, r in res_banco.iterrows():
+            with cols[i % len(cols)]:
+                st.metric(r['Banco'], f"R$ {r['S_calc']:,.2f}")
 
 except Exception as e:
-    st.error(f"Erro no sistema: {e}")
+    st.error(f"Erro corrigido: {e}")
