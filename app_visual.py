@@ -7,7 +7,7 @@ from datetime import datetime
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Mantenha exatamente como está)
+# 2. CHAVE DE ACESSO (Mantenha sua chave original aqui)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -54,90 +54,74 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
-    # --- PROCESSAMENTO DOS DADOS ---
     dados = ws_lanc.get_all_records()
     df = pd.DataFrame(dados)
     
     if not df.empty:
-        # LIMPEZA DE COLUNAS: Remove espaços e padroniza os nomes
         df.columns = [str(c).strip() for c in df.columns]
-        
-        # Converte Data
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
         df['Data_limpa'] = df['Data_dt'].dt.strftime('%d/%m/%Y')
-        
-        # Converte Valor para número
         df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
         
-        # Garante colunas mínimas para evitar erros de índice
         if 'Tipo' not in df.columns: df['Tipo'] = 'Despesa'
         if 'Categoria' not in df.columns: df['Categoria'] = 'Outros'
         if 'Status' not in df.columns: df['Status'] = 'Pendente'
 
-    # --- AS 5 TAGS DO TOPO ---
+    # --- TAGS INDICADORAS ---
     st.title("💼 FinançasPro Wilson")
-    
     if not df.empty:
         hoje = datetime.now()
         df_mes = df[df['Data_dt'].dt.month == hoje.month]
         
-        # Cálculos para as Tags
         rec_mes = df_mes[df_mes['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
         desp_mes = df_mes[df_mes['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
-        saldo_r_d = rec_mes - desp_mes
         
-        # RENDIMENTOS: Apenas lançamentos com a categoria exata "Rendimento"
         rendimentos = df_mes[df_mes['Categoria'].astype(str).str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
-        
-        # PENDÊNCIAS: Despesas onde o Status NÃO é "Pago"
+        # Pendências: Despesas não marcadas como "Pago"
         pendencias = df[(df['Tipo'].str.contains('Despesa', case=False, na=False)) & (df['Status'] != 'Pago')]['Valor_num'].sum()
 
         t1, t2, t3, t4, t5 = st.columns(5)
         t1.metric("Receitas (Mês)", f"R$ {rec_mes:,.2f}")
         t2.metric("Despesas (Mês)", f"R$ {desp_mes:,.2f}")
-        t3.metric("Saldo (R - D)", f"R$ {saldo_r_d:,.2f}")
+        t3.metric("Saldo (R - D)", f"R$ {rec_mes - desp_mes:,.2f}")
         t4.metric("Rendimentos", f"R$ {rendimentos:,.2f}")
         t5.metric("Pendências", f"R$ {pendencias:,.2f}")
 
     st.divider()
 
-    # --- LAYOUT: FORMULÁRIO E HISTÓRICO ---
+    # --- FORMULÁRIO COM LIMPEZA AUTOMÁTICA ---
     col_form, col_hist = st.columns([1, 2.5])
     
     with col_form:
-        st.subheader("📝 Lançamento")
-        tipo_mov = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
-        dt_input = st.date_input("Data", datetime.now())
-        vlr_input = st.number_input("Valor (R$)", min_value=0.0)
-        benef_input = st.text_input("Beneficiário/Origem")
-        cat_input = st.selectbox("Categoria", ["Aluguel", "Mercado", "Rendimento", "Trabalho", "Outros"])
-        banco_input = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
-        status_input = st.selectbox("Status", ["Pago", "Pendente"])
+        st.subheader("📝 Novo Lançamento")
         
-        if st.button("🚀 Salvar", use_container_width=True):
-            # Envia para a planilha (ajuste a ordem se as suas colunas forem diferentes)
-            ws_lanc.append_row([
-                dt_input.strftime('%d/%m/%Y'), vlr_input, cat_input, banco_input, 
-                "Manual", benef_input, "Pessoal", 0, "", status_input, tipo_mov
-            ])
-            st.success("Lançamento guardado!")
-            st.rerun()
+        # O segredo para limpar é o st.rerun() no final do botão 'Salvar'
+        tipo_f = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
+        data_f = st.date_input("Data", datetime.now())
+        valor_f = st.number_input("Valor (R$)", min_value=0.0, step=0.01, value=0.0)
+        benef_f = st.text_input("Beneficiário/Origem", value="")
+        cat_f = st.selectbox("Categoria", ["Aluguel", "Mercado", "Rendimento", "Trabalho", "Lazer", "Outros"])
+        banco_f = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
+        status_f = st.selectbox("Status", ["Pago", "Pendente"])
+        
+        if st.button("🚀 Salvar Lançamento", use_container_width=True):
+            if valor_f > 0:
+                ws_lanc.append_row([
+                    data_f.strftime('%d/%m/%Y'), valor_f, cat_f, banco_f, 
+                    "Manual", benef_f, "Pessoal", 0, "", status_f, tipo_f
+                ])
+                st.success("Dados gravados com sucesso!")
+                # Este comando limpa a memória do formulário e recarrega a página com campos zerados
+                st.rerun()
+            else:
+                st.warning("Por favor, insira um valor maior que zero.")
 
     with col_hist:
-        st.subheader("🔍 Histórico de Movimentações")
-        busca = st.text_input("🔎 Pesquisa rápida:")
-        
-        # Seleção de colunas para exibição limpa
-        cols_mostrar = ['Data_limpa', 'Valor', 'Tipo', 'Banco', 'Beneficiário', 'Status']
-        cols_existentes = [c for c in cols_mostrar if c in df.columns]
-        
-        df_view = df[cols_existentes].copy()
-        
-        if busca:
-            mask = df_view.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)
-            df_view = df_view[mask]
-        
-        st.dataframe(df_view.sort_values('Data_limpa', ascending=False), use_container_width=True, hide_index=True)
+        st.subheader("🔍 Histórico Recente")
+        if not df.empty:
+            cols_ver = ['Data_limpa', 'Valor', 'Tipo', 'Banco', 'Beneficiário', 'Status']
+            cols_e = [c for c in cols_ver if c in df.columns]
+            st.dataframe(df[cols_e].sort_values('Data_dt', ascending=False), use_container_width=True, hide_index=True)
 
 except Exception as e:
-    st.error(f"Erro detectado: {e}")
+    st.error(f"Erro no sistema: {e}")
