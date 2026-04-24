@@ -7,7 +7,7 @@ from datetime import datetime
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Mantenha sua chave original abaixo)
+# 2. CHAVE DE ACESSO (Sua chave original)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -54,26 +54,24 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
-    # --- ESCUDO: CARREGAMENTO SEGURO ---
     dados = ws_lanc.get_all_records()
     df = pd.DataFrame(dados)
     
     if not df.empty:
         df.columns = [str(c).strip() for c in df.columns]
         
-        # Garante colunas vitais para o histórico não sumir
-        colunas_vitais = ['Data', 'Valor', 'Tipo', 'Status', 'Categoria', 'Banco', 'Beneficiário']
+        # O Escudo Nível 2 - Garante que as colunas existam
+        colunas_vitais = ['Data', 'Valor', 'Tipo', 'Status', 'Categoria', 'Banco', 'Beneficiário', 'Descrição']
         for col in colunas_vitais:
-            if col not in df.columns: df[col] = "N/A"
+            if col not in df.columns: df[col] = ""
 
-        # Conversão de dados
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
         df['Data_limpa'] = df['Data'].astype(str)
         df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
 
-    st.title("🛡️ FinançasPro Wilson (Completo)")
+    st.title("🛡️ FinançasPro Wilson (Busca Avançada)")
 
-    # --- INDICADORES E GRÁFICO ---
+    # --- INDICADORES ---
     if not df.empty:
         hoje = datetime.now()
         df_mes = df[df['Data_dt'].dt.month == hoje.month].copy()
@@ -90,62 +88,57 @@ try:
         m4.metric("Rendimentos", f"R$ {rend_mes:,.2f}")
         m5.metric("Pendências", f"R$ {pend_total:,.2f}")
 
-        # Gráfico Simples
-        st.write("### 📊 Balanço Mensal")
-        chart_df = pd.DataFrame({
-            'Tipo': ['Receitas', 'Despesas'],
-            'Total': [rec_mes, desp_mes]
-        })
-        st.bar_chart(chart_df.set_index('Tipo'))
-
     st.divider()
 
     c_form, c_hist = st.columns([1, 2.5])
     
     with c_form:
-        st.subheader("📝 Lançamento")
+        st.subheader("📝 Novo Lançamento")
         tipo_f = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
         data_f = st.date_input("Data", datetime.now())
         valor_f = st.number_input("Valor (R$)", min_value=0.0, step=0.01)
-        benef_f = st.text_input("Beneficiário/Origem")
+        benef_f = st.text_input("Beneficiário (Quem?)")
+        desc_f = st.text_input("Descrição (Ex: Parcela 1/10)")
         cat_f = st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Rendimento", "Trabalho", "Outros"])
         banco_f = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
         status_f = st.selectbox("Status", ["Pago", "Pendente"])
         
         if st.button("🚀 Salvar Lançamento", use_container_width=True):
             if valor_f > 0:
+                # Ordem: Data, Valor, Categoria, Banco, Descrição, Beneficiário, Centro Custo, KM, Outros, Status, Tipo
                 ws_lanc.append_row([
                     data_f.strftime('%d/%m/%Y'), valor_f, cat_f, banco_f, 
-                    "Manual", benef_f, "Pessoal", 0, "", status_f, tipo_f
+                    desc_f, benef_f, "Pessoal", 0, "", status_f, tipo_f
                 ])
-                st.success("Gravado! Limpando campos...")
+                st.success("Lançamento Registrado!")
                 st.rerun()
 
     with c_hist:
-        st.subheader("🔍 Histórico")
+        st.subheader("🔍 Localizar Lançamentos e Parcelas")
         if not df.empty:
-            # Botões de Filtro
             f1, f2 = st.columns(2)
-            with f1: btn_pets = st.button("🐶 Filtro Milo & Bolt", use_container_width=True)
+            with f1: btn_pets = st.button("🐶 Milo & Bolt", use_container_width=True)
             with f2: btn_limpar = st.button("📄 Mostrar Tudo", use_container_width=True)
             
-            busca = st.text_input("🔎 Pesquisa manual:", value="")
+            busca = st.text_input("🔎 Digite aqui para filtrar (Ex: Parcela, Mercado, 1/12):")
             
-            df_view = df[['Data_limpa', 'Valor', 'Tipo', 'Banco', 'Beneficiário', 'Status']].copy()
+            # Colunas exibidas (Incluindo Descrição para ver as parcelas)
+            cols_ver = ['Data_limpa', 'Valor', 'Descrição', 'Beneficiário', 'Banco', 'Status']
+            df_view = df[cols_ver].copy()
             
             if btn_pets:
-                mask = df_view.astype(str).apply(lambda x: x.str.contains('Milo|Bolt', case=False)).any(axis=1)
+                mask = df.astype(str).apply(lambda x: x.str.contains('Milo|Bolt', case=False)).any(axis=1)
                 df_view = df_view[mask]
-                st.info(f"Total com os meninos: R$ {df_view['Valor'].sum():,.2f}")
             elif btn_limpar:
                 st.rerun()
             elif busca:
-                mask = df_view.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)
+                # O Escudo procura o termo em todas as colunas
+                mask = df.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)
                 df_view = df_view[mask]
             
             st.dataframe(df_view.sort_index(ascending=False), use_container_width=True, hide_index=True)
         else:
-            st.info("Sem dados na planilha.")
+            st.info("Nenhum dado na planilha.")
 
 except Exception as e:
-    st.error(f"O Escudo detectou algo: {e}")
+    st.error(f"O Escudo detectou um problema: {e}")
