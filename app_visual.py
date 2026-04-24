@@ -8,8 +8,8 @@ import re
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. SUA CHAVE DE ACESSO (MANTENHA O FORMATO DE TRÊS ASPAS)
-# Cole sua chave inteira aqui dentro, do BEGIN até o END.
+# 2. SUA CHAVE DE ACESSO (MANTENHA AS TRÊS ASPAS)
+# Cole sua chave inteira aqui. Mesmo que venha com pontos ou espaços, o código limpa.
 CHAVE_BRUTA = """
 -----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP
@@ -20,12 +20,16 @@ MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP
 @st.cache_resource
 def conectar_google():
     try:
-        # LIMPEZA RADICAL: Remove espaços em branco nas pontas e garante quebras de linha
-        chave_limpa = CHAVE_BRUTA.strip()
+        # --- LIMPEZA DE SEGURANÇA (O segredo está aqui) ---
+        # 1. Remove os cabeçalhos para limpar o "miolo" da chave
+        miolo = CHAVE_BRUTA.replace("-----BEGIN PRIVATE KEY-----", "").replace("-----END PRIVATE KEY-----", "")
         
-        # Se a chave foi colada com espaços no início de cada linha, isso limpa:
-        linhas = [line.strip() for line in chave_limpa.split('\n') if line.strip()]
-        chave_final = "\n".join(linhas)
+        # 2. Remove TUDO que não for letra, número, +, / ou = (remove pontos e espaços)
+        miolo_limpo = re.sub(r'[^a-zA-Z0-9+/=]', '', miolo)
+        
+        # 3. Reconstrói a chave no formato que o Google exige (blocos de 64 caracteres)
+        linhas = [miolo_limpo[i:i+64] for i in range(0, len(miolo_limpo), 64)]
+        chave_final = "-----BEGIN PRIVATE KEY-----\n" + "\n".join(linhas) + "\n-----END PRIVATE KEY-----\n"
 
         scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         
@@ -47,19 +51,22 @@ client = conectar_google()
 
 if client:
     try:
+        # Tenta abrir a planilha
         sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
         ws = sh.get_worksheet(0)
+        
+        # Lê os dados
         df = pd.DataFrame(ws.get_all_records())
         
         st.title("🛡️ FinançasPro Wilson")
+        st.success("Conexão estabelecida com sucesso!")
 
         if not df.empty:
-            # Padronização para evitar erros de 'tipo' ou 'valor'
+            # Padronização de Colunas
             df.columns = [str(c).strip().lower() for c in df.columns]
             
-            # Conversão de Dados Segura
+            # Conversão de Dados
             df['data_dt'] = pd.to_datetime(df['data'], dayfirst=True, errors='coerce')
-            # Limpa o valor de R$, pontos e vírgulas
             df['valor_num'] = pd.to_numeric(
                 df['valor'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip(), 
                 errors='coerce'
@@ -67,8 +74,8 @@ if client:
             
             df['data_so_dia'] = df['data_dt'].dt.date
 
-            # Filtro de Março/Abril
-            periodo = st.date_input("📅 Período:", value=(date(2026, 3, 1), date(2026, 4, 30)), format="DD/MM/YYYY")
+            # Filtro de Data
+            periodo = st.date_input("📅 Selecione o Período:", value=(date(2026, 3, 1), date(2026, 4, 30)), format="DD/MM/YYYY")
 
             if isinstance(periodo, tuple) and len(periodo) == 2:
                 d_ini, d_fim = periodo
@@ -80,14 +87,15 @@ if client:
                     
                     c1, c2, c3 = st.columns(3)
                     c1.metric("Faturamento", f"R$ {rec:,.2f}")
-                    c2.metric("Gastos", f"R$ {desp:,.2f}")
+                    c2.metric("Despesas", f"R$ {desp:,.2f}")
                     c3.metric("Saldo", f"R$ {rec - desp:,.2f}")
 
+                    st.subheader("📋 Lançamentos Encontrados")
                     st.dataframe(df_filtrado[['data', 'valor', 'tipo', 'descrição']], use_container_width=True)
                 else:
                     st.warning("Nenhum dado para este período.")
         else:
-            st.warning("Planilha vazia ou não encontrada.")
+            st.warning("A planilha do Google está vazia.")
 
     except Exception as e:
-        st.error(f"Erro ao ler Planilha: {e}")
+        st.error(f"Erro ao acessar os dados da planilha: {e}")
