@@ -4,10 +4,10 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime
 
-# 1. CONFIGURAÇÃO DA PÁGINA
+# 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Mantida intacta)
+# 2. CHAVE (Mantida)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -40,39 +40,37 @@ PK_LIST = [
 ]
 
 @st.cache_resource
-def conectar_google():
+def conectar():
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    creds_info = {
+    creds = Credentials.from_service_account_info({
         "type": "service_account", "project_id": "financaspro-wilson",
         "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
         "token_uri": "https://oauth2.googleapis.com/token", "private_key": "\n".join(PK_LIST)
-    }
-    return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
+    }, scopes=scope)
+    return gspread.authorize(creds)
 
 try:
-    client = conectar_google()
+    client = conectar()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-    ws_lanc = sh.get_worksheet(0)
+    ws = sh.get_worksheet(0)
     
-    # --- PROCESSAMENTO DE DADOS ---
-    dados = ws_lanc.get_all_records()
+    # --- CARREGAR E LIMPAR DADOS ---
+    dados = ws.get_all_records()
     df = pd.DataFrame(dados)
     
     if not df.empty:
-        # Padroniza nomes das colunas (remove espaços e coloca inicial maiúscula)
+        # Padroniza nomes de colunas
         df.columns = [str(c).strip().capitalize() for c in df.columns]
         
-        # Correção da Data (Remove o 00:00:00)
+        # Converte Data e remove o 00:00:00
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-        # Criamos uma coluna de exibição formatada como texto brasileiro
-        df['Data Exibição'] = df['Data_dt'].dt.strftime('%d/%m/%Y')
+        df['Data Limpa'] = df['Data_dt'].dt.strftime('%d/%m/%Y')
         
-        # Correção do Valor
-        df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
+        # Converte Valor
+        df['Vlr'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
         
-        # Garante que a coluna Tipo existe para os cards
-        if 'Tipo' not in df.columns:
-            df['Tipo'] = 'Despesa' # Fallback caso a coluna tenha outro nome
+        # Garante coluna Tipo
+        if 'Tipo' not in df.columns: df['Tipo'] = 'Despesa'
 
     # --- CARDS DO TOPO ---
     st.title("💼 FinançasPro Wilson")
@@ -82,53 +80,22 @@ try:
         hoje = datetime.now()
         df_mes = df[df['Data_dt'].dt.month == hoje.month]
         
-        receita_mes = df_mes[df_mes['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
-        despesa_mes = df_mes[df_mes['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
+        rec = df_mes[df_mes['Tipo'].str.contains('Receita', case=False, na=False)]['Vlr'].sum()
+        desp = df_mes[df_mes['Tipo'].str.contains('Despesa', case=False, na=False)]['Vlr'].sum()
         
-        # 1. SALDO (Receita - Despesa)
-        c1.metric("Saldo do Mês (R-D)", f"R$ {receita_mes - despesa_mes:,.2f}")
-        # 2. RENDIMENTOS
-        c2.metric("Rendimentos (Mês)", f"R$ {receita_mes:,.2f}")
-        # 3. PENDÊNCIAS (Mês Atual + Anterior)
-        pendencias = df[(df['Tipo'].str.contains('Despesa', case=False, na=False)) & (df['Data_dt'] <= hoje)]['Valor_num'].sum()
-        c3.metric("Pendências (Total)", f"R$ {pendencias:,.2f}")
+        c1.metric("Saldo do Mês (Receita - Despesa)", f"R$ {rec - desp:,.2f}")
+        c2.metric("Rendimentos (Mês)", f"R$ {rec:,.2f}")
+        
+        # Pendências (Tudo que é despesa até hoje)
+        pend = df[(df['Tipo'].str.contains('Despesa', case=False, na=False)) & (df['Data_dt'] <= hoje)]['Vlr'].sum()
+        c3.metric("Pendências (Mês + Anterior)", f"R$ {pend:,.2f}")
 
     st.divider()
 
-    # --- ABA DE LANÇAMENTOS ---
-    col_form, col_hist = st.columns([1, 2.5])
+    # --- LANÇAMENTOS ---
+    col_f, col_h = st.columns([1, 2.5])
     
-    with col_form:
+    with col_f:
         st.subheader("📝 Novo Registro")
-        tipo_mov = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
-        data_sel = st.date_input("Data", datetime.now())
-        valor_total = st.number_input("Valor (R$)", min_value=0.0)
-        beneficiario = st.text_input("Beneficiário/Origem")
-        centro_custo = st.selectbox("Centro de Custo", ["Pessoal", "Família", "Trabalho"])
-        banco = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
-        km = st.number_input("KM", min_value=0, value=0)
-        
-        if st.button("🚀 Salvar", use_container_width=True):
-            ws_lanc.append_row([data_sel.strftime('%d/%m/%Y'), valor_total, "Geral", banco, "Automático", beneficiario, centro_custo, km, "", "", tipo_mov])
-            st.success("Salvo!")
-            st.rerun()
-
-    with col_hist:
-        st.subheader("🔍 Filtro Geral")
-        busca = st.text_input("🔎 Pesquise por Data, Mês ou Beneficiário:")
-        
-        # Selecionamos apenas as colunas importantes para a tabela ficar limpa
-        colunas_exibicao = ['Data Exibição', 'Valor', 'Descrição', 'Banco', 'Beneficiário', 'Centro de custo', 'Tipo']
-        # Verificamos quais dessas colunas realmente existem no DF
-        colunas_existentes = [c for c in colunas_exibicao if c in df.columns]
-        
-        df_view = df[colunas_existentes].copy()
-        
-        if busca:
-            mask = df_view.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)
-            df_view = df_view[mask]
-        
-        st.dataframe(df_view, use_container_width=True, hide_index=True)
-
-except Exception as e:
-    st.error(f"Erro no sistema: {e}")
+        t_mov = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
+        dt = st.date_input("
