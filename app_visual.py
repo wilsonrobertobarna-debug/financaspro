@@ -7,7 +7,7 @@ from datetime import datetime, date
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Mantenha sua chave completa original aqui)
+# 2. CHAVE DE ACESSO (Mantenha sua chave original completa aqui)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -53,52 +53,59 @@ try:
     client = conectar_google()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
-    df_final = pd.DataFrame(ws_lanc.get_all_records())
+    df_nuvem = pd.DataFrame(ws_lanc.get_all_records())
 
-    # --- UPLOAD DO ARQUIVO ---
-    st.sidebar.header("📁 Importar Movimentação")
+    # --- ÁREA DE IMPORTAÇÃO ---
+    st.sidebar.header("📁 Importar CSV (11 Colunas)")
     uploaded_file = st.sidebar.file_uploader("Upload financas_bruta", type=['csv'])
+
+    df_local = pd.DataFrame()
 
     if uploaded_file is not None:
         try:
-            # Lendo com separador flexível
+            # Lê o arquivo detectando o separador automaticamente
             df_local = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='latin1')
             
-            # PROTEÇÃO: Renomeia as colunas pela POSIÇÃO (Independente do nome que você deu no Excel)
-            # Coluna 0 = Data, Coluna 1 = Valor, Coluna 10 = Tipo
-            novas_colunas = {
+            # PROTEÇÃO ABSOLUTA: Renomeia as colunas pela POSIÇÃO
+            # Col 0: Data | Col 1: Valor | Col 10: Tipo (conforme sua lista)
+            col_map = {
                 df_local.columns[0]: 'data',
                 df_local.columns[1]: 'valor',
                 df_local.columns[10]: 'tipo'
             }
-            df_local = df_local.rename(columns=novas_colunas)
+            df_local = df_local.rename(columns=col_map)
             
             # Limpeza de Data
             df_local['data_dt'] = pd.to_datetime(df_local['data'], dayfirst=True, errors='coerce')
             df_local = df_local.dropna(subset=['data_dt'])
             df_local['data'] = df_local['data_dt'].dt.strftime('%d/%m/%Y')
             
-            # Limpeza de Valor
-            df_local['valor'] = df_local['valor'].astype(str).str.replace('R$', '', regex=False)
-            df_local['valor'] = df_local['valor'].str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip()
-            df_local['valor_num'] = pd.to_numeric(df_local['valor'], errors='coerce').fillna(0)
+            # Limpeza de Valor (Remove R$, pontos de milhar e ajusta vírgula)
+            df_local['valor_limpo'] = df_local['valor'].astype(str).str.replace('R$', '', regex=False)
+            df_local['valor_limpo'] = df_local['valor_limpo'].str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip()
+            df_local['valor_num'] = pd.to_numeric(df_local['valor_limpo'], errors='coerce').fillna(0)
             
-            df_final = pd.concat([df_final, df_local], ignore_index=True)
-            st.sidebar.success(f"✅ {len(df_local)} linhas lidas!")
+            st.sidebar.success(f"✅ {len(df_local)} linhas carregadas com sucesso!")
         except Exception as e:
             st.sidebar.error(f"Erro no arquivo: {e}")
 
-    # --- FILTRO E EXIBIÇÃO ---
+    # UNIÃO DOS DADOS
+    df_final = pd.concat([df_nuvem, df_local], ignore_index=True)
+
     if not df_final.empty:
-        # Padroniza tudo para evitar erro 'data'
+        # Padroniza nomes de colunas e converte datas para filtro
         df_final.columns = [str(c).strip().lower() for c in df_final.columns]
         df_final['data_dt'] = pd.to_datetime(df_final['data'], dayfirst=True, errors='coerce').dt.date
 
+        # Garante a coluna numérica de valor
+        if 'valor_num' not in df_final.columns:
+            df_final['valor_num'] = pd.to_numeric(df_final['valor'], errors='coerce').fillna(0)
+
         st.title("🛡️ FinançasPro Wilson")
 
-        # Filtro fixo para Março e Abril 2026
+        # FILTRO DE PERÍODO (Foco em Março/Abril 2026)
         periodo = st.date_input(
-            "📅 Período de Análise:",
+            "📅 Selecione o Período:",
             value=(date(2026, 3, 1), date(2026, 4, 30)),
             format="DD/MM/YYYY"
         )
@@ -107,33 +114,26 @@ try:
             d_ini, d_fim = periodo
             df_filtrado = df_final[(df_final['data_dt'] >= d_ini) & (df_final['data_dt'] <= d_fim)].copy()
 
-         # --- Trecho Corrigido (Linha 110 em diante) ---
-        if isinstance(periodo, tuple) and len(periodo) == 2:
-            d_ini, d_fim = periodo
-            # Filtra os dados entre as datas selecionadas
-            df_filtrado = df_final[(df_final['data_dt'] >= d_ini) & (df_final['data_dt'] <= d_fim)].copy()
-
             if not df_filtrado.empty:
-                # Garante que a coluna de valor para cálculo exista
-                if 'valor_num' not in df_filtrado.columns:
-                    df_filtrado['valor_num'] = pd.to_numeric(df_filtrado['valor'], errors='coerce').fillna(0)
-
-                # Separa Receitas e Despesas (baseado na sua coluna 'tipo')
-                rec = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('receita', case=False, na=False)]['valor_num'].sum()
-                desp = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('despesa', case=False, na=False)]['valor_num'].sum()
+                # Cálculos baseados na sua coluna 'tipo'
+                receitas = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('receita', case=False, na=False)]['valor_num'].sum()
+                despesas = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('despesa', case=False, na=False)]['valor_num'].sum()
                 
-                # Exibe os Cards de Resumo
-                c1, c2, c3 = st.columns(3)
-                c1.metric("Receitas", f"R$ {rec:,.2f}")
-                c2.metric("Despesas", f"R$ {desp:,.2f}")
-                c3.metric("Saldo", f"R$ {rec - desp:,.2f}")
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Receitas", f"R$ {receitas:,.2f}")
+                col2.metric("Despesas", f"R$ {despesas:,.2f}")
+                col3.metric("Saldo", f"R$ {receitas - despesas:,.2f}")
 
-                # Exibe a tabela final
+                st.subheader("📋 Detalhamento")
                 st.dataframe(df_filtrado, use_container_width=True)
             else:
-              # ... (resto do seu código acima)
-                st.warning(f"Nenhum lançamento encontrado entre {d_ini.strftime('%d/%m')} e {d_fim.strftime('%d/%m')}.")
+                st.warning(f"Nenhum lançamento encontrado entre {d_ini.strftime('%d/%m/%Y')} e {d_fim.strftime('%d/%m/%Y')}.")
+                
+                # RAIO-X AUTOMÁTICO (Caso não apareça nada)
+                with st.expander("🔍 Por que está vazio? (Diagnóstico)"):
+                    st.write("Datas encontradas no arquivo (Top 10):")
+                    st.write(df_final['data'].unique()[:10])
+                    st.write("Dica: Verifique se o ano no Excel é 2026.")
 
-# --- ADICIONE ESTAS LINHAS ABAIXO ---
 except Exception as e:
-    st.error(f"Erro crítico no sistema: {e}")
+    st.error(f"Erro Crítico: {e}")
