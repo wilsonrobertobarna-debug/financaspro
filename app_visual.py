@@ -54,22 +54,22 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
+    # --- CARREGAMENTO SEGURO ---
     dados = ws_lanc.get_all_records()
     df = pd.DataFrame(dados)
     
     if not df.empty:
         df.columns = [str(c).strip() for c in df.columns]
-        
-        # O Escudo Nível 2 - Garante que as colunas existam
         colunas_vitais = ['Data', 'Valor', 'Tipo', 'Status', 'Categoria', 'Banco', 'Beneficiário', 'Descrição']
         for col in colunas_vitais:
             if col not in df.columns: df[col] = ""
 
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-        df['Data_limpa'] = df['Data'].astype(str)
         df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
+        # Cria um ID baseado na linha da planilha (gspread começa em 1, cabeçalho é 1, então dados começam em 2)
+        df['ID'] = range(2, len(df) + 2)
 
-    st.title("🛡️ FinançasPro Wilson (Busca Avançada)")
+    st.title("🛡️ FinançasPro Wilson (Versão com Lixeira)")
 
     # --- INDICADORES ---
     if not df.empty:
@@ -97,33 +97,32 @@ try:
         tipo_f = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
         data_f = st.date_input("Data", datetime.now())
         valor_f = st.number_input("Valor (R$)", min_value=0.0, step=0.01)
-        benef_f = st.text_input("Beneficiário (Quem?)")
-        desc_f = st.text_input("Descrição (Ex: Parcela 1/10)")
+        benef_f = st.text_input("Beneficiário")
+        desc_f = st.text_input("Descrição (Ex: Parcela 1/12)")
         cat_f = st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Rendimento", "Trabalho", "Outros"])
         banco_f = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
         status_f = st.selectbox("Status", ["Pago", "Pendente"])
         
         if st.button("🚀 Salvar Lançamento", use_container_width=True):
             if valor_f > 0:
-                # Ordem: Data, Valor, Categoria, Banco, Descrição, Beneficiário, Centro Custo, KM, Outros, Status, Tipo
                 ws_lanc.append_row([
                     data_f.strftime('%d/%m/%Y'), valor_f, cat_f, banco_f, 
                     desc_f, benef_f, "Pessoal", 0, "", status_f, tipo_f
                 ])
-                st.success("Lançamento Registrado!")
+                st.success("Registrado!")
                 st.rerun()
 
     with c_hist:
-        st.subheader("🔍 Localizar Lançamentos e Parcelas")
+        st.subheader("🔍 Histórico e Gerenciamento")
         if not df.empty:
             f1, f2 = st.columns(2)
             with f1: btn_pets = st.button("🐶 Milo & Bolt", use_container_width=True)
             with f2: btn_limpar = st.button("📄 Mostrar Tudo", use_container_width=True)
             
-            busca = st.text_input("🔎 Digite aqui para filtrar (Ex: Parcela, Mercado, 1/12):")
+            busca = st.text_input("🔎 Pesquisar (ID, Nome, Parcela):")
             
-            # Colunas exibidas (Incluindo Descrição para ver as parcelas)
-            cols_ver = ['Data_limpa', 'Valor', 'Descrição', 'Beneficiário', 'Banco', 'Status']
+            # Mostrar o ID na tabela para o usuário saber o que deletar
+            cols_ver = ['ID', 'Data', 'Valor', 'Descrição', 'Beneficiário', 'Status']
             df_view = df[cols_ver].copy()
             
             if btn_pets:
@@ -132,13 +131,27 @@ try:
             elif btn_limpar:
                 st.rerun()
             elif busca:
-                # O Escudo procura o termo em todas as colunas
                 mask = df.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)
                 df_view = df_view[mask]
             
-            st.dataframe(df_view.sort_index(ascending=False), use_container_width=True, hide_index=True)
+            st.dataframe(df_view.sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
+
+            # --- PAINEL DE EXCLUSÃO (LIXEIRA) ---
+            st.divider()
+            with st.expander("🗑️ Painel de Exclusão (Cuidado!)"):
+                id_para_deletar = st.number_input("Digite o ID do lançamento que deseja apagar:", min_value=2, step=1)
+                confirma = st.checkbox("Eu tenho certeza que quero excluir este registro.")
+                
+                if st.button("🔴 Excluir Definitivamente", use_container_width=True):
+                    if confirma:
+                        # Deleta a linha na planilha Google (ID corresponde à linha)
+                        ws_lanc.delete_rows(int(id_para_deletar))
+                        st.success(f"Lançamento {id_para_deletar} excluído com sucesso!")
+                        st.rerun()
+                    else:
+                        st.warning("Por favor, marque a caixa de confirmação acima.")
         else:
-            st.info("Nenhum dado na planilha.")
+            st.info("Planilha vazia.")
 
 except Exception as e:
     st.error(f"O Escudo detectou um problema: {e}")
