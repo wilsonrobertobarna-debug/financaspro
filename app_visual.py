@@ -7,7 +7,7 @@ from datetime import datetime
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Sua chave original)
+# 2. CHAVE DE ACESSO (Mantenha sua chave original abaixo)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -54,7 +54,6 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
-    # --- CARREGAMENTO SEGURO ---
     dados = ws_lanc.get_all_records()
     df = pd.DataFrame(dados)
     
@@ -66,12 +65,11 @@ try:
 
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
         df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
-        # Cria um ID baseado na linha da planilha (gspread começa em 1, cabeçalho é 1, então dados começam em 2)
         df['ID'] = range(2, len(df) + 2)
 
-    st.title("🛡️ FinançasPro Wilson (Versão com Lixeira)")
+    st.title("🛡️ FinançasPro Wilson (Gráficos & Lixeira)")
 
-    # --- INDICADORES ---
+    # --- INDICADORES E GRÁFICOS ---
     if not df.empty:
         hoje = datetime.now()
         df_mes = df[df['Data_dt'].dt.month == hoje.month].copy()
@@ -87,6 +85,14 @@ try:
         m3.metric("Saldo", f"R$ {rec_mes - desp_mes:,.2f}")
         m4.metric("Rendimentos", f"R$ {rend_mes:,.2f}")
         m5.metric("Pendências", f"R$ {pend_total:,.2f}")
+
+        # O Gráfico voltou!
+        st.write("### 📊 Balanço Mensal")
+        chart_df = pd.DataFrame({
+            'Tipo': ['Receitas', 'Despesas'],
+            'Total': [rec_mes, desp_mes]
+        })
+        st.bar_chart(chart_df.set_index('Tipo'))
 
     st.divider()
 
@@ -121,13 +127,13 @@ try:
             
             busca = st.text_input("🔎 Pesquisar (ID, Nome, Parcela):")
             
-            # Mostrar o ID na tabela para o usuário saber o que deletar
             cols_ver = ['ID', 'Data', 'Valor', 'Descrição', 'Beneficiário', 'Status']
             df_view = df[cols_ver].copy()
             
             if btn_pets:
                 mask = df.astype(str).apply(lambda x: x.str.contains('Milo|Bolt', case=False)).any(axis=1)
                 df_view = df_view[mask]
+                st.info(f"Total com os meninos: R$ {df_view['Valor'].sum():,.2f}")
             elif btn_limpar:
                 st.rerun()
             elif busca:
@@ -136,22 +142,18 @@ try:
             
             st.dataframe(df_view.sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
 
-            # --- PAINEL DE EXCLUSÃO (LIXEIRA) ---
+            # --- LIXEIRA ---
             st.divider()
-            with st.expander("🗑️ Painel de Exclusão (Cuidado!)"):
-                id_para_deletar = st.number_input("Digite o ID do lançamento que deseja apagar:", min_value=2, step=1)
-                confirma = st.checkbox("Eu tenho certeza que quero excluir este registro.")
-                
-                if st.button("🔴 Excluir Definitivamente", use_container_width=True):
+            with st.expander("🗑️ Painel de Exclusão"):
+                id_del = st.number_input("Digite o ID para apagar:", min_value=2, step=1)
+                confirma = st.checkbox("Confirmar exclusão")
+                if st.button("🔴 Excluir Registro", use_container_width=True):
                     if confirma:
-                        # Deleta a linha na planilha Google (ID corresponde à linha)
-                        ws_lanc.delete_rows(int(id_para_deletar))
-                        st.success(f"Lançamento {id_para_deletar} excluído com sucesso!")
+                        ws_lanc.delete_rows(int(id_del))
+                        st.success(f"ID {id_del} removido!")
                         st.rerun()
-                    else:
-                        st.warning("Por favor, marque a caixa de confirmação acima.")
         else:
-            st.info("Planilha vazia.")
+            st.info("Sem dados.")
 
 except Exception as e:
-    st.error(f"O Escudo detectou um problema: {e}")
+    st.error(f"Erro detectado: {e}")
