@@ -3,7 +3,6 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
@@ -55,16 +54,27 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
-    # --- CARREGAMENTO DE DADOS ---
+    # --- PROCESSAMENTO DE DADOS ---
     dados = ws_lanc.get_all_records()
     df = pd.DataFrame(dados)
+    
     if not df.empty:
-        df.columns = [c.strip().capitalize() for c in df.columns]
+        # Padroniza nomes das colunas (remove espaços e coloca inicial maiúscula)
+        df.columns = [str(c).strip().capitalize() for c in df.columns]
+        
+        # Correção da Data (Remove o 00:00:00)
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
+        # Criamos uma coluna de exibição formatada como texto brasileiro
+        df['Data Exibição'] = df['Data_dt'].dt.strftime('%d/%m/%Y')
+        
+        # Correção do Valor
         df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
-        df['Tipo'] = df['Tipo'].fillna('Despesa').replace('', 'Despesa')
+        
+        # Garante que a coluna Tipo existe para os cards
+        if 'Tipo' not in df.columns:
+            df['Tipo'] = 'Despesa' # Fallback caso a coluna tenha outro nome
 
-    # --- CARDS DO TOPO (ORDEM SOLICITADA) ---
+    # --- CARDS DO TOPO ---
     st.title("💼 FinançasPro Wilson")
     c1, c2, c3 = st.columns(3)
     
@@ -72,26 +82,20 @@ try:
         hoje = datetime.now()
         df_mes = df[df['Data_dt'].dt.month == hoje.month]
         
-        receita_mes = df_mes[df_mes['Tipo'] == 'Receita']['Valor_num'].sum()
-        despesa_mes = df_mes[df_mes['Tipo'] == 'Despesa']['Valor_num'].sum()
-        saldo_mes = receita_mes - despesa_mes
+        receita_mes = df_mes[df_mes['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
+        despesa_mes = df_mes[df_mes['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
         
-        # Pendências: Soma de Despesas do Mês Atual + meses anteriores (Data <= hoje)
-        pendencias_valor = df[(df['Tipo'] == 'Despesa') & (df['Data_dt'] <= hoje)]['Valor_num'].sum()
+        # 1. SALDO (Receita - Despesa)
+        c1.metric("Saldo do Mês (R-D)", f"R$ {receita_mes - despesa_mes:,.2f}")
+        # 2. RENDIMENTOS
+        c2.metric("Rendimentos (Mês)", f"R$ {receita_mes:,.2f}")
+        # 3. PENDÊNCIAS (Mês Atual + Anterior)
+        pendencias = df[(df['Tipo'].str.contains('Despesa', case=False, na=False)) & (df['Data_dt'] <= hoje)]['Valor_num'].sum()
+        c3.metric("Pendências (Total)", f"R$ {pendencias:,.2f}")
 
-        # 1. Card Receita - Despesa = Saldo
-        c1.metric("Resumo: Receita - Despesa", f"R$ {saldo_mes:,.2f}", help="Cálculo do mês atual")
-        
-        # 2. Card Rendimentos
-        c2.metric("Rendimentos do Mês", f"R$ {receita_mes:,.2f}")
-        
-        # 3. Card Pendências (Mês atual e anterior)
-        c3.metric("Pendências (Mês + Anterior)", f"R$ {pendencias_valor:,.2f}", delta_color="inverse")
-    
     st.divider()
 
     # --- ABA DE LANÇAMENTOS ---
-    # Estrutura e formulário mantidos intactos conforme solicitado
     col_form, col_hist = st.columns([1, 2.5])
     
     with col_form:
@@ -104,27 +108,27 @@ try:
         banco = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
         km = st.number_input("KM", min_value=0, value=0)
         
-        if st.button("🚀 Salvar Registro", use_container_width=True):
-            # Mantendo a ordem da sua planilha: A=Data, B=Valor, C=Cat, D=Banco, E=Forma, F=Benef, G=C.Custo, H=KM, I="", J="", K=Tipo
-            ws_lanc.append_row([
-                data_sel.strftime('%d/%m/%Y'), valor_total, "Geral", banco, 
-                "Automático", beneficiario, centro_custo, km, "", "", tipo_mov
-            ])
-            st.success("Lançamento salvo!")
+        if st.button("🚀 Salvar", use_container_width=True):
+            ws_lanc.append_row([data_sel.strftime('%d/%m/%Y'), valor_total, "Geral", banco, "Automático", beneficiario, centro_custo, km, "", "", tipo_mov])
+            st.success("Salvo!")
             st.rerun()
 
     with col_hist:
-        st.subheader("🔍 Pesquisa Inteligente")
-        # Barra de busca por qualquer coisa (Data, Mês, Beneficiário, Banco, etc.)
-        busca_global = st.text_input("🔎 Pesquise por data (ex: 23/04), beneficiário, banco ou qualquer termo:")
+        st.subheader("🔍 Filtro Geral")
+        busca = st.text_input("🔎 Pesquise por Data, Mês ou Beneficiário:")
         
-        df_view = df.copy()
-        if busca_global:
-            # Transforma tudo em texto para facilitar a busca em qualquer coluna
-            mask = df_view.astype(str).apply(lambda x: x.str.contains(busca_global, case=False)).any(axis=1)
+        # Selecionamos apenas as colunas importantes para a tabela ficar limpa
+        colunas_exibicao = ['Data Exibição', 'Valor', 'Descrição', 'Banco', 'Beneficiário', 'Centro de custo', 'Tipo']
+        # Verificamos quais dessas colunas realmente existem no DF
+        colunas_existentes = [c for c in colunas_exibicao if c in df.columns]
+        
+        df_view = df[colunas_existentes].copy()
+        
+        if busca:
+            mask = df_view.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)
             df_view = df_view[mask]
         
-        st.dataframe(df_view.sort_values('Data_dt', ascending=False), use_container_width=True)
+        st.dataframe(df_view, use_container_width=True, hide_index=True)
 
 except Exception as e:
-    st.error(f"Erro ao carregar os dados: {e}")
+    st.error(f"Erro no sistema: {e}")
