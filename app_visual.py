@@ -7,7 +7,7 @@ from datetime import datetime, date
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Mantenha sua chave original completa aqui)
+# 2. CHAVE DE ACESSO (Mantenha sua chave original aqui)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -57,73 +57,79 @@ try:
     if not df_nuvem.empty:
         df_nuvem.columns = [str(c).strip().lower() for c in df_nuvem.columns]
 
-    # --- IMPORTAÇÃO ---
-    st.sidebar.header("📁 Importar Arquivo")
-    uploaded_file = st.sidebar.file_uploader("Upload financas_bruta", type=['csv'])
+    st.title("🛡️ FinançasPro Wilson")
+
+    # --- ÁREA DE IMPORTAÇÃO ---
+    with st.sidebar:
+        st.header("📁 Importar Movimentação")
+        uploaded_file = st.sidebar.file_uploader("Upload financas_bruta", type=['csv'])
 
     df_local = pd.DataFrame()
+
     if uploaded_file is not None:
         try:
+            # Lendo o arquivo sem frescura
             df_local = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='latin1')
-            # Força mapeamento por posição
+            
+            # Força o nome das colunas pela posição (0=Data, 1=Valor, 10=Tipo)
             df_local = df_local.rename(columns={
                 df_local.columns[0]: 'data',
                 df_local.columns[1]: 'valor',
                 df_local.columns[10]: 'tipo'
             })
-            # Tenta converter data (dia primeiro)
+            
+            # Tenta converter a data e guarda o erro se falhar
             df_local['data_dt'] = pd.to_datetime(df_local['data'], dayfirst=True, errors='coerce')
-            df_local = df_local.dropna(subset=['data_dt'])
             
-            # Limpa valor
-            df_local['valor_num'] = pd.to_numeric(df_local['valor'].astype(str).str.replace('R$', '').str.replace('.', '').str.replace(',', '.').str.strip(), errors='coerce').fillna(0)
+            # Limpa o valor para número
+            df_local['valor_num'] = pd.to_numeric(
+                df_local['valor'].astype(str).str.replace('R$', '').str.replace('.', '').str.replace(',', '.').str.strip(), 
+                errors='coerce'
+            ).fillna(0)
             
-            st.sidebar.success(f"✅ {len(df_local)} linhas locais prontas!")
+            st.sidebar.success(f"✅ {len(df_local)} linhas encontradas no CSV.")
         except Exception as e:
-            st.sidebar.error(f"Erro no CSV: {e}")
+            st.sidebar.error(f"Erro ao ler CSV: {e}")
 
-    # UNIÃO
+    # UNIÃO DOS DADOS
     df_final = pd.concat([df_nuvem, df_local], ignore_index=True)
 
     if not df_final.empty:
+        # Garante que temos a data em formato de objeto de data para o filtro
         df_final['data_dt'] = pd.to_datetime(df_final['data'], dayfirst=True, errors='coerce').dt.date
         
-        st.title("🛡️ FinançasPro Wilson")
+        # --- RAIO-X DE DADOS (EXPANDER) ---
+        with st.expander("🔍 Ver o que o sistema leu do seu arquivo"):
+            st.write("Amostra dos dados carregados:")
+            st.dataframe(df_final[['data', 'data_dt', 'valor', 'tipo']].head(10))
+            st.write("Datas únicas encontradas (confira se o ano está certo):")
+            st.write(df_final['data_dt'].dropna().unique())
 
-        # Seletor de Período
-        periodo = st.date_input("📅 Filtrar por Data:", value=(date(2026, 3, 1), date(2026, 4, 30)), format="DD/MM/YYYY")
+        # SELETOR DE PERÍODO
+        periodo = st.date_input(
+            "📅 Selecione o Período:",
+            value=(date(2026, 3, 1), date(2026, 4, 30)),
+            format="DD/MM/YYYY"
+        )
 
         if isinstance(periodo, tuple) and len(periodo) == 2:
             d_ini, d_fim = periodo
             df_filtrado = df_final[(df_final['data_dt'] >= d_ini) & (df_final['data_dt'] <= d_fim)].copy()
 
             if not df_filtrado.empty:
-                # Dashboard
-                if 'valor_num' not in df_filtrado.columns:
-                    df_filtrado['valor_num'] = pd.to_numeric(df_filtrado['valor'], errors='coerce').fillna(0)
-
+                # Dashboard de Métricas
                 rec = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('receita', case=False, na=False)]['valor_num'].sum()
                 desp = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('despesa', case=False, na=False)]['valor_num'].sum()
                 
                 c1, c2, c3 = st.columns(3)
-                c1.metric("Receitas", f"R$ {rec:,.2f}")
+                c1.metric("Faturamento", f"R$ {rec:,.2f}")
                 c2.metric("Despesas", f"R$ {desp:,.2f}")
                 c3.metric("Saldo", f"R$ {rec - desp:,.2f}")
+
+                st.subheader("📋 Tabela de Lançamentos")
                 st.dataframe(df_filtrado, use_container_width=True)
             else:
-                st.warning(f"Nenhum dado para o filtro selecionado.")
-                
-                # DIAGNÓSTICO REAL: O que tem no arquivo?
-                st.write("---")
-                st.subheader("🔍 Diagnóstico do Arquivo")
-                st.write("Aqui estão as datas que o sistema conseguiu ler do seu arquivo:")
-                
-                # Mostra as datas únicas para o Wilson conferir o ANO
-                datas_lidas = df_final['data_dt'].dropna().unique()
-                datas_lidas.sort()
-                st.write(datas_lidas)
-                
-                st.info("Se você não vê datas de Março (03) ou Abril (04) de 2026 na lista acima, o problema está no arquivo Excel.")
+                st.warning(f"Nenhum lançamento encontrado entre {d_ini} e {d_fim}. Confira o Raio-X acima.")
 
 except Exception as e:
-    st.error(f"Erro: {e}")
+    st.error(f"Erro no sistema: {e}")
