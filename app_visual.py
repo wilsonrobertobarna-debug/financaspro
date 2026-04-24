@@ -7,7 +7,7 @@ from datetime import datetime
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Mantenha sua chave original aqui)
+# 2. CHAVE DE ACESSO
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -57,41 +57,41 @@ try:
     dados = ws_lanc.get_all_records()
     df = pd.DataFrame(dados)
     
-    # --- ESCUDO NIVEL 2 ---
     if not df.empty:
         df.columns = [str(c).strip() for c in df.columns]
-        
-        # Garante que as colunas existam para não dar erro de "KeyError"
-        colunas_necessarias = ['Data', 'Valor', 'Tipo', 'Status', 'Categoria', 'Banco', 'Beneficiário']
-        for col in colunas_necessarias:
-            if col not in df.columns:
-                df[col] = "N/A"
-
-        # Converte Data com segurança
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-        df['Data_limpa'] = df['Data'].astype(str) # Fallback: se a conversão falhar, usa o texto original
+        df['Data_limpa'] = df['Data_dt'].dt.strftime('%d/%m/%Y')
         df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
+        
+        for col in ['Tipo', 'Status', 'Categoria', 'Banco', 'Beneficiário']:
+            if col not in df.columns: df[col] = 'N/A'
 
-    st.title("🛡️ FinançasPro (Escudo Reforçado)")
+    st.title("🛡️ FinançasPro (Versão Pets & Gráficos)")
 
-    # --- INDICADORES ---
-    if not df.empty and 'Data_dt' in df.columns:
+    # --- MÉTRICAS E GRÁFICO ---
+    if not df.empty:
         hoje = datetime.now()
-        # Filtro de mês seguro (ignora datas nulas)
-        df_mes = df[df['Data_dt'].notnull()]
-        df_mes = df_mes[df_mes['Data_dt'].dt.month == hoje.month]
+        df_mes = df[df['Data_dt'].dt.month == hoje.month].copy()
         
         rec_mes = df_mes[df_mes['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
         desp_mes = df_mes[df_mes['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
         rend_mes = df_mes[df_mes['Categoria'].astype(str).str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
         pend_total = df[(df['Tipo'].str.contains('Despesa', case=False, na=False)) & (df['Status'] != 'Pago')]['Valor_num'].sum()
 
-        t1, t2, t3, t4, t5 = st.columns(5)
-        t1.metric("Receita (Mês)", f"R$ {rec_mes:,.2f}")
-        t2.metric("Despesas (Mês)", f"R$ {desp_mes:,.2f}")
-        t3.metric("Saldo (R - D)", f"R$ {rec_mes - desp_mes:,.2f}")
-        t4.metric("Rendimentos", f"R$ {rend_mes:,.2f}")
-        t5.metric("Pendências", f"R$ {pend_total:,.2f}")
+        m1, m2, m3, m4, m5 = st.columns(5)
+        m1.metric("Receita (Mês)", f"R$ {rec_mes:,.2f}")
+        m2.metric("Despesas (Mês)", f"R$ {desp_mes:,.2f}")
+        m3.metric("Saldo", f"R$ {rec_mes - desp_mes:,.2f}")
+        m4.metric("Rendimentos", f"R$ {rend_mes:,.2f}")
+        m5.metric("Pendências", f"R$ {pend_total:,.2f}")
+
+        # Gráfico Evolutivo
+        st.write("### 📊 Balanço Mensal")
+        chart_data = pd.DataFrame({
+            'Categoria': ['Receitas', 'Despesas'],
+            'Total': [rec_mes, desp_mes]
+        })
+        st.bar_chart(chart_data.set_index('Categoria'))
 
     st.divider()
 
@@ -101,39 +101,39 @@ try:
         st.subheader("📝 Lançamento")
         tipo_f = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
         data_f = st.date_input("Data", datetime.now())
-        valor_f = st.number_input("Valor (R$)", min_value=0.0, step=0.01, value=0.0)
-        benef_f = st.text_input("Origem/Destino")
-        cat_f = st.selectbox("Categoria", ["Aluguel", "Mercado", "Rendimento", "Trabalho", "Outros"])
+        valor_f = st.number_input("Valor (R$)", min_value=0.0, step=0.01)
+        benef_f = st.text_input("Beneficiário (Ex: Milo, Bolt, Mercado)")
+        cat_f = st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Rendimento", "Trabalho", "Outros"])
         banco_f = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
         status_f = st.selectbox("Status", ["Pago", "Pendente"])
         
-        if st.button("🚀 Salvar e Limpar", use_container_width=True):
+        if st.button("🚀 Salvar", use_container_width=True):
             if valor_f > 0:
                 ws_lanc.append_row([
                     data_f.strftime('%d/%m/%Y'), valor_f, cat_f, banco_f, 
                     "Manual", benef_f, "Pessoal", 0, "", status_f, tipo_f
                 ])
-                st.success("Gravado!")
+                st.success("Salvo!")
                 st.rerun()
-            else:
-                st.warning("Insira um valor.")
 
     with c_hist:
         st.subheader("🔍 Histórico")
         if not df.empty:
-            # Exibe as colunas que existem
-            colunas_historico = ['Data_limpa', 'Valor', 'Tipo', 'Banco', 'Beneficiário', 'Status']
-            colunas_finais = [c for c in colunas_historico if c in df.columns]
+            btn_milo = st.button("🐶 Filtro Milo & Bolt")
+            busca = st.text_input("🔎 Pesquisa manual:")
             
-            df_view = df[colunas_finais].copy()
+            df_view = df[['Data_limpa', 'Valor', 'Tipo', 'Banco', 'Beneficiário', 'Status']].copy()
             
-            # Ordenação segura: tenta pela data_dt, se não der, mostra como está
-            if 'Data_dt' in df.columns and df['Data_dt'].notnull().any():
-                st.dataframe(df_view.sort_index(ascending=False), use_container_width=True, hide_index=True)
-            else:
-                st.dataframe(df_view, use_container_width=True, hide_index=True)
-        else:
-            st.info("Nenhum dado encontrado.")
+            if btn_milo:
+                # Busca por Milo ou Bolt em qualquer coluna
+                mask = df_view.astype(str).apply(lambda x: x.str.contains('Milo|Bolt', case=False)).any(axis=1)
+                df_view = df_view[mask]
+                st.info(f"Exibindo gastos com os meninos: R$ {df_view['Valor'].sum():,.2f}")
+            elif busca:
+                mask = df_view.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)
+                df_view = df_view[mask]
+            
+            st.dataframe(df_view.sort_index(ascending=False), use_container_width=True, hide_index=True)
 
 except Exception as e:
-    st.error(f"O Escudo detectou um problema: {e}")
+    st.error(f"Erro detectado: {e}")
