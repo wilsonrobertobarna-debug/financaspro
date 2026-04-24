@@ -55,113 +55,68 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
+    # --- CARREGAMENTO DOS DADOS ---
     dados_nuvem = ws_lanc.get_all_records()
     df = pd.DataFrame(dados_nuvem)
     
+    # Diagnóstico do CSV Local
     if os.path.exists('financas_bruta.csv'):
         df_bruto = pd.read_csv('financas_bruta.csv')
+        # Tenta converter a coluna Data de forma flexível
+        df_bruto['Data'] = pd.to_datetime(df_bruto['Data'], dayfirst=True, errors='coerce').dt.strftime('%d/%m/%Y')
         df = pd.concat([df, df_bruto], ignore_index=True)
+        st.sidebar.success(f"✅ {len(df_bruto)} registros carregados do arquivo local.")
+    else:
+        st.sidebar.warning("⚠️ Arquivo 'financas_bruta.csv' não encontrado na pasta.")
 
     if not df.empty:
         df.columns = [str(c).strip() for c in df.columns]
+        # Converte para objeto de data real para o filtro do calendário funcionar
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce').dt.date
         df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
         df['ID'] = range(2, len(df) + 2)
 
-    st.title("🛡️ FinançasPro Wilson (Filtro por Período)")
+    st.title("🛡️ FinançasPro Wilson")
 
-    # --- NOVO SELETOR DE PERÍODO (CALENDÁRIO) ---
+    # --- SELETOR DE PERÍODO ---
     if not df.empty:
-        col_filtro, _ = st.columns([2, 2])
-        with col_filtro:
-            # Define o período padrão (do dia 1 do mês atual até hoje)
-            hoje = date.today()
-            inicio_padrao = date(hoje.year, hoje.month, 1)
-            
-            periodo = st.date_input(
-                "📅 Escolha o Período no Calendário:",
-                value=(inicio_padrao, hoje),
-                format="DD/MM/YYYY"
-            )
+        # Pega a data mínima e máxima disponível nos dados para ajudar o usuário
+        data_min = df['Data_dt'].min() if not df['Data_dt'].isnull().all() else date(2026, 1, 1)
+        data_max = date.today()
+
+        st.info(f"Dica: Seus dados começam em {data_min.strftime('%d/%m/%Y')}. Ajuste o calendário abaixo.")
         
-        # Só filtra se o usuário selecionou as duas datas (início e fim)
+        periodo = st.date_input(
+            "📅 Selecione o intervalo (Início e Fim):",
+            value=(data_min, data_max),
+            format="DD/MM/YYYY"
+        )
+        
         if isinstance(periodo, tuple) and len(periodo) == 2:
             data_inicio, data_fim = periodo
             df_filtrado = df[(df['Data_dt'] >= data_inicio) & (df['Data_dt'] <= data_fim)].copy()
             
-            # MÉTRICAS DO PERÍODO
-            rec_per = df_filtrado[df_filtrado['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
-            desp_per = df_filtrado[df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
-            rend_per = df_filtrado[df_filtrado['Categoria'].astype(str).str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
-            pend_per = df_filtrado[(df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)) & (df_filtrado['Status'] != 'Pago')]['Valor_num'].sum()
+            # MÉTRICAS
+            rec = df_filtrado[df_filtrado['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
+            desp = df_filtrado[df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
+            rend = df_filtrado[df_filtrado['Categoria'].astype(str).str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
+            pend = df_filtrado[(df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)) & (df_filtrado['Status'] != 'Pago')]['Valor_num'].sum()
 
             m1, m2, m3, m4, m5 = st.columns(5)
-            m1.metric("Receitas", f"R$ {rec_per:,.2f}")
-            m2.metric("Despesas", f"R$ {desp_per:,.2f}")
-            m3.metric("Saldo", f"R$ {rec_per - desp_per:,.2f}")
-            m4.metric("Rendimentos", f"R$ {rend_per:,.2f}")
-            m5.metric("Pendências", f"R$ {pend_per:,.2f}")
+            m1.metric("Receitas", f"R$ {rec:,.2f}")
+            m2.metric("Despesas", f"R$ {desp:,.2f}")
+            m3.metric("Saldo", f"R$ {rec - desp:,.2f}")
+            m4.metric("Rendimentos", f"R$ {rend:,.2f}")
+            m5.metric("Pendências", f"R$ {pend:,.2f}")
 
-            st.write(f"### 📊 Movimentação de {data_inicio.strftime('%d/%m')} até {data_fim.strftime('%d/%m')}")
-            chart_df = pd.DataFrame({'Tipo': ['Receitas', 'Despesas'], 'Total': [rec_per, desp_per]})
-            st.bar_chart(chart_df.set_index('Tipo'))
+            st.bar_chart(pd.DataFrame({'Tipo': ['Receitas', 'Despesas'], 'Total': [rec, desp]}).set_index('Tipo'))
+            
+            # HISTÓRICO
+            st.divider()
+            st.subheader(f"🔍 Registros de {data_inicio.strftime('%d/%m')} a {data_fim.strftime('%d/%m')}")
+            st.dataframe(df_filtrado[['ID', 'Data', 'Valor', 'Descrição', 'Beneficiário', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
         else:
-            st.warning("⚠️ Selecione a data de início e a data de fim no calendário.")
-            df_filtrado = pd.DataFrame()
-
-    st.divider()
-
-    c_form, c_hist = st.columns([1, 2.5])
-    
-    with c_form:
-        st.subheader("📝 Novo Lançamento")
-        tipo_f = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
-        data_f = st.date_input("Data do Registro", date.today())
-        valor_f = st.number_input("Valor (R$)", min_value=0.0, step=0.01)
-        benef_f = st.text_input("Beneficiário")
-        desc_f = st.text_input("Descrição")
-        cat_f = st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Rendimento", "Trabalho", "Outros"])
-        banco_f = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
-        status_f = st.selectbox("Status", ["Pago", "Pendente"])
-        
-        if st.button("🚀 Salvar na Nuvem", use_container_width=True):
-            if valor_f > 0:
-                ws_lanc.append_row([data_f.strftime('%d/%m/%Y'), valor_f, cat_f, banco_f, desc_f, benef_f, "Pessoal", 0, "", status_f, tipo_f])
-                st.success("Registrado!")
-                st.rerun()
-
-    with c_hist:
-        st.subheader("🔍 Detalhes do Período")
-        if not df_filtrado.empty:
-            f1, f2 = st.columns(2)
-            with f1: btn_pets = st.button("🐶 Filtro Milo & Bolt", use_container_width=True)
-            with f2: btn_limpar = st.button("📄 Resetar Filtros", use_container_width=True)
-            
-            busca = st.text_input("🔎 Pesquisar neste período:")
-            
-            df_view = df_filtrado[['ID', 'Data', 'Valor', 'Descrição', 'Beneficiário', 'Status']].copy()
-            
-            if btn_pets:
-                mask = df_filtrado.astype(str).apply(lambda x: x.str.contains('Milo|Bolt', case=False)).any(axis=1)
-                df_view = df_view[mask]
-            elif btn_limpar:
-                st.rerun()
-            elif busca:
-                mask = df_filtrado.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)
-                df_view = df_view[mask]
-            
-            st.dataframe(df_view.sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
-
-            with st.expander("🗑️ Central de Exclusão"):
-                id_del = st.number_input("ID da linha para apagar:", min_value=2, step=1)
-                confirma = st.checkbox("Tenho certeza da exclusão")
-                if st.button("🔴 Apagar Agora", use_container_width=True):
-                    if confirma:
-                        ws_lanc.delete_rows(int(id_del))
-                        st.success(f"ID {id_del} removido da planilha!")
-                        st.rerun()
-        else:
-            st.info("Aguardando seleção de período completa.")
+            st.warning("Selecione as duas datas no calendário para ver os resultados.")
 
 except Exception as e:
-    st.error(f"Erro detectado: {e}")
+    st.error(f"Erro: {e}")
