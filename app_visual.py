@@ -54,86 +54,76 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     df_nuvem = pd.DataFrame(ws_lanc.get_all_records())
+    if not df_nuvem.empty:
+        df_nuvem.columns = [str(c).strip().lower() for c in df_nuvem.columns]
 
-    # --- ÁREA DE IMPORTAÇÃO ---
-    st.sidebar.header("📁 Importar CSV (11 Colunas)")
+    # --- IMPORTAÇÃO ---
+    st.sidebar.header("📁 Importar Arquivo")
     uploaded_file = st.sidebar.file_uploader("Upload financas_bruta", type=['csv'])
 
     df_local = pd.DataFrame()
-
     if uploaded_file is not None:
         try:
-            # Lê o arquivo detectando o separador automaticamente
             df_local = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='latin1')
-            
-            # PROTEÇÃO ABSOLUTA: Renomeia as colunas pela POSIÇÃO
-            # Col 0: Data | Col 1: Valor | Col 10: Tipo (conforme sua lista)
-            col_map = {
+            # Força mapeamento por posição
+            df_local = df_local.rename(columns={
                 df_local.columns[0]: 'data',
                 df_local.columns[1]: 'valor',
                 df_local.columns[10]: 'tipo'
-            }
-            df_local = df_local.rename(columns=col_map)
-            
-            # Limpeza de Data
+            })
+            # Tenta converter data (dia primeiro)
             df_local['data_dt'] = pd.to_datetime(df_local['data'], dayfirst=True, errors='coerce')
             df_local = df_local.dropna(subset=['data_dt'])
-            df_local['data'] = df_local['data_dt'].dt.strftime('%d/%m/%Y')
             
-            # Limpeza de Valor (Remove R$, pontos de milhar e ajusta vírgula)
-            df_local['valor_limpo'] = df_local['valor'].astype(str).str.replace('R$', '', regex=False)
-            df_local['valor_limpo'] = df_local['valor_limpo'].str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip()
-            df_local['valor_num'] = pd.to_numeric(df_local['valor_limpo'], errors='coerce').fillna(0)
+            # Limpa valor
+            df_local['valor_num'] = pd.to_numeric(df_local['valor'].astype(str).str.replace('R$', '').str.replace('.', '').str.replace(',', '.').str.strip(), errors='coerce').fillna(0)
             
-            st.sidebar.success(f"✅ {len(df_local)} linhas carregadas com sucesso!")
+            st.sidebar.success(f"✅ {len(df_local)} linhas locais prontas!")
         except Exception as e:
-            st.sidebar.error(f"Erro no arquivo: {e}")
+            st.sidebar.error(f"Erro no CSV: {e}")
 
-    # UNIÃO DOS DADOS
+    # UNIÃO
     df_final = pd.concat([df_nuvem, df_local], ignore_index=True)
 
     if not df_final.empty:
-        # Padroniza nomes de colunas e converte datas para filtro
-        df_final.columns = [str(c).strip().lower() for c in df_final.columns]
         df_final['data_dt'] = pd.to_datetime(df_final['data'], dayfirst=True, errors='coerce').dt.date
-
-        # Garante a coluna numérica de valor
-        if 'valor_num' not in df_final.columns:
-            df_final['valor_num'] = pd.to_numeric(df_final['valor'], errors='coerce').fillna(0)
-
+        
         st.title("🛡️ FinançasPro Wilson")
 
-        # FILTRO DE PERÍODO (Foco em Março/Abril 2026)
-        periodo = st.date_input(
-            "📅 Selecione o Período:",
-            value=(date(2026, 3, 1), date(2026, 4, 30)),
-            format="DD/MM/YYYY"
-        )
+        # Seletor de Período
+        periodo = st.date_input("📅 Filtrar por Data:", value=(date(2026, 3, 1), date(2026, 4, 30)), format="DD/MM/YYYY")
 
         if isinstance(periodo, tuple) and len(periodo) == 2:
             d_ini, d_fim = periodo
             df_filtrado = df_final[(df_final['data_dt'] >= d_ini) & (df_final['data_dt'] <= d_fim)].copy()
 
             if not df_filtrado.empty:
-                # Cálculos baseados na sua coluna 'tipo'
-                receitas = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('receita', case=False, na=False)]['valor_num'].sum()
-                despesas = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('despesa', case=False, na=False)]['valor_num'].sum()
-                
-                col1, col2, col3 = st.columns(3)
-                col1.metric("Receitas", f"R$ {receitas:,.2f}")
-                col2.metric("Despesas", f"R$ {despesas:,.2f}")
-                col3.metric("Saldo", f"R$ {receitas - despesas:,.2f}")
+                # Dashboard
+                if 'valor_num' not in df_filtrado.columns:
+                    df_filtrado['valor_num'] = pd.to_numeric(df_filtrado['valor'], errors='coerce').fillna(0)
 
-                st.subheader("📋 Detalhamento")
+                rec = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('receita', case=False, na=False)]['valor_num'].sum()
+                desp = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('despesa', case=False, na=False)]['valor_num'].sum()
+                
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Receitas", f"R$ {rec:,.2f}")
+                c2.metric("Despesas", f"R$ {desp:,.2f}")
+                c3.metric("Saldo", f"R$ {rec - desp:,.2f}")
                 st.dataframe(df_filtrado, use_container_width=True)
             else:
-                st.warning(f"Nenhum lançamento encontrado entre {d_ini.strftime('%d/%m/%Y')} e {d_fim.strftime('%d/%m/%Y')}.")
+                st.warning(f"Nenhum dado para o filtro selecionado.")
                 
-                # RAIO-X AUTOMÁTICO (Caso não apareça nada)
-                with st.expander("🔍 Por que está vazio? (Diagnóstico)"):
-                    st.write("Datas encontradas no arquivo (Top 10):")
-                    st.write(df_final['data'].unique()[:10])
-                    st.write("Dica: Verifique se o ano no Excel é 2026.")
+                # DIAGNÓSTICO REAL: O que tem no arquivo?
+                st.write("---")
+                st.subheader("🔍 Diagnóstico do Arquivo")
+                st.write("Aqui estão as datas que o sistema conseguiu ler do seu arquivo:")
+                
+                # Mostra as datas únicas para o Wilson conferir o ANO
+                datas_lidas = df_final['data_dt'].dropna().unique()
+                datas_lidas.sort()
+                st.write(datas_lidas)
+                
+                st.info("Se você não vê datas de Março (03) ou Abril (04) de 2026 na lista acima, o problema está no arquivo Excel.")
 
 except Exception as e:
-    st.error(f"Erro Crítico: {e}")
+    st.error(f"Erro: {e}")
