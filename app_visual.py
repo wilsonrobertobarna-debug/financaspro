@@ -3,7 +3,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime, date
-import os
+import io
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
@@ -59,35 +59,36 @@ try:
     dados_nuvem = ws_lanc.get_all_records()
     df = pd.DataFrame(dados_nuvem)
     
-    # Diagnóstico do CSV Local
-    if os.path.exists('financas_bruta.csv'):
-        df_bruto = pd.read_csv('financas_bruta.csv')
-        # Tenta converter a coluna Data de forma flexível
+    # Barra Lateral para Upload
+    st.sidebar.header("📁 Importação")
+    uploaded_file = st.sidebar.file_uploader("Carregar 'financas_bruta'", type=['csv'])
+
+    if uploaded_file is not None:
+        df_bruto = pd.read_csv(uploaded_file)
+        # Padroniza colunas
+        df_bruto.columns = [str(c).strip() for c in df_bruto.columns]
+        # Garante que a coluna Data seja legível
         df_bruto['Data'] = pd.to_datetime(df_bruto['Data'], dayfirst=True, errors='coerce').dt.strftime('%d/%m/%Y')
         df = pd.concat([df, df_bruto], ignore_index=True)
-        st.sidebar.success(f"✅ {len(df_bruto)} registros carregados do arquivo local.")
-    else:
-        st.sidebar.warning("⚠️ Arquivo 'financas_bruta.csv' não encontrado na pasta.")
+        st.sidebar.success(f"✅ {len(df_bruto)} registros carregados!")
 
     if not df.empty:
         df.columns = [str(c).strip() for c in df.columns]
-        # Converte para objeto de data real para o filtro do calendário funcionar
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce').dt.date
         df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
         df['ID'] = range(2, len(df) + 2)
 
     st.title("🛡️ FinançasPro Wilson")
 
-    # --- SELETOR DE PERÍODO ---
+    # --- SELETOR DE PERÍODO (CALENDÁRIO) ---
     if not df.empty:
-        # Pega a data mínima e máxima disponível nos dados para ajudar o usuário
-        data_min = df['Data_dt'].min() if not df['Data_dt'].isnull().all() else date(2026, 1, 1)
+        data_min = df['Data_dt'].min() if not df['Data_dt'].isnull().all() else date(2026, 3, 1)
         data_max = date.today()
-
-        st.info(f"Dica: Seus dados começam em {data_min.strftime('%d/%m/%Y')}. Ajuste o calendário abaixo.")
+        
+        st.info(f"📊 Analisando dados desde {data_min.strftime('%d/%m/%Y')}")
         
         periodo = st.date_input(
-            "📅 Selecione o intervalo (Início e Fim):",
+            "📅 Selecione o Período no Calendário:",
             value=(data_min, data_max),
             format="DD/MM/YYYY"
         )
@@ -109,14 +110,21 @@ try:
             m4.metric("Rendimentos", f"R$ {rend:,.2f}")
             m5.metric("Pendências", f"R$ {pend:,.2f}")
 
-            st.bar_chart(pd.DataFrame({'Tipo': ['Receitas', 'Despesas'], 'Total': [rec, desp]}).set_index('Tipo'))
-            
-            # HISTÓRICO
+            st.write(f"### 📈 Balanço de {data_inicio.strftime('%d/%m')} a {data_fim.strftime('%d/%m')}")
+            chart_df = pd.DataFrame({'Tipo': ['Receitas', 'Despesas'], 'Total': [rec, desp]})
+            st.bar_chart(chart_df.set_index('Tipo'))
+
             st.divider()
-            st.subheader(f"🔍 Registros de {data_inicio.strftime('%d/%m')} a {data_fim.strftime('%d/%m')}")
+            st.subheader("🔍 Histórico Detalhado")
             st.dataframe(df_filtrado[['ID', 'Data', 'Valor', 'Descrição', 'Beneficiário', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
-        else:
-            st.warning("Selecione as duas datas no calendário para ver os resultados.")
+            
+            # LIXEIRA
+            with st.expander("🗑️ Excluir Lançamentos"):
+                id_del = st.number_input("ID da linha:", min_value=2, step=1)
+                if st.button("🔴 Confirmar Exclusão"):
+                    ws_lanc.delete_rows(int(id_del))
+                    st.success("Excluído!")
+                    st.rerun()
 
 except Exception as e:
     st.error(f"Erro: {e}")
