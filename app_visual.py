@@ -2,13 +2,13 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, date
 import os
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO
+# 2. CHAVE DE ACESSO (Sua chave original)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -64,37 +64,50 @@ try:
 
     if not df.empty:
         df.columns = [str(c).strip() for c in df.columns]
-        df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
+        df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce').dt.date
         df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
         df['ID'] = range(2, len(df) + 2)
-        df['Mes_Ano'] = df['Data_dt'].dt.strftime('%m/%Y')
 
-    st.title("🛡️ FinançasPro Wilson (Filtro por Mês)")
+    st.title("🛡️ FinançasPro Wilson (Filtro por Período)")
 
-    # --- FILTRO DE MÊS NO TOPO ---
+    # --- NOVO SELETOR DE PERÍODO (CALENDÁRIO) ---
     if not df.empty:
-        meses_disponiveis = sorted(df['Mes_Ano'].dropna().unique(), reverse=True)
-        mes_selecionado = st.selectbox("📅 Selecione o Mês para Analisar:", meses_disponiveis)
+        col_filtro, _ = st.columns([2, 2])
+        with col_filtro:
+            # Define o período padrão (do dia 1 do mês atual até hoje)
+            hoje = date.today()
+            inicio_padrao = date(hoje.year, hoje.month, 1)
+            
+            periodo = st.date_input(
+                "📅 Escolha o Período no Calendário:",
+                value=(inicio_padrao, hoje),
+                format="DD/MM/YYYY"
+            )
         
-        # Filtra o DF principal pelo mês selecionado
-        df_filtrado = df[df['Mes_Ano'] == mes_selecionado].copy()
-        
-        # MÉTRICAS DO MÊS SELECIONADO
-        rec_mes = df_filtrado[df_filtrado['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
-        desp_mes = df_filtrado[df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
-        rend_mes = df_filtrado[df_filtrado['Categoria'].astype(str).str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
-        pend_mes = df_filtrado[(df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)) & (df_filtrado['Status'] != 'Pago')]['Valor_num'].sum()
+        # Só filtra se o usuário selecionou as duas datas (início e fim)
+        if isinstance(periodo, tuple) and len(periodo) == 2:
+            data_inicio, data_fim = periodo
+            df_filtrado = df[(df['Data_dt'] >= data_inicio) & (df['Data_dt'] <= data_fim)].copy()
+            
+            # MÉTRICAS DO PERÍODO
+            rec_per = df_filtrado[df_filtrado['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
+            desp_per = df_filtrado[df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
+            rend_per = df_filtrado[df_filtrado['Categoria'].astype(str).str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
+            pend_per = df_filtrado[(df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)) & (df_filtrado['Status'] != 'Pago')]['Valor_num'].sum()
 
-        m1, m2, m3, m4, m5 = st.columns(5)
-        m1.metric("Receitas", f"R$ {rec_mes:,.2f}")
-        m2.metric("Despesas", f"R$ {desp_mes:,.2f}")
-        m3.metric("Saldo", f"R$ {rec_mes - desp_mes:,.2f}")
-        m4.metric("Rendimentos", f"R$ {rend_mes:,.2f}")
-        m5.metric("Pendências", f"R$ {pend_mes:,.2f}")
+            m1, m2, m3, m4, m5 = st.columns(5)
+            m1.metric("Receitas", f"R$ {rec_per:,.2f}")
+            m2.metric("Despesas", f"R$ {desp_per:,.2f}")
+            m3.metric("Saldo", f"R$ {rec_per - desp_per:,.2f}")
+            m4.metric("Rendimentos", f"R$ {rend_per:,.2f}")
+            m5.metric("Pendências", f"R$ {pend_per:,.2f}")
 
-        st.write(f"### 📊 Balanço de {mes_selecionado}")
-        chart_df = pd.DataFrame({'Tipo': ['Receitas', 'Despesas'], 'Total': [rec_mes, desp_mes]})
-        st.bar_chart(chart_df.set_index('Tipo'))
+            st.write(f"### 📊 Movimentação de {data_inicio.strftime('%d/%m')} até {data_fim.strftime('%d/%m')}")
+            chart_df = pd.DataFrame({'Tipo': ['Receitas', 'Despesas'], 'Total': [rec_per, desp_per]})
+            st.bar_chart(chart_df.set_index('Tipo'))
+        else:
+            st.warning("⚠️ Selecione a data de início e a data de fim no calendário.")
+            df_filtrado = pd.DataFrame()
 
     st.divider()
 
@@ -103,7 +116,7 @@ try:
     with c_form:
         st.subheader("📝 Novo Lançamento")
         tipo_f = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
-        data_f = st.date_input("Data", datetime.now())
+        data_f = st.date_input("Data do Registro", date.today())
         valor_f = st.number_input("Valor (R$)", min_value=0.0, step=0.01)
         benef_f = st.text_input("Beneficiário")
         desc_f = st.text_input("Descrição")
@@ -111,20 +124,20 @@ try:
         banco_f = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
         status_f = st.selectbox("Status", ["Pago", "Pendente"])
         
-        if st.button("🚀 Salvar", use_container_width=True):
+        if st.button("🚀 Salvar na Nuvem", use_container_width=True):
             if valor_f > 0:
                 ws_lanc.append_row([data_f.strftime('%d/%m/%Y'), valor_f, cat_f, banco_f, desc_f, benef_f, "Pessoal", 0, "", status_f, tipo_f])
-                st.success("Salvo na Nuvem!")
+                st.success("Registrado!")
                 st.rerun()
 
     with c_hist:
-        st.subheader(f"🔍 Histórico de {mes_selecionado}")
-        if not df.empty:
+        st.subheader("🔍 Detalhes do Período")
+        if not df_filtrado.empty:
             f1, f2 = st.columns(2)
             with f1: btn_pets = st.button("🐶 Filtro Milo & Bolt", use_container_width=True)
-            with f2: btn_limpar = st.button("📄 Mostrar Tudo", use_container_width=True)
+            with f2: btn_limpar = st.button("📄 Resetar Filtros", use_container_width=True)
             
-            busca = st.text_input("🔎 Pesquisar neste mês:")
+            busca = st.text_input("🔎 Pesquisar neste período:")
             
             df_view = df_filtrado[['ID', 'Data', 'Valor', 'Descrição', 'Beneficiário', 'Status']].copy()
             
@@ -139,16 +152,16 @@ try:
             
             st.dataframe(df_view.sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
 
-            with st.expander("🗑️ Lixeira (Excluir por ID)"):
-                id_del = st.number_input("ID para apagar:", min_value=2, step=1)
-                confirma = st.checkbox("Confirmar exclusão")
-                if st.button("🔴 Apagar Registro", use_container_width=True):
+            with st.expander("🗑️ Central de Exclusão"):
+                id_del = st.number_input("ID da linha para apagar:", min_value=2, step=1)
+                confirma = st.checkbox("Tenho certeza da exclusão")
+                if st.button("🔴 Apagar Agora", use_container_width=True):
                     if confirma:
                         ws_lanc.delete_rows(int(id_del))
-                        st.success(f"ID {id_del} removido!")
+                        st.success(f"ID {id_del} removido da planilha!")
                         st.rerun()
         else:
-            st.info("Sem dados para este período.")
+            st.info("Aguardando seleção de período completa.")
 
 except Exception as e:
     st.error(f"Erro detectado: {e}")
