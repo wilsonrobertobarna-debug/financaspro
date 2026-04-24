@@ -43,91 +43,98 @@ PK_LIST = [
 @st.cache_resource
 def conectar_google():
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    private_key = "\n".join(PK_LIST)
     creds_info = {
-        "type": "service_account",
-        "project_id": "financaspro-wilson",
+        "type": "service_account", "project_id": "financaspro-wilson",
         "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "private_key": private_key
+        "token_uri": "https://oauth2.googleapis.com/token", "private_key": "\n".join(PK_LIST)
     }
-    creds = Credentials.from_service_account_info(creds_info, scopes=scope)
-    return gspread.authorize(creds)
+    return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
 
 try:
     client = conectar_google()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
-    # 1. CARREGAMENTO DOS DADOS (Com proteção contra erro de coluna)
+    # --- DADOS ---
     dados = ws_lanc.get_all_records()
     df = pd.DataFrame(dados)
     if not df.empty:
         df.columns = [c.strip().capitalize() for c in df.columns]
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
         df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
-        if 'Tipo' not in df.columns: df['Tipo'] = 'Despesa'
         df['Tipo'] = df['Tipo'].fillna('Despesa').replace('', 'Despesa')
 
-    # 2. CARDS NO TOPO
+    # --- CARDS DO TOPO (RESILIENTES) ---
     st.title("💼 FinançasPro Wilson")
+    c1, c2, c3 = st.columns(3)
+    
     if not df.empty:
         hoje = datetime.now()
-        # Filtro para o mês atual
+        # Cálculos para o Mês Atual
         df_mes = df[df['Data_dt'].dt.month == hoje.month]
+        receita_mes = df_mes[df_mes['Tipo'] == 'Receita']['Valor_num'].sum()
+        despesa_mes = df_mes[df_mes['Tipo'] == 'Despesa']['Valor_num'].sum()
         
-        c1, c2, c3 = st.columns(3)
-        rendimentos = df_mes[df_mes['Tipo'] == 'Receita']['Valor_num'].sum()
-        despesas = df_mes[df_mes['Tipo'] == 'Despesa']['Valor_num'].sum()
-        pendencias = df[(df['Tipo'] == 'Despesa') & (df['Data_dt'] <= hoje)]['Valor_num'].sum()
-        
-        c1.metric("Rendimentos (Mês)", f"R$ {rendimentos:,.2f}")
-        c2.metric("Saldo (Mês)", f"R$ {rendimentos - despesas:,.2f}")
-        c3.metric("Pendências (Até Hoje)", f"R$ {pendencias:,.2f}")
+        # Pendências: Tudo que é Despesa do Mês Atual e Anterior (Data <= hoje)
+        pendencias_total = df[(df['Tipo'] == 'Despesa') & (df['Data_dt'] <= hoje)]['Valor_num'].sum()
 
+        # ORDEM DOS CARDS PEDIDA:
+        # 1. SALDO (Receita - Despesa)
+        c1.metric("Saldo do Mês (R-D)", f"R$ {receita_mes - despesa_mes:,.2f}")
+        # 2. RENDIMENTOS
+        c2.metric("Rendimentos (Mês)", f"R$ {receita_mes:,.2f}")
+        # 3. PENDÊNCIAS
+        c3.metric("Pendências (Atual + Anterior)", f"R$ {pendencias_total:,.2f}", delta_color="inverse")
+    
     st.divider()
 
-    # 3. ABAS
-    tab_lanc, tab_bancos, tab_metas, tab_config = st.tabs(["🚀 Lançamentos", "🏦 Bancos", "🎯 Metas", "⚙️ Configurações"])
+    # --- ABA DE LANÇAMENTOS ---
+    col_form, col_hist = st.columns([1, 2.5])
+    
+    with col_form:
+        st.subheader("📝 Novo Registro")
+        tipo_mov = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
+        data_sel = st.date_input("Data", datetime.now())
+        valor_total = st.number_input("Valor (R$)", min_value=0.0)
+        beneficiario = st.text_input("Beneficiário/Origem")
+        centro_custo = st.selectbox("Centro de Custo", ["Pessoal", "Família", "Trabalho"])
+        banco = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
+        km = st.number_input("KM", min_value=0, value=0)
+        
+        if st.button("🚀 Salvar", use_container_width=True):
+            ws_lanc.append_row([data_sel.strftime('%d/%m/%Y'), valor_total, "Geral", banco, "Automático", beneficiario, centro_custo, km, "", "", tipo_mov])
+            st.success("Salvo!")
+            st.rerun()
 
-    with tab_lanc:
-        col_form, col_hist = st.columns([1, 2])
-        with col_form:
-            # SEU FORMULÁRIO ORIGINAL (INTACTO)
-            st.subheader("📝 Novo Registro")
-            tipo_mov = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
-            data_sel = st.date_input("Data", datetime.now())
-            valor_total = st.number_input("Valor (R$)", min_value=0.0)
-            beneficiario = st.text_input("Beneficiário/Origem")
-            banco_sel = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
-            # ... (outros campos que você já tem no seu código original podem ser mantidos aqui)
-            
-            if st.button("🚀 Salvar"):
-                ws_lanc.append_row([data_sel.strftime('%d/%m/%Y'), valor_total, "Geral", banco_sel, "Automático", beneficiario, "Pessoal", 0, "", "", tipo_mov])
-                st.success("Salvo!")
-                st.rerun()
+    with col_hist:
+        st.subheader("🔍 Filtros e Pesquisa")
+        
+        # BARRA DE BUSCA "BUSCA TUDO"
+        busca_total = st.text_input("🔎 Pesquise Data (ex: 23/04), Mês (ex: 04/2026), Beneficiário ou qualquer termo:")
+        
+        df_view = df.copy()
+        
+        if busca_total:
+            # Filtra em todas as colunas relevantes transformando tudo em texto
+            mask = df_view.astype(str).apply(lambda x: x.str.contains(busca_total, case=False)).any(axis=1)
+            df_view = df_view[mask]
+        
+        st.dataframe(df_view.sort_values('Data_dt', ascending=False), use_container_width=True)
 
-        with col_hist:
-            st.subheader("📊 Histórico e Filtros")
-            busca = st.text_input("🔍 Buscar por Beneficiário ou Banco")
-            
-            df_view = df.copy()
-            if busca:
-                df_view = df_view[df_view['Beneficiário'].str.contains(busca, case=False, na=False) | 
-                                 df_view['Banco'].str.contains(busca, case=False, na=False)]
-            
-            st.dataframe(df_view.sort_values('Data_dt', ascending=False), use_container_width=True)
-
+    # --- ABA DE BANCOS E METAS (RESTURADAS E PROTEGIDAS) ---
+    tab_bancos, tab_metas = st.tabs(["🏦 Bancos", "🎯 Metas"])
+    
     with tab_bancos:
-        st.subheader("🏦 Saldos por Banco")
         if not df.empty:
-            df['Saldo_calc'] = df.apply(lambda x: x['Valor_num'] if x['Tipo'] == 'Receita' else -x['Valor_num'], axis=1)
-            bancos_resumo = df.groupby('Banco')['Saldo_calc'].sum().reset_index()
-            st.table(bancos_resumo)
+            df['Saldo_p_banco'] = df.apply(lambda x: x['Valor_num'] if x['Tipo'] == 'Receita' else -x['Valor_num'], axis=1)
+            resumo_banco = df.groupby('Banco')['Saldo_p_banco'].sum().reset_index()
+            st.table(resumo_banco)
 
     with tab_metas:
-        st.subheader("🎯 Suas Metas")
-        st.info("Espaço reservado para seus objetivos financeiros.")
+        if not df.empty:
+            st.write("### Resumo de Fluxo")
+            st.write(f"Total Geral Receitas: R$ {df[df['Tipo'] == 'Receita']['Valor_num'].sum():,.2f}")
+            st.write(f"Total Geral Despesas: R$ {df[df['Tipo'] == 'Despesa']['Valor_num'].sum():,.2f}")
 
 except Exception as e:
-    st.error(f"Erro ao carregar o sistema: {e}")
+    st.error(f"Ocorreu um erro: {e}")
