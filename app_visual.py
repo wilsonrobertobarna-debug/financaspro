@@ -3,103 +3,165 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime, date
-import re
+import os
 
-# 1. CONFIGURAÇÃO DA PÁGINA (Deve ser o primeiro comando Streamlit)
+# 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. SUA CHAVE DE ACESSO
-# Cole sua chave inteira entre as três aspas.
-CHAVE_BRUTA = """
------BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP
-...
------END PRIVATE KEY-----
-"""
+# 2. CHAVE DE ACESSO (Sua chave original)
+PK_LIST = [
+    "-----BEGIN PRIVATE KEY-----",
+    "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
+    "gcN1MxhHMlXJsmswR16gqEtwNmj1s4mLqZhifwA8qu7M16i6q0IU0RnQVufHfqNu",
+    "BPQh74sLQ1/xrvNZ8q/A4fO/QqJCAhlqtYo3djsVRfDI/LOoUiP+clQzN3M+1Qdx",
+    "74Df9cW6ELv3t8WpcCzBgkLX/3+V91dayvp+dr9OGRMTrVqDNRH8AnWDXdWlvhox",
+    "Ke7s3lFgk0JYU1ql6ffs0mdp9fJ6gB/MsKWcwZmbSIUGkrbiN5rfV9s8jANcNa1m",
+    "kJ2tr3XsPsqpGcgOWF4pOrY0P++Xse4pgwppGa3WbBuPg4OzzK1LIgCuIvsGuRhs",
+    "rwn3KZidAgMBAAECggEAB48kDKWPrPW5/BD57DM/xZQz92gzNJw9Dkhu3QGO33b0",
+    "FRusQHKWCTsDtFm1zS717oKPiEeRQSpiRjS1N8iEWDFB7CIgk7ozINvf6Vk7hea7",
+    "nroA5Z5DokvR5nLTz2UXj8NA2NXQtkD/MEgTdTnWy4SREOP5Db/FTbxSHhpY/lpq",
+    "xlTlOIoKkk6gZyt3oCZAUzLo+R0CfG6jEJy+pwwk6stjRVKp8DnP/mrJV8LaU8Au",
+    "fWxytSywY7XRxEjRHp2RplgVpQckuga3vbOcU0Y+FJNpkGT49DdH7PP7EEe/5J/t",
+    "McYkWUR1lvWDdlv/EzbO0GxqZ6FpPIA4MBO/krvPNwKBgQDwVqpWk48OkajwuMUL",
+    "YGFE1dTWk0axmbiZa3bxK+laqBTt0sfuaiKemgRqQSy5kJS7f9qC02Evc+RC7nnQ",
+    "BsSYeijNQiHwNcrjcbq6NGbCzYTcXu7FajM490tet7YF3XfGGTfuyA6GRYYpyNNT",
+    "qwBeVGNtP4iXBeT3DSHaR3n/awKBgQDS3RVh1whP4Cu6CEOheUgQuMxEWdEbnQQS",
+    "Ns8Le56t5Bed2PmfMGXjTLBzDXPYiemGnDnPwm5SErTE0emZUo4+mzljSHAirpTB",
+    "N9sNRi3pnLTnZ4YSHrmQlW3UxkNpgph+VMxmUM+HlKw0lutfoeYIjzIWa2ZImLGw",
+    "GW7W8eJyFwKBgQCkOqR1OqnDy9cEf03uYzK0ZeXlpoflLmTNOXjyfg4ca8S5apJC",
+    "IXZ8qEQiE10rhFeN9GTthuHfGjM9ZVYJx8YpZzhgYjNswGVenEV7nfkmXmfOanSA",
+    "o/xSjfGLzL9uLJL+5BarbTs3l2SBQwDdKHm8+69hZMvCXz3Bb9DVJoh/9wKBgDTz",
+    "MXBdOAgeybwwYRNGSlNwpFKxnzHo7uHIA5vlkgYmlcucdaqE08ENO+3YPfPtRcf4",
+    "qQfD0kIn0l7uO1O2CGQuRG3q/cWnw1D1vrsJmXPlVwQY2fDo6D4nV+orUzhGhBaN",
+    "Irq6pjJsogWetEJSfFo/4xsAIzItrckDyfKN0QhHAoGBAN8pejg4WzSJjwrfTOgA",
+    "VnARRsrH8VVQ8FSpfWTsYnJe/z0K3hxF4OiWM0oIkZsXhj62yjiZDizWApjwlhcW",
+    "O02v3bvgkF+W/VSs/W1Rf0iMdp22KVEhL97fNWcfi/19QH+FRPeRzZpe2ujNcJyb",
+    "1GHhDwH33nMtylvbUkBN8pBU",
+    "-----END PRIVATE KEY-----"
+]
 
 @st.cache_resource
 def conectar_google():
-    try:
-        # Limpeza do miolo da chave
-        miolo = CHAVE_BRUTA.replace("-----BEGIN PRIVATE KEY-----", "").replace("-----END PRIVATE KEY-----", "")
-        # Remove tudo que não é base64
-        miolo_limpo = re.sub(r'[^a-zA-Z0-9+/]', '', miolo)
-        
-        # Conserto de Padding (Múltiplo de 4)
-        while len(miolo_limpo) % 4 != 0:
-            miolo_limpo += '='
-        
-        # Formatação PEM (blocos de 64 caracteres)
-        linhas = [miolo_limpo[i:i+64] for i in range(0, len(miolo_limpo), 64)]
-        chave_final = "-----BEGIN PRIVATE KEY-----\n" + "\n".join(linhas) + "\n-----END PRIVATE KEY-----\n"
+    scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    creds_info = {
+        "type": "service_account", "project_id": "financaspro-wilson",
+        "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
+        "token_uri": "https://oauth2.googleapis.com/token", "private_key": "\n".join(PK_LIST)
+    }
+    return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
 
-        scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-        
-        creds_info = {
-            "type": "service_account",
-            "project_id": "financaspro-wilson",
-            "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "private_key": chave_final
-        }
-        
-        return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
-    except Exception as e:
-        st.error(f"Erro na Chave: {e}")
-        return None
+try:
+    client = conectar_google()
+    sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+    ws_lanc = sh.get_worksheet(0)
+    
+    dados_nuvem = ws_lanc.get_all_records()
+    df = pd.DataFrame(dados_nuvem)
+    
+    if os.path.exists('financas_bruta.csv'):
+        df_bruto = pd.read_csv('financas_bruta.csv')
+        df = pd.concat([df, df_bruto], ignore_index=True)
 
-# 3. EXECUÇÃO DO SISTEMA
-client = conectar_google()
+    if not df.empty:
+        df.columns = [str(c).strip() for c in df.columns]
+        df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce').dt.date
+        df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
+        df['ID'] = range(2, len(df) + 2)
 
-if client:
-    try:
-        sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-        ws = sh.get_worksheet(0)
-        
-        # Pega todos os dados da planilha
-        dados = ws.get_all_records()
-        df = pd.DataFrame(dados)
-        
-        st.title("🛡️ FinançasPro Wilson")
+    st.title("🛡️ FinançasPro Wilson (Filtro por Período)")
 
-        if not df.empty:
-            # Padroniza nomes de colunas
-            df.columns = [str(c).strip().lower() for c in df.columns]
+    # --- NOVO SELETOR DE PERÍODO (CALENDÁRIO) ---
+    if not df.empty:
+        col_filtro, _ = st.columns([2, 2])
+        with col_filtro:
+            # Define o período padrão (do dia 1 do mês atual até hoje)
+            hoje = date.today()
+            inicio_padrao = date(hoje.year, hoje.month, 1)
             
-            # Converte Data e Valor
-            df['data_dt'] = pd.to_datetime(df['data'], dayfirst=True, errors='coerce')
-            df['valor_num'] = pd.to_numeric(
-                df['valor'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip(), 
-                errors='coerce'
-            ).fillna(0.0)
+            periodo = st.date_input(
+                "📅 Escolha o Período no Calendário:",
+                value=(inicio_padrao, hoje),
+                format="DD/MM/YYYY"
+            )
+        
+        # Só filtra se o usuário selecionou as duas datas (início e fim)
+        if isinstance(periodo, tuple) and len(periodo) == 2:
+            data_inicio, data_fim = periodo
+            df_filtrado = df[(df['Data_dt'] >= data_inicio) & (df['Data_dt'] <= data_fim)].copy()
             
-            df['data_so_dia'] = df['data_dt'].dt.date
+            # MÉTRICAS DO PERÍODO
+            rec_per = df_filtrado[df_filtrado['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
+            desp_per = df_filtrado[df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
+            rend_per = df_filtrado[df_filtrado['Categoria'].astype(str).str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
+            pend_per = df_filtrado[(df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)) & (df_filtrado['Status'] != 'Pago')]['Valor_num'].sum()
 
-            # Seletor de Período (Inicia em Março conforme planejado)
-            periodo = st.date_input("📅 Período:", value=(date(2026, 3, 1), date(2026, 4, 30)), format="DD/MM/YYYY")
+            m1, m2, m3, m4, m5 = st.columns(5)
+            m1.metric("Receitas", f"R$ {rec_per:,.2f}")
+            m2.metric("Despesas", f"R$ {desp_per:,.2f}")
+            m3.metric("Saldo", f"R$ {rec_per - desp_per:,.2f}")
+            m4.metric("Rendimentos", f"R$ {rend_per:,.2f}")
+            m5.metric("Pendências", f"R$ {pend_per:,.2f}")
 
-            if isinstance(periodo, tuple) and len(periodo) == 2:
-                d_ini, d_fim = periodo
-                df_filtrado = df[(df['data_so_dia'] >= d_ini) & (df['data_so_dia'] <= d_fim)].copy()
-
-                if not df_filtrado.empty:
-                    # Dashboard
-                    rec = df_filtrado[df_filtrado['tipo'].str.contains('receita', case=False, na=False)]['valor_num'].sum()
-                    desp = df_filtrado[df_filtrado['tipo'].str.contains('despesa', case=False, na=False)]['valor_num'].sum()
-                    
-                    c1, c2, c3 = st.columns(3)
-                    c1.metric("Faturamento", f"R$ {rec:,.2f}")
-                    c2.metric("Despesas", f"R$ {desp:,.2f}")
-                    c3.metric("Saldo", f"R$ {rec - desp:,.2f}")
-
-                    st.subheader("📋 Detalhamento")
-                    # Mostra apenas as colunas que existem
-                    colunas_exibir = [c for c in ['data', 'valor', 'tipo', 'descrição'] if c in df_filtrado.columns]
-                    st.dataframe(df_filtrado[colunas_exibir], use_container_width=True)
-                else:
-                    st.warning("Nenhum dado encontrado para o período selecionado.")
+            st.write(f"### 📊 Movimentação de {data_inicio.strftime('%d/%m')} até {data_fim.strftime('%d/%m')}")
+            chart_df = pd.DataFrame({'Tipo': ['Receitas', 'Despesas'], 'Total': [rec_per, desp_per]})
+            st.bar_chart(chart_df.set_index('Tipo'))
         else:
-            st.warning("A planilha do Google Sheets está vazia.")
+            st.warning("⚠️ Selecione a data de início e a data de fim no calendário.")
+            df_filtrado = pd.DataFrame()
 
-    except Exception as e:
-        st.error(f"Erro ao acessar a planilha: {e}")
+    st.divider()
+
+    c_form, c_hist = st.columns([1, 2.5])
+    
+    with c_form:
+        st.subheader("📝 Novo Lançamento")
+        tipo_f = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
+        data_f = st.date_input("Data do Registro", date.today())
+        valor_f = st.number_input("Valor (R$)", min_value=0.0, step=0.01)
+        benef_f = st.text_input("Beneficiário")
+        desc_f = st.text_input("Descrição")
+        cat_f = st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Rendimento", "Trabalho", "Outros"])
+        banco_f = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
+        status_f = st.selectbox("Status", ["Pago", "Pendente"])
+        
+        if st.button("🚀 Salvar na Nuvem", use_container_width=True):
+            if valor_f > 0:
+                ws_lanc.append_row([data_f.strftime('%d/%m/%Y'), valor_f, cat_f, banco_f, desc_f, benef_f, "Pessoal", 0, "", status_f, tipo_f])
+                st.success("Registrado!")
+                st.rerun()
+
+    with c_hist:
+        st.subheader("🔍 Detalhes do Período")
+        if not df_filtrado.empty:
+            f1, f2 = st.columns(2)
+            with f1: btn_pets = st.button("🐶 Filtro Milo & Bolt", use_container_width=True)
+            with f2: btn_limpar = st.button("📄 Resetar Filtros", use_container_width=True)
+            
+            busca = st.text_input("🔎 Pesquisar neste período:")
+            
+            df_view = df_filtrado[['ID', 'Data', 'Valor', 'Descrição', 'Beneficiário', 'Status']].copy()
+            
+            if btn_pets:
+                mask = df_filtrado.astype(str).apply(lambda x: x.str.contains('Milo|Bolt', case=False)).any(axis=1)
+                df_view = df_view[mask]
+            elif btn_limpar:
+                st.rerun()
+            elif busca:
+                mask = df_filtrado.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)
+                df_view = df_view[mask]
+            
+            st.dataframe(df_view.sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
+
+            with st.expander("🗑️ Central de Exclusão"):
+                id_del = st.number_input("ID da linha para apagar:", min_value=2, step=1)
+                confirma = st.checkbox("Tenho certeza da exclusão")
+                if st.button("🔴 Apagar Agora", use_container_width=True):
+                    if confirma:
+                        ws_lanc.delete_rows(int(id_del))
+                        st.success(f"ID {id_del} removido da planilha!")
+                        st.rerun()
+        else:
+            st.info("Aguardando seleção de período completa.")
+
+except Exception as e:
+    st.error(f"Erro detectado: {e}")
