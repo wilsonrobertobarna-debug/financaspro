@@ -4,10 +4,10 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime, date
 
-# 1. CONFIGURAÇÃO DA PÁGINA
+# 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Mantenha sua chave original aqui)
+# CHAVE DE ACESSO (Sua chave original)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -54,36 +54,33 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     df_nuvem = pd.DataFrame(ws_lanc.get_all_records())
-
+    
     st.title("🛡️ FinançasPro Wilson")
 
-    # --- SIDEBAR: IMPORTAÇÃO ---
+    # --- IMPORTAÇÃO ---
     with st.sidebar:
         st.header("📁 Importar Movimentação")
-        uploaded_file = st.file_uploader("Upload financas_bruta", type=['csv'])
+        uploaded_file = st.file_uploader("Suba seu arquivo CSV", type=['csv'])
 
     df_local = pd.DataFrame()
     if uploaded_file is not None:
         try:
-            df_local = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='latin1')
+            # Lê o CSV ignorando erros de linha e detectando separador
+            df_local = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='latin1', on_bad_lines='skip')
             
-            # Garante nomes padronizados por POSIÇÃO
+            # Força o mapeamento (0: Data, 1: Valor, 10: Tipo)
             df_local = df_local.rename(columns={
                 df_local.columns[0]: 'data',
                 df_local.columns[1]: 'valor',
                 df_local.columns[10]: 'tipo'
             })
             
-            # Limpeza de Data
-            df_local['data_dt'] = pd.to_datetime(df_local['data'], dayfirst=True, errors='coerce')
-            df_local = df_local.dropna(subset=['data_dt'])
-            
-            # Limpeza de Valor (Criação do valor_num)
+            # Limpeza do Valor para número
             v = df_local['valor'].astype(str).str.replace('R$', '', regex=False)
             v = v.str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip()
-            df_local['valor_num'] = pd.to_numeric(v, errors='coerce').fillna(0)
+            df_local['valor_num'] = pd.to_numeric(v, errors='coerce').fillna(0.0)
             
-            st.sidebar.success(f"✅ {len(df_local)} linhas lidas do CSV!")
+            st.sidebar.success(f"✅ CSV Lido: {len(df_local)} linhas.")
         except Exception as e:
             st.sidebar.error(f"Erro no CSV: {e}")
 
@@ -91,44 +88,51 @@ try:
     df_final = pd.concat([df_nuvem, df_local], ignore_index=True)
 
     if not df_final.empty:
-        # Padronização final de todas as colunas para minúsculo
+        # PADRONIZAÇÃO DE COLUNAS
         df_final.columns = [str(c).strip().lower() for c in df_final.columns]
         
-        # Garante que a coluna 'valor_num' existe mesmo que o CSV falhe
-        if 'valor_num' not in df_final.columns:
-            if 'valor' in df_final.columns:
-                v_nuvem = df_final['valor'].astype(str).str.replace('R$', '', regex=False)
-                v_nuvem = v_nuvem.str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip()
-                df_final['valor_num'] = pd.to_numeric(v_nuvem, errors='coerce').fillna(0)
-            else:
-                df_final['valor_num'] = 0.0
+        # TENTA CONVERTER DATA DE VÁRIOS JEITOS
+        # Jeito 1: Dia/Mês/Ano
+        df_final['data_dt'] = pd.to_datetime(df_final['data'], dayfirst=True, errors='coerce')
+        # Se falhou, tenta Jeito 2: Ano-Mês-Dia (comum em exportações)
+        df_final['data_dt'] = df_final['data_dt'].fillna(pd.to_datetime(df_final['data'], errors='coerce'))
+        
+        # Converte para apenas data (sem hora) para o filtro
+        df_final['data_so_dia'] = df_final['data_dt'].dt.date
 
-        # Converte para data real para o filtro
-        df_final['data_dt'] = pd.to_datetime(df_final['data'], dayfirst=True, errors='coerce').dt.date
-
-        # FILTRO
-        periodo = st.date_input("📅 Período:", value=(date(2026, 3, 1), date(2026, 4, 30)), format="DD/MM/YYYY")
+        # SELETOR DE PERÍODO (Inicia em Março de 2026)
+        periodo = st.date_input(
+            "📅 Selecione o Período:",
+            value=(date(2026, 3, 1), date(2026, 4, 30)),
+            format="DD/MM/YYYY"
+        )
 
         if isinstance(periodo, tuple) and len(periodo) == 2:
             d_ini, d_fim = periodo
-            df_filtrado = df_final[(df_final['data_dt'] >= d_ini) & (df_final['data_dt'] <= d_fim)].copy()
+            # Filtro rigoroso
+            df_filtrado = df_final[(df_final['data_so_dia'] >= d_ini) & (df_final['data_so_dia'] <= d_fim)].copy()
 
             if not df_filtrado.empty:
-                # Cálculos
+                # Dashboard
                 rec = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('receita', case=False, na=False)]['valor_num'].sum()
                 desp = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('despesa', case=False, na=False)]['valor_num'].sum()
                 
                 c1, c2, c3 = st.columns(3)
-                c1.metric("Receitas", f"R$ {rec:,.2f}")
-                c2.metric("Despesas", f"R$ {desp:,.2f}")
-                c3.metric("Saldo", f"R$ {rec - desp:,.2f}")
+                c1.metric("Faturamento", f"R$ {rec:,.2f}")
+                c2.metric("Gastos", f"R$ {desp:,.2f}")
+                c3.metric("Resultado", f"R$ {rec - desp:,.2f}")
 
-                st.dataframe(df_filtrado, use_container_width=True)
+                st.subheader("📋 Detalhamento do Período")
+                st.dataframe(df_filtrado[['data', 'valor', 'tipo']], use_container_width=True)
             else:
-                st.warning("Nenhum dado no período selecionado.")
-                # Ajuda a entender o que foi lido
-                with st.expander("🔍 Detalhes das Datas Encontradas"):
+                st.warning(f"Nenhum dado encontrado para o filtro selecionado.")
+                
+                # O SEGREDO ESTÁ AQUI: RAIO-X PARA O WILSON
+                with st.expander("🔍 Ver o que o sistema encontrou (Diagnóstico)"):
+                    st.write("Aqui estão as datas brutas que vieram do seu arquivo:")
                     st.write(df_final['data'].unique())
+                    st.write("Aqui estão as datas que o sistema conseguiu entender:")
+                    st.write(df_final['data_so_dia'].dropna().unique())
 
 except Exception as e:
-    st.error(f"Erro Geral: {e}")
+    st.error(f"Erro no sistema: {e}")
