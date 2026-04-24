@@ -8,7 +8,7 @@ import os
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO
+# 2. CHAVE DE ACESSO (Sua chave original)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -59,7 +59,6 @@ try:
     dados_nuvem = ws_lanc.get_all_records()
     df = pd.DataFrame(dados_nuvem)
     
-    # Tenta carregar o seu arquivo bruto local
     if os.path.exists('financas_bruta.csv'):
         df_bruto = pd.read_csv('financas_bruta.csv')
         df = pd.concat([df, df_bruto], ignore_index=True)
@@ -74,9 +73,9 @@ try:
         df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
         df['ID'] = range(2, len(df) + 2)
 
-    st.title("🛡️ FinançasPro Wilson (Importação Bruta)")
+    st.title("🛡️ FinançasPro Wilson (Visão Geral Completa)")
 
-    # --- INDICADORES E GRÁFICOS ---
+    # --- INDICADORES COMPLETOS ---
     if not df.empty:
         hoje = datetime.now()
         df_mes = df[df['Data_dt'].dt.month == hoje.month].copy()
@@ -84,12 +83,20 @@ try:
         rec_mes = df_mes[df_mes['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
         desp_mes = df_mes[df_mes['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
         
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Receita (Mês)", f"R$ {rec_mes:,.2f}")
-        m2.metric("Despesas (Mês)", f"R$ {desp_mes:,.2f}")
-        m3.metric("Saldo", f"R$ {rec_mes - desp_mes:,.2f}")
+        # Lógica para Rendimento (Categoria que contém a palavra Rendimento)
+        rend_mes = df_mes[df_mes['Categoria'].astype(str).str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
+        
+        # Lógica para Pendências (Tudo que é despesa e não está "Pago")
+        pend_total = df[(df['Tipo'].str.contains('Despesa', case=False, na=False)) & (df['Status'] != 'Pago')]['Valor_num'].sum()
 
-        st.write("### 📊 Balanço Mensal Atualizado")
+        m1, m2, m3, m4, m5 = st.columns(5)
+        m1.metric("Receitas", f"R$ {rec_mes:,.2f}")
+        m2.metric("Despesas", f"R$ {desp_mes:,.2f}")
+        m3.metric("Saldo", f"R$ {rec_mes - desp_mes:,.2f}")
+        m4.metric("Rendimentos", f"R$ {rend_mes:,.2f}")
+        m5.metric("Pendências", f"R$ {pend_total:,.2f}")
+
+        st.write("### 📊 Balanço Mensal")
         chart_df = pd.DataFrame({'Tipo': ['Receitas', 'Despesas'], 'Total': [rec_mes, desp_mes]})
         st.bar_chart(chart_df.set_index('Tipo'))
 
@@ -103,7 +110,7 @@ try:
         data_f = st.date_input("Data", datetime.now())
         valor_f = st.number_input("Valor (R$)", min_value=0.0, step=0.01)
         benef_f = st.text_input("Beneficiário")
-        desc_f = st.text_input("Descrição (Ex: Parcela 1/12)")
+        desc_f = st.text_input("Descrição")
         cat_f = st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Rendimento", "Trabalho", "Outros"])
         banco_f = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
         status_f = st.selectbox("Status", ["Pago", "Pendente"])
@@ -111,17 +118,17 @@ try:
         if st.button("🚀 Salvar", use_container_width=True):
             if valor_f > 0:
                 ws_lanc.append_row([data_f.strftime('%d/%m/%Y'), valor_f, cat_f, banco_f, desc_f, benef_f, "Pessoal", 0, "", status_f, tipo_f])
-                st.success("Registrado na Nuvem!")
+                st.success("Salvo na Nuvem!")
                 st.rerun()
 
     with c_hist:
-        st.subheader("🔍 Histórico Consolidado")
+        st.subheader("🔍 Histórico")
         if not df.empty:
             f1, f2 = st.columns(2)
             with f1: btn_pets = st.button("🐶 Filtro Milo & Bolt", use_container_width=True)
             with f2: btn_limpar = st.button("📄 Mostrar Tudo", use_container_width=True)
             
-            busca = st.text_input("🔎 Pesquisar no histórico:")
+            busca = st.text_input("🔎 Pesquisar:")
             
             df_view = df[['ID', 'Data', 'Valor', 'Descrição', 'Beneficiário', 'Status']].copy()
             
@@ -136,17 +143,16 @@ try:
             
             st.dataframe(df_view.sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
 
-            # --- LIXEIRA ---
-            with st.expander("🗑️ Excluir Lançamentos de Teste"):
-                id_del = st.number_input("Digite o ID para apagar:", min_value=2, step=1)
-                confirma = st.checkbox("Confirmar exclusão definitiva")
-                if st.button("🔴 Apagar Registro", use_container_width=True):
+            with st.expander("🗑️ Excluir Testes"):
+                id_del = st.number_input("ID para apagar:", min_value=2, step=1)
+                confirma = st.checkbox("Confirmar exclusão")
+                if st.button("🔴 Apagar", use_container_width=True):
                     if confirma:
                         ws_lanc.delete_rows(int(id_del))
-                        st.success(f"Teste ID {id_del} removido!")
+                        st.success(f"ID {id_del} removido!")
                         st.rerun()
         else:
-            st.info("Aguardando dados...")
+            st.info("Sem dados.")
 
 except Exception as e:
     st.error(f"Erro detectado: {e}")
