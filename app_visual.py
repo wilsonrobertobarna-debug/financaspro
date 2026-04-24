@@ -4,12 +4,11 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime, date
 import os
-import re
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (PK_LIST)
+# 2. CHAVE DE ACESSO (PK_LIST) - Mantenha a sua chave real aqui
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -27,7 +26,7 @@ PK_LIST = [
     "YGFE1dTWk0axmbiZa3bxK+laqBTt0sfuaiKemgRqQSy5kJS7f9qC02Evc+RC7nnQ",
     "BsSYeijNQiHwNcrjcbq6NGbCzYTcXu7FajM490tet7YF3XfGGTfuyA6GRYYpyNNT",
     "qwBeVGNtP4iXBeT3DSHaR3n/awKBgQDS3RVh1whP4Cu6CEOheUgQuMxEWdEbnQQS",
-    "Ns8Le56t5Bed2PmfMGXjTLBed2PmfMGXjTLBzDXPYiemGnDnPwm5SErTE0emZUo4",
+    "Ns8Le56t5Bed2PmfMGXjTLBzDXPYiemGnDnPwm5SErTE0emZUo4+mzljSHAirpTB",
     "N9sNRi3pnLTnZ4YSHrmQlW3UxkNpgph+VMxmUM+HlKw0lutfoeYIjzIWa2ZImLGw",
     "GW7W8eJyFwKBgQCkOqR1OqnDy9cEf03uYzK0ZeXlpoflLmTNOXjyfg4ca8S5apJC",
     "IXZ8qEQiE10rhFeN9GTthuHfGjM9ZVYJx8YpZzhgYjNswGVenEV7nfkmXmfOanSA",
@@ -57,7 +56,7 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
-    # Carregamento e União
+    # Carregamento
     df = pd.DataFrame(ws_lanc.get_all_records())
     if os.path.exists('financas_bruta.csv'):
         df = pd.concat([df, pd.read_csv('financas_bruta.csv')], ignore_index=True)
@@ -66,12 +65,13 @@ try:
         df.columns = [str(c).strip() for c in df.columns]
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce').dt.date
         df['Valor_num'] = pd.to_numeric(df['Valor'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip(), errors='coerce').fillna(0)
+        # O ID corresponde à linha na planilha (começa em 2 porque a 1 é o cabeçalho)
         df['ID'] = range(2, len(df) + 2)
 
     st.title("🛡️ FinançasPro Wilson")
 
     if not df.empty:
-        # --- FILTROS E BOTÕES ---
+        # --- FILTROS E ATALHOS ---
         c1, c2 = st.columns([2, 2])
         with c1:
             hoje = date.today()
@@ -87,11 +87,9 @@ try:
             d_ini, d_fim = periodo
             df_filtrado = df[(df['Data_dt'] >= d_ini) & (df['Data_dt'] <= d_fim)].copy()
 
-            # Lógica dos Botões de Filtro
             if btn_matilha:
                 df_filtrado = df_filtrado[df_filtrado.astype(str).apply(lambda x: x.str.contains('Milo|Bolt', case=False)).any(axis=1)]
             
-            # Busca Manual
             busca = st.text_input("🔎 Pesquisa Manual:", placeholder="Ex: Mercado, Aluguel...")
             if busca:
                 df_filtrado = df_filtrado[df_filtrado.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)]
@@ -103,10 +101,8 @@ try:
             pend = df_filtrado[(df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)) & (df_filtrado['Status'] != 'Pago')]['Valor_num'].sum()
             saldo = rec - desp
 
-            # --- DESTAQUE: SALDO LÍQUIDO (TARJA AZUL) ---
+            # --- TARJA AZUL E MÉTRICAS ---
             st.info(f"### 💰 Saldo Líquido do Período: R$ {saldo:,.2f}")
-
-            # MÉTRICAS EM LINHA
             m1, m2, m3, m4 = st.columns(4)
             m1.metric("Receitas", f"R$ {rec:,.2f}")
             m2.metric("Despesas", f"R$ {desp:,.2f}")
@@ -119,12 +115,11 @@ try:
             g1, g2 = st.columns(2)
             with g1:
                 st.subheader("📊 Movimentação")
-                chart_data = pd.DataFrame({'Total': [rec, desp]}, index=['Receitas', 'Despesas'])
-                st.bar_chart(chart_data)
+                st.bar_chart(pd.DataFrame({'Total': [rec, desp]}, index=['Receitas', 'Despesas']))
             with g2:
                 exibir_metas = st.checkbox("🔑 Ver Metas (Privado)")
                 if exibir_metas:
-                    st.subheader("🎯 Meta de Faturamento")
+                    st.subheader("🎯 Meta Mensal")
                     META = 10000.00
                     st.bar_chart(pd.DataFrame({'Valor': [META, rec]}, index=['Meta', 'Alcançado']), color="#3498db")
                 else:
@@ -152,9 +147,22 @@ try:
                 st.rerun()
 
     with c_hist:
-        st.subheader("📋 Detalhes dos Lançamentos")
+        st.subheader("📋 Histórico")
         if not df_filtrado.empty:
-            st.dataframe(df_filtrado[['Data', 'Valor', 'Tipo', 'Descrição', 'Beneficiário', 'Status']].sort_values('Data', ascending=False), use_container_width=True, hide_index=True)
+            st.dataframe(df_filtrado[['ID', 'Data', 'Valor', 'Tipo', 'Descrição', 'Beneficiário', 'Status']].sort_values('Data', ascending=False), use_container_width=True, hide_index=True)
+            
+            # --- SEÇÃO DE EXCLUSÃO (O QUE CAIU NO CHÃO) ---
+            st.write("---")
+            st.subheader("🗑️ Gerenciar Lançamentos")
+            id_para_excluir = st.number_input("Digite o ID para excluir:", min_value=2, step=1)
+            if st.button("🔴 Confirmar Exclusão Definitiva", use_container_width=True):
+                try:
+                    # Deleta a linha na planilha Google
+                    ws_lanc.delete_rows(int(id_para_excluir))
+                    st.warning(f"Lançamento ID {id_para_excluir} removido com sucesso!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erro ao excluir: {e}")
 
 except Exception as e:
     st.error(f"Erro: {e}")
