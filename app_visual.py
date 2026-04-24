@@ -7,7 +7,7 @@ from datetime import datetime
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Mantenha sua chave privada original aqui)
+# 2. CHAVE DE ACESSO (Mantenha sua chave original aqui)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -54,39 +54,35 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
-    # --- CARREGAMENTO E LIMPEZA DOS DADOS ---
+    # --- ESCUDO: CARREGAMENTO COM PROTEÇÃO ---
     dados = ws_lanc.get_all_records()
     df = pd.DataFrame(dados)
     
     if not df.empty:
-        # Limpa espaços em branco e padroniza colunas
+        # 1. Limpa espaços invisíveis nos nomes das colunas
         df.columns = [str(c).strip() for c in df.columns]
         
-        # Converte Data para formato Python
+        # 2. Garante que as colunas vitais existam (O Escudo)
+        colunas_vitais = ['Data', 'Valor', 'Tipo', 'Status', 'Categoria', 'Banco', 'Beneficiário']
+        for col in colunas_vitais:
+            if col not in df.columns:
+                df[col] = "" # Cria coluna vazia se não existir para não quebrar o app
+        
+        # 3. Processamento de tipos
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
         df['Data_limpa'] = df['Data_dt'].dt.strftime('%d/%m/%Y')
-        
-        # Converte Valor para número
         df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
-        
-        # Garante colunas mínimas para evitar erros de índice no histórico
-        if 'Tipo' not in df.columns: df['Tipo'] = 'Despesa'
-        if 'Status' not in df.columns: df['Status'] = 'Pendente'
-        if 'Categoria' not in df.columns: df['Categoria'] = 'Outros'
 
-    # --- TAGS INDICADORAS (INDICADORES DO TOPO) ---
-    st.title("💼 FinançasPro Wilson")
+    # --- INTERFACE ---
+    st.title("🛡️ FinançasPro (Versão Blindada)")
+    
     if not df.empty:
         hoje = datetime.now()
         df_mes = df[df['Data_dt'].dt.month == hoje.month]
         
         rec_mes = df_mes[df_mes['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
         desp_mes = df_mes[df_mes['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
-        
-        # Rendimentos: Apenas o que estiver categorizado explicitamente como "Rendimento"
         rend_mes = df_mes[df_mes['Categoria'].astype(str).str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
-        
-        # Pendências: Despesas que não possuem Status "Pago"
         pend_total = df[(df['Tipo'].str.contains('Despesa', case=False, na=False)) & (df['Status'] != 'Pago')]['Valor_num'].sum()
 
         t1, t2, t3, t4, t5 = st.columns(5)
@@ -98,52 +94,37 @@ try:
 
     st.divider()
 
-    # --- LAYOUT: FORMULÁRIO E HISTÓRICO ---
     c_form, c_hist = st.columns([1, 2.5])
     
     with c_form:
-        st.subheader("📝 Novo Lançamento")
-        
-        # Formulário: st.rerun() no botão limpa os campos após salvar
+        st.subheader("📝 Lançamento")
         tipo_f = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
         data_f = st.date_input("Data", datetime.now())
         valor_f = st.number_input("Valor (R$)", min_value=0.0, step=0.01, value=0.0)
-        benef_f = st.text_input("Beneficiário/Origem", value="")
+        benef_f = st.text_input("Origem/Destino")
         cat_f = st.selectbox("Categoria", ["Aluguel", "Mercado", "Rendimento", "Trabalho", "Outros"])
         banco_f = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
         status_f = st.selectbox("Status", ["Pago", "Pendente"])
         
-        if st.button("🚀 Salvar Lançamento", use_container_width=True):
+        if st.button("🚀 Salvar e Limpar", use_container_width=True):
             if valor_f > 0:
-                # Ordem das colunas: Data, Valor, Categoria, Banco, Descrição, Beneficiário, Centro Custo, KM, Outros, Status, Tipo
+                # Salva na planilha mantendo a ordem das suas colunas
                 ws_lanc.append_row([
                     data_f.strftime('%d/%m/%Y'), valor_f, cat_f, banco_f, 
                     "Manual", benef_f, "Pessoal", 0, "", status_f, tipo_f
                 ])
-                st.success("Dados gravados! Campos limpos.")
-                st.rerun() # Reinicia o app e limpa o formulário
+                st.success("Gravado com sucesso!")
+                st.rerun() # Limpa os campos automaticamente
             else:
-                st.warning("Insira um valor acima de zero.")
+                st.warning("O valor deve ser maior que zero.")
 
     with c_hist:
-        st.subheader("🔍 Histórico de Lançamentos")
+        st.subheader("🔍 Histórico")
         if not df.empty:
-            busca = st.text_input("🔎 Pesquisa rápida (Data, Beneficiário ou Banco):")
-            
-            # Filtro de exibição
-            cols_exibir = ['Data_limpa', 'Valor', 'Tipo', 'Banco', 'Beneficiário', 'Status']
-            # Filtra apenas colunas que realmente existem para não dar erro
-            cols_finais = [c for c in cols_exibir if c in df.columns]
-            
-            df_view = df[cols_finais].copy()
-            
-            if busca:
-                mask = df_view.astype(str).apply(lambda x: x.str.contains(busca, case=False)).any(axis=1)
-                df_view = df_view[mask]
-            
-            st.dataframe(df_view.sort_values('Data_limpa', ascending=False), use_container_width=True, hide_index=True)
+            df_view = df[['Data_limpa', 'Valor', 'Tipo', 'Banco', 'Beneficiário', 'Status']].copy()
+            st.dataframe(df_view.sort_values('Data_dt', ascending=False), use_container_width=True, hide_index=True)
         else:
-            st.info("Nenhum lançamento encontrado para exibir no histórico.")
+            st.info("Nenhum dado para exibir.")
 
 except Exception as e:
-    st.error(f"Erro no sistema: {e}")
+    st.error(f"O Escudo detectou um problema: {e}")
