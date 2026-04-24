@@ -131,4 +131,9 @@ try:
                 # Exibe a tabela final
                 st.dataframe(df_filtrado, use_container_width=True)
             else:
+              # ... (resto do seu código acima)
                 st.warning(f"Nenhum lançamento encontrado entre {d_ini.strftime('%d/%m')} e {d_fim.strftime('%d/%m')}.")
+
+# --- ADICIONE ESTAS LINHAS ABAIXO ---
+except Exception as e:
+    st.error(f"Erro crítico no sistema: {e}")
