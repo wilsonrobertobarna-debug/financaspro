@@ -4,11 +4,40 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime, date
 
-# 1. CONFIGURAÇÃO
+# 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# CHAVE DE ACESSO (Mantenha sua chave original aqui)
-PK_LIST = ["..."] 
+# 2. CHAVE DE ACESSO (Mantenha sua chave original completa aqui)
+PK_LIST = [
+    "-----BEGIN PRIVATE KEY-----",
+    "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
+    "gcN1MxhHMlXJsmswR16gqEtwNmj1s4mLqZhifwA8qu7M16i6q0IU0RnQVufHfqNu",
+    "BPQh74sLQ1/xrvNZ8q/A4fO/QqJCAhlqtYo3djsVRfDI/LOoUiP+clQzN3M+1Qdx",
+    "74Df9cW6ELv3t8WpcCzBgkLX/3+V91dayvp+dr9OGRMTrVqDNRH8AnWDXdWlvhox",
+    "Ke7s3lFgk0JYU1ql6ffs0mdp9fJ6gB/MsKWcwZmbSIUGkrbiN5rfV9s8jANcNa1m",
+    "kJ2tr3XsPsqpGcgOWF4pOrY0P++Xse4pgwppGa3WbBuPg4OzzK1LIgCuIvsGuRhs",
+    "rwn3KZidAgMBAAECggEAB48kDKWPrPW5/BD57DM/xZQz92gzNJw9Dkhu3QGO33b0",
+    "FRusQHKWCTsDtFm1zS717oKPiEeRQSpiRjS1N8iEWDFB7CIgk7ozINvf6Vk7hea7",
+    "nroA5Z5DokvR5nLTz2UXj8NA2NXQtkD/MEgTdTnWy4SREOP5Db/FTbxSHhpY/lpq",
+    "xlTlOIoKkk6gZyt3oCZAUzLo+R0CfG6jEJy+pwwk6stjRVKp8DnP/mrJV8LaU8Au",
+    "fWxytSywY7XRxEjRHp2RplgVpQckuga3vbOcU0Y+FJNpkGT49DdH7PP7EEe/5J/t",
+    "McYkWUR1lvWDdlv/EzbO0GxqZ6FpPIA4MBO/krvPNwKBgQDwVqpWk48OkajwuMUL",
+    "YGFE1dTWk0axmbiZa3bxK+laqBTt0sfuaiKemgRqQSy5kJS7f9qC02Evc+RC7nnQ",
+    "BsSYeijNQiHwNcrjcbq6NGbCzYTcXu7FajM490tet7YF3XfGGTfuyA6GRYYpyNNT",
+    "qwBeVGNtP4iXBeT3DSHaR3n/awKBgQDS3RVh1whP4Cu6CEOheUgQuMxEWdEbnQQS",
+    "Ns8Le56t5Bed2PmfMGXjTLBed2PmfMGXjTLBzDXPYiemGnDnPwm5SErTE0emZUo4+mzljSHAirpTB",
+    "N9sNRi3pnLTnZ4YSHrmQlW3UxkNpgph+VMxmUM+HlKw0lutfoeYIjzIWa2ZImLGw",
+    "GW7W8eJyFwKBgQCkOqR1OqnDy9cEf03uYzK0ZeXlpoflLmTNOXjyfg4ca8S5apJC",
+    "IXZ8qEQiE10rhFeN9GTthuHfGjM9ZVYJx8YpZzhgYjNswGVenEV7nfkmXmfOanSA",
+    "o/xSjfGLzL9uLJL+5BarbTs3l2SBQwDdKHm8+69hZMvCXz3Bb9DVJoh/9wKBgDTz",
+    "MXBdOAgeybwwYRNGSlNwpFKxnzHo7uHIA5vlkgYmlcucdaqE08ENO+3YPfPtRcf4",
+    "qQfD0kIn0l7uO1O2CGQuRG3q/cWnw1D1vrsJmXPlVwQY2fDo6D4nV+orUzhGhBaN",
+    "Irq6pjJsogWetEJSfFo/4xsAIzItrckDyfKN0QhHAoGBAN8pejg4WzSJjwrfTOgA",
+    "VnARRsrH8VVQ8FSpfWTsYnJe/z0K3hxF4OiWM0oIkZsXhj62yjiZDizWApjwlhcW",
+    "O02v3bvgkF+W/VSs/W1Rf0iMdp22KVEhL97fNWcfi/19QH+FRPeRzZpe2ujNcJyb",
+    "1GHhDwH33nMtylvbUkBN8pBU",
+    "-----END PRIVATE KEY-----"
+]
 
 @st.cache_resource
 def conectar_google():
@@ -28,61 +57,65 @@ try:
     
     st.title("🛡️ FinançasPro Wilson")
 
-    # --- IMPORTAÇÃO ---
+    # --- ÁREA DE IMPORTAÇÃO ---
     with st.sidebar:
-        st.header("📁 Importar Movimentação")
-        uploaded_file = st.file_uploader("Suba o arquivo CSV", type=['csv'])
+        st.header("📁 Importar Arquivo")
+        uploaded_file = st.file_uploader("Upload financas_bruta", type=['csv'])
 
     df_local = pd.DataFrame()
+
     if uploaded_file is not None:
         try:
-            # Lendo com detecção automática de separador
+            # Tenta ler com os dois separadores mais comuns (vírgula ou ponto-e-vírgula)
             df_local = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='latin1')
             
-            # NORMALIZAÇÃO: Transforma todos os nomes de colunas em minúsculo e sem espaços
-            df_local.columns = [str(c).strip().lower() for c in df_local.columns]
+            # FORÇA OS NOMES: Não importa o que está escrito no Excel, vamos renomear pela posição
+            # 0 = Data, 1 = Valor, 10 = Tipo
+            df_local.columns.values[0] = "data"
+            df_local.columns.values[1] = "valor"
+            if len(df_local.columns) >= 11:
+                df_local.columns.values[10] = "tipo"
+            else:
+                df_local["tipo"] = "Despesa" # Fallback caso o arquivo seja curto
             
-            # MAPEAMENTO DE SEGURANÇA: Se não achar 'tipo', tenta 'tipo de lançamento' ou similares
-            if 'tipo' not in df_local.columns:
-                # Se houver pelo menos 11 colunas, sabemos que a 11ª (índice 10) é o tipo
-                if len(df_local.columns) >= 11:
-                    df_local = df_local.rename(columns={df_local.columns[10]: 'tipo'})
-            
-            # Limpeza de Valor e Data (repetindo a lógica de sucesso anterior)
+            # Limpeza de Valor para número
             df_local['valor_num'] = pd.to_numeric(
-                df_local.iloc[:, 1].astype(str).str.replace('R$', '').str.replace('.', '').str.replace(',', '.').str.strip(), 
+                df_local['valor'].astype(str).str.replace('R$', '').str.replace('.', '').str.replace(',', '.').str.strip(), 
                 errors='coerce'
-            ).fillna(0.0)
+            ).fillna(0)
             
-            df_local['data_dt'] = pd.to_datetime(df_local.iloc[:, 0], dayfirst=True, errors='coerce')
-            st.sidebar.success(f"✅ {len(df_local)} linhas carregadas!")
+            # Limpeza de Data
+            df_local['data_dt'] = pd.to_datetime(df_local['data'], dayfirst=True, errors='coerce')
+            st.sidebar.success(f"✅ CSV carregado com {len(df_local)} linhas!")
         except Exception as e:
             st.sidebar.error(f"Erro no CSV: {e}")
 
     # UNIÃO DOS DADOS
+    # Padroniza o df_nuvem para ter as mesmas colunas
+    if not df_nuvem.empty:
+        df_nuvem.columns = [str(c).lower().strip() for c in df_nuvem.columns]
+        if 'valor' in df_nuvem.columns and 'valor_num' not in df_nuvem.columns:
+            df_nuvem['valor_num'] = pd.to_numeric(df_nuvem['valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
+        if 'data' in df_nuvem.columns:
+            df_nuvem['data_dt'] = pd.to_datetime(df_nuvem['data'], dayfirst=True, errors='coerce')
+
     df_final = pd.concat([df_nuvem, df_local], ignore_index=True)
 
     if not df_final.empty:
-        # Padroniza TUDO para minúsculo antes de filtrar
-        df_final.columns = [str(c).strip().lower() for c in df_final.columns]
+        # Garante que as colunas críticas existam
+        if 'tipo' not in df_final.columns: df_final['tipo'] = 'Despesa'
+        if 'valor_num' not in df_final.columns: df_final['valor_num'] = 0.0
         
-        # Garante que as colunas essenciais existem para o código não quebrar
-        for col in ['tipo', 'valor_num', 'data']:
-            if col not in df_final.columns:
-                df_final[col] = "" if col != 'valor_num' else 0.0
-
-        df_final['data_dt'] = pd.to_datetime(df_final['data'], dayfirst=True, errors='coerce')
         df_final['data_so_dia'] = df_final['data_dt'].dt.date
 
         # FILTRO
-        periodo = st.date_input("📅 Período:", value=(date(2026, 3, 1), date(2026, 4, 30)), format="DD/MM/YYYY")
+        periodo = st.date_input("📅 Selecione o Período:", value=(date(2026, 3, 1), date(2026, 4, 30)), format="DD/MM/YYYY")
 
         if isinstance(periodo, tuple) and len(periodo) == 2:
             d_ini, d_fim = periodo
             df_filtrado = df_final[(df_final['data_so_dia'] >= d_ini) & (df_final['data_so_dia'] <= d_fim)].copy()
 
             if not df_filtrado.empty:
-                # Agora o 'tipo' (minúsculo) vai funcionar!
                 rec = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('receita', case=False, na=False)]['valor_num'].sum()
                 desp = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('despesa', case=False, na=False)]['valor_num'].sum()
                 
@@ -91,11 +124,12 @@ try:
                 c2.metric("Despesas", f"R$ {desp:,.2f}")
                 c3.metric("Saldo", f"R$ {rec - desp:,.2f}")
 
-                st.dataframe(df_filtrado, use_container_width=True)
+                st.dataframe(df_filtrado[['data', 'valor', 'tipo']], use_container_width=True)
             else:
-                st.warning("Nenhum dado encontrado no período.")
-                with st.expander("🔍 Diagnóstico de Colunas"):
+                st.warning("Nenhum dado encontrado para este período.")
+                with st.expander("🔍 Raio-X do que o sistema leu"):
+                    st.write("Datas encontradas no arquivo:", df_final['data'].unique())
                     st.write("Colunas detectadas:", list(df_final.columns))
 
 except Exception as e:
-    st.error(f"Erro Geral: {e}")
+    st.error(f"Erro crítico: {e}")
