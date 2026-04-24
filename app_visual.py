@@ -4,10 +4,10 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime, date
 
-# 1. CONFIGURAÇÃO DA PÁGINA
+# 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Mantenha sua chave original completa aqui)
+# CHAVE DE ACESSO (Sua chave original)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -57,7 +57,7 @@ try:
     
     st.title("🛡️ FinançasPro Wilson")
 
-    # --- SIDEBAR: IMPORTAÇÃO ---
+    # --- CARREGAMENTO DO ARQUIVO ---
     with st.sidebar:
         st.header("📁 Importar Movimentação")
         uploaded_file = st.file_uploader("Upload financas_bruta", type=['csv'])
@@ -65,74 +65,72 @@ try:
     df_local = pd.DataFrame()
     if uploaded_file is not None:
         try:
-            # Tenta ler com separador automático
-            df_local = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='latin1')
+            # Lê o arquivo ignorando erros de linha
+            df_local = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='latin1', on_bad_lines='skip')
             
-            # NORMALIZAÇÃO RADICAL: Coloca tudo em minúsculo e remove espaços
+            # Padroniza nomes de colunas (Forçando minúsculo)
             df_local.columns = [str(c).strip().lower() for c in df_local.columns]
             
-            # SE AS COLUNAS NÃO FOREM ENCONTRADAS PELO NOME, USA A POSIÇÃO
-            mapa_colunas = {
-                'data': df_local.columns[0],
-                'valor_bruto': df_local.columns[1],
-                'tipo': df_local.columns[10] if len(df_local.columns) > 10 else df_local.columns[-1]
-            }
-            
-            # Limpeza de Valor (Criação do valor_num)
-            v = df_local[mapa_colunas['valor_bruto']].astype(str).str.replace('R$', '', regex=False)
+            # Se as colunas sumiram, vamos renomear pela posição (0=data, 1=valor, 10=tipo)
+            df_local = df_local.rename(columns={
+                df_local.columns[0]: 'data',
+                df_local.columns[1]: 'valor',
+                df_local.columns[10] if len(df_local.columns) > 10 else df_local.columns[-1]: 'tipo'
+            })
+
+            # Conversão de Valor
+            v = df_local['valor'].astype(str).str.replace('R$', '', regex=False)
             v = v.str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip()
             df_local['valor_num'] = pd.to_numeric(v, errors='coerce').fillna(0.0)
-            
-            # Limpeza de Data
-            df_local['data_dt'] = pd.to_datetime(df_local[mapa_colunas['data']], dayfirst=True, errors='coerce')
-            
-            # Garante que a coluna 'tipo' exista no formato esperado
-            df_local['tipo_limpo'] = df_local[mapa_colunas['tipo']].astype(str).str.lower()
-            
-            st.sidebar.success(f"✅ {len(df_local)} linhas lidas do CSV.")
-        except Exception as e:
-            st.sidebar.error(f"Erro no CSV: {e}")
 
-    # UNIÃO DOS DADOS
-    # Padroniza a nuvem para o mesmo formato do local
+            # Conversão de Data (O Ponto Crítico)
+            df_local['data_dt'] = pd.to_datetime(df_local['data'], dayfirst=True, errors='coerce')
+            
+            st.sidebar.success(f"✅ {len(df_local)} linhas lidas. Tentando processar...")
+        except Exception as e:
+            st.sidebar.error(f"Erro ao ler arquivo: {e}")
+
+    # UNIÃO E PADRONIZAÇÃO FINAL
     if not df_nuvem.empty:
         df_nuvem.columns = [str(c).strip().lower() for c in df_nuvem.columns]
         if 'valor' in df_nuvem.columns:
-            df_nuvem['valor_num'] = pd.to_numeric(df_nuvem['valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0.0)
-        if 'data' in df_nuvem.columns:
-            df_nuvem['data_dt'] = pd.to_datetime(df_nuvem['data'], dayfirst=True, errors='coerce')
-        if 'tipo' in df_nuvem.columns:
-            df_nuvem['tipo_limpo'] = df_nuvem['tipo'].astype(str).str.lower()
+            df_nuvem['valor_num'] = pd.to_numeric(df_nuvem['valor'].astype(str).replace(',', '.'), errors='coerce').fillna(0.0)
+        df_nuvem['data_dt'] = pd.to_datetime(df_nuvem['data'], dayfirst=True, errors='coerce')
 
     df_final = pd.concat([df_nuvem, df_local], ignore_index=True)
 
     if not df_final.empty:
+        # Cria a coluna de comparação para o filtro
         df_final['data_so_dia'] = df_final['data_dt'].dt.date
-
-        # FILTRO DE PERÍODO
-        periodo = st.date_input("📅 Selecione o Período:", value=(date(2026, 3, 1), date(2026, 4, 30)), format="DD/MM/YYYY")
+        
+        # FILTRO
+        periodo = st.date_input("📅 Período:", value=(date(2026, 3, 1), date(2026, 4, 30)), format="DD/MM/YYYY")
 
         if isinstance(periodo, tuple) and len(periodo) == 2:
             d_ini, d_fim = periodo
             df_filtrado = df_final[(df_final['data_so_dia'] >= d_ini) & (df_final['data_so_dia'] <= d_fim)].copy()
 
             if not df_filtrado.empty:
-                # CÁLCULOS USANDO AS COLUNAS NORMALIZADAS
-                rec = df_filtrado[df_filtrado['tipo_limpo'].str.contains('receita', na=False)]['valor_num'].sum()
-                desp = df_filtrado[df_filtrado['tipo_limpo'].str.contains('despesa', na=False)]['valor_num'].sum()
+                # Dashboard
+                rec = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('receita', case=False, na=False)]['valor_num'].sum()
+                desp = df_filtrado[df_filtrado['tipo'].astype(str).str.contains('despesa', case=False, na=False)]['valor_num'].sum()
                 
                 c1, c2, c3 = st.columns(3)
-                c1.metric("Receitas", f"R$ {rec:,.2f}")
-                c2.metric("Despesas", f"R$ {desp:,.2f}")
-                c3.metric("Saldo", f"R$ {rec - desp:,.2f}")
+                c1.metric("Faturamento", f"R$ {rec:,.2f}")
+                c2.metric("Gastos", f"R$ {desp:,.2f}")
+                c3.metric("Resultado", f"R$ {rec - desp:,.2f}")
 
                 st.subheader("📋 Lançamentos do Período")
-                # Mostra as colunas originais de data e valor para o usuário conferir
                 st.dataframe(df_filtrado, use_container_width=True)
             else:
-                st.warning("Nenhum lançamento encontrado entre as datas selecionadas.")
-                with st.expander("🔍 Verifique se as datas foram lidas corretamente"):
-                    st.write("Datas encontradas no arquivo:", df_final['data_dt'].dropna().unique())
+                st.warning("Nenhum dado encontrado para o período.")
+                
+                # DIAGNÓSTICO PARA O WILSON
+                with st.expander("🔍 Por que os dados não estão aparecendo? (Clique aqui)"):
+                    st.write("Datas que o sistema encontrou no arquivo:")
+                    st.write(df_final['data'].unique()[:10])
+                    st.write("Anos identificados:", df_final['data_dt'].dt.year.unique())
+                    st.write("Colunas identificadas:", list(df_final.columns))
 
 except Exception as e:
-    st.error(f"Erro Geral do Sistema: {e}")
+    st.error(f"Erro Geral: {e}")
