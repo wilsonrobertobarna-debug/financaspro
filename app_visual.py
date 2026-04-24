@@ -54,31 +54,32 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
-    # --- ESCUDO: CARREGAMENTO COM PROTEÇÃO ---
     dados = ws_lanc.get_all_records()
     df = pd.DataFrame(dados)
     
+    # --- ESCUDO NIVEL 2 ---
     if not df.empty:
-        # 1. Limpa espaços invisíveis nos nomes das colunas
         df.columns = [str(c).strip() for c in df.columns]
         
-        # 2. Garante que as colunas vitais existam (O Escudo)
-        colunas_vitais = ['Data', 'Valor', 'Tipo', 'Status', 'Categoria', 'Banco', 'Beneficiário']
-        for col in colunas_vitais:
+        # Garante que as colunas existam para não dar erro de "KeyError"
+        colunas_necessarias = ['Data', 'Valor', 'Tipo', 'Status', 'Categoria', 'Banco', 'Beneficiário']
+        for col in colunas_necessarias:
             if col not in df.columns:
-                df[col] = "" # Cria coluna vazia se não existir para não quebrar o app
-        
-        # 3. Processamento de tipos
+                df[col] = "N/A"
+
+        # Converte Data com segurança
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-        df['Data_limpa'] = df['Data_dt'].dt.strftime('%d/%m/%Y')
+        df['Data_limpa'] = df['Data'].astype(str) # Fallback: se a conversão falhar, usa o texto original
         df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
 
-    # --- INTERFACE ---
-    st.title("🛡️ FinançasPro (Versão Blindada)")
-    
-    if not df.empty:
+    st.title("🛡️ FinançasPro (Escudo Reforçado)")
+
+    # --- INDICADORES ---
+    if not df.empty and 'Data_dt' in df.columns:
         hoje = datetime.now()
-        df_mes = df[df['Data_dt'].dt.month == hoje.month]
+        # Filtro de mês seguro (ignora datas nulas)
+        df_mes = df[df['Data_dt'].notnull()]
+        df_mes = df_mes[df_mes['Data_dt'].dt.month == hoje.month]
         
         rec_mes = df_mes[df_mes['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
         desp_mes = df_mes[df_mes['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
@@ -108,23 +109,31 @@ try:
         
         if st.button("🚀 Salvar e Limpar", use_container_width=True):
             if valor_f > 0:
-                # Salva na planilha mantendo a ordem das suas colunas
                 ws_lanc.append_row([
                     data_f.strftime('%d/%m/%Y'), valor_f, cat_f, banco_f, 
                     "Manual", benef_f, "Pessoal", 0, "", status_f, tipo_f
                 ])
-                st.success("Gravado com sucesso!")
-                st.rerun() # Limpa os campos automaticamente
+                st.success("Gravado!")
+                st.rerun()
             else:
-                st.warning("O valor deve ser maior que zero.")
+                st.warning("Insira um valor.")
 
     with c_hist:
         st.subheader("🔍 Histórico")
         if not df.empty:
-            df_view = df[['Data_limpa', 'Valor', 'Tipo', 'Banco', 'Beneficiário', 'Status']].copy()
-            st.dataframe(df_view.sort_values('Data_dt', ascending=False), use_container_width=True, hide_index=True)
+            # Exibe as colunas que existem
+            colunas_historico = ['Data_limpa', 'Valor', 'Tipo', 'Banco', 'Beneficiário', 'Status']
+            colunas_finais = [c for c in colunas_historico if c in df.columns]
+            
+            df_view = df[colunas_finais].copy()
+            
+            # Ordenação segura: tenta pela data_dt, se não der, mostra como está
+            if 'Data_dt' in df.columns and df['Data_dt'].notnull().any():
+                st.dataframe(df_view.sort_index(ascending=False), use_container_width=True, hide_index=True)
+            else:
+                st.dataframe(df_view, use_container_width=True, hide_index=True)
         else:
-            st.info("Nenhum dado para exibir.")
+            st.info("Nenhum dado encontrado.")
 
 except Exception as e:
     st.error(f"O Escudo detectou um problema: {e}")
