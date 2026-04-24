@@ -3,12 +3,11 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime, date
-import os
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Sua chave original)
+# 2. CHAVE DE ACESSO
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -55,87 +54,79 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
-    # --- CARREGAMENTO DOS DADOS ---
+    # 1. PEGA DADOS DA NUVEM (Google Sheets)
     dados_nuvem = ws_lanc.get_all_records()
-    df = pd.DataFrame(dados_nuvem)
+    df_nuvem = pd.DataFrame(dados_nuvem)
     
-    # Barra Lateral para Upload (Resolução do problema do arquivo sumido)
-    st.sidebar.header("📁 Importar Março/Abril")
-    uploaded_file = st.sidebar.file_uploader("Selecione o arquivo financas_bruta", type=['csv'])
+    # 2. SISTEMA DE IMPORTAÇÃO (CSV Local)
+    st.sidebar.header("📁 Importar CSV")
+    uploaded_file = st.sidebar.file_uploader("Upload do arquivo financas_bruta", type=['csv'])
+
+    df_final = df_nuvem.copy()
 
     if uploaded_file is not None:
+        # Tenta ler com diferentes separadores
         try:
-            # Tenta ler com vírgula, se falhar tenta ponto e vírgula
-            try:
-                df_bruto = pd.read_csv(uploaded_file, sep=',')
-            except:
-                df_bruto = pd.read_csv(uploaded_file, sep=';')
+            df_local = pd.read_csv(uploaded_file, sep=None, engine='python')
+        except:
+            df_local = pd.read_csv(uploaded_file, sep=';')
             
-            # LIMPEZA DAS COLUNAS: Tira espaços e padroniza os nomes
-            df_bruto.columns = [str(c).strip().title() for c in df_bruto.columns]
-            
-            # Verifica se a coluna Data existe após a limpeza
-            if 'Data' in df_bruto.columns:
-                df_bruto['Data_dt'] = pd.to_datetime(df_bruto['Data'], dayfirst=True, errors='coerce')
-                df_bruto['Data'] = df_bruto['Data_dt'].dt.strftime('%d/%m/%Y')
-                df = pd.concat([df, df_bruto], ignore_index=True)
-                st.sidebar.success(f"✅ {len(df_bruto)} registros carregados!")
-            else:
-                st.sidebar.error(f"Coluna 'Data' não encontrada. Colunas lidas: {list(df_bruto.columns)}")
-        except Exception as e:
-            st.sidebar.error(f"Erro ao ler arquivo: {e}")
-
-    if not df.empty:
-        df.columns = [str(c).strip().title() for c in df.columns]
-        # Garante colunas mínimas para não dar erro no gráfico
-        for col in ['Data', 'Valor', 'Tipo', 'Status', 'Categoria']:
-            if col not in df.columns: df[col] = ""
-            
-        df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce').dt.date
-        df['Valor_num'] = pd.to_numeric(df['Valor'], errors='coerce').fillna(0)
-        df['ID'] = range(2, len(df) + 2)
-
-    st.title("🛡️ FinançasPro Wilson")
-
-    # --- SELETOR DE PERÍODO ---
-    if not df.empty:
-        data_min = df['Data_dt'].min() if not pd.isnull(df['Data_dt'].min()) else date.today()
-        data_max = date.today()
+        # LIMPEZA DE EMERGÊNCIA
+        df_local.columns = [str(c).strip().title() for c in df_local.columns]
         
-        st.info(f"📅 Dados disponíveis desde: {data_min.strftime('%d/%m/%Y')}")
+        # MOSTRAR DIAGNÓSTICO (Aparece na barra lateral)
+        st.sidebar.write("---")
+        st.sidebar.write("**Diagnóstico do seu arquivo:**")
+        st.sidebar.write(f"Colunas achadas: `{list(df_local.columns)}`")
+        st.sidebar.write(f"Exemplo de Data: `{df_local['Data'].iloc[0] if 'Data' in df_local.columns else 'NÃO ACHOU'}`")
+
+        if 'Data' in df_local.columns:
+            # Força a conversão da data
+            df_local['Data_dt'] = pd.to_datetime(df_local['Data'], dayfirst=True, errors='coerce')
+            df_local['Data'] = df_local['Data_dt'].dt.strftime('%d/%m/%Y')
+            df_final = pd.concat([df_nuvem, df_local], ignore_index=True)
+            st.sidebar.success(f"✅ {len(df_local)} linhas carregadas!")
+
+    # 3. PROCESSAMENTO FINAL
+    if not df_final.empty:
+        df_final.columns = [str(c).strip().title() for c in df_final.columns]
+        df_final['Data_dt'] = pd.to_datetime(df_final['Data'], dayfirst=True, errors='coerce').dt.date
+        df_final['Valor_num'] = pd.to_numeric(df_final['Valor'], errors='coerce').fillna(0)
         
+        st.title("🛡️ FinançasPro Wilson")
+
+        # --- SELETOR DE PERÍODO ---
+        # Definimos o período padrão de Março para facilitar seu teste
+        data_inicio_teste = date(2026, 3, 1)
+        data_fim_teste = date(2026, 3, 31)
+
         periodo = st.date_input(
-            "Selecione o intervalo no calendário:",
-            value=(data_min, data_max),
+            "📅 Selecione o Período no Calendário:",
+            value=(data_inicio_teste, data_fim_teste),
             format="DD/MM/YYYY"
         )
         
         if isinstance(periodo, tuple) and len(periodo) == 2:
-            data_ini, data_fim = periodo
-            df_filtrado = df[(df['Data_dt'] >= data_ini) & (df['Data_dt'] <= data_fim)].copy()
+            d_ini, d_fim = periodo
+            df_filtrado = df_final[(df_final['Data_dt'] >= d_ini) & (df_final['Data_dt'] <= d_fim)].copy()
             
-            # CÁLCULO DAS 5 TAGS (Métricas)
-            rec = df_filtrado[df_filtrado['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
-            desp = df_filtrado[df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
-            rend = df_filtrado[df_filtrado['Categoria'].str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
-            pend = df_filtrado[(df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)) & (df_filtrado['Status'] != 'Pago')]['Valor_num'].sum()
+            if not df_filtrado.empty:
+                # MÉTRICAS
+                # Usamos .str.contains para ser flexível com "Receita " ou "RECEITA"
+                rec = df_filtrado[df_filtrado['Tipo'].astype(str).str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
+                desp = df_filtrado[df_filtrado['Tipo'].astype(str).str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
+                
+                m1, m2, m3 = st.columns(3)
+                m1.metric("Receitas (Março)", f"R$ {rec:,.2f}")
+                m2.metric("Despesas (Março)", f"R$ {desp:,.2f}")
+                m3.metric("Saldo", f"R$ {rec - desp:,.2f}")
 
-            m1, m2, m3, m4, m5 = st.columns(5)
-            m1.metric("Receitas", f"R$ {rec:,.2f}")
-            m2.metric("Despesas", f"R$ {desp:,.2f}")
-            m3.metric("Saldo", f"R$ {rec - desp:,.2f}")
-            m4.metric("Rendimentos", f"R$ {rend:,.2f}")
-            m5.metric("Pendências", f"R$ {pend:,.2f}")
-
-            st.write(f"### 📊 Balanço de {data_ini.strftime('%d/%m')} até {data_fim.strftime('%d/%m')}")
-            chart_df = pd.DataFrame({'Tipo': ['Receitas', 'Despesas'], 'Total': [rec, desp]})
-            st.bar_chart(chart_df.set_index('Tipo'))
-
-            st.divider()
-            st.subheader("🔍 Histórico do Período")
-            st.dataframe(df_filtrado[['ID', 'Data', 'Valor', 'Descrição', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
-        else:
-            st.warning("⚠️ Selecione a data final no calendário.")
+                st.bar_chart(pd.DataFrame({'Tipo': ['Receitas', 'Despesas'], 'Total': [rec, desp]}).set_index('Tipo'))
+                
+                st.subheader("📋 Lançamentos Encontrados")
+                st.dataframe(df_filtrado[['Data', 'Valor', 'Descrição', 'Tipo', 'Status']], use_container_width=True)
+            else:
+                st.warning(f"⚠️ NENHUM dado encontrado entre {d_ini} e {d_fim}. Verifique se o ano está correto (2025 ou 2026?).")
 
 except Exception as e:
-    st.error(f"Erro crítico no sistema: {e}")
+    st.error(f"Erro no sistema: {e}")
