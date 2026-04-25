@@ -56,14 +56,12 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
-    # Leitura com tratamento de Data Brasil
     df = pd.DataFrame(ws_lanc.get_all_records())
     if os.path.exists('financas_bruta.csv'):
         df = pd.concat([df, pd.read_csv('financas_bruta.csv')], ignore_index=True)
 
     if not df.empty:
         df.columns = [str(c).strip() for c in df.columns]
-        # Força leitura DD/MM/YYYY
         df['Data_dt'] = pd.to_datetime(df['Data'], format='%d/%m/%Y', errors='coerce').dt.date
         df['Valor_num'] = pd.to_numeric(df['Valor'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip(), errors='coerce').fillna(0)
         df['ID'] = range(2, len(df) + 2)
@@ -75,8 +73,7 @@ try:
         c1, c2 = st.columns([2, 2])
         with c1:
             hoje = date.today()
-            periodo = st.date_input("📅 Período (Brasil):", value=(date(hoje.year, hoje.month, 1), hoje), format="DD/MM/YYYY")
-        
+            periodo = st.date_input("📅 Período:", value=(date(hoje.year, hoje.month, 1), hoje), format="DD/MM/YYYY")
         with c2:
             st.write("🚀 Atalhos:")
             col_b1, col_b2 = st.columns(2)
@@ -97,7 +94,6 @@ try:
             pend = df_filtrado[(df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)) & (df_filtrado['Status'] != 'Pago')]['Valor_num'].sum()
             saldo = rec - desp
 
-            # --- VISUAL ---
             st.info(f"### 💰 Saldo Líquido: R$ {saldo:,.2f}")
             m1, m2, m3, m4 = st.columns(4)
             m1.metric("Receitas", f"R$ {rec:,.2f}")
@@ -105,48 +101,37 @@ try:
             m3.metric("Rendimentos", f"R$ {rend:,.2f}")
             m4.metric("Pendências", f"R$ {pend:,.2f}")
 
-            st.divider()
-
-            # --- GRÁFICOS ---
-            g1, g2 = st.columns(2)
-            with g1:
-                st.subheader("📊 Movimentação")
-                st.bar_chart(pd.DataFrame({'Total': [rec, desp]}, index=['Receitas', 'Despesas']))
-            with g2:
-                exibir_metas = st.checkbox("🔑 Ver Metas")
-                if exibir_metas:
-                    st.subheader("🎯 Meta")
-                    META = 10000.00
-                    st.bar_chart(pd.DataFrame({'Valor': [META, rec]}, index=['Meta', 'Alcançado']), color="#3498db")
-
     st.divider()
 
-    # --- FORMULÁRIO (COM PARCELAMENTO) ---
+    # --- FORMULÁRIO COM LÓGICA DE LIMPEZA (RESET) ---
     c_form, c_hist = st.columns([1, 2.5])
     with c_form:
         st.subheader("📝 Novo Lançamento")
-        tipo_f = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True)
-        data_f = st.date_input("Data", date.today(), format="DD/MM/YYYY")
-        valor_f = st.number_input("Valor (R$)", min_value=0.0, step=0.01)
-        benef_f = st.text_input("Beneficiário")
-        desc_f = st.text_input("Descrição")
         
-        # Campo de Parcelamento recuperado
-        parcela_f = st.text_input("Parcelamento (ex: 1/10)", value="1/1")
-        
-        cat_f = st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Rendimento", "Trabalho", "Outros"])
-        banco_f = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"])
-        status_f = st.selectbox("Status", ["Pago", "Pendente"])
+        # Usamos chaves (keys) para poder resetar os campos depois
+        tipo_f = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True, key="tipo_input")
+        data_f = st.date_input("Data", date.today(), format="DD/MM/YYYY", key="data_input")
+        valor_f = st.number_input("Valor (R$)", min_value=0.0, step=0.01, key="valor_input")
+        benef_f = st.text_input("Beneficiário", key="benef_input")
+        desc_f = st.text_input("Descrição", key="desc_input")
+        parcela_f = st.text_input("Parcelamento (ex: 1/10)", value="1/1", key="parcela_input")
+        cat_f = st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Rendimento", "Trabalho", "Outros"], key="cat_input")
+        banco_f = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"], key="banco_input")
+        status_f = st.selectbox("Status", ["Pago", "Pendente"], key="status_input")
         
         if st.button("🚀 Salvar na Nuvem", use_container_width=True):
             if valor_f > 0:
-                # Grava no formato Brasil na planilha
                 data_br = data_f.strftime('%d/%m/%Y')
-                # A descrição agora inclui o parcelamento se for diferente de 1/1
                 desc_final = f"{desc_f} ({parcela_f})" if parcela_f != "1/1" else desc_f
-                
                 ws_lanc.append_row([data_br, valor_f, cat_f, banco_f, desc_final, benef_f, "Pessoal", 0, "", status_f, tipo_f])
-                st.success("Registrado!")
+                
+                # LIMPEZA DOS CAMPOS APÓS SALVAR
+                st.session_state.valor_input = 0.0
+                st.session_state.benef_input = ""
+                st.session_state.desc_input = ""
+                st.session_state.parcela_input = "1/1"
+                
+                st.success("Registrado com sucesso!")
                 st.rerun()
 
     with c_hist:
@@ -154,13 +139,20 @@ try:
         if not df_filtrado.empty:
             st.dataframe(df_filtrado[['ID', 'Data', 'Valor', 'Tipo', 'Descrição', 'Beneficiário', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
             
-            # --- EXCLUSÃO ---
-            st.write("---")
-            id_excluir = st.number_input("ID para excluir:", min_value=2, step=1)
+            # --- EXCLUSÃO COM LÓGICA DE LIMPEZA ---
+            st.divider()
+            st.subheader("🗑️ Excluir Registro")
+            id_excluir = st.number_input("ID para excluir:", min_value=2, step=1, key="id_excluir_input")
+            
             if st.button("🔴 Confirmar Exclusão", use_container_width=True):
-                ws_lanc.delete_rows(int(id_excluir))
-                st.warning(f"ID {id_excluir} removido.")
-                st.rerun()
+                try:
+                    ws_lanc.delete_rows(int(id_excluir))
+                    # RESET DO CAMPO DE EXCLUSÃO
+                    st.session_state.id_excluir_input = 2
+                    st.warning(f"ID {id_excluir} removido!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erro: {e}")
 
 except Exception as e:
     st.error(f"Erro: {e}")
