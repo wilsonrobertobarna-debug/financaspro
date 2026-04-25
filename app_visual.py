@@ -7,7 +7,7 @@ from datetime import datetime, date
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Mantenha sua chave privada real aqui)
+# 2. CHAVE DE ACESSO (Mantenha sua chave real aqui)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -25,7 +25,7 @@ PK_LIST = [
     "YGFE1dTWk0axmbiZa3bxK+laqBTt0sfuaiKemgRqQSy5kJS7f9qC02Evc+RC7nnQ",
     "BsSYeijNQiHwNcrjcbq6NGbCzYTcXu7FajM490tet7YF3XfGGTfuyA6GRYYpyNNT",
     "qwBeVGNtP4iXBeT3DSHaR3n/awKBgQDS3RVh1whP4Cu6CEOheUgQuMxEWdEbnQQS",
-    "Ns8Le56t5Bed2PmfMGXjTLBzDXPYiemGnDnPwm5SErTE0emZUo4+mzljSHAirpTB",
+    "Ns8Le56t5Bed2PmfMGXjTLBed2PmfMGXjTLBzDXPYiemGnDnPwm5SErTE0emZUo4",
     "N9sNRi3pnLTnZ4YSHrmQlW3UxkNpgph+VMxmUM+HlKw0lutfoeYIjzIWa2ZImLGw",
     "GW7W8eJyFwKBgQCkOqR1OqnDy9cEf03uYzK0ZeXlpoflLmTNOXjyfg4ca8S5apJC",
     "IXZ8qEQiE10rhFeN9GTthuHfGjM9ZVYJx8YpZzhgYjNswGVenEV7nfkmXmfOanSA",
@@ -57,22 +57,20 @@ def carregar_dados(ws):
     if not df.empty:
         df.columns = [str(c).strip() for c in df.columns]
         df['Data_dt'] = pd.to_datetime(df['Data'], format='%d/%m/%Y', errors='coerce').dt.date
-        # Limpeza do valor para cálculo
         df['Valor_num'] = pd.to_numeric(df['Valor'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip(), errors='coerce').fillna(0)
         df['ID'] = range(2, len(df) + 2)
     return df
 
-# --- FUNÇÕES DE INTERAÇÃO (CALLBACKS) ---
+# --- FUNÇÕES DE INTERAÇÃO (Limpam os campos após salvar) ---
 def salvar_registro():
-    """Esta função roda quando o botão de salvar é clicado."""
     if st.session_state.valor_input > 0:
         data_br = st.session_state.data_input.strftime('%d/%m/%Y')
         desc = st.session_state.desc_input
         parc = st.session_state.parcela_input
         desc_final = f"{desc} ({parc})" if parc != "1/1" else desc
         
-        # Ordem corrigida para não trocar Status por 'Pessoal'
-        # Estrutura: Data, Valor, Categoria, Banco, Descrição, Beneficiário, Conta, Aux1, Aux2, STATUS, TIPO
+        # ORDEM DAS COLUNAS (Ajustado para o Status não sair trocado)
+        # Colunas: Data, Valor, Categoria, Banco, Descrição, Beneficiário, Conta, Aux1, Aux2, STATUS, TIPO
         nova_linha = [
             data_br, 
             st.session_state.valor_input, 
@@ -80,22 +78,23 @@ def salvar_registro():
             st.session_state.banco_input, 
             desc_final, 
             st.session_state.benef_input, 
-            "Pessoal", 0, "", 
-            st.session_state.status_input, # Coluna J
-            st.session_state.tipo_input   # Coluna K
+            "Pessoal", # Coluna Conta
+            0,         # Coluna Aux1
+            "",        # Coluna Aux2
+            st.session_state.status_input, # AQUI SAI 'PAGO' OU 'PENDENTE'
+            st.session_state.tipo_input    # AQUI SAI 'RECEITA' OU 'DESPESA'
         ]
         
         ws_lanc.append_row(nova_linha)
         
-        # LIMPANDO OS CAMPOS (Zerar memória)
+        # ZERAR OS CAMPOS APÓS SALVAR
         st.session_state.valor_input = 0.0
         st.session_state.benef_input = ""
         st.session_state.desc_input = ""
         st.session_state.parcela_input = "1/1"
-        st.toast("✅ Salvo com sucesso!")
+        st.toast("✅ Lançamento realizado e campos limpos!")
 
 def excluir_registro():
-    """Esta função roda quando o botão de excluir é clicado."""
     id_alvo = st.session_state.id_excluir_input
     ws_lanc.delete_rows(int(id_alvo))
     st.toast(f"🗑️ Registro {id_alvo} removido!")
@@ -110,8 +109,8 @@ try:
     df = carregar_dados(ws_lanc)
     st.title("🛡️ FinançasPro Wilson")
 
-    # --- ÁREA SUPERIOR (FILTROS E GRÁFICOS) ---
     if not df.empty:
+        # Filtros de visualização
         c1, c2 = st.columns([2, 2])
         with c1:
             hoje = date.today()
@@ -123,14 +122,14 @@ try:
             btn_matilha = col_b1.button("🐶 Matilha", use_container_width=True)
             btn_geral = col_b2.button("📄 Geral", use_container_width=True)
 
-        # Lógica de Filtro
         if isinstance(periodo, tuple) and len(periodo) == 2:
             d_ini, d_fim = periodo
             df_view = df[(df['Data_dt'] >= d_ini) & (df['Data_dt'] <= d_fim)].copy()
+            
             if btn_matilha:
                 df_view = df_view[df_view.astype(str).apply(lambda x: x.str.contains('Milo|Bolt', case=False)).any(axis=1)]
 
-            # Métricas
+            # Métricas das Tags
             rec = df_view[df_view['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
             desp = df_view[df_view['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
             rend = df_view[df_view['Categoria'].str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
@@ -143,20 +142,9 @@ try:
             m3.metric("Rendimentos", f"R$ {rend:,.2f}")
             m4.metric("Pendências", f"R$ {pend:,.2f}")
 
-            # Gráficos
-            st.divider()
-            g1, g2 = st.columns(2)
-            with g1:
-                st.subheader("📊 Movimentação")
-                st.bar_chart(pd.DataFrame({'Total': [rec, desp]}, index=['Receitas', 'Despesas']))
-            with g2:
-                if st.checkbox("🔑 Ver Metas"):
-                    st.subheader("🎯 Meta vs Real")
-                    st.bar_chart(pd.DataFrame({'Valor': [10000.0, rec]}, index=['Meta', 'Realizado']), color="#3498db")
-
     st.divider()
 
-    # --- ÁREA INFERIOR (FORMULÁRIO E TABELA) ---
+    # --- FORMULÁRIO E HISTÓRICO ---
     c_form, c_table = st.columns([1, 2.5])
 
     with c_form:
@@ -171,7 +159,7 @@ try:
         st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"], key="banco_input")
         st.selectbox("Status", ["Pago", "Pendente"], key="status_input")
         
-        # BOTÃO COM CALLBACK (Limpa tudo sozinho)
+        # O on_click roda a função que limpa os campos
         st.button("🚀 Salvar na Nuvem", use_container_width=True, on_click=salvar_registro)
 
     with c_table:
@@ -180,9 +168,9 @@ try:
             st.dataframe(df_view[['ID', 'Data', 'Valor', 'Tipo', 'Descrição', 'Beneficiário', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
             
             st.divider()
-            st.subheader("🗑️ Excluir Registro")
+            st.subheader("🗑️ Excluir Lançamento")
             st.number_input("ID do registro:", min_value=2, step=1, key="id_excluir_input")
             st.button("🔴 Confirmar Exclusão", use_container_width=True, on_click=excluir_registro)
 
 except Exception as e:
-    st.error(f"Erro no sistema: {e}")
+    st.error(f"Erro detectado: {e}")
