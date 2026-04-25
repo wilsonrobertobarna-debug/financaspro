@@ -13,7 +13,7 @@ st.markdown("""
     .saldo-container {
         background-color: #007bff;
         color: white;
-        padding: 8px 15px; /* Reduzido o padding pela metade */
+        padding: 8px 15px;
         border-radius: 10px;
         text-align: center;
         margin-bottom: 20px;
@@ -88,7 +88,7 @@ if aba == "💰 Finanças":
         rec = df[df[c_tipo] == 'Receita']['Valor_Num'].sum()
         desp = df[df[c_tipo] == 'Despesa']['Valor_Num'].sum()
         rend = df[df[c_cat].astype(str).str.contains('Rendimento', case=False)]['Valor_Num'].sum()
-        pend = df[df[c_stat] == 'Pendente']['Valor_Num'].sum()
+        pend = df[df[c_stat].astype(str).str.contains('Pendente', case=False)]['Valor_Num'].sum()
         
         saldo = rec - desp
         eco_perc = (saldo / rec * 100) if rec > 0 else 0
@@ -117,6 +117,50 @@ if aba == "💰 Finanças":
             </div>
             """, unsafe_allow_html=True)
 
-    # FORMULÁRIO LATERAL
+    # FORMULÁRIO LATERAL (Linhas revisadas para evitar SyntaxError)
     with st.sidebar.form("f_fin", clear_on_submit=True):
-        st.subheader("📝
+        st.subheader("📝 Lançamento")
+        f_dat = st.date_input("Data", datetime.now())
+        f_val = st.number_input("Valor", min_value=0.0)
+        f_tip = st.selectbox("Tipo", ["Despesa", "Receita"])
+        f_cat = st.selectbox("Categoria", ["Mercado", "AserNet", "Skyfit", "Milo/Bolt", "Combustível", "Rendimento", "Outros"])
+        f_bnc = st.selectbox("Banco", ["Nubank", "Itaú", "Dinheiro", "Outro"])
+        f_stat = st.selectbox("Status", ["Pago", "Pendente"])
+        if st.form_submit_button("🚀 SALVAR"):
+            ws.append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_stat])
+            st.cache_data.clear()
+            st.rerun()
+
+    # Gráficos e histórico abaixo
+    st.write("---")
+    g1, g2 = st.columns(2)
+    with g1:
+        st.subheader("📊 Histórico Mensal")
+        try:
+            df_g = df.copy()
+            df_g['Data_DT'] = pd.to_datetime(df_g['Data'], dayfirst=True, errors='coerce')
+            df_g = df_g.dropna(subset=['Data_DT'])
+            df_g['Mes'] = df_g['Data_DT'].dt.strftime('%m/%y')
+            comp = df_g.groupby(['Mes', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
+            
+            # Cores para o gráfico
+            st.bar_chart(comp, color=['#dc3545', '#28a745'])
+        except:
+            st.info("Lance dados com data para ativar o gráfico.")
+    with g2:
+        st.subheader("📋 Tabela Recente")
+        st.dataframe(df.iloc[::-1].head(10), use_container_width=True)
+
+# ABA 2 (Pets) e ABA 3 (Veículo) com carregamento básico
+elif aba == "🐾 Milo & Bolt":
+    st.title("🐾 Controle: Milo & Bolt")
+    try:
+        ws_p = sh.worksheet("Controle_Pets")
+        st.dataframe(pd.DataFrame(ws_p.get_all_values()), use_container_width=True)
+    except: st.error("Aba 'Controle_Pets' não encontrada.")
+else:
+    st.title("🚗 Controle: Veículo")
+    try:
+        ws_v = sh.worksheet("Controle_Veiculo")
+        st.dataframe(pd.DataFrame(ws_v.get_all_values()), use_container_width=True)
+    except: st.error("Aba 'Controle_Veiculo' não encontrada.")
