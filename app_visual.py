@@ -7,24 +7,24 @@ from datetime import datetime, date
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO
-# DICA: Cole aqui a "private_key" completa do seu arquivo .json
+# 2. CHAVE DE ACESSO (O COFRE)
+# IMPORTANTE: Cole sua chave do JSON entre as aspas abaixo.
+# Ela deve começar com -----BEGIN... e terminar com ...KEY-----
 CHAVE_PRIVADA_BRUTA = """-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP
-... COLE O RESTO DA SUA CHAVE AQUI ...
+... (COLE O RESTO DA SUA CHAVE AQUI) ...
 -----END PRIVATE KEY-----"""
 
 @st.cache_resource
 def conectar_google():
-    # TRATAMENTO DE CHOQUE:
-    # 1. Remove espaços no início/fim
-    # 2. Converte o texto "\n" literal em quebra de linha real
-    # 3. Limpa espaços invisíveis em cada linha individualmente
+    # Esta parte limpa qualquer caractere @ ou espaços que entraram por erro de colagem
     raw_key = CHAVE_PRIVADA_BRUTA.strip()
     
+    # Resolve o problema das quebras de linha literais (\n) vs reais (Enter)
     if "\\n" in raw_key:
         chave_final = raw_key.replace("\\n", "\n")
     else:
+        # Reconstrói a chave linha por linha limpando espaços nas pontas
         linhas = [l.strip() for l in raw_key.split('\n') if l.strip()]
         chave_final = "\n".join(linhas)
     
@@ -40,14 +40,14 @@ def conectar_google():
     
     return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
 
-# --- FUNÇÕES DE INTERAÇÃO ---
+# --- FUNÇÕES DE BOTÃO ---
 def acao_salvar():
     v = st.session_state.valor_input
     if v > 0:
         data_br = st.session_state.data_input.strftime('%d/%m/%Y')
         desc_final = f"{st.session_state.desc_input} ({st.session_state.parcela_input})" if st.session_state.parcela_input != "1/1" else st.session_state.desc_input
         
-        # Ordem das 11 colunas da sua planilha (A-K)
+        # Estrutura exata das 11 colunas da sua planilha
         nova_linha = [
             data_br, v, st.session_state.cat_input, st.session_state.banco_input, 
             desc_final, st.session_state.benef_input, "Pessoal", "", "", 
@@ -55,9 +55,9 @@ def acao_salvar():
         ]
         
         ws_lanc.append_row(nova_linha)
-        st.toast("✅ Dados gravados com sucesso!")
+        st.toast("✅ Lançamento enviado!")
         
-        # Limpa os campos após salvar
+        # Reseta os campos para o próximo uso
         st.session_state.valor_input = 0.0
         st.session_state.desc_input = ""
         st.session_state.benef_input = ""
@@ -65,9 +65,9 @@ def acao_salvar():
 def acao_excluir():
     id_alvo = st.session_state.id_excluir_input
     ws_lanc.delete_rows(int(id_alvo))
-    st.toast(f"🗑️ Registro {id_alvo} removido.")
+    st.toast(f"🗑️ Registro {id_alvo} apagado.")
 
-# --- LÓGICA PRINCIPAL ---
+# --- INTERFACE E LOGICA ---
 try:
     client = conectar_google()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
@@ -84,20 +84,19 @@ try:
     st.title("🛡️ FinançasPro Wilson")
 
     if not df.empty:
-        # Filtro de Data
-        periodo = st.date_input("📅 Período:", value=(date(date.today().year, date.today().month, 1), date.today()), format="DD/MM/YYYY")
+        periodo = st.date_input("📅 Filtro:", value=(date(date.today().year, date.today().month, 1), date.today()), format="DD/MM/YYYY")
         
         if isinstance(periodo, tuple) and len(periodo) == 2:
             d_ini, d_fim = periodo
             df_view = df[(df['Data_dt'] >= d_ini) & (df['Data_dt'] <= d_fim)].copy()
             
+            # Cálculos automáticos para o dashboard
             rec = df_view[df_view['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
             desp = df_view[df_view['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
             st.info(f"### 💰 Saldo do Período: R$ {rec - desp:,.2f}")
 
     st.divider()
 
-    # Formulário e Histórico
     col_f, col_h = st.columns([1, 2.5])
     
     with col_f:
@@ -116,14 +115,10 @@ try:
     with col_h:
         st.subheader("📋 Histórico")
         if not df.empty:
-            st.dataframe(
-                df_view[['ID', 'Data', 'Valor', 'Tipo', 'Descrição', 'Status']].sort_values('ID', ascending=False), 
-                use_container_width=True, 
-                hide_index=True
-            )
+            st.dataframe(df_view[['ID', 'Data', 'Valor', 'Tipo', 'Descrição', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
             st.divider()
-            st.number_input("Remover ID:", min_value=2, step=1, key="id_excluir_input")
-            st.button("🔴 Excluir Registro", use_container_width=True, on_click=acao_excluir)
+            st.number_input("Excluir ID:", min_value=2, step=1, key="id_excluir_input")
+            st.button("🔴 Remover", use_container_width=True, on_click=acao_excluir)
 
 except Exception as e:
     st.error(f"Erro detectado: {e}")
