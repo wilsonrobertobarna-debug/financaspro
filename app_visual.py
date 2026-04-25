@@ -23,12 +23,13 @@ def conectar_google():
         
         # Monta o dicionário final para o Google
         final_creds = {
-            "type": creds_info["type"],
-            "project_id": creds_info["project_id"],
-            "private_key_id": creds_info["private_key_id"],
-            "private_key": private_key,
-            "client_email": creds_info["client_email"],
-            "token_uri": creds_info["token_uri"],
+           [connections.gsheets]
+type = "service_account"
+project_id = "financaspro-wilson"
+private_key_id = "COLE_AQUI_O_ID_QUE_ESTA_NO_SEU_JSON"
+private_key = "-----BEGIN PRIVATE KEY-----\nCOLE_AQUI_A_CHAVE_LONGA_EM_UMA_LINHA_SO\n-----END PRIVATE KEY-----\n"
+client_email = "financas-wilson@financaspro-wilson.iam.gserviceaccount.com"
+token_uri = "https://oauth2.googleapis.com/token"
         }
         
         scopes = [
