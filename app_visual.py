@@ -38,6 +38,7 @@ st.markdown("""
         font-weight: bold;
         text-align: center;
         margin-top: 15px;
+        margin-bottom: 25px;
         padding: 10px;
     }
     </style>
@@ -95,7 +96,7 @@ if aba == "💰 Finanças":
         
         def f_brl(v): return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-        # --- EXIBIÇÃO: SALDO EM DESTAQUE (AZUL FINO) ---
+        # --- EXIBIÇÃO: SALDO EM DESTAQUE ---
         st.markdown(f"""
             <div class="saldo-container">
                 <small>Saldo Atual em Conta</small>
@@ -110,14 +111,19 @@ if aba == "💰 Finanças":
         t3.metric("📈 Rendimentos", f_brl(rend))
         t4.metric("⏳ Pendências", f_brl(pend))
 
-        # --- ECONOMIA REAL (AZUL) ---
+        # --- ECONOMIA REAL ---
         st.markdown(f"""
             <div class="economia-texto">
                 🔹 Economia Real: {f_brl(saldo)} ({eco_perc:.1f}%)
             </div>
             """, unsafe_allow_html=True)
 
-    # FORMULÁRIO LATERAL (Linhas revisadas para evitar SyntaxError)
+        # --- HISTÓRICO DE LANÇAMENTOS (ABAIXO DA ECONOMIA) ---
+        st.subheader("📋 Histórico de Lançamentos")
+        # Exibe o dataframe invertido (mais novos primeiro)
+        st.dataframe(df.iloc[::-1], use_container_width=True)
+
+    # FORMULÁRIO LATERAL
     with st.sidebar.form("f_fin", clear_on_submit=True):
         st.subheader("📝 Lançamento")
         f_dat = st.date_input("Data", datetime.now())
@@ -131,36 +137,23 @@ if aba == "💰 Finanças":
             st.cache_data.clear()
             st.rerun()
 
-    # Gráficos e histórico abaixo
-    st.write("---")
-    g1, g2 = st.columns(2)
-    with g1:
-        st.subheader("📊 Histórico Mensal")
-        try:
-            df_g = df.copy()
-            df_g['Data_DT'] = pd.to_datetime(df_g['Data'], dayfirst=True, errors='coerce')
-            df_g = df_g.dropna(subset=['Data_DT'])
-            df_g['Mes'] = df_g['Data_DT'].dt.strftime('%m/%y')
-            comp = df_g.groupby(['Mes', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
-            
-            # Cores para o gráfico
-            st.bar_chart(comp, color=['#dc3545', '#28a745'])
-        except:
-            st.info("Lance dados com data para ativar o gráfico.")
-    with g2:
-        st.subheader("📋 Tabela Recente")
-        st.dataframe(df.iloc[::-1].head(10), use_container_width=True)
-
-# ABA 2 (Pets) e ABA 3 (Veículo) com carregamento básico
+# ABA 2 (Pets) e ABA 3 (Veículo)
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Controle: Milo & Bolt")
     try:
         ws_p = sh.worksheet("Controle_Pets")
-        st.dataframe(pd.DataFrame(ws_p.get_all_values()), use_container_width=True)
+        dados_p = ws_p.get_all_values()
+        if len(dados_p) > 0:
+            df_p = pd.DataFrame(dados_p[1:], columns=dados_p[0])
+            st.dataframe(df_p.iloc[::-1], use_container_width=True)
     except: st.error("Aba 'Controle_Pets' não encontrada.")
+
 else:
     st.title("🚗 Controle: Veículo")
     try:
         ws_v = sh.worksheet("Controle_Veiculo")
-        st.dataframe(pd.DataFrame(ws_v.get_all_values()), use_container_width=True)
+        dados_v = ws_v.get_all_values()
+        if len(dados_v) > 0:
+            df_v = pd.DataFrame(dados_v[1:], columns=dados_v[0])
+            st.dataframe(df_v.iloc[::-1], use_container_width=True)
     except: st.error("Aba 'Controle_Veiculo' não encontrada.")
