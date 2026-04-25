@@ -8,7 +8,7 @@ from datetime import datetime, date
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
 # 2. CHAVE DE ACESSO
-# Certifique-se de que cada linha da chave está entre aspas e separada por vírgula.
+# IMPORTANTE: Mantenha as aspas e as vírgulas em cada linha da sua chave real.
 PK_LIST = [
    "-----BEGIN PRIVATE KEY-----",
    "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -47,7 +47,7 @@ def acao_salvar():
         data_br = st.session_state.data_input.strftime('%d/%m/%Y')
         desc_final = f"{st.session_state.desc_input} ({st.session_state.parcela_input})" if st.session_state.parcela_input != "1/1" else st.session_state.desc_input
         
-        # Alinhamento para sua planilha arrumada (11 colunas A até K)
+        # Ordem para sua planilha (A até K)
         # J: Status | K: Tipo
         nova_linha = [
             data_br, v, st.session_state.cat_input, st.session_state.banco_input, 
@@ -56,9 +56,9 @@ def acao_salvar():
         ]
         
         ws_lanc.append_row(nova_linha)
-        st.toast("✅ Lançamento gravado!")
+        st.toast("✅ Lançamento enviado!")
         
-        # Limpeza segura
+        # Limpeza segura dos campos
         st.session_state.valor_input = 0.0
         st.session_state.benef_input = ""
         st.session_state.desc_input = ""
@@ -71,8 +71,10 @@ def acao_excluir():
 
 @st.cache_resource
 def conectar_google():
-    # TRATAMENTO DA CHAVE: Remove espaços e garante que \n vire quebra de linha real
-    private_key = "\n".join([l.strip() for l in PK_LIST]).replace('\\n', '\n')
+    # A MUDANÇA CRÍTICA ESTÁ AQUI:
+    # 1. strip() limpa espaços no fim das linhas
+    # 2. replace converte os textos '\n' em quebras reais que o Google entende
+    chave_limpa = "\n".join([l.strip() for l in PK_LIST]).replace('\\n', '\n')
     
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     creds_info = {
@@ -80,52 +82,49 @@ def conectar_google():
         "project_id": "financaspro-wilson",
         "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
         "token_uri": "https://oauth2.googleapis.com/token", 
-        "private_key": private_key
+        "private_key": chave_limpa
     }
     return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
 
-# --- PROCESSAMENTO PRINCIPAL ---
+# --- PROCESSAMENTO ---
 try:
     client = conectar_google()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
-    # Leitura e tratamento do DataFrame
     raw_data = ws_lanc.get_all_records()
     df = pd.DataFrame(raw_data)
     
+    # Tratamento básico dos dados lidos
     if not df.empty:
         df.columns = [str(c).strip() for c in df.columns]
+        # Ajuste o nome das colunas conforme sua planilha real
+        col_tipo = 'Tipo' if 'Tipo' in df.columns else 'Tipo Movimentação'
+        
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce').dt.date
-        # Limpa o valor para cálculos internos
         df['Valor_num'] = pd.to_numeric(df['Valor'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip(), errors='coerce').fillna(0)
         df['ID'] = range(2, len(df) + 2)
 
     st.title("🛡️ FinançasPro Wilson")
 
-    # Filtros e Métricas
+    # Filtros e Saldo
     if not df.empty:
-        c1, c2 = st.columns([2, 2])
+        c1, c2 = st.columns(2)
         with c1:
-            hoje = date.today()
-            periodo = st.date_input("📅 Filtro de Data:", value=(date(hoje.year, hoje.month, 1), hoje), format="DD/MM/YYYY")
+            periodo = st.date_input("📅 Filtro:", value=(date(date.today().year, date.today().month, 1), date.today()), format="DD/MM/YYYY")
         
         if isinstance(periodo, tuple) and len(periodo) == 2:
             d_ini, d_fim = periodo
             df_view = df[(df['Data_dt'] >= d_ini) & (df['Data_dt'] <= d_fim)].copy()
             
-            # Resumo Financeiro
-            rec = df_view[df_view['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
-            desp = df_view[df_view['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
-            
+            # Cálculo de saldo (ajustado para o nome da sua coluna de Tipo)
+            rec = df_view[df_view[col_tipo].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
+            desp = df_view[df_view[col_tipo].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
             st.info(f"### 💰 Saldo: R$ {rec - desp:,.2f}")
-            m1, m2 = st.columns(2)
-            m1.metric("Receitas", f"R$ {rec:,.2f}")
-            m2.metric("Despesas", f"R$ {desp:,.2f}")
 
     st.divider()
 
-    # Layout de Input e Histórico
+    # Formulário e Tabela
     col_f, col_h = st.columns([1, 2.5])
     
     with col_f:
@@ -144,12 +143,10 @@ try:
     with col_h:
         st.subheader("📋 Histórico")
         if not df.empty:
-            st.dataframe(df_view[['ID', 'Data', 'Valor', 'Tipo', 'Descrição', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
-            
+            st.dataframe(df_view[['ID', 'Data', 'Valor', col_tipo, 'Descrição', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
             st.divider()
-            st.subheader("🗑️ Excluir Registro")
             st.number_input("ID para remover:", min_value=2, step=1, key="id_excluir_input")
-            st.button("🔴 Confirmar Exclusão", use_container_width=True, on_click=acao_excluir)
+            st.button("🔴 Excluir", use_container_width=True, on_click=acao_excluir)
 
 except Exception as e:
-    st.error(f"Erro detectado: {e}")
+    st.error(f"
