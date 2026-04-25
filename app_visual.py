@@ -21,9 +21,12 @@ def conectar_google():
         creds_info = st.secrets["connections"]["gsheets"]
         private_key = creds_info["private_key"].replace("\\n", "\n").strip()
         final_creds = {
-            "type": creds_info["type"], "project_id": creds_info["project_id"],
-            "private_key_id": creds_info["private_key_id"], "private_key": private_key,
-            "client_email": creds_info["client_email"], "token_uri": creds_info["token_uri"],
+            "type": creds_info["type"], 
+            "project_id": creds_info["project_id"],
+            "private_key_id": creds_info["private_key_id"], 
+            "private_key": private_key,
+            "client_email": creds_info["client_email"], 
+            "token_uri": creds_info["token_uri"],
         }
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=scopes))
@@ -49,13 +52,13 @@ if aba == "💰 Finanças":
         f_val = st.number_input("Valor (R$)", min_value=0.0)
         f_cat = st.selectbox("Categoria", ["Mercado", "Shopee", "AserNet", "Skyfit", "Milo/Bolt", "Combustível", "Outros"])
         if st.form_submit_button("🚀 SALVAR FINANCEIRO"):
-            ws_fin.append_row([f_dat.strftime("%d/%m/%Y"), str(f_val), f_cat, "Despesa", "Nubank", "Pago"])
+            ws_fin.append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, "Despesa", "Nubank", "Pago"])
             st.cache_data.clear(); st.rerun()
 
     dados = ws_fin.get_all_values()
     if len(dados) > 1:
         df = pd.DataFrame(dados[1:], columns=["Data", "Valor", "Categoria", "Tipo", "Banco", "Status"])
-        df['Valor'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
+        df['Valor_Num'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
         df['Data_Ref'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
         df = df.sort_values(by='Data_Ref', ascending=False).drop(columns=['Data_Ref'])
         st.dataframe(df.head(15), use_container_width=True)
@@ -74,19 +77,19 @@ elif aba == "🐾 Milo & Bolt":
         p_val = st.number_input("Valor (R$)", min_value=0.0)
         if st.form_submit_button("🦴 SALVAR NO PET"):
             dt_s = p_dat.strftime("%d/%m/%Y")
-            ws_pets.append_row([dt_s, p_pet, p_tip, "Lançamento App", str(p_val)])
-            sh.get_worksheet(0).append_row([dt_s, str(p_val), f"Pet: {p_tip}", "Despesa", "Nubank", "Pago"])
+            ws_pets.append_row([dt_s, p_pet, p_tip, "Lançamento App", str(p_val).replace('.', ',')])
+            sh.get_worksheet(0).append_row([dt_s, str(p_val).replace('.', ','), f"Pet: {p_tip}", "Despesa", "Nubank", "Pago"])
             st.cache_data.clear(); st.rerun()
 
     dados_p = ws_pets.get_all_values()
     if len(dados_p) > 1:
         df_p = pd.DataFrame(dados_p[1:])
-        # Forçamos as colunas caso a planilha tenha ordens diferentes
-        df_p.columns = ["Data", "Pet", "Tipo", "Detalhe", "Valor"][:len(df_p.columns)]
+        cols = ["Data", "Pet", "Tipo", "Detalhe", "Valor"]
+        df_p.columns = cols[:df_p.shape[1]]
         st.dataframe(df_p, use_container_width=True)
 
 # ==========================================
-# ABA 3: MEU VEÍCULO (CORREÇÃO DE COLUNAS)
+# ABA 3: MEU VEÍCULO
 # ==========================================
 else:
     ws_vei = sh.worksheet("Controle_Veiculo")
@@ -112,19 +115,16 @@ else:
             
             if st.form_submit_button("🚗 SALVAR NO VEÍCULO"):
                 dt_s = v_dat.strftime("%d/%m/%Y")
-                # ORDEM PARA PLANILHA: Data, Serviço, KM, Valor
-                ws_vei.append_row([dt_s, v_tip, str(v_km), str(v_val)])
-                # LANÇA NO FINANCEIRO
-                sh.get_worksheet(0).append_row([dt_s, str(v_val), "Combustível", "Despesa", "Nubank", "Pago"])
+                ws_vei.append_row([dt_s, v_tip, str(v_km), str(v_val).replace('.', ',')])
+                sh.get_worksheet(0).append_row([dt_s, str(v_val).replace('.', ','), "Combustível", "Despesa", "Nubank", "Pago"])
                 st.cache_data.clear(); st.rerun()
 
     dados_v = ws_vei.get_all_values()
     if len(dados_v) > 1:
         df_v = pd.DataFrame(dados_v[1:])
-        # ESTA LINHA É A CHAVE: Força o nome das colunas na ordem que salvamos
         if df_v.shape[1] >= 4:
             df_v.columns = ["Data", "Serviço", "KM Atual", "Valor"]
             df_v['Data_Ref'] = pd.to_datetime(df_v['Data'], dayfirst=True, errors='coerce')
             df_v = df_v.sort_values(by='Data_Ref', ascending=False).drop(columns=['Data_Ref'])
             st.subheader("📋 Histórico do Veículo")
-            st.dataframe(df_v[["Data", "Serviço", "KM Atual", "Valor"]], use_container_width=True)
+            st.dataframe(df_v, use_container_width=True)
