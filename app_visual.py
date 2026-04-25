@@ -40,6 +40,16 @@ PK_LIST = [
     "-----END PRIVATE KEY-----"
 ]
 
+# --- FUNÇÕES DE LIMPEZA ---
+def limpar_form():
+    st.session_state.valor_input = 0.0
+    st.session_state.benef_input = ""
+    st.session_state.desc_input = ""
+    st.session_state.parcela_input = "1/1"
+
+def limpar_exclusao():
+    st.session_state.id_excluir_input = 2
+
 @st.cache_resource
 def conectar_google():
     private_key = "\n".join([l.strip() for l in PK_LIST])
@@ -68,8 +78,8 @@ try:
 
     st.title("🛡️ FinançasPro Wilson")
 
+    # --- FILTROS ---
     if not df.empty:
-        # --- FILTROS ---
         c1, c2 = st.columns([2, 2])
         with c1:
             hoje = date.today()
@@ -83,11 +93,9 @@ try:
         if isinstance(periodo, tuple) and len(periodo) == 2:
             d_ini, d_fim = periodo
             df_filtrado = df[(df['Data_dt'] >= d_ini) & (df['Data_dt'] <= d_fim)].copy()
-
             if btn_matilha:
                 df_filtrado = df_filtrado[df_filtrado.astype(str).apply(lambda x: x.str.contains('Milo|Bolt', case=False)).any(axis=1)]
-            
-            # CÁLCULOS
+
             rec = df_filtrado[df_filtrado['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
             desp = df_filtrado[df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
             rend = df_filtrado[df_filtrado['Categoria'].astype(str).str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
@@ -101,37 +109,44 @@ try:
             m3.metric("Rendimentos", f"R$ {rend:,.2f}")
             m4.metric("Pendências", f"R$ {pend:,.2f}")
 
+            st.divider()
+
+            # --- GRÁFICOS (DE VOLTA!) ---
+            g1, g2 = st.columns(2)
+            with g1:
+                st.subheader("📊 Movimentação")
+                st.bar_chart(pd.DataFrame({'Total': [rec, desp]}, index=['Receitas', 'Despesas']))
+            with g2:
+                exibir_metas = st.checkbox("🔑 Ver Metas (Privado)")
+                if exibir_metas:
+                    st.subheader("🎯 Meta Mensal")
+                    META = 10000.00
+                    st.bar_chart(pd.DataFrame({'Valor': [META, rec]}, index=['Meta', 'Alcançado']), color="#3498db")
+                else:
+                    st.info("Painel de metas oculto.")
+
     st.divider()
 
-    # --- FORMULÁRIO COM LÓGICA DE LIMPEZA (RESET) ---
+    # --- FORMULÁRIO E HISTÓRICO ---
     c_form, c_hist = st.columns([1, 2.5])
     with c_form:
-        st.subheader("📝 Novo Lançamento")
-        
-        # Usamos chaves (keys) para poder resetar os campos depois
+        st.subheader("📝 Novo Registro")
         tipo_f = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True, key="tipo_input")
         data_f = st.date_input("Data", date.today(), format="DD/MM/YYYY", key="data_input")
         valor_f = st.number_input("Valor (R$)", min_value=0.0, step=0.01, key="valor_input")
         benef_f = st.text_input("Beneficiário", key="benef_input")
         desc_f = st.text_input("Descrição", key="desc_input")
-        parcela_f = st.text_input("Parcelamento (ex: 1/10)", value="1/1", key="parcela_input")
+        parcela_f = st.text_input("Parcelamento", value="1/1", key="parcela_input")
         cat_f = st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Rendimento", "Trabalho", "Outros"], key="cat_input")
         banco_f = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"], key="banco_input")
         status_f = st.selectbox("Status", ["Pago", "Pendente"], key="status_input")
         
-        if st.button("🚀 Salvar na Nuvem", use_container_width=True):
+        if st.button("🚀 Salvar na Nuvem", use_container_width=True, on_click=limpar_form):
             if valor_f > 0:
                 data_br = data_f.strftime('%d/%m/%Y')
                 desc_final = f"{desc_f} ({parcela_f})" if parcela_f != "1/1" else desc_f
                 ws_lanc.append_row([data_br, valor_f, cat_f, banco_f, desc_final, benef_f, "Pessoal", 0, "", status_f, tipo_f])
-                
-                # LIMPEZA DOS CAMPOS APÓS SALVAR
-                st.session_state.valor_input = 0.0
-                st.session_state.benef_input = ""
-                st.session_state.desc_input = ""
-                st.session_state.parcela_input = "1/1"
-                
-                st.success("Registrado com sucesso!")
+                st.success("Registrado!")
                 st.rerun()
 
     with c_hist:
@@ -139,20 +154,18 @@ try:
         if not df_filtrado.empty:
             st.dataframe(df_filtrado[['ID', 'Data', 'Valor', 'Tipo', 'Descrição', 'Beneficiário', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
             
-            # --- EXCLUSÃO COM LÓGICA DE LIMPEZA ---
             st.divider()
             st.subheader("🗑️ Excluir Registro")
+            # Correção do Erro: O ID agora tem uma key fixa e o reset é feito via on_click
             id_excluir = st.number_input("ID para excluir:", min_value=2, step=1, key="id_excluir_input")
             
-            if st.button("🔴 Confirmar Exclusão", use_container_width=True):
+            if st.button("🔴 Confirmar Exclusão", use_container_width=True, on_click=limpar_exclusao):
                 try:
                     ws_lanc.delete_rows(int(id_excluir))
-                    # RESET DO CAMPO DE EXCLUSÃO
-                    st.session_state.id_excluir_input = 2
                     st.warning(f"ID {id_excluir} removido!")
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Erro: {e}")
+                    st.error(f"Erro ao excluir: {e}")
 
 except Exception as e:
     st.error(f"Erro: {e}")
