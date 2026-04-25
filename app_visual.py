@@ -68,7 +68,6 @@ if aba == "💰 Finanças":
         desp = df[df[c_tipo].str.contains('Despesa', case=False, na=False)]['Valor_Num'].sum()
         rend = df[df[c_cat].str.contains('Rendimento', case=False, na=False)]['Valor_Num'].sum()
         pend = df[df[c_stat].str.contains('Pendente', case=False, na=False)]['Valor_Num'].sum()
-        
         saldo = rec - desp
         eco_perc = (saldo / rec * 100) if rec > 0 else 0
         def f_brl(v): return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
@@ -84,19 +83,36 @@ if aba == "💰 Finanças":
         df_visual.index = df_visual.index + 2
         st.dataframe(df_visual.iloc[::-1], use_container_width=True)
 
-        # Gráficos
-        g1, g2 = st.columns(2)
-        with g1:
+        st.write("---")
+        
+        # --- BLOCO DE GRÁFICOS ---
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
             st.subheader("🍕 Categoria (Mês)")
-            df_m = df.copy(); df_m['Mes'] = df_m['Data_DT'].dt.strftime('%m/%y')
+            df_m = df.copy()
+            df_m['Mes'] = df_m['Data_DT'].dt.strftime('%m/%y')
             gastos_cat = df_m[(df_m['Mes'] == mes_atual) & (df_m[c_tipo] == 'Despesa')].groupby(c_cat)['Valor_Num'].sum()
             st.bar_chart(gastos_cat, color='#ffc107')
-        with g2:
-            st.subheader("📊 Receita x Despesa")
-            comp = df_m.groupby(['Mes', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
-            st.bar_chart(comp, color=['#dc3545', '#28a745'])
 
-    # MENU LATERAL FINANÇAS
+        with col_g2:
+            st.subheader("📊 Receita x Despesa")
+            try:
+                comp = df_m.groupby(['Mes', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
+                # Forçar cores Verde para Receita e Vermelho para Despesa
+                cores = []
+                for col in comp.columns:
+                    if "Receita" in col: cores.append('#28a745')
+                    elif "Despesa" in col: cores.append('#dc3545')
+                    else: cores.append('#808080')
+                st.bar_chart(comp, color=cores)
+            except: st.info("Dados insuficientes para o gráfico.")
+
+        st.write("---")
+        st.subheader("🏦 Gasto por Banco")
+        gastos_banco = df[df[c_tipo].str.contains('Despesa', case=False, na=False)].groupby(c_bnc)['Valor_Num'].sum()
+        st.bar_chart(gastos_banco, color='#007bff')
+
+    # MENU LATERAL
     menu_acao = st.sidebar.selectbox("Ação Financeira:", ["Novo Lançamento", "Editar/Excluir"])
     if menu_acao == "Novo Lançamento":
         with st.sidebar.form("f_novo"):
@@ -134,7 +150,6 @@ if aba == "💰 Finanças":
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Controle: Milo & Bolt")
     ws_p = sh.worksheet("Controle_Pets")
-    
     with st.sidebar.form("f_pets"):
         st.subheader("🐾 Novo Registro")
         p_dat = st.date_input("Data", datetime.now())
@@ -143,7 +158,6 @@ elif aba == "🐾 Milo & Bolt":
         if st.form_submit_button("🚀 SALVAR NO PET"):
             ws_p.append_row([p_dat.strftime("%d/%m/%Y"), p_obs, str(p_val).replace('.', ',')])
             st.cache_data.clear(); st.rerun()
-
     dados_p = ws_p.get_all_values()
     if len(dados_p) > 1:
         st.dataframe(pd.DataFrame(dados_p[1:], columns=dados_p[0]).iloc[::-1], use_container_width=True)
@@ -154,7 +168,6 @@ elif aba == "🐾 Milo & Bolt":
 else:
     st.title("🚗 Controle: Veículo")
     ws_v = sh.worksheet("Controle_Veiculo")
-
     with st.sidebar.form("f_veiculo"):
         st.subheader("🚗 Novo Registro")
         v_dat = st.date_input("Data", datetime.now())
@@ -164,7 +177,6 @@ else:
         if st.form_submit_button("🚀 SALVAR NO VEÍCULO"):
             ws_v.append_row([v_dat.strftime("%d/%m/%Y"), str(v_km), v_obs, str(v_val).replace('.', ',')])
             st.cache_data.clear(); st.rerun()
-
     dados_v = ws_v.get_all_values()
     if len(dados_v) > 1:
         st.dataframe(pd.DataFrame(dados_v[1:], columns=dados_v[0]).iloc[::-1], use_container_width=True)
