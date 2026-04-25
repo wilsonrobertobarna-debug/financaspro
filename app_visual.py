@@ -36,31 +36,27 @@ sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
-# --- FUNÇÃO DE TABELA ROBUSTA ---
-def exibir_tabela_inteligente(aba_sheet, titulo):
+# --- FUNÇÃO DE TABELA INTELIGENTE ---
+def exibir_tabela_dinamica(aba_sheet, titulo):
     dados = aba_sheet.get_all_values()
     if len(dados) > 1:
-        # Usa a primeira linha da planilha como os nomes das colunas
         df = pd.DataFrame(dados[1:], columns=dados[0])
-        
-        # Tenta ordenar pela primeira coluna (Data) se ela existir
         try:
             col_data = dados[0][0]
             df['Data_Sort'] = pd.to_datetime(df[col_data], dayfirst=True, errors='coerce')
             df = df.sort_values(by='Data_Sort', ascending=False).drop(columns=['Data_Sort'])
         except: pass
-        
         st.subheader(f"📋 {titulo}")
         st.dataframe(df, use_container_width=True)
     else:
-        st.info(f"Sem registros em {titulo}.")
+        st.info(f"Aba {titulo} vazia.")
 
 # ==========================================
 # ABA 1: FINANÇAS
 # ==========================================
 if aba == "💰 Finanças":
     ws = sh.get_worksheet(0)
-    st.title("🛡️ FinançasPro - Central")
+    st.title("🛡️ FinançasPro - Central Wilson")
     
     with st.sidebar.form("f_fin", clear_on_submit=True):
         f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -70,27 +66,27 @@ if aba == "💰 Finanças":
             ws.append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, "Despesa", "Nubank", "Pago"])
             st.cache_data.clear(); st.rerun()
             
-    exibir_tabela_inteligente(ws, "Histórico Financeiro")
+    exibir_tabela_dinamica(ws, "Histórico Financeiro Geral")
 
 # ==========================================
 # ABA 2: MILO & BOLT
 # ==========================================
 elif aba == "🐾 Milo & Bolt":
     ws = sh.worksheet("Controle_Pets")
-    st.title("🐾 Milo & Bolt")
+    st.title("🐾 Cuidados: Milo & Bolt")
     
     with st.sidebar.form("f_pet", clear_on_submit=True):
         p_pet = st.selectbox("Quem?", ["Milo", "Bolt", "Os Dois"])
         p_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
         p_tip = st.selectbox("Tipo", ["Ração", "Vacina", "Banho", "Saúde"])
-        p_val = st.number_input("Valor", min_value=0.0)
-        if st.form_submit_button("🦴 SALVAR"):
+        p_val = st.number_input("Valor (R$)", min_value=0.0)
+        if st.form_submit_button("🦴 SALVAR NO PET"):
             dt_s = p_dat.strftime("%d/%m/%Y")
-            ws.append_row([dt_s, p_pet, p_tip, "App", str(p_val).replace('.', ',')])
+            ws.append_row([dt_s, p_pet, p_tip, "Lançamento App", str(p_val).replace('.', ',')])
             sh.get_worksheet(0).append_row([dt_s, str(p_val).replace('.', ','), f"Pet: {p_tip}", "Despesa", "Nubank", "Pago"])
             st.cache_data.clear(); st.rerun()
             
-    exibir_tabela_inteligente(ws, "Histórico dos Pets")
+    exibir_tabela_dinamica(ws, "Histórico dos Meninos")
 
 # ==========================================
 # ABA 3: MEU VEÍCULO
@@ -101,9 +97,9 @@ else:
     
     c1, c2 = st.columns([1, 2])
     with c1:
-        st.subheader("⛽ Flex")
-        alc = st.number_input("Álcool", min_value=0.0)
-        gas = st.number_input("Gasolina", min_value=0.0)
+        st.subheader("⛽ Calculadora Flex")
+        alc = st.number_input("Preço Álcool", min_value=0.0)
+        gas = st.number_input("Preço Gasolina", min_value=0.0)
         if alc > 0 and gas > 0:
             res = alc / gas
             st.metric("Proporção", f"{res:.2f}")
@@ -114,13 +110,16 @@ else:
         with st.sidebar.form("f_vei", clear_on_submit=True):
             v_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
             v_tip = st.selectbox("Serviço", ["Abastecimento", "Troca de Óleo", "Manutenção", "Lavagem"])
+            v_det = st.text_input("Descrição (Ex: Posto, Marca do Óleo)")
             v_km = st.number_input("KM Atual", min_value=0)
-            v_val = st.number_input("Valor Pago", min_value=0.0)
-            if st.form_submit_button("🚗 SALVAR"):
+            v_val = st.number_input("Valor Pago (R$)", min_value=0.0)
+            
+            if st.form_submit_button("🚗 SALVAR NO VEÍCULO"):
                 dt_s = v_dat.strftime("%d/%m/%Y")
-                # ORDEM: Data, Serviço, KM, Valor
-                ws.append_row([dt_s, v_tip, str(v_km), str(v_val).replace('.', ',')])
-                sh.get_worksheet(0).append_row([dt_s, str(v_val).replace('.', ','), "Combustível", "Despesa", "Nubank", "Pago"])
+                # ORDEM: Data | Serviço | Descrição | KM | Valor
+                ws.append_row([dt_s, v_tip, v_det, str(v_km), str(v_val).replace('.', ',')])
+                # LANÇA NO FINANCEIRO GERAL
+                sh.get_worksheet(0).append_row([dt_s, str(v_val).replace('.', ','), f"Veículo: {v_tip}", "Despesa", "Nubank", "Pago"])
                 st.cache_data.clear(); st.rerun()
                 
-    exibir_tabela_inteligente(ws, "Histórico do Veículo")
+    exibir_tabela_dinamica(ws, "Histórico do Veículo")
