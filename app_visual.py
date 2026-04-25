@@ -5,17 +5,33 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 
-# 1. CONFIGURAÇÃO E ESTILO
+# 1. CONFIGURAÇÃO E ESTILO PERSONALIZADO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
 
 st.markdown("""
     <style>
+    /* Estilo da Tarja Azul de Saldo */
+    .saldo-container {
+        background-color: #007bff;
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    /* Estilo dos Cartões de Tags */
+    .tag-card {
+        background-color: #ffffff;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 5px solid #ccc;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
     .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; }
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXÃO SEGURA
+# 2. CONEXÃO SEGURA (Secrets)
 @st.cache_resource
 def conectar_google():
     try:
@@ -39,16 +55,17 @@ client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 ws = sh.get_worksheet(0)
 
-# --- CONFIGURAÇÃO DE METAS ---
-META_GASTO_MENSAL = 3000.00 
+# --- CONFIGURAÇÃO DE CATEGORIAS ---
+categorias_dict = {
+    "Receita": ["Salário", "Vendas", "Extras"],
+    "Despesa": ["Alimentação", "Moradia", "Transporte", "Lazer"],
+    "Rendimento": ["Dividendos", "Juros", "Aplicações"],
+    "Pendência": ["Boleto a Pagar", "Empréstimo", "Dívida"]
+}
 
 # --- BARRA LATERAL ---
 st.sidebar.header("📝 Novo Lançamento")
-categorias_dict = {
-    "Receita": ["Salário", "Vendas", "Investimentos", "Presente", "Outros"],
-    "Despesa": ["Alimentação", "Moradia", "Transporte", "Lazer", "Saúde", "Outros"]
-}
-tipo = st.sidebar.radio("Tipo:", ["Despesa", "Receita"], horizontal=True)
+tipo = st.sidebar.selectbox("Tipo de Movimentação:", list(categorias_dict.keys()))
 
 with st.sidebar.form("form_lancamento", clear_on_submit=True):
     data_input = st.date_input("Data", datetime.now())
@@ -56,7 +73,7 @@ with st.sidebar.form("form_lancamento", clear_on_submit=True):
     categoria_input = st.selectbox("Categoria", categorias_dict[tipo])
     descricao_input = st.text_input("Descrição")
     
-    if st.form_submit_button("Salvar"):
+    if st.form_submit_button("Salvar no FinançasPro"):
         if valor_input > 0:
             ws.append_row([data_input.strftime("%d/%m/%Y"), valor_input, categoria_input, tipo, descricao_input])
             st.cache_data.clear()
@@ -70,51 +87,68 @@ try:
     if len(lista_dados) > 1:
         df = pd.DataFrame(lista_dados[1:], columns=lista_dados[0])
         df.columns = [c.strip() for c in df.columns]
-
-        # Conversão de dados com proteção contra erros
         df['Valor'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
         df['Data'] = pd.to_datetime(df['Data'], format='%d/%m/%Y', errors='coerce')
         df_valid = df.dropna(subset=['Data']).copy()
-        df_valid['Mês/Ano'] = df_valid['Data'].dt.strftime('%m/%Y')
 
-        # Agrupamento para os gráficos
+        # CÁLCULOS
+        receitas = df_valid[df_valid['Tipo'] == 'Receita']['Valor'].sum()
+        despesas = df_valid[df_valid['Tipo'] == 'Despesa']['Valor'].sum()
+        rendimentos = df_valid[df_valid['Tipo'] == 'Rendimento']['Valor'].sum()
+        pendencias = df_valid[df_valid['Tipo'] == 'Pendência']['Valor'].sum()
+        
+        saldo_final = (receitas + rendimentos) - despesas
+
+        # --- EXIBIÇÃO: TARJA AZUL DE SALDO ---
+        st.markdown(f"""
+            <div class="saldo-container">
+                <h2 style='margin:0; font-size: 1.2rem;'>SALDO ATUAL</h2>
+                <h1 style='margin:0; font-size: 2.8rem;'>R$ {saldo_final:,.2f}</h1>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # --- EXIBIÇÃO: TAGS ABAIXO ---
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.markdown("<div class='tag-card' style='border-left-color: #28a745;'>", unsafe_allow_html=True)
+            st.metric("Receitas", f"R$ {receitas:,.2f}")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        with col2:
+            st.markdown("<div class='tag-card' style='border-left-color: #dc3545;'>", unsafe_allow_html=True)
+            st.metric("Despesas", f"R$ {despesas:,.2f}")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        with col3:
+            st.markdown("<div class='tag-card' style='border-left-color: #17a2b8;'>", unsafe_allow_html=True)
+            st.metric("Rendimentos", f"R$ {rendimentos:,.2f}")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        with col4:
+            st.markdown("<div class='tag-card' style='border-left-color: #ffc107;'>", unsafe_allow_html=True)
+            st.metric("Pendências", f"R$ {pendencias:,.2f}")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        # --- GRÁFICOS ---
+        st.markdown("---")
+        df_valid['Mês/Ano'] = df_valid['Data'].dt.strftime('%m/%Y')
         resumo = df_valid.groupby(['Mês/Ano', 'Tipo'])['Valor'].sum().unstack(fill_value=0).reset_index()
 
-        # 📊 1. GRÁFICO COMPARATIVO (RECEITA VS DESPESA)
-        st.subheader("📊 Comparativo Mensal: Receita vs Despesa")
-        fig1 = go.Figure()
-        if 'Receita' in resumo.columns:
-            fig1.add_trace(go.Bar(x=resumo['Mês/Ano'], y=resumo['Receita'], name='Receitas', marker_color='#28a745'))
-        if 'Despesa' in resumo.columns:
-            fig1.add_trace(go.Bar(x=resumo['Mês/Ano'], y=resumo['Despesa'], name='Despesas', marker_color='#dc3545'))
+        st.subheader("📊 Evolução Mensal")
+        fig = go.Figure()
+        for t in ["Receita", "Despesa", "Rendimento"]:
+            if t in resumo.columns:
+                fig.add_trace(go.Bar(x=resumo['Mês/Ano'], y=resumo[t], name=t))
         
-        fig1.update_layout(barmode='group', height=350, margin=dict(l=0, r=0, t=30, b=0))
-        st.plotly_chart(fig1, use_container_width=True)
+        fig.update_layout(barmode='group', height=350)
+        st.plotly_chart(fig, use_container_width=True)
 
         st.markdown("---")
-
-        # 📊 2. GRÁFICO DE METAS (APENAS DESPESAS)
-        st.subheader("🎯 Acompanhamento de Metas de Gastos")
-        fig2 = go.Figure()
-        if 'Despesa' in resumo.columns:
-            fig2.add_trace(go.Bar(x=resumo['Mês/Ano'], y=resumo['Despesa'], name='Gasto Real', marker_color='#007bff'))
-        
-        fig2.add_trace(go.Scatter(
-            x=resumo['Mês/Ano'], 
-            y=[META_GASTO_MENSAL] * len(resumo),
-            name='Limite Meta', line=dict(color='#ffc107', width=4, dash='dash')
-        ))
-        
-        fig2.update_layout(height=350, margin=dict(l=0, r=0, t=30, b=0))
-        st.plotly_chart(fig2, use_container_width=True)
-
-        # 📋 TABELA FINAL
-        st.markdown("---")
-        st.subheader("📋 Histórico Recente")
-        st.dataframe(df.tail(15), use_container_width=True)
+        st.subheader("📋 Histórico")
+        st.dataframe(df.tail(10), use_container_width=True)
         
     else:
-        st.info("Aguardando lançamentos para gerar os gráficos...")
-
+        st.info("Lance os dados para ativar o painel.")
 except Exception as e:
-    st.error(f"Erro ao processar visuais: {e}")
+    st.error(f"Erro ao processar: {e}")
