@@ -45,25 +45,19 @@ aba = st.sidebar.radio("Navegar para:", ["💰 Finanças", "🐾 Controle dos Me
 
 if aba == "💰 Finanças":
     st.sidebar.header("📝 Novo Lançamento")
-    # Menu para definir o TIPO (Receita ou Despesa)
     tipo_selecionado = st.sidebar.selectbox("Tipo:", ["Receita", "Despesa", "Rendimento", "Pendência"])
-    
     categorias_dict = {
         "Receita": ["Salário", "Vendas", "Extras"],
         "Despesa": ["Alimentação", "Moradia", "Transporte", "Lazer", "Saúde"],
         "Rendimento": ["Dividendos", "Juros"],
         "Pendência": ["Boleto", "Dívida"]
     }
-    
     with st.sidebar.form("form_f", clear_on_submit=True):
         f_data = st.date_input("Data", datetime.now())
         f_valor = st.number_input("Valor (R$)", min_value=0.0)
         f_cat = st.selectbox("Categoria", categorias_dict.get(tipo_selecionado, ["Geral"]))
-        # Este campo vai para a coluna STATUS (Descrição na Planilha)
         f_status = st.text_input("Status (Ex: Pago ou Pendente)", value="Pago") 
-        
         if st.form_submit_button("Salvar no FinançasPro"):
-            # Planilha segue a ordem: Data | Valor | Categoria | Tipo | Descrição (Status)
             ws.append_row([f_data.strftime("%d/%m/%Y"), f_valor, f_cat, tipo_selecionado, f_status])
             st.cache_data.clear(); st.rerun()
 
@@ -81,37 +75,39 @@ try:
         if aba == "💰 Finanças":
             st.title("🛡️ FinançasPro Wilson")
             
-            # Resumo de Valores
+            # 1. RESUMO DE SALDO (TOPO)
             rec = df_v[df_v['Tipo'].isin(['Receita', 'Rendimento'])]['Valor'].sum()
             des = df_v[df_v['Tipo'] == 'Despesa']['Valor'].sum()
             saldo = rec - des
-            
             st.markdown(f'<div class="saldo-container"><span>SALDO ATUAL</span><span>R$ {saldo:,.2f}</span></div>', unsafe_allow_html=True)
 
-            # --- TABELA DE HISTÓRICO CORRIGIDA ---
+            # 2. LANÇAMENTOS (SUBIU PARA CÁ)
             st.markdown("---")
-            st.subheader("📋 Histórico de Lançamentos")
-            
+            st.subheader("📋 Últimos Lançamentos")
             df_display = df_v.copy()
             df_display['Data'] = df_display['Data'].dt.strftime('%d/%m/%Y')
-            
-            # Selecionando e Renomeando conforme seu pedido
-            # Ordem na planilha: Data(0), Valor(1), Categoria(2), Tipo(3), Descrição(4)
             df_final = df_display[['Data', 'Valor', 'Categoria', 'Tipo', 'Descrição']].tail(15)
             df_final.columns = ['Data', 'Valor', 'Categoria', 'Tipo', 'Status']
-            
-            # Mostra o mais recente no topo
             st.dataframe(df_final.iloc[::-1], use_container_width=True)
 
-            # --- GRÁFICOS ---
+            # 3. GRÁFICO MENSAL (VOLTOU)
             st.markdown("---")
-            st.subheader("🎯 Gastos por Categoria")
+            st.subheader("📊 Comparativo Mensal")
+            res_mensal = df_v.groupby(['Mês/Ano', 'Tipo'])['Valor'].sum().unstack(fill_value=0).reset_index()
+            fig1 = go.Figure()
+            if 'Receita' in res_mensal.columns: fig1.add_trace(go.Bar(x=res_mensal['Mês/Ano'], y=res_mensal['Receita'], name='Receita', marker_color='#28a745'))
+            if 'Despesa' in res_mensal.columns: fig1.add_trace(go.Bar(x=res_mensal['Mês/Ano'], y=res_mensal['Despesa'], name='Despesa', marker_color='#dc3545'))
+            st.plotly_chart(fig1, use_container_width=True)
+
+            # 4. GRÁFICO DE METAS (PARA BAIXO)
+            st.markdown("---")
+            st.subheader("🎯 Metas por Categoria")
             res_cat = df_v[df_v['Tipo'] == 'Despesa'].groupby('Categoria')['Valor'].sum().reset_index()
             if not res_cat.empty:
-                fig = go.Figure()
-                fig.add_trace(go.Bar(x=res_cat['Categoria'], y=res_cat['Valor'], marker_color='#007bff', name="Gasto"))
-                fig.add_trace(go.Scatter(x=res_cat['Categoria'], y=[META_GASTO_CATEGORIA]*len(res_cat), name='Meta', line=dict(color='#ffc107', dash='dash')))
-                st.plotly_chart(fig, use_container_width=True)
+                fig2 = go.Figure()
+                fig2.add_trace(go.Bar(x=res_cat['Categoria'], y=res_cat['Valor'], marker_color='#007bff', name="Gasto Atual"))
+                fig2.add_trace(go.Scatter(x=res_cat['Categoria'], y=[META_GASTO_CATEGORIA]*len(res_cat), name='Limite', line=dict(color='#ffc107', dash='dash')))
+                st.plotly_chart(fig2, use_container_width=True)
 
 except Exception as e:
-    st.error(f"Erro ao carregar os dados: {e}")
+    st.error(f"Erro: {e}")
