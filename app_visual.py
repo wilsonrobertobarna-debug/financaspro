@@ -64,11 +64,7 @@ if aba == "💰 Finanças":
     try:
         dados_list = ws.get_all_values()
         if len(dados_list) > 1:
-            # Pega apenas as 6 primeiras colunas para evitar o erro de duplicados/vazios
-            df = pd.DataFrame(dados_list[1:], columns=dados_list[0])
-            df = df.iloc[:, :6] 
-            
-            # Limpeza de nomes e conversão
+            df = pd.DataFrame(dados_list[1:], columns=dados_list[0]).iloc[:, :6]
             df.columns = [c.strip() for c in df.columns]
             df['Valor'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
             df['Data'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
@@ -90,39 +86,74 @@ if aba == "💰 Finanças":
             df_table['Data'] = df_table['Data'].dt.strftime('%d/%m/%Y')
             st.dataframe(df_table.iloc[::-1], use_container_width=True)
 
-            # GRÁFICO POR CATEGORIA
+            # GRÁFICO 1: RECEITA X DESPESA (POR MÊS)
             st.markdown("---")
+            st.subheader("📊 Evolução Mensal (Receita vs Despesa)")
+            df_v['Mês/Ano'] = df_v['Data'].dt.strftime('%m/%Y')
+            res_m = df_v.groupby(['Mês/Ano', 'Tipo'])['Valor'].sum().unstack(fill_value=0).reset_index()
+            fig1 = go.Figure()
+            if 'Receita' in res_m: fig1.add_trace(go.Bar(x=res_m['Mês/Ano'], y=res_m['Receita'], name='Receitas', marker_color='#28a745'))
+            if 'Despesa' in res_m: fig1.add_trace(go.Bar(x=res_m['Mês/Ano'], y=res_m['Despesa'], name='Despesas', marker_color='#dc3545'))
+            st.plotly_chart(fig1, use_container_width=True)
+
+            # GRÁFICO 2: GASTOS POR CATEGORIA
             st.subheader("🎯 Gastos por Categoria (Mês Atual)")
-            mes_f = datetime.now().strftime('%m/%Y')
-            df_v['Mês'] = df_v['Data'].dt.strftime('%m/%Y')
-            df_mes = df_v[(df_v['Mês'] == mes_f) & (df_v['Tipo'] == 'Despesa')]
-            res_cat = df_mes.groupby('Categoria')['Valor'].sum().reset_index()
+            mes_atual = datetime.now().strftime('%m/%Y')
+            df_mes = df_v[(df_v['Mês/Ano'] == mes_atual) & (df_v['Tipo'] == 'Despesa')]
+            res_cat = df_mes.groupby('Categoria')['Valor'].sum().sort_values(ascending=False).reset_index()
             if not res_cat.empty:
-                fig = go.Figure(go.Bar(x=res_cat['Categoria'], y=res_cat['Valor'], marker_color='#007bff'))
-                st.plotly_chart(fig, use_container_width=True)
-    except Exception as e: st.error(f"Erro ao carregar dados: {e}")
+                fig2 = go.Figure(go.Bar(x=res_cat['Categoria'], y=res_cat['Valor'], marker_color='#007bff'))
+                st.plotly_chart(fig2, use_container_width=True)
+
+    except Exception as e: st.error(f"Erro: {e}")
 
 # ==========================================
-# ABAS PETS E VEÍCULO (Seguem a mesma lógica)
+# ABA 2: MILO & BOLT
 # ==========================================
 elif aba == "🐾 Milo & Bolt":
-    st.title("🐾 Milo & Bolt")
+    st.title("🐾 Controle: Milo & Bolt")
     try:
         ws_p = sh.worksheet("Controle_Pets")
-        # ... formulário igual ao anterior ...
+        st.sidebar.header("📋 Registrar p/ os Meninos")
+        with st.sidebar.form("form_p", clear_on_submit=True):
+            p_pet = st.selectbox("Quem?", ["Milo", "Bolt", "Os Dois"])
+            p_data = st.date_input("Data", datetime.now())
+            p_tipo = st.selectbox("O quê?", ["Vacina", "Banho", "Ração/Petiscos", "Saúde", "Brinquedos"])
+            p_desc = st.text_input("Descrição")
+            p_valor = st.number_input("Valor (R$)", min_value=0.0)
+            p_prox = st.date_input("Agendar Próximo?", p_data + timedelta(days=7))
+            if st.form_submit_button("🦴 SALVAR REGISTRO PET"):
+                ws_p.append_row([p_data.strftime("%d/%m/%Y"), p_pet, p_tipo, p_desc, p_valor, p_prox.strftime("%d/%m/%Y")])
+                st.cache_data.clear(); st.rerun()
+
         dados_p = ws_p.get_all_values()
         if len(dados_p) > 1:
             dp = pd.DataFrame(dados_p[1:], columns=dados_p[0]).iloc[:, :6]
+            st.metric("Total Gasto c/ Meninos", f"R$ {pd.to_numeric(dp['Valor'].str.replace(',','.'), errors='coerce').sum():,.2f}")
             st.dataframe(dp.iloc[::-1], use_container_width=True)
-    except: st.info("Verifique a aba 'Controle_Pets' no Sheets.")
+    except: st.info("Crie a aba 'Controle_Pets' no Sheets.")
 
+# ==========================================
+# ABA 3: MEU VEÍCULO
+# ==========================================
 elif aba == "🚗 Meu Veículo":
-    st.title("🚗 Meu Veículo")
+    st.title("🚗 Gestão do Veículo")
     try:
         ws_v = sh.worksheet("Controle_Veiculo")
-        # ... formulário igual ao anterior ...
+        st.sidebar.header("⛽ Registrar Gasto")
+        with st.sidebar.form("form_v", clear_on_submit=True):
+            v_data = st.date_input("Data", datetime.now())
+            v_tipo = st.selectbox("Tipo", ["Combustível", "Manutenção", "Óleo", "Seguro"])
+            v_km = st.number_input("KM Atual", min_value=0)
+            v_valor = st.number_input("Valor (R$)", min_value=0.0)
+            v_desc = st.text_input("Detalhes")
+            if st.form_submit_button("🏎️ SALVAR VEÍCULO"):
+                ws_v.append_row([v_data.strftime("%d/%m/%Y"), v_tipo, v_desc, v_km, v_valor])
+                st.cache_data.clear(); st.rerun()
+
         dados_v = ws_v.get_all_values()
         if len(dados_v) > 1:
             dv = pd.DataFrame(dados_v[1:], columns=dados_v[0]).iloc[:, :5]
+            st.metric("Gasto Total Veículo", f"R$ {pd.to_numeric(dv['Valor'].str.replace(',','.'), errors='coerce').sum():,.2f}")
             st.dataframe(dv.iloc[::-1], use_container_width=True)
-    except: st.info("Verifique a aba 'Controle_Veiculo' no Sheets.")
+    except: st.info("Crie a aba 'Controle_Veiculo' no Sheets.")
