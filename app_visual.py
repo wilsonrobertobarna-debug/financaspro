@@ -16,7 +16,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXÃO (Não altere sua chave da planilha)
+# 2. CONEXÃO
 @st.cache_resource
 def conectar_google():
     try:
@@ -45,25 +45,29 @@ aba = st.sidebar.radio("Navegar para:", ["💰 Finanças", "🐾 Controle dos Me
 
 if aba == "💰 Finanças":
     st.sidebar.header("📝 Novo Lançamento")
+    # Menu para definir o TIPO (Receita ou Despesa)
+    tipo_selecionado = st.sidebar.selectbox("Tipo:", ["Receita", "Despesa", "Rendimento", "Pendência"])
+    
     categorias_dict = {
         "Receita": ["Salário", "Vendas", "Extras"],
         "Despesa": ["Alimentação", "Moradia", "Transporte", "Lazer", "Saúde"],
         "Rendimento": ["Dividendos", "Juros"],
         "Pendência": ["Boleto", "Dívida"]
     }
-    # Aqui o 'Tipo' define se é Receita ou Despesa
-    tipo_selecionado = st.sidebar.selectbox("Classificação:", list(categorias_dict.keys()))
+    
     with st.sidebar.form("form_f", clear_on_submit=True):
         f_data = st.date_input("Data", datetime.now())
         f_valor = st.number_input("Valor (R$)", min_value=0.0)
-        f_cat = st.selectbox("Categoria", categorias_dict[tipo_selecionado])
-        # Aqui o usuário escreve se está Pago ou Pendente
+        f_cat = st.selectbox("Categoria", categorias_dict.get(tipo_selecionado, ["Geral"]))
+        # Este campo vai para a coluna STATUS (Descrição na Planilha)
         f_status = st.text_input("Status (Ex: Pago ou Pendente)", value="Pago") 
+        
         if st.form_submit_button("Salvar no FinançasPro"):
+            # Planilha segue a ordem: Data | Valor | Categoria | Tipo | Descrição (Status)
             ws.append_row([f_data.strftime("%d/%m/%Y"), f_valor, f_cat, tipo_selecionado, f_status])
             st.cache_data.clear(); st.rerun()
 
-# --- PROCESSAMENTO ---
+# --- PROCESSAMENTO DOS DADOS ---
 try:
     dados_raw = ws.get_all_values()
     if len(dados_raw) > 1:
@@ -72,35 +76,42 @@ try:
         df['Valor'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
         df['Data'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
         df_v = df.dropna(subset=['Data']).copy()
+        df_v['Mês/Ano'] = df_v['Data'].dt.strftime('%m/%Y')
 
         if aba == "💰 Finanças":
             st.title("🛡️ FinançasPro Wilson")
             
-            # Blocos de Saldo (Omitidos aqui para brevidade, mas mantidos no seu código real)
-            rec = df_v[df_v['Tipo'] == 'Receita']['Valor'].sum()
+            # Resumo de Valores
+            rec = df_v[df_v['Tipo'].isin(['Receita', 'Rendimento'])]['Valor'].sum()
             des = df_v[df_v['Tipo'] == 'Despesa']['Valor'].sum()
             saldo = rec - des
+            
             st.markdown(f'<div class="saldo-container"><span>SALDO ATUAL</span><span>R$ {saldo:,.2f}</span></div>', unsafe_allow_html=True)
 
-            # --- TABELA DE ÚLTIMOS LANÇAMENTOS (CORREÇÃO DE COLUNAS) ---
+            # --- TABELA DE HISTÓRICO CORRIGIDA ---
             st.markdown("---")
             st.subheader("📋 Histórico de Lançamentos")
             
             df_display = df_v.copy()
             df_display['Data'] = df_display['Data'].dt.strftime('%d/%m/%Y')
             
-            # Renomeando as colunas para o que você pediu
+            # Selecionando e Renomeando conforme seu pedido
+            # Ordem na planilha: Data(0), Valor(1), Categoria(2), Tipo(3), Descrição(4)
             df_final = df_display[['Data', 'Valor', 'Categoria', 'Tipo', 'Descrição']].tail(15)
-            df_final.columns = ['Data', 'Valor', 'Categoria', 'Classificação (Rec/Desp)', 'Status (Pago/Pendente)']
+            df_final.columns = ['Data', 'Valor', 'Categoria', 'Tipo', 'Status']
             
-            # Aplicando a inversão para mostrar o mais recente primeiro
+            # Mostra o mais recente no topo
             st.dataframe(df_final.iloc[::-1], use_container_width=True)
 
             # --- GRÁFICOS ---
+            st.markdown("---")
             st.subheader("🎯 Gastos por Categoria")
             res_cat = df_v[df_v['Tipo'] == 'Despesa'].groupby('Categoria')['Valor'].sum().reset_index()
-            fig = go.Figure(go.Bar(x=res_cat['Categoria'], y=res_cat['Valor'], marker_color='#007bff'))
-            st.plotly_chart(fig, use_container_width=True)
+            if not res_cat.empty:
+                fig = go.Figure()
+                fig.add_trace(go.Bar(x=res_cat['Categoria'], y=res_cat['Valor'], marker_color='#007bff', name="Gasto"))
+                fig.add_trace(go.Scatter(x=res_cat['Categoria'], y=[META_GASTO_CATEGORIA]*len(res_cat), name='Meta', line=dict(color='#ffc107', dash='dash')))
+                st.plotly_chart(fig, use_container_width=True)
 
 except Exception as e:
-    st.error(f"Erro ao processar: {e}")
+    st.error(f"Erro ao carregar os dados: {e}")
