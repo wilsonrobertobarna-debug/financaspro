@@ -63,24 +63,32 @@ if aba == "💰 Finanças":
         c_stat = 'Status' if 'Status' in df.columns else df.columns[5]
         c_bnc = 'Banco' if 'Banco' in df.columns else df.columns[4]
 
-        # Cálculos
+        # Cálculos Dashboard
         rec = df[df[c_tipo].str.contains('Receita', case=False, na=False)]['Valor_Num'].sum()
         desp = df[df[c_tipo].str.contains('Despesa', case=False, na=False)]['Valor_Num'].sum()
         rend = df[df[c_cat].str.contains('Rendimento', case=False, na=False)]['Valor_Num'].sum()
         pend = df[df[c_stat].str.contains('Pendente', case=False, na=False)]['Valor_Num'].sum()
+        
         saldo = rec - desp
+        eco_perc = (saldo / rec * 100) if rec > 0 else 0
         def f_brl(v): return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
+        # Dashboard e Economia Real
         st.markdown(f'<div class="saldo-container"><small>Saldo Atual</small><h2>{f_brl(saldo)}</h2></div>', unsafe_allow_html=True)
         t1, t2, t3, t4 = st.columns(4)
-        t1.metric("🟢 Receitas", f_brl(rec)); t2.metric("🔴 Despesas", f_brl(desp))
-        t3.metric("📈 Rendimentos", f_brl(rend)); t4.metric("⏳ Pendências", f_brl(pend))
+        t1.metric("🟢 Receitas", f_brl(rec))
+        t2.metric("🔴 Despesas", f_brl(desp))
+        t3.metric("📈 Rendimentos", f_brl(rend))
+        t4.metric("⏳ Pendências", f_brl(pend))
+        
+        # AQUI VOLTOU O RESUMO DE ECONOMIA
+        st.markdown(f'<div class="economia-texto">🔹 Economia Real: {f_brl(saldo)} ({eco_perc:.1f}%)</div>', unsafe_allow_html=True)
 
         st.subheader("📋 Histórico")
         df_visual = df.copy(); df_visual.index = df_visual.index + 2
         st.dataframe(df_visual.iloc[::-1], use_container_width=True)
 
-        # --- GRÁFICOS CORRIGIDOS ---
+        # Gráficos
         st.write("---")
         g1, g2 = st.columns(2)
         with g1:
@@ -88,7 +96,6 @@ if aba == "💰 Finanças":
             df_m = df.copy(); df_m['Mes'] = df_m['Data_DT'].dt.strftime('%m/%y')
             gastos_cat = df_m[(df_m['Mes'] == mes_atual) & (df_m[c_tipo] == 'Despesa')].groupby(c_cat)['Valor_Num'].sum()
             st.bar_chart(gastos_cat, color='#ffc107')
-        
         with g2:
             st.subheader("📊 Receita x Despesa")
             try:
@@ -100,7 +107,7 @@ if aba == "💰 Finanças":
         st.subheader("🏦 Gasto por Banco")
         st.bar_chart(df[df[c_tipo].str.contains('Despesa', case=False, na=False)].groupby(c_bnc)['Valor_Num'].sum(), color='#007bff')
 
-    # MENU LATERAL
+    # MENU LATERAL (Manter igual ao anterior)
     acao_fin = st.sidebar.selectbox("Ação Financeira:", ["Novo Lançamento", "Editar/Excluir"])
     if acao_fin == "Novo Lançamento":
         with st.sidebar.form("f_fin"):
@@ -124,16 +131,13 @@ if aba == "💰 Finanças":
                 if c2.form_submit_button("🗑️ EXCLUIR"):
                     ws.delete_rows(int(sel_f)); st.cache_data.clear(); st.rerun()
 
-# ==========================================
-# ABA 2: MILO & BOLT
-# ==========================================
+# Outras abas (Milo e Veículo) permanecem iguais...
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Controle: Milo & Bolt")
     ws_p = sh.worksheet("Controle_Pets")
     dados_p = ws_p.get_all_values()
     df_p = pd.DataFrame(dados_p[1:], columns=dados_p[0])
     df_p.index = df_p.index + 2
-
     acao_p = st.sidebar.selectbox("Ação Pets:", ["Novo Registro", "Editar/Excluir"])
     if acao_p == "Novo Registro":
         with st.sidebar.form("f_p"):
@@ -145,21 +149,16 @@ elif aba == "🐾 Milo & Bolt":
         sel_p = st.sidebar.selectbox("ID Linha:", list(df_p.index))
         if sel_p:
             with st.sidebar.form("e_p"):
-                st.write(f"Editando Linha {sel_p}")
                 if st.form_submit_button("🗑️ EXCLUIR REGISTRO"):
                     ws_p.delete_rows(int(sel_p)); st.cache_data.clear(); st.rerun()
     st.dataframe(df_p.iloc[::-1], use_container_width=True)
 
-# ==========================================
-# ABA 3: MEU VEÍCULO
-# ==========================================
 else:
     st.title("🚗 Controle: Veículo")
     ws_v = sh.worksheet("Controle_Veiculo")
     dados_v = ws_v.get_all_values()
     df_v = pd.DataFrame(dados_v[1:], columns=dados_v[0])
     df_v.index = df_v.index + 2
-
     acao_v = st.sidebar.selectbox("Ação Veículo:", ["Novo Registro", "Editar/Excluir"])
     if acao_v == "Novo Registro":
         with st.sidebar.form("f_v"):
@@ -171,7 +170,6 @@ else:
         sel_v = st.sidebar.selectbox("ID Linha:", list(df_v.index))
         if sel_v:
             with st.sidebar.form("e_v"):
-                st.write(f"Editando Linha {sel_v}")
                 if st.form_submit_button("🗑️ EXCLUIR REGISTRO"):
                     ws_v.delete_rows(int(sel_v)); st.cache_data.clear(); st.rerun()
     st.dataframe(df_v.iloc[::-1], use_container_width=True)
