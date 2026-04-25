@@ -17,7 +17,7 @@ st.markdown("""
         border-radius: 10px;
         text-align: center;
         margin-bottom: 20px;
-        line-height: 1.2;
+        line-height: 1.1;
     }
     .saldo-container h2 { margin: 0; font-size: 1.8rem; }
     .saldo-container small { font-weight: bold; text-transform: uppercase; font-size: 0.7rem; }
@@ -67,8 +67,12 @@ aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 
 # ==========================================
 if aba == "💰 Finanças":
     ws = sh.get_worksheet(0)
-    # Título com o nome e as patinhas como você pediu
-    st.title("🛡️ FinançasPro Wilson 🐾🐾🐾🐾")
+    
+    # Título com duas patinhas (uma embaixo da outra)
+    st.markdown("""
+        <h1 style='text-align: center; margin-bottom: 0;'>🛡️ FinançasPro Wilson</h1>
+        <p style='text-align: center; font-size: 1.5rem; margin-top: -10px;'>🐾<br>🐾</p>
+    """, unsafe_allow_html=True)
     
     dados = ws.get_all_values()
     if len(dados) > 1:
@@ -144,7 +148,7 @@ if aba == "💰 Finanças":
             ws.append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_stat])
             st.cache_data.clear(); st.rerun()
 
-# Manter as outras abas
+# Outras abas (Milo e Veículo)
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Controle: Milo & Bolt")
     ws_p = sh.worksheet("Controle_Pets")
