@@ -149,4 +149,4 @@ try:
             st.button("🔴 Excluir", use_container_width=True, on_click=acao_excluir)
 
 except Exception as e:
-    st.error(f"
+    st.error(f"Erro detectado: {e}) # Faltou fechar a aspa aqui! "
