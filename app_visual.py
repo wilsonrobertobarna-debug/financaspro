@@ -52,8 +52,8 @@ aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 
 if aba == "💰 Finanças":
     st.sidebar.header("📝 Novo Lançamento")
     with st.sidebar.form("form_f", clear_on_submit=True):
-        # Aqui garantimos que o seletor visual também ajude o usuário
-        f_data = st.date_input("Data do Lançamento", datetime.now()) 
+        # AQUI ESTÁ O AJUSTE: format="DD/MM/YYYY" para o calendário ficar BR
+        f_data = st.date_input("Data do Lançamento", datetime.now(), format="DD/MM/YYYY") 
         f_valor = st.number_input("Valor (R$)", min_value=0.0, format="%.2f")
         f_cat = st.selectbox("Categoria", LISTA_CAT)
         f_parc = st.number_input("Parcelas", min_value=1, value=1)
@@ -61,13 +61,11 @@ if aba == "💰 Finanças":
         f_banco = st.selectbox("Banco", LISTA_BANCO)
         f_status = st.selectbox("Status", LISTA_STATUS)
         
-        if st.form_submit_button("🚀 SALVAR NO PADRÃO BR"):
-            # TRAVA DA DATA BR: Dia/Mês/Ano
-            dt_formatada = f_data.strftime("%d/%m/%Y")
+        if st.form_submit_button("🚀 SALVAR AGORA"):
+            dt_br = f_data.strftime("%d/%m/%Y")
             desc_final = f"{f_cat} ({f_parc}x)" if f_parc > 1 else f_cat
-            ws_finance.append_row([dt_formatada, f_valor, desc_final, f_tipo, f_banco, f_status])
+            ws_finance.append_row([dt_br, f_valor, desc_final, f_tipo, f_banco, f_status])
             st.cache_data.clear()
-            st.success(f"Lançamento de {dt_formatada} salvo!")
             st.rerun()
 
     # 4. EXIBIÇÃO E GRÁFICOS
@@ -76,8 +74,6 @@ if aba == "💰 Finanças":
         if len(dados) > 1:
             df = pd.DataFrame(dados[1:], columns=["Data", "Valor", "Categoria", "Tipo", "Banco", "Status"])
             df['Valor'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
-            
-            # Garante que o Pandas entenda a data BR que vem da planilha
             df['Data_Obj'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
             df_v = df.dropna(subset=['Data_Obj']).sort_values(by='Data_Obj', ascending=False)
 
@@ -116,8 +112,7 @@ if aba == "💰 Finanças":
                     fig2 = go.Figure(go.Bar(x=res_cat['Categoria'], y=res_cat['Valor'], marker_color='#007bff'))
                     st.plotly_chart(fig2, use_container_width=True)
 
-            st.subheader("📋 Histórico (Organizado por Data)")
-            # Mostra a coluna Data original que já está em formato BR
+            st.subheader("📋 Histórico (Recentes Primeiro)")
             st.dataframe(df_v[["Data", "Valor", "Categoria", "Tipo", "Banco", "Status"]].head(15), use_container_width=True)
 
     except Exception as e:
@@ -125,4 +120,4 @@ if aba == "💰 Finanças":
 
 else:
     st.title(f"Aba {aba}")
-    st.info("Focando na correção da Data em Finanças primeiro!")
+    st.info("Validando a Data no padrão Brasil!")
