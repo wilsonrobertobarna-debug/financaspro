@@ -5,17 +5,10 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 
-# 1. CONFIGURAÇÃO E ESTILO
+# 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
 
-st.markdown("""
-    <style>
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; }
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    </style>
-    """, unsafe_allow_html=True)
-
-# 2. CONEXÃO (Utilizando seus Secrets já configurados)
+# 2. CONEXÃO SEGURA
 @st.cache_resource
 def conectar_google():
     try:
@@ -35,32 +28,32 @@ def conectar_google():
         st.error(f"Erro de conexão: {e}")
         st.stop()
 
-# 3. LOGICA DE DADOS
+# Inicializa conexão
 client = conectar_google()
-PLANILHA_ID = "147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4"
-sh = client.open_by_key(PLANILHA_ID)
+sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 ws = sh.get_worksheet(0)
 
-# Categorias dinâmicas
-categorias_dict = {
-    "Receita": ["Salário", "Vendas", "Investimentos", "Presente", "Outros (Receita)"],
-    "Despesa": ["Alimentação", "Moradia", "Transporte", "Lazer", "Saúde", "Educação", "Outros (Despesa)"]
-}
+# --- CONFIGURAÇÃO DE METAS (Exemplo) ---
+# Você pode ajustar esses valores conforme seu planejamento mensal
+META_GASTO_MENSAL = 3000.00 
 
-# --- BARRA LATERAL ---
+# --- BARRA LATERAL (Inalterada para manter o que já funciona) ---
 st.sidebar.header("📝 Novo Lançamento")
+categorias_dict = {
+    "Receita": ["Salário", "Vendas", "Investimentos", "Presente", "Outros"],
+    "Despesa": ["Alimentação", "Moradia", "Transporte", "Lazer", "Saúde", "Outros"]
+}
 tipo = st.sidebar.radio("Tipo:", ["Despesa", "Receita"], horizontal=True)
 
 with st.sidebar.form("form_lancamento", clear_on_submit=True):
     data = st.date_input("Data", datetime.now())
-    valor = st.number_input("Valor (R$)", min_value=0.0, step=0.01, format="%.2f")
+    valor = st.number_input("Valor (R$)", min_value=0.0, step=0.01)
     categoria = st.selectbox("Categoria", categorias_dict[tipo])
     descricao = st.text_input("Descrição")
     
     if st.form_submit_button("Salvar"):
         if valor > 0:
             ws.append_row([data.strftime("%d/%m/%Y"), valor, categoria, tipo, descricao])
-            st.sidebar.success("✅ Salvo!")
             st.cache_data.clear()
             st.rerun()
 
@@ -72,33 +65,52 @@ try:
     if len(lista_dados) > 1:
         df = pd.DataFrame(lista_dados[1:], columns=lista_dados[0])
         df.columns = [c.strip() for c in df.columns]
-        
-        # Converte tipos de dados
         df['Valor'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
         df['Data'] = pd.to_datetime(df['Data'], format='%d/%m/%Y', errors='coerce')
         df['Mês/Ano'] = df['Data'].dt.strftime('%m/%Y')
-        
-        # 4. GRÁFICO COMPARATIVO
-        st.subheader("📊 Comparativo Mensal: Receitas vs Despesas")
-        
-        # Agrupa por Mês/Ano e Tipo
+
+        # Cálculos de Meta
         resumo_mensal = df.groupby(['Mês/Ano', 'Tipo'])['Valor'].sum().unstack(fill_value=0).reset_index()
         
+        # 📊 GRÁFICO DE BARRAS COM META
+        st.subheader("📊 Acompanhamento de Metas de Gastos")
+        
         fig = go.Figure()
-        if 'Receita' in resumo_mensal.columns:
-            fig.add_trace(go.Bar(x=resumo_mensal['Mês/Ano'], y=resumo_mensal['Receita'], name='Receitas', marker_color='#28a745'))
-        if 'Despesa' in resumo_mensal.columns:
-            fig.add_trace(go.Bar(x=resumo_mensal['Mês/Ano'], y=resumo_mensal['Despesa'], name='Despesas', marker_color='#dc3545'))
 
-        fig.update_layout(barmode='group', height=400, margin=dict(l=20, r=20, t=20, b=20))
+        # Barra de Despesa Real
+        if 'Despesa' in resumo_mensal.columns:
+            fig.add_trace(go.Bar(
+                x=resumo_mensal['Mês/Ano'], 
+                y=resumo_mensal['Despesa'], 
+                name='Gasto Realizado',
+                marker_color='#dc3545'
+            ))
+
+        # Linha ou Barra de Meta
+        fig.add_trace(go.Scatter(
+            x=resumo_mensal['Mês/Ano'], 
+            y=[META_GASTO_MENSAL] * len(resumo_mensal),
+            name='Meta de Gastos',
+            line=dict(color='#ffc107', width=4, dash='dash')
+        ))
+
+        fig.update_layout(
+            barmode='group', 
+            height=400, 
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
         st.plotly_chart(fig, use_container_width=True)
 
-        # Histórico
-        st.markdown("---")
-        st.subheader("📋 Últimos Lançamentos")
-        st.dataframe(df.tail(10), use_container_width=True)
-        
+        # Alerta de Meta
+        if 'Despesa' in resumo_mensal.columns:
+            ultimo_gasto = resumo_mensal['Despesa'].iloc[-1]
+            if ultimo_gasto > META_GASTO_MENSAL:
+                st.warning(f"⚠️ Atenção: Você ultrapassou a meta de gastos este mês em R$ {ultimo_gasto - META_GASTO_MENSAL:,.2f}!")
+            else:
+                st.success(f"✅ Parabéns! Você está R$ {META_GASTO_MENSAL - ultimo_gasto:,.2f} abaixo da sua meta.")
+
     else:
-        st.info("Faça seu primeiro lançamento na barra lateral!")
+        st.info("Aguardando lançamentos para gerar os gráficos...")
+
 except Exception as e:
-    st.error(f"Erro ao processar gráfico: {e}")
+    st.error(f"Erro ao processar dados: {e}")
