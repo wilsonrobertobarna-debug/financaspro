@@ -7,26 +7,27 @@ from datetime import datetime, date
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (O COFRE)
-# IMPORTANTE: Cole sua chave do JSON entre as aspas abaixo.
-# Ela deve começar com -----BEGIN... e terminar com ...KEY-----
+# 2. CHAVE DE ACESSO
+# DICA: Se você copiou do JSON e ele veio com "\n" escritos, não tem problema, 
+# o código abaixo vai tratar isso.
 CHAVE_PRIVADA_BRUTA = """-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP
-... (COLE O RESTO DA SUA CHAVE AQUI) ...
+... COLE O RESTO DA SUA CHAVE AQUI ...
 -----END PRIVATE KEY-----"""
 
 @st.cache_resource
 def conectar_google():
-    # Esta parte limpa qualquer caractere @ ou espaços que entraram por erro de colagem
+    # --- PROCESSO DE LIMPEZA PESADA ---
+    # 1. Remove espaços que podem ter vindo na colagem
     raw_key = CHAVE_PRIVADA_BRUTA.strip()
     
-    # Resolve o problema das quebras de linha literais (\n) vs reais (Enter)
+    # 2. Se a chave tiver o texto "\n" literal (comum em arquivos JSON), converte para quebra real
     if "\\n" in raw_key:
-        chave_final = raw_key.replace("\\n", "\n")
+        chave_formatada = raw_key.replace("\\n", "\n")
     else:
-        # Reconstrói a chave linha por linha limpando espaços nas pontas
+        # 3. Se foi colada com quebras de linha reais, remove espaços invisíveis no fim de cada linha
         linhas = [l.strip() for l in raw_key.split('\n') if l.strip()]
-        chave_final = "\n".join(linhas)
+        chave_formatada = "\n".join(linhas)
     
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     
@@ -35,19 +36,19 @@ def conectar_google():
         "project_id": "financaspro-wilson",
         "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
         "token_uri": "https://oauth2.googleapis.com/token", 
-        "private_key": chave_final
+        "private_key": chave_formatada
     }
     
     return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
 
-# --- FUNÇÕES DE BOTÃO ---
+# --- FUNÇÕES DE INTERAÇÃO ---
 def acao_salvar():
     v = st.session_state.valor_input
     if v > 0:
         data_br = st.session_state.data_input.strftime('%d/%m/%Y')
         desc_final = f"{st.session_state.desc_input} ({st.session_state.parcela_input})" if st.session_state.parcela_input != "1/1" else st.session_state.desc_input
         
-        # Estrutura exata das 11 colunas da sua planilha
+        # Estrutura de 11 colunas para manter sua planilha organizada
         nova_linha = [
             data_br, v, st.session_state.cat_input, st.session_state.banco_input, 
             desc_final, st.session_state.benef_input, "Pessoal", "", "", 
@@ -55,9 +56,9 @@ def acao_salvar():
         ]
         
         ws_lanc.append_row(nova_linha)
-        st.toast("✅ Lançamento enviado!")
+        st.toast("✅ Lançamento gravado!")
         
-        # Reseta os campos para o próximo uso
+        # Limpeza automática dos campos
         st.session_state.valor_input = 0.0
         st.session_state.desc_input = ""
         st.session_state.benef_input = ""
@@ -65,9 +66,9 @@ def acao_salvar():
 def acao_excluir():
     id_alvo = st.session_state.id_excluir_input
     ws_lanc.delete_rows(int(id_alvo))
-    st.toast(f"🗑️ Registro {id_alvo} apagado.")
+    st.toast(f"🗑️ Registro {id_alvo} removido.")
 
-# --- INTERFACE E LOGICA ---
+# --- LÓGICA PRINCIPAL ---
 try:
     client = conectar_google()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
@@ -84,16 +85,15 @@ try:
     st.title("🛡️ FinançasPro Wilson")
 
     if not df.empty:
-        periodo = st.date_input("📅 Filtro:", value=(date(date.today().year, date.today().month, 1), date.today()), format="DD/MM/YYYY")
+        periodo = st.date_input("📅 Período:", value=(date(date.today().year, date.today().month, 1), date.today()), format="DD/MM/YYYY")
         
         if isinstance(periodo, tuple) and len(periodo) == 2:
             d_ini, d_fim = periodo
             df_view = df[(df['Data_dt'] >= d_ini) & (df['Data_dt'] <= d_fim)].copy()
             
-            # Cálculos automáticos para o dashboard
             rec = df_view[df_view['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
             desp = df_view[df_view['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
-            st.info(f"### 💰 Saldo do Período: R$ {rec - desp:,.2f}")
+            st.info(f"### 💰 Saldo Atual: R$ {rec - desp:,.2f}")
 
     st.divider()
 
@@ -118,7 +118,7 @@ try:
             st.dataframe(df_view[['ID', 'Data', 'Valor', 'Tipo', 'Descrição', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
             st.divider()
             st.number_input("Excluir ID:", min_value=2, step=1, key="id_excluir_input")
-            st.button("🔴 Remover", use_container_width=True, on_click=acao_excluir)
+            st.button("🔴 Remover Registro", use_container_width=True, on_click=acao_excluir)
 
 except Exception as e:
     st.error(f"Erro detectado: {e}")
