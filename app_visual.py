@@ -4,32 +4,34 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import re
 
-# 1. CONFIGURAÇÃO
+# 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. SUA CHAVE (Pode colar o JSON inteiro aqui, o código vai garimpar)
+# 2. CHAVE DE ACESSO
+# DICA: Wilson, pode colar o bloco do JSON aqui sem medo. 
+# O código abaixo vai "garimpar" a chave real e jogar o lixo fora.
 CHAVE_PRIVADA_BRUTA = """-----BEGIN PRIVATE KEY-----
 COLE_SUA_CHAVE_AQUI
 -----END PRIVATE KEY-----"""
 
-@st.cache_resource(show_spinner="Validando credenciais...")
+@st.cache_resource(show_spinner="Validando credenciais no Google...")
 def conectar_google():
-    # --- LIMPEZA NÍVEL HARD ---
-    # Passo 1: Resolve os \n literais que o JSON coloca
-    passo1 = CHAVE_PRIVADA_BRUTA.strip().replace("\\n", "\n")
+    # --- OPERAÇÃO LIMPEZA TOTAL ---
+    # Passo 1: Resolve os \n que o JSON coloca no texto
+    texto = CHAVE_PRIVADA_BRUTA.strip().replace("\\n", "\n")
     
-    # Passo 2: EXTRAÇÃO POR MARCADOR
-    # O regex abaixo busca APENAS o que começa com BEGIN e termina com END.
-    # Isso joga no lixo qualquer e-mail (@) ou nome de campo (private_key_) que veio junto.
-    match = re.search(r"-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----", passo1)
+    # Passo 2: EXTRAÇÃO CIRÚRGICA
+    # Busca apenas o que está entre os marcadores oficiais.
+    # Isso ignora o erro 95 (underline) e o erro 64 (@) automaticamente.
+    match = re.search(r"-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----", texto)
     
     if not match:
-        st.error("🚨 Marcadores BEGIN/END não encontrados! Verifique se copiou a chave toda.")
+        st.error("🚨 Wilson, não encontrei os marcadores BEGIN/END. Verifique se copiou a chave toda.")
         st.stop()
     
     chave_isolada = match.group(0)
     
-    # Passo 3: Limpeza de linhas (remove espaços invisíveis que o Windows adora colocar)
+    # Passo 3: Limpeza de linhas (remove espaços invisíveis das pontas)
     linhas = [l.strip() for l in chave_isolada.split('\n') if l.strip()]
     chave_final = "\n".join(linhas)
     
@@ -50,16 +52,18 @@ st.title("🛡️ FinançasPro Wilson")
 
 try:
     client = conectar_google()
-    # Conecta à planilha pelo ID que você já usa
+    # Conecta à sua planilha
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-    st.success("✅ Conexão estabelecida com sucesso!")
+    ws = sh.get_worksheet(0)
     
-    # Visualização rápida
-    df = pd.DataFrame(sh.get_worksheet(0).get_all_records())
-    if not df.empty:
+    st.success("🔥 Wilson, a conexão foi estabelecida! O sistema está pronto.")
+    
+    # Busca os dados para mostrar que funcionou
+    dados = ws.get_all_records()
+    if dados:
         st.subheader("📋 Últimos Registros")
-        st.dataframe(df.tail(10), use_container_width=True)
+        st.dataframe(pd.DataFrame(dados).tail(10), use_container_width=True)
 
 except Exception as e:
     st.error(f"Erro na conexão: {e}")
-    st.info("💡 Wilson, tente o seguinte: abra o seu arquivo .json no BLOCO DE NOTAS (Notepad) e copie APENAS o conteúdo de 'private_key' (sem as aspas).")
+    st.info("💡 Se o erro persistir, no menu do Streamlit (3 pontinhos), clique em 'Clear Cache' e dê F5.")
