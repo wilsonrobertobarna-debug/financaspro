@@ -3,13 +3,13 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime, date
+import re
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (O SEGREDO ESTÁ AQUI)
-# Abra seu arquivo .json original, copie o valor de "private_key" 
-# (aquela string enorme que começa com -----BEGIN...) e cole EXATAMENTE entre as aspas triplas.
+# 2. CHAVE DE ACESSO
+# DICA: Cole aqui a chave exatamente como está no seu arquivo .json
 CHAVE_PRIVADA_BRUTA = """-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP
 ... COLE O RESTO DA SUA CHAVE AQUI ...
@@ -17,9 +17,13 @@ MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP
 
 @st.cache_resource
 def conectar_google():
-    # Esta linha força o Python a entender que '\n' é uma quebra de linha real
-    # e remove espaços invisíveis que estragam a chave.
-    private_key = CHAVE_PRIVADA_BRUTA.strip().replace('\\n', '\n')
+    # LIMPEZA CIRÚRGICA: 
+    # Remove espaços, limpa o texto '\n' literal e garante que não existam símbolos invisíveis.
+    chave_limpa = CHAVE_PRIVADA_BRUTA.strip().replace('\\n', '\n')
+    
+    # Se houver espaços no final de cada linha interna, este loop remove:
+    linhas = [linha.strip() for linha in chave_limpa.split('\n')]
+    chave_final = "\n".join(linhas)
     
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     
@@ -28,18 +32,19 @@ def conectar_google():
         "project_id": "financaspro-wilson",
         "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
         "token_uri": "https://oauth2.googleapis.com/token", 
-        "private_key": private_key
+        "private_key": chave_final
     }
+    
     return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
 
-# --- FUNÇÕES DE INTERAÇÃO ---
+# --- FUNÇÕES DE CALLBACK ---
 def acao_salvar():
     v = st.session_state.valor_input
     if v > 0:
         data_br = st.session_state.data_input.strftime('%d/%m/%Y')
         desc_final = f"{st.session_state.desc_input} ({st.session_state.parcela_input})" if st.session_state.parcela_input != "1/1" else st.session_state.desc_input
         
-        # Alinhamento exato para suas 11 colunas
+        # Estrutura de 11 colunas para manter sua planilha organizada
         nova_linha = [
             data_br, v, st.session_state.cat_input, st.session_state.banco_input, 
             desc_final, st.session_state.benef_input, "Pessoal", "", "", 
@@ -49,22 +54,24 @@ def acao_salvar():
         ws_lanc.append_row(nova_linha)
         st.toast("✅ Lançamento gravado!")
         
-        # Reset de campos
+        # Limpeza automática dos campos
         st.session_state.valor_input = 0.0
         st.session_state.desc_input = ""
         st.session_state.benef_input = ""
+        st.session_state.parcela_input = "1/1"
 
 def acao_excluir():
     id_alvo = st.session_state.id_excluir_input
     ws_lanc.delete_rows(int(id_alvo))
     st.toast(f"🗑️ Registro {id_alvo} removido.")
 
-# --- LÓGICA DO APP ---
+# --- LÓGICA PRINCIPAL ---
 try:
     client = conectar_google()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
+    # Leitura de dados
     df = pd.DataFrame(ws_lanc.get_all_records())
     
     if not df.empty:
@@ -75,8 +82,11 @@ try:
 
     st.title("🛡️ FinançasPro Wilson")
 
+    # Filtros e Resumo Financeiro
     if not df.empty:
-        periodo = st.date_input("📅 Filtrar Período:", value=(date(date.today().year, date.today().month, 1), date.today()), format="DD/MM/YYYY")
+        c1, c2 = st.columns(2)
+        with c1:
+            periodo = st.date_input("📅 Filtrar Data:", value=(date(date.today().year, date.today().month, 1), date.today()), format="DD/MM/YYYY")
         
         if isinstance(periodo, tuple) and len(periodo) == 2:
             d_ini, d_fim = periodo
@@ -84,11 +94,11 @@ try:
             
             rec = df_view[df_view['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
             desp = df_view[df_view['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
-            
-            st.info(f"### 💰 Saldo: R$ {rec - desp:,.2f}")
+            st.info(f"### 💰 Saldo do Período: R$ {rec - desp:,.2f}")
 
     st.divider()
 
+    # Layout de Input e Histórico
     col_f, col_h = st.columns([1, 2.5])
     
     with col_f:
@@ -102,15 +112,15 @@ try:
         st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Trabalho", "Outros"], key="cat_input")
         st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco"], key="banco_input")
         st.selectbox("Status", ["Pago", "Pendente"], key="status_input")
-        st.button("🚀 Gravar", use_container_width=True, on_click=acao_salvar)
+        st.button("🚀 Gravar no Google", use_container_width=True, on_click=acao_salvar)
 
     with col_h:
         st.subheader("📋 Histórico")
         if not df.empty:
             st.dataframe(df_view[['ID', 'Data', 'Valor', 'Tipo', 'Descrição', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
             st.divider()
-            st.number_input("Remover ID:", min_value=2, step=1, key="id_excluir_input")
-            st.button("🔴 Excluir", use_container_width=True, on_click=acao_excluir)
+            st.number_input("Excluir ID:", min_value=2, step=1, key="id_excluir_input")
+            st.button("🔴 Remover Registro", use_container_width=True, on_click=acao_excluir)
 
 except Exception as e:
     st.error(f"Erro detectado: {e}")
