@@ -8,7 +8,7 @@ import os
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (PK_LIST)
+# 2. CHAVE DE ACESSO (Mantenha sua chave real aqui)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -77,7 +77,6 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
-    # Carregamento inicial
     df = carregar_dados(ws_lanc)
 
     st.title("🛡️ FinançasPro Wilson")
@@ -87,49 +86,58 @@ try:
         c1, c2 = st.columns([2, 2])
         with c1:
             hoje = date.today()
-            periodo = st.date_input("📅 Período:", value=(date(hoje.year, hoje.month, 1), hoje), format="DD/MM/YYYY")
+            # Ajuste para garantir que o período capturado seja válido
+            periodo = st.date_input("📅 Período de Exibição:", value=(date(hoje.year, hoje.month, 1), hoje), format="DD/MM/YYYY")
         with c2:
             st.write("🚀 Atalhos:")
             col_b1, col_b2 = st.columns(2)
             btn_matilha = col_b1.button("🐶 Matilha", use_container_width=True)
             btn_reset = col_b2.button("📄 Geral", use_container_width=True)
 
-        # Lógica de Filtragem
-        d_ini, d_fim = (periodo[0], periodo[1]) if isinstance(periodo, tuple) and len(periodo) == 2 else (date.today(), date.today())
-        df_filtrado = df[(df['Data_dt'] >= d_ini) & (df['Data_dt'] <= d_fim)].copy()
-        
-        if btn_matilha:
-            df_filtrado = df_filtrado[df_filtrado.astype(str).apply(lambda x: x.str.contains('Milo|Bolt', case=False)).any(axis=1)]
+        if isinstance(periodo, tuple) and len(periodo) == 2:
+            d_ini, d_fim = periodo
+            df_filtrado = df[(df['Data_dt'] >= d_ini) & (df['Data_dt'] <= d_fim)].copy()
+            
+            if btn_matilha:
+                df_filtrado = df_filtrado[df_filtrado.astype(str).apply(lambda x: x.str.contains('Milo|Bolt', case=False)).any(axis=1)]
 
-        # --- MÉTRICAS ---
-        rec = df_filtrado[df_filtrado['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
-        desp = df_filtrado[df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
-        saldo = rec - desp
+            # --- CÁLCULO DAS TAGS (CORRIGIDO) ---
+            rec = df_filtrado[df_filtrado['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
+            desp = df_filtrado[df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
+            # Tag Rendimentos: Busca na categoria
+            rend = df_filtrado[df_filtrado['Categoria'].str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
+            # Tag Pendências: Despesas que não estão "Pago"
+            pend = df_filtrado[(df_filtrado['Tipo'].str.contains('Despesa', case=False, na=False)) & (df_filtrado['Status'] != 'Pago')]['Valor_num'].sum()
+            
+            saldo = rec - desp
 
-        st.info(f"### 💰 Saldo Líquido: R$ {saldo:,.2f}")
-        m1, m2 = st.columns(2)
-        m1.metric("Receitas", f"R$ {rec:,.2f}")
-        m2.metric("Despesas", f"R$ {desp:,.2f}")
+            # --- TARJA AZUL ---
+            st.info(f"### 💰 Saldo Líquido do Período: R$ {saldo:,.2f}")
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Receitas", f"R$ {rec:,.2f}")
+            m2.metric("Despesas", f"R$ {desp:,.2f}")
+            m3.metric("Rendimentos", f"R$ {rend:,.2f}")
+            m4.metric("Pendências", f"R$ {pend:,.2f}")
 
-        # --- GRÁFICOS ---
-        st.divider()
-        g1, g2 = st.columns(2)
-        with g1:
-            st.subheader("📊 Movimentação")
-            st.bar_chart(pd.DataFrame({'Total': [rec, desp]}, index=['Receitas', 'Despesas']))
-        with g2:
-            if st.checkbox("🔑 Ver Metas"):
-                st.subheader("🎯 Meta")
-                st.bar_chart(pd.DataFrame({'Valor': [10000.0, rec]}, index=['Meta', 'Alcançado']), color="#3498db")
+            # --- GRÁFICOS ---
+            st.divider()
+            g1, g2 = st.columns(2)
+            with g1:
+                st.subheader("📊 Resumo Visual")
+                st.bar_chart(pd.DataFrame({'Total': [rec, desp]}, index=['Entradas', 'Saídas']))
+            with g2:
+                if st.checkbox("🔑 Ver Metas"):
+                    st.subheader("🎯 Meta vs Real")
+                    st.bar_chart(pd.DataFrame({'Valor': [10000.0, rec]}, index=['Meta', 'Alcançado']), color="#3498db")
 
     st.divider()
 
-    # --- FORMULÁRIO E TABELA ---
+    # --- FORMULÁRIO E HISTÓRICO ---
     c_form, c_hist = st.columns([1, 2.5])
     with c_form:
         st.subheader("📝 Novo Registro")
         tipo_f = st.radio("Tipo", ["Despesa", "Receita"], horizontal=True, key="tipo_input")
-        data_f = st.date_input("Data", date.today(), format="DD/MM/YYYY", key="data_input")
+        data_f = st.date_input("Data do Lançamento", date.today(), format="DD/MM/YYYY", key="data_input")
         valor_f = st.number_input("Valor (R$)", min_value=0.0, step=0.01, key="valor_input")
         benef_f = st.text_input("Beneficiário", key="benef_input")
         desc_f = st.text_input("Descrição", key="desc_input")
@@ -138,25 +146,32 @@ try:
         banco_f = st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"], key="banco_input")
         status_f = st.selectbox("Status", ["Pago", "Pendente"], key="status_input")
         
-        if st.button("🚀 Salvar na Nuvem", use_container_width=True, on_click=limpar_form):
+        if st.button("🚀 Salvar na Nuvem", use_container_width=True):
             if valor_f > 0:
                 data_br = data_f.strftime('%d/%m/%Y')
                 desc_final = f"{desc_f} ({parcela_f})" if parcela_f != "1/1" else desc_f
+                
+                # ENVIO PARA GOOGLE
                 ws_lanc.append_row([data_br, valor_f, cat_f, banco_f, desc_final, benef_f, "Pessoal", 0, "", status_f, tipo_f])
-                st.success("Registrado!")
-                st.rerun() # FORÇA O RECARREGAMENTO PARA MOSTRAR NA LISTA
+                
+                st.success(f"✅ Salvo: R$ {valor_f} em {data_br}")
+                limpar_form() # Limpa as variáveis internas
+                st.rerun()
 
     with c_hist:
-        st.subheader("📋 Histórico")
+        st.subheader("📋 Histórico Recente")
         if not df_filtrado.empty:
+            # Ordena pelo ID (mais recente primeiro)
             st.dataframe(df_filtrado[['ID', 'Data', 'Valor', 'Tipo', 'Descrição', 'Beneficiário', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
             
             st.divider()
-            id_excluir = st.number_input("ID para excluir:", min_value=2, step=1, key="id_excluir_input")
-            if st.button("🔴 Confirmar Exclusão", use_container_width=True, on_click=limpar_exclusao):
+            st.subheader("🗑️ Excluir Lançamento")
+            id_excluir = st.number_input("Digite o ID que deseja apagar:", min_value=2, step=1, key="id_excluir_input")
+            if st.button("🔴 Confirmar Exclusão", use_container_width=True):
                 ws_lanc.delete_rows(int(id_excluir))
-                st.warning(f"ID {id_excluir} removido!")
-                st.rerun() # FORÇA O RECARREGAMENTO
+                st.warning(f"O item com ID {id_excluir} foi removido.")
+                limpar_exclusao()
+                st.rerun()
 
 except Exception as e:
-    st.error(f"Erro: {e}")
+    st.error(f"Erro no Sistema: {e}")
