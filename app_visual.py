@@ -9,10 +9,9 @@ import re
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
 # 2. CHAVE DE ACESSO (O COFRE)
-# IMPORTANTE: Cole sua private_key aqui. 
+# Cole aqui o conteúdo da sua "private_key" do JSON.
 CHAVE_PRIVADA_BRUTA = """-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP
-... COLE O RESTO DA SUA CHAVE AQUI ...
+COLE_SUA_CHAVE_AQUI
 -----END PRIVATE KEY-----"""
 
 @st.cache_resource
@@ -21,16 +20,16 @@ def conectar_google():
     # 1. Remove espaços e resolve o problema do \n literal do JSON
     raw_key = CHAVE_PRIVADA_BRUTA.strip().replace("\\n", "\n")
     
-    # 2. FILTRO ANTI-RUÍDO: 
-    # Extrai apenas o que está entre os marcadores BEGIN e END.
-    # Isso ignora qualquer "private_key:", e-mails ou pontos extras.
+    # 2. DETECTOR DE METAL: 
+    # Extrai APENAS o bloco que começa com BEGIN e termina com END.
+    # Isso ignora qualquer e-mail, ponto ou underline que esteja "sujando" a variável.
     match = re.search(r"-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----", raw_key)
     if match:
         key_processada = match.group(0)
     else:
         key_processada = raw_key
 
-    # 3. Reconstroi a chave linha por linha para garantir pureza absoluta
+    # 3. Reconstroi a chave linha por linha para garantir que não existam espaços invisíveis
     linhas = [l.strip() for l in key_processada.split('\n') if l.strip()]
     chave_final = "\n".join(linhas)
     
@@ -53,7 +52,6 @@ def acao_salvar():
         data_br = st.session_state.data_input.strftime('%d/%m/%Y')
         desc_final = f"{st.session_state.desc_input} ({st.session_state.parcela_input})" if st.session_state.parcela_input != "1/1" else st.session_state.desc_input
         
-        # Estrutura exata das 11 colunas (A até K)
         nova_linha = [
             data_br, v, st.session_state.cat_input, st.session_state.banco_input, 
             desc_final, st.session_state.benef_input, "Pessoal", "", "", 
@@ -63,7 +61,6 @@ def acao_salvar():
         ws_lanc.append_row(nova_linha)
         st.toast("✅ Gravado com sucesso!")
         
-        # Limpa os campos para o próximo uso
         st.session_state.valor_input = 0.0
         st.session_state.desc_input = ""
         st.session_state.benef_input = ""
