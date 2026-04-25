@@ -8,20 +8,27 @@ from datetime import datetime, date
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
 # 2. CHAVE DE ACESSO
-# Cole aqui o conteúdo da sua "private_key" do arquivo .json
+# DICA: Não remova os \n se eles vierem no seu JSON original.
 CHAVE_PRIVADA_BRUTA = """-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP
-... (COLE O RESTO DA SUA CHAVE AQUI) ...
+... COLE O RESTO DA SUA CHAVE AQUI ...
 -----END PRIVATE KEY-----"""
 
 @st.cache_resource
 def conectar_google():
-    # LIMPEZA PROFUNDA: 
-    # 1. Remove espaços em branco no início e fim
-    # 2. Converte o texto "\n" literal em quebras de linha reais
-    # 3. Limpa espaços invisíveis no final de cada linha interna
-    linhas = CHAVE_PRIVADA_BRUTA.strip().replace('\\n', '\n').split('\n')
-    chave_limpa = "\n".join([l.strip() for l in linhas if l.strip()])
+    # TRATAMENTO DE CHOQUE:
+    # 1. Remove espaços no início/fim de todo o bloco
+    # 2. Garante que o caractere literal '\n' seja convertido em quebra de linha real
+    # 3. Limpa espaços fantasmas em cada linha individualmente
+    raw_key = CHAVE_PRIVADA_BRUTA.strip()
+    
+    # Se a chave foi colada com o texto '\n' visível:
+    if "\\n" in raw_key:
+        chave_final = raw_key.replace("\\n", "\n")
+    else:
+        # Se foi colada com quebras de linha reais:
+        linhas = [l.strip() for l in raw_key.split('\n') if l.strip()]
+        chave_final = "\n".join(linhas)
     
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     
@@ -30,7 +37,7 @@ def conectar_google():
         "project_id": "financaspro-wilson",
         "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
         "token_uri": "https://oauth2.googleapis.com/token", 
-        "private_key": chave_limpa
+        "private_key": chave_final
     }
     
     return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
@@ -42,7 +49,7 @@ def acao_salvar():
         data_br = st.session_state.data_input.strftime('%d/%m/%Y')
         desc_final = f"{st.session_state.desc_input} ({st.session_state.parcela_input})" if st.session_state.parcela_input != "1/1" else st.session_state.desc_input
         
-        # Estrutura de 11 colunas para manter sua planilha organizada
+        # Ordem das 11 colunas da sua planilha (A-K)
         nova_linha = [
             data_br, v, st.session_state.cat_input, st.session_state.banco_input, 
             desc_final, st.session_state.benef_input, "Pessoal", "", "", 
@@ -50,9 +57,9 @@ def acao_salvar():
         ]
         
         ws_lanc.append_row(nova_linha)
-        st.toast("✅ Lançamento gravado!")
+        st.toast("✅ Dados gravados no Google Sheets!")
         
-        # Limpeza automática dos campos
+        # Limpa os campos após salvar
         st.session_state.valor_input = 0.0
         st.session_state.desc_input = ""
         st.session_state.benef_input = ""
@@ -79,7 +86,8 @@ try:
     st.title("🛡️ FinançasPro Wilson")
 
     if not df.empty:
-        periodo = st.date_input("📅 Filtrar Data:", value=(date(date.today().year, date.today().month, 1), date.today()), format="DD/MM/YYYY")
+        # Resumo Financeiro
+        periodo = st.date_input("📅 Filtrar por Data:", value=(date(date.today().year, date.today().month, 1), date.today()), format="DD/MM/YYYY")
         
         if isinstance(periodo, tuple) and len(periodo) == 2:
             d_ini, d_fim = periodo
@@ -87,10 +95,11 @@ try:
             
             rec = df_view[df_view['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
             desp = df_view[df_view['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
-            st.info(f"### 💰 Saldo Atual: R$ {rec - desp:,.2f}")
+            st.info(f"### 💰 Saldo em Conta: R$ {rec - desp:,.2f}")
 
     st.divider()
 
+    # Layout de Duas Colunas (Formulário e Histórico)
     col_f, col_h = st.columns([1, 2.5])
     
     with col_f:
@@ -104,15 +113,19 @@ try:
         st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Trabalho", "Outros"], key="cat_input")
         st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco"], key="banco_input")
         st.selectbox("Status", ["Pago", "Pendente"], key="status_input")
-        st.button("🚀 Gravar", use_container_width=True, on_click=acao_salvar)
+        st.button("🚀 Gravar Agora", use_container_width=True, on_click=acao_salvar)
 
     with col_h:
-        st.subheader("📋 Histórico")
+        st.subheader("📋 Histórico Recente")
         if not df.empty:
-            st.dataframe(df_view[['ID', 'Data', 'Valor', 'Tipo', 'Descrição', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
+            st.dataframe(
+                df_view[['ID', 'Data', 'Valor', 'Tipo', 'Descrição', 'Status']].sort_values('ID', ascending=False), 
+                use_container_width=True, 
+                hide_index=True
+            )
             st.divider()
-            st.number_input("Excluir ID:", min_value=2, step=1, key="id_excluir_input")
-            st.button("🔴 Remover Registro", use_container_width=True, on_click=acao_excluir)
+            st.number_input("Remover ID:", min_value=2, step=1, key="id_excluir_input")
+            st.button("🔴 Excluir Registro", use_container_width=True, on_click=acao_excluir)
 
 except Exception as e:
     st.error(f"Erro detectado: {e}")
