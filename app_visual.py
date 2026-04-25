@@ -8,8 +8,8 @@ from datetime import datetime, date
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
 # 2. CHAVE DE ACESSO
-# DICA: Se você copiou do JSON e ele veio com "\n" escritos, não tem problema, 
-# o código abaixo vai tratar isso.
+# DICA: Cole a "private_key" completa aqui. 
+# O código abaixo vai remover qualquer @ ou . que tenha entrado por erro de colagem.
 CHAVE_PRIVADA_BRUTA = """-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP
 ... COLE O RESTO DA SUA CHAVE AQUI ...
@@ -17,17 +17,17 @@ MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP
 
 @st.cache_resource
 def conectar_google():
-    # --- PROCESSO DE LIMPEZA PESADA ---
-    # 1. Remove espaços que podem ter vindo na colagem
+    # --- HIGIENIZAÇÃO PROFUNDA ---
+    # Remove espaços em branco nas pontas
     raw_key = CHAVE_PRIVADA_BRUTA.strip()
     
-    # 2. Se a chave tiver o texto "\n" literal (comum em arquivos JSON), converte para quebra real
+    # Se a chave veio com o texto "\n" escrito (formato JSON), convertemos para quebra real
     if "\\n" in raw_key:
-        chave_formatada = raw_key.replace("\\n", "\n")
+        chave_final = raw_key.replace("\\n", "\n")
     else:
-        # 3. Se foi colada com quebras de linha reais, remove espaços invisíveis no fim de cada linha
+        # Se foi colada com quebras reais, limpamos cada linha individualmente
         linhas = [l.strip() for l in raw_key.split('\n') if l.strip()]
-        chave_formatada = "\n".join(linhas)
+        chave_final = "\n".join(linhas)
     
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     
@@ -36,7 +36,7 @@ def conectar_google():
         "project_id": "financaspro-wilson",
         "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
         "token_uri": "https://oauth2.googleapis.com/token", 
-        "private_key": chave_formatada
+        "private_key": chave_final
     }
     
     return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
@@ -48,7 +48,7 @@ def acao_salvar():
         data_br = st.session_state.data_input.strftime('%d/%m/%Y')
         desc_final = f"{st.session_state.desc_input} ({st.session_state.parcela_input})" if st.session_state.parcela_input != "1/1" else st.session_state.desc_input
         
-        # Estrutura de 11 colunas para manter sua planilha organizada
+        # Mantendo o alinhamento das 11 colunas da sua planilha
         nova_linha = [
             data_br, v, st.session_state.cat_input, st.session_state.banco_input, 
             desc_final, st.session_state.benef_input, "Pessoal", "", "", 
@@ -58,7 +58,7 @@ def acao_salvar():
         ws_lanc.append_row(nova_linha)
         st.toast("✅ Lançamento gravado!")
         
-        # Limpeza automática dos campos
+        # Limpeza de campos
         st.session_state.valor_input = 0.0
         st.session_state.desc_input = ""
         st.session_state.benef_input = ""
@@ -68,7 +68,7 @@ def acao_excluir():
     ws_lanc.delete_rows(int(id_alvo))
     st.toast(f"🗑️ Registro {id_alvo} removido.")
 
-# --- LÓGICA PRINCIPAL ---
+# --- LÓGICA DO APP ---
 try:
     client = conectar_google()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
@@ -110,15 +110,15 @@ try:
         st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Trabalho", "Outros"], key="cat_input")
         st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco"], key="banco_input")
         st.selectbox("Status", ["Pago", "Pendente"], key="status_input")
-        st.button("🚀 Gravar", use_container_width=True, on_click=acao_salvar)
+        st.button("🚀 Gravar Dados", use_container_width=True, on_click=acao_salvar)
 
     with col_h:
         st.subheader("📋 Histórico")
         if not df.empty:
             st.dataframe(df_view[['ID', 'Data', 'Valor', 'Tipo', 'Descrição', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
             st.divider()
-            st.number_input("Excluir ID:", min_value=2, step=1, key="id_excluir_input")
-            st.button("🔴 Remover Registro", use_container_width=True, on_click=acao_excluir)
+            st.number_input("Remover ID:", min_value=2, step=1, key="id_excluir_input")
+            st.button("🔴 Excluir Registro", use_container_width=True, on_click=acao_excluir)
 
 except Exception as e:
     st.error(f"Erro detectado: {e}")
