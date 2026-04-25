@@ -53,13 +53,15 @@ if aba == "💰 Finanças":
         df.columns = [c.strip() for c in df.columns]
         
         df['Valor_Num'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
+        df['Data_DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
+        mes_atual = datetime.now().strftime('%m/%y')
         
         c_tipo = 'Tipo' if 'Tipo' in df.columns else df.columns[3]
         c_cat = 'Categoria' if 'Categoria' in df.columns else df.columns[2]
         c_stat = 'Status' if 'Status' in df.columns else df.columns[5]
         c_bnc = 'Banco' if 'Banco' in df.columns else df.columns[4]
 
-        # Dashboard e Métricas
+        # Cálculos
         rec = df[df[c_tipo].str.contains('Receita', case=False, na=False)]['Valor_Num'].sum()
         desp = df[df[c_tipo].str.contains('Despesa', case=False, na=False)]['Valor_Num'].sum()
         rend = df[df[c_cat].str.contains('Rendimento', case=False, na=False)]['Valor_Num'].sum()
@@ -69,19 +71,42 @@ if aba == "💰 Finanças":
         eco_perc = (saldo / rec * 100) if rec > 0 else 0
         def f_brl(v): return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
+        # Dashboard Principal
         st.markdown(f'<div class="saldo-container"><small>Saldo Atual</small><h2>{f_brl(saldo)}</h2></div>', unsafe_allow_html=True)
         t1, t2, t3, t4 = st.columns(4)
         t1.metric("🟢 Receitas", f_brl(rec)); t2.metric("🔴 Despesas", f_brl(desp))
         t3.metric("📈 Rendimentos", f_brl(rend)); t4.metric("⏳ Pendências", f_brl(pend))
         st.markdown(f'<div class="economia-texto">🔹 Economia Real: {f_brl(saldo)} ({eco_perc:.1f}%)</div>', unsafe_allow_html=True)
 
+        # Histórico
         st.subheader("📋 Histórico")
-        # Adicionamos uma coluna de ID visual para ajudar você a escolher a linha
         df_visual = df.copy()
         df_visual.index = df_visual.index + 2
         st.dataframe(df_visual.iloc[::-1], use_container_width=True)
 
-        # GERENCIAMENTO LATERAL
+        st.write("---")
+
+        # --- RECOLOCANDO OS GRÁFICOS ---
+        g1, g2 = st.columns(2)
+        with g1:
+            st.subheader("🍕 Gasto por Categoria (Mês)")
+            df_m = df.copy()
+            df_m['Mes'] = df_m['Data_DT'].dt.strftime('%m/%y')
+            gastos_cat = df_m[(df_m['Mes'] == mes_atual) & (df_m[c_tipo] == 'Despesa')].groupby(c_cat)['Valor_Num'].sum()
+            if not gastos_cat.empty:
+                st.bar_chart(gastos_cat, color='#ffc107')
+            else: st.info("Sem gastos lançados neste mês.")
+
+        with g2:
+            st.subheader("📊 Receitas x Despesas")
+            try:
+                comp = df_m.groupby(['Mes', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
+                cores_map = {'Receita': '#28a745', 'Despesa': '#dc3545'}
+                cores_list = [cores_map.get(col, '#808080') for col in comp.columns]
+                st.bar_chart(comp, color=cores_list)
+            except: st.info("Dados insuficientes para comparar meses.")
+
+        # MENU LATERAL (Novo / Editar)
         menu_acao = st.sidebar.selectbox("Ação:", ["Novo Lançamento", "Editar/Excluir"])
 
         if menu_acao == "Novo Lançamento":
@@ -99,14 +124,11 @@ if aba == "💰 Finanças":
 
         elif menu_acao == "Editar/Excluir":
             st.sidebar.subheader("⚙️ Gerenciar Linha")
-            # Lista de linhas baseada no DataFrame carregado
             lista_linhas = list(df_visual.index)
-            linha_sel = st.sidebar.selectbox("Selecione a Linha pelo ID:", lista_linhas)
+            linha_sel = st.sidebar.selectbox("ID da Linha:", lista_linhas)
             
             if linha_sel:
-                # Pegar os dados da linha específica com segurança
                 dados_linha = df.loc[linha_sel - 2]
-                
                 with st.sidebar.form("f_edicao"):
                     e_dat = st.text_input("Data", value=str(dados_linha['Data']))
                     e_val = st.text_input("Valor", value=str(dados_linha['Valor']))
@@ -119,16 +141,15 @@ if aba == "💰 Finanças":
                     if c1.form_submit_button("💾 ATUALIZAR"):
                         ws.update(f"A{linha_sel}:F{linha_sel}", [[e_dat, e_val, e_cat, e_tip, e_bnc, e_stat]])
                         st.cache_data.clear(); st.rerun()
-                    
                     if c2.form_submit_button("🗑️ EXCLUIR"):
                         ws.delete_rows(int(linha_sel))
                         st.cache_data.clear(); st.rerun()
 
+# Outras abas permanecem...
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Controle: Milo & Bolt")
     ws_p = sh.worksheet("Controle_Pets")
     st.dataframe(pd.DataFrame(ws_p.get_all_values()[1:], columns=ws_p.get_all_values()[0]).iloc[::-1], use_container_width=True)
-
 else:
     st.title("🚗 Controle: Veículo")
     ws_v = sh.worksheet("Controle_Veiculo")
