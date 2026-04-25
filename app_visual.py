@@ -7,47 +7,46 @@ from datetime import datetime, date
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO
-# Certifique-se de que cada linha termina com vírgula (exceto a última)
-PK_LIST = [
-   "-----BEGIN PRIVATE KEY-----",
-   "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
-   "gcN1MxhHMlXJsmswR16gqEtwNmj1s4mLqZhifwA8qu7M16i6q0IU0RnQVufHfqNu",
-   "BPQh74sLQ1/xrvNZ8q/A4fO/QqJCAhlqtYo3djsVRfDI/LOoUiP+clQzN3M+1Qdx",
-   "74Df9cW6ELv3t8WpcCzBgkLX/3+V91dayvp+dr9OGRMTrVqDNRH8AnWDXdWlvhox",
-   "Ke7s3lFgk0JYU1ql6ffs0mdp9fJ6gB/MsKWcwZmbSIUGkrbiN5rfV9s8jANcNa1m",
-   "kJ2tr3XsPsqpGcgOWF4pOrY0P++Xse4pgwppGa3WbBuPg4OzzK1LIgCuIvsGuRhs",
-   "rwn3KZidAgMBAAECggEAB48kDKWPrPW5/BD57DM/xZQz92gzNJw9Dkhu3QGO33b0",
-   "FRusQHKWCTsDtFm1zS717oKPiEeRQSpiRjS1N8iEWDFB7CIgk7ozINvf6Vk7hea7",
-   "nroA5Z5DokvR5nLTz2UXj8NA2NXQtkD/MEgTdTnWy4SREOP5Db/FTbxSHhpY/lpq",
-   "xlTlOIoKkk6gZyt3oCZAUzLo+R0CfG6jEJy+pwwk6stjRVKp8DnP/mrJV8LaU8Au",
-   "fWxytSywY7XRxEjRHp2RplgVpQckuga3vbOcU0Y+FJNpkGT49DdH7PP7EEe/5J/t",
-   "McYkWUR1lvWDdlv/EzbO0GxqZ6FpPIA4MBO/krvPNwKBgQDwVqpWk48OkajwuMUL",
-   "YGFE1dTWk0axmbiZa3bxK+laqBTt0sfuaiKemgRqQSy5kJS7f9qC02Evc+RC7nnQ",
-   "BsSYeijNQiHwNcrjcbq6NGbCzYTcXu7FajM490tet7YF3XfGGTfuyA6GRYYpyNNT",
-   "qwBeVGNtP4iXBeT3DSHaR3n/awKBgQDS3RVh1whP4Cu6CEOheUgQuMxEWdEbnQQS",
-   "Ns8Le56t5Bed2PmfMGXjTLBed2PmfMGXjTLBzDXPYiemGnDnPwm5SErTE0emZUo4",
-   "N9sNRi3pnLTnZ4YSHrmQlW3UxkNpgph+VMxmUM+HlKw0lutfoeYIjzIWa2ZImLGw",
-   "GW7W8eJyFwKBgQCkOqR1OqnDy9cEf03uYzK0ZeXlpoflLmTNOXjyfg4ca8S5apJC",
-   "IXZ8qEQiE10rhFeN9GTthuHfGjM9ZVYJx8YpZzhgYjNswGVenEV7nfkmXmfOanSA",
-   "o/xSjfGLzL9uLJL+5BarbTs3l2SBQwDdKHm8+69hZMvCXz3Bb9DVJoh/9wKBgDTz",
-   "MXBdOAgeybwwYRNGSlNwpFKxnzHo7uHIA5vlkgYmlcucdaqE08ENO+3YPfPtRcf4",
-   "qQfD0kIn0l7uO1O2CGQuRG3q/cWnw1D1vrsJmXPlVwQY2fDo6D4nV+orUzhGhBaN",
-   "Irq6pjJsogWetEJSfFo/4xsAIzItrckDyfKN0QhHAoGBAN8pejg4WzSJjwrfTOgA",
-   "VnARRsrH8VVQ8FSpfWTsYnJe/z0K3hxF4OiWM0oIkZsXhj62yjiZDizWApjwlhcW",
-   "O02v3bvgkF+W/VSs/W1Rf0iMdp22KVEhL97fNWcfi/19QH+FRPeRzZpe2ujNcJyb",
-   "1GHhDwH33nMtylvbUkBN8pBU",
-   "-----END PRIVATE KEY-----"
-]
+# 2. CHAVE DE ACESSO (MÉTODO DE BLOCO ÚNICO)
+# IMPORTANTE: Cola a tua chave completa entre as aspas triplas abaixo.
+# Deve começar com -----BEGIN PRIVATE KEY----- e terminar com -----END PRIVATE KEY-----
+CHAVE_PRIVADA_BRUTA = """-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP
+gcN1MxhHMlXJsmswR16gqEtwNmj1s4mLqZhifwA8qu7M16i6q0IU0RnQVufHfqNu
+BPQh74sLQ1/xrvNZ8q/A4fO/QqJCAhlqtYo3djsVRfDI/LOoUiP+clQzN3M+1Qdx
+74Df9cW6ELv3t8WpcCzBgkLX/3+V91dayvp+dr9OGRMTrVqDNRH8AnWDXdWlvhox
+Ke7s3lFgk0JYU1ql6ffs0mdp9fJ6gB/MsKWcwZmbSIUGkrbiN5rfV9s8jANcNa1m
+kJ2tr3XsPsqpGcgOWF4pOrY0P++Xse4pgwppGa3WbBuPg4OzzK1LIgCuIvsGuRhs
+rwn3KZidAgMBAAECggEAB48kDKWPrPW5/BD57DM/xZQz92gzNJw9Dkhu3QGO33b0
+FRusQHKWCTsDtFm1zS717oKPiEeRQSpiRjS1N8iEWDFB7CIgk7ozINvf6Vk7hea7
+nroA5Z5DokvR5nLTz2UXj8NA2NXQtkD/MEgTdTnWy4SREOP5Db/FTbxSHhpY/lpq
+xlTlOIoKkk6gZyt3oCZAUzLo+R0CfG6jEJy+pwwk6stjRVKp8DnP/mrJV8LaU8Au
+fWxytSywY7XRxEjRHp2RplgVpQckuga3vbOcU0Y+FJNpkGT49DdH7PP7EEe/5J/t
+McYkWUR1lvWDdlv/EzbO0GxqZ6FpPIA4MBO/krvPNwKBgQDwVqpWk48OkajwuMUL
+YGFE1dTWk0axmbiZa3bxK+laqBTt0sfuaiKemgRqQSy5kJS7f9qC02Evc+RC7nnQ
+BsSYeijNQiHwNcrjcbq6NGbCzYTcXu7FajM490tet7YF3XfGGTfuyA6GRYYpyNNT
+qwBeVGNtP4iXBeT3DSHaR3n/awKBgQDS3RVh1whP4Cu6CEOheUgQuMxEWdEbnQQS
+Ns8Le56t5Bed2PmfMGXjTLBed2PmfMGXjTLBzDXPYiemGnDnPwm5SErTE0emZUo4
+N9sNRi3pnLTnZ4YSHrmQlW3UxkNpgph+VMxmUM+HlKw0lutfoeYIjzIWa2ZImLGw
+GW7W8eJyFwKBgQCkOqR1OqnDy9cEf03uYzK0ZeXlpoflLmTNOXjyfg4ca8S5apJC
+IXZ8qEQiE10rhFeN9GTthuHfGjM9ZVYJx8YpZzhgYjNswGVenEV7nfkmXmfOanSA
+o/xSjfGLzL9uLJL+5BarbTs3l2SBQwDdKHm8+69hZMvCXz3Bb9DVJoh/9wKBgDTz
+MXBdOAgeybwwYRNGSlNwpFKxnzHo7uHIA5vlkgYmlcucdaqE08ENO+3YPfPtRcf4
+qQfD0kIn0l7uO1O2CGQuRG3q/cWnw1D1vrsJmXPlVwQY2fDo6D4nV+orUzhGhBaN
+Irq6pjJsogWetEJSfFo/4xsAIzItrckDyfKN0QhHAoGBAN8pejg4WzSJjwrfTOgA
+VnARRsrH8VVQ8FSpfWTsYnJe/z0K3hxF4OiWM0oIkZsXhj62yjiZDizWApjwlhcW
+O02v3bvgkF+W/VSs/W1Rf0iMdp22KVEhL97fNWcfi/19QH+FRPeRzZpe2ujNcJyb
+1GHhDwH33nMtylvbUkBN8pBU
+-----END PRIVATE KEY-----"""
 
-# --- FUNÇÕES DE CALLBACK (AÇÃO E LIMPEZA) ---
+# --- FUNÇÕES DE SUPORTE ---
 def acao_salvar():
     v = st.session_state.valor_input
     if v > 0:
         data_br = st.session_state.data_input.strftime('%d/%m/%Y')
         desc_final = f"{st.session_state.desc_input} ({st.session_state.parcela_input})" if st.session_state.parcela_input != "1/1" else st.session_state.desc_input
         
-        # Colunas A até K (11 colunas)
+        # Estrutura de 11 colunas para a tua planilha
         nova_linha = [
             data_br, v, st.session_state.cat_input, st.session_state.banco_input, 
             desc_final, st.session_state.benef_input, "Pessoal", "", "", 
@@ -55,9 +54,9 @@ def acao_salvar():
         ]
         
         ws_lanc.append_row(nova_linha)
-        st.toast("✅ Lançamento realizado com sucesso!")
+        st.toast("✅ Lançamento gravado!")
         
-        # Reseta os campos no session_state
+        # Limpeza dos campos
         st.session_state.valor_input = 0.0
         st.session_state.benef_input = ""
         st.session_state.desc_input = ""
@@ -70,10 +69,8 @@ def acao_excluir():
 
 @st.cache_resource
 def conectar_google():
-    # TRATAMENTO CRÍTICO: Garante que a quebra de linha seja real (\n)
-    # e remove espaços invisíveis que invalidam a assinatura.
-    chave_unida = "\n".join([l.strip() for l in PK_LIST])
-    private_key = chave_unida.replace('\\n', '\n')
+    # Limpeza profunda da chave para evitar erro de assinatura
+    chave_limpa = CHAVE_PRIVADA_BRUTA.strip().replace('\\n', '\n')
     
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     creds_info = {
@@ -81,22 +78,20 @@ def conectar_google():
         "project_id": "financaspro-wilson",
         "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
         "token_uri": "https://oauth2.googleapis.com/token", 
-        "private_key": private_key
+        "private_key": chave_limpa
     }
     return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
 
-# --- PROCESSAMENTO ---
+# --- LÓGICA PRINCIPAL ---
 try:
     client = conectar_google()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
     
-    raw_data = ws_lanc.get_all_records()
-    df = pd.DataFrame(raw_data)
+    df = pd.DataFrame(ws_lanc.get_all_records())
     
     if not df.empty:
         df.columns = [str(c).strip() for c in df.columns]
-        # Identifica a coluna de Tipo (suporta variações de nome)
         col_tipo = next((c for c in df.columns if 'tipo' in c.lower()), 'Tipo')
         
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce').dt.date
@@ -105,11 +100,9 @@ try:
 
     st.title("🛡️ FinançasPro Wilson")
 
-    # Filtros e Métricas
     if not df.empty:
-        c_filt1, c_filt2 = st.columns([2, 2])
-        with c_filt1:
-            periodo = st.date_input("📅 Período:", value=(date(date.today().year, date.today().month, 1), date.today()), format="DD/MM/YYYY")
+        # Filtros de Data
+        periodo = st.date_input("📅 Período:", value=(date(date.today().year, date.today().month, 1), date.today()), format="DD/MM/YYYY")
         
         if isinstance(periodo, tuple) and len(periodo) == 2:
             d_ini, d_fim = periodo
@@ -118,39 +111,34 @@ try:
             rec = df_view[df_view[col_tipo].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
             desp = df_view[df_view[col_tipo].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
             
-            st.info(f"### 💰 Saldo do Período: R$ {rec - desp:,.2f}")
-            m1, m2 = st.columns(2)
-            m1.metric("Receitas", f"R$ {rec:,.2f}")
-            m2.metric("Despesas", f"R$ {desp:,.2f}")
+            st.info(f"### 💰 Saldo Atual: R$ {rec - desp:,.2f}")
 
     st.divider()
 
-    # Layout: Formulário e Histórico
-    c_form, c_hist = st.columns([1, 2.5])
+    # Layout de Formulário e Tabela
+    col_f, col_h = st.columns([1, 2.5])
     
-    with c_form:
-        st.subheader("📝 Novo Lançamento")
+    with col_f:
+        st.subheader("📝 Lançamento")
         st.radio("Tipo", ["Despesa", "Receita"], horizontal=True, key="tipo_input")
         st.date_input("Data", date.today(), format="DD/MM/YYYY", key="data_input")
         st.number_input("Valor (R$)", min_value=0.0, step=0.01, key="valor_input")
         st.text_input("Descrição", key="desc_input")
         st.text_input("Beneficiário", key="benef_input")
-        st.text_input("Parcelamento", value="1/1", key="parcela_input")
+        st.text_input("Parcela", value="1/1", key="parcela_input")
         st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Trabalho", "Outros"], key="cat_input")
-        st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"], key="banco_input")
+        st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco"], key="banco_input")
         st.selectbox("Status", ["Pago", "Pendente"], key="status_input")
-        st.button("🚀 Gravar Dados", use_container_width=True, on_click=acao_salvar)
+        st.button("🚀 Gravar", use_container_width=True, on_click=acao_salvar)
 
-    with c_hist:
-        st.subheader("📋 Histórico Recente")
+    with col_h:
+        st.subheader("📋 Histórico")
         if not df.empty:
-            st.dataframe(df_view[['ID', 'Data', 'Valor', col_tipo, 'Descrição', 'Status']].sort_values('ID', ascending=False), 
-                         use_container_width=True, hide_index=True)
+            st.dataframe(df_view[['ID', 'Data', 'Valor', col_tipo, 'Descrição', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
             
             st.divider()
-            st.subheader("🗑️ Excluir Linha")
-            st.number_input("ID do registro:", min_value=2, step=1, key="id_excluir_input")
-            st.button("🔴 Confirmar Exclusão", use_container_width=True, on_click=acao_excluir)
+            st.number_input("Remover ID:", min_value=2, step=1, key="id_excluir_input")
+            st.button("🔴 Excluir Registro", use_container_width=True, on_click=acao_excluir)
 
 except Exception as e:
     st.error(f"Erro detectado: {e}")
