@@ -50,13 +50,11 @@ st.title("🛡️ FinançasPro Wilson")
 
 try:
     client = conectar_google()
-    # Conecta à sua planilha pelo ID
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws = sh.get_worksheet(0)
     
     st.success("✅ Conexão estabelecida com sucesso!")
     
-    # Visualização de teste
     dados = ws.get_all_records()
     if dados:
         st.subheader("📋 Histórico Recente")
@@ -64,4 +62,4 @@ try:
 
 except Exception as e:
     st.error(f"Erro detectado: {e}")
-    st.info("💡 Wilson, tente abrir o arquivo .json no BLOCO DE NOTAS e copie a chave novamente.")
+    st.info("💡 Wilson, se persistir, tente abrir o arquivo .json no BLOCO DE NOTAS e copie a chave novamente.")
