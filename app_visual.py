@@ -5,10 +5,17 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 
-# 1. CONFIGURAÇÃO
+# 1. CONFIGURAÇÃO E ESTILO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
 
-# 2. CONEXÃO SEGURA
+st.markdown("""
+    <style>
+    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; }
+    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    </style>
+    """, unsafe_allow_html=True)
+
+# 2. CONEXÃO (Secrets)
 @st.cache_resource
 def conectar_google():
     try:
@@ -28,16 +35,14 @@ def conectar_google():
         st.error(f"Erro de conexão: {e}")
         st.stop()
 
-# Inicializa conexão
 client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 ws = sh.get_worksheet(0)
 
-# --- CONFIGURAÇÃO DE METAS (Exemplo) ---
-# Você pode ajustar esses valores conforme seu planejamento mensal
+# --- CONFIGURAÇÃO DE METAS ---
 META_GASTO_MENSAL = 3000.00 
 
-# --- BARRA LATERAL (Inalterada para manter o que já funciona) ---
+# --- BARRA LATERAL ---
 st.sidebar.header("📝 Novo Lançamento")
 categorias_dict = {
     "Receita": ["Salário", "Vendas", "Investimentos", "Presente", "Outros"],
@@ -46,14 +51,14 @@ categorias_dict = {
 tipo = st.sidebar.radio("Tipo:", ["Despesa", "Receita"], horizontal=True)
 
 with st.sidebar.form("form_lancamento", clear_on_submit=True):
-    data = st.date_input("Data", datetime.now())
-    valor = st.number_input("Valor (R$)", min_value=0.0, step=0.01)
-    categoria = st.selectbox("Categoria", categorias_dict[tipo])
-    descricao = st.text_input("Descrição")
+    data_input = st.date_input("Data", datetime.now())
+    valor_input = st.number_input("Valor (R$)", min_value=0.0, step=0.01)
+    categoria_input = st.selectbox("Categoria", categorias_dict[tipo])
+    descricao_input = st.text_input("Descrição")
     
     if st.form_submit_button("Salvar"):
-        if valor > 0:
-            ws.append_row([data.strftime("%d/%m/%Y"), valor, categoria, tipo, descricao])
+        if valor_input > 0:
+            ws.append_row([data_input.strftime("%d/%m/%Y"), valor_input, categoria_input, tipo, descricao_input])
             st.cache_data.clear()
             st.rerun()
 
@@ -63,54 +68,48 @@ st.title("🛡️ FinançasPro Wilson")
 try:
     lista_dados = ws.get_all_values()
     if len(lista_dados) > 1:
+        # Cria DataFrame e limpa nomes de colunas
         df = pd.DataFrame(lista_dados[1:], columns=lista_dados[0])
         df.columns = [c.strip() for c in df.columns]
+
+        # CONVERSÃO BLINDADA (Onde a mágica acontece)
+        # 1. Trata Valores (ignora textos errados na coluna numérica)
         df['Valor'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
+        
+        # 2. Trata Datas (ignora datas mal digitadas)
         df['Data'] = pd.to_datetime(df['Data'], format='%d/%m/%Y', errors='coerce')
-        df['Mês/Ano'] = df['Data'].dt.strftime('%m/%Y')
-
-        # Cálculos de Meta
-        resumo_mensal = df.groupby(['Mês/Ano', 'Tipo'])['Valor'].sum().unstack(fill_value=0).reset_index()
         
-        # 📊 GRÁFICO DE BARRAS COM META
-        st.subheader("📊 Acompanhamento de Metas de Gastos")
-        
-        fig = go.Figure()
+        # Remove linhas onde a data é inválida para não quebrar o gráfico
+        df_valid = df.dropna(subset=['Data']).copy()
+        df_valid['Mês/Ano'] = df_valid['Data'].dt.strftime('%m/%Y')
 
-        # Barra de Despesa Real
-        if 'Despesa' in resumo_mensal.columns:
-            fig.add_trace(go.Bar(
-                x=resumo_mensal['Mês/Ano'], 
-                y=resumo_mensal['Despesa'], 
-                name='Gasto Realizado',
-                marker_color='#dc3545'
+        # --- GRÁFICO DE BARRAS COM META ---
+        if not df_valid.empty:
+            st.subheader("📊 Acompanhamento de Metas e Gastos")
+            
+            resumo = df_valid.groupby(['Mês/Ano', 'Tipo'])['Valor'].sum().unstack(fill_value=0).reset_index()
+            
+            fig = go.Figure()
+            if 'Despesa' in resumo.columns:
+                fig.add_trace(go.Bar(x=resumo['Mês/Ano'], y=resumo['Despesa'], name='Gasto Real', marker_color='#dc3545'))
+            
+            fig.add_trace(go.Scatter(
+                x=resumo['Mês/Ano'], 
+                y=[META_GASTO_MENSAL] * len(resumo),
+                name='Meta', line=dict(color='#ffc107', width=3, dash='dash')
             ))
+            
+            fig.update_layout(barmode='group', height=350, margin=dict(l=0, r=0, t=30, b=0))
+            st.plotly_chart(fig, use_container_width=True)
 
-        # Linha ou Barra de Meta
-        fig.add_trace(go.Scatter(
-            x=resumo_mensal['Mês/Ano'], 
-            y=[META_GASTO_MENSAL] * len(resumo_mensal),
-            name='Meta de Gastos',
-            line=dict(color='#ffc107', width=4, dash='dash')
-        ))
-
-        fig.update_layout(
-            barmode='group', 
-            height=400, 
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-        # Alerta de Meta
-        if 'Despesa' in resumo_mensal.columns:
-            ultimo_gasto = resumo_mensal['Despesa'].iloc[-1]
-            if ultimo_gasto > META_GASTO_MENSAL:
-                st.warning(f"⚠️ Atenção: Você ultrapassou a meta de gastos este mês em R$ {ultimo_gasto - META_GASTO_MENSAL:,.2f}!")
-            else:
-                st.success(f"✅ Parabéns! Você está R$ {META_GASTO_MENSAL - ultimo_gasto:,.2f} abaixo da sua meta.")
-
+        # --- TABELA DE LANÇAMENTOS ---
+        st.markdown("---")
+        st.subheader("📋 Histórico")
+        # Mostra o DF original para você ver onde está o erro (aparecerá como NaT ou 0)
+        st.dataframe(df.tail(15), use_container_width=True)
+        
     else:
-        st.info("Aguardando lançamentos para gerar os gráficos...")
+        st.info("Planilha vazia. Use a barra lateral para lançar dados.")
 
 except Exception as e:
-    st.error(f"Erro ao processar dados: {e}")
+    st.error(f"Ocorreu um erro inesperado: {e}")
