@@ -7,7 +7,14 @@ from datetime import datetime
 # 1. CONFIGURAÇÃO E ESTILO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
 
-# 2. CONEXÃO (SEGURA)
+st.markdown("""
+    <style>
+    .saldo-container { background-color: #007bff; color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 25px; }
+    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; font-weight: bold; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# 2. CONEXÃO SEGURA
 @st.cache_resource
 def conectar_google():
     try:
@@ -22,21 +29,6 @@ def conectar_google():
         return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=scopes))
     except Exception as e:
         st.error(f"Erro de Conexão: {e}"); st.stop()
-
-# FUNÇÃO PARA EXIBIR TABELAS SEM DAR ERRO DE COLUNA
-def exibir_tabela_dinamica(aba_sheet, titulo):
-    dados = aba_sheet.get_all_values()
-    if len(dados) > 1:
-        df = pd.DataFrame(dados[1:], columns=dados[0])
-        # Organiza pela data (primeira coluna) se possível
-        try:
-            df['Data_Ref'] = pd.to_datetime(df.iloc[:, 0], dayfirst=True, errors='coerce')
-            df = df.sort_values(by='Data_Ref', ascending=False).drop(columns=['Data_Ref'])
-        except: pass
-        st.subheader(f"📋 {titulo}")
-        st.dataframe(df, use_container_width=True)
-    else:
-        st.info(f"Nenhum registro encontrado em {titulo}.")
 
 client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
@@ -59,8 +51,14 @@ if aba == "💰 Finanças":
         if st.form_submit_button("🚀 SALVAR FINANCEIRO"):
             ws_fin.append_row([f_dat.strftime("%d/%m/%Y"), str(f_val), f_cat, "Despesa", "Nubank", "Pago"])
             st.cache_data.clear(); st.rerun()
-            
-    exibir_tabela_dinamica(ws_fin, "Histórico Financeiro Geral")
+
+    dados = ws_fin.get_all_values()
+    if len(dados) > 1:
+        df = pd.DataFrame(dados[1:], columns=["Data", "Valor", "Categoria", "Tipo", "Banco", "Status"])
+        df['Valor'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
+        df['Data_Ref'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
+        df = df.sort_values(by='Data_Ref', ascending=False).drop(columns=['Data_Ref'])
+        st.dataframe(df.head(15), use_container_width=True)
 
 # ==========================================
 # ABA 2: MILO & BOLT
@@ -72,24 +70,28 @@ elif aba == "🐾 Milo & Bolt":
     with st.sidebar.form("f_pet", clear_on_submit=True):
         p_pet = st.selectbox("Quem?", ["Milo", "Bolt", "Os Dois"])
         p_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
-        p_tip = st.selectbox("Tipo", ["Ração", "Vacina", "Vermífugo", "Banho", "Saúde"])
-        p_val = st.number_input("Valor", min_value=0.0)
+        p_tip = st.selectbox("Tipo", ["Ração", "Vacina", "Banho", "Saúde"])
+        p_val = st.number_input("Valor (R$)", min_value=0.0)
         if st.form_submit_button("🦴 SALVAR NO PET"):
             dt_s = p_dat.strftime("%d/%m/%Y")
             ws_pets.append_row([dt_s, p_pet, p_tip, "Lançamento App", str(p_val)])
             sh.get_worksheet(0).append_row([dt_s, str(p_val), f"Pet: {p_tip}", "Despesa", "Nubank", "Pago"])
             st.cache_data.clear(); st.rerun()
-            
-    exibir_tabela_dinamica(ws_pets, "Histórico dos Meninos")
+
+    dados_p = ws_pets.get_all_values()
+    if len(dados_p) > 1:
+        df_p = pd.DataFrame(dados_p[1:])
+        # Forçamos as colunas caso a planilha tenha ordens diferentes
+        df_p.columns = ["Data", "Pet", "Tipo", "Detalhe", "Valor"][:len(df_p.columns)]
+        st.dataframe(df_p, use_container_width=True)
 
 # ==========================================
-# ABA 3: MEU VEÍCULO
+# ABA 3: MEU VEÍCULO (CORREÇÃO DE COLUNAS)
 # ==========================================
 else:
     ws_vei = sh.worksheet("Controle_Veiculo")
     st.title("🚗 Controle do Veículo")
     
-    # Calculadora Flex
     c1, c2 = st.columns([1, 2])
     with c1:
         st.subheader("⛽ Calculadora Flex")
@@ -107,12 +109,22 @@ else:
             v_tip = st.selectbox("Serviço", ["Abastecimento", "Troca de Óleo", "Manutenção", "Lavagem"])
             v_km = st.number_input("KM Atual", min_value=0)
             v_val = st.number_input("Valor Pago", min_value=0.0)
+            
             if st.form_submit_button("🚗 SALVAR NO VEÍCULO"):
                 dt_s = v_dat.strftime("%d/%m/%Y")
-                # ORDEM CORRETA: Data, Serviço, KM, Valor
+                # ORDEM PARA PLANILHA: Data, Serviço, KM, Valor
                 ws_vei.append_row([dt_s, v_tip, str(v_km), str(v_val)])
                 # LANÇA NO FINANCEIRO
                 sh.get_worksheet(0).append_row([dt_s, str(v_val), "Combustível", "Despesa", "Nubank", "Pago"])
                 st.cache_data.clear(); st.rerun()
-                
-    exibir_tabela_dinamica(ws_vei, "Histórico do Veículo")
+
+    dados_v = ws_vei.get_all_values()
+    if len(dados_v) > 1:
+        df_v = pd.DataFrame(dados_v[1:])
+        # ESTA LINHA É A CHAVE: Força o nome das colunas na ordem que salvamos
+        if df_v.shape[1] >= 4:
+            df_v.columns = ["Data", "Serviço", "KM Atual", "Valor"]
+            df_v['Data_Ref'] = pd.to_datetime(df_v['Data'], dayfirst=True, errors='coerce')
+            df_v = df_v.sort_values(by='Data_Ref', ascending=False).drop(columns=['Data_Ref'])
+            st.subheader("📋 Histórico do Veículo")
+            st.dataframe(df_v[["Data", "Serviço", "KM Atual", "Valor"]], use_container_width=True)
