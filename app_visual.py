@@ -5,14 +5,13 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 
-# 1. CONFIGURAÇÃO E ESTILO (Interface Unificada)
+# 1. CONFIGURAÇÃO E ESTILO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
 
 st.markdown("""
     <style>
     .saldo-container { background-color: #007bff; color: white; padding: 10px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .tag-card { background-color: #ffffff; padding: 12px; border-radius: 8px; border-left: 5px solid #ccc; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 10px; }
-    .alerta-box { padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; text-align: center; border: 2px solid; }
     .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; }
     </style>
     """, unsafe_allow_html=True)
@@ -37,15 +36,14 @@ client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 ws = sh.get_worksheet(0)
 
-# CONFIGURAÇÕES GERAIS
+# CONFIGURAÇÕES
 META_GASTO_CATEGORIA = 500.00
 ESTOQUE_TOTAL_RACAO = 15.0 
 
-# --- BARRA LATERAL: NAVEGAÇÃO ---
+# --- BARRA LATERAL ---
 st.sidebar.title("🎮 Painel Wilson")
-aba = st.sidebar.radio("Escolher Módulo:", ["💰 Finanças", "🐾 Controle dos Meninos", "🚗 Meu Veículo"])
+aba = st.sidebar.radio("Navegar para:", ["💰 Finanças", "🐾 Controle dos Meninos", "🚗 Meu Veículo"])
 
-# --- FORMULÁRIOS DA BARRA LATERAL CONFORME A ABA ---
 if aba == "💰 Finanças":
     st.sidebar.header("📝 Novo Lançamento")
     categorias_dict = {
@@ -59,8 +57,9 @@ if aba == "💰 Finanças":
         f_data = st.date_input("Data", datetime.now())
         f_valor = st.number_input("Valor (R$)", min_value=0.0)
         f_cat = st.selectbox("Categoria", categorias_dict[tipo])
+        f_desc = st.text_input("Descrição")
         if st.form_submit_button("Salvar Finanças"):
-            ws.append_row([f_data.strftime("%d/%m/%Y"), f_valor, f_cat, tipo, ""])
+            ws.append_row([f_data.strftime("%d/%m/%Y"), f_valor, f_cat, tipo, f_desc])
             st.cache_data.clear(); st.rerun()
 
 elif aba == "🐾 Controle dos Meninos":
@@ -73,7 +72,7 @@ elif aba == "🐾 Controle dos Meninos":
             st.cache_data.clear(); st.rerun()
 
 else:
-    st.sidebar.header("⚙️ Alertas e Posto")
+    st.sidebar.header("🚗 Configurações Veículo")
     proxima_troca = st.sidebar.number_input("KM Próxima Troca de Óleo", value=50000)
     with st.sidebar.form("form_v", clear_on_submit=True):
         v_data = st.date_input("Data", datetime.now())
@@ -84,7 +83,7 @@ else:
             ws.append_row([v_data.strftime("%d/%m/%Y"), v_preco, "Combustível", "Veículo", f"KM:{v_km}|L:{v_litros}"])
             st.cache_data.clear(); st.rerun()
 
-# --- PROCESSAMENTO DOS DADOS ---
+# --- PROCESSAMENTO ---
 try:
     dados_raw = ws.get_all_values()
     if len(dados_raw) > 1:
@@ -96,9 +95,9 @@ try:
         df_v = df.dropna(subset=['Data']).copy()
         df_v['Mês/Ano'] = df_v['Data'].dt.strftime('%m/%Y')
 
-        # --- EXIBIÇÃO: FINANÇAS ---
         if aba == "💰 Finanças":
             st.title("🛡️ FinançasPro Wilson")
+            
             rec = df_v[df_v['Tipo'] == 'Receita']['Valor'].sum()
             des = df_v[df_v['Tipo'] == 'Despesa']['Valor'].sum()
             ren = df_v[df_v['Tipo'] == 'Rendimento']['Valor'].sum()
@@ -113,8 +112,9 @@ try:
             c3.markdown(f"<div class='tag-card' style='border-left-color:#17a2b8;'><b>Rendimentos</b><br>R$ {ren:,.2f}</div>", unsafe_allow_html=True)
             c4.markdown(f"<div class='tag-card' style='border-left-color:#ffc107;'><b>Pendências</b><br>R$ {pen:,.2f}</div>", unsafe_allow_html=True)
 
-            res_mensal = df_v.groupby(['Mês/Ano', 'Tipo'])['Valor'].sum().unstack(fill_value=0).reset_index()
+            st.markdown("---")
             st.subheader("📊 Comparativo Mensal")
+            res_mensal = df_v.groupby(['Mês/Ano', 'Tipo'])['Valor'].sum().unstack(fill_value=0).reset_index()
             fig1 = go.Figure()
             if 'Receita' in res_mensal.columns: fig1.add_trace(go.Bar(x=res_mensal['Mês/Ano'], y=res_mensal['Receita'], name='Receita', marker_color='#28a745'))
             if 'Despesa' in res_mensal.columns: fig1.add_trace(go.Bar(x=res_mensal['Mês/Ano'], y=res_mensal['Despesa'], name='Despesa', marker_color='#dc3545'))
@@ -127,36 +127,30 @@ try:
             fig2.add_trace(go.Scatter(x=res_cat['Categoria'], y=[META_GASTO_CATEGORIA]*len(res_cat), name='Limite', line=dict(color='#ffc107', dash='dash')))
             st.plotly_chart(fig2, use_container_width=True)
 
-        # --- EXIBIÇÃO: MENINOS ---
+            # --- TABELA DE LANÇAMENTOS (AQUI ESTÁ A CORREÇÃO) ---
+            st.markdown("---")
+            st.subheader("📋 Últimos Lançamentos")
+            # Mostra apenas as colunas principais e os 15 mais recentes
+            st.dataframe(df[['Data', 'Valor', 'Categoria', 'Tipo', 'Descrição']].tail(15), use_container_width=True)
+
         elif aba == "🐾 Controle dos Meninos":
             st.title("🐾 Gestão de Ração - Milo & Cia")
             df_pet = df_v[df_v['Categoria'] == 'Consumo Ração'].copy()
             df_pet['G'] = df_pet['Descrição'].str.extract('(\d+)').astype(float).fillna(0)
             estoque = max(0, ESTOQUE_TOTAL_RACAO - (df_pet['G'].sum() / 1000))
-            
-            fig_p = go.Figure(go.Indicator(mode="gauge+number", value=estoque, title={'text': "Estoque (KG)"},
-                gauge={'axis': {'range': [0, 15]}, 'bar': {'color': "green" if estoque > 3 else "red"}}))
+            fig_p = go.Figure(go.Indicator(mode="gauge+number", value=estoque, title={'text': "Estoque (KG)"}, gauge={'axis': {'range': [0, 15]}, 'bar': {'color': "green"}}))
             st.plotly_chart(fig_p, use_container_width=True)
-            st.table(df_pet[['Data', 'Descrição']].tail(5))
+            st.table(df_pet[['Data', 'Descrição']].tail(10))
 
-        # --- EXIBIÇÃO: VEÍCULO ---
         else:
-            st.title("🚗 Performance e Manutenção")
+            st.title("🚗 Performance do Veículo")
             df_car = df_v[df_v['Categoria'] == 'Combustível'].copy()
             df_car['KM'] = df_car['Descrição'].str.extract('KM:(\d+)').astype(float)
             if not df_car.empty:
                 km_atual = df_car['KM'].max()
                 restante = proxima_troca - km_atual
-                if restante <= 500:
-                    st.error(f"⚠️ Alerta: Troca de óleo em {restante:.0f} KM!")
-                else:
-                    st.success(f"✅ Próxima troca em {restante:.0f} KM.")
-                
-                df_car['L'] = df_car['Descrição'].str.extract('L:([\d.]+)').astype(float)
-                if len(df_car) > 1:
-                    df_car = df_car.sort_values('Data')
-                    df_car['Consumo'] = df_car['KM'].diff() / df_car['L']
-                    st.plotly_chart(go.Figure(go.Scatter(x=df_car['Data'], y=df_car['Consumo'], mode='lines+markers', name='km/l')), use_container_width=True)
+                st.info(f"KM Atual: {km_atual} | Próxima Troca em: {restante:.0f} KM")
+                st.dataframe(df_car[['Data', 'Valor', 'Descrição']].tail(10), use_container_width=True)
 
 except Exception as e:
     st.error(f"Erro: {e}")
