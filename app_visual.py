@@ -7,30 +7,30 @@ import re
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. SUA CHAVE (Pode colar o bloco do JSON aqui sem medo)
+# 2. SUA CHAVE (Pode colar o JSON INTEIRO aqui, sem limpar nada)
+# O código abaixo vai "caçar" a chave no meio do texto e ignorar e-mails e nomes de campos.
 CHAVE_PRIVADA_BRUTA = """-----BEGIN PRIVATE KEY-----
 COLE_SUA_CHAVE_AQUI
 -----END PRIVATE KEY-----"""
 
-@st.cache_resource(show_spinner="Conectando ao Google...")
+@st.cache_resource(show_spinner="Validando segurança...")
 def conectar_google():
-    # --- LIMPEZA NÍVEL HARD ---
-    # Passo 1: Resolve os \n literais do JSON
-    texto = CHAVE_PRIVADA_BRUTA.strip().replace("\\n", "\n")
+    # --- OPERAÇÃO GARIMPO ---
+    # 1. Converte \n literais (comuns no JSON) em quebras reais
+    texto = CHAVE_PRIVADA_BRUTA.replace("\\n", "\n")
     
-    # Passo 2: EXTRAÇÃO CIRÚRGICA
-    # O regex busca APENAS o que começa com BEGIN e termina com END.
-    # Isso joga no lixo qualquer e-mail (@) ou underline (_) que veio junto.
+    # 2. FILTRO CIRÚRGICO: Extrai APENAS o que está entre BEGIN e END
+    # Isso joga fora o erro 95 (underline) e o erro 64 (@) instantaneamente
     match = re.search(r"-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----", texto)
     
     if not match:
-        st.error("🚨 Wilson, não encontrei os marcadores BEGIN e END. Verifique se copiou a chave toda.")
+        st.error("🚨 Marcadores não encontrados! Verifique se você colou do '-----BEGIN' até o 'END-----'.")
         st.stop()
     
-    chave_isolada = match.group(0)
+    chave_pura = match.group(0)
     
-    # Passo 3: Reconstroi linha por linha (remove espaços invisíveis)
-    linhas = [l.strip() for l in chave_isolada.split('\n') if l.strip()]
+    # 3. Limpa espaços fantasmas no início/fim de cada linha
+    linhas = [l.strip() for l in chave_pura.split('\n') if l.strip()]
     chave_final = "\n".join(linhas)
     
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -45,7 +45,7 @@ def conectar_google():
     
     return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
 
-# --- INTERFACE ---
+# --- INTERFACE PRINCIPAL ---
 st.title("🛡️ FinançasPro Wilson")
 
 try:
@@ -53,14 +53,13 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws = sh.get_worksheet(0)
     
-    st.success("✅ Wilson, conexão estabelecida! O sistema está pronto.")
+    st.success("✅ Conexão estabelecida com sucesso!")
     
-    # Mostra os últimos dados para confirmar
+    # Teste de leitura
     dados = ws.get_all_records()
     if dados:
-        st.subheader("📋 Últimos Lançamentos")
-        st.dataframe(pd.DataFrame(dados).tail(10), use_container_width=True)
+        st.dataframe(pd.DataFrame(dados).tail(5), use_container_width=True)
 
 except Exception as e:
-    st.error(f"Erro na conexão: {e}")
-    st.info("💡 Se o erro persistir, no menu do Streamlit (3 pontinhos), clique em 'Clear Cache' e dê F5.")
+    st.error(f"Erro detectado: {e}")
+    st.info("💡 Se o erro persistir, abra seu arquivo .json no BLOCO DE NOTAS e copie a chave novamente.")
