@@ -7,7 +7,7 @@ from datetime import datetime, date
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO
+# 2. CHAVE DE ACESSO (Mantenha sua chave real)
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -51,59 +51,70 @@ def conectar_google():
     }
     return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
 
-# --- FUNÇÃO DE SALVAMENTO ---
+# --- FUNÇÃO SALVAR (Zera campos e organiza colunas) ---
 def salvar_registro():
-    # 1. CAPTURAR OS VALORES EM VARIÁVEIS LOCAIS (Para não perder na limpeza)
-    valor_final = st.session_state.valor_input
-    
-    if valor_final > 0:
-        data_txt = st.session_state.data_input.strftime('%d/%m/%Y')
-        benef_txt = st.session_state.benef_input
+    # 1. Pegamos os dados AGORA (antes de limpar)
+    val = st.session_state.valor_input
+    if val > 0:
+        d_txt = st.session_state.data_input.strftime('%d/%m/%Y')
         desc_txt = st.session_state.desc_input
         parc_txt = st.session_state.parcela_input
+        benef_txt = st.session_state.benef_input
         cat_txt = st.session_state.cat_input
         banco_txt = st.session_state.banco_input
         status_txt = st.session_state.status_input
         tipo_txt = st.session_state.tipo_input
         
-        # Formata descrição com parcela
-        desc_com_parcela = f"{desc_txt} ({parc_txt})" if parc_txt != "1/1" else desc_txt
+        # Formata descrição
+        final_desc = f"{desc_txt} ({parc_txt})" if parc_txt != "1/1" else desc_txt
         
-        # 2. MONTAGEM DA LINHA (Colunas A até K)
-        # A=Data, B=Valor, C=Cat, D=Banco, E=Desc, F=Benef, G=Fixo, H=Aux, I=Aux, J=Status, K=Tipo
+        # 2. MAPA DE COLUNAS (Ajustado para sua planilha)
+        # A=Data | B=Valor | C=Cat | D=Banco | E=Desc | F=Benef | G=Conta | H=Obs1 | I=Obs2 | J=STATUS | K=TIPO
         nova_linha = [
-            data_txt, 
-            valor_final, 
-            cat_txt, 
-            banco_txt, 
-            desc_com_parcela, # Coluna E (Descrição)
-            benef_txt,        # Coluna F (Beneficiário)
-            "Pessoal",        # Coluna G (Fixo - Não mexe no Status)
-            0,                # Coluna H
-            "",               # Coluna I
-            status_txt,       # Coluna J (Aqui sai Pago ou Pendente)
-            tipo_txt          # Coluna K (Aqui sai Receita ou Despesa)
+            d_txt, val, cat_txt, banco_txt, final_desc, benef_txt, 
+            "Pessoal",  # Coluna G
+            "",         # Coluna H (Vazia para não empurrar o Status)
+            "",         # Coluna I (Vazia para não empurrar o Status)
+            status_txt, # Coluna J (Aqui cai o Pago/Pendente)
+            tipo_txt    # Coluna K (Aqui cai Receita/Despesa)
         ]
         
-        # 3. ENVIO
         ws_lanc.append_row(nova_linha)
         
-        # 4. LIMPEZA DOS CAMPOS
+        # 3. ZERAR CAMPOS
         st.session_state.valor_input = 0.0
         st.session_state.benef_input = ""
         st.session_state.desc_input = ""
         st.session_state.parcela_input = "1/1"
-        st.toast("✅ Lançamento concluído!")
+        st.toast("✅ Lançamento gravado!")
 
-# --- EXECUÇÃO ---
+# --- APP PRINCIPAL ---
 try:
     client = conectar_google()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
 
+    # Carregar dados para os gráficos (Parte de Cima)
+    data = ws_lanc.get_all_records()
+    df = pd.DataFrame(data)
+    
     st.title("🛡️ FinançasPro Wilson")
 
-    c_form, c_hist = st.columns([1, 2.5])
+    if not df.empty:
+        # Filtros e Métricas
+        df.columns = [str(c).strip() for c in df.columns]
+        df['Valor_num'] = pd.to_numeric(df['Valor'].astype(str).str.replace('R$', '').str.replace('.', '').str.replace(',', '.').str.strip(), errors='coerce').fillna(0)
+        
+        m1, m2 = st.columns(2)
+        with m1:
+            st.metric("Total Despesas", f"R$ {df[df['Tipo Movimentação'] == 'Despesa']['Valor_num'].sum():,.2f}")
+        with m2:
+            st.metric("Total Receitas", f"R$ {df[df['Tipo Movimentação'] == 'Receita']['Valor_num'].sum():,.2f}")
+
+    st.divider()
+
+    # Layout de formulário
+    c_form, c_table = st.columns([1, 2.5])
 
     with c_form:
         st.subheader("📝 Lançamento")
@@ -117,14 +128,12 @@ try:
         st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"], key="banco_input")
         st.selectbox("Status", ["Pago", "Pendente"], key="status_input")
         
-        # Chama a função que salva e limpa
         st.button("🚀 Salvar na Planilha", use_container_width=True, on_click=salvar_registro)
 
-    with c_hist:
+    with c_table:
         st.subheader("📋 Histórico")
-        dados = ws_lanc.get_all_records()
-        if dados:
-            st.dataframe(pd.DataFrame(dados).tail(15), use_container_width=True, hide_index=True)
+        if not df.empty:
+            st.dataframe(df.tail(15), use_container_width=True, hide_index=True)
 
 except Exception as e:
-    st.error(f"Erro: {e}")
+    st.error(f"Erro no sistema: {e}")
