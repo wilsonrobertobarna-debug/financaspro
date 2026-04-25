@@ -21,7 +21,7 @@ def conectar_google():
     texto = CHAVE_PRIVADA_BRUTA.strip().replace("\\n", "\n")
     
     # Passo 2: EXTRAÇÃO CIRÚRGICA
-    # Busca apenas o que está entre os marcadores oficiais.
+    # O regex busca apenas o que está entre os marcadores oficiais.
     # Isso ignora o erro 95 (underline) e o erro 64 (@) automaticamente.
     match = re.search(r"-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----", texto)
     
@@ -55,12 +55,14 @@ try:
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws = sh.get_worksheet(0)
     
-    st.success("✅ Conexão estabelecida!")
+    st.success("✅ Wilson, conexão estabelecida! O sistema está pronto.")
     
     # Visualização simples para teste
-    df = pd.DataFrame(ws.get_all_records())
-    if not df.empty:
-        st.dataframe(df.tail(10))
+    dados = ws.get_all_records()
+    if dados:
+        st.subheader("📋 Últimos Lançamentos")
+        st.dataframe(pd.DataFrame(dados).tail(10), use_container_width=True)
 
 except Exception as e:
     st.error(f"Erro detectado: {e}")
+    st.info("💡 Dica: Se o erro persistir, no menu do Streamlit (3 pontinhos), clique em 'Clear Cache' e dê F5.")
