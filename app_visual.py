@@ -42,8 +42,8 @@ aba = st.sidebar.radio("Navegar para:", ["💰 Finanças", "🐾 Controle dos Me
 if aba == "💰 Finanças":
     st.sidebar.header("📝 Novo Lançamento")
     
-    # Entradas explícitas
-    v_tipo = st.sidebar.selectbox("Classificação (Tipo):", ["Receita", "Despesa", "Rendimento", "Pendência"])
+    # Seleção de Tipo e Banco
+    v_tipo = st.sidebar.selectbox("Tipo (Receita/Despesa):", ["Receita", "Despesa", "Rendimento", "Pendência"])
     v_banco = st.sidebar.selectbox("Banco:", ["Nubank", "Itaú", "Bradesco", "Dinheiro", "Outros"])
     
     categorias_dict = {
@@ -57,14 +57,14 @@ if aba == "💰 Finanças":
         f_data = st.date_input("Data", datetime.now())
         f_valor = st.number_input("Valor (R$)", min_value=0.0, format="%.2f")
         f_cat = st.selectbox("Categoria", categorias_dict.get(v_tipo, ["Geral"]))
-        f_status = st.text_input("Status (Pago ou Pendente)", value="Pago") 
+        f_status = st.text_input("Status (Ex: Pago ou Pendente)", value="Pago") 
         
-        if st.form_submit_button("🚀 SALVAR AGORA"):
+        if st.form_submit_button("🚀 SALVAR NO FINANÇASPRO"):
             try:
-                # ENVIO: Data | Valor | Categoria | Tipo | Banco | Descrição
+                # ENVIO PARA PLANILHA: Data | Valor | Categoria | Tipo | Banco | Descrição
                 ws.append_row([f_data.strftime("%d/%m/%Y"), f_valor, f_cat, v_tipo, v_banco, f_status])
                 st.cache_data.clear()
-                st.sidebar.success("✅ Registrado!")
+                st.sidebar.success("✅ Salvo com sucesso!")
                 st.rerun()
             except Exception as e:
                 st.error(f"Erro ao salvar: {e}")
@@ -74,10 +74,9 @@ try:
     dados_raw = ws.get_all_values()
     if len(dados_raw) > 1:
         df = pd.DataFrame(dados_raw[1:], columns=dados_raw[0])
-        # Limpa nomes de colunas
         df.columns = [c.strip() for c in df.columns]
         
-        # Converte valores
+        # Conversão de Dados
         df['Valor'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
         df['Data'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
         df_v = df.dropna(subset=['Data']).copy()
@@ -85,39 +84,34 @@ try:
         if aba == "💰 Finanças":
             st.title("🛡️ FinançasPro Wilson")
             
-            # Saldo
+            # Resumo de Saldo
             rec = df_v[df_v['Tipo'].isin(['Receita', 'Rendimento'])]['Valor'].sum()
             des = df_v[df_v['Tipo'] == 'Despesa']['Valor'].sum()
             st.markdown(f'<div class="saldo-container"><span>SALDO ATUAL</span><span>R$ {rec - des:,.2f}</span></div>', unsafe_allow_html=True)
 
-            # TABELA
+            # --- TABELA DE ÚLTIMOS LANÇAMENTOS ---
             st.subheader("📋 Últimos Lançamentos")
             df_display = df_v.copy()
             df_display['Data'] = df_display['Data'].dt.strftime('%d/%m/%Y')
             
-            # Mapeamento rígido das colunas para garantir que não saia nada branco
-            # Usamos o .get() para evitar erro caso a coluna mude de nome na planilha
-            colunas_finais = []
-            for col in ['Data', 'Valor', 'Categoria', 'Tipo', 'Banco', 'Descrição']:
-                if col in df_display.columns:
-                    colunas_finais.append(col)
+            # Selecionamos exatamente o que está na planilha
+            colunas_selecionadas = ['Data', 'Valor', 'Categoria', 'Tipo', 'Banco', 'Descrição']
+            df_final = df_display[colunas_selecionadas].tail(15)
             
-            df_tabela = df_display[colunas_finais].tail(15)
-            # Renomeia "Descrição" para "Status" na tela
-            if 'Descrição' in df_tabela.columns:
-                df_tabela = df_tabela.rename(columns={'Descrição': 'Status'})
-                
-            st.dataframe(df_tabela.iloc[::-1], use_container_width=True)
+            # Renomeamos APENAS para a visualização no app ficar igual ao que você pediu
+            df_final.columns = ['Data', 'Valor', 'Categoria', 'Tipo', 'Banco', 'Status']
+            
+            st.dataframe(df_final.iloc[::-1], use_container_width=True)
 
-            # GRÁFICO MENSAL
+            # --- GRÁFICO MENSAL ---
             st.markdown("---")
             st.subheader("📊 Comparativo Mensal")
             df_v['Mês/Ano'] = df_v['Data'].dt.strftime('%m/%Y')
             res_mensal = df_v.groupby(['Mês/Ano', 'Tipo'])['Valor'].sum().unstack(fill_value=0).reset_index()
-            fig1 = go.Figure()
-            if 'Receita' in res_mensal.columns: fig1.add_trace(go.Bar(x=res_mensal['Mês/Ano'], y=res_mensal['Receita'], name='Receita', marker_color='#28a745'))
+            fig = go.Figure()
+            if 'Receita' in res_mensal.columns: fig.add_trace(go.Bar(x=res_mensal['Mês/Ano'], y=res_mensal['Receita'], name='Receita', marker_color='#28a745'))
             if 'Despesa' in res_mensal.columns: fig1.add_trace(go.Bar(x=res_mensal['Mês/Ano'], y=res_mensal['Despesa'], name='Despesa', marker_color='#dc3545'))
-            st.plotly_chart(fig1, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True)
 
 except Exception as e:
-    st.error(f"Erro técnico: {e}")
+    st.error(f"Erro ao processar dados: {e}")
