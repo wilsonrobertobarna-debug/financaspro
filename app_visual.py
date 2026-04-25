@@ -52,7 +52,7 @@ if aba == "💰 Finanças":
         "Rendimento": ["Dividendos", "Juros"],
         "Pendência": ["Boleto", "Dívida"]
     }
-    tipo = st.sidebar.selectbox("Tipo:", list(categorias_dict.keys()))
+    tipo = st.sidebar.selectbox("Status (Tipo):", list(categorias_dict.keys()))
     with st.sidebar.form("form_f", clear_on_submit=True):
         f_data = st.date_input("Data", datetime.now())
         f_valor = st.number_input("Valor (R$)", min_value=0.0)
@@ -89,8 +89,13 @@ try:
     if len(dados_raw) > 1:
         df = pd.DataFrame(dados_raw[1:], columns=dados_raw[0])
         df.columns = [c.strip() for c in df.columns]
+        
+        # Ajuste de Valor
         df['Valor'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
-        df['Data'] = pd.to_datetime(df['Data'], format='%d/%m/%Y', errors='coerce')
+        
+        # Ajuste de Data para formato Brasil e remoção de horas
+        df['Data'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
+        
         df['Tipo'] = df['Tipo'].astype(str).str.strip()
         df_v = df.dropna(subset=['Data']).copy()
         df_v['Mês/Ano'] = df_v['Data'].dt.strftime('%m/%Y')
@@ -120,19 +125,22 @@ try:
             if 'Despesa' in res_mensal.columns: fig1.add_trace(go.Bar(x=res_mensal['Mês/Ano'], y=res_mensal['Despesa'], name='Despesa', marker_color='#dc3545'))
             st.plotly_chart(fig1, use_container_width=True)
 
-            st.subheader("🎯 Metas por Categoria")
-            res_cat = df_v[df_v['Tipo'] == 'Despesa'].groupby('Categoria')['Valor'].sum().reset_index()
-            fig2 = go.Figure()
-            fig2.add_trace(go.Bar(x=res_cat['Categoria'], y=res_cat['Valor'], marker_color='#007bff'))
-            fig2.add_trace(go.Scatter(x=res_cat['Categoria'], y=[META_GASTO_CATEGORIA]*len(res_cat), name='Limite', line=dict(color='#ffc107', dash='dash')))
-            st.plotly_chart(fig2, use_container_width=True)
-
-            # --- TABELA DE LANÇAMENTOS (AQUI ESTÁ A CORREÇÃO) ---
+            # --- TABELA DE LANÇAMENTOS CORRIGIDA ---
             st.markdown("---")
             st.subheader("📋 Últimos Lançamentos")
-            # Mostra apenas as colunas principais e os 15 mais recentes
-            st.dataframe(df[['Data', 'Valor', 'Categoria', 'Tipo', 'Descrição']].tail(15), use_container_width=True)
+            
+            # Criamos uma cópia para exibição formatada
+            df_display = df_v.copy()
+            # Formata a data para padrão Brasileiro (dd/mm/yyyy)
+            df_display['Data'] = df_display['Data'].dt.strftime('%d/%m/%Y')
+            # Renomeia a coluna Tipo para ficar mais intuitivo
+            df_display = df_display.rename(columns={'Tipo': 'Status (Pago/Pendente)'})
+            
+            # Mostra as colunas solicitadas
+            colunas_visiveis = ['Data', 'Valor', 'Categoria', 'Status (Pago/Pendente)', 'Descrição']
+            st.dataframe(df_display[colunas_visiveis].tail(15), use_container_width=True)
 
+        # ... (Restante do código de Pets e Veículo permanece igual)
         elif aba == "🐾 Controle dos Meninos":
             st.title("🐾 Gestão de Ração - Milo & Cia")
             df_pet = df_v[df_v['Categoria'] == 'Consumo Ração'].copy()
@@ -140,7 +148,10 @@ try:
             estoque = max(0, ESTOQUE_TOTAL_RACAO - (df_pet['G'].sum() / 1000))
             fig_p = go.Figure(go.Indicator(mode="gauge+number", value=estoque, title={'text': "Estoque (KG)"}, gauge={'axis': {'range': [0, 15]}, 'bar': {'color': "green"}}))
             st.plotly_chart(fig_p, use_container_width=True)
-            st.table(df_pet[['Data', 'Descrição']].tail(10))
+            
+            df_pet_disp = df_pet.copy()
+            df_pet_disp['Data'] = df_pet_disp['Data'].dt.strftime('%d/%m/%Y')
+            st.table(df_pet_disp[['Data', 'Descrição']].tail(10))
 
         else:
             st.title("🚗 Performance do Veículo")
@@ -150,7 +161,10 @@ try:
                 km_atual = df_car['KM'].max()
                 restante = proxima_troca - km_atual
                 st.info(f"KM Atual: {km_atual} | Próxima Troca em: {restante:.0f} KM")
-                st.dataframe(df_car[['Data', 'Valor', 'Descrição']].tail(10), use_container_width=True)
+                
+                df_car_disp = df_car.copy()
+                df_car_disp['Data'] = df_car_disp['Data'].dt.strftime('%d/%m/%Y')
+                st.dataframe(df_car_disp[['Data', 'Valor', 'Descrição']].tail(10), use_container_width=True)
 
 except Exception as e:
     st.error(f"Erro: {e}")
