@@ -53,7 +53,7 @@ st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
 # ==========================================
-# ABA 1: FINANÇAS (DASHBOARD COMPLETO)
+# ABA 1: FINANÇAS (DASHBOARD COM TRAVA)
 # ==========================================
 if aba == "💰 Finanças":
     ws = sh.get_worksheet(0)
@@ -64,12 +64,18 @@ if aba == "💰 Finanças":
         df = pd.DataFrame(dados[1:], columns=dados[0])
         df['Valor_Num'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
         
-        # CÁLCULOS DOS CARDS
-        rec = df[df['Tipo'] == 'Receita']['Valor_Num'].sum()
-        desp = df[df['Tipo'] == 'Despesa']['Valor_Num'].sum()
+        # --- TRAVA DE SEGURANÇA PARA COLUNAS ---
+        # Identifica como as colunas estão nomeadas na sua planilha
+        c_tipo = 'Tipo' if 'Tipo' in df.columns else (df.columns[3] if len(df.columns) > 3 else None)
+        c_status = 'Status' if 'Status' in df.columns else ('Descrição' if 'Descrição' in df.columns else None)
+        c_cat = 'Categoria' if 'Categoria' in df.columns else (df.columns[2] if len(df.columns) > 2 else None)
+
+        # CÁLCULOS DOS CARDS (SÓ FAZ SE A COLUNA EXISTIR)
+        rec = df[df[c_tipo] == 'Receita']['Valor_Num'].sum() if c_tipo else 0
+        desp = df[df[c_tipo] == 'Despesa']['Valor_Num'].sum() if c_tipo else 0
         saldo = rec - desp
-        rend = df[df['Categoria'] == 'Rendimento']['Valor_Num'].sum()
-        pend = df[df['Status'] == 'Pendente']['Valor_Num'].sum()
+        rend = df[df[c_cat] == 'Rendimento']['Valor_Num'].sum() if c_cat else 0
+        pend = df[df[c_status] == 'Pendente']['Valor_Num'].sum() if c_status else 0
         
         # EXIBIÇÃO DOS CARDS
         c1, c2, c3, c4, c5 = st.columns(5)
@@ -88,12 +94,13 @@ if aba == "💰 Finanças":
         g1, g2 = st.columns(2)
         with g1:
             st.subheader("📊 Gastos por Categoria")
-            gastos_cat = df[df['Tipo'] == 'Despesa'].groupby('Categoria')['Valor_Num'].sum()
-            st.bar_chart(gastos_cat)
+            if c_tipo:
+                gastos_cat = df[df[c_tipo] == 'Despesa'].groupby(c_cat)['Valor_Num'].sum() if c_cat else pd.Series()
+                st.bar_chart(gastos_cat)
         with g2:
             st.subheader("🥧 Distribuição")
-            st.write("Visão detalhada de despesas:")
-            st.table(gastos_cat.sort_values(ascending=False))
+            if not gastos_cat.empty:
+                st.table(gastos_cat.sort_values(ascending=False))
 
     # FORMULÁRIO LATERAL
     with st.sidebar.form("f_fin", clear_on_submit=True):
@@ -103,6 +110,7 @@ if aba == "💰 Finanças":
         f_cat = st.selectbox("Categoria", ["Mercado", "Shopee", "AserNet", "Skyfit", "Milo/Bolt", "Combustível", "Rendimento", "Outros"])
         f_stat = st.selectbox("Status", ["Pago", "Pendente"])
         if st.form_submit_button("🚀 SALVAR FINANCEIRO"):
+            # Aqui ele salva seguindo a ordem das colunas da sua planilha atual
             ws.append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, f_tip, "Nubank", f_stat])
             st.cache_data.clear(); st.rerun()
             
