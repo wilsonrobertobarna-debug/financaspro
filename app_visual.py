@@ -8,7 +8,7 @@ from datetime import datetime, date
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
 # 2. CHAVE DE ACESSO
-# IMPORTANTE: Mantenha as aspas e as vírgulas em cada linha da sua chave real.
+# Certifique-se de que cada linha termina com vírgula (exceto a última)
 PK_LIST = [
    "-----BEGIN PRIVATE KEY-----",
    "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -40,15 +40,14 @@ PK_LIST = [
    "-----END PRIVATE KEY-----"
 ]
 
-# --- FUNÇÕES DE CALLBACK ---
+# --- FUNÇÕES DE CALLBACK (AÇÃO E LIMPEZA) ---
 def acao_salvar():
     v = st.session_state.valor_input
     if v > 0:
         data_br = st.session_state.data_input.strftime('%d/%m/%Y')
         desc_final = f"{st.session_state.desc_input} ({st.session_state.parcela_input})" if st.session_state.parcela_input != "1/1" else st.session_state.desc_input
         
-        # Ordem para sua planilha (A até K)
-        # J: Status | K: Tipo
+        # Colunas A até K (11 colunas)
         nova_linha = [
             data_br, v, st.session_state.cat_input, st.session_state.banco_input, 
             desc_final, st.session_state.benef_input, "Pessoal", "", "", 
@@ -56,9 +55,9 @@ def acao_salvar():
         ]
         
         ws_lanc.append_row(nova_linha)
-        st.toast("✅ Lançamento enviado!")
+        st.toast("✅ Lançamento realizado com sucesso!")
         
-        # Limpeza segura dos campos
+        # Reseta os campos no session_state
         st.session_state.valor_input = 0.0
         st.session_state.benef_input = ""
         st.session_state.desc_input = ""
@@ -71,10 +70,10 @@ def acao_excluir():
 
 @st.cache_resource
 def conectar_google():
-    # A MUDANÇA CRÍTICA ESTÁ AQUI:
-    # 1. strip() limpa espaços no fim das linhas
-    # 2. replace converte os textos '\n' em quebras reais que o Google entende
-    chave_limpa = "\n".join([l.strip() for l in PK_LIST]).replace('\\n', '\n')
+    # TRATAMENTO CRÍTICO: Garante que a quebra de linha seja real (\n)
+    # e remove espaços invisíveis que invalidam a assinatura.
+    chave_unida = "\n".join([l.strip() for l in PK_LIST])
+    private_key = chave_unida.replace('\\n', '\n')
     
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     creds_info = {
@@ -82,7 +81,7 @@ def conectar_google():
         "project_id": "financaspro-wilson",
         "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
         "token_uri": "https://oauth2.googleapis.com/token", 
-        "private_key": chave_limpa
+        "private_key": private_key
     }
     return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
 
@@ -95,11 +94,10 @@ try:
     raw_data = ws_lanc.get_all_records()
     df = pd.DataFrame(raw_data)
     
-    # Tratamento básico dos dados lidos
     if not df.empty:
         df.columns = [str(c).strip() for c in df.columns]
-        # Ajuste o nome das colunas conforme sua planilha real
-        col_tipo = 'Tipo' if 'Tipo' in df.columns else 'Tipo Movimentação'
+        # Identifica a coluna de Tipo (suporta variações de nome)
+        col_tipo = next((c for c in df.columns if 'tipo' in c.lower()), 'Tipo')
         
         df['Data_dt'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce').dt.date
         df['Valor_num'] = pd.to_numeric(df['Valor'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip(), errors='coerce').fillna(0)
@@ -107,46 +105,52 @@ try:
 
     st.title("🛡️ FinançasPro Wilson")
 
-    # Filtros e Saldo
+    # Filtros e Métricas
     if not df.empty:
-        c1, c2 = st.columns(2)
-        with c1:
-            periodo = st.date_input("📅 Filtro:", value=(date(date.today().year, date.today().month, 1), date.today()), format="DD/MM/YYYY")
+        c_filt1, c_filt2 = st.columns([2, 2])
+        with c_filt1:
+            periodo = st.date_input("📅 Período:", value=(date(date.today().year, date.today().month, 1), date.today()), format="DD/MM/YYYY")
         
         if isinstance(periodo, tuple) and len(periodo) == 2:
             d_ini, d_fim = periodo
             df_view = df[(df['Data_dt'] >= d_ini) & (df['Data_dt'] <= d_fim)].copy()
             
-            # Cálculo de saldo (ajustado para o nome da sua coluna de Tipo)
             rec = df_view[df_view[col_tipo].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
             desp = df_view[df_view[col_tipo].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
-            st.info(f"### 💰 Saldo: R$ {rec - desp:,.2f}")
+            
+            st.info(f"### 💰 Saldo do Período: R$ {rec - desp:,.2f}")
+            m1, m2 = st.columns(2)
+            m1.metric("Receitas", f"R$ {rec:,.2f}")
+            m2.metric("Despesas", f"R$ {desp:,.2f}")
 
     st.divider()
 
-    # Formulário e Tabela
-    col_f, col_h = st.columns([1, 2.5])
+    # Layout: Formulário e Histórico
+    c_form, c_hist = st.columns([1, 2.5])
     
-    with col_f:
-        st.subheader("📝 Lançamento")
+    with c_form:
+        st.subheader("📝 Novo Lançamento")
         st.radio("Tipo", ["Despesa", "Receita"], horizontal=True, key="tipo_input")
         st.date_input("Data", date.today(), format="DD/MM/YYYY", key="data_input")
         st.number_input("Valor (R$)", min_value=0.0, step=0.01, key="valor_input")
         st.text_input("Descrição", key="desc_input")
         st.text_input("Beneficiário", key="benef_input")
-        st.text_input("Parcela", value="1/1", key="parcela_input")
+        st.text_input("Parcelamento", value="1/1", key="parcela_input")
         st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Trabalho", "Outros"], key="cat_input")
-        st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco"], key="banco_input")
+        st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"], key="banco_input")
         st.selectbox("Status", ["Pago", "Pendente"], key="status_input")
-        st.button("🚀 Gravar", use_container_width=True, on_click=acao_salvar)
+        st.button("🚀 Gravar Dados", use_container_width=True, on_click=acao_salvar)
 
-    with col_h:
-        st.subheader("📋 Histórico")
+    with c_hist:
+        st.subheader("📋 Histórico Recente")
         if not df.empty:
-            st.dataframe(df_view[['ID', 'Data', 'Valor', col_tipo, 'Descrição', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
+            st.dataframe(df_view[['ID', 'Data', 'Valor', col_tipo, 'Descrição', 'Status']].sort_values('ID', ascending=False), 
+                         use_container_width=True, hide_index=True)
+            
             st.divider()
-            st.number_input("ID para remover:", min_value=2, step=1, key="id_excluir_input")
-            st.button("🔴 Excluir", use_container_width=True, on_click=acao_excluir)
+            st.subheader("🗑️ Excluir Linha")
+            st.number_input("ID do registro:", min_value=2, step=1, key="id_excluir_input")
+            st.button("🔴 Confirmar Exclusão", use_container_width=True, on_click=acao_excluir)
 
 except Exception as e:
     st.error(f"Erro detectado: {e}")
