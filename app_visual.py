@@ -9,12 +9,12 @@ st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="�
 
 # 2. CHAVE DE ACESSO
 # DICA: Wilson, pode colar o bloco do JSON aqui sem medo. 
-# O código abaixo vai "garimpar" a chave real e jogar o lixo fora.
+# O código abaixo vai "garimpar" a chave real e jogar o lixo (e-mails, underlines) fora.
 CHAVE_PRIVADA_BRUTA = """-----BEGIN PRIVATE KEY-----
 COLE_SUA_CHAVE_AQUI
 -----END PRIVATE KEY-----"""
 
-@st.cache_resource(show_spinner="Validando credenciais no Google...")
+@st.cache_resource(show_spinner="Conectando ao Google...")
 def conectar_google():
     # --- OPERAÇÃO LIMPEZA TOTAL ---
     # Passo 1: Resolve os \n que o JSON coloca no texto
@@ -26,7 +26,7 @@ def conectar_google():
     match = re.search(r"-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----", texto)
     
     if not match:
-        st.error("🚨 Wilson, não encontrei os marcadores BEGIN/END. Verifique se copiou a chave toda.")
+        st.error("🚨 Marcadores BEGIN/END não encontrados! Verifique se copiou a chave toda.")
         st.stop()
     
     chave_isolada = match.group(0)
@@ -52,18 +52,15 @@ st.title("🛡️ FinançasPro Wilson")
 
 try:
     client = conectar_google()
-    # Conecta à sua planilha
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws = sh.get_worksheet(0)
     
-    st.success("🔥 Wilson, a conexão foi estabelecida! O sistema está pronto.")
+    st.success("✅ Conexão estabelecida!")
     
-    # Busca os dados para mostrar que funcionou
-    dados = ws.get_all_records()
-    if dados:
-        st.subheader("📋 Últimos Registros")
-        st.dataframe(pd.DataFrame(dados).tail(10), use_container_width=True)
+    # Visualização simples para teste
+    df = pd.DataFrame(ws.get_all_records())
+    if not df.empty:
+        st.dataframe(df.tail(10))
 
 except Exception as e:
-    st.error(f"Erro na conexão: {e}")
-    st.info("💡 Se o erro persistir, no menu do Streamlit (3 pontinhos), clique em 'Clear Cache' e dê F5.")
+    st.error(f"Erro detectado: {e}")
