@@ -2,33 +2,35 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
-from datetime import datetime, date
 import re
 
-# 1. CONFIGURAÇÃO
-st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
+# 1. CONFIGURAÇÃO BÁSICA
+st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
-# 2. SUA CHAVE (COLE EXATAMENTE O QUE ESTÁ ENTRE AS ASPAS NO JSON)
+# 2. COLE SUA CHAVE AQUI (Pode vir com "sujeira", o código vai limpar)
 CHAVE_PRIVADA_BRUTA = """-----BEGIN PRIVATE KEY-----
-COLE_SUA_CHAVE_AQUI
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP
+... COLE O RESTO DA SUA CHAVE AQUI ...
 -----END PRIVATE KEY-----"""
 
 @st.cache_resource
 def conectar_google():
-    # --- LIMPEZA RADICAL ---
-    # 1. Resolve o problema do \n literal
-    passo1 = CHAVE_PRIVADA_BRUTA.strip().replace("\\n", "\n")
+    # --- OPERAÇÃO LIMPEZA TOTAL ---
+    # 1. Resolve o problema do \n literal que vem do JSON
+    raw_key = CHAVE_PRIVADA_BRUTA.strip().replace("\\n", "\n")
     
-    # 2. Extrai APENAS o que está entre os marcadores BEGIN e END
-    # Isso joga fora qualquer e-mail (@) ou ponto (.) que tenha vindo junto
-    match = re.search(r"-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----", passo1)
-    if not match:
-        raise ValueError("Marcadores BEGIN/END não encontrados na chave!")
+    # 2. FILTRO ANTI-ERRO 95 (Underline) e 64 (@): 
+    # Extrai APENAS o bloco que começa com BEGIN e termina com END.
+    match = re.search(r"-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----", raw_key)
     
-    chave_isolada = match.group(0)
-    
-    # 3. Limpa espaços invisíveis de cada linha
-    linhas = [l.strip() for l in chave_isolada.split('\n') if l.strip()]
+    if match:
+        key_processada = match.group(0)
+    else:
+        # Se não achou os marcadores, tenta usar a string limpa
+        key_processada = raw_key
+
+    # 3. Reconstroi a chave linha por linha para garantir pureza
+    linhas = [l.strip() for l in key_processada.split('\n') if l.strip()]
     chave_final = "\n".join(linhas)
     
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -43,53 +45,17 @@ def conectar_google():
     
     return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
 
-# --- FUNÇÕES DE INTERAÇÃO ---
-def acao_salvar():
-    v = st.session_state.valor_input
-    if v > 0:
-        data_br = st.session_state.data_input.strftime('%d/%m/%Y')
-        desc_final = f"{st.session_state.desc_input} ({st.session_state.parcela_input})" if st.session_state.parcela_input != "1/1" else st.session_state.desc_input
-        
-        nova_linha = [
-            data_br, v, st.session_state.cat_input, st.session_state.banco_input, 
-            desc_final, st.session_state.benef_input, "Pessoal", "", "", 
-            st.session_state.status_input, st.session_state.tipo_input
-        ]
-        
-        ws_lanc.append_row(nova_linha)
-        st.toast("✅ Gravado com sucesso!")
-        st.session_state.valor_input = 0.0
-        st.session_state.desc_input = ""
-
-# --- INTERFACE PRINCIPAL ---
+# --- INTERFACE ---
 try:
     client = conectar_google()
+    # Substitua pelo ID da sua planilha se necessário
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-    ws_lanc = sh.get_worksheet(0)
+    st.success("✅ Wilson, o FinançasPro está ONLINE!")
     
-    df = pd.DataFrame(ws_lanc.get_all_records())
-    
-    st.title("🛡️ FinançasPro Wilson")
-
-    col_f, col_h = st.columns([1, 2.5])
-    
-    with col_f:
-        st.subheader("📝 Lançamento")
-        st.radio("Tipo", ["Despesa", "Receita"], horizontal=True, key="tipo_input")
-        st.date_input("Data", date.today(), format="DD/MM/YYYY", key="data_input")
-        st.number_input("Valor (R$)", min_value=0.0, step=0.01, key="valor_input")
-        st.text_input("Descrição", key="desc_input")
-        st.text_input("Beneficiário", key="benef_input")
-        st.text_input("Parcela", value="1/1", key="parcela_input")
-        st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Trabalho", "Outros"], key="cat_input")
-        st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco"], key="banco_input")
-        st.selectbox("Status", ["Pago", "Pendente"], key="status_input")
-        st.button("🚀 Gravar Dados", use_container_width=True, on_click=acao_salvar)
-
-    with col_h:
-        st.subheader("📋 Histórico")
-        if not df.empty:
-            st.dataframe(df.tail(10), use_container_width=True, hide_index=True)
+    # Resto do seu código de carregar dados...
+    df = pd.DataFrame(sh.get_worksheet(0).get_all_records())
+    st.dataframe(df.tail(10))
 
 except Exception as e:
     st.error(f"Erro na conexão: {e}")
+    st.info("Dica: Certifique-se de que colou a chave completa, começando em -----BEGIN e terminando em -----END")
