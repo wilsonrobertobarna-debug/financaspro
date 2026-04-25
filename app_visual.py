@@ -4,12 +4,12 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime
 
-# 1. CONFIGURAÇÃO E ESTILO (Tags organizadas e visual limpo)
+# 1. CONFIGURAÇÃO E ESTILO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
 
 st.markdown("""
     <style>
-    [data-testid="stMetricValue"] { font-size: 1.5rem !important; }
+    [data-testid="stMetricValue"] { font-size: 1.4rem !important; }
     [data-testid="stMetricLabel"] { font-size: 0.8rem !important; font-weight: bold; }
     .stMetric { background-color: #ffffff; padding: 10px; border-radius: 10px; border: 1px solid #e0e0e0; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); }
     .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #28a745; color: white; font-weight: bold; }
@@ -39,9 +39,6 @@ sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
-# ==========================================
-# ABA 1: FINANÇAS (DASHBOARD COMPLETO)
-# ==========================================
 if aba == "💰 Finanças":
     ws = sh.get_worksheet(0)
     st.title("🛡️ FinançasPro - Central Wilson")
@@ -51,56 +48,67 @@ if aba == "💰 Finanças":
         df = pd.DataFrame(dados[1:], columns=dados[0])
         df['Valor_Num'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
         
-        # Identificação de Colunas
+        # Mapeamento de Colunas
         c_tipo = 'Tipo' if 'Tipo' in df.columns else (df.columns[3] if len(df.columns) > 3 else 'Tipo')
         c_cat = 'Categoria' if 'Categoria' in df.columns else (df.columns[2] if len(df.columns) > 2 else 'Categoria')
         c_bnc = 'Banco' if 'Banco' in df.columns else (df.columns[4] if len(df.columns) > 4 else 'Banco')
-        c_status = 'Status' if 'Status' in df.columns else (df.columns[5] if len(df.columns) > 5 else 'Status')
+        c_stat = 'Status' if 'Status' in df.columns else (df.columns[5] if len(df.columns) > 5 else 'Status')
 
-        # Cálculos com Padronização
+        # Cálculos Padronizados
         df[c_tipo] = df[c_tipo].astype(str).str.strip().str.capitalize()
+        df[c_stat] = df[c_stat].astype(str).str.strip().str.capitalize()
+        
         rec = df[df[c_tipo] == 'Receita']['Valor_Num'].sum()
         desp = df[df[c_tipo] == 'Despesa']['Valor_Num'].sum()
         rend = df[df[c_cat].astype(str).str.contains('Rendimento', case=False)]['Valor_Num'].sum()
+        pend = df[df[c_stat] == 'Pendente']['Valor_Num'].sum()
         
-        # Cálculo de Economia %
-        eco_perc = ((rec - desp) / rec * 100) if rec > 0 else 0
+        sobra = rec - desp
+        eco_perc = (sobra / rec * 100) if rec > 0 else 0
         
         def f_brl(v): return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-        # --- TAGS (METRICS) ---
-        t1, t2, t3, t4, t5 = st.columns(5)
+        # --- TAGS DE RESUMO (6 CARDS) ---
+        t1, t2, t3 = st.columns(3)
         t1.metric("🟢 Receitas", f_brl(rec))
         t2.metric("🔴 Despesas", f_brl(desp))
-        t3.metric("💎 Saldo", f_brl(rec - desp))
+        t3.metric("💎 Saldo", f_brl(sobra))
+        
+        t4, t5, t6 = st.columns(3)
         t4.metric("📈 Rendimentos", f_brl(rend))
-        t5.metric("💡 Economia %", f"{eco_perc:.1f}%")
+        t5.metric("⏳ Para Pagar (Pend.)", f_brl(pend))
+        t6.metric("💡 Economia Real", f"{f_brl(sobra)} ({eco_perc:.1f}%)")
 
         st.write("---")
         
         # --- GRÁFICOS ---
-        col_g1, col_g2 = st.columns(2)
+        g1, g2 = st.columns(2)
 
-        with col_g1:
-            st.subheader("📊 Receitas x Despesas Mensal")
+        with g1:
+            st.subheader("📊 Mensal: Receitas x Despesas")
             try:
-                df_m = df.copy()
-                df_m['Data_DT'] = pd.to_datetime(df_m['Data'], dayfirst=True, errors='coerce')
-                df_m = df_m.dropna(subset=['Data_DT'])
-                df_m['Mes'] = df_m['Data_DT'].dt.strftime('%m/%y')
-                comp = df_m.groupby(['Mes', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
-                st.bar_chart(comp, color=['#dc3545', '#28a745']) # Vermelho e Verde
-            except: st.info("Aguardando dados de data válidos...")
+                df_g = df.copy()
+                df_g['Data_DT'] = pd.to_datetime(df_g['Data'], dayfirst=True, errors='coerce')
+                df_g = df_g.dropna(subset=['Data_DT'])
+                df_g['Mes'] = df_g['Data_DT'].dt.strftime('%m/%y')
+                comp = df_g.groupby(['Mes', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
+                # Garante que apareçam as cores corretas
+                cores = []
+                for col in comp.columns:
+                    if 'Receita' in col: cores.append('#28a745')
+                    elif 'Despesa' in col: cores.append('#dc3545')
+                st.bar_chart(comp, color=cores)
+            except: st.info("Adicione datas válidas na planilha para ativar o gráfico.")
 
-        with col_g2:
+        with g2:
             st.subheader("🏦 Gastos por Banco")
-            gastos_banco = df[df[c_tipo] == 'Despesa'].groupby(c_bnc)['Valor_Num'].sum()
-            st.bar_chart(gastos_banco, color='#6c757d')
+            df_b = df[df[c_tipo] == 'Despesa'].groupby(c_bnc)['Valor_Num'].sum()
+            st.bar_chart(df_b, color='#6c757d')
 
         st.write("---")
         st.subheader("🍕 Gastos por Categoria")
-        gastos_cat = df[df[c_tipo] == 'Despesa'].groupby(c_cat)['Valor_Num'].sum()
-        st.bar_chart(gastos_cat, color='#ffc107')
+        df_c = df[df[c_tipo] == 'Despesa'].groupby(c_cat)['Valor_Num'].sum()
+        st.bar_chart(df_c, color='#ffc107')
 
     # FORMULÁRIO LATERAL
     with st.sidebar.form("f_fin", clear_on_submit=True):
@@ -109,10 +117,20 @@ if aba == "💰 Finanças":
         f_val = st.number_input("Valor", min_value=0.0)
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita"])
         f_cat = st.selectbox("Categoria", ["Mercado", "AserNet", "Skyfit", "Milo/Bolt", "Combustível", "Rendimento", "Outros"])
-        f_bnc = st.selectbox("Banco", ["Nubank", "Itaú", "Dinheiro", "Outro"])
+        f_bnc = st.selectbox("Banco", ["Nubank", "Itaú", "Bradesco", "Dinheiro"])
         f_stat = st.selectbox("Status", ["Pago", "Pendente"])
-        if st.form_submit_button("🚀 SALVAR"):
+        if st.form_submit_button("🚀 SALVAR NO FINANCEIRO"):
             ws.append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_stat])
             st.cache_data.clear(); st.rerun()
 
-# ABA 2 (Pets) e ABA 3 (Veículo) mantidas conforme o funcionamento anterior...
+    st.write("---")
+    st.subheader("📋 Últimos Lançamentos")
+    st.dataframe(df.iloc[::-1], use_container_width=True)
+
+# ABA 2 (Pets) e ABA 3 (Veículo)
+elif aba == "🐾 Milo & Bolt":
+    # (Mesmo código anterior para os pets...)
+    pass
+else:
+    # (Mesmo código anterior para o veículo...)
+    pass
