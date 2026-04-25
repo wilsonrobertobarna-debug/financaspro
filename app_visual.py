@@ -4,7 +4,7 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime
 
-# 1. CONFIGURAÇÃO E ESTILO
+# 1. CONFIGURAÇÃO E ESTILO (CSS para tags menores e organizadas)
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
 
 st.markdown("""
@@ -16,7 +16,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXÃO SEGURA
+# 2. CONEXÃO SEGURA COM O GOOGLE SHEETS
 @st.cache_resource
 def conectar_google():
     try:
@@ -35,7 +35,7 @@ def conectar_google():
 client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# --- FUNÇÃO DE TABELA DINÂMICA ---
+# --- FUNÇÃO DE TABELA DINÂMICA (Para exibir os dados abaixo dos gráficos) ---
 def exibir_tabela_dinamica(aba_sheet, titulo):
     dados = aba_sheet.get_all_values()
     if len(dados) > 1:
@@ -47,15 +47,13 @@ def exibir_tabela_dinamica(aba_sheet, titulo):
         except: pass
         st.subheader(f"📋 {titulo}")
         st.dataframe(df, use_container_width=True)
-    else:
-        st.info(f"Aba {titulo} vazia.")
 
-# 3. INTERFACE DE NAVEGAÇÃO
+# 3. INTERFACE DE NAVEGAÇÃO LATERAL
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
 # ==========================================
-# ABA 1: FINANÇAS (DASHBOARD COMPLETO)
+# ABA 1: FINANÇAS (DASHBOARD COLORIDO)
 # ==========================================
 if aba == "💰 Finanças":
     ws = sh.get_worksheet(0)
@@ -66,52 +64,50 @@ if aba == "💰 Finanças":
         df = pd.DataFrame(dados[1:], columns=dados[0])
         df['Valor_Num'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
         
-        # Identificação de colunas inteligente
+        # Travas de segurança para nomes de colunas
         c_tipo = 'Tipo' if 'Tipo' in df.columns else (df.columns[3] if len(df.columns) > 3 else None)
         c_status = 'Status' if 'Status' in df.columns else ('Descrição' if 'Descrição' in df.columns else None)
         c_cat = 'Categoria' if 'Categoria' in df.columns else (df.columns[2] if len(df.columns) > 2 else None)
 
-        # Cálculos das Tags
+        # Cálculos para as Tags (Métricas)
         rec = df[df[c_tipo] == 'Receita']['Valor_Num'].sum() if c_tipo else 0
         desp = df[df[c_tipo] == 'Despesa']['Valor_Num'].sum() if c_tipo else 0
-        saldo = rec - desp
         rend = df[df[c_cat] == 'Rendimento']['Valor_Num'].sum() if c_cat else 0
         pend = df[df[c_status] == 'Pendente']['Valor_Num'].sum() if c_status else 0
         
-        # Tags Ajustadas
         def format_brl(v): return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-
+        
         c1, c2, c3, c4, c5 = st.columns(5)
         c1.metric("🟢 Receitas", format_brl(rec))
         c2.metric("🔴 Despesas", format_brl(desp))
-        c3.metric("💎 Saldo", format_brl(saldo))
+        c3.metric("💎 Saldo", format_brl(rec - desp))
         c4.metric("📈 Rend.", format_brl(rend))
         c5.metric("⏳ Pend.", format_brl(pend))
 
-        # --- GRÁFICOS ---
         st.write("---")
         g1, g2 = st.columns(2)
 
         with g1:
             st.subheader("📊 Receitas x Despesas Mensal")
             try:
-                # Criar coluna de Mês/Ano para agrupar
                 df['Data_DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-                df['Mes_Ano'] = df['Data_DT'].dt.strftime('%m/%Y')
+                df['Mes_Ano'] = df['Data_DT'].dt.strftime('%m/%y')
+                comp = df.groupby(['Mes_Ano', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
                 
-                # Agrupar por Mês e Tipo
-                comparativo = df.groupby(['Mes_Ano', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
-                st.bar_chart(comparativo)
-            except:
-                st.info("Adicione dados com datas válidas para ver o gráfico mensal.")
+                # CORES: Verde para Receita (#28a745), Vermelho para Despesa (#dc3545)
+                cores_grafico = []
+                if 'Receita' in comp.columns: cores_grafico.append('#28a745')
+                if 'Despesa' in comp.columns: cores_grafico.append('#dc3545')
+                
+                st.bar_chart(comp, color=cores_grafico)
+            except: st.info("Adicione dados com datas para ver o gráfico.")
 
         with g2:
             st.subheader("🍕 Gastos por Categoria")
             if c_tipo:
-                gastos_cat = df[df[c_tipo] == 'Despesa'].groupby(c_cat)['Valor_Num'].sum() if c_cat else pd.Series()
-                st.bar_chart(gastos_cat)
+                gastos_cat = df[df[c_tipo] == 'Despesa'].groupby(c_cat)['Valor_Num'].sum()
+                st.bar_chart(gastos_cat, color='#ffc107') # Amarelo para categorias
 
-    # Formulário Lateral
     with st.sidebar.form("f_fin", clear_on_submit=True):
         f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
         f_val = st.number_input("Valor (R$)", min_value=0.0)
@@ -162,11 +158,12 @@ else:
         with st.sidebar.form("f_vei", clear_on_submit=True):
             v_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
             v_tip = st.selectbox("Serviço", ["Abastecimento", "Troca de Óleo", "Manutenção", "Lavagem"])
-            v_det = st.text_input("Descrição")
+            v_det = st.text_input("Descrição (Ex: Posto)")
             v_km = st.number_input("KM Atual", min_value=0)
             v_val = st.number_input("Valor Pago", min_value=0.0)
             if st.form_submit_button("🚗 SALVAR NO VEÍCULO"):
                 dt_s = v_dat.strftime("%d/%m/%Y")
+                # Ordem: Data, Serviço, Descrição, KM, Valor
                 ws.append_row([dt_s, v_tip, v_det, str(v_km), str(v_val).replace('.', ',')])
                 sh.get_worksheet(0).append_row([dt_s, str(v_val).replace('.', ','), f"Veículo: {v_tip}", "Despesa", "Nubank", "Pago"])
                 st.cache_data.clear(); st.rerun()
