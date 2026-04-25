@@ -63,20 +63,43 @@ if aba == "💰 Finanças":
         c_stat = 'Status' if 'Status' in df.columns else df.columns[5]
         c_bnc = 'Banco' if 'Banco' in df.columns else df.columns[4]
 
-        # Dashboard e Histórico (omitidos aqui por brevidade, manter igual ao anterior)
-        # ... (Cálculos de rec, desp, saldo, etc)
+        # Cálculos Dashboard
+        rec = df[df[c_tipo].str.contains('Receita', case=False, na=False)]['Valor_Num'].sum()
+        desp = df[df[c_tipo].str.contains('Despesa', case=False, na=False)]['Valor_Num'].sum()
+        rend = df[df[c_cat].str.contains('Rendimento', case=False, na=False)]['Valor_Num'].sum()
+        pend = df[df[c_stat].str.contains('Pendente', case=False, na=False)]['Valor_Num'].sum()
+        
+        saldo = rec - desp
+        eco_perc = (saldo / rec * 100) if rec > 0 else 0
         def f_brl(v): return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-        st.markdown(f'<div class="saldo-container"><small>Saldo Atual</small><h2>{f_brl(rec - desp)}</h2></div>', unsafe_allow_html=True)
+
+        st.markdown(f'<div class="saldo-container"><small>Saldo Atual</small><h2>{f_brl(saldo)}</h2></div>', unsafe_allow_html=True)
+        t1, t2, t3, t4 = st.columns(4)
+        t1.metric("🟢 Receitas", f_brl(rec)); t2.metric("🔴 Despesas", f_brl(desp))
+        t3.metric("📈 Rendimentos", f_brl(rend)); t4.metric("⏳ Pendências", f_brl(pend))
+        st.markdown(f'<div class="economia-texto">🔹 Economia Real: {f_brl(saldo)} ({eco_perc:.1f}%)</div>', unsafe_allow_html=True)
+
         st.subheader("📋 Histórico")
         df_visual = df.copy()
         df_visual.index = df_visual.index + 2
         st.dataframe(df_visual.iloc[::-1], use_container_width=True)
 
+        # Gráficos
+        g1, g2 = st.columns(2)
+        with g1:
+            st.subheader("🍕 Categoria (Mês)")
+            df_m = df.copy(); df_m['Mes'] = df_m['Data_DT'].dt.strftime('%m/%y')
+            gastos_cat = df_m[(df_m['Mes'] == mes_atual) & (df_m[c_tipo] == 'Despesa')].groupby(c_cat)['Valor_Num'].sum()
+            st.bar_chart(gastos_cat, color='#ffc107')
+        with g2:
+            st.subheader("📊 Receita x Despesa")
+            comp = df_m.groupby(['Mes', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
+            st.bar_chart(comp, color=['#dc3545', '#28a745'])
+
     # MENU LATERAL FINANÇAS
     menu_acao = st.sidebar.selectbox("Ação Financeira:", ["Novo Lançamento", "Editar/Excluir"])
     if menu_acao == "Novo Lançamento":
         with st.sidebar.form("f_novo"):
-            st.subheader("📝 Novo")
             f_dat = st.date_input("Data", datetime.now())
             f_val = st.number_input("Valor", min_value=0.0)
             f_tip = st.selectbox("Tipo", ["Despesa", "Receita"])
@@ -86,7 +109,24 @@ if aba == "💰 Finanças":
             if st.form_submit_button("🚀 SALVAR"):
                 ws.append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_stat])
                 st.cache_data.clear(); st.rerun()
-    # ... (Bloco Editar/Excluir continua igual)
+    elif menu_acao == "Editar/Excluir":
+        linha_sel = st.sidebar.selectbox("ID da Linha:", list(df_visual.index))
+        if linha_sel:
+            dados_linha = df.loc[linha_sel - 2]
+            with st.sidebar.form("f_edicao"):
+                e_dat = st.text_input("Data", value=str(dados_linha['Data']))
+                e_val = st.text_input("Valor", value=str(dados_linha['Valor']))
+                e_tip = st.selectbox("Tipo", ["Despesa", "Receita"], index=0 if "Desp" in str(dados_linha[c_tipo]) else 1)
+                e_cat = st.text_input("Categoria", value=str(dados_linha[c_cat]))
+                e_bnc = st.text_input("Banco", value=str(dados_linha[c_bnc]))
+                e_stat = st.selectbox("Status", ["Pago", "Pendente"], index=0 if "Pag" in str(dados_linha[c_stat]) else 1)
+                c1, c2 = st.columns(2)
+                if c1.form_submit_button("💾 ATUALIZAR"):
+                    ws.update(f"A{linha_sel}:F{linha_sel}", [[e_dat, e_val, e_cat, e_tip, e_bnc, e_stat]])
+                    st.cache_data.clear(); st.rerun()
+                if c2.form_submit_button("🗑️ EXCLUIR"):
+                    ws.delete_rows(int(linha_sel))
+                    st.cache_data.clear(); st.rerun()
 
 # ==========================================
 # ABA 2: MILO & BOLT
@@ -95,12 +135,11 @@ elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Controle: Milo & Bolt")
     ws_p = sh.worksheet("Controle_Pets")
     
-    # Formulário de Lançamento para Pets
     with st.sidebar.form("f_pets"):
-        st.subheader("🐾 Novo Registro Pet")
+        st.subheader("🐾 Novo Registro")
         p_dat = st.date_input("Data", datetime.now())
-        p_obs = st.text_input("O que aconteceu? (Banho, Vacina, Ração...)")
-        p_val = st.number_input("Custo (se houver)", min_value=0.0)
+        p_obs = st.text_input("O que aconteceu?")
+        p_val = st.number_input("Custo", min_value=0.0)
         if st.form_submit_button("🚀 SALVAR NO PET"):
             ws_p.append_row([p_dat.strftime("%d/%m/%Y"), p_obs, str(p_val).replace('.', ',')])
             st.cache_data.clear(); st.rerun()
@@ -116,12 +155,11 @@ else:
     st.title("🚗 Controle: Veículo")
     ws_v = sh.worksheet("Controle_Veiculo")
 
-    # Formulário de Lançamento para Veículo
     with st.sidebar.form("f_veiculo"):
-        st.subheader("🚗 Novo Registro Veículo")
+        st.subheader("🚗 Novo Registro")
         v_dat = st.date_input("Data", datetime.now())
         v_km = st.number_input("KM Atual", min_value=0)
-        v_obs = st.text_input("Manutenção/Abastecimento")
+        v_obs = st.text_input("Obs")
         v_val = st.number_input("Valor", min_value=0.0)
         if st.form_submit_button("🚀 SALVAR NO VEÍCULO"):
             ws_v.append_row([v_dat.strftime("%d/%m/%Y"), str(v_km), v_obs, str(v_val).replace('.', ',')])
