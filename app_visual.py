@@ -4,13 +4,13 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime
 
-# 1. CONFIGURAÇÃO E ESTILO (O segredo do visual limpo)
+# 1. CONFIGURAÇÃO E ESTILO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
 
 st.markdown("""
     <style>
-    [data-testid="stMetricValue"] { font-size: 1.5rem !important; }
-    [data-testid="stMetricLabel"] { font-size: 0.8rem !important; font-weight: bold; }
+    [data-testid="stMetricValue"] { font-size: 1.6rem !important; }
+    [data-testid="stMetricLabel"] { font-size: 0.85rem !important; font-weight: bold; }
     .stMetric { background-color: #ffffff; padding: 10px; border-radius: 10px; border: 1px solid #e0e0e0; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); }
     .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #28a745; color: white; font-weight: bold; }
     </style>
@@ -64,20 +64,22 @@ if aba == "💰 Finanças":
         df = pd.DataFrame(dados[1:], columns=dados[0])
         df['Valor_Num'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
         
-        # Identificação inteligente das colunas
+        # Identificação de colunas com fallback
         c_tipo = 'Tipo' if 'Tipo' in df.columns else (df.columns[3] if len(df.columns) > 3 else 'Tipo')
         c_status = 'Status' if 'Status' in df.columns else ('Descrição' if 'Descrição' in df.columns else 'Status')
         c_cat = 'Categoria' if 'Categoria' in df.columns else (df.columns[2] if len(df.columns) > 2 else 'Categoria')
 
-        # Cálculos das Tags
+        # Padronização para cálculos (Remove espaços e acerta maiúsculas)
+        df[c_tipo] = df[c_tipo].astype(str).str.strip().str.capitalize()
+
         rec = df[df[c_tipo] == 'Receita']['Valor_Num'].sum()
         desp = df[df[c_tipo] == 'Despesa']['Valor_Num'].sum()
-        rend = df[df[c_cat] == 'Rendimento']['Valor_Num'].sum()
-        pend = df[df[c_status] == 'Pendente']['Valor_Num'].sum()
+        rend = df[df[c_cat].astype(str).str.contains('Rendimento', case=False)]['Valor_Num'].sum()
+        pend = df[df[c_status].astype(str).str.contains('Pendente', case=False)]['Valor_Num'].sum()
         
         def f_brl(v): return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-        # EXIBIÇÃO DAS 5 TAGS (Igual à foto)
+        # EXIBIÇÃO DAS 5 TAGS
         t1, t2, t3, t4, t5 = st.columns(5)
         t1.metric("🟢 Receitas", f_brl(rec))
         t2.metric("🔴 Despesas", f_brl(desp))
@@ -87,30 +89,34 @@ if aba == "💰 Finanças":
 
         st.write("---")
         
-        # GRÁFICOS LADO A LADO
+        # GRÁFICOS
         g1, g2 = st.columns([2, 1])
 
         with g1:
             st.subheader("📊 Receitas x Despesas Mensal")
             try:
-                df['Data_DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-                df['Mes_Ano'] = df['Data_DT'].dt.strftime('%m/%y')
-                comp = df.groupby(['Mes_Ano', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
-                # Cores fixas: Verde e Vermelho
-                cores = []
-                if 'Receita' in comp.columns: cores.append('#28a745')
-                if 'Despesa' in comp.columns: cores.append('#dc3545')
-                st.bar_chart(comp, color=cores)
-            except: st.info("Sem dados para o gráfico.")
+                df_graf = df.copy()
+                df_graf['Data_DT'] = pd.to_datetime(df_graf['Data'], dayfirst=True, errors='coerce')
+                df_graf = df_graf.dropna(subset=['Data_DT'])
+                df_graf['Mes_Ano'] = df_graf['Data_DT'].dt.strftime('%m/%y')
+                
+                comp = df_graf.groupby(['Mes_Ano', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
+                
+                # Mapeamento de cores fixas
+                cores_map = {'Receita': '#28a745', 'Despesa': '#dc3545'}
+                cores_lista = [cores_map.get(col, '#808080') for col in comp.columns]
+                
+                st.bar_chart(comp, color=cores_lista)
+            except:
+                st.info("💡 Dica: Verifique se a coluna 'Tipo' na planilha contém 'Receita' ou 'Despesa'.")
 
         with g2:
             st.subheader("🍕 Distribuição")
             gastos_cat = df[df[c_tipo] == 'Despesa'].groupby(c_cat)['Valor_Num'].sum()
             if not gastos_cat.empty:
                 st.write(gastos_cat.sort_values(ascending=False))
-            else: st.write("Sem despesas.")
+            else: st.write("Aguardando despesas...")
 
-    # FORMULÁRIO LATERAL
     with st.sidebar.form("f_fin", clear_on_submit=True):
         f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
         f_val = st.number_input("Valor (R$)", min_value=0.0)
@@ -123,7 +129,9 @@ if aba == "💰 Finanças":
             
     exibir_tabela_dinamica(ws, "Histórico Geral")
 
-# ABA 2 e 3 (Pets e Veículo seguem o seu código atual)
+# ==========================================
+# ABA 2: MILO & BOLT
+# ==========================================
 elif aba == "🐾 Milo & Bolt":
     ws = sh.worksheet("Controle_Pets")
     st.title("🐾 Cuidados: Milo & Bolt")
@@ -139,6 +147,9 @@ elif aba == "🐾 Milo & Bolt":
             st.cache_data.clear(); st.rerun()
     exibir_tabela_dinamica(ws, "Histórico dos Pets")
 
+# ==========================================
+# ABA 3: MEU VEÍCULO
+# ==========================================
 else:
     ws = sh.worksheet("Controle_Veiculo")
     st.title("🚗 Controle do Veículo")
@@ -149,13 +160,13 @@ else:
         if alc > 0 and gas > 0:
             res = alc / gas
             st.metric("Proporção", f"{res:.2f}")
-            if res <= 0.7: st.success("ÁLCOOL! ✅")
-            else: st.warning("GASOLINA! ⛽")
+            if res <= 0.7: st.success("VÁ DE ÁLCOOL! ✅")
+            else: st.warning("VÁ DE GASOLINA! ⛽")
     with c2:
         with st.sidebar.form("f_vei", clear_on_submit=True):
             v_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
             v_tip = st.selectbox("Serviço", ["Abastecimento", "Troca de Óleo", "Manutenção", "Lavagem"])
-            v_det = st.text_input("Descrição")
+            v_det = st.text_input("Descrição (Ex: Posto)")
             v_km = st.number_input("KM Atual", min_value=0)
             v_val = st.number_input("Valor Pago", min_value=0.0)
             if st.form_submit_button("🚗 SALVAR NO VEÍCULO"):
