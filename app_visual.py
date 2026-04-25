@@ -3,7 +3,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.graph_objects as go
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # 1. CONFIGURAÇÃO E ESTILO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
@@ -16,6 +16,7 @@ st.markdown("""
     .receita { background-color: #28a745; }
     .despesa { background-color: #dc3545; }
     .rendimento { background-color: #17a2b8; }
+    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -49,11 +50,13 @@ LISTA_BANCO = ["Nubank", "Itaú", "Bradesco", "Dinheiro", "Outros"]
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
+# ==========================================
+# ABA 1: FINANÇAS
+# ==========================================
 if aba == "💰 Finanças":
     st.sidebar.header("📝 Novo Lançamento")
     with st.sidebar.form("form_f", clear_on_submit=True):
-        # AQUI ESTÁ O AJUSTE: format="DD/MM/YYYY" para o calendário ficar BR
-        f_data = st.date_input("Data do Lançamento", datetime.now(), format="DD/MM/YYYY") 
+        f_data = st.date_input("Data", datetime.now(), format="DD/MM/YYYY") 
         f_valor = st.number_input("Valor (R$)", min_value=0.0, format="%.2f")
         f_cat = st.selectbox("Categoria", LISTA_CAT)
         f_parc = st.number_input("Parcelas", min_value=1, value=1)
@@ -61,14 +64,13 @@ if aba == "💰 Finanças":
         f_banco = st.selectbox("Banco", LISTA_BANCO)
         f_status = st.selectbox("Status", LISTA_STATUS)
         
-        if st.form_submit_button("🚀 SALVAR AGORA"):
+        if st.form_submit_button("🚀 SALVAR"):
             dt_br = f_data.strftime("%d/%m/%Y")
             desc_final = f"{f_cat} ({f_parc}x)" if f_parc > 1 else f_cat
             ws_finance.append_row([dt_br, f_valor, desc_final, f_tipo, f_banco, f_status])
-            st.cache_data.clear()
-            st.rerun()
+            st.cache_data.clear(); st.rerun()
 
-    # 4. EXIBIÇÃO E GRÁFICOS
+    # EXIBIÇÃO FINANÇAS
     try:
         dados = ws_finance.get_all_values()
         if len(dados) > 1:
@@ -77,7 +79,6 @@ if aba == "💰 Finanças":
             df['Data_Obj'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
             df_v = df.dropna(subset=['Data_Obj']).sort_values(by='Data_Obj', ascending=False)
 
-            # CARDS
             v_rec = df_v[df_v['Tipo'] == 'Receita']['Valor'].sum()
             v_des = df_v[df_v['Tipo'] == 'Despesa']['Valor'].sum()
             v_rend = df_v[df_v['Tipo'] == 'Rendimento']['Valor'].sum()
@@ -94,7 +95,6 @@ if aba == "💰 Finanças":
                 </div>
                 """, unsafe_allow_html=True)
 
-            # GRÁFICOS
             c1, c2 = st.columns(2)
             with c1:
                 st.subheader("📊 Evolução")
@@ -104,7 +104,6 @@ if aba == "💰 Finanças":
                 if 'Receita' in res_m: fig1.add_trace(go.Bar(x=res_m['Mês/Ano'], y=res_m['Receita'], name='Rec', marker_color='#28a745'))
                 if 'Despesa' in res_m: fig1.add_trace(go.Bar(x=res_m['Mês/Ano'], y=res_m['Despesa'], name='Des', marker_color='#dc3545'))
                 st.plotly_chart(fig1, use_container_width=True)
-            
             with c2:
                 st.subheader("🎯 Por Categoria")
                 res_cat = df_v[df_v['Tipo'] == 'Despesa'].groupby('Categoria')['Valor'].sum().sort_values(ascending=False).reset_index()
@@ -112,12 +111,41 @@ if aba == "💰 Finanças":
                     fig2 = go.Figure(go.Bar(x=res_cat['Categoria'], y=res_cat['Valor'], marker_color='#007bff'))
                     st.plotly_chart(fig2, use_container_width=True)
 
-            st.subheader("📋 Histórico (Recentes Primeiro)")
             st.dataframe(df_v[["Data", "Valor", "Categoria", "Tipo", "Banco", "Status"]].head(15), use_container_width=True)
+    except: st.error("Erro ao carregar finanças.")
 
-    except Exception as e:
-        st.error(f"Erro ao processar dados: {e}")
+# ==========================================
+# ABA 2: MILO & BOLT (LIBERADA!)
+# ==========================================
+elif aba == "🐾 Milo & Bolt":
+    st.title("🐾 Cuidados: Milo & Bolt")
+    try:
+        ws_p = sh.worksheet("Controle_Pets")
+        
+        st.sidebar.header("📝 Registro Pet")
+        with st.sidebar.form("form_p", clear_on_submit=True):
+            p_pet = st.selectbox("Quem?", ["Milo", "Bolt", "Os Dois"])
+            p_data = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+            p_tipo = st.selectbox("O quê?", ["Ração", "Vacina", "Vermífugo", "Banho", "Saúde"])
+            p_valor = st.number_input("Valor (R$)", min_value=0.0)
+            p_detalhe = st.text_input("Detalhes")
+            
+            if st.form_submit_button("🦴 SALVAR E INTEGRAR"):
+                dt_br = p_data.strftime("%d/%m/%Y")
+                # Salva na aba Pets
+                ws_p.append_row([dt_br, p_pet, p_tipo, p_detalhe, p_valor])
+                # Integra com Finanças
+                ws_finance.append_row([dt_br, p_valor, f"Pet: {p_tipo} ({p_pet})", "Despesa", "Nubank", "Pago"])
+                st.cache_data.clear(); st.rerun()
+
+        dp_list = ws_p.get_all_values()
+        if len(dp_list) > 1:
+            dp = pd.DataFrame(dp_list[1:], columns=["Data", "Pet", "Tipo", "Detalhe", "Valor"])
+            st.subheader("📋 Histórico dos Meninos")
+            st.dataframe(dp.iloc[::-1], use_container_width=True)
+    except:
+        st.warning("Verifique se a aba 'Controle_Pets' existe na sua planilha.")
 
 else:
-    st.title(f"Aba {aba}")
-    st.info("Validando a Data no padrão Brasil!")
+    st.title("🚗 Meu Veículo")
+    st.info("Finanças e Pets OK! Vamos validar o Veículo por último?")
