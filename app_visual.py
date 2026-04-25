@@ -1,51 +1,79 @@
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
-import re
+import pandas as pd
 
-st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
-st.title("🛡️ FinançasPro Wilson: Reparador de Conexão")
+# 1. CONFIGURAÇÃO DA PÁGINA
+st.set_page_config(
+    page_title="FinançasPro Wilson", 
+    layout="wide", 
+    page_icon="🛡️"
+)
 
-# Área para colar a chave - Isso evita que o erro fique "preso" no código
-entrada_chave = st.text_area("Cole aqui o conteúdo do seu arquivo JSON:", height=200, help="Pode colar tudo, o sistema vai filtrar o que importa.")
-
-if entrada_chave:
+# 2. FUNÇÃO DE CONEXÃO BLINDADA (Lê do st.secrets)
+@st.cache_resource(show_spinner="Acessando cofre de segurança...")
+def conectar_google():
     try:
-        # --- FILTRO DE SEGURANÇA ---
-        # 1. Busca apenas o que está entre os hífens (descarta underlines externos)
-        match = re.search(r"-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----", entrada_chave)
+        # Puxa os dados que você salvou no painel 'Secrets' do Streamlit Cloud
+        creds_info = st.secrets["connections"]["gsheets"]
         
-        if not match:
-            st.error("🚨 Marcadores BEGIN/END não encontrados. Copie a chave completa do arquivo!")
-        else:
-            # 2. Limpa os \n e espaços extras
-            chave_limpa = match.group(0).replace("\\n", "\n").strip()
-            
-            # 3. Tenta a conexão
-            scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-            creds_info = {
-                "type": "service_account",
-                "project_id": "financaspro-wilson",
-                "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "private_key": chave_limpa
-            }
-            
-            # Tenta autorizar
-            client = gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
-            sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-            
-            st.success("🔥 CONECTADO! Wilson, o motor do programa voltou a funcionar.")
-            st.balloons()
-            
-            # Se conectou, mostra os dados para confirmar
-            ws = sh.get_worksheet(0)
-            st.write("Dados recuperados com sucesso:", ws.get_all_records()[-3:])
-
+        # O segredo do sucesso: o Python precisa que os \n sejam quebras reais
+        # Isso resolve o erro 95 de uma vez por todas
+        private_key = creds_info["private_key"].replace("\\n", "\n")
+        
+        # Monta o dicionário final para o Google
+        final_creds = {
+            "type": creds_info["type"],
+            "project_id": creds_info["project_id"],
+            "private_key_id": creds_info["private_key_id"],
+            "private_key": private_key,
+            "client_email": creds_info["client_email"],
+            "token_uri": creds_info["token_uri"],
+        }
+        
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        
+        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=scopes))
     except Exception as e:
-        if "95" in str(e):
-            st.error("❌ O caractere '_' (underline) ainda está infiltrado na chave.")
-        else:
-            st.error(f"Erro: {e}")
-else:
-    st.info("Aguardando você colar a chave para reativar o sistema...")
+        st.error(f"Erro ao carregar segredos: {e}")
+        st.info("💡 Certifique-se de que preencheu o campo 'Secrets' no painel do Streamlit Cloud.")
+        st.stop()
+
+# 3. INTERFACE PRINCIPAL
+st.title("🛡️ FinançasPro Wilson")
+st.markdown("---")
+
+try:
+    # Inicia conexão
+    client = conectar_google()
+    
+    # Abre a sua planilha pelo ID (mantive o ID que estávamos usando)
+    # Dica: Você também pode colocar esse ID nos Secrets se quiser!
+    PLANILHA_ID = "147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4"
+    sh = client.open_by_key(PLANILHA_ID)
+    ws = sh.get_worksheet(0) # Pega a primeira aba
+    
+    st.success("✅ Conexão Automática Ativa!")
+
+    # 4. ÁREA DE VISUALIZAÇÃO
+    st.subheader("📊 Resumo de Lançamentos")
+    dados = ws.get_all_records()
+    
+    if dados:
+        df = pd.DataFrame(dados)
+        
+        # Pequeno resumo financeiro
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Total de Registros", len(df))
+        
+        # Mostra a tabela limpa
+        st.dataframe(df.tail(20), use_container_width=True)
+    else:
+        st.warning("A planilha parece estar vazia ou não foi lida corretamente.")
+
+except Exception as e:
+    st.error(f"Erro na execução do app: {e}")
