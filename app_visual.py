@@ -36,10 +36,10 @@ st.title("🛡️ FinançasPro Wilson")
 
 try:
     client = conectar_google()
-    # Conecta à planilha (substitua o ID se necessário)
+    # Conecta à planilha (ID fixo conforme seu projeto)
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     st.success("🔥 Agora sim, Wilson! O programa está online e conectado.")
     
 except Exception as e:
     st.error(f"Erro persistente: {e}")
-    st.info("💡 Wilson, se o erro continuar, vá nos 3 pontinhos (canto superior), clique em 'Clear Cache' e dê F5.")
+    st.info("💡 Dica: Se o erro continuar, vá nos 3 pontinhos (canto superior), clique em 'Clear Cache' e dê F5.")
