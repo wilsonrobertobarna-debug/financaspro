@@ -23,7 +23,7 @@ def conectar_google():
     
     # 2. FILTRO ANTI-RUÍDO: 
     # Extrai apenas o que está entre os marcadores BEGIN e END.
-    # Isso ignora qualquer "private_key:", e-mails ou underlines extras.
+    # Isso ignora qualquer "private_key:", e-mails ou pontos extras.
     match = re.search(r"-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----", raw_key)
     if match:
         key_processada = match.group(0)
@@ -53,7 +53,7 @@ def acao_salvar():
         data_br = st.session_state.data_input.strftime('%d/%m/%Y')
         desc_final = f"{st.session_state.desc_input} ({st.session_state.parcela_input})" if st.session_state.parcela_input != "1/1" else st.session_state.desc_input
         
-        # Mantendo as 11 colunas da sua planilha original (A até K)
+        # Estrutura exata das 11 colunas (A até K)
         nova_linha = [
             data_br, v, st.session_state.cat_input, st.session_state.banco_input, 
             desc_final, st.session_state.benef_input, "Pessoal", "", "", 
