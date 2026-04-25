@@ -9,25 +9,36 @@ st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="�
 
 st.markdown("""
     <style>
-    /* Estilo para a Tag de Saldo (Azul) */
+    /* Tag de Saldo Azul mais fina */
     .saldo-container {
         background-color: #007bff;
         color: white;
-        padding: 20px;
-        border-radius: 15px;
+        padding: 8px 15px; /* Reduzido o padding pela metade */
+        border-radius: 10px;
         text-align: center;
         margin-bottom: 20px;
+        line-height: 1.2;
+    }
+    .saldo-container h2 {
+        margin: 0;
+        font-size: 1.8rem;
+    }
+    .saldo-container small {
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 0.7rem;
     }
     /* Estilo para as tags debaixo */
-    [data-testid="stMetricValue"] { font-size: 1.4rem !important; }
-    .stMetric { background-color: #ffffff; padding: 10px; border-radius: 10px; border: 1px solid #e0e0e0; }
+    [data-testid="stMetricValue"] { font-size: 1.3rem !important; }
+    .stMetric { background-color: #ffffff; padding: 8px; border-radius: 10px; border: 1px solid #e0e0e0; }
     /* Texto Economia Real em Azul */
     .economia-texto {
         color: #007bff;
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         font-weight: bold;
         text-align: center;
-        margin-top: 20px;
+        margin-top: 15px;
+        padding: 10px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -57,7 +68,7 @@ aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 
 
 if aba == "💰 Finanças":
     ws = sh.get_worksheet(0)
-    st.title("🛡️ FinançasPro - Central Wilson")
+    st.title("🛡️ FinançasPro")
     
     dados = ws.get_all_values()
     if len(dados) > 1:
@@ -84,11 +95,11 @@ if aba == "💰 Finanças":
         
         def f_brl(v): return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-        # --- EXIBIÇÃO: SALDO EM DESTAQUE (AZUL) ---
+        # --- EXIBIÇÃO: SALDO EM DESTAQUE (AZUL FINO) ---
         st.markdown(f"""
             <div class="saldo-container">
-                <small>SALDO ATUAL EM CONTA</small>
-                <h1>{f_brl(saldo)}</h1>
+                <small>Saldo Atual em Conta</small>
+                <h2>{f_brl(saldo)}</h2>
             </div>
             """, unsafe_allow_html=True)
 
@@ -102,29 +113,10 @@ if aba == "💰 Finanças":
         # --- ECONOMIA REAL (AZUL) ---
         st.markdown(f"""
             <div class="economia-texto">
-                Economia Real: {f_brl(saldo)} ({eco_perc:.1f}%)
+                🔹 Economia Real: {f_brl(saldo)} ({eco_perc:.1f}%)
             </div>
             """, unsafe_allow_html=True)
 
-    # FORMULÁRIO LATERAL (Mantido para lançamentos)
+    # FORMULÁRIO LATERAL
     with st.sidebar.form("f_fin", clear_on_submit=True):
-        st.subheader("📝 Lançamento")
-        f_dat = st.date_input("Data", datetime.now())
-        f_val = st.number_input("Valor", min_value=0.0)
-        f_tip = st.selectbox("Tipo", ["Despesa", "Receita"])
-        f_cat = st.selectbox("Categoria", ["Mercado", "AserNet", "Skyfit", "Milo/Bolt", "Combustível", "Rendimento", "Outros"])
-        f_bnc = st.selectbox("Banco", ["Nubank", "Itaú", "Bradesco", "Dinheiro"])
-        f_stat = st.selectbox("Status", ["Pago", "Pendente"])
-        if st.form_submit_button("🚀 SALVAR"):
-            ws.append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_stat])
-            st.cache_data.clear(); st.rerun()
-
-# ABA 2 (Pets) e ABA 3 (Veículo)
-elif aba == "🐾 Milo & Bolt":
-    ws_p = sh.worksheet("Controle_Pets")
-    st.title("🐾 Milo & Bolt")
-    st.dataframe(ws_p.get_all_values())
-else:
-    ws_v = sh.worksheet("Controle_Veiculo")
-    st.title("🚗 Meu Veículo")
-    st.dataframe(ws_v.get_all_values())
+        st.subheader("📝
