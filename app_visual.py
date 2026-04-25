@@ -7,7 +7,7 @@ from datetime import datetime, date
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. CHAVE DE ACESSO (Mantenha sua chave real aqui)
+# 2. CHAVE DE ACESSO
 PK_LIST = [
     "-----BEGIN PRIVATE KEY-----",
     "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
@@ -39,7 +39,7 @@ PK_LIST = [
     "-----END PRIVATE KEY-----"
 ]
 
-# --- FUNÇÕES DE APOIO ---
+# --- CONEXÃO ---
 @st.cache_resource
 def conectar_google():
     private_key = "\n".join([l.strip() for l in PK_LIST])
@@ -51,101 +51,59 @@ def conectar_google():
     }
     return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
 
-def carregar_dados(ws):
-    data = ws.get_all_records()
-    df = pd.DataFrame(data)
-    if not df.empty:
-        df.columns = [str(c).strip() for c in df.columns]
-        df['Data_dt'] = pd.to_datetime(df['Data'], format='%d/%m/%Y', errors='coerce').dt.date
-        df['Valor_num'] = pd.to_numeric(df['Valor'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip(), errors='coerce').fillna(0)
-        df['ID'] = range(2, len(df) + 2)
-    return df
-
-# --- FUNÇÕES DE INTERAÇÃO (Limpam os campos após salvar) ---
+# --- FUNÇÃO DE SALVAMENTO ---
 def salvar_registro():
-    if st.session_state.valor_input > 0:
-        data_br = st.session_state.data_input.strftime('%d/%m/%Y')
-        desc = st.session_state.desc_input
-        parc = st.session_state.parcela_input
-        desc_final = f"{desc} ({parc})" if parc != "1/1" else desc
+    # 1. CAPTURAR OS VALORES EM VARIÁVEIS LOCAIS (Para não perder na limpeza)
+    valor_final = st.session_state.valor_input
+    
+    if valor_final > 0:
+        data_txt = st.session_state.data_input.strftime('%d/%m/%Y')
+        benef_txt = st.session_state.benef_input
+        desc_txt = st.session_state.desc_input
+        parc_txt = st.session_state.parcela_input
+        cat_txt = st.session_state.cat_input
+        banco_txt = st.session_state.banco_input
+        status_txt = st.session_state.status_input
+        tipo_txt = st.session_state.tipo_input
         
-        # ORDEM DAS COLUNAS (Ajustado para o Status não sair trocado)
-        # Colunas: Data, Valor, Categoria, Banco, Descrição, Beneficiário, Conta, Aux1, Aux2, STATUS, TIPO
+        # Formata descrição com parcela
+        desc_com_parcela = f"{desc_txt} ({parc_txt})" if parc_txt != "1/1" else desc_txt
+        
+        # 2. MONTAGEM DA LINHA (Colunas A até K)
+        # A=Data, B=Valor, C=Cat, D=Banco, E=Desc, F=Benef, G=Fixo, H=Aux, I=Aux, J=Status, K=Tipo
         nova_linha = [
-            data_br, 
-            st.session_state.valor_input, 
-            st.session_state.cat_input, 
-            st.session_state.banco_input, 
-            desc_final, 
-            st.session_state.benef_input, 
-            "Pessoal", # Coluna Conta
-            0,         # Coluna Aux1
-            "",        # Coluna Aux2
-            st.session_state.status_input, # AQUI SAI 'PAGO' OU 'PENDENTE'
-            st.session_state.tipo_input    # AQUI SAI 'RECEITA' OU 'DESPESA'
+            data_txt, 
+            valor_final, 
+            cat_txt, 
+            banco_txt, 
+            desc_com_parcela, # Coluna E (Descrição)
+            benef_txt,        # Coluna F (Beneficiário)
+            "Pessoal",        # Coluna G (Fixo - Não mexe no Status)
+            0,                # Coluna H
+            "",               # Coluna I
+            status_txt,       # Coluna J (Aqui sai Pago ou Pendente)
+            tipo_txt          # Coluna K (Aqui sai Receita ou Despesa)
         ]
         
+        # 3. ENVIO
         ws_lanc.append_row(nova_linha)
         
-        # ZERAR OS CAMPOS APÓS SALVAR
+        # 4. LIMPEZA DOS CAMPOS
         st.session_state.valor_input = 0.0
         st.session_state.benef_input = ""
         st.session_state.desc_input = ""
         st.session_state.parcela_input = "1/1"
-        st.toast("✅ Lançamento realizado e campos limpos!")
+        st.toast("✅ Lançamento concluído!")
 
-def excluir_registro():
-    id_alvo = st.session_state.id_excluir_input
-    ws_lanc.delete_rows(int(id_alvo))
-    st.toast(f"🗑️ Registro {id_alvo} removido!")
-    st.session_state.id_excluir_input = 2
-
-# --- INÍCIO DO APP ---
+# --- EXECUÇÃO ---
 try:
     client = conectar_google()
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws_lanc = sh.get_worksheet(0)
-    
-    df = carregar_dados(ws_lanc)
+
     st.title("🛡️ FinançasPro Wilson")
 
-    if not df.empty:
-        # Filtros de visualização
-        c1, c2 = st.columns([2, 2])
-        with c1:
-            hoje = date.today()
-            periodo = st.date_input("📅 Período:", value=(date(hoje.year, hoje.month, 1), hoje), format="DD/MM/YYYY")
-        
-        with c2:
-            st.write("🚀 Atalhos:")
-            col_b1, col_b2 = st.columns(2)
-            btn_matilha = col_b1.button("🐶 Matilha", use_container_width=True)
-            btn_geral = col_b2.button("📄 Geral", use_container_width=True)
-
-        if isinstance(periodo, tuple) and len(periodo) == 2:
-            d_ini, d_fim = periodo
-            df_view = df[(df['Data_dt'] >= d_ini) & (df['Data_dt'] <= d_fim)].copy()
-            
-            if btn_matilha:
-                df_view = df_view[df_view.astype(str).apply(lambda x: x.str.contains('Milo|Bolt', case=False)).any(axis=1)]
-
-            # Métricas das Tags
-            rec = df_view[df_view['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
-            desp = df_view[df_view['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
-            rend = df_view[df_view['Categoria'].str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
-            pend = df_view[(df_view['Tipo'].str.contains('Despesa', case=False, na=False)) & (df_view['Status'] != 'Pago')]['Valor_num'].sum()
-
-            st.info(f"### 💰 Saldo do Período: R$ {rec - desp:,.2f}")
-            m1, m2, m3, m4 = st.columns(4)
-            m1.metric("Receitas", f"R$ {rec:,.2f}")
-            m2.metric("Despesas", f"R$ {desp:,.2f}")
-            m3.metric("Rendimentos", f"R$ {rend:,.2f}")
-            m4.metric("Pendências", f"R$ {pend:,.2f}")
-
-    st.divider()
-
-    # --- FORMULÁRIO E HISTÓRICO ---
-    c_form, c_table = st.columns([1, 2.5])
+    c_form, c_hist = st.columns([1, 2.5])
 
     with c_form:
         st.subheader("📝 Lançamento")
@@ -159,18 +117,14 @@ try:
         st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"], key="banco_input")
         st.selectbox("Status", ["Pago", "Pendente"], key="status_input")
         
-        # O on_click roda a função que limpa os campos
-        st.button("🚀 Salvar na Nuvem", use_container_width=True, on_click=salvar_registro)
+        # Chama a função que salva e limpa
+        st.button("🚀 Salvar na Planilha", use_container_width=True, on_click=salvar_registro)
 
-    with c_table:
+    with c_hist:
         st.subheader("📋 Histórico")
-        if not df.empty:
-            st.dataframe(df_view[['ID', 'Data', 'Valor', 'Tipo', 'Descrição', 'Beneficiário', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
-            
-            st.divider()
-            st.subheader("🗑️ Excluir Lançamento")
-            st.number_input("ID do registro:", min_value=2, step=1, key="id_excluir_input")
-            st.button("🔴 Confirmar Exclusão", use_container_width=True, on_click=excluir_registro)
+        dados = ws_lanc.get_all_records()
+        if dados:
+            st.dataframe(pd.DataFrame(dados).tail(15), use_container_width=True, hide_index=True)
 
 except Exception as e:
-    st.error(f"Erro detectado: {e}")
+    st.error(f"Erro: {e}")
