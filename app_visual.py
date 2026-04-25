@@ -2,26 +2,9 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
-import plotly.graph_objects as go
-from datetime import datetime
+from datetime import datetime, timedelta
 
-# 1. CONFIGURAÇÃO E ESTILO
-st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
-
-st.markdown("""
-    <style>
-    .saldo-container { background-color: #007bff; color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 25px; }
-    .card-container { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 25px; }
-    .card { flex: 1; padding: 15px; border-radius: 10px; color: white; text-align: center; font-weight: bold; }
-    .receita { background-color: #28a745; }
-    .despesa { background-color: #dc3545; }
-    .rendimento { background-color: #17a2b8; }
-    .pendencia { background-color: #ffc107; color: #212529; }
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; font-weight: bold; }
-    </style>
-    """, unsafe_allow_html=True)
-
-# 2. CONEXÃO
+# 1. CONEXÃO (Reutilizando sua lógica atual)
 @st.cache_resource
 def conectar_google():
     try:
@@ -39,94 +22,71 @@ def conectar_google():
 
 client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-ws = sh.get_worksheet(0)
-
-# CONFIGURAÇÕES
-META_GASTO = 500.00
 
 # --- BARRA LATERAL ---
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegar para:", ["💰 Finanças", "🐾 Controle dos Meninos", "🚗 Meu Veículo"])
 
-if aba == "💰 Finanças":
-    st.sidebar.header("📝 Novo Lançamento")
-    v_tipo = st.sidebar.selectbox("Tipo:", ["Receita", "Despesa", "Rendimento", "Pendência"])
-    v_banco = st.sidebar.selectbox("Banco:", ["Nubank", "Itaú", "Bradesco", "Dinheiro", "Outros"])
+# --- ABA: CONTROLE DOS MENINOS (MILO) ---
+if aba == "🐾 Controle dos Meninos":
+    st.title("🐾 Controle do Milo")
     
-    with st.sidebar.form("form_f", clear_on_submit=True):
-        f_data = st.date_input("Data", datetime.now())
-        f_valor = st.number_input("Valor (R$)", min_value=0.0, format="%.2f")
-        f_cat = st.text_input("Categoria (Ex: Aluguel, Salário)")
-        f_status = st.text_input("Status", value="Pago") 
-        if st.form_submit_button("🚀 SALVAR AGORA"):
-            ws.append_row([f_data.strftime("%d/%m/%Y"), f_valor, f_cat, v_tipo, v_banco, f_status])
-            st.cache_data.clear(); st.rerun()
+    # Conexão com a aba específica
+    try:
+        ws_milo = sh.worksheet("Controle_Milo")
+    except:
+        st.error("Aba 'Controle_Milo' não encontrada no Google Sheets. Crie-a para começar.")
+        st.stop()
 
-# --- PROCESSAMENTO ---
-try:
-    dados_raw = ws.get_all_values()
-    if len(dados_raw) > 1:
-        df = pd.DataFrame(dados_raw[1:], columns=dados_raw[0])
-        df.columns = [c.strip() for c in df.columns]
-        df['Valor'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
-        df['Data'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-        df_v = df.dropna(subset=['Data']).copy()
+    # Formulário de Entrada
+    st.sidebar.header("📋 Registrar Evento")
+    with st.sidebar.form("form_milo", clear_on_submit=True):
+        m_data = st.date_input("Data do Evento", datetime.now())
+        m_tipo = st.selectbox("Tipo", ["Vacina", "Banho", "Ração/Petisco", "Veterinário", "Outros Gastos"])
+        m_desc = st.text_input("Descrição (Ex: V10, Banho Semanal, Antipulgas)")
+        m_valor = st.number_input("Custo (R$)", min_value=0.0, format="%.2f")
+        
+        # Lógica de sugestão de próxima data
+        sugestao_prox = m_data + timedelta(days=7) if m_tipo == "Banho" else m_data + timedelta(days=30)
+        m_prox = st.date_input("Agendar Próximo (Opcional)", sugestao_prox)
+        
+        if st.form_submit_button("🦴 REGISTRAR PARA O MILO"):
+            ws_milo.append_row([
+                m_data.strftime("%d/%m/%Y"), 
+                m_tipo, 
+                m_desc, 
+                m_valor, 
+                m_prox.strftime("%d/%m/%Y")
+            ])
+            st.cache_data.clear()
+            st.success("Dados do Milo salvos!")
+            st.rerun()
 
-        if aba == "💰 Finanças":
-            st.title("🛡️ FinançasPro Wilson")
+    # Exibição dos Dados
+    try:
+        dados_milo = ws_milo.get_all_values()
+        if len(dados_milo) > 1:
+            df_milo = pd.DataFrame(dados_milo[1:], columns=dados_raw[0] if 'dados_raw' in locals() else dados_milo[0])
             
-            # CÁLCULOS PARA OS CARDS
-            v_rec = df_v[df_v['Tipo'] == 'Receita']['Valor'].sum()
-            v_des = df_v[df_v['Tipo'] == 'Despesa']['Valor'].sum()
-            v_rend = df_v[df_v['Tipo'] == 'Rendimento']['Valor'].sum()
-            v_pend = df_v[df_v['Tipo'] == 'Pendência']['Valor'].sum()
-            v_saldo = (v_rec + v_rend) - v_des
+            # Resumo rápido
+            gastos_totais = pd.to_numeric(df_milo['Valor'].str.replace(',', '.'), errors='coerce').sum()
+            
+            col1, col2 = st.columns(2)
+            col1.metric("Gasto Total com Milo", f"R$ {gastos_totais:,.2f}")
+            
+            # Próximos Compromissos (Vacinas/Banhos)
+            st.subheader("🗓️ Próximos Eventos Agendados")
+            df_milo['Próxima Data'] = pd.to_datetime(df_milo['Próxima Data'], dayfirst=True, errors='coerce')
+            hoje = datetime.now()
+            agenda = df_milo[df_milo['Próxima Data'] >= hoje].sort_values('Próxima Data')
+            
+            if not agenda.empty:
+                st.table(agenda[['Tipo', 'Descrição', 'Próxima Data']].head(5))
+            
+            st.subheader("📜 Histórico Completo")
+            st.dataframe(df_milo.iloc[::-1], use_container_width=True)
+            
+    except Exception as e:
+        st.info("Ainda não há registros para o Milo. Use o formulário lateral!")
 
-            # 1. TAG CENTRAL DE SALDO
-            st.markdown(f"""
-                <div class="saldo-container">
-                    <small>SALDO ATUAL DISPONÍVEL</small>
-                    <h1 style='margin:0;'>R$ {v_saldo:,.2f}</h1>
-                </div>
-            """, unsafe_allow_html=True)
-
-            # 2. TAGS DE RESUMO (CARDS COLORIDOS)
-            st.markdown(f"""
-                <div class="card-container">
-                    <div class="card receita">Receitas<br>R$ {v_rec:,.2f}</div>
-                    <div class="card despesa">Despesas<br>R$ {v_des:,.2f}</div>
-                    <div class="card rendimento">Rendimentos<br>R$ {v_rend:,.2f}</div>
-                    <div class="card pendencia">Pendentes<br>R$ {v_pend:,.2f}</div>
-                </div>
-            """, unsafe_allow_html=True)
-
-            # 3. TABELA DE LANÇAMENTOS
-            st.subheader("📋 Últimos Lançamentos")
-            df_display = df_v.copy()
-            df_display['Data'] = df_display['Data'].dt.strftime('%d/%m/%Y')
-            df_final = df_display[['Data', 'Valor', 'Categoria', 'Tipo', 'Banco', 'Descrição']].tail(15)
-            df_final.columns = ['Data', 'Valor', 'Categoria', 'Tipo', 'Banco', 'Status']
-            st.dataframe(df_final.iloc[::-1], use_container_width=True)
-
-            # 4. GRÁFICO MENSAL
-            st.markdown("---")
-            st.subheader("📊 Comparativo Mensal")
-            df_v['Mês/Ano'] = df_v['Data'].dt.strftime('%m/%Y')
-            res_m = df_v.groupby(['Mês/Ano', 'Tipo'])['Valor'].sum().unstack(fill_value=0).reset_index()
-            fig1 = go.Figure()
-            if 'Receita' in res_m: fig1.add_trace(go.Bar(x=res_m['Mês/Ano'], y=res_m['Receita'], name='Receita', marker_color='#28a745'))
-            if 'Despesa' in res_m: fig1.add_trace(go.Bar(x=res_m['Mês/Ano'], y=res_m['Despesa'], name='Despesa', marker_color='#dc3545'))
-            st.plotly_chart(fig1, use_container_width=True)
-
-            # 5. GRÁFICO DE METAS
-            st.markdown("---")
-            st.subheader("🎯 Metas por Categoria")
-            res_c = df_v[df_v['Tipo'] == 'Despesa'].groupby('Categoria')['Valor'].sum().reset_index()
-            if not res_c.empty:
-                fig2 = go.Figure()
-                fig2.add_trace(go.Bar(x=res_c['Categoria'], y=res_c['Valor'], name='Gasto', marker_color='#007bff'))
-                fig2.add_trace(go.Scatter(x=res_c['Categoria'], y=[META_GASTO]*len(res_c), name='Meta', line=dict(color='#ffc107', dash='dash')))
-                st.plotly_chart(fig2, use_container_width=True)
-
-except Exception as e:
-    st.error(f"Erro: {e}")
+# (Manter aqui o código das outras abas...)
