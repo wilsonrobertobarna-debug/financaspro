@@ -15,7 +15,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXÃO (Secrets)
+# 2. CONEXÃO SEGURA
 @st.cache_resource
 def conectar_google():
     try:
@@ -68,48 +68,53 @@ st.title("🛡️ FinançasPro Wilson")
 try:
     lista_dados = ws.get_all_values()
     if len(lista_dados) > 1:
-        # Cria DataFrame e limpa nomes de colunas
         df = pd.DataFrame(lista_dados[1:], columns=lista_dados[0])
         df.columns = [c.strip() for c in df.columns]
 
-        # CONVERSÃO BLINDADA (Onde a mágica acontece)
-        # 1. Trata Valores (ignora textos errados na coluna numérica)
+        # Conversão de dados com proteção contra erros
         df['Valor'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
-        
-        # 2. Trata Datas (ignora datas mal digitadas)
         df['Data'] = pd.to_datetime(df['Data'], format='%d/%m/%Y', errors='coerce')
-        
-        # Remove linhas onde a data é inválida para não quebrar o gráfico
         df_valid = df.dropna(subset=['Data']).copy()
         df_valid['Mês/Ano'] = df_valid['Data'].dt.strftime('%m/%Y')
 
-        # --- GRÁFICO DE BARRAS COM META ---
-        if not df_valid.empty:
-            st.subheader("📊 Acompanhamento de Metas e Gastos")
-            
-            resumo = df_valid.groupby(['Mês/Ano', 'Tipo'])['Valor'].sum().unstack(fill_value=0).reset_index()
-            
-            fig = go.Figure()
-            if 'Despesa' in resumo.columns:
-                fig.add_trace(go.Bar(x=resumo['Mês/Ano'], y=resumo['Despesa'], name='Gasto Real', marker_color='#dc3545'))
-            
-            fig.add_trace(go.Scatter(
-                x=resumo['Mês/Ano'], 
-                y=[META_GASTO_MENSAL] * len(resumo),
-                name='Meta', line=dict(color='#ffc107', width=3, dash='dash')
-            ))
-            
-            fig.update_layout(barmode='group', height=350, margin=dict(l=0, r=0, t=30, b=0))
-            st.plotly_chart(fig, use_container_width=True)
+        # Agrupamento para os gráficos
+        resumo = df_valid.groupby(['Mês/Ano', 'Tipo'])['Valor'].sum().unstack(fill_value=0).reset_index()
 
-        # --- TABELA DE LANÇAMENTOS ---
+        # 📊 1. GRÁFICO COMPARATIVO (RECEITA VS DESPESA)
+        st.subheader("📊 Comparativo Mensal: Receita vs Despesa")
+        fig1 = go.Figure()
+        if 'Receita' in resumo.columns:
+            fig1.add_trace(go.Bar(x=resumo['Mês/Ano'], y=resumo['Receita'], name='Receitas', marker_color='#28a745'))
+        if 'Despesa' in resumo.columns:
+            fig1.add_trace(go.Bar(x=resumo['Mês/Ano'], y=resumo['Despesa'], name='Despesas', marker_color='#dc3545'))
+        
+        fig1.update_layout(barmode='group', height=350, margin=dict(l=0, r=0, t=30, b=0))
+        st.plotly_chart(fig1, use_container_width=True)
+
         st.markdown("---")
-        st.subheader("📋 Histórico")
-        # Mostra o DF original para você ver onde está o erro (aparecerá como NaT ou 0)
+
+        # 📊 2. GRÁFICO DE METAS (APENAS DESPESAS)
+        st.subheader("🎯 Acompanhamento de Metas de Gastos")
+        fig2 = go.Figure()
+        if 'Despesa' in resumo.columns:
+            fig2.add_trace(go.Bar(x=resumo['Mês/Ano'], y=resumo['Despesa'], name='Gasto Real', marker_color='#007bff'))
+        
+        fig2.add_trace(go.Scatter(
+            x=resumo['Mês/Ano'], 
+            y=[META_GASTO_MENSAL] * len(resumo),
+            name='Limite Meta', line=dict(color='#ffc107', width=4, dash='dash')
+        ))
+        
+        fig2.update_layout(height=350, margin=dict(l=0, r=0, t=30, b=0))
+        st.plotly_chart(fig2, use_container_width=True)
+
+        # 📋 TABELA FINAL
+        st.markdown("---")
+        st.subheader("📋 Histórico Recente")
         st.dataframe(df.tail(15), use_container_width=True)
         
     else:
-        st.info("Planilha vazia. Use a barra lateral para lançar dados.")
+        st.info("Aguardando lançamentos para gerar os gráficos...")
 
 except Exception as e:
-    st.error(f"Ocorreu um erro inesperado: {e}")
+    st.error(f"Erro ao processar visuais: {e}")
