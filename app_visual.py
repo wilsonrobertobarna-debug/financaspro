@@ -4,33 +4,33 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import re
 
-# 1. CONFIGURAÇÃO
+# 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# 2. SUA CHAVE (Pode colar o JSON INTEIRO aqui, sem limpar nada)
-# O código abaixo vai "caçar" a chave no meio do texto e ignorar e-mails e nomes de campos.
+# 2. SUA CHAVE (Pode colar o conteúdo INTEGRAL do JSON aqui)
+# O código abaixo vai "garimpar" a chave real e ignorar o resto.
 CHAVE_PRIVADA_BRUTA = """-----BEGIN PRIVATE KEY-----
 COLE_SUA_CHAVE_AQUI
 -----END PRIVATE KEY-----"""
 
-@st.cache_resource(show_spinner="Validando segurança...")
+@st.cache_resource(show_spinner="Autenticando no Google...")
 def conectar_google():
     # --- OPERAÇÃO GARIMPO ---
-    # 1. Converte \n literais (comuns no JSON) em quebras reais
-    texto = CHAVE_PRIVADA_BRUTA.replace("\\n", "\n")
+    # 1. Converte \n literais em quebras reais
+    texto_limpo = CHAVE_PRIVADA_BRUTA.replace("\\n", "\n")
     
-    # 2. FILTRO CIRÚRGICO: Extrai APENAS o que está entre BEGIN e END
-    # Isso joga fora o erro 95 (underline) e o erro 64 (@) instantaneamente
-    match = re.search(r"-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----", texto)
+    # 2. EXTRAÇÃO CIRÚRGICA: Busca apenas o bloco entre BEGIN e END
+    # Isso elimina o erro 95 (underline) e o erro 64 (@) na hora.
+    match = re.search(r"-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----", texto_limpo)
     
     if not match:
-        st.error("🚨 Marcadores não encontrados! Verifique se você colou do '-----BEGIN' até o 'END-----'.")
+        st.error("🚨 Marcadores não encontrados! Verifique se você copiou desde o '-----BEGIN' até o 'END-----'.")
         st.stop()
     
-    chave_pura = match.group(0)
+    chave_isolada = match.group(0)
     
-    # 3. Limpa espaços fantasmas no início/fim de cada linha
-    linhas = [l.strip() for l in chave_pura.split('\n') if l.strip()]
+    # 3. Limpeza final de espaços invisíveis
+    linhas = [l.strip() for l in chave_isolada.split('\n') if l.strip()]
     chave_final = "\n".join(linhas)
     
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -50,16 +50,18 @@ st.title("🛡️ FinançasPro Wilson")
 
 try:
     client = conectar_google()
+    # Conecta à sua planilha pelo ID
     sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
     ws = sh.get_worksheet(0)
     
     st.success("✅ Conexão estabelecida com sucesso!")
     
-    # Teste de leitura
+    # Visualização de teste
     dados = ws.get_all_records()
     if dados:
-        st.dataframe(pd.DataFrame(dados).tail(5), use_container_width=True)
+        st.subheader("📋 Histórico Recente")
+        st.dataframe(pd.DataFrame(dados).tail(10), use_container_width=True)
 
 except Exception as e:
     st.error(f"Erro detectado: {e}")
-    st.info("💡 Se o erro persistir, abra seu arquivo .json no BLOCO DE NOTAS e copie a chave novamente.")
+    st.info("💡 Wilson, tente abrir o arquivo .json no BLOCO DE NOTAS e copie a chave novamente.")
