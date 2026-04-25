@@ -16,7 +16,6 @@ st.markdown("""
     .receita { background-color: #28a745; }
     .despesa { background-color: #dc3545; }
     .rendimento { background-color: #17a2b8; }
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -38,47 +37,57 @@ def conectar_google():
 
 client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+ws_finance = sh.get_worksheet(0)
+
+# LISTAS PARA AS BARRINHAS
+LISTA_CAT = ["Mercado", "Shopee", "Mercado Livre", "AserNet", "Skyfit", "Farmácia", "Combustível", "Milo/Bolt", "Lazer", "Outros"]
+LISTA_TIPO = ["Receita", "Despesa", "Rendimento", "Pendência"]
+LISTA_STATUS = ["Pago", "Pendente"]
+LISTA_BANCO = ["Nubank", "Itaú", "Bradesco", "Dinheiro", "Outros"]
 
 # 3. BARRA LATERAL
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
-# ==========================================
-# ABA 1: FINANÇAS
-# ==========================================
 if aba == "💰 Finanças":
-    ws_finance = sh.get_worksheet(0)
-    
     st.sidebar.header("📝 Novo Lançamento")
     with st.sidebar.form("form_f", clear_on_submit=True):
-        f_data = st.date_input("Data", datetime.now(), format="DD/MM/YYYY") 
+        # Aqui garantimos que o seletor visual também ajude o usuário
+        f_data = st.date_input("Data do Lançamento", datetime.now()) 
         f_valor = st.number_input("Valor (R$)", min_value=0.0, format="%.2f")
-        f_cat = st.selectbox("Categoria", ["Mercado", "Shopee", "Mercado Livre", "AserNet", "Skyfit", "Farmácia", "Combustível", "Milo/Bolt", "Lazer", "Outros"])
-        f_tipo = st.selectbox("Tipo", ["Receita", "Despesa", "Rendimento", "Pendência"])
-        f_banco = st.selectbox("Banco", ["Nubank", "Itaú", "Bradesco", "Dinheiro", "Outros"])
-        f_status = st.selectbox("Status", ["Pago", "Pendente"])
+        f_cat = st.selectbox("Categoria", LISTA_CAT)
+        f_parc = st.number_input("Parcelas", min_value=1, value=1)
+        f_tipo = st.selectbox("Tipo", LISTA_TIPO)
+        f_banco = st.selectbox("Banco", LISTA_BANCO)
+        f_status = st.selectbox("Status", LISTA_STATUS)
         
-        if st.form_submit_button("🚀 SALVAR"):
-            dt_br = f_data.strftime("%d/%m/%Y")
-            ws_finance.append_row([dt_br, f_valor, f_cat, f_tipo, f_banco, f_status])
-            st.cache_data.clear(); st.rerun()
+        if st.form_submit_button("🚀 SALVAR NO PADRÃO BR"):
+            # TRAVA DA DATA BR: Dia/Mês/Ano
+            dt_formatada = f_data.strftime("%d/%m/%Y")
+            desc_final = f"{f_cat} ({f_parc}x)" if f_parc > 1 else f_cat
+            ws_finance.append_row([dt_formatada, f_valor, desc_final, f_tipo, f_banco, f_status])
+            st.cache_data.clear()
+            st.success(f"Lançamento de {dt_formatada} salvo!")
+            st.rerun()
 
+    # 4. EXIBIÇÃO E GRÁFICOS
     try:
         dados = ws_finance.get_all_values()
         if len(dados) > 1:
             df = pd.DataFrame(dados[1:], columns=["Data", "Valor", "Categoria", "Tipo", "Banco", "Status"])
             df['Valor'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
+            
+            # Garante que o Pandas entenda a data BR que vem da planilha
             df['Data_Obj'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
             df_v = df.dropna(subset=['Data_Obj']).sort_values(by='Data_Obj', ascending=False)
 
-            # --- CÁLCULOS DOS CARDS ---
+            # CARDS
             v_rec = df_v[df_v['Tipo'] == 'Receita']['Valor'].sum()
             v_des = df_v[df_v['Tipo'] == 'Despesa']['Valor'].sum()
             v_rend = df_v[df_v['Tipo'] == 'Rendimento']['Valor'].sum()
             saldo = (v_rec + v_rend) - v_des
 
-            # --- TELA PRINCIPAL ---
-            st.title("🛡️ FinançasPro - Central Wilson")
+            st.title("🛡️ FinançasPro - Central")
             st.markdown(f'<div class="saldo-container"><small>SALDO ATUAL</small><h1 style="margin:0;">R$ {saldo:,.2f}</h1></div>', unsafe_allow_html=True)
             
             st.markdown(f"""
@@ -89,10 +98,10 @@ if aba == "💰 Finanças":
                 </div>
                 """, unsafe_allow_html=True)
 
-            # --- GRÁFICOS ---
+            # GRÁFICOS
             c1, c2 = st.columns(2)
             with c1:
-                st.subheader("📊 Evolução Mensal")
+                st.subheader("📊 Evolução")
                 df_v['Mês/Ano'] = df_v['Data_Obj'].dt.strftime('%m/%Y')
                 res_m = df_v.groupby(['Mês/Ano', 'Tipo'])['Valor'].sum().unstack(fill_value=0).reset_index()
                 fig1 = go.Figure()
@@ -101,44 +110,19 @@ if aba == "💰 Finanças":
                 st.plotly_chart(fig1, use_container_width=True)
             
             with c2:
-                st.subheader("🎯 Gastos por Categoria")
+                st.subheader("🎯 Por Categoria")
                 res_cat = df_v[df_v['Tipo'] == 'Despesa'].groupby('Categoria')['Valor'].sum().sort_values(ascending=False).reset_index()
                 if not res_cat.empty:
                     fig2 = go.Figure(go.Bar(x=res_cat['Categoria'], y=res_cat['Valor'], marker_color='#007bff'))
                     st.plotly_chart(fig2, use_container_width=True)
 
-            st.subheader("📋 Histórico Recente")
+            st.subheader("📋 Histórico (Organizado por Data)")
+            # Mostra a coluna Data original que já está em formato BR
             st.dataframe(df_v[["Data", "Valor", "Categoria", "Tipo", "Banco", "Status"]].head(15), use_container_width=True)
-    except Exception as e: st.error(f"Erro: {e}")
 
-# ==========================================
-# ABA 2: MILO & BOLT
-# ==========================================
-elif aba == "🐾 Milo & Bolt":
-    st.title("🐾 Cuidados: Milo & Bolt")
-    try:
-        ws_p = sh.worksheet("Controle_Pets")
-        st.sidebar.header("📝 Registro Pet")
-        with st.sidebar.form("form_p", clear_on_submit=True):
-            p_pet = st.selectbox("Quem?", ["Milo", "Bolt", "Os Dois"])
-            p_data = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
-            p_tipo = st.selectbox("O quê?", ["Ração", "Vacina", "Vermífugo", "Banho", "Saúde"])
-            p_valor = st.number_input("Valor (R$)", min_value=0.0)
-            if st.form_submit_button("🦴 SALVAR"):
-                dt_br = p_data.strftime("%d/%m/%Y")
-                ws_p.append_row([dt_br, p_pet, p_tipo, "Cuidado Pet", p_valor])
-                sh.get_worksheet(0).append_row([dt_br, p_valor, f"Pet: {p_tipo}", "Despesa", "Nubank", "Pago"])
-                st.cache_data.clear(); st.rerun()
+    except Exception as e:
+        st.error(f"Erro ao processar dados: {e}")
 
-        dp_list = ws_p.get_all_values()
-        if len(dp_list) > 1:
-            dp = pd.DataFrame(dp_list[1:], columns=["Data", "Pet", "Tipo", "Detalhe", "Valor"])
-            st.dataframe(dp.iloc[::-1], use_container_width=True)
-    except: st.error("Aba 'Controle_Pets' não encontrada.")
-
-# ==========================================
-# ABA 3: VEÍCULO
-# ==========================================
 else:
-    st.title("🚗 Meu Veículo")
-    st.info("Pronto para configurar o veículo assim que as outras estiverem 100%!")
+    st.title(f"Aba {aba}")
+    st.info("Focando na correção da Data em Finanças primeiro!")
