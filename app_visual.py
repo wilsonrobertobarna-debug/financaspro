@@ -9,6 +9,7 @@ st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="�
 
 st.markdown("""
     <style>
+    .stMetric { background-color: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #dee2e6; }
     .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
@@ -32,11 +33,7 @@ def conectar_google():
 client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# 3. INTERFACE DE NAVEGAÇÃO
-st.sidebar.title("🎮 Painel Wilson")
-aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
-
-# --- FUNÇÃO DE TABELA INTELIGENTE ---
+# --- FUNÇÃO DE TABELA DINÂMICA ---
 def exibir_tabela_dinamica(aba_sheet, titulo):
     dados = aba_sheet.get_all_values()
     if len(dados) > 1:
@@ -51,22 +48,65 @@ def exibir_tabela_dinamica(aba_sheet, titulo):
     else:
         st.info(f"Aba {titulo} vazia.")
 
+# 3. INTERFACE DE NAVEGAÇÃO
+st.sidebar.title("🎮 Painel Wilson")
+aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
+
 # ==========================================
-# ABA 1: FINANÇAS
+# ABA 1: FINANÇAS (DASHBOARD COMPLETO)
 # ==========================================
 if aba == "💰 Finanças":
     ws = sh.get_worksheet(0)
     st.title("🛡️ FinançasPro - Central Wilson")
     
+    dados = ws.get_all_values()
+    if len(dados) > 1:
+        df = pd.DataFrame(dados[1:], columns=dados[0])
+        df['Valor_Num'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
+        
+        # CÁLCULOS DOS CARDS
+        rec = df[df['Tipo'] == 'Receita']['Valor_Num'].sum()
+        desp = df[df['Tipo'] == 'Despesa']['Valor_Num'].sum()
+        saldo = rec - desp
+        rend = df[df['Categoria'] == 'Rendimento']['Valor_Num'].sum()
+        pend = df[df['Status'] == 'Pendente']['Valor_Num'].sum()
+        
+        # EXIBIÇÃO DOS CARDS
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("🟢 Receitas", f"R$ {rec:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        c2.metric("🔴 Despesas", f"R$ {desp:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        c3.metric("💎 Saldo", f"R$ {saldo:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        c4.metric("📈 Rendimentos", f"R$ {rend:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        c5.metric("⏳ Pendentes", f"R$ {pend:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        
+        # CARD DE ECONOMIA
+        economia_perc = ((rec - desp) / rec * 100) if rec > 0 else 0
+        st.success(f"📈 **Resumo de Economia:** Wilson, você poupou **{economia_perc:.1f}%** da sua renda este mês! 🛡️")
+
+        # GRÁFICOS
+        st.write("---")
+        g1, g2 = st.columns(2)
+        with g1:
+            st.subheader("📊 Gastos por Categoria")
+            gastos_cat = df[df['Tipo'] == 'Despesa'].groupby('Categoria')['Valor_Num'].sum()
+            st.bar_chart(gastos_cat)
+        with g2:
+            st.subheader("🥧 Distribuição")
+            st.write("Visão detalhada de despesas:")
+            st.table(gastos_cat.sort_values(ascending=False))
+
+    # FORMULÁRIO LATERAL
     with st.sidebar.form("f_fin", clear_on_submit=True):
         f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
         f_val = st.number_input("Valor (R$)", min_value=0.0)
-        f_cat = st.selectbox("Categoria", ["Mercado", "Shopee", "AserNet", "Skyfit", "Milo/Bolt", "Combustível", "Outros"])
+        f_tip = st.selectbox("Tipo", ["Despesa", "Receita"])
+        f_cat = st.selectbox("Categoria", ["Mercado", "Shopee", "AserNet", "Skyfit", "Milo/Bolt", "Combustível", "Rendimento", "Outros"])
+        f_stat = st.selectbox("Status", ["Pago", "Pendente"])
         if st.form_submit_button("🚀 SALVAR FINANCEIRO"):
-            ws.append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, "Despesa", "Nubank", "Pago"])
+            ws.append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, f_tip, "Nubank", f_stat])
             st.cache_data.clear(); st.rerun()
             
-    exibir_tabela_dinamica(ws, "Histórico Financeiro Geral")
+    exibir_tabela_dinamica(ws, "Histórico Geral")
 
 # ==========================================
 # ABA 2: MILO & BOLT
@@ -86,7 +126,7 @@ elif aba == "🐾 Milo & Bolt":
             sh.get_worksheet(0).append_row([dt_s, str(p_val).replace('.', ','), f"Pet: {p_tip}", "Despesa", "Nubank", "Pago"])
             st.cache_data.clear(); st.rerun()
             
-    exibir_tabela_dinamica(ws, "Histórico dos Meninos")
+    exibir_tabela_dinamica(ws, "Histórico dos Pets")
 
 # ==========================================
 # ABA 3: MEU VEÍCULO
@@ -110,15 +150,12 @@ else:
         with st.sidebar.form("f_vei", clear_on_submit=True):
             v_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
             v_tip = st.selectbox("Serviço", ["Abastecimento", "Troca de Óleo", "Manutenção", "Lavagem"])
-            v_det = st.text_input("Descrição (Ex: Posto, Marca do Óleo)")
+            v_det = st.text_input("Descrição (Ex: Posto)")
             v_km = st.number_input("KM Atual", min_value=0)
             v_val = st.number_input("Valor Pago (R$)", min_value=0.0)
-            
             if st.form_submit_button("🚗 SALVAR NO VEÍCULO"):
                 dt_s = v_dat.strftime("%d/%m/%Y")
-                # ORDEM: Data | Serviço | Descrição | KM | Valor
                 ws.append_row([dt_s, v_tip, v_det, str(v_km), str(v_val).replace('.', ',')])
-                # LANÇA NO FINANCEIRO GERAL
                 sh.get_worksheet(0).append_row([dt_s, str(v_val).replace('.', ','), f"Veículo: {v_tip}", "Despesa", "Nubank", "Pago"])
                 st.cache_data.clear(); st.rerun()
                 
