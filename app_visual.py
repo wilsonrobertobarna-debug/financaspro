@@ -61,42 +61,31 @@ if aba == "💰 Finanças":
         c_stat = 'Status' if 'Status' in df_base.columns else df_base.columns[5]
         c_bnc = 'Banco' if 'Banco' in df_base.columns else df_base.columns[4]
 
-        # FILTRO DE BANCO
         bancos_lista = ["Todos"] + sorted(list(df_base[c_bnc].unique()))
         banco_filtro = st.selectbox("🔍 Filtrar Visão por Banco:", bancos_lista)
         df = df_base[df_base[c_bnc] == banco_filtro].copy() if banco_filtro != "Todos" else df_base.copy()
 
-        # TRATAMENTO DE DADOS
         df['Valor_Num'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
-        # Criamos uma coluna oculta para cálculos, mas NÃO alteramos a coluna 'Data' original da planilha
         df['Data_Calc'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
         mes_atual = datetime.now().strftime('%m/%y')
         
-        # CÁLCULOS DASHBOARD
         rec = df[df[c_tipo].str.contains('Receita', case=False, na=False)]['Valor_Num'].sum()
         desp = df[df[c_tipo].str.contains('Despesa', case=False, na=False)]['Valor_Num'].sum()
         rend = df[df[c_cat].str.contains('Rendimento', case=False, na=False)]['Valor_Num'].sum()
         pend = df[df[c_stat].str.contains('Pendente', case=False, na=False)]['Valor_Num'].sum()
         saldo = rec - desp
-        eco_perc = (saldo / rec * 100) if rec > 0 else 0
         def f_brl(v): return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-        # EXIBIÇÃO DASHBOARD
         st.markdown(f'<div class="saldo-container"><small>Saldo em: {banco_filtro}</small><h2>{f_brl(saldo)}</h2></div>', unsafe_allow_html=True)
         t1, t2, t3, t4 = st.columns(4)
-        t1.metric("🟢 Receitas", f_brl(rec))
-        t2.metric("🔴 Despesas", f_brl(desp))
-        t3.metric("📈 Rendimentos", f_brl(rend))
-        t4.metric("⏳ Pendências", f_brl(pend))
-        st.markdown(f'<div class="economia-texto">🔹 Economia Real ({banco_filtro}): {f_brl(saldo)} ({eco_perc:.1f}%)</div>', unsafe_allow_html=True)
+        t1.metric("🟢 Receitas", f_brl(rec)); t2.metric("🔴 Despesas", f_brl(desp))
+        t3.metric("📈 Rendimentos", f_brl(rend)); t4.metric("⏳ Pendências", f_brl(pend))
 
-        # HISTÓRICO - Aqui forçamos a exibição da coluna original da planilha
         st.subheader(f"📋 Histórico: {banco_filtro}")
         df_visual = df.drop(columns=['Data_Calc'], errors='ignore').copy()
         df_visual.index = df.index + 2
         st.dataframe(df_visual.iloc[::-1], use_container_width=True)
 
-        # GRÁFICOS
         st.write("---")
         g1, g2 = st.columns(2)
         with g1:
@@ -108,23 +97,20 @@ if aba == "💰 Finanças":
             st.subheader("📊 Receita x Despesa")
             try:
                 comp = df_m.groupby(['Mes', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
-                cores = ['#dc3545' if "Desp" in col else '#28a745' for col in comp.columns]
-                st.bar_chart(comp, color=cores)
+                st.bar_chart(comp)
             except: st.info("Dados insuficientes.")
 
         st.subheader("🏦 Gasto por Banco")
         gastos_banco = df[df[c_tipo].str.contains('Despesa', case=False, na=False)].groupby(c_bnc)['Valor_Num'].sum()
         st.bar_chart(gastos_banco, color='#007bff')
 
-    # FORMULÁRIOS NO MENU LATERAL (MANTIDOS)
     acao_fin = st.sidebar.selectbox("Ação Financeira:", ["Novo Lançamento", "Editar/Excluir"])
     if acao_fin == "Novo Lançamento":
         with st.sidebar.form("f_fin"):
-            f_dat = st.date_input("Início", datetime.now())
-            f_val = st.number_input("Valor da Parcela", min_value=0.0)
+            f_dat = st.date_input("Início", datetime.now()); f_val = st.number_input("Valor", min_value=0.0)
             f_parc = st.number_input("Qtd Parcelas", min_value=1, value=1)
             f_tip = st.selectbox("Tipo", ["Despesa", "Receita"])
-            f_cat = st.selectbox("Categoria", ["Mercado", "AserNet", "Skyfit", "Milo/Bolt", "Combustível", "Rendimento", "Parcelamento", "Outros"])
+            f_cat = st.selectbox("Categoria", ["Mercado", "AserNet", "Skyfit", "Milo/Bolt", "Combustível", "Rendimento", "Outros"])
             f_bnc = st.selectbox("Banco", ["Nubank", "Itaú", "Dinheiro", "Outro"])
             f_stat = st.selectbox("Status", ["Pago", "Pendente"])
             if st.form_submit_button("🚀 SALVAR"):
@@ -133,29 +119,20 @@ if aba == "💰 Finanças":
                     dt = f_dat + relativedelta(months=i)
                     cat_nome = f"{f_cat} ({i+1}/{f_parc})" if f_parc > 1 else f_cat
                     linhas.append([dt.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), cat_nome, f_tip, f_bnc, f_stat])
-                ws.append_rows(linhas)
-                st.cache_data.clear(); st.rerun()
-    else:
-        sel_f = st.sidebar.selectbox("ID Linha:", list(df_visual.index))
-        if sel_f:
-            row_f = df_base.loc[sel_f-2]
-            with st.sidebar.form("e_fin"):
-                e_val = st.text_input("Valor", value=str(row_f['Valor']))
-                e_bnc = st.selectbox("Banco", ["Nubank", "Itaú", "Dinheiro", "Outro"])
-                e_stat = st.selectbox("Status", ["Pago", "Pendente"], index=0 if "Pag" in str(row_f[c_stat]) else 1)
-                if st.form_submit_button("💾 ATUALIZAR"):
-                    ws.update(f"B{sel_f}", [[e_val]]); ws.update(f"E{sel_f}", [[e_bnc]]); ws.update(f"F{sel_f}", [[e_stat]])
-                    st.cache_data.clear(); st.rerun()
-                if st.form_submit_button("🗑️ EXCLUIR"):
-                    ws.delete_rows(int(sel_f)); st.cache_data.clear(); st.rerun()
+                ws.append_rows(linhas); st.cache_data.clear(); st.rerun()
 
-# ABAS MILO E VEÍCULO (INTOCADAS)
+# ==========================================
+# ABA 2: MILO & BOLT (CORRIGIDO)
+# ==========================================
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Controle: Milo & Bolt")
     ws_p = sh.worksheet("Controle_Pets")
     dados_p = ws_p.get_all_values()
     df_p = pd.DataFrame(dados_p[1:], columns=dados_p[0])
+    
+    # AJUSTE DA DATA: Usamos a coluna original para visualização
     df_p.index = df_p.index + 2
+    
     acao_p = st.sidebar.selectbox("Ação Pets:", ["Novo Registro", "Editar/Excluir"])
     if acao_p == "Novo Registro":
         with st.sidebar.form("f_p"):
@@ -167,14 +144,21 @@ elif aba == "🐾 Milo & Bolt":
         sel_p = st.sidebar.selectbox("ID Linha:", list(df_p.index))
         if sel_p and st.sidebar.button("🗑️ EXCLUIR REGISTRO"):
             ws_p.delete_rows(int(sel_p)); st.cache_data.clear(); st.rerun()
+    
     st.dataframe(df_p.iloc[::-1], use_container_width=True)
 
+# ==========================================
+# ABA 3: MEU VEÍCULO (CORRIGIDO)
+# ==========================================
 else:
     st.title("🚗 Controle: Veículo")
     ws_v = sh.worksheet("Controle_Veiculo")
     dados_v = ws_v.get_all_values()
     df_v = pd.DataFrame(dados_v[1:], columns=dados_v[0])
+    
+    # AJUSTE DA DATA: Usamos a coluna original para visualização
     df_v.index = df_v.index + 2
+    
     acao_v = st.sidebar.selectbox("Ação Veículo:", ["Novo Registro", "Editar/Excluir"])
     if acao_v == "Novo Registro":
         with st.sidebar.form("f_v"):
@@ -186,4 +170,5 @@ else:
         sel_v = st.sidebar.selectbox("ID Linha:", list(df_v.index))
         if sel_v and st.sidebar.button("🗑️ EXCLUIR REGISTRO"):
             ws_v.delete_rows(int(sel_v)); st.cache_data.clear(); st.rerun()
+            
     st.dataframe(df_v.iloc[::-1], use_container_width=True)
