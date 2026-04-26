@@ -45,6 +45,8 @@ def carregar_tudo():
     try:
         df_b = pd.DataFrame(sh.worksheet("Bancos").get_all_records())
         df_c = pd.DataFrame(sh.worksheet("Categoria").get_all_records())
+        
+        # Limpeza profunda nas Metas
         if 'Meta' in df_c.columns:
             df_c['Meta'] = pd.to_numeric(df_c['Meta'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0.0)
         else: df_c['Meta'] = 0.0
@@ -91,28 +93,28 @@ if aba == "💰 Finanças":
         
         with col1:
             st.subheader(f"📊 Metas vs Gasto ({mes_atual})")
+            
+            # 1. Pegar gastos do mês e limpar nomes
             df_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base[c_tip] == 'Despesa')].copy()
             df_mes[c_cat] = df_mes[c_cat].astype(str).str.strip()
-            gasto_cat = df_mes.groupby(c_cat)['Valor_Num'].sum().reset_index()
+            gasto_cat = df_mes.groupby(c_cat)['Valor_Num'].sum()
             
-            # Unir categorias cadastradas com gastos reais
-            df_m = pd.merge(df_cats_cad[['Nome', 'Meta']], gasto_cat, left_on='Nome', right_on=c_cat, how='outer').fillna(0.0)
-            df_m['Nome'] = df_m['Nome'].where(df_m['Nome'] != 0, df_m[c_cat])
+            # 2. Criar a tabela de comparação baseada no CADASTRO de categorias
+            df_comp = pd.DataFrame(index=df_cats_cad['Nome'])
+            df_comp['Meta'] = df_cats_cad.set_index('Nome')['Meta']
+            df_comp['Real'] = gasto_cat
             
-            # Criar DataFrame final com colunas explícitas
-            df_final = pd.DataFrame({
-                'Meta': df_m['Meta'].values,
-                'Real': df_m['Valor_Num'].values
-            }, index=df_m['Nome'])
+            # 3. Limpar zeros e garantir que são números
+            df_comp = df_comp.fillna(0.0).astype(float)
             
-            # Filtro para não mostrar categorias vazias
-            df_final = df_final[(df_final['Meta'] > 0) | (df_final['Real'] > 0)]
+            # 4. Filtrar para mostrar apenas categorias que têm ou Meta ou Gasto Real
+            df_final_grafico = df_comp[(df_comp['Meta'] > 0) | (df_comp['Real'] > 0)]
 
-            if not df_final.empty:
-                # O segredo: usamos o DataFrame reconstruído e garantimos que não há empilhamento
-                st.bar_chart(df_final, horizontal=True)
+            if not df_final_grafico.empty:
+                # Exibe barras lado a lado
+                st.bar_chart(df_final_grafico, horizontal=True)
             else:
-                st.info("Verifique se as Metas estão preenchidas na folha 'Categoria'.")
+                st.info("💡 Nenhuma meta ou gasto encontrado. Verifique se os nomes das categorias na aba 'Lançamentos' são iguais aos da aba 'Categoria'.")
 
         with col2:
             st.subheader("📈 Receita x Despesa Mensal")
