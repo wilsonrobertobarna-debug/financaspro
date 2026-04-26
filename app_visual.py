@@ -66,9 +66,10 @@ if aba == "💰 Finanças":
         banco_filtro = st.selectbox("🔍 Filtrar Visão por Banco:", bancos_lista)
         df = df_base[df_base[c_bnc] == banco_filtro].copy() if banco_filtro != "Todos" else df_base.copy()
 
-        # TRATAMENTO DE DADOS (CORRIGINDO DATA E VALOR)
+        # TRATAMENTO DE DADOS
         df['Valor_Num'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
-        df['Data_DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
+        # Criamos uma coluna oculta para cálculos, mas NÃO alteramos a coluna 'Data' original da planilha
+        df['Data_Calc'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
         mes_atual = datetime.now().strftime('%m/%y')
         
         # CÁLCULOS DASHBOARD
@@ -89,17 +90,18 @@ if aba == "💰 Finanças":
         t4.metric("⏳ Pendências", f_brl(pend))
         st.markdown(f'<div class="economia-texto">🔹 Economia Real ({banco_filtro}): {f_brl(saldo)} ({eco_perc:.1f}%)</div>', unsafe_allow_html=True)
 
-        # HISTÓRICO COM DATA BR
+        # HISTÓRICO - Aqui forçamos a exibição da coluna original da planilha
         st.subheader(f"📋 Histórico: {banco_filtro}")
-        df_visual = df.copy(); df_visual.index = df.index + 2
+        df_visual = df.drop(columns=['Data_Calc'], errors='ignore').copy()
+        df_visual.index = df.index + 2
         st.dataframe(df_visual.iloc[::-1], use_container_width=True)
 
-        # --- GRÁFICOS RESTAURADOS ---
+        # GRÁFICOS
         st.write("---")
         g1, g2 = st.columns(2)
         with g1:
             st.subheader("🍕 Categoria (Mês)")
-            df_m = df.copy(); df_m['Mes'] = df_m['Data_DT'].dt.strftime('%m/%y')
+            df_m = df.copy(); df_m['Mes'] = df_m['Data_Calc'].dt.strftime('%m/%y')
             gastos_cat = df_m[(df_m['Mes'] == mes_atual) & (df_m[c_tipo] == 'Despesa')].groupby(c_cat)['Valor_Num'].sum()
             st.bar_chart(gastos_cat, color='#ffc107')
         with g2:
@@ -108,14 +110,13 @@ if aba == "💰 Finanças":
                 comp = df_m.groupby(['Mes', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
                 cores = ['#dc3545' if "Desp" in col else '#28a745' for col in comp.columns]
                 st.bar_chart(comp, color=cores)
-            except: st.info("Dados insuficientes para comparação mensal.")
+            except: st.info("Dados insuficientes.")
 
-        # GRÁFICO POR BANCO (RECUPERADO)
         st.subheader("🏦 Gasto por Banco")
         gastos_banco = df[df[c_tipo].str.contains('Despesa', case=False, na=False)].groupby(c_bnc)['Valor_Num'].sum()
         st.bar_chart(gastos_banco, color='#007bff')
 
-    # FORMULÁRIOS NO MENU LATERAL (PRESERVADOS)
+    # FORMULÁRIOS NO MENU LATERAL (MANTIDOS)
     acao_fin = st.sidebar.selectbox("Ação Financeira:", ["Novo Lançamento", "Editar/Excluir"])
     if acao_fin == "Novo Lançamento":
         with st.sidebar.form("f_fin"):
@@ -148,7 +149,7 @@ if aba == "💰 Finanças":
                 if st.form_submit_button("🗑️ EXCLUIR"):
                     ws.delete_rows(int(sel_f)); st.cache_data.clear(); st.rerun()
 
-# ABA MILO E VEÍCULO (PRESERVADAS)
+# ABAS MILO E VEÍCULO (INTOCADAS)
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Controle: Milo & Bolt")
     ws_p = sh.worksheet("Controle_Pets")
