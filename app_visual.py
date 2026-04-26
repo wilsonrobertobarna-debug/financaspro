@@ -48,6 +48,10 @@ def carregar_tudo():
         if 'Meta' in df_c.columns:
             df_c['Meta'] = pd.to_numeric(df_c['Meta'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0.0)
         else: df_c['Meta'] = 0.0
+        
+        # Limpeza de nomes de categorias para evitar erros de cruzamento
+        df_c['Nome'] = df_c['Nome'].astype(str).str.strip()
+        
         df_ct = pd.DataFrame(sh.worksheet("Cartoes").get_all_records())
         ws = sh.get_worksheet(0)
         dados = ws.get_all_values()
@@ -62,9 +66,6 @@ df_bancos_cad, df_cats_cad, df_cartoes_cad, df_base = carregar_tudo()
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
-# ==========================================
-# ABA 1: FINANÇAS
-# ==========================================
 if aba == "💰 Finanças":
     ws = sh.get_worksheet(0)
     st.markdown("<h1 style='text-align: center; margin-bottom: 0;'>🛡️ FinançasPro Wilson</h1><p style='text-align: center; font-size: 1.5rem; margin-top: -10px;'>🐾<br>🐾</p>", unsafe_allow_html=True)
@@ -79,7 +80,7 @@ if aba == "💰 Finanças":
         df_base['Mes_Ano'] = df_base['Data_DT'].dt.strftime('%m/%y')
         mes_atual = datetime.now().strftime('%m/%y')
 
-        # Cálculo do Saldo
+        # Saldo
         s_ini = pd.to_numeric(df_bancos_cad['Saldo Inicial'].astype(str).str.replace(',', '.'), errors='coerce').sum() if not df_bancos_cad.empty else 0
         rec_t = df_base[df_base[c_tip] == 'Receita']['Valor_Num'].sum()
         desp_t = df_base[df_base[c_tip] == 'Despesa']['Valor_Num'].sum()
@@ -92,15 +93,34 @@ if aba == "💰 Finanças":
         
         with col1:
             st.subheader(f"📊 Metas vs Gasto ({mes_atual})")
-            df_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base[c_tip] == 'Despesa')]
+            # Filtra gastos do mês
+            df_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base[c_tip] == 'Despesa')].copy()
+            df_mes[c_cat] = df_mes[c_cat].astype(str).str.strip() # Limpa espaços nos lançamentos
+            
             gasto_cat = df_mes.groupby(c_cat)['Valor_Num'].sum().reset_index()
-            df_metas_plot = pd.merge(df_cats_cad[['Nome', 'Meta']], gasto_cat, left_on='Nome', right_on=c_cat, how='left').fillna(0.0)
+            
+            # Cruzamento robusto (Join) entre Cadastro de Categorias e Lançamentos
+            df_metas_plot = pd.merge(
+                df_cats_cad[['Nome', 'Meta']], 
+                gasto_cat, 
+                left_on='Nome', 
+                right_on=c_cat, 
+                how='outer'
+            ).fillna(0.0)
+            
+            # Se a categoria veio só do lançamento (sem meta cadastrada), usa o nome do lançamento
+            df_metas_plot['Nome'] = df_metas_plot['Nome'].where(df_metas_plot['Nome'] != 0.0, df_metas_plot[c_cat])
+            
             df_metas_plot = df_metas_plot.rename(columns={'Nome': 'Categoria', 'Meta': 'Meta Planejada', 'Valor_Num': 'Gasto Real'})
             df_metas_plot = df_metas_plot.set_index('Categoria')[['Meta Planejada', 'Gasto Real']].astype(float)
+            
+            # Remove linhas onde ambos são zero para limpar o gráfico
             df_metas_plot = df_metas_plot[(df_metas_plot['Meta Planejada'] > 0) | (df_metas_plot['Gasto Real'] > 0)]
+            
             if not df_metas_plot.empty:
                 st.bar_chart(df_metas_plot, horizontal=True)
-            else: st.info("Sem metas/gastos no mês.")
+            else:
+                st.info("Ajuste as Metas na aba 'Categoria' para elas aparecerem aqui.")
 
         with col2:
             st.subheader("📈 Receita x Despesa Mensal")
@@ -113,7 +133,7 @@ if aba == "💰 Finanças":
         st.subheader("📋 Lançamentos Recentes")
         st.dataframe(df_base.drop(columns=['Data_DT', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
 
-    # FORMULÁRIO DE LANÇAMENTO (CORRIGIDO)
+    # FORMULÁRIO
     with st.sidebar.form("f_original"):
         st.write("### 🚀 Novo Lançamento")
         f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
