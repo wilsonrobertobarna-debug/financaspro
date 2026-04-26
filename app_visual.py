@@ -11,16 +11,15 @@ st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="�
 st.markdown("""
     <style>
     .saldo-container {
-        background-color: #007bff; color: white; padding: 8px 15px;
-        border-radius: 10px; text-align: center; margin-bottom: 20px; line-height: 1.1;
+        background-color: #007bff; color: white; padding: 10px 20px;
+        border-radius: 12px; text-align: center; margin-bottom: 25px;
     }
-    .saldo-container h2 { margin: 0; font-size: 1.8rem; }
-    [data-testid="stMetricValue"] { font-size: 1.3rem !important; }
-    .stMetric { background-color: #ffffff; padding: 8px; border-radius: 10px; border: 1px solid #e0e0e0; }
+    .saldo-container h2 { margin: 0; font-size: 2.2rem; font-weight: bold; }
+    .stMetric { background-color: #ffffff; padding: 10px; border-radius: 10px; border: 1px solid #e0e0e0; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXÃO
+# 2. CONEXÃO COM GOOGLE SHEETS
 @st.cache_resource
 def conectar_google():
     try:
@@ -39,48 +38,63 @@ def conectar_google():
 client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# 3. CARREGAMENTO DOS DADOS
+# 3. CARREGAMENTO E TRATAMENTO DE DADOS
 @st.cache_data(ttl=60)
 def carregar_tudo():
     try:
-        df_b = pd.DataFrame(sh.worksheet("Bancos").get_all_records())
-        df_c = pd.DataFrame(sh.worksheet("Categoria").get_all_records())
+        # Carregar Categorias
+        ws_cat = sh.worksheet("Categoria")
+        df_c = pd.DataFrame(ws_cat.get_all_records())
+        df_c.columns = [str(c).strip() for c in df_c.columns] # Limpa nomes das colunas
         
-        # Limpeza profunda nas Metas
+        # Tratamento da Coluna Meta
         if 'Meta' in df_c.columns:
-            df_c['Meta'] = pd.to_numeric(df_c['Meta'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0.0)
-        else: df_c['Meta'] = 0.0
+            df_c['Meta'] = df_c['Meta'].astype(str).str.replace('R$', '').str.replace('.', '').str.replace(',', '.').str.strip()
+            df_c['Meta'] = pd.to_numeric(df_c['Meta'], errors='coerce').fillna(0.0)
+        else:
+            df_c['Meta'] = 0.0 # Cria coluna vazia se não existir física na planilha
+            
         df_c['Nome'] = df_c['Nome'].astype(str).str.strip()
-        
-        df_ct = pd.DataFrame(sh.worksheet("Cartoes").get_all_records())
-        ws = sh.get_worksheet(0)
-        dados = ws.get_all_values()
+
+        # Carregar Lançamentos (aba 0)
+        ws_base = sh.get_worksheet(0)
+        dados = ws_base.get_all_values()
         df_base = pd.DataFrame(dados[1:], columns=dados[0]) if len(dados) > 1 else pd.DataFrame()
+        
+        # Carregar Bancos e Cartões
+        df_b = pd.DataFrame(sh.worksheet("Bancos").get_all_records())
+        df_ct = pd.DataFrame(sh.worksheet("Cartoes").get_all_records())
+        
         return df_b, df_c, df_ct, df_base
-    except:
+    except Exception as e:
+        st.error(f"Erro ao processar dados: {e}")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
 df_bancos_cad, df_cats_cad, df_cartoes_cad, df_base = carregar_tudo()
 
-# 4. NAVEGAÇÃO
+# 4. INTERFACE PRINCIPAL
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
 if aba == "💰 Finanças":
-    ws = sh.get_worksheet(0)
-    st.markdown("<h1 style='text-align: center; margin-bottom: 0;'>🛡️ FinançasPro Wilson</h1><p style='text-align: center; font-size: 1.5rem; margin-top: -10px;'>🐾<br>🐾</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>🛡️ FinançasPro Wilson</h1>", unsafe_allow_html=True)
     
     if not df_base.empty:
+        # Limpeza de colunas da base
         df_base.columns = [c.strip() for c in df_base.columns]
-        c_dat, c_val, c_cat, c_tip, c_bnc, c_sta = df_base.columns[0], df_base.columns[1], df_base.columns[2], df_base.columns[3], df_base.columns[4], df_base.columns[5]
+        c_dat, c_val, c_cat, c_tip = df_base.columns[0], df_base.columns[1], df_base.columns[2], df_base.columns[3]
+        c_bnc, c_sta = df_base.columns[4], df_base.columns[5]
 
-        df_base['Valor_Num'] = pd.to_numeric(df_base[c_val].astype(str).str.replace(',', '.'), errors='coerce').fillna(0.0)
+        # Conversão de Valores e Datas
+        df_base['Valor_Num'] = df_base[c_val].astype(str).str.replace('.', '').str.replace(',', '.').str.strip()
+        df_base['Valor_Num'] = pd.to_numeric(df_base['Valor_Num'], errors='coerce').fillna(0.0)
         df_base['Data_DT'] = pd.to_datetime(df_base[c_dat], dayfirst=True, errors='coerce')
         df_base = df_base.dropna(subset=['Data_DT'])
         df_base['Mes_Ano'] = df_base['Data_DT'].dt.strftime('%m/%y')
+        
         mes_atual = datetime.now().strftime('%m/%y')
 
-        # Dashboard de Saldo
+        # Dashboard de Saldo Geral
         s_ini = pd.to_numeric(df_bancos_cad['Saldo Inicial'].astype(str).str.replace(',', '.'), errors='coerce').sum() if not df_bancos_cad.empty else 0
         rec_t = df_base[df_base[c_tip] == 'Receita']['Valor_Num'].sum()
         desp_t = df_base[df_base[c_tip] == 'Despesa']['Valor_Num'].sum()
@@ -94,83 +108,68 @@ if aba == "💰 Finanças":
         with col1:
             st.subheader(f"📊 Metas vs Gasto ({mes_atual})")
             
-            # 1. Pegar gastos do mês e limpar nomes
+            # Agrupar gastos reais do mês
             df_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base[c_tip] == 'Despesa')].copy()
             df_mes[c_cat] = df_mes[c_cat].astype(str).str.strip()
-            gasto_cat = df_mes.groupby(c_cat)['Valor_Num'].sum()
+            gasto_por_cat = df_mes.groupby(c_cat)['Valor_Num'].sum()
             
-            # 2. Criar a tabela de comparação baseada no CADASTRO de categorias
-            df_comp = pd.DataFrame(index=df_cats_cad['Nome'])
-            df_comp['Meta'] = df_cats_cad.set_index('Nome')['Meta']
-            df_comp['Real'] = gasto_cat
+            # Cruzar com a tabela de Metas
+            df_comparativo = pd.DataFrame({
+                'Meta': df_cats_cad.set_index('Nome')['Meta'],
+                'Real': gasto_por_cat
+            }).fillna(0.0)
             
-            # 3. Limpar zeros e garantir que são números
-            df_comp = df_comp.fillna(0.0).astype(float)
-            
-            # 4. Filtrar para mostrar apenas categorias que têm ou Meta ou Gasto Real
-            df_final_grafico = df_comp[(df_comp['Meta'] > 0) | (df_comp['Real'] > 0)]
+            # Mostrar apenas o que tem movimento
+            df_plot = df_comparativo[(df_comparativo['Meta'] > 0) | (df_comparativo['Real'] > 0)]
 
-            if not df_final_grafico.empty:
-                # Exibe barras lado a lado
-                st.bar_chart(df_final_grafico, horizontal=True)
+            if not df_plot.empty:
+                st.bar_chart(df_plot, horizontal=True)
             else:
-                st.info("💡 Nenhuma meta ou gasto encontrado. Verifique se os nomes das categorias na aba 'Lançamentos' são iguais aos da aba 'Categoria'.")
+                st.info("⚠️ Adicione a coluna 'Meta' na aba 'Categoria' da planilha e preencha os valores.")
 
         with col2:
             st.subheader("📈 Receita x Despesa Mensal")
-            df_evol = df_base.groupby(['Mes_Ano', c_tip])['Valor_Num'].sum().unstack().fillna(0.0).astype(float)
+            df_evol = df_base.groupby(['Mes_Ano', c_tip])['Valor_Num'].sum().unstack().fillna(0.0)
             if not df_evol.empty:
                 st.bar_chart(df_evol)
-            else: st.info("Sem dados de evolução.")
 
         st.write("---")
         st.subheader("📋 Lançamentos Recentes")
         st.dataframe(df_base.drop(columns=['Data_DT', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
 
-    # FORMULÁRIO DE LANÇAMENTO
-    with st.sidebar.form("f_original"):
+    # FORMULÁRIO LATERAL
+    with st.sidebar.form("novo_lanc"):
         st.write("### 🚀 Novo Lançamento")
-        f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+        f_dat = st.date_input("Data", datetime.now())
         f_val = st.number_input("Valor", min_value=0.0)
-        f_parc = st.number_input("Qtd Parcelas", min_value=1, value=1)
+        f_parc = st.number_input("Parcelas", min_value=1, value=1)
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita"])
-        f_cat = st.selectbox("Categoria", sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Outros"])
-        bancos_list = sorted(df_bancos_cad['Nome do Banco'].tolist() + df_cartoes_cad['Nome do Cartão'].tolist() + ["Dinheiro"]) if not df_bancos_cad.empty else ["Dinheiro"]
-        f_bnc = st.selectbox("Banco/Cartão", bancos_list)
+        cats = sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Outros"]
+        f_cat = st.selectbox("Categoria", cats)
+        f_bnc = st.selectbox("Banco/Cartão", ["Dinheiro"] + sorted(df_bancos_cad['Nome do Banco'].tolist() if not df_bancos_cad.empty else []))
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         
         if st.form_submit_button("SALVAR"):
+            ws = sh.get_worksheet(0)
             linhas = []
             for i in range(f_parc):
                 dt = f_dat + relativedelta(months=i)
-                cat_n = f"{f_cat} ({i+1}/{f_parc})" if f_parc > 1 else f_cat
-                linhas.append([dt.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), cat_n, f_tip, f_bnc, f_sta])
+                nome_cat = f"{f_cat} ({i+1}/{f_parc})" if f_parc > 1 else f_cat
+                linhas.append([dt.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), nome_cat, f_tip, f_bnc, f_sta])
             ws.append_rows(linhas)
             st.cache_data.clear(); st.rerun()
 
-# ABAS MILO E VEÍCULO (MANTIDAS)
+# OUTRAS ABAS
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Controle: Milo & Bolt")
     ws_p = sh.worksheet("Controle_Pets")
-    df_p = pd.DataFrame(ws_p.get_all_values()[1:], columns=ws_p.get_all_values()[0])
+    dados_p = ws_p.get_all_values()
+    df_p = pd.DataFrame(dados_p[1:], columns=dados_p[0]) if len(dados_p) > 1 else pd.DataFrame()
     st.dataframe(df_p.iloc[::-1], use_container_width=True)
-    with st.sidebar.form("f_p"):
-        p_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
-        p_obs = st.text_input("Obs")
-        p_val = st.number_input("Custo", min_value=0.0)
-        if st.form_submit_button("Salvar Pet"):
-            ws_p.append_row([p_dat.strftime("%d/%m/%Y"), p_obs, str(p_val).replace('.', ',')])
-            st.cache_data.clear(); st.rerun()
 
 else:
     st.title("🚗 Meu Veículo")
     ws_v = sh.worksheet("Controle_Veiculo")
-    df_v = pd.DataFrame(ws_v.get_all_values()[1:], columns=ws_v.get_all_values()[0])
+    dados_v = ws_v.get_all_values()
+    df_v = pd.DataFrame(dados_v[1:], columns=dados_v[0]) if len(dados_v) > 1 else pd.DataFrame()
     st.dataframe(df_v.iloc[::-1], use_container_width=True)
-    with st.sidebar.form("f_v"):
-        v_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
-        v_km = st.number_input("KM", min_value=0)
-        v_obs = st.text_input("Obs")
-        if st.form_submit_button("Salvar Veículo"):
-            ws_v.append_row([v_dat.strftime("%d/%m/%Y"), str(v_km), v_obs, "0"])
-            st.cache_data.clear(); st.rerun()
