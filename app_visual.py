@@ -5,7 +5,7 @@ import pandas as pd
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-# 1. CONFIGURAÇÃO E ESTILO (INTOCADO)
+# 1. CONFIGURAÇÃO E ESTILO (PRESERVADO)
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
 
 st.markdown("""
@@ -21,7 +21,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXÃO (INTOCADO)
+# 2. CONEXÃO (PRESERVADO)
 @st.cache_resource
 def conectar_google():
     try:
@@ -61,39 +61,40 @@ if aba == "💰 Finanças":
         c_stat = 'Status' if 'Status' in df_base.columns else df_base.columns[5]
         c_bnc = 'Banco' if 'Banco' in df_base.columns else df_base.columns[4]
 
+        # FILTRO DE BANCO
         bancos_lista = ["Todos"] + sorted(list(df_base[c_bnc].unique()))
         banco_filtro = st.selectbox("🔍 Filtrar Visão por Banco:", bancos_lista)
         df = df_base[df_base[c_bnc] == banco_filtro].copy() if banco_filtro != "Todos" else df_base.copy()
 
+        # TRATAMENTO DE DADOS (CORRIGINDO DATA E VALOR)
         df['Valor_Num'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
-        
-        # --- AJUSTE DA DATA (BR) ---
         df['Data_DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-        
         mes_atual = datetime.now().strftime('%m/%y')
         
-        # Cálculos Dashboard
+        # CÁLCULOS DASHBOARD
         rec = df[df[c_tipo].str.contains('Receita', case=False, na=False)]['Valor_Num'].sum()
         desp = df[df[c_tipo].str.contains('Despesa', case=False, na=False)]['Valor_Num'].sum()
         rend = df[df[c_cat].str.contains('Rendimento', case=False, na=False)]['Valor_Num'].sum()
         pend = df[df[c_stat].str.contains('Pendente', case=False, na=False)]['Valor_Num'].sum()
-        
         saldo = rec - desp
         eco_perc = (saldo / rec * 100) if rec > 0 else 0
         def f_brl(v): return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
+        # EXIBIÇÃO DASHBOARD
         st.markdown(f'<div class="saldo-container"><small>Saldo em: {banco_filtro}</small><h2>{f_brl(saldo)}</h2></div>', unsafe_allow_html=True)
         t1, t2, t3, t4 = st.columns(4)
-        t1.metric("🟢 Receitas", f_brl(rec)); t2.metric("🔴 Despesas", f_brl(desp))
-        t3.metric("📈 Rendimentos", f_brl(rend)); t4.metric("⏳ Pendências", f_brl(pend))
+        t1.metric("🟢 Receitas", f_brl(rec))
+        t2.metric("🔴 Despesas", f_brl(desp))
+        t3.metric("📈 Rendimentos", f_brl(rend))
+        t4.metric("⏳ Pendências", f_brl(pend))
         st.markdown(f'<div class="economia-texto">🔹 Economia Real ({banco_filtro}): {f_brl(saldo)} ({eco_perc:.1f}%)</div>', unsafe_allow_html=True)
 
+        # HISTÓRICO COM DATA BR
         st.subheader(f"📋 Histórico: {banco_filtro}")
         df_visual = df.copy(); df_visual.index = df.index + 2
-        # Exibe garantindo que a coluna 'Data' original da planilha seja usada para evitar confusão visual
         st.dataframe(df_visual.iloc[::-1], use_container_width=True)
 
-        # GRÁFICOS (MANTIDOS)
+        # --- GRÁFICOS RESTAURADOS ---
         st.write("---")
         g1, g2 = st.columns(2)
         with g1:
@@ -107,9 +108,14 @@ if aba == "💰 Finanças":
                 comp = df_m.groupby(['Mes', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
                 cores = ['#dc3545' if "Desp" in col else '#28a745' for col in comp.columns]
                 st.bar_chart(comp, color=cores)
-            except: st.info("Dados insuficientes.")
+            except: st.info("Dados insuficientes para comparação mensal.")
 
-    # FORMULÁRIO (INTOCADO)
+        # GRÁFICO POR BANCO (RECUPERADO)
+        st.subheader("🏦 Gasto por Banco")
+        gastos_banco = df[df[c_tipo].str.contains('Despesa', case=False, na=False)].groupby(c_bnc)['Valor_Num'].sum()
+        st.bar_chart(gastos_banco, color='#007bff')
+
+    # FORMULÁRIOS NO MENU LATERAL (PRESERVADOS)
     acao_fin = st.sidebar.selectbox("Ação Financeira:", ["Novo Lançamento", "Editar/Excluir"])
     if acao_fin == "Novo Lançamento":
         with st.sidebar.form("f_fin"):
@@ -136,14 +142,13 @@ if aba == "💰 Finanças":
                 e_val = st.text_input("Valor", value=str(row_f['Valor']))
                 e_bnc = st.selectbox("Banco", ["Nubank", "Itaú", "Dinheiro", "Outro"])
                 e_stat = st.selectbox("Status", ["Pago", "Pendente"], index=0 if "Pag" in str(row_f[c_stat]) else 1)
-                c1, c2 = st.columns(2)
-                if c1.form_submit_button("💾 SALVAR"):
+                if st.form_submit_button("💾 ATUALIZAR"):
                     ws.update(f"B{sel_f}", [[e_val]]); ws.update(f"E{sel_f}", [[e_bnc]]); ws.update(f"F{sel_f}", [[e_stat]])
                     st.cache_data.clear(); st.rerun()
-                if c2.form_submit_button("🗑️ EXCLUIR"):
+                if st.form_submit_button("🗑️ EXCLUIR"):
                     ws.delete_rows(int(sel_f)); st.cache_data.clear(); st.rerun()
 
-# ABA MILO E VEÍCULO (MANTIDAS COM SEUS FORMULÁRIOS)
+# ABA MILO E VEÍCULO (PRESERVADAS)
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Controle: Milo & Bolt")
     ws_p = sh.worksheet("Controle_Pets")
