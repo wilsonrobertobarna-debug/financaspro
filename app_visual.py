@@ -39,80 +39,156 @@ def conectar_google():
 
 client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-ws = sh.get_worksheet(0) # Planilha Principal
-
-# Carregar dados globais para todas as abas
-dados_brutos = ws.get_all_values()
-df_base = pd.DataFrame(dados_brutos[1:], columns=dados_brutos[0])
-df_base.columns = [c.strip() for c in df_base.columns]
-c_tipo, c_cat, c_stat, c_bnc = df_base.columns[3], df_base.columns[2], df_base.columns[5], df_base.columns[4]
 
 # 3. NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
 # ==========================================
-# ABA 1: FINANÇAS (Dashboard Geral)
+# ABA 1: FINANÇAS
 # ==========================================
 if aba == "💰 Finanças":
+    ws = sh.get_worksheet(0)
     st.markdown("<h1 style='text-align: center; margin-bottom: 0;'>🛡️ FinançasPro Wilson</h1><p style='text-align: center; font-size: 1.5rem; margin-top: -10px;'>🐾<br>🐾</p>", unsafe_allow_html=True)
     
-    bancos_lista = ["Todos"] + sorted(list(df_base[c_bnc].unique()))
-    banco_filtro = st.selectbox("🔍 Filtrar Visão por Banco:", bancos_lista)
-    df = df_base[df_base[c_bnc] == banco_filtro].copy() if banco_filtro != "Todos" else df_base.copy()
+    dados_brutos = ws.get_all_values()
+    if len(dados_brutos) > 1:
+        df_base = pd.DataFrame(dados_brutos[1:], columns=dados_brutos[0])
+        df_base.columns = [c.strip() for c in df_base.columns]
+        
+        c_tipo = 'Tipo' if 'Tipo' in df_base.columns else df_base.columns[3]
+        c_cat = 'Categoria' if 'Categoria' in df_base.columns else df_base.columns[2]
+        c_stat = 'Status' if 'Status' in df_base.columns else df_base.columns[5]
+        c_bnc = 'Banco' if 'Banco' in df_base.columns else df_base.columns[4]
 
-    df['Valor_Num'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
-    df['Data_DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-    
-    rec = df[df[c_tipo].str.contains('Receita', case=False, na=False)]['Valor_Num'].sum()
-    desp = df[df[c_tipo].str.contains('Despesa', case=False, na=False)]['Valor_Num'].sum()
-    rend = df[df[c_cat].str.contains('Rendimento', case=False, na=False)]['Valor_Num'].sum()
-    saldo = rec - desp
-    def f_brl(v): return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+        bancos_lista = ["Todos"] + sorted(list(df_base[c_bnc].unique()))
+        banco_filtro = st.selectbox("🔍 Filtrar Visão por Banco:", bancos_lista)
+        df = df_base[df_base[c_bnc] == banco_filtro].copy() if banco_filtro != "Todos" else df_base.copy()
 
-    st.markdown(f'<div class="saldo-container"><small>Saldo em: {banco_filtro}</small><h2>{f_brl(saldo)}</h2></div>', unsafe_allow_html=True)
-    t1, t2, t3 = st.columns(3)
-    t1.metric("🟢 Receitas", f_brl(rec)); t2.metric("🔴 Despesas", f_brl(desp)); t3.metric("📈 Rendimentos", f_brl(rend))
+        df['Valor_Num'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
+        df['Data_DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
+        mes_atual = datetime.now().strftime('%m/%y')
+        
+        rec = df[df[c_tipo].str.contains('Receita', case=False, na=False)]['Valor_Num'].sum()
+        desp = df[df[c_tipo].str.contains('Despesa', case=False, na=False)]['Valor_Num'].sum()
+        rend = df[df[c_cat].str.contains('Rendimento', case=False, na=False)]['Valor_Num'].sum()
+        pend = df[df[c_stat].str.contains('Pendente', case=False, na=False)]['Valor_Num'].sum()
+        
+        saldo = rec - desp
+        eco_perc = (saldo / rec * 100) if rec > 0 else 0
+        def f_brl(v): return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-    st.subheader("📋 Histórico Geral")
-    df_visual = df.copy(); df_visual.index = df.index + 2
-    st.dataframe(df_visual.iloc[::-1], use_container_width=True)
+        st.markdown(f'<div class="saldo-container"><small>Saldo em: {banco_filtro}</small><h2>{f_brl(saldo)}</h2></div>', unsafe_allow_html=True)
+        t1, t2, t3, t4 = st.columns(4)
+        t1.metric("🟢 Receitas", f_brl(rec)); t2.metric("🔴 Despesas", f_brl(desp))
+        t3.metric("📈 Rendimentos", f_brl(rend)); t4.metric("⏳ Pendências", f_brl(pend))
+        st.markdown(f'<div class="economia-texto">🔹 Economia Real ({banco_filtro}): {f_brl(saldo)} ({eco_perc:.1f}%)</div>', unsafe_allow_html=True)
+
+        st.subheader(f"📋 Histórico: {banco_filtro}")
+        df_visual = df.copy(); df_visual.index = df.index + 2
+        st.dataframe(df_visual.iloc[::-1], use_container_width=True)
+
+        # GRÁFICOS
+        st.write("---")
+        g1, g2 = st.columns(2)
+        with g1:
+            st.subheader("🍕 Categoria (Mês)")
+            df_m = df.copy(); df_m['Mes'] = df_m['Data_DT'].dt.strftime('%m/%y')
+            gastos_cat = df_m[(df_m['Mes'] == mes_atual) & (df_m[c_tipo] == 'Despesa')].groupby(c_cat)['Valor_Num'].sum()
+            st.bar_chart(gastos_cat, color='#ffc107')
+        with g2:
+            st.subheader("📊 Receita x Despesa")
+            try:
+                comp = df_m.groupby(['Mes', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
+                cores = ['#dc3545' if "Desp" in col else '#28a745' for col in comp.columns]
+                st.bar_chart(comp, color=cores)
+            except: st.info("Dados insuficientes.")
+
+        st.subheader("🏦 Gasto por Banco")
+        st.bar_chart(df[df[c_tipo].str.contains('Despesa', case=False, na=False)].groupby(c_bnc)['Valor_Num'].sum(), color='#007bff')
+
+    # MENU LATERAL FINANÇAS
+    acao_fin = st.sidebar.selectbox("Ação Financeira:", ["Novo Lançamento", "Editar/Excluir"])
+    if acao_fin == "Novo Lançamento":
+        with st.sidebar.form("f_fin"):
+            f_dat = st.date_input("Início", datetime.now())
+            f_val = st.number_input("Valor da Parcela", min_value=0.0)
+            f_parc = st.number_input("Qtd Parcelas", min_value=1, value=1)
+            f_tip = st.selectbox("Tipo", ["Despesa", "Receita"])
+            f_cat = st.selectbox("Categoria", ["Mercado", "AserNet", "Skyfit", "Milo/Bolt", "Combustível", "Rendimento", "Parcelamento", "Outros"])
+            f_bnc = st.selectbox("Banco", ["Nubank", "Itaú", "Dinheiro", "Outro"])
+            f_stat = st.selectbox("Status", ["Pago", "Pendente"])
+            if st.form_submit_button("🚀 SALVAR"):
+                linhas = []
+                for i in range(f_parc):
+                    dt = f_dat + relativedelta(months=i)
+                    cat_nome = f"{f_cat} ({i+1}/{f_parc})" if f_parc > 1 else f_cat
+                    linhas.append([dt.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), cat_nome, f_tip, f_bnc, f_stat])
+                ws.append_rows(linhas)
+                st.cache_data.clear(); st.rerun()
+    else:
+        sel_f = st.sidebar.selectbox("ID Linha:", list(df_visual.index))
+        if sel_f:
+            row_f = df_base.loc[sel_f-2]
+            with st.sidebar.form("e_fin"):
+                e_val = st.text_input("Valor", value=str(row_f['Valor']))
+                e_bnc = st.selectbox("Banco", ["Nubank", "Itaú", "Dinheiro", "Outro"])
+                e_stat = st.selectbox("Status", ["Pago", "Pendente"], index=0 if "Pag" in str(row_f[c_stat]) else 1)
+                c1, c2 = st.columns(2)
+                if c1.form_submit_button("💾 SALVAR"):
+                    ws.update(f"B{sel_f}", [[e_val]]); ws.update(f"E{sel_f}", [[e_bnc]]); ws.update(f"F{sel_f}", [[e_stat]])
+                    st.cache_data.clear(); st.rerun()
+                if c2.form_submit_button("🗑️ EXCLUIR"):
+                    ws.delete_rows(int(sel_f)); st.cache_data.clear(); st.rerun()
 
 # ==========================================
-# ABA 2: MILO & BOLT (Filtro Automático)
+# ABA 2: MILO & BOLT
 # ==========================================
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Controle: Milo & Bolt")
-    df_pets = df_base[df_base[c_cat].str.contains('Milo|Bolt', case=False, na=False)].copy()
-    if not df_pets.empty:
-        df_pets.index = df_pets.index + 2
-        st.dataframe(df_pets.iloc[::-1], use_container_width=True)
+    ws_p = sh.worksheet("Controle_Pets")
+    dados_p = ws_p.get_all_values()
+    df_p = pd.DataFrame(dados_p[1:], columns=dados_p[0])
+    df_p.index = df_p.index + 2
+
+    # RESTAURADO: MENU LATERAL PARA PETS
+    acao_p = st.sidebar.selectbox("Ação Pets:", ["Novo Registro", "Editar/Excluir"])
+    if acao_p == "Novo Registro":
+        with st.sidebar.form("f_p"):
+            p_dat = st.date_input("Data", datetime.now()); p_obs = st.text_input("Obs"); p_val = st.number_input("Custo", min_value=0.0)
+            if st.form_submit_button("🚀 SALVAR"):
+                ws_p.append_row([p_dat.strftime("%d/%m/%Y"), p_obs, str(p_val).replace('.', ',')])
+                st.cache_data.clear(); st.rerun()
     else:
-        st.info("Nenhum lançamento encontrado para os pets na planilha principal.")
+        sel_p = st.sidebar.selectbox("ID Linha:", list(df_p.index))
+        if sel_p:
+            if st.sidebar.button("🗑️ EXCLUIR REGISTRO"):
+                ws_p.delete_rows(int(sel_p)); st.cache_data.clear(); st.rerun()
+
+    st.dataframe(df_p.iloc[::-1], use_container_width=True)
 
 # ==========================================
-# ABA 3: MEU VEÍCULO (Filtro Automático)
+# ABA 3: MEU VEÍCULO
 # ==========================================
 else:
     st.title("🚗 Controle: Veículo")
-    df_veic = df_base[df_base[c_cat].str.contains('Veículo|Combustível', case=False, na=False)].copy()
-    if not df_veic.empty:
-        df_veic.index = df_veic.index + 2
-        st.dataframe(df_veic.iloc[::-1], use_container_width=True)
-    else:
-        st.info("Nenhum lançamento de veículo encontrado.")
+    ws_v = sh.worksheet("Controle_Veiculo")
+    dados_v = ws_v.get_all_values()
+    df_v = pd.DataFrame(dados_v[1:], columns=dados_v[0])
+    df_v.index = df_v.index + 2
 
-# --- MENU LATERAL PARA LANÇAMENTOS ---
-st.sidebar.write("---")
-acao = st.sidebar.selectbox("Ação:", ["Novo Lançamento", "Editar/Excluir"])
-if acao == "Novo Lançamento":
-    with st.sidebar.form("f_novo"):
-        f_dat = st.date_input("Data", datetime.now())
-        f_val = st.number_input("Valor", min_value=0.0)
-        f_cat = st.selectbox("Categoria", ["Mercado", "Milo/Bolt", "Veículo: Abastecimento", "Combustível", "Skyfit", "Outros"])
-        f_tip = st.selectbox("Tipo", ["Despesa", "Receita"])
-        f_bnc = st.selectbox("Banco", ["Nubank", "Itaú", "Dinheiro"])
-        f_stat = st.selectbox("Status", ["Pago", "Pendente"])
-        if st.form_submit_button("🚀 SALVAR"):
-            ws.append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_stat])
-            st.cache_data.clear(); st.rerun()
+    # RESTAURADO: MENU LATERAL PARA VEÍCULO
+    acao_v = st.sidebar.selectbox("Ação Veículo:", ["Novo Registro", "Editar/Excluir"])
+    if acao_v == "Novo Registro":
+        with st.sidebar.form("f_v"):
+            v_dat = st.date_input("Data", datetime.now()); v_km = st.number_input("KM", min_value=0); v_obs = st.text_input("Obs")
+            if st.form_submit_button("🚀 SALVAR"):
+                ws_v.append_row([v_dat.strftime("%d/%m/%Y"), str(v_km), v_obs, "0"])
+                st.cache_data.clear(); st.rerun()
+    else:
+        sel_v = st.sidebar.selectbox("ID Linha:", list(df_v.index))
+        if sel_v:
+            if st.sidebar.button("🗑️ EXCLUIR REGISTRO"):
+                ws_v.delete_rows(int(sel_v)); st.cache_data.clear(); st.rerun()
+
+    st.dataframe(df_v.iloc[::-1], use_container_width=True)
