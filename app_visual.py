@@ -39,83 +39,80 @@ def conectar_google():
 
 client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+ws = sh.get_worksheet(0) # Planilha Principal
+
+# Carregar dados globais para todas as abas
+dados_brutos = ws.get_all_values()
+df_base = pd.DataFrame(dados_brutos[1:], columns=dados_brutos[0])
+df_base.columns = [c.strip() for c in df_base.columns]
+c_tipo, c_cat, c_stat, c_bnc = df_base.columns[3], df_base.columns[2], df_base.columns[5], df_base.columns[4]
 
 # 3. NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
 # ==========================================
-# ABA 1: FINANÇAS
+# ABA 1: FINANÇAS (Dashboard Geral)
 # ==========================================
 if aba == "💰 Finanças":
-    ws = sh.get_worksheet(0)
     st.markdown("<h1 style='text-align: center; margin-bottom: 0;'>🛡️ FinançasPro Wilson</h1><p style='text-align: center; font-size: 1.5rem; margin-top: -10px;'>🐾<br>🐾</p>", unsafe_allow_html=True)
     
-    dados_brutos = ws.get_all_values()
-    if len(dados_brutos) > 1:
-        df_base = pd.DataFrame(dados_brutos[1:], columns=dados_brutos[0])
-        df_base.columns = [c.strip() for c in df_base.columns]
-        
-        c_tipo = 'Tipo' if 'Tipo' in df_base.columns else df_base.columns[3]
-        c_cat = 'Categoria' if 'Categoria' in df_base.columns else df_base.columns[2]
-        c_stat = 'Status' if 'Status' in df_base.columns else df_base.columns[5]
-        c_bnc = 'Banco' if 'Banco' in df_base.columns else df_base.columns[4]
+    bancos_lista = ["Todos"] + sorted(list(df_base[c_bnc].unique()))
+    banco_filtro = st.selectbox("🔍 Filtrar Visão por Banco:", bancos_lista)
+    df = df_base[df_base[c_bnc] == banco_filtro].copy() if banco_filtro != "Todos" else df_base.copy()
 
-        # --- FILTRO DE BANCO ---
-        bancos_lista = ["Todos"] + sorted(list(df_base[c_bnc].unique()))
-        banco_filtro = st.selectbox("🔍 Filtrar Visão por Banco:", bancos_lista)
-        df = df_base[df_base[c_bnc] == banco_filtro].copy() if banco_filtro != "Todos" else df_base.copy()
+    df['Valor_Num'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
+    df['Data_DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
+    
+    rec = df[df[c_tipo].str.contains('Receita', case=False, na=False)]['Valor_Num'].sum()
+    desp = df[df[c_tipo].str.contains('Despesa', case=False, na=False)]['Valor_Num'].sum()
+    rend = df[df[c_cat].str.contains('Rendimento', case=False, na=False)]['Valor_Num'].sum()
+    saldo = rec - desp
+    def f_brl(v): return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-        # Tratamento
-        df['Valor_Num'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
-        df['Data_DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-        mes_atual = datetime.now().strftime('%m/%y')
-        
-        # Cálculos Dashboard
-        rec = df[df[c_tipo].str.contains('Receita', case=False, na=False)]['Valor_Num'].sum()
-        desp = df[df[c_tipo].str.contains('Despesa', case=False, na=False)]['Valor_Num'].sum()
-        rend = df[df[c_cat].str.contains('Rendimento', case=False, na=False)]['Valor_Num'].sum() # CÁLCULO RECUPERADO
-        pend = df[df[c_stat].str.contains('Pendente', case=False, na=False)]['Valor_Num'].sum()
-        
-        saldo = rec - desp
-        eco_perc = (saldo / rec * 100) if rec > 0 else 0
-        def f_brl(v): return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+    st.markdown(f'<div class="saldo-container"><small>Saldo em: {banco_filtro}</small><h2>{f_brl(saldo)}</h2></div>', unsafe_allow_html=True)
+    t1, t2, t3 = st.columns(3)
+    t1.metric("🟢 Receitas", f_brl(rec)); t2.metric("🔴 Despesas", f_brl(desp)); t3.metric("📈 Rendimentos", f_brl(rend))
 
-        # Dashboard Visual
-        st.markdown(f'<div class="saldo-container"><small>Saldo em: {banco_filtro}</small><h2>{f_brl(saldo)}</h2></div>', unsafe_allow_html=True)
-        
-        # TAGS DE MÉTRICAS (Rendimentos voltou!)
-        t1, t2, t3, t4 = st.columns(4)
-        t1.metric("🟢 Receitas", f_brl(rec))
-        t2.metric("🔴 Despesas", f_brl(desp))
-        t3.metric("📈 Rendimentos", f_brl(rend)) # TAG RECUPERADA
-        t4.metric("⏳ Pendências", f_brl(pend))
-        
-        st.markdown(f'<div class="economia-texto">🔹 Economia Real ({banco_filtro}): {f_brl(saldo)} ({eco_perc:.1f}%)</div>', unsafe_allow_html=True)
+    st.subheader("📋 Histórico Geral")
+    df_visual = df.copy(); df_visual.index = df.index + 2
+    st.dataframe(df_visual.iloc[::-1], use_container_width=True)
 
-        # Histórico
-        st.subheader(f"📋 Histórico: {banco_filtro}")
-        df_visual = df.copy(); df_visual.index = df.index + 2
-        st.dataframe(df_visual.iloc[::-1], use_container_width=True)
+# ==========================================
+# ABA 2: MILO & BOLT (Filtro Automático)
+# ==========================================
+elif aba == "🐾 Milo & Bolt":
+    st.title("🐾 Controle: Milo & Bolt")
+    df_pets = df_base[df_base[c_cat].str.contains('Milo|Bolt', case=False, na=False)].copy()
+    if not df_pets.empty:
+        df_pets.index = df_pets.index + 2
+        st.dataframe(df_pets.iloc[::-1], use_container_width=True)
+    else:
+        st.info("Nenhum lançamento encontrado para os pets na planilha principal.")
 
-        # Gráficos
-        st.write("---")
-        g1, g2 = st.columns(2)
-        with g1:
-            st.subheader("🍕 Categoria (Mês)")
-            df_m = df.copy(); df_m['Mes'] = df_m['Data_DT'].dt.strftime('%m/%y')
-            gastos_cat = df_m[(df_m['Mes'] == mes_atual) & (df_m[c_tipo] == 'Despesa')].groupby(c_cat)['Valor_Num'].sum()
-            st.bar_chart(gastos_cat, color='#ffc107')
-        with g2:
-            st.subheader("📊 Receita x Despesa")
-            try:
-                comp = df_m.groupby(['Mes', c_tipo])['Valor_Num'].sum().unstack().fillna(0)
-                cores = ['#dc3545' if "Desp" in col else '#28a745' for col in comp.columns]
-                st.bar_chart(comp, color=cores)
-            except: st.info("Sem dados suficientes para o gráfico.")
+# ==========================================
+# ABA 3: MEU VEÍCULO (Filtro Automático)
+# ==========================================
+else:
+    st.title("🚗 Controle: Veículo")
+    df_veic = df_base[df_base[c_cat].str.contains('Veículo|Combustível', case=False, na=False)].copy()
+    if not df_veic.empty:
+        df_veic.index = df_veic.index + 2
+        st.dataframe(df_veic.iloc[::-1], use_container_width=True)
+    else:
+        st.info("Nenhum lançamento de veículo encontrado.")
 
-        st.subheader("🏦 Gasto por Banco")
-        st.bar_chart(df[df[c_tipo].str.contains('Despesa', case=False, na=False)].groupby(c_bnc)['Valor_Num'].sum(), color='#007bff')
-
-    # MENU LATERAL (Novo / Editar com Parcelamento)
-    # ... [Restante do código de navegação e edição igual ao anterior] ...
+# --- MENU LATERAL PARA LANÇAMENTOS ---
+st.sidebar.write("---")
+acao = st.sidebar.selectbox("Ação:", ["Novo Lançamento", "Editar/Excluir"])
+if acao == "Novo Lançamento":
+    with st.sidebar.form("f_novo"):
+        f_dat = st.date_input("Data", datetime.now())
+        f_val = st.number_input("Valor", min_value=0.0)
+        f_cat = st.selectbox("Categoria", ["Mercado", "Milo/Bolt", "Veículo: Abastecimento", "Combustível", "Skyfit", "Outros"])
+        f_tip = st.selectbox("Tipo", ["Despesa", "Receita"])
+        f_bnc = st.selectbox("Banco", ["Nubank", "Itaú", "Dinheiro"])
+        f_stat = st.selectbox("Status", ["Pago", "Pendente"])
+        if st.form_submit_button("🚀 SALVAR"):
+            ws.append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_stat])
+            st.cache_data.clear(); st.rerun()
