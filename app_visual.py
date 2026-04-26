@@ -104,10 +104,13 @@ if aba == "💰 Finanças":
         gastos_banco = df[df[c_tipo].str.contains('Despesa', case=False, na=False)].groupby(c_bnc)['Valor_Num'].sum()
         st.bar_chart(gastos_banco, color='#007bff')
 
+    # FORMULÁRIO COM DATA BR (CORRIGIDO)
     acao_fin = st.sidebar.selectbox("Ação Financeira:", ["Novo Lançamento", "Editar/Excluir"])
     if acao_fin == "Novo Lançamento":
         with st.sidebar.form("f_fin"):
-            f_dat = st.date_input("Início", datetime.now()); f_val = st.number_input("Valor", min_value=0.0)
+            # Adicionado format="DD/MM/YYYY" para garantir visualização BR
+            f_dat = st.date_input("Início", datetime.now(), format="DD/MM/YYYY")
+            f_val = st.number_input("Valor", min_value=0.0)
             f_parc = st.number_input("Qtd Parcelas", min_value=1, value=1)
             f_tip = st.selectbox("Tipo", ["Despesa", "Receita"])
             f_cat = st.selectbox("Categoria", ["Mercado", "AserNet", "Skyfit", "Milo/Bolt", "Combustível", "Rendimento", "Outros"])
@@ -122,21 +125,21 @@ if aba == "💰 Finanças":
                 ws.append_rows(linhas); st.cache_data.clear(); st.rerun()
 
 # ==========================================
-# ABA 2: MILO & BOLT (CORRIGIDO)
+# ABA 2: MILO & BOLT (DATA BR NO LANÇAMENTO)
 # ==========================================
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Controle: Milo & Bolt")
     ws_p = sh.worksheet("Controle_Pets")
     dados_p = ws_p.get_all_values()
     df_p = pd.DataFrame(dados_p[1:], columns=dados_p[0])
-    
-    # AJUSTE DA DATA: Usamos a coluna original para visualização
     df_p.index = df_p.index + 2
     
     acao_p = st.sidebar.selectbox("Ação Pets:", ["Novo Registro", "Editar/Excluir"])
     if acao_p == "Novo Registro":
         with st.sidebar.form("f_p"):
-            p_dat = st.date_input("Data", datetime.now()); p_obs = st.text_input("Obs"); p_val = st.number_input("Custo", min_value=0.0)
+            # Adicionado format="DD/MM/YYYY"
+            p_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+            p_obs = st.text_input("Obs"); p_val = st.number_input("Custo", min_value=0.0)
             if st.form_submit_button("🚀 SALVAR"):
                 ws_p.append_row([p_dat.strftime("%d/%m/%Y"), p_obs, str(p_val).replace('.', ',')])
                 st.cache_data.clear(); st.rerun()
@@ -148,21 +151,21 @@ elif aba == "🐾 Milo & Bolt":
     st.dataframe(df_p.iloc[::-1], use_container_width=True)
 
 # ==========================================
-# ABA 3: MEU VEÍCULO (CORRIGIDO)
+# ABA 3: MEU VEÍCULO (DATA BR NO LANÇAMENTO)
 # ==========================================
 else:
     st.title("🚗 Controle: Veículo")
     ws_v = sh.worksheet("Controle_Veiculo")
     dados_v = ws_v.get_all_values()
     df_v = pd.DataFrame(dados_v[1:], columns=dados_v[0])
-    
-    # AJUSTE DA DATA: Usamos a coluna original para visualização
     df_v.index = df_v.index + 2
     
     acao_v = st.sidebar.selectbox("Ação Veículo:", ["Novo Registro", "Editar/Excluir"])
     if acao_v == "Novo Registro":
         with st.sidebar.form("f_v"):
-            v_dat = st.date_input("Data", datetime.now()); v_km = st.number_input("KM", min_value=0); v_obs = st.text_input("Obs")
+            # Adicionado format="DD/MM/YYYY"
+            v_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+            v_km = st.number_input("KM", min_value=0); v_obs = st.text_input("Obs")
             if st.form_submit_button("🚀 SALVAR"):
                 ws_v.append_row([v_dat.strftime("%d/%m/%Y"), str(v_km), v_obs, "0"])
                 st.cache_data.clear(); st.rerun()
