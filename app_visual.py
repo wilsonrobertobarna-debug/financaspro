@@ -39,16 +39,19 @@ def conectar_google():
 client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# 3. CARREGAMENTO DOS DADOS
+# 3. CARREGAMENTO DOS DADOS (COM PROTEÇÃO)
 @st.cache_data(ttl=60)
 def carregar_tudo():
     try:
+        # Carrega cadastros básicos
         df_b = pd.DataFrame(sh.worksheet("Bancos").get_all_records())
         df_c = pd.DataFrame(sh.worksheet("Categoria").get_all_records())
         if 'Meta' in df_c.columns:
             df_c['Meta'] = pd.to_numeric(df_c['Meta'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0.0)
         else: df_c['Meta'] = 0.0
         df_ct = pd.DataFrame(sh.worksheet("Cartoes").get_all_records())
+        
+        # Carrega lançamentos (Folha 0)
         ws = sh.get_worksheet(0)
         dados = ws.get_all_values()
         df_base = pd.DataFrame(dados[1:], columns=dados[0]) if len(dados) > 1 else pd.DataFrame()
@@ -62,21 +65,26 @@ df_bancos_cad, df_cats_cad, df_cartoes_cad, df_base = carregar_tudo()
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
+# ==========================================
+# ABA 1: FINANÇAS
+# ==========================================
 if aba == "💰 Finanças":
     ws = sh.get_worksheet(0)
     st.markdown("<h1 style='text-align: center; margin-bottom: 0;'>🛡️ FinançasPro Wilson</h1><p style='text-align: center; font-size: 1.5rem; margin-top: -10px;'>🐾<br>🐾</p>", unsafe_allow_html=True)
     
     if not df_base.empty:
+        # Limpeza e Padronização
         df_base.columns = [c.strip() for c in df_base.columns]
         c_dat, c_val, c_cat, c_tip, c_bnc, c_sta = df_base.columns[0], df_base.columns[1], df_base.columns[2], df_base.columns[3], df_base.columns[4], df_base.columns[5]
 
+        # Conversão de Valores e Datas
         df_base['Valor_Num'] = pd.to_numeric(df_base[c_val].astype(str).str.replace(',', '.'), errors='coerce').fillna(0.0)
         df_base['Data_DT'] = pd.to_datetime(df_base[c_dat], dayfirst=True, errors='coerce')
-        df_base = df_base.dropna(subset=['Data_DT'])
+        df_base = df_base.dropna(subset=['Data_DT']) # Remove erros de data
         df_base['Mes_Ano'] = df_base['Data_DT'].dt.strftime('%m/%y')
         mes_atual = datetime.now().strftime('%m/%y')
 
-        # Saldo
+        # Cálculo do Saldo Geral
         s_ini = pd.to_numeric(df_bancos_cad['Saldo Inicial'].astype(str).str.replace(',', '.'), errors='coerce').sum() if not df_bancos_cad.empty else 0
         rec_t = df_base[df_base[c_tip] == 'Receita']['Valor_Num'].sum()
         desp_t = df_base[df_base[c_tip] == 'Despesa']['Valor_Num'].sum()
@@ -84,6 +92,7 @@ if aba == "💰 Finanças":
 
         st.markdown(f'<div class="saldo-container"><small>Saldo Geral Consolidado</small><h2>R$ {saldo_geral:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
+        # --- ÁREA DE GRÁFICOS ---
         st.write("---")
         col1, col2 = st.columns(2)
         
@@ -91,27 +100,31 @@ if aba == "💰 Finanças":
             st.subheader(f"📊 Metas vs Gasto ({mes_atual})")
             df_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base[c_tip] == 'Despesa')]
             gasto_cat = df_mes.groupby(c_cat)['Valor_Num'].sum().reset_index()
+            
+            # Cruzamento com a folha de Categorias
             df_metas_plot = pd.merge(df_cats_cad[['Nome', 'Meta']], gasto_cat, left_on='Nome', right_on=c_cat, how='left').fillna(0.0)
-            df_metas_plot = df_metas_plot.rename(columns={'Nome': 'Categoria', 'Meta': 'Meta', 'Valor_Num': 'Real'})
-            df_metas_plot = df_metas_plot.set_index('Categoria')[['Meta', 'Real']].astype(float)
-            df_metas_plot = df_metas_plot[(df_metas_plot['Meta'] > 0) | (df_metas_plot['Real'] > 0)]
+            df_metas_plot = df_metas_plot.rename(columns={'Nome': 'Categoria', 'Meta': 'Meta Planejada', 'Valor_Num': 'Gasto Real'})
+            df_metas_plot = df_metas_plot.set_index('Categoria')[['Meta Planejada', 'Gasto Real']].astype(float)
+            
+            # Filtra apenas o que tem valor para não encher o gráfico de zeros
+            df_metas_plot = df_metas_plot[(df_metas_plot['Meta Planejada'] > 0) | (df_metas_plot['Gasto Real'] > 0)]
+            
             if not df_metas_plot.empty:
-                st.bar_chart(df_metas_plot, horizontal=True)
-            else: st.info("Sem dados de metas/gastos.")
+                st.bar_chart(df_metas_plot, horizontal=True) # Cores automáticas evitam o erro de comprimento
+            else: st.info("Sem metas ou gastos lançados no mês atual.")
 
         with col2:
             st.subheader("📈 Receita x Despesa Mensal")
             df_evol = df_base.groupby(['Mes_Ano', c_tip])['Valor_Num'].sum().unstack().fillna(0.0).astype(float)
             if not df_evol.empty:
-                # Cor automática para evitar erro de StreamlitColorLengthError
-                st.bar_chart(df_evol) 
-            else: st.info("Sem dados para evolução.")
+                st.bar_chart(df_evol) # Gráfico de barras para comparar melhor os totais
+            else: st.info("Lance dados para ver a evolução mensal.")
 
         st.write("---")
         st.subheader("📋 Lançamentos Recentes")
         st.dataframe(df_base.drop(columns=['Data_DT', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
 
-    # FORMULÁRIO (ESTRUTURA ORIGINAL)
+    # FORMULÁRIO DE LANÇAMENTO
     with st.sidebar.form("f_original"):
         st.write("### 🚀 Novo Lançamento")
         f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -119,6 +132,7 @@ if aba == "💰 Finanças":
         f_parc = st.number_input("Qtd Parcelas", min_value=1, value=1)
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita"])
         f_cat = st.selectbox("Categoria", sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Outros"])
+        
         bancos_list = sorted(df_bancos_cad['Nome do Banco'].tolist() + df_cartoes_cad['Nome do Cartão'].tolist() + ["Dinheiro"]) if not df_bancos_cad.empty else ["Dinheiro"]
         f_bnc = st.selectbox("Banco/Cartão", bancos_list)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
@@ -126,35 +140,4 @@ if aba == "💰 Finanças":
         if st.form_submit_button("SALVAR"):
             linhas = []
             for i in range(f_parc):
-                dt = f_dat + relativedelta(months=i)
-                cat_n = f"{f_cat} ({i+1}/{f_parc})" if f_parc > 1 else f_cat
-                linhas.append([dt.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), cat_n, f_tip, f_bnc, f_sta])
-            ws.append_rows(linhas)
-            st.cache_data.clear(); st.rerun()
-
-# MILO E VEÍCULO (ORIGINAIS)
-elif aba == "🐾 Milo & Bolt":
-    st.title("🐾 Controle: Milo & Bolt")
-    ws_p = sh.worksheet("Controle_Pets")
-    df_p = pd.DataFrame(ws_p.get_all_values()[1:], columns=ws_p.get_all_values()[0])
-    st.dataframe(df_p.iloc[::-1], use_container_width=True)
-    with st.sidebar.form("f_p"):
-        p_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
-        p_obs = st.text_input("Obs")
-        p_val = st.number_input("Custo", min_value=0.0)
-        if st.form_submit_button("Salvar Pet"):
-            ws_p.append_row([p_dat.strftime("%d/%m/%Y"), p_obs, str(p_val).replace('.', ',')])
-            st.cache_data.clear(); st.rerun()
-
-else:
-    st.title("🚗 Meu Veículo")
-    ws_v = sh.worksheet("Controle_Veiculo")
-    df_v = pd.DataFrame(ws_v.get_all_values()[1:], columns=ws_v.get_all_values()[0])
-    st.dataframe(df_v.iloc[::-1], use_container_width=True)
-    with st.sidebar.form("f_v"):
-        v_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
-        v_km = st.number_input("KM", min_value=0)
-        v_obs = st.text_input("Obs")
-        if st.form_submit_button("Salvar Veículo"):
-            ws_v.append_row([v_dat.strftime("%d/%m/%Y"), str(v_km), v_obs, "0"])
-            st.cache_data.clear(); st.rerun()
+                dt =
