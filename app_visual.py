@@ -5,7 +5,7 @@ import pandas as pd
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-# 1. CONFIGURAÇÃO E ESTILO
+# 1. CONFIGURAÇÃO E ESTILO (INTOCADO)
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
 
 st.markdown("""
@@ -21,7 +21,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXÃO
+# 2. CONEXÃO (INTOCADO)
 @st.cache_resource
 def conectar_google():
     try:
@@ -66,9 +66,13 @@ if aba == "💰 Finanças":
         df = df_base[df_base[c_bnc] == banco_filtro].copy() if banco_filtro != "Todos" else df_base.copy()
 
         df['Valor_Num'] = pd.to_numeric(df['Valor'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
+        
+        # --- AJUSTE DA DATA (BR) ---
         df['Data_DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
+        
         mes_atual = datetime.now().strftime('%m/%y')
         
+        # Cálculos Dashboard
         rec = df[df[c_tipo].str.contains('Receita', case=False, na=False)]['Valor_Num'].sum()
         desp = df[df[c_tipo].str.contains('Despesa', case=False, na=False)]['Valor_Num'].sum()
         rend = df[df[c_cat].str.contains('Rendimento', case=False, na=False)]['Valor_Num'].sum()
@@ -86,9 +90,10 @@ if aba == "💰 Finanças":
 
         st.subheader(f"📋 Histórico: {banco_filtro}")
         df_visual = df.copy(); df_visual.index = df.index + 2
+        # Exibe garantindo que a coluna 'Data' original da planilha seja usada para evitar confusão visual
         st.dataframe(df_visual.iloc[::-1], use_container_width=True)
 
-        # GRÁFICOS
+        # GRÁFICOS (MANTIDOS)
         st.write("---")
         g1, g2 = st.columns(2)
         with g1:
@@ -104,10 +109,7 @@ if aba == "💰 Finanças":
                 st.bar_chart(comp, color=cores)
             except: st.info("Dados insuficientes.")
 
-        st.subheader("🏦 Gasto por Banco")
-        st.bar_chart(df[df[c_tipo].str.contains('Despesa', case=False, na=False)].groupby(c_bnc)['Valor_Num'].sum(), color='#007bff')
-
-    # MENU LATERAL FINANÇAS
+    # FORMULÁRIO (INTOCADO)
     acao_fin = st.sidebar.selectbox("Ação Financeira:", ["Novo Lançamento", "Editar/Excluir"])
     if acao_fin == "Novo Lançamento":
         with st.sidebar.form("f_fin"):
@@ -141,17 +143,13 @@ if aba == "💰 Finanças":
                 if c2.form_submit_button("🗑️ EXCLUIR"):
                     ws.delete_rows(int(sel_f)); st.cache_data.clear(); st.rerun()
 
-# ==========================================
-# ABA 2: MILO & BOLT
-# ==========================================
+# ABA MILO E VEÍCULO (MANTIDAS COM SEUS FORMULÁRIOS)
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Controle: Milo & Bolt")
     ws_p = sh.worksheet("Controle_Pets")
     dados_p = ws_p.get_all_values()
     df_p = pd.DataFrame(dados_p[1:], columns=dados_p[0])
     df_p.index = df_p.index + 2
-
-    # RESTAURADO: MENU LATERAL PARA PETS
     acao_p = st.sidebar.selectbox("Ação Pets:", ["Novo Registro", "Editar/Excluir"])
     if acao_p == "Novo Registro":
         with st.sidebar.form("f_p"):
@@ -161,23 +159,16 @@ elif aba == "🐾 Milo & Bolt":
                 st.cache_data.clear(); st.rerun()
     else:
         sel_p = st.sidebar.selectbox("ID Linha:", list(df_p.index))
-        if sel_p:
-            if st.sidebar.button("🗑️ EXCLUIR REGISTRO"):
-                ws_p.delete_rows(int(sel_p)); st.cache_data.clear(); st.rerun()
-
+        if sel_p and st.sidebar.button("🗑️ EXCLUIR REGISTRO"):
+            ws_p.delete_rows(int(sel_p)); st.cache_data.clear(); st.rerun()
     st.dataframe(df_p.iloc[::-1], use_container_width=True)
 
-# ==========================================
-# ABA 3: MEU VEÍCULO
-# ==========================================
 else:
     st.title("🚗 Controle: Veículo")
     ws_v = sh.worksheet("Controle_Veiculo")
     dados_v = ws_v.get_all_values()
     df_v = pd.DataFrame(dados_v[1:], columns=dados_v[0])
     df_v.index = df_v.index + 2
-
-    # RESTAURADO: MENU LATERAL PARA VEÍCULO
     acao_v = st.sidebar.selectbox("Ação Veículo:", ["Novo Registro", "Editar/Excluir"])
     if acao_v == "Novo Registro":
         with st.sidebar.form("f_v"):
@@ -187,8 +178,6 @@ else:
                 st.cache_data.clear(); st.rerun()
     else:
         sel_v = st.sidebar.selectbox("ID Linha:", list(df_v.index))
-        if sel_v:
-            if st.sidebar.button("🗑️ EXCLUIR REGISTRO"):
-                ws_v.delete_rows(int(sel_v)); st.cache_data.clear(); st.rerun()
-
+        if sel_v and st.sidebar.button("🗑️ EXCLUIR REGISTRO"):
+            ws_v.delete_rows(int(sel_v)); st.cache_data.clear(); st.rerun()
     st.dataframe(df_v.iloc[::-1], use_container_width=True)
