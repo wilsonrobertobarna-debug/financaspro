@@ -95,20 +95,24 @@ if aba == "💰 Finanças":
             df_mes[c_cat] = df_mes[c_cat].astype(str).str.strip()
             gasto_cat = df_mes.groupby(c_cat)['Valor_Num'].sum().reset_index()
             
-            # Cruzamento de dados
-            df_metas_plot = pd.merge(df_cats_cad[['Nome', 'Meta']], gasto_cat, left_on='Nome', right_on=c_cat, how='outer').fillna(0.0)
-            df_metas_plot['Nome'] = df_metas_plot['Nome'].where(df_metas_plot['Nome'] != 0, df_metas_plot[c_cat])
-            df_metas_plot = df_metas_plot.rename(columns={'Nome': 'Categoria', 'Meta': 'Meta', 'Valor_Num': 'Real'})
+            # Unir categorias cadastradas com gastos reais
+            df_m = pd.merge(df_cats_cad[['Nome', 'Meta']], gasto_cat, left_on='Nome', right_on=c_cat, how='outer').fillna(0.0)
+            df_m['Nome'] = df_m['Nome'].where(df_m['Nome'] != 0, df_m[c_cat])
             
-            # Prepara o DataFrame para mostrar barras lado a lado
-            df_final_metas = df_metas_plot.set_index('Categoria')[['Meta', 'Real']].astype(float)
-            df_final_metas = df_final_metas[(df_final_metas['Meta'] > 0) | (df_final_metas['Real'] > 0)]
+            # Criar DataFrame final com colunas explícitas
+            df_final = pd.DataFrame({
+                'Meta': df_m['Meta'].values,
+                'Real': df_m['Valor_Num'].values
+            }, index=df_m['Nome'])
+            
+            # Filtro para não mostrar categorias vazias
+            df_final = df_final[(df_final['Meta'] > 0) | (df_final['Real'] > 0)]
 
-            if not df_final_metas.empty:
-                # O parâmetro stack=False impede que as barras fiquem uma em cima da outra
-                st.bar_chart(df_final_metas, horizontal=True)
+            if not df_final.empty:
+                # O segredo: usamos o DataFrame reconstruído e garantimos que não há empilhamento
+                st.bar_chart(df_final, horizontal=True)
             else:
-                st.info("Sem metas ou gastos para exibir.")
+                st.info("Verifique se as Metas estão preenchidas na folha 'Categoria'.")
 
         with col2:
             st.subheader("📈 Receita x Despesa Mensal")
