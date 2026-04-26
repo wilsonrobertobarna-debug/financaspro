@@ -96,15 +96,15 @@ if aba == "💰 Finanças":
             df_metas_plot = df_metas_plot.set_index('Categoria')[['Meta', 'Real']].astype(float)
             df_metas_plot = df_metas_plot[(df_metas_plot['Meta'] > 0) | (df_metas_plot['Real'] > 0)]
             if not df_metas_plot.empty:
-                st.bar_chart(df_metas_plot, horizontal=True, color=['#007bff', '#ff4b4b'])
+                st.bar_chart(df_metas_plot, horizontal=True)
             else: st.info("Sem dados de metas/gastos.")
 
         with col2:
             st.subheader("📈 Receita x Despesa Mensal")
             df_evol = df_base.groupby(['Mes_Ano', c_tip])['Valor_Num'].sum().unstack().fillna(0.0).astype(float)
             if not df_evol.empty:
-                # Mudamos para bar_chart para evitar as bolinhas e comparar melhor os totais
-                st.bar_chart(df_evol, color=['#ff4b4b', '#28a745']) 
+                # Cor automática para evitar erro de StreamlitColorLengthError
+                st.bar_chart(df_evol) 
             else: st.info("Sem dados para evolução.")
 
         st.write("---")
