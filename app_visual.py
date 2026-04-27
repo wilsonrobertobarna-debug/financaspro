@@ -41,8 +41,8 @@ def conectar_google():
 client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# 3. DADOS
-@st.cache_data(ttl=5)
+# 3. CARREGAMENTO DE DADOS
+@st.cache_data(ttl=2) # Reduzi o tempo de cache para atualizar mais rápido
 def carregar_dados():
     try:
         df_c = pd.DataFrame(sh.worksheet("Categoria").get_all_records())
@@ -98,9 +98,7 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
 # 5. ABA FINANÇAS
 if aba == "💰 Finanças":
     st.markdown("<h1 style='text-align: center;'>🛡️ FinançasPro Wilson</h1>", unsafe_allow_html=True)
-    
     if not df_base.empty:
-        # --- FILTROS (3 COLUNAS) ---
         c1, c2, c3 = st.columns(3)
         with c1:
             lista_bancos = ["Todos"] + sorted(df_bancos_cad['Nome do Banco'].unique().tolist()) if not df_bancos_cad.empty else ["Todos", "Dinheiro"]
@@ -110,19 +108,17 @@ if aba == "💰 Finanças":
         with c3:
             status_sel = st.multiselect("📌 Status:", ["Pago", "Pendente"], default=["Pago", "Pendente"])
 
-        # Aplicar Filtros
         df_f = df_base if banco_sel == "Todos" else df_base[df_base['Banco'] == banco_sel]
         if tipo_sel != "Todos": df_f = df_f[df_f['Tipo'] == tipo_sel]
         df_f = df_f[df_f['Status'].isin(status_sel)]
 
-        # Cálculos Tags (Sempre no contexto do Banco selecionado)
+        # Tags de Resumo
         df_calc = df_base if banco_sel == "Todos" else df_base[df_base['Banco'] == banco_sel]
         receitas = df_calc[(df_calc['Tipo'] == 'Receita') & (df_calc['Status'] == 'Pago')]['V_Num'].sum()
         despesas = df_calc[(df_calc['Tipo'] == 'Despesa') & (df_calc['Status'] == 'Pago')]['V_Num'].sum()
         rendimentos = df_calc[(df_calc['Tipo'] == 'Rendimento') & (df_calc['Status'] == 'Pago')]['V_Num'].sum()
         pendentes = df_calc[df_calc['Status'] == 'Pendente']['V_Num'].sum()
         
-        # Saldo
         if banco_sel == "Todos":
             s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
         else:
@@ -130,7 +126,6 @@ if aba == "💰 Finanças":
         
         saldo_final = s_ini + receitas + rendimentos - despesas
 
-        # EXIBIÇÃO
         st.markdown(f'''
             <div class="saldo-container">
                 <small>Saldo Disponível ({banco_sel})</small>
@@ -144,7 +139,6 @@ if aba == "💰 Finanças":
             </div>
         '''.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
-        # Gráficos
         col_g1, col_g2 = st.columns(2)
         with col_g1:
             st.subheader("📈 Evolução")
@@ -169,27 +163,39 @@ if aba == "💰 Finanças":
         st.subheader("📋 Tabela de Lançamentos")
         st.dataframe(df_f.drop(columns=['DT', 'Mes_Ano', 'V_Num', 'Linha'], errors='ignore').iloc[::-1], use_container_width=True)
 
-# Outras Abas
+# 6. ABA MILO & BOLT (BUSCA MELHORADA)
 elif aba == "🐾 Milo & Bolt":
     st.markdown("<h1 style='text-align: center;'>🐾 Milo & Bolt</h1>", unsafe_allow_html=True)
-    df_p = df_base[df_base['Descrição'].str.contains('Milo|Bolt|Pet|Ração|Vet', case=False, na=False)]
-    st.metric("Total Gasto", f"R$ {df_p['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-    st.dataframe(df_p.iloc[::-1], use_container_width=True)
+    if not df_base.empty:
+        # Busca por termos chave
+        df_p = df_base[df_base['Descrição'].str.contains('Milo|Bolt|Pet|Ração|Vet|Cachorro', case=False, na=False) | 
+                       df_base['Categoria'].str.contains('Ração|Pet|Veterinário', case=False, na=False)]
+        st.metric("Total Gasto com os Pets", f"R$ {df_p['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        st.dataframe(df_p.drop(columns=['DT', 'Mes_Ano', 'V_Num', 'Linha'], errors='ignore').iloc[::-1], use_container_width=True)
 
 elif aba == "🚗 Meu Veículo":
     st.markdown("<h1 style='text-align: center;'>🚗 Veículo</h1>", unsafe_allow_html=True)
-    df_v = df_base[df_base['Descrição'].str.contains('Veículo|Carro|Gasolina|Etanol|Oficina', case=False, na=False)]
-    st.metric("Total Gasto", f"R$ {df_v['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-    st.dataframe(df_v.iloc[::-1], use_container_width=True)
+    if not df_base.empty:
+        df_v = df_base[df_base['Descrição'].str.contains('Veículo|Carro|Gasolina|Etanol|Oficina', case=False, na=False)]
+        st.metric("Total Gasto", f"R$ {df_v['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        st.dataframe(df_v.iloc[::-1], use_container_width=True)
 
-# Gerenciador Lateral
+# 7. GERENCIADOR (CORREÇÃO DA EXCLUSÃO)
 st.sidebar.write("---")
+st.sidebar.write("### ⚙️ Gerenciar Linhas")
 if not df_base.empty:
     df_base['Linha'] = df_base.index + 2
-    opcoes = {f"L{r['Linha']} | {r['Descrição']}": r['Linha'] for _, r in df_base.iloc[::-1].head(10).iterrows()}
-    sel = st.sidebar.selectbox("Ação rápida:", [""] + list(opcoes.keys()))
+    # Mostra os últimos 15 lançamentos para facilitar
+    opcoes = {f"L{r['Linha']} | {r['Data']} | {r['Descrição']}": r['Linha'] for _, r in df_base.iloc[::-1].head(15).iterrows()}
+    sel = st.sidebar.selectbox("Escolha um item:", [""] + list(opcoes.keys()))
+    
     if sel:
-        l = opcoes[sel]
-        if st.sidebar.button("🗑️ APAGAR"):
-            sh.get_worksheet(0).delete_rows(int(l))
-            st.cache_data.clear(); st.rerun()
+        linha_alvo = opcoes[sel]
+        if st.sidebar.button("🗑️ CONFIRMAR EXCLUSÃO"):
+            try:
+                sh.get_worksheet(0).delete_rows(int(linha_alvo))
+                st.sidebar.success(f"Linha {linha_alvo} removida!")
+                st.cache_data.clear() # Limpa o cache para forçar recarregamento
+                st.rerun() # Reinicia o app para atualizar a tabela
+            except Exception as e:
+                st.sidebar.error(f"Erro ao excluir: {e}")
