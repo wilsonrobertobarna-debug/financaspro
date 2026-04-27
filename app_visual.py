@@ -4,22 +4,32 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone # Para fuso horário nativo
 
 # 1. CONFIGURAÇÃO DA PÁGINA
-st.set_page_config(page_title="FinançasPro", page_icon="🛡️", layout="wide")
+st.set_page_config(
+    page_title="FinançasPro",
+    page_icon="🛡️",
+    layout="wide"
+)
 
-# Estilos CSS (Restaurados)
+# Estilos CSS Personalizados (Mantidos)
 st.markdown("""
     <style>
-    .saldo-container { background-color: #007bff; color: white; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
+    .saldo-container {
+        background-color: #007bff; color: white; padding: 15px;
+        border-radius: 12px; text-align: center; margin-bottom: 20px;
+    }
     .saldo-container h2 { margin: 0; font-size: 2.2rem; font-weight: bold; }
     .stMetric { background-color: #ffffff; padding: 10px; border-radius: 10px; border: 1px solid #e0e0e0; }
-    .resumo-card { padding: 8px; border-radius: 8px; text-align: center; border: 1px solid #ddd; background-color: #f8f9fa; margin-bottom: 5px; }
+    .resumo-card { 
+        padding: 8px; border-radius: 8px; text-align: center; 
+        border: 1px solid #ddd; background-color: #f8f9fa; margin-bottom: 5px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXÃO
+# 2. CONEXÃO COM GOOGLE SHEETS
 @st.cache_resource
 def conectar():
     try:
@@ -32,7 +42,7 @@ def conectar():
         }, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"])
         return gspread.authorize(creds)
     except Exception as e:
-        st.error(f"Erro: {e}"); st.stop()
+        st.error(f"Erro de Conexão: {e}"); st.stop()
 
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
@@ -56,7 +66,7 @@ def carregar_dados():
 
 df_bancos_cad, df_cats_cad, df_base = carregar_dados()
 
-# --- DATA BRASIL (ESTRATÉGIA FORÇADA) ---
+# --- AJUSTE DE DATA BRASIL (GMT-3) ---
 fuso_br = timezone(timedelta(hours=-3))
 hoje_br = datetime.now(fuso_br)
 
@@ -74,21 +84,18 @@ if aba == "💰 Finanças":
         df_base['DT'] = pd.to_datetime(df_base[c_dat], dayfirst=True, errors='coerce')
         df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
         
-        # Filtro de Mês: Se não tiver dados do mês atual, pega o último disponível
-        mes_atual_sistema = hoje_br.strftime('%m/%y')
-        mes_atual = mes_atual_sistema if mes_atual_sistema in df_base['Mes_Ano'].values else df_base.sort_values('DT', ascending=False)['Mes_Ano'].iloc[0]
-
         # Filtros
         bancos_lista = ["Todos"] + sorted(df_base[c_bnc].unique().tolist())
         banco_sel = st.selectbox("🔍 Filtrar Visão por Banco:", bancos_lista)
         df_filtrado = df_base if banco_sel == "Todos" else df_base[df_base[c_bnc] == banco_sel]
 
-        # Cálculos de Saldo
+        # Saldo Total
         s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_v).sum() if banco_sel == "Todos" else df_bancos_cad[df_bancos_cad['Nome do Banco'] == banco_sel]['Saldo Inicial'].apply(limpar_v).sum()
         df_pago = df_filtrado[df_filtrado[c_sta] == 'Pago']
         saldo_atual = s_ini + df_pago[df_pago[c_tip].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_pago[df_pago[c_tip] == 'Despesa']['V_Num'].sum()
 
-        # Métricas do Mês (Restauradas)
+        # Métricas do Mês Atual
+        mes_atual = hoje_br.strftime('%m/%y')
         df_mes = df_filtrado[df_filtrado['Mes_Ano'] == mes_atual]
         m_rec = df_mes[df_mes[c_tip] == 'Receita']['V_Num'].sum()
         m_des = df_mes[df_mes[c_tip] == 'Despesa']['V_Num'].sum()
@@ -103,9 +110,9 @@ if aba == "💰 Finanças":
         col3.metric("💰 Rendimento", f"R$ {m_ren:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         col4.metric("⏳ Pendente", f"R$ {m_pen:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
-        # --- RESUMO DA ECONOMIA (Restaurado) ---
+        # --- RESUMO DA ECONOMIA ---
         st.write("---")
-        st.subheader(f"📊 Resumo de Economia ({mes_atual})")
+        st.subheader("📊 Resumo de Economia")
         gasto_cat = df_mes[df_mes[c_tip] == 'Despesa'].groupby(c_cat)['V_Num'].sum()
         df_m = pd.DataFrame({'Meta': df_cats_cad.set_index('Nome')['Meta'], 'Real': gasto_cat}).fillna(0.0)
         df_m = df_m[df_m['Meta'] > 0]
@@ -118,7 +125,7 @@ if aba == "💰 Finanças":
                 with cols_res[i % 5]:
                     st.markdown(f'<div class="resumo-card"><small><b>{categoria}</b></small><br><span style="color:{cor}; font-weight:bold;">{pct:.1f}%</span><br><small>R$ {row["Real"]:,.0f} / {row["Meta"]:,.0f}</small></div>', unsafe_allow_html=True)
 
-        # --- GRÁFICOS LADO A LADO (Restaurados) ---
+        # --- GRÁFICOS (METAS E PIZZA) ---
         st.write("---")
         g1, g2 = st.columns(2)
         with g1:
@@ -142,13 +149,20 @@ if aba == "💰 Finanças":
                 fig_meta.update_layout(barmode='overlay', height=350, margin=dict(l=0, r=0, t=20, b=0))
                 st.plotly_chart(fig_meta, use_container_width=True)
 
+        # --- NOVO: GRÁFICO DE BARRAS MENSAL (RECEITA X DESPESA) ---
+        st.write("---")
+        st.subheader("📈 Evolução Mensal (Receita x Despesa)")
+        evol = df_filtrado.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0)
+        if not evol.empty:
+            st.bar_chart(evol)
+
         st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['V_Num', 'DT', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
 
-    # FORMULÁRIO LATERAL (DATA FORÇADA)
+    # BARRA LATERAL - FORMULÁRIO (DATA CORRIGIDA)
     with st.sidebar.form("novo"):
         st.write("### 🚀 Lançar")
-        f_dat = st.date_input("Data", hoje_br)
+        f_dat = st.date_input("Data", hoje_br) # Puxa automaticamente o dia do Brasil
         f_val = st.number_input("Valor", min_value=0.0)
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Geral"])
