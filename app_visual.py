@@ -75,31 +75,31 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
             ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, desc_parc, f_cat, f_tip, f_bnc, f_sta])
         st.cache_data.clear(); st.rerun()
 
-# 5. GERENCIADOR - EDIÇÃO CORRIGIDA
+# 5. GERENCIADOR - EDIÇÃO COM VALOR NO NOME (MELHORADO)
 st.sidebar.divider()
-st.sidebar.subheader("⚙️ Alterar Valor / Descrição")
+st.sidebar.subheader("⚙️ Alterar Lançamento")
 if not df_base.empty:
-    # Mostra as últimas 15 transações para editar
     df_edit = df_base.copy()
     df_edit['LinhaPlanilha'] = df_edit.index + 2
-    lista_opcoes = {f"{r['Data']} | {r['Descrição']}": r for _, r in df_edit.tail(15).iterrows()}
     
-    escolha = st.sidebar.selectbox("Selecione para editar:", [""] + list(lista_opcoes.keys()))
+    # AGORA MOSTRA DATA, DESCRIÇÃO E VALOR NA LISTA
+    lista_opcoes = {f"{r['Data']} | {r['Descrição']} | R$ {r['Valor']}": r for _, r in df_edit.tail(20).iterrows()}
+    
+    escolha = st.sidebar.selectbox("Escolha para editar:", [""] + list(lista_opcoes.keys()))
     
     if escolha:
         dados_linha = lista_opcoes[escolha]
         num_linha = int(dados_linha['LinhaPlanilha'])
         
-        # Agora os campos aparecem preenchidos!
-        edit_desc = st.sidebar.text_input("Alterar Descrição:", value=dados_linha['Descrição'])
-        edit_valor = st.sidebar.text_input("Alterar Valor:", value=dados_linha['Valor'])
-        edit_status = st.sidebar.selectbox("Alterar Status:", ["Pago", "Pendente"], index=0 if dados_linha['Status'] == "Pago" else 1)
+        edit_desc = st.sidebar.text_input("Descrição / Beneficiário:", value=dados_linha['Descrição'])
+        edit_valor = st.sidebar.text_input("Valor (R$):", value=dados_linha['Valor'])
+        edit_status = st.sidebar.selectbox("Status:", ["Pago", "Pendente"], index=0 if dados_linha['Status'] == "Pago" else 1)
         
         c1, c2 = st.sidebar.columns(2)
         if c1.button("💾 SALVAR"):
-            ws_base.update_cell(num_linha, 3, edit_desc) # Coluna Descrição
-            ws_base.update_cell(num_linha, 2, edit_valor) # Coluna Valor
-            ws_base.update_cell(num_linha, 7, edit_status) # Coluna Status
+            ws_base.update_cell(num_linha, 3, edit_desc) # Coluna C (Descrição)
+            ws_base.update_cell(num_linha, 2, edit_valor) # Coluna B (Valor)
+            ws_base.update_cell(num_linha, 7, edit_status) # Coluna G (Status)
             st.cache_data.clear(); st.rerun()
             
         if c2.button("🚨 APAGAR"):
@@ -114,7 +114,6 @@ if "💰" in aba:
     if not df_base.empty:
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         
-        # Métricas
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("📈 Receitas", m_fmt(df_m[df_m['Tipo'] == 'Receita']['V_Num'].sum()))
         c2.metric("📉 Despesas", m_fmt(df_m[df_m['Tipo'] == 'Despesa']['V_Num'].sum()))
@@ -123,18 +122,15 @@ if "💰" in aba:
         
         st.divider()
         
-        # Gráficos (Garantindo que apareçam)
         col_g1, col_g2 = st.columns(2)
         with col_g1:
             df_pie = df_m[df_m['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             if not df_pie.empty:
-                fig1 = px.pie(df_pie, values='V_Num', names='Categoria', title="Gastos por Categoria", hole=0.4)
-                st.plotly_chart(fig1, use_container_width=True)
+                st.plotly_chart(px.pie(df_pie, values='V_Num', names='Categoria', title="Gastos por Categoria", hole=0.4), use_container_width=True)
         with col_g2:
             df_bar = df_m.groupby('Tipo')['V_Num'].sum().reset_index()
             if not df_bar.empty:
-                fig2 = px.bar(df_bar, x='Tipo', y='V_Num', color='Tipo', title="Resumo Mensal")
-                st.plotly_chart(fig2, use_container_width=True)
+                st.plotly_chart(px.bar(df_bar, x='Tipo', y='V_Num', color='Tipo', title="Resumo Mensal"), use_container_width=True)
 
         st.divider()
         st.subheader("🔍 Filtros de Pesquisa")
