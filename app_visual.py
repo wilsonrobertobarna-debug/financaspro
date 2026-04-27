@@ -50,7 +50,7 @@ def carregar():
 df_base = carregar()
 mes_atual = datetime.now().strftime('%m/%y')
 
-# 4. SIDEBAR - LANÇAMENTO E MENU
+# 4. SIDEBAR - MENU E NOVO LANÇAMENTO
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
@@ -75,42 +75,46 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
             ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, desc_parc, f_cat, f_tip, f_bnc, f_sta])
         st.cache_data.clear(); st.rerun()
 
-# 5. GERENCIADOR - AGORA COM EDIÇÃO
+# 5. GERENCIADOR - EDIÇÃO CORRIGIDA
 st.sidebar.divider()
-st.sidebar.subheader("⚙️ Editar/Alterar Valor")
+st.sidebar.subheader("⚙️ Alterar Valor / Descrição")
 if not df_base.empty:
-    # Pegamos as últimas 20 linhas para editar
+    # Mostra as últimas 15 transações para editar
     df_edit = df_base.copy()
-    df_edit['ID'] = df_edit.index + 2
-    opcoes_edit = {f"L{r['ID']} | {r['Descrição']}": r for _, r in df_edit.tail(20).iterrows()}
+    df_edit['LinhaPlanilha'] = df_edit.index + 2
+    lista_opcoes = {f"{r['Data']} | {r['Descrição']}": r for _, r in df_edit.tail(15).iterrows()}
     
-    sel_edit = st.sidebar.selectbox("Escolha para alterar:", [""] + list(opcoes_edit.keys()))
+    escolha = st.sidebar.selectbox("Selecione para editar:", [""] + list(lista_opcoes.keys()))
     
-    if sel_edit:
-        item = opcoes_edit[sel_edit]
-        with st.sidebar.container():
-            # Campos preenchidos com o que já está na planilha
-            new_val = st.text_input("Novo Valor:", value=str(item['Valor']))
-            new_sta = st.selectbox("Novo Status:", ["Pago", "Pendente"], index=0 if item['Status'] == "Pago" else 1)
+    if escolha:
+        dados_linha = lista_opcoes[escolha]
+        num_linha = int(dados_linha['LinhaPlanilha'])
+        
+        # Agora os campos aparecem preenchidos!
+        edit_desc = st.sidebar.text_input("Alterar Descrição:", value=dados_linha['Descrição'])
+        edit_valor = st.sidebar.text_input("Alterar Valor:", value=dados_linha['Valor'])
+        edit_status = st.sidebar.selectbox("Alterar Status:", ["Pago", "Pendente"], index=0 if dados_linha['Status'] == "Pago" else 1)
+        
+        c1, c2 = st.sidebar.columns(2)
+        if c1.button("💾 SALVAR"):
+            ws_base.update_cell(num_linha, 3, edit_desc) # Coluna Descrição
+            ws_base.update_cell(num_linha, 2, edit_valor) # Coluna Valor
+            ws_base.update_cell(num_linha, 7, edit_status) # Coluna Status
+            st.cache_data.clear(); st.rerun()
             
-            col1, col2 = st.columns(2)
-            if col1.button("💾 ATUALIZAR"):
-                # Atualiza a célula do Valor (Coluna 2) e Status (Coluna 7)
-                ws_base.update_cell(int(item['ID']), 2, new_val)
-                ws_base.update_cell(int(item['ID']), 7, new_sta)
-                st.cache_data.clear(); st.rerun()
-                
-            if col2.button("🚨 APAGAR"):
-                ws_base.delete_rows(int(item['ID']))
-                st.cache_data.clear(); st.rerun()
+        if c2.button("🚨 APAGAR"):
+            ws_base.delete_rows(num_linha)
+            st.cache_data.clear(); st.rerun()
 
-# 6. VISUALIZAÇÃO (DEMAIS TELAS)
+# 6. TELAS PRINCIPAIS
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+        
+        # Métricas
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("📈 Receitas", m_fmt(df_m[df_m['Tipo'] == 'Receita']['V_Num'].sum()))
         c2.metric("📉 Despesas", m_fmt(df_m[df_m['Tipo'] == 'Despesa']['V_Num'].sum()))
@@ -118,10 +122,26 @@ if "💰" in aba:
         c4.metric("⏳ Pendente", m_fmt(df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()))
         
         st.divider()
-        st.subheader("🔍 Filtros e Lançamentos")
+        
+        # Gráficos (Garantindo que apareçam)
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
+            df_pie = df_m[df_m['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            if not df_pie.empty:
+                fig1 = px.pie(df_pie, values='V_Num', names='Categoria', title="Gastos por Categoria", hole=0.4)
+                st.plotly_chart(fig1, use_container_width=True)
+        with col_g2:
+            df_bar = df_m.groupby('Tipo')['V_Num'].sum().reset_index()
+            if not df_bar.empty:
+                fig2 = px.bar(df_bar, x='Tipo', y='V_Num', color='Tipo', title="Resumo Mensal")
+                st.plotly_chart(fig2, use_container_width=True)
+
+        st.divider()
+        st.subheader("🔍 Filtros de Pesquisa")
         f1, f2 = st.columns(2)
         s_bnc = f1.multiselect("Banco:", sorted(df_base['Banco'].unique()))
         s_sta = f2.multiselect("Status:", ["Pago", "Pendente"])
+        
         df_v = df_base.copy()
         if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
@@ -130,11 +150,11 @@ if "💰" in aba:
 elif "🐾" in aba:
     st.title("🐾 Milo & Bolt")
     df_pet = df_base[df_base['Categoria'].str.contains('Pet', case=False, na=False)]
-    st.metric("Total neles", m_fmt(df_pet['V_Num'].sum()))
+    st.metric("Total com eles", m_fmt(df_pet['V_Num'].sum()))
     st.dataframe(df_pet[['Data', 'Valor', 'Descrição', 'Banco', 'Status']].iloc[::-1], use_container_width=True)
 
 elif "🚗" in aba:
     st.title("🚗 Meu Veículo")
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Carro|Combustível', case=False, na=False)]
-    st.metric("Total Veículo", m_fmt(df_car['V_Num'].sum()))
+    st.metric("Total no Veículo", m_fmt(df_car['V_Num'].sum()))
     st.dataframe(df_car[['Data', 'Valor', 'Descrição', 'Banco', 'Status']].iloc[::-1], use_container_width=True)
