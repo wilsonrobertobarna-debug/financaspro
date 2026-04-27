@@ -108,7 +108,6 @@ if aba == "💰 Finanças":
         st.write("---")
         with st.container():
             col_rec, col_tabela = st.columns([1, 2])
-            
             total_mes = m_receita
             sobra = total_mes - m_despesa
             perc_sobra = (sobra / total_mes * 100) if total_mes > 0 else 0
@@ -128,7 +127,6 @@ if aba == "💰 Finanças":
                     df_res_cat.columns = ['Categoria', 'Valor']
                     df_res_cat['%'] = (df_res_cat['Valor'] / m_despesa * 100) if m_despesa > 0 else 0
                     df_res_cat = df_res_cat.sort_values(by='Valor', ascending=False)
-                    
                     df_display = df_res_cat.copy()
                     df_display['Valor'] = df_display['Valor'].apply(lambda x: f"R$ {x:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
                     df_display['%'] = df_display['%'].apply(lambda x: f"{x:.1f}%")
@@ -140,10 +138,8 @@ if aba == "💰 Finanças":
         df_evol = df_filtrado.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0).reset_index()
         if not df_evol.empty:
             fig_bar = go.Figure()
-            if 'Receita' in df_evol.columns:
-                fig_bar.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol['Receita'], name='Receita', marker_color='#28a745'))
-            if 'Despesa' in df_evol.columns:
-                fig_bar.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol['Despesa'], name='Despesa', marker_color='#dc3545'))
+            if 'Receita' in df_evol.columns: fig_bar.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol['Receita'], name='Receita', marker_color='#28a745'))
+            if 'Despesa' in df_evol.columns: fig_bar.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol['Despesa'], name='Despesa', marker_color='#dc3545'))
             fig_bar.update_layout(barmode='group', height=350)
             st.plotly_chart(fig_bar, use_container_width=True)
 
@@ -189,7 +185,6 @@ if aba == "💰 Finanças":
         f_bnc = st.selectbox("Banco", sorted(df_bancos_cad['Nome do Banco'].tolist() + ["Dinheiro"]))
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         f_parc = st.number_input("Número de Parcelas", min_value=1, value=1)
-        
         if st.form_submit_button("SALVAR"):
             ws = sh.get_worksheet(0)
             for i in range(f_parc):
@@ -198,7 +193,7 @@ if aba == "💰 Finanças":
                 ws.append_row([dt_p.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), desc_p, f_tip, f_bnc, f_sta])
             st.cache_data.clear(); st.rerun()
 
-    # --- GERENCIAR ---
+    # --- GERENCIAR (EDIÇÃO DE VALOR INCLUÍDA) ---
     st.sidebar.write("---")
     st.sidebar.write("### ⚙️ Gerenciar Lançamentos")
     if not df_base.empty:
@@ -207,6 +202,15 @@ if aba == "💰 Finanças":
         item_sel = st.sidebar.selectbox("Selecione o item:", [""] + opcoes)
         if item_sel:
             linha_idx = int(item_sel.split(" | ")[0])
+            valor_atual_str = item_sel.split(" | ")[3].replace('R$', '').strip()
+            
+            # Campo para novo valor
+            novo_val = st.sidebar.number_input("Novo Valor:", value=limpar_valor(valor_atual_str))
+            
+            if st.sidebar.button("💾 Alterar Valor"):
+                sh.get_worksheet(0).update_cell(linha_idx, 2, str(novo_val).replace('.', ','))
+                st.cache_data.clear(); st.rerun()
+                
             c1, c2 = st.sidebar.columns(2)
             if c1.button("🗑️ Excluir"):
                 sh.get_worksheet(0).delete_rows(linha_idx)
