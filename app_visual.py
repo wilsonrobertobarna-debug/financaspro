@@ -19,6 +19,7 @@ st.markdown("""
     .saldo-container h2 { margin: 0; font-size: 2.2rem; font-weight: bold; }
     [data-testid="stMetricValue"] { font-size: 1.4rem !important; }
     .stMetric { background-color: #ffffff; padding: 10px; border-radius: 10px; border: 1px solid #e0e0e0; }
+    .resumo-box { background-color: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 5px solid #28a745; margin-top: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -47,12 +48,10 @@ def carregar_dados():
     try:
         df_b = pd.DataFrame(sh.worksheet("Bancos").get_all_records())
         df_c = pd.DataFrame(sh.worksheet("Categoria").get_all_records())
-        
         df_c.columns = [str(c).strip() for c in df_c.columns]
         if 'Meta' in df_c.columns:
             df_c['Meta'] = df_c['Meta'].astype(str).str.replace('R$', '').str.replace('.', '').str.replace(',', '.').str.strip()
             df_c['Meta'] = pd.to_numeric(df_c['Meta'], errors='coerce').fillna(0.0)
-        
         ws_base = sh.get_worksheet(0)
         dados = ws_base.get_all_values()
         df_base = pd.DataFrame(dados[1:], columns=dados[0]) if len(dados) > 1 else pd.DataFrame()
@@ -106,6 +105,37 @@ if aba == "💰 Finanças":
         m2.metric("📉 Despesas", f"R$ {m_despesa:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m3.metric("💰 Rendimentos", f"R$ {m_rendimento:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m4.metric("⏳ Pendência", f"R$ {m_pendente:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+
+        # --- NOVO: RESUMO ECONOMIA ---
+        st.write("---")
+        with st.container():
+            col_rec, col_tabela = st.columns([1, 2])
+            
+            total_mes = m_receita + m_rendimento
+            sobra = total_mes - m_despesa
+            perc_sobra = (sobra / total_mes * 100) if total_mes > 0 else 0
+            
+            with col_rec:
+                st.markdown(f"""
+                <div class="resumo-box">
+                    <h4>💰 Economia do Mês</h4>
+                    <p style='font-size: 1.2rem; margin-bottom: 0;'>Sobrou: <b>R$ {sobra:,.2f}</b></p>
+                    <p style='color: #28a745;'>Corresponde a <b>{perc_sobra:.1f}%</b> do que entrou.</p>
+                </div>
+                """.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
+            
+            with col_tabela:
+                if not df_mes.empty:
+                    df_res_cat = df_mes[df_mes[c_tip] == 'Despesa'].groupby(c_cat)['V_Num'].sum().reset_index()
+                    df_res_cat.columns = ['Categoria', 'Valor']
+                    df_res_cat['%'] = (df_res_cat['Valor'] / m_despesa * 100) if m_despesa > 0 else 0
+                    df_res_cat = df_res_cat.sort_values(by='Valor', ascending=False)
+                    
+                    # Formatação para exibição
+                    df_display = df_res_cat.copy()
+                    df_display['Valor'] = df_display['Valor'].apply(lambda x: f"R$ {x:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+                    df_display['%'] = df_display['%'].apply(lambda x: f"{x:.1f}%")
+                    st.dataframe(df_display, use_container_width=True, hide_index=True)
 
         # --- SEÇÃO DE GRÁFICOS ---
         st.write("---")
