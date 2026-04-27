@@ -36,26 +36,27 @@ def conectar():
         st.error(f"Erro de Conexão: {e}"); st.stop()
 
 client = conectar()
-# SUA PLANILHA
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # 3. FUNÇÕES DE TRATAMENTO
 @st.cache_data(ttl=60)
 def buscar_dados(nome_aba):
-    ws = sh.worksheet(nome_aba)
-    dados = ws.get_all_values()
-    if len(dados) > 1:
-        df = pd.DataFrame(dados[1:], columns=dados[0])
-        df.columns = [c.strip() for c in df.columns]
-        return df
+    try:
+        ws = sh.worksheet(nome_aba)
+        dados = ws.get_all_values()
+        if len(dados) > 1:
+            df_temp = pd.DataFrame(dados[1:], columns=dados[0])
+            df_temp.columns = [c.strip() for c in df_temp.columns]
+            return df_temp
+    except: pass
     return pd.DataFrame()
 
 def p_num(v):
-    if not v: return 0.0
+    if not v or v == "": return 0.0
     v = str(v).replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.')
     return pd.to_numeric(v, errors='coerce') or 0.0
 
-# 4. CARREGAR DADOS
+# 4. CARREGAR CADASTROS
 df_bancos_cad = buscar_dados("Bancos")
 df_cats_cad = buscar_dados("Categoria")
 
@@ -101,7 +102,6 @@ if aba == "💰 Finanças":
         m_ren = df_m[df_m[c_tip] == 'Rendimento']['V_Num'].sum()
         m_pen = df_m[df_m[c_sta] == 'Pendente']['V_Num'].sum()
 
-        # Dashboard de Valores
         st.markdown(f'<div class="saldo-container"><small>Saldo Real em Conta (Líquido)</small><h2>R$ {saldo_atual:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
         c1, c2, c3, c4 = st.columns(4)
@@ -112,23 +112,25 @@ if aba == "💰 Finanças":
         
         st.write("---")
 
-        # --- SEÇÃO DE GRÁFICOS ---
+        # --- GRÁFICOS ---
         g1, g2 = st.columns(2)
         
         with g1:
             st.subheader("🏦 Saldo por Banco")
             lista_bancos = []
-            for b in df_bancos_cad['Nome do Banco'].unique():
-                ini = df_bancos_cad[df_bancos_cad['Nome do Banco'] == b]['Saldo Inicial'].apply(p_num).sum()
-                entradas = df[(df[c_bnc] == b) & (df[c_sta] == 'Pago') & (df[c_tip].isin(['Receita', 'Rendimento']))]['V_Num'].sum()
-                saidas = df[(df[c_bnc] == b) & (df[c_sta] == 'Pago') & (df_base[c_tip] == 'Despesa')]['V_Num'].sum()
-                lista_bancos.append({'Banco': b, 'Saldo': ini + entradas - saidas})
-            
-            df_pie = pd.DataFrame(lista_bancos)
-            df_pie = df_pie[df_pie['Saldo'] > 0]
-            if not df_pie.empty:
-                fig = px.pie(df_pie, values='Saldo', names='Banco', hole=.4, color_discrete_sequence=px.colors.qualitative.Pastel)
-                st.plotly_chart(fig, use_container_width=True)
+            if not df_bancos_cad.empty:
+                for b in df_bancos_cad['Nome do Banco'].unique():
+                    ini = df_bancos_cad[df_bancos_cad['Nome do Banco'] == b]['Saldo Inicial'].apply(p_num).sum()
+                    entradas = df[(df[c_bnc] == b) & (df[c_sta] == 'Pago') & (df[c_tip].isin(['Receita', 'Rendimento']))]['V_Num'].sum()
+                    # CORRIGIDO: df_base para df
+                    saidas = df[(df[c_bnc] == b) & (df[c_sta] == 'Pago') & (df[c_tip] == 'Despesa')]['V_Num'].sum()
+                    lista_bancos.append({'Banco': b, 'Saldo': ini + entradas - saidas})
+                
+                df_pie = pd.DataFrame(lista_bancos)
+                df_pie = df_pie[df_pie['Saldo'] != 0]
+                if not df_pie.empty:
+                    fig = px.pie(df_pie, values='Saldo', names='Banco', hole=.4, color_discrete_sequence=px.colors.qualitative.Pastel)
+                    st.plotly_chart(fig, use_container_width=True)
 
         with g2:
             st.subheader("📊 Receitas x Despesas")
@@ -147,7 +149,7 @@ if aba == "💰 Finanças":
         f_val = st.number_input("Valor", min_value=0.0)
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Geral"])
-        f_bnc = st.selectbox("Banco", sorted(df_bancos_cad['Nome do Banco'].tolist()))
+        f_bnc = st.selectbox("Banco", sorted(df_bancos_cad['Nome do Banco'].tolist()) if not df_bancos_cad.empty else ["Dinheiro"])
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         if st.form_submit_button("SALVAR"):
