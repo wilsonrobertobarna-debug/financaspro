@@ -123,7 +123,6 @@ if aba == "💰 Finanças":
         m3.metric("💰 Rendimentos", f"R$ {df_mes[df_mes['Tipo'] == 'Rendimento']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m4.metric("⏳ Pendência", f"R$ {df_mes[df_mes['Status'].str.strip() == 'Pendente']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
-        # GRÁFICOS RESTAURADOS
         st.write("---")
         col_g1, col_g2 = st.columns(2)
         with col_g1:
@@ -147,13 +146,29 @@ if aba == "💰 Finanças":
         st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1].head(15), use_container_width=True)
 
-# 7. GERENCIADOR (CORREÇÃO DE EXCLUSÃO)
+elif aba == "🐾 Milo & Bolt":
+    st.markdown("<h1 style='text-align: center;'>🐾 Milo & Bolt</h1>", unsafe_allow_html=True)
+    if not df_base.empty:
+        # FILTRO ROBUSTO: Procura Milo ou Bolt em Categoria OU Descrição
+        df_pets = df_base[
+            df_base['Categoria'].str.contains('Milo|Bolt|Pet', case=False, na=False) | 
+            df_base['Descrição'].str.contains('Milo|Bolt', case=False, na=False)
+        ]
+        
+        col_p1, col_p2 = st.columns(2)
+        with col_p1:
+            st.info(f"Investimento Total nos Pets: **R$ {df_pets['V_Num'].sum():,.2f}**".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        with col_p2:
+            st.success(f"Itens Cadastrados: **{len(df_pets)}**")
+            
+        st.write("---")
+        st.dataframe(df_pets.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1], use_container_width=True)
+
+# 7. GERENCIADOR
 st.sidebar.write("---")
 st.sidebar.write("### ⚙️ Gerenciar")
 if not df_base.empty:
-    # Mostra os 15 últimos lançamentos reais da planilha
     df_manag = df_base.copy()
-    # Adicionamos a linha física real (index + 2) para garantir que delete a certa
     df_manag['Linha_Planilha'] = df_manag.index + 2
     lista_edit = df_manag.iloc[::-1].head(15)
     
@@ -165,18 +180,9 @@ if not df_base.empty:
         col_btn1, col_btn2 = st.sidebar.columns(2)
         
         if col_btn1.button("🗑️ EXCLUIR"):
-            try:
-                sh.get_worksheet(0).delete_rows(int(linha_alvo))
-                st.toast(f"Linha {linha_alvo} excluída com sucesso!")
-                st.cache_data.clear(); st.rerun()
-            except Exception as e:
-                st.error(f"Erro ao excluir: {e}")
+            sh.get_worksheet(0).delete_rows(int(linha_alvo))
+            st.cache_data.clear(); st.rerun()
                 
         if col_btn2.button("✅ QUITAR"):
-            try:
-                # O Status está na coluna G (7ª coluna)
-                sh.get_worksheet(0).update_cell(int(linha_alvo), 7, "Pago")
-                st.toast("Status atualizado para Pago!")
-                st.cache_data.clear(); st.rerun()
-            except Exception as e:
-                st.error(f"Erro ao quitar: {e}")
+            sh.get_worksheet(0).update_cell(int(linha_alvo), 7, "Pago")
+            st.cache_data.clear(); st.rerun()
