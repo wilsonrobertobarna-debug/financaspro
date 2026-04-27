@@ -17,16 +17,21 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXÃO
+# 2. CONEXÃO (Lendo os novos campos que você colocou nos Secrets)
 @st.cache_resource
 def conectar_google():
     try:
         creds_info = st.secrets["connections"]["gsheets"]
+        # Limpando a chave para evitar erro de conexão
         private_key = creds_info["private_key"].replace("\\n", "\n").strip()
+        
         final_creds = {
-            "type": creds_info["type"], "project_id": creds_info["project_id"],
-            "private_key_id": creds_info["private_key_id"], "private_key": private_key,
-            "client_email": creds_info["client_email"], "token_uri": creds_info["token_uri"],
+            "type": creds_info["type"], 
+            "project_id": creds_info["project_id"],
+            "private_key_id": creds_info["private_key_id"], 
+            "private_key": private_key,
+            "client_email": creds_info["client_email"], 
+            "token_uri": creds_info["token_uri"],
         }
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=scopes))
@@ -36,7 +41,7 @@ def conectar_google():
 client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# 3. CARREGAMENTO
+# 3. CARREGAMENTO DE DADOS
 @st.cache_data(ttl=5)
 def carregar_dados():
     try:
@@ -64,7 +69,7 @@ if not df_base.empty:
     df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
     mes_atual = datetime.now().strftime('%m/%y')
 
-# 5. SIDEBAR (FORMULÁRIO COM BENEFICIÁRIO)
+# 5. SIDEBAR (ESTRUTURA ORIGINAL + BENEFICIÁRIO)
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
@@ -73,15 +78,15 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
     f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
     f_val = st.number_input("Valor", min_value=0.0)
     
-    # NOVO CAMPO: Beneficiário
-    f_ben = st.text_input("Beneficiário (Quem recebeu/pagou?)")
+    # Campo de Beneficiário que você pediu
+    f_ben = st.text_input("Beneficiário (Quem?)")
     
-    # Opção de Pet para ajudar na descrição
+    # Ajuda para o Milo e Bolt na descrição
     pet_ref = ""
     if aba == "🐾 Milo & Bolt":
-        pet_ref = st.selectbox("Referente ao Pet:", ["Milo", "Bolt", "Ambos", "Nenhum"])
+        pet_ref = st.selectbox("Pet Referente:", ["Milo", "Bolt", "Ambos", "Nenhum"])
     
-    f_des = st.text_input("Descrição do Gasto (Ex: Ração, Aluguel)")
+    f_des = st.text_input("Descrição (Ex: Ração, Aluguel)")
     f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
     
     lista_cats = sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Outros"]
@@ -93,25 +98,25 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
     f_sta = st.selectbox("Status", ["Pago", "Pendente"])
     f_parc = st.number_input("Parcelas", min_value=1, value=1)
     
-    if st.form_submit_button("SALVAR NOVO LANÇAMENTO"):
+    if st.form_submit_button("SALVAR"):
         ws = sh.get_worksheet(0)
         
-        # Monta a descrição inteligente: "Descrição [Beneficiário] (Pet)"
-        identificador = f" [{f_ben}]" if f_ben else ""
-        pet_info = f" ({pet_ref})" if pet_ref and pet_ref != "Nenhum" else ""
-        desc_completa = f"{f_des}{identificador}{pet_info}"
+        # Monta a descrição para não ficar confuso na planilha
+        tag_ben = f" [{f_ben}]" if f_ben else ""
+        tag_pet = f" ({pet_ref})" if pet_ref and pet_ref != "Nenhum" else ""
+        desc_montada = f"{f_des}{tag_ben}{tag_pet}"
         
         for i in range(int(f_parc)):
             dt_p = f_dat + relativedelta(months=i)
-            desc_final = f"{desc_completa} ({i+1}/{int(f_parc)})" if f_parc > 1 else desc_completa
+            desc_final = f"{desc_montada} ({i+1}/{int(f_parc)})" if f_parc > 1 else desc_montada
             ws.append_row([dt_p.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), desc_final, f_cat, f_tip, f_bnc, f_sta])
         st.cache_data.clear(); st.rerun()
 
-# 6. CONTEÚDO PRINCIPAL
+# 6. ABA FINANÇAS (Métricas e Gráficos Originais)
 if aba == "💰 Finanças":
     st.markdown("<h1 style='text-align: center;'>🛡️ FinançasPro Wilson</h1>", unsafe_allow_html=True)
     if not df_base.empty:
-        # MÉTRICAS GERAIS
+        # Saldo Geral Realizado
         df_real = df_base[df_base['Status'].str.strip() == 'Pago']
         t_in = df_real[df_real['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
         t_out = df_real[df_real['Tipo'] == 'Despesa']['V_Num'].sum()
@@ -119,7 +124,7 @@ if aba == "💰 Finanças":
         
         st.markdown(f'<div class="saldo-container"><small>Saldo Geral Realizado</small><h2>R$ {s_ini + t_in - t_out:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
-        # TAGS DO MÊS
+        # Tags do Mês
         df_mes = df_base[df_base['Mes_Ano'] == mes_atual]
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Receitas", f"R$ {df_mes[df_mes['Tipo'] == 'Receita']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
@@ -131,23 +136,23 @@ if aba == "💰 Finanças":
         st.subheader("📋 Últimos Lançamentos")
         st.dataframe(df_base.drop(columns=['DT', 'V_Num', 'Mes_Ano'], errors='ignore').iloc[::-1].head(15), use_container_width=True)
 
+# 7. ABA PETS
 elif aba == "🐾 Milo & Bolt":
     st.markdown("<h1 style='text-align: center;'>🐾 Milo & Bolt</h1>", unsafe_allow_html=True)
     df_pets = df_base[df_base['Categoria'].str.contains('Pet', case=False, na=False)]
     st.info(f"Investimento Total nos Pets: **R$ {df_pets['V_Num'].sum():,.2f}**".replace(',', 'X').replace('.', ',').replace('X', '.'))
     st.dataframe(df_pets.drop(columns=['DT', 'V_Num', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
 
-# 8. GERENCIADOR DE EXCLUSÃO (BLINDADO COM ID REAL)
+# 8. GERENCIADOR (EXCLUSÃO BLINDADA)
 st.sidebar.write("---")
 st.sidebar.write("### ⚙️ Gerenciar Registro")
 if not df_base.empty:
     df_aux = df_base.copy()
     df_aux['ID_PLANILHA'] = df_aux.index + 2
     
-    # Criamos a lista de exclusão com Valor e Descrição para você conferir
     opcoes_excluir = {}
     for _, r in df_aux.tail(15).iloc[::-1].iterrows():
-        # Exemplo: L28 | Ração [PetShop] | R$ 150,00
+        # Exemplo: L28 | Ração [Wilson] | R$ 150,00
         texto = f"L{r['ID_PLANILHA']} | {r['Descrição']} | R$ {r['Valor']}"
         opcoes_excluir[texto] = r['ID_PLANILHA']
     
@@ -157,6 +162,5 @@ if not df_base.empty:
         linha_alvo = opcoes_excluir[escolha]
         if st.sidebar.button("🚨 CONFIRMAR EXCLUSÃO"):
             sh.get_worksheet(0).delete_rows(int(linha_alvo))
-            st.sidebar.success(f"Linha {linha_alvo} removida!")
-            st.cache_data.clear()
-            st.rerun()
+            st.sidebar.success(f"Linha {linha_alvo} apagada!")
+            st.cache_data.clear(); st.rerun()
