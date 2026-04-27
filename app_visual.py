@@ -75,7 +75,7 @@ if not df_base.empty:
     df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
     mes_atual = datetime.now().strftime('%m/%y')
 
-# 5. SIDEBAR - LANÇAMENTO CORRIGIDO
+# 5. SIDEBAR
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
@@ -83,12 +83,10 @@ with st.sidebar.form("f_novo"):
     st.write("### 🚀 Novo Lançamento")
     f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
     f_val = st.number_input("Valor", min_value=0.0)
-    f_des = st.text_input("Descrição (Ex: Ração Milo)")
+    f_des = st.text_input("Descrição")
     f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-    
     lista_cats = sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Outros"]
     f_cat = st.selectbox("Categoria", lista_cats)
-    
     f_bnc = st.selectbox("Banco", sorted(df_bancos_cad['Nome do Banco'].tolist() + ["Dinheiro"]) if not df_bancos_cad.empty else ["Dinheiro"])
     f_sta = st.selectbox("Status", ["Pago", "Pendente"])
     f_parc = st.number_input("Parcelas", min_value=1, value=1)
@@ -98,16 +96,7 @@ with st.sidebar.form("f_novo"):
         for i in range(int(f_parc)):
             dt_p = f_dat + relativedelta(months=i)
             desc_p = f"{f_des} ({i+1}/{int(f_parc)})" if f_parc > 1 else f_des
-            # ORDEM CRUCIAL: A=Data, B=Valor, C=Descrição, D=Categoria, E=Tipo, F=Banco, G=Status
-            ws.append_row([
-                dt_p.strftime("%d/%m/%Y"), 
-                str(f_val).replace('.', ','), 
-                desc_p, 
-                f_cat, 
-                f_tip, 
-                f_bnc, 
-                f_sta
-            ])
+            ws.append_row([dt_p.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), desc_p, f_cat, f_tip, f_bnc, f_sta])
         st.cache_data.clear(); st.rerun()
 
 # 6. CONTEÚDO
@@ -133,22 +122,21 @@ if aba == "💰 Finanças":
         m3.metric("💰 Rendimentos", f"R$ {df_mes[df_mes['Tipo'] == 'Rendimento']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m4.metric("⏳ Pendência", f"R$ {df_mes[df_mes['Status'].str.strip() == 'Pendente']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
-        st.write("---")
-        st.subheader("📋 Lançamentos Recentes")
+        st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1].head(15), use_container_width=True)
 
 elif aba == "🐾 Milo & Bolt":
     st.markdown("<h1 style='text-align: center;'>🐾 Milo & Bolt</h1>", unsafe_allow_html=True)
     if not df_base.empty:
-        palavras_chave = 'Milo|Bolt|Pet|Ração|Racao|Vacina|Vet|Banho'
+        palavras_chave = 'Milo|Bolt|Pet|Ração|Racao|Vacina|Vet|Banho|Tosa'
         df_pets = df_base[
             df_base['Categoria'].str.contains(palavras_chave, case=False, na=False) | 
             df_base['Descrição'].str.contains(palavras_chave, case=False, na=False)
         ]
-        st.info(f"Investimento Total nos Pets: **R$ {df_pets['V_Num'].sum():,.2f}**".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        st.info(f"Investimento Total: **R$ {df_pets['V_Num'].sum():,.2f}**".replace(',', 'X').replace('.', ',').replace('X', '.'))
         st.dataframe(df_pets.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1], use_container_width=True)
 
-# 7. GERENCIADOR (SINCRONIZADO)
+# 7. GERENCIADOR (LINHA 170 CORRIGIDA AQUI)
 st.sidebar.write("---")
 st.sidebar.write("### ⚙️ Gerenciar")
 if not df_base.empty:
@@ -164,7 +152,9 @@ if not df_base.empty:
         col_btn1, col_btn2 = st.sidebar.columns(2)
         if col_btn1.button("🗑️ EXCLUIR"):
             sh.get_worksheet(0).delete_rows(int(linha_alvo))
-            st.cache_data.clear(); st.rerun()
+            st.cache_data.clear()
+            st.rerun()
         if col_btn2.button("✅ QUITAR"):
-            # Coluna 7 é o Status (G)
-            sh.get_worksheet(0).
+            sh.get_worksheet(0).update_cell(int(linha_alvo), 7, "Pago")
+            st.cache_data.clear()
+            st.rerun()
