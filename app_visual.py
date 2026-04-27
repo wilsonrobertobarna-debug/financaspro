@@ -13,7 +13,6 @@ st.markdown("""
     <style>
     .saldo-container { background-color: #007bff; color: white; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 25px; border: 1px solid #0056b3; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .saldo-container h2 { margin: 0; font-size: 2.8rem; font-weight: bold; }
-    .saldo-container small { font-size: 1rem; opacity: 0.9; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -59,7 +58,6 @@ def limpar_valor(v):
     try: return float(v)
     except: return 0.0
 
-# 4. PROCESSAMENTO GLOBAL
 if not df_base.empty:
     for col in ['Data', 'Valor', 'Descrição', 'Categoria', 'Tipo', 'Banco', 'Status']:
         if col not in df_base.columns: df_base[col] = ""
@@ -68,7 +66,7 @@ if not df_base.empty:
     df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
     mes_atual = datetime.now().strftime('%m/%y')
 
-# 5. BARRA LATERAL (LANÇAMENTOS)
+# 4. BARRA LATERAL
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
@@ -92,43 +90,42 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
         st.success("Salvo!")
         st.cache_data.clear(); st.rerun()
 
-# 6. ABA FINANÇAS (INTERFACE RESTAURADA)
+# 5. ABA FINANÇAS
 if aba == "💰 Finanças":
     st.markdown("<h1 style='text-align: center;'>🛡️ FinançasPro Wilson</h1>", unsafe_allow_html=True)
     
     if not df_base.empty:
-        # Pesquisa e Tags (Restaurados)
-        c_p1, c_p2 = st.columns([2, 1])
+        # ÁREA DE PESQUISA (Restaurada e Organizada)
+        st.write("### 🔍 Filtros de Pesquisa")
+        c_p1, c_p2, c_p3 = st.columns(3)
         with c_p1:
-            banco_sel = st.selectbox("🔍 Pesquisar por Banco:", ["Todos"] + sorted(df_base['Banco'].unique().tolist()))
+            banco_sel = st.selectbox("Filtrar por Banco:", ["Todos"] + sorted(df_base['Banco'].unique().tolist()))
         with c_p2:
-            status_tags = st.multiselect("Filtrar Status:", ["Pago", "Pendente"], default=["Pago", "Pendente"])
+            tipo_sel = st.selectbox("Filtrar por Tipo:", ["Todos", "Despesa", "Receita", "Rendimento"])
+        with c_p3:
+            status_sel = st.selectbox("Filtrar por Status:", ["Todos", "Pago", "Pendente"])
 
-        df_filtrado = df_base if banco_sel == "Todos" else df_base[df_base['Banco'] == banco_sel]
-        df_filtrado = df_filtrado[df_filtrado['Status'].isin(status_tags)]
+        # Aplicando os filtros
+        df_f = df_base.copy()
+        if banco_sel != "Todos": df_f = df_f[df_f['Banco'] == banco_sel]
+        if tipo_sel != "Todos": df_f = df_f[df_f['Tipo'] == tipo_sel]
+        if status_sel != "Todos": df_f = df_f[df_f['Status'] == status_sel]
 
-        # Saldo Real
-        df_pago = df_filtrado[df_filtrado['Status'].str.strip() == 'Pago']
-        if banco_sel == "Todos":
-            s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
-        else:
-            s_ini = df_bancos_cad[df_bancos_cad['Nome do Banco'] == banco_sel]['Saldo Inicial'].apply(limpar_valor).sum()
+        # Saldo Real (Sempre baseado no que está PAGO)
+        df_pago_calc = df_base[df_base['Status'].str.strip() == 'Pago']
+        if banco_sel != "Todos": df_pago_calc = df_pago_calc[df_pago_calc['Banco'] == banco_sel]
         
-        entradas = df_pago[df_pago['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        saidas = df_pago[df_pago['Tipo'] == 'Despesa']['V_Num'].sum()
+        s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if banco_sel == "Todos" else df_bancos_cad[df_bancos_cad['Nome do Banco'] == banco_sel]['Saldo Inicial'].apply(limpar_valor).sum()
+        entradas = df_pago_calc[df_pago_calc['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        saidas = df_pago_calc[df_pago_calc['Tipo'] == 'Despesa']['V_Num'].sum()
         
-        st.markdown(f'''
-            <div class="saldo-container">
-                <small>Saldo Disponível ({banco_sel})</small>
-                <h2>R$ {s_ini + entradas - saidas:,.2f}</h2>
-            </div>
-        '''.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
+        st.markdown(f'<div class="saldo-container"><small>Saldo Atual em Conta ({banco_sel})</small><h2>R$ {s_ini + entradas - saidas:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
-        # Gráficos em Duas Colunas
+        # Gráficos
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("📈 Evolução Mensal")
-            df_evol = df_filtrado.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().unstack().fillna(0).reset_index()
+            df_evol = df_f.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().unstack().fillna(0).reset_index()
             fig = go.Figure()
             for t, cor in zip(['Receita', 'Despesa', 'Rendimento'], ['#28a745', '#dc3545', '#007bff']):
                 if t in df_evol.columns: fig.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol[t], name=t, marker_color=cor))
@@ -136,48 +133,41 @@ if aba == "💰 Finanças":
             st.plotly_chart(fig, use_container_width=True)
 
         with col2:
-            st.subheader("📊 Resumo de Economia (Metas)")
-            df_mes_atual = df_filtrado[df_filtrado['Mes_Ano'] == mes_atual]
-            real_cat = df_mes_atual[df_mes_atual['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum()
-            
-            if not df_cats_cad.empty and 'Meta' in df_cats_cad.columns:
-                df_cats_cad['Meta_Num'] = df_cats_cad['Meta'].apply(limpar_valor)
-                df_comp = pd.DataFrame({'Meta': df_cats_cad.set_index('Nome')['Meta_Num'], 'Real': real_cat}).fillna(0).reset_index()
+            st.subheader("📊 Metas por Categoria")
+            if not df_cats_cad.empty:
+                df_mes_atual = df_f[df_f['Mes_Ano'] == mes_atual]
+                real_cat = df_mes_atual[df_mes_atual['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum()
+                df_comp = pd.DataFrame({'Meta': df_cats_cad.set_index('Nome')['Meta'].apply(limpar_valor), 'Real': real_cat}).fillna(0).reset_index()
                 fig_m = go.Figure()
-                fig_m.add_trace(go.Bar(y=df_comp['index'], x=df_comp['Meta'], name='Planejado', orientation='h', marker_color='#d3d3d3'))
-                fig_m.add_trace(go.Bar(y=df_comp['index'], x=df_comp['Real'], name='Gasto Real', orientation='h', marker_color='#007bff'))
+                fig_m.add_trace(go.Bar(y=df_comp['index'], x=df_comp['Meta'], name='Meta', orientation='h', marker_color='#d3d3d3'))
+                fig_m.add_trace(go.Bar(y=df_comp['index'], x=df_comp['Real'], name='Real', orientation='h', marker_color='#007bff'))
                 fig_m.update_layout(barmode='overlay', height=300, margin=dict(l=0,r=0,t=20,b=0))
                 st.plotly_chart(fig_m, use_container_width=True)
-            else:
-                st.info("Cadastre metas para ver este gráfico.")
 
-        # Tabela (Metade Inferior)
         st.write("---")
-        st.subheader("📋 Histórico de Lançamentos")
-        st.dataframe(df_filtrado.drop(columns=['DT', 'Mes_Ano', 'V_Num', 'Linha'], errors='ignore').iloc[::-1], use_container_width=True)
+        st.subheader("📋 Tabela de Lançamentos")
+        st.dataframe(df_f.drop(columns=['DT', 'Mes_Ano', 'V_Num', 'Linha'], errors='ignore').iloc[::-1], use_container_width=True)
 
-# 7. ABAS ESPECÍFICAS
+# 6. OUTRAS ABAS (PETS E VEÍCULO)
 elif aba == "🐾 Milo & Bolt":
-    st.markdown("<h1 style='text-align: center;'>🐾 Espaço Milo & Bolt</h1>", unsafe_allow_html=True)
-    df_pets = df_base[df_base['Descrição'].str.contains('Milo|Bolt|Pet|Ração|Vet', case=False, na=False) | 
-                      df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
-    st.metric("Total Investido nos Pets", f"R$ {df_pets['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-    st.dataframe(df_pets.drop(columns=['DT', 'Mes_Ano', 'V_Num', 'Linha'], errors='ignore').iloc[::-1], use_container_width=True)
+    st.markdown("<h1 style='text-align: center;'>🐾 Milo & Bolt</h1>", unsafe_allow_html=True)
+    df_pets = df_base[df_base['Descrição'].str.contains('Milo|Bolt|Pet|Ração|Vet', case=False, na=False)]
+    st.metric("Total Pets", f"R$ {df_pets['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+    st.dataframe(df_pets.iloc[::-1], use_container_width=True)
 
 elif aba == "🚗 Meu Veículo":
-    st.markdown("<h1 style='text-align: center;'>🚗 Controle do Veículo</h1>", unsafe_allow_html=True)
-    df_veic = df_base[df_base['Descrição'].str.contains('Veículo|Carro|Combustível|IPVA', case=False, na=False) | 
-                      df_base['Categoria'].str.contains('Veículo|Transporte', case=False, na=False)].copy()
-    st.metric("Total Gasto com Veículo", f"R$ {df_veic['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-    st.dataframe(df_veic.drop(columns=['DT', 'Mes_Ano', 'V_Num', 'Linha'], errors='ignore').iloc[::-1], use_container_width=True)
+    st.markdown("<h1 style='text-align: center;'>🚗 Meu Veículo</h1>", unsafe_allow_html=True)
+    df_veic = df_base[df_base['Descrição'].str.contains('Veículo|Carro|Combustível|IPVA', case=False, na=False)]
+    st.metric("Total Veículo", f"R$ {df_veic['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+    st.dataframe(df_veic.iloc[::-1], use_container_width=True)
 
-# 8. GERENCIADOR
+# 7. GERENCIADOR
 st.sidebar.write("---")
-st.sidebar.write("### ⚙️ Gerenciar")
+st.sidebar.write("### ⚙️ Gerenciar Linhas")
 if not df_base.empty:
     df_base['Linha'] = df_base.index + 2
     opcoes_manag = {f"L{r['Linha']} | {r['Data']} | {r['Descrição']}": r['Linha'] for _, r in df_base.iloc[::-1].head(15).iterrows()}
-    sel = st.sidebar.selectbox("Ação rápida para linha:", [""] + list(opcoes_manag.keys()))
+    sel = st.sidebar.selectbox("Ação rápida:", [""] + list(opcoes_manag.keys()))
     if sel:
         l_alvo = opcoes_manag[sel]
         c1, c2 = st.sidebar.columns(2)
