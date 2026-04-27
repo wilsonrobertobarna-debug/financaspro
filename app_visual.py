@@ -46,6 +46,13 @@ def carregar_dados():
     try:
         df_b = pd.DataFrame(sh.worksheet("Bancos").get_all_records())
         df_c = pd.DataFrame(sh.worksheet("Categoria").get_all_records())
+        
+        # Limpeza da Meta na origem
+        df_c.columns = [str(c).strip() for c in df_c.columns]
+        if 'Meta' in df_c.columns:
+            df_c['Meta'] = df_c['Meta'].astype(str).str.replace('R$', '').str.replace('.', '').str.replace(',', '.').str.strip()
+            df_c['Meta'] = pd.to_numeric(df_c['Meta'], errors='coerce').fillna(0.0)
+        
         ws_base = sh.get_worksheet(0)
         dados = ws_base.get_all_values()
         df_base = pd.DataFrame(dados[1:], columns=dados[0]) if len(dados) > 1 else pd.DataFrame()
@@ -55,7 +62,7 @@ def carregar_dados():
 
 df_bancos_cad, df_cats_cad, df_base = carregar_dados()
 
-# 4. ABA FINANÇAS
+# 4. INTERFACE
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
@@ -63,7 +70,6 @@ if aba == "💰 Finanças":
     st.markdown("<h1 style='text-align: center;'>🛡️ FinançasPro Wilson</h1>", unsafe_allow_html=True)
     
     if not df_base.empty:
-        # Padronizar nomes de colunas
         df_base.columns = [c.strip() for c in df_base.columns]
         c_dat, c_val, c_cat, c_tip, c_bnc, c_sta = df_base.columns[0], df_base.columns[1], df_base.columns[2], df_base.columns[3], df_base.columns[4], df_base.columns[5]
 
@@ -81,14 +87,13 @@ if aba == "💰 Finanças":
         banco_sel = st.selectbox("🔍 Pesquisar por Banco:", bancos_unicos)
         df_filtrado = df_base if banco_sel == "Todos" else df_base[df_base[c_bnc] == banco_sel]
 
-        # Cálculos de Saldo (Sem pendentes no Geral)
+        # Cálculos
         s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
         df_realizado = df_base[df_base[c_sta] != 'Pendente']
         t_rec = df_realizado[(df_realizado[c_tip] == 'Receita') | (df_realizado[c_tip] == 'Rendimento')]['V_Num'].sum()
         t_des = df_realizado[df_realizado[c_tip] == 'Despesa']['V_Num'].sum()
         saldo_geral = s_ini + t_rec - t_des
 
-        # Tags do Mês
         df_mes = df_filtrado[df_filtrado['Mes_Ano'] == mes_atual]
         m_receita = df_mes[df_mes[c_tip] == 'Receita']['V_Num'].sum()
         m_despesa = df_mes[df_mes[c_tip] == 'Despesa']['V_Num'].sum()
@@ -103,20 +108,42 @@ if aba == "💰 Finanças":
         m3.metric("💰 Rendimentos", f"R$ {m_rendimento:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m4.metric("⏳ Pendência", f"R$ {m_pendente:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
-        # Gráfico por Banco
+        # --- SEÇÃO DE GRÁFICOS ---
         st.write("---")
-        st.subheader("🏦 Saldo por Banco")
-        saldos_lista = []
-        for b in df_bancos_cad['Nome do Banco'].unique():
-            si = df_bancos_cad[df_bancos_cad['Nome do Banco'] == b]['Saldo Inicial'].apply(limpar_valor).sum()
-            re = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] != 'Pendente') & ((df_base[c_tip] == 'Receita') | (df_base[c_tip] == 'Rendimento'))]['V_Num'].sum()
-            de = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] != 'Pendente') & (df_base[c_tip] == 'Despesa')]['V_Num'].sum()
-            saldos_lista.append({'Banco': b, 'Saldo': si + re - de})
-        df_sb = pd.DataFrame(saldos_lista)
-        df_sb = df_sb[df_sb['Saldo'] != 0]
-        if not df_sb.empty:
-            fig_p = px.pie(df_sb, values='Saldo', names='Banco', hole=.4)
-            st.plotly_chart(fig_p, use_container_width=True)
+        col_esq, col_dir = st.columns(2)
+        
+        with col_esq:
+            st.subheader("🏦 Saldo por Banco")
+            saldos_lista = []
+            for b in df_bancos_cad['Nome do Banco'].unique():
+                si = df_bancos_cad[df_bancos_cad['Nome do Banco'] == b]['Saldo Inicial'].apply(limpar_valor).sum()
+                re = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] != 'Pendente') & ((df_base[c_tip] == 'Receita') | (df_base[c_tip] == 'Rendimento'))]['V_Num'].sum()
+                de = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] != 'Pendente') & (df_base[c_tip] == 'Despesa')]['V_Num'].sum()
+                saldos_lista.append({'Banco': b, 'Saldo': si + re - de})
+            df_sb = pd.DataFrame(saldos_lista)
+            df_sb = df_sb[df_sb['Saldo'] != 0]
+            if not df_sb.empty:
+                fig_p = px.pie(df_sb, values='Saldo', names='Banco', hole=.4)
+                fig_p.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=300)
+                st.plotly_chart(fig_p, use_container_width=True)
+
+        with col_dir:
+            st.subheader(f"📊 Metas vs Gasto ({mes_atual})")
+            gasto_cat = df_mes[df_mes[c_tip] == 'Despesa'].groupby(c_cat)['V_Num'].sum()
+            df_m = pd.DataFrame({'Meta': df_cats_cad.set_index('Nome')['Meta'], 'Real': gasto_cat}).fillna(0.0)
+            df_m = df_m[(df_m['Meta'] > 0) | (df_m['Real'] > 0)]
+            if not df_m.empty:
+                fig_m = go.Figure()
+                fig_m.add_trace(go.Bar(y=df_m.index, x=df_m['Meta'], name='Meta', orientation='h', marker_color='#D3D3D3'))
+                fig_m.add_trace(go.Bar(y=df_m.index, x=df_m['Real'], name='Real', orientation='h', marker_color='#007bff'))
+                fig_m.update_layout(barmode='group', height=300, margin=dict(l=0, r=0, t=20, b=0), legend=dict(orientation="h", y=1.2))
+                st.plotly_chart(fig_m, use_container_width=True)
+
+        st.write("---")
+        st.subheader("📈 Evolução Receita x Despesa")
+        df_evol = df_filtrado.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0.0)
+        if not df_evol.empty:
+            st.bar_chart(df_evol)
 
         st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1], use_container_width=True)
@@ -134,7 +161,7 @@ if aba == "💰 Finanças":
             st.cache_data.clear(); st.rerun()
 
 elif aba == "🐾 Milo & Bolt":
-    st.info("Aba em manutenção. Vamos focar primeiro em ajustar as Finanças.")
+    st.info("Aba em manutenção controlada. Focando na estabilidade de Finanças.")
 
 else:
-    st.info("Aba em manutenção. Vamos focar primeiro em ajustar as Finanças.")
+    st.info("Aba em manutenção controlada. Focando na estabilidade de Finanças.")
