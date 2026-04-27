@@ -109,6 +109,21 @@ if aba == "💰 Finanças":
 
         # --- SEÇÃO DE GRÁFICOS ---
         st.write("---")
+        st.subheader("📈 Evolução Mensal (Receita vs Despesa)")
+        
+        # Agrupamento para o gráfico de barras
+        df_evol = df_filtrado.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0).reset_index()
+        
+        if not df_evol.empty:
+            fig_bar = go.Figure()
+            if 'Receita' in df_evol.columns:
+                fig_bar.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol['Receita'], name='Receita', marker_color='#28a745'))
+            if 'Despesa' in df_evol.columns:
+                fig_bar.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol['Despesa'], name='Despesa', marker_color='#dc3545'))
+            
+            fig_bar.update_layout(barmode='group', height=350, margin=dict(l=20, r=20, t=20, b=20))
+            st.plotly_chart(fig_bar, use_container_width=True)
+
         col_esq, col_dir = st.columns(2)
         with col_esq:
             st.subheader("🏦 Saldo por Banco")
@@ -160,26 +175,23 @@ if aba == "💰 Finanças":
                 ws.append_row([dt_p.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), desc, f_tip, f_bnc, f_sta])
             st.cache_data.clear(); st.rerun()
 
-    # --- NOVO: GERENCIAR (EXCLUIR / ALTERAR) ---
+    # --- GERENCIAR (EXCLUIR / ALTERAR) ---
     st.sidebar.write("---")
     st.sidebar.write("### ⚙️ Gerenciar Lançamentos")
     
     if not df_base.empty:
-        # Criamos uma lista de opções para o usuário escolher qual deletar/alterar
-        lista_edit = df_base.iloc[::-1].head(20) # Mostra os últimos 20 para facilitar
+        lista_edit = df_base.iloc[::-1].head(20) 
         opcoes = [f"{idx+2} | {row[c_dat]} | {row[c_cat]} | {row[c_val]}" for idx, row in lista_edit.iterrows()]
         item_sel = st.sidebar.selectbox("Selecione o item (Linha | Data | Cat | Val):", [""] + opcoes)
         
         if item_sel:
             linha_idx = int(item_sel.split(" | ")[0])
-            
             col_bt1, col_bt2 = st.sidebar.columns(2)
             if col_bt1.button("🗑️ Excluir"):
                 sh.get_worksheet(0).delete_rows(linha_idx)
                 st.cache_data.clear(); st.rerun()
             
             if col_bt2.button("✅ Quitar"):
-                # Muda o status da coluna 6 (Status) para 'Pago'
                 sh.get_worksheet(0).update_cell(linha_idx, 6, "Pago")
                 st.cache_data.clear(); st.rerun()
 
