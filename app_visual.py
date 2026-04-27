@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro", page_icon="🛡️", layout="wide")
 
-# Estilos CSS (Estrutura 100% preservada)
+# Estilos CSS (Preservados)
 st.markdown("""
     <style>
     .saldo-container { background-color: #007bff; color: white; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
@@ -19,7 +19,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXÃO (Mantida conforme seus segredos)
+# 2. CONEXÃO
 @st.cache_resource
 def conectar():
     try:
@@ -37,13 +37,13 @@ def conectar():
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# 3. TRATAMENTO DE DADOS E DATA DO BRASIL
+# 3. TRATAMENTO E DATA BRASIL (GMT-3)
 def limpar_v(v):
     if not v or v == "": return 0.0
     v = str(v).replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.')
     return pd.to_numeric(v, errors='coerce') or 0.0
 
-# --- CÁLCULO DA DATA ATUAL NO BRASIL (GMT-3) ---
+# Força o fuso horário de Brasília para o formulário
 fuso_br = timezone(timedelta(hours=-3))
 hoje_br = datetime.now(fuso_br).date()
 
@@ -71,7 +71,6 @@ if aba == "💰 Finanças":
         df_base.columns = [c.strip() for c in df_base.columns]
         c_dat, c_val, c_cat, c_tip, c_bnc, c_sta = df_base.columns[0:6]
         df_base['V_Num'] = df_base[c_val].apply(limpar_v)
-        # Força a leitura correta da data que já está na planilha
         df_base['DT'] = pd.to_datetime(df_base[c_dat], dayfirst=True, errors='coerce')
         df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
         
@@ -80,7 +79,7 @@ if aba == "💰 Finanças":
         banco_sel = st.selectbox("🔍 Filtrar Visão por Banco:", bancos_lista)
         df_filtrado = df_base if banco_sel == "Todos" else df_base[df_base[c_bnc] == banco_sel]
 
-        # Cálculos de Métricas
+        # Métricas
         s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_v).sum() if banco_sel == "Todos" else df_bancos_cad[df_bancos_cad['Nome do Banco'] == banco_sel]['Saldo Inicial'].apply(limpar_v).sum()
         df_pago = df_filtrado[df_filtrado[c_sta] == 'Pago']
         saldo_atual = s_ini + df_pago[df_pago[c_tip].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_pago[df_pago[c_tip] == 'Despesa']['V_Num'].sum()
@@ -96,25 +95,60 @@ if aba == "💰 Finanças":
         col3.metric("💰 Rendimento", f"R$ {df_mes[df_mes[c_tip] == 'Rendimento']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         col4.metric("⏳ Pendente", f"R$ {df_mes[df_mes[c_sta] == 'Pendente']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
-        # --- GRÁFICO MENSAL RECEITA X DESPESA (CORES FIXAS) ---
+        # --- SEÇÃO DE ECONOMIA (REINTRODUZIDA) ---
+        st.write("---")
+        st.subheader("📊 Resumo de Economia")
+        gasto_cat = df_mes[df_mes[c_tip] == 'Despesa'].groupby(c_cat)['V_Num'].sum()
+        df_m = pd.DataFrame({'Meta': df_cats_cad.set_index('Nome')['Meta'], 'Real': gasto_cat}).fillna(0.0)
+        df_m = df_m[df_m['Meta'] > 0]
+
+        if not df_m.empty:
+            cols_res = st.columns(5)
+            for i, (categoria, row) in enumerate(df_m.iterrows()):
+                pct = (row['Real'] / row['Meta']) * 100 if row['Meta'] > 0 else 0
+                cor = "#28a745" if pct < 80 else ("#ffc107" if pct <= 100 else "#dc3545")
+                with cols_res[i % 5]:
+                    st.markdown(f'<div class="resumo-card"><small><b>{categoria}</b></small><br><span style="color:{cor}; font-weight:bold;">{pct:.1f}%</span><br><small>R$ {row["Real"]:,.0f} / {row["Meta"]:,.0f}</small></div>', unsafe_allow_html=True)
+
+        # --- GRÁFICOS (REINTRODUZIDOS) ---
+        st.write("---")
+        g1, g2 = st.columns(2)
+        with g1:
+            st.subheader("🏦 Bancos")
+            s_pizza = []
+            for b in df_bancos_cad['Nome do Banco'].unique():
+                si = df_bancos_cad[df_bancos_cad['Nome do Banco'] == b]['Saldo Inicial'].apply(limpar_v).sum()
+                re = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] == 'Pago') & (df_base[c_tip].isin(['Receita', 'Rendimento']))]['V_Num'].sum()
+                de = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] == 'Pago') & (df_base[c_tip] == 'Despesa')]['V_Num'].sum()
+                s_pizza.append({'Banco': b, 'Saldo': si + re - de})
+            st.plotly_chart(px.pie(pd.DataFrame(s_pizza), values='Saldo', names='Banco', hole=.4, height=350), use_container_width=True)
+
+        with g2:
+            st.subheader("📊 Gráfico de Metas")
+            if not df_m.empty:
+                df_plot = df_m.sort_values('Meta')
+                fig_meta = go.Figure()
+                fig_meta.add_trace(go.Bar(y=df_plot.index, x=df_plot['Meta'], name='Meta', orientation='h', marker_color='#E0E0E0'))
+                fig_meta.add_trace(go.Bar(y=df_plot.index, x=df_plot['Real'], name='Real', orientation='h', marker_color='#007bff'))
+                fig_meta.update_layout(barmode='overlay', height=350, margin=dict(l=0, r=0, t=20, b=0))
+                st.plotly_chart(fig_meta, use_container_width=True)
+
+        # --- EVOLUÇÃO MENSAL (VERDE/VERMELHO) ---
         st.write("---")
         st.subheader("📈 Evolução Mensal (Receita vs Despesa)")
         evol = df_filtrado.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0)
         if not evol.empty:
-            # Garante a ordem e as cores: Receita (Verde), Despesa (Vermelho)
-            colunas_existentes = [c for c in ['Receita', 'Despesa'] if c in evol.columns]
-            cores = []
-            for c in colunas_existentes:
-                cores.append("#28a745" if c == 'Receita' else "#dc3545")
-            st.bar_chart(evol[colunas_existentes], color=cores)
+            # Força as colunas para garantir a cor certa
+            for c in ['Receita', 'Despesa']:
+                if c not in evol.columns: evol[c] = 0.0
+            st.bar_chart(evol[['Receita', 'Despesa']], color=["#28a745", "#dc3545"])
 
         st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['V_Num', 'DT', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
 
-    # BARRA LATERAL - FORMULÁRIO COM DATA BRASIL
+    # FORMULÁRIO (DATA FIXA)
     with st.sidebar.form("novo"):
         st.write("### 🚀 Lançar")
-        # Aqui a data já inicia com o dia de hoje no Brasil
         f_dat = st.date_input("Data", hoje_br)
         f_val = st.number_input("Valor", min_value=0.0)
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
@@ -123,7 +157,7 @@ if aba == "💰 Finanças":
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         
         if st.form_submit_button("SALVAR"):
-            # O SEGREDO: Salvar como texto fixo DD/MM/AAAA para o Google Sheets não inverter
-            data_formatada = f_dat.strftime("%d/%m/%Y")
-            sh.get_worksheet(0).append_row([data_formatada, str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_sta], value_input_option='USER_ENTERED')
+            # Envia como texto puro para o Sheets não processar errado
+            data_str = f_dat.strftime("%d/%m/%Y")
+            sh.get_worksheet(0).append_row([data_str, str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_sta], value_input_option='USER_ENTERED')
             st.cache_data.clear(); st.rerun()
