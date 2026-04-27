@@ -1,13 +1,14 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
+import gspread
+from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
 
+# Estilos Visuais
 st.markdown("""
     <style>
     .saldo-container { background-color: #007bff; color: white; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 10px; border: 1px solid #0056b3; }
@@ -21,19 +22,49 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXÃO SIMPLIFICADA (EVITA O ERRO KEYERROR)
-conn = st.connection("gsheets", type=GSheetsConnection)
+# 2. CONEXÃO ROBUSTA (Tratamento de Chave)
+@st.cache_resource
+def conectar_google():
+    try:
+        # Pega as infos do Secrets
+        creds_dict = st.secrets["connections"]["gsheets"]
+        
+        # O SEGREDO ESTÁ AQUI: Limpa a chave privada de espaços ou quebras de linha erradas
+        private_key = creds_dict["private_key"].replace("\\n", "\n").strip()
+        
+        info = {
+            "type": creds_dict["type"],
+            "project_id": creds_dict["project_id"],
+            "private_key_id": creds_dict["private_key_id"],
+            "private_key": private_key,
+            "client_email": creds_dict["client_email"],
+            "token_uri": creds_dict["token_uri"],
+        }
+        
+        scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        creds = Credentials.from_service_account_info(info, scopes=scopes)
+        return gspread.authorize(creds)
+    except Exception as e:
+        st.error(f"Erro na Chave de Acesso: {e}")
+        st.stop()
 
-@st.cache_data(ttl=2)
+client = conectar_google()
+# Substitua pela sua ID se for diferente
+sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+
+# 3. CARREGAMENTO E LIMPEZA
+@st.cache_data(ttl=5)
 def carregar_dados():
     try:
-        # Carrega as abas principais
-        df_base = conn.read(worksheet="LANCAMENTOS", ttl=0)
-        df_bancos = conn.read(worksheet="Bancos", ttl=0)
-        df_cats = conn.read(worksheet="Categoria", ttl=0)
-        return df_bancos, df_cats, df_base
-    except Exception as e:
-        st.error(f"Erro ao ler planilhas: {e}")
+        ws_l = sh.get_worksheet(0) # Aba LANCAMENTOS
+        ws_b = sh.worksheet("Bancos")
+        ws_c = sh.worksheet("Categoria")
+        
+        df = pd.DataFrame(ws_l.get_all_records())
+        df_b = pd.DataFrame(ws_b.get_all_records())
+        df_c = pd.DataFrame(ws_c.get_all_records())
+        return df_b, df_c, df
+    except:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
 df_bancos_cad, df_cats_cad, df_base = carregar_dados()
@@ -46,54 +77,41 @@ def limpar_valor(v):
 
 if not df_base.empty:
     df_base.columns = [c.strip() for c in df_base.columns]
-    for col in ['Data', 'Valor', 'Descrição', 'Categoria', 'Tipo', 'Banco', 'Status']:
-        if col not in df_base.columns: df_base[col] = ""
-    
     df_base['V_Num'] = df_base['Valor'].apply(limpar_valor)
     df_base['DT'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
     df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
-    mes_atual = datetime.now().strftime('%m/%y')
 
-# 3. BARRA LATERAL E NAVEGAÇÃO
+# 4. INTERFACE PRINCIPAL
 st.sidebar.title("🎮 Painel Wilson")
-aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
+aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt"])
 
-# 4. ABA FINANÇAS (FILTROS E RESUMO)
 if aba == "💰 Finanças":
     st.markdown("<h1 style='text-align: center;'>🛡️ FinançasPro Wilson</h1>", unsafe_allow_html=True)
     
     if not df_base.empty:
-        # FILTROS
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            lista_bancos = ["Todos"] + sorted(df_bancos_cad['Nome do Banco'].unique().tolist()) if not df_bancos_cad.empty else ["Todos"]
+        # OS TRÊS FILTROS DE VOLTA
+        col_f1, col_f2, col_f3 = st.columns(3)
+        with col_f1:
+            lista_bancos = ["Todos"] + sorted(df_base['Banco'].unique().tolist())
             banco_sel = st.selectbox("🔍 Banco:", lista_bancos)
-        with c2:
+        with col_f2:
             tipo_sel = st.selectbox("📂 Tipo:", ["Todos", "Despesa", "Receita", "Rendimento"])
-        with c3:
+        with col_f3:
             status_sel = st.multiselect("📌 Status:", ["Pago", "Pendente"], default=["Pago", "Pendente"])
 
-        # Aplicar Filtros na Tabela
-        df_f = df_base if banco_sel == "Todos" else df_base[df_base['Banco'] == banco_sel]
+        # Filtragem
+        df_f = df_base.copy()
+        if banco_sel != "Todos": df_f = df_f[df_f['Banco'] == banco_sel]
         if tipo_sel != "Todos": df_f = df_f[df_f['Tipo'] == tipo_sel]
         df_f = df_f[df_f['Status'].isin(status_sel)]
 
-        # Cálculos para as Tags (Baseado no Banco selecionado)
-        df_calc = df_base if banco_sel == "Todos" else df_base[df_base['Banco'] == banco_sel]
-        receitas = df_calc[(df_calc['Tipo'] == 'Receita') & (df_calc['Status'] == 'Pago')]['V_Num'].sum()
-        despesas = df_calc[(df_calc['Tipo'] == 'Despesa') & (df_calc['Status'] == 'Pago')]['V_Num'].sum()
-        rendimentos = df_calc[(df_calc['Tipo'] == 'Rendimento') & (df_calc['Status'] == 'Pago')]['V_Num'].sum()
-        pendentes = df_calc[df_calc['Status'] == 'Pendente']['V_Num'].sum()
-        
-        s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if banco_sel == "Todos" else df_bancos_cad[df_bancos_cad['Nome do Banco'] == banco_sel]['Saldo Inicial'].apply(limpar_valor).sum()
-        saldo_final = s_ini + receitas + rendimentos - despesas
+        # Tags de Resumo (Baseado no Banco)
+        receitas = df_f[(df_f['Tipo'] == 'Receita') & (df_f['Status'] == 'Pago')]['V_Num'].sum()
+        despesas = df_f[(df_f['Tipo'] == 'Despesa') & (df_f['Status'] == 'Pago')]['V_Num'].sum()
+        rendimentos = df_f[(df_f['Tipo'] == 'Rendimento') & (df_f['Status'] == 'Pago')]['V_Num'].sum()
+        pendentes = df_f[df_f['Status'] == 'Pendente']['V_Num'].sum()
 
-        # EXIBIÇÃO DE SALDO E TAGS
         st.markdown(f'''
-            <div class="saldo-container">
-                <small>Saldo Disponível ({banco_sel})</small>
-                <h2>R$ {saldo_final:,.2f}</h2>
-            </div>
             <div class="tag-container">
                 <div class="tag-card tag-receita">Receitas<br>R$ {receitas:,.2f}</div>
                 <div class="tag-card tag-despesa">Despesas<br>R$ {despesas:,.2f}</div>
@@ -102,28 +120,18 @@ if aba == "💰 Finanças":
             </div>
         '''.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
-        st.subheader("📋 Lançamentos Filtrados")
         st.dataframe(df_f.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1], use_container_width=True)
 
-# 5. ABA MILO & BOLT
-elif aba == "🐾 Milo & Bolt":
-    st.markdown("<h1 style='text-align: center;'>🐾 Milo & Bolt</h1>", unsafe_allow_html=True)
-    if not df_base.empty:
-        df_p = df_base[df_base['Descrição'].str.contains('Milo|Bolt|Pet|Ração|Vet', case=False, na=False) | 
-                       df_base['Categoria'].str.contains('Ração|Pet', case=False, na=False)]
-        st.metric("Total Gasto", f"R$ {df_p['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        st.dataframe(df_p.iloc[::-1], use_container_width=True)
-
-# 6. GERENCIADOR (EXCLUSÃO)
+# 5. GERENCIADOR DE EXCLUSÃO (LIMPO)
 st.sidebar.write("---")
 if not df_base.empty:
-    st.sidebar.write("### 🗑️ Apagar Linha")
+    st.sidebar.write("### 🗑️ Apagar Registro")
     df_base['Linha'] = df_base.index + 2
-    opcoes = {f"L{r['Linha']} | {r['Data']} | {r['Descrição']}": r['Linha'] for _, r in df_base.iloc[::-1].head(10).iterrows()}
-    sel_del = st.sidebar.selectbox("Selecionar para excluir:", [""] + list(opcoes.keys()))
+    opcoes = {f"L{r['Linha']} | {r['Descrição']}": r['Linha'] for _, r in df_base.iloc[::-1].head(10).iterrows()}
+    item_del = st.sidebar.selectbox("Escolha para apagar:", [""] + list(opcoes.keys()))
     
-    if sel_del:
+    if item_del:
         if st.sidebar.button("CONFIRMAR EXCLUSÃO"):
-            # Aqui você precisaria usar gspread para deletar, mas para evitar o erro de chave, 
-            # foque primeiro em carregar os dados. Se carregar, resolvemos a exclusão depois.
-            st.sidebar.warning("Funcionalidade de exclusão em manutenção para segurança das chaves.")
+            sh.get_worksheet(0).delete_rows(int(opcoes[item_del]))
+            st.cache_data.clear()
+            st.rerun()
