@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
 
-# 1. CONFIGURAÇÃO DA PÁGINA (Para o ícone no telemóvel)
+# 1. CONFIGURAÇÃO DA PÁGINA (Para o ícone no celular)
 st.set_page_config(
     page_title="FinançasPro",
     page_icon="🛡️",
@@ -87,9 +87,15 @@ if aba == "💰 Finanças":
         df_filtrado = df_base if banco_sel == "Todos" else df_base[df_base[c_bnc] == banco_sel]
 
         # Cálculos de Saldo
-        s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_v).sum() if banco_sel == "Todos" else df_bancos_cad[df_bancos_cad['Nome do Banco'] == banco_sel]['Saldo Inicial'].apply(limpar_v).sum()
+        if banco_sel == "Todos":
+            s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_v).sum()
+        else:
+            s_ini = df_bancos_cad[df_bancos_cad['Nome do Banco'] == banco_sel]['Saldo Inicial'].apply(limpar_v).sum()
+            
         df_pago = df_filtrado[df_filtrado[c_sta] == 'Pago']
-        saldo_atual = s_ini + df_pago[df_pago[c_tip].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_pago[df_pago[c_tip] == 'Despesa']['V_Num'].sum()
+        entradas = df_pago[df_pago[c_tip].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        saidas = df_pago[df_pago[c_tip] == 'Despesa']['V_Num'].sum()
+        saldo_atual = s_ini + entradas - saidas
 
         # Métricas do Mês
         df_mes = df_filtrado[df_filtrado['Mes_Ano'] == mes_atual]
@@ -115,7 +121,7 @@ if aba == "💰 Finanças":
         if not categorias_estouradas.empty:
             for cat, row in categorias_estouradas.iterrows():
                 excesso = row['Real'] - row['Meta']
-                st.error(f"🚨 **Atenção Wilson!** Ultrapassaste a meta de **{cat}** em **R$ {excesso:,.2f}**.")
+                st.error(f"🚨 **Atenção Wilson!** Ultrapassou a meta de **{cat}** em **R$ {excesso:,.2f}**.")
 
         # --- RESUMO DA ECONOMIA (MINI CARDS) ---
         st.write("---")
@@ -136,6 +142,42 @@ if aba == "💰 Finanças":
             s_pizza = []
             for b in df_bancos_cad['Nome do Banco'].unique():
                 si = df_bancos_cad[df_bancos_cad['Nome do Banco'] == b]['Saldo Inicial'].apply(limpar_v).sum()
-                re = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] == 'Pago') & (df_base[c_tip].isin(['Receita', 'Rendimento']))]['V_Num'].sum()
-                de = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] == 'Pago') & (df_base[c_tip] == 'Despesa')]['V_Num'].sum()
-                s_pizza.append({'Banco': b, 'Saldo': si +
+                re_p = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] == 'Pago') & (df_base[c_tip].isin(['Receita', 'Rendimento']))]['V_Num'].sum()
+                de_p = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] == 'Pago') & (df_base[c_tip] == 'Despesa')]['V_Num'].sum()
+                s_pizza.append({'Banco': b, 'Saldo': (si + re_p - de_p)})
+            df_p = pd.DataFrame(s_pizza)
+            fig_p = px.pie(df_p[df_p['Saldo'] > 0], values='Saldo', names='Banco', hole=.4, height=350)
+            st.plotly_chart(fig_p, use_container_width=True)
+
+        with g2:
+            st.subheader("📊 Gráfico de Metas")
+            if not df_m.empty:
+                df_plot = df_m.sort_values('Meta')
+                fig_meta = go.Figure()
+                fig_meta.add_trace(go.Bar(y=df_plot.index, x=df_plot['Meta'], name='Meta', orientation='h', marker_color='#E0E0E0'))
+                fig_meta.add_trace(go.Bar(y=df_plot.index, x=df_plot['Real'], name='Real', orientation='h', marker_color='#007bff'))
+                fig_meta.update_layout(barmode='overlay', height=350, margin=dict(l=0, r=0, t=20, b=0))
+                st.plotly_chart(fig_meta, use_container_width=True)
+
+        # --- EVOLUÇÃO ---
+        st.write("---")
+        st.subheader("📈 Evolução Mensal")
+        evol = df_filtrado.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0)
+        if not evol.empty:
+            st.bar_chart(evol)
+
+        st.subheader("📋 Lançamentos")
+        st.dataframe(df_filtrado.drop(columns=['V_Num', 'DT', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
+
+    # BARRA LATERAL - FORMULÁRIO
+    with st.sidebar.form("novo"):
+        st.write("### 🚀 Lançar")
+        f_dat = st.date_input("Data", datetime.now())
+        f_val = st.number_input("Valor", min_value=0.0)
+        f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
+        f_cat = st.selectbox("Categoria", sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Geral"])
+        f_bnc = st.selectbox("Banco", sorted(df_bancos_cad['Nome do Banco'].tolist() + ["Dinheiro"]))
+        f_sta = st.selectbox("Status", ["Pago", "Pendente"])
+        if st.form_submit_button("SALVAR"):
+            sh.get_worksheet(0).append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_sta])
+            st.cache_data.clear(); st.rerun()
