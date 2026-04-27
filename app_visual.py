@@ -93,7 +93,6 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
 # 5. ABA FINANÇAS
 if aba == "💰 Finanças":
     st.markdown("<h1 style='text-align: center;'>🛡️ FinançasPro Wilson</h1>", unsafe_allow_html=True)
-    
     if not df_base.empty:
         st.write("### 🔍 Filtros de Pesquisa")
         c_p1, c_p2, c_p3 = st.columns(3)
@@ -136,37 +135,41 @@ if aba == "💰 Finanças":
             total_gasto_mes = gastos_por_cat.sum()
             
             if total_gasto_mes > 0:
-                # Criando rótulos com Nome + Valor + %
                 labels = [f"{cat}: R$ {val:,.2f} ({(val/total_gasto_mes)*100:.1f}%)" for cat, val in gastos_por_cat.items()]
-                
-                fig_resumo = go.Figure(data=[go.Pie(
-                    labels=labels, 
-                    values=gastos_por_cat.values, 
-                    hole=.4,
-                    textinfo='percent',
-                    insidetextorientation='radial'
-                )])
-                fig_resumo.update_layout(height=350, margin=dict(l=0,r=0,t=20,b=80), showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.5, xanchor="center", x=0.5))
+                fig_resumo = go.Figure(data=[go.Pie(labels=labels, values=gastos_por_cat.values, hole=.4, textinfo='percent')])
+                fig_resumo.update_layout(height=350, showlegend=True, legend=dict(orientation="h", y=-0.5))
                 st.plotly_chart(fig_resumo, use_container_width=True)
             else:
-                st.info("Nenhuma despesa no mês atual para gerar o resumo.")
+                st.info("Sem despesas este mês.")
 
         st.write("---")
         st.subheader("📋 Tabela de Lançamentos")
         st.dataframe(df_f.drop(columns=['DT', 'Mes_Ano', 'V_Num', 'Linha'], errors='ignore').iloc[::-1], use_container_width=True)
 
-# 6. OUTRAS ABAS
+# 6. ABA MILO & BOLT (CORRIGIDA)
 elif aba == "🐾 Milo & Bolt":
     st.markdown("<h1 style='text-align: center;'>🐾 Milo & Bolt</h1>", unsafe_allow_html=True)
-    df_pets = df_base[df_base['Descrição'].str.contains('Milo|Bolt|Pet|Ração|Vet', case=False, na=False)]
-    st.metric("Total Pets", f"R$ {df_pets['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-    st.dataframe(df_pets.iloc[::-1], use_container_width=True)
+    if not df_base.empty:
+        # Busca por termos chave na Descrição OU na Categoria
+        palavras_chave = 'Milo|Bolt|Pet|Ração|Veterinário|Banho|Tosa|Cachorro'
+        df_pets = df_base[
+            df_base['Descrição'].str.contains(palavras_chave, case=False, na=False) | 
+            df_base['Categoria'].str.contains(palavras_chave, case=False, na=False)
+        ].copy()
+        
+        st.metric("Total Investido nos Pets", f"R$ {df_pets['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        st.dataframe(df_pets.drop(columns=['DT', 'Mes_Ano', 'V_Num', 'Linha'], errors='ignore').iloc[::-1], use_container_width=True)
 
 elif aba == "🚗 Meu Veículo":
     st.markdown("<h1 style='text-align: center;'>🚗 Meu Veículo</h1>", unsafe_allow_html=True)
-    df_veic = df_base[df_base['Descrição'].str.contains('Veículo|Carro|Combustível|IPVA', case=False, na=False)]
-    st.metric("Total Veículo", f"R$ {df_veic['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-    st.dataframe(df_veic.iloc[::-1], use_container_width=True)
+    if not df_base.empty:
+        palavras_veic = 'Veículo|Carro|Combustível|IPVA|Manutenção|Oficina|Gasolina|Etanol'
+        df_veic = df_base[
+            df_base['Descrição'].str.contains(palavras_veic, case=False, na=False) | 
+            df_base['Categoria'].str.contains('Veículo|Transporte', case=False, na=False)
+        ].copy()
+        st.metric("Total Gasto com Veículo", f"R$ {df_veic['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        st.dataframe(df_veic.drop(columns=['DT', 'Mes_Ano', 'V_Num', 'Linha'], errors='ignore').iloc[::-1], use_container_width=True)
 
 # 7. GERENCIADOR
 st.sidebar.write("---")
