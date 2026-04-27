@@ -80,7 +80,6 @@ if "💰" in aba:
     if not df_base.empty:
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         
-        # MÉTRICAS
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Receitas", m_fmt(df_m[df_m['Tipo'] == 'Receita']['V_Num'].sum()))
         m2.metric("📉 Despesas", m_fmt(df_m[df_m['Tipo'] == 'Despesa']['V_Num'].sum()))
@@ -89,7 +88,6 @@ if "💰" in aba:
         
         st.divider()
 
-        # SEÇÃO DE GRÁFICOS
         g1, g2 = st.columns(2)
         with g1:
             df_p = df_m[df_m['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
@@ -100,7 +98,6 @@ if "💰" in aba:
             if not df_f.empty:
                 st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="Fluxo de Caixa"), use_container_width=True)
 
-        # GRÁFICO DE METAS
         st.subheader("🎯 Metas por Categoria")
         metas_f = {"Mercado": 1200, "Internet": 150, "Luz/Água": 350, "Pet: Milo": 400, "Pet: Bolt": 400, "Veículo": 600}
         df_metas = df_m[df_m['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
@@ -113,21 +110,17 @@ if "💰" in aba:
             st.plotly_chart(fig_m, use_container_width=True)
 
         st.divider()
-
-        # --- FILTROS DE PESQUISA (RECUPERADOS) ---
         st.subheader("🔍 Pesquisa e Histórico")
-        col_f1, col_f2, col_f3 = st.columns(3)
-        sel_bnc = col_f1.multiselect("Filtrar Banco:", sorted(df_base['Banco'].unique()))
-        sel_sta = col_f2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
-        busca_desc = col_f3.text_input("Buscar na Descrição:")
+        c1, c2, c3 = st.columns(3)
+        s_bnc = c1.multiselect("Filtrar Banco:", sorted(df_base['Banco'].unique()))
+        s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
+        b_desc = c3.text_input("Buscar Descrição:")
 
-        # LÓGICA DE FILTRO
         df_v = df_base.copy()
-        if sel_bnc: df_v = df_v[df_v['Banco'].isin(sel_bnc)]
-        if sel_sta: df_v = df_v[df_v['Status'].isin(sel_sta)]
-        if busca_desc: df_v = df_v[df_v['Descrição'].str.contains(busca_desc, case=False, na=False)]
+        if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
+        if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
+        if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
 
-        # TABELA COM DESCRIÇÃO
         st.dataframe(df_v[['ID', 'Data', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True)
 
 elif "🐾" in aba:
@@ -148,16 +141,22 @@ elif "🚗" in aba:
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Carro|Combustível|Manutenção', case=False, na=False)]
     st.dataframe(df_car[['ID', 'Data', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True)
 
-# EDIÇÃO NA SIDEBAR
+# 6. GERENCIADOR (EDIÇÃO E EXCLUSÃO) - SIDEBAR
 st.sidebar.divider()
 if not df_base.empty:
     lista = {f"ID: {r['ID']} | {r['Descrição']}": r for _, r in df_base.tail(15).iterrows()}
-    sel = st.sidebar.selectbox("⚙️ Editar Lançamento:", [""] + list(lista.keys()))
+    sel = st.sidebar.selectbox("⚙️ Alterar Lançamento:", [""] + list(lista.keys()))
     if sel:
         item = lista[sel]
-        v_desc = st.sidebar.text_input("Descrição Atual:", value=item['Descrição'])
-        v_val = st.sidebar.text_input("Valor Atual:", value=item['Valor'])
-        if st.sidebar.button("💾 ATUALIZAR"):
+        v_desc = st.sidebar.text_input("Descrição:", value=item['Descrição'])
+        v_val = st.sidebar.text_input("Valor:", value=item['Valor'])
+        
+        col_ed1, col_ed2 = st.sidebar.columns(2)
+        if col_ed1.button("💾 SALVAR"):
             ws_base.update_cell(int(item['ID']), 3, v_desc)
             ws_base.update_cell(int(item['ID']), 2, v_val)
+            st.cache_data.clear(); st.rerun()
+            
+        if col_ed2.button("🚨 EXCLUIR"):
+            ws_base.delete_rows(int(item['ID']))
             st.cache_data.clear(); st.rerun()
