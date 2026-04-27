@@ -4,7 +4,8 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime, timedelta # Importado timedelta para parcelas
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
@@ -85,6 +86,7 @@ if aba == "💰 Finanças":
         banco_sel = st.selectbox("🔍 Pesquisar por Banco:", bancos_unicos)
         df_filtrado = df_base if banco_sel == "Todos" else df_base[df_base[c_bnc] == banco_sel]
 
+        # Cálculos de Saldo
         s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
         df_realizado = df_base[df_base[c_sta] != 'Pendente']
         t_rec = df_realizado[(df_realizado[c_tip] == 'Receita') | (df_realizado[c_tip] == 'Rendimento')]['V_Num'].sum()
@@ -105,9 +107,9 @@ if aba == "💰 Finanças":
         m3.metric("💰 Rendimentos", f"R$ {m_rendimento:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m4.metric("⏳ Pendência", f"R$ {m_pendente:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
+        # --- SEÇÃO DE GRÁFICOS ---
         st.write("---")
         col_esq, col_dir = st.columns(2)
-        
         with col_esq:
             st.subheader("🏦 Saldo por Banco")
             saldos_lista = []
@@ -136,37 +138,50 @@ if aba == "💰 Finanças":
                 st.plotly_chart(fig_m, use_container_width=True)
 
         st.write("---")
-        st.subheader("📈 Evolução Receita x Despesa")
-        df_evol = df_filtrado.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0.0)
-        if not df_evol.empty:
-            st.bar_chart(df_evol)
-
         st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1], use_container_width=True)
 
-    # FORMULÁRIO COM DATA BRASIL E PARCELAMENTO
-    with st.sidebar.form("f"):
-        st.write("### 🚀 Lançar")
-        f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY") # DATA NO PADRÃO BRASIL
-        f_val = st.number_input("Valor total ou da parcela", min_value=0.0)
+    # --- FORMULÁRIO LATERAL (ADICIONAR) ---
+    with st.sidebar.form("f_novo"):
+        st.write("### 🚀 Novo Lançamento")
+        f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+        f_val = st.number_input("Valor", min_value=0.0)
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Outros"])
         f_bnc = st.selectbox("Banco", sorted(df_bancos_cad['Nome do Banco'].tolist() + ["Dinheiro"]))
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
-        
-        # PARCELAMENTO
-        st.write("---")
         f_parc = st.number_input("Número de Parcelas", min_value=1, value=1)
         
         if st.form_submit_button("SALVAR"):
             ws = sh.get_worksheet(0)
             for i in range(f_parc):
-                # Calcula a data da parcela (mês a mês)
-                data_parcela = f_dat + relativedelta(months=i) if 'relativedelta' in globals() else f_dat + timedelta(days=30*i)
-                desc_parcela = f"{f_cat} ({i+1}/{f_parc})" if f_parc > 1 else f_cat
-                ws.append_row([data_parcela.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), desc_parcela, f_tip, f_bnc, f_sta])
-            
+                dt_p = f_dat + relativedelta(months=i)
+                desc = f"{f_cat} ({i+1}/{f_parc})" if f_parc > 1 else f_cat
+                ws.append_row([dt_p.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), desc, f_tip, f_bnc, f_sta])
             st.cache_data.clear(); st.rerun()
+
+    # --- NOVO: GERENCIAR (EXCLUIR / ALTERAR) ---
+    st.sidebar.write("---")
+    st.sidebar.write("### ⚙️ Gerenciar Lançamentos")
+    
+    if not df_base.empty:
+        # Criamos uma lista de opções para o usuário escolher qual deletar/alterar
+        lista_edit = df_base.iloc[::-1].head(20) # Mostra os últimos 20 para facilitar
+        opcoes = [f"{idx+2} | {row[c_dat]} | {row[c_cat]} | {row[c_val]}" for idx, row in lista_edit.iterrows()]
+        item_sel = st.sidebar.selectbox("Selecione o item (Linha | Data | Cat | Val):", [""] + opcoes)
+        
+        if item_sel:
+            linha_idx = int(item_sel.split(" | ")[0])
+            
+            col_bt1, col_bt2 = st.sidebar.columns(2)
+            if col_bt1.button("🗑️ Excluir"):
+                sh.get_worksheet(0).delete_rows(linha_idx)
+                st.cache_data.clear(); st.rerun()
+            
+            if col_bt2.button("✅ Quitar"):
+                # Muda o status da coluna 6 (Status) para 'Pago'
+                sh.get_worksheet(0).update_cell(linha_idx, 6, "Pago")
+                st.cache_data.clear(); st.rerun()
 
 elif aba == "🐾 Milo & Bolt":
     st.info("Aba em manutenção controlada.")
