@@ -18,8 +18,8 @@ st.markdown("""
     .saldo-container h2 { margin: 0; font-size: 2.2rem; font-weight: bold; }
     .stMetric { background-color: #ffffff; padding: 10px; border-radius: 10px; border: 1px solid #e0e0e0; }
     .resumo-card { 
-        padding: 10px; border-radius: 8px; text-align: center; 
-        border: 1px solid #eee; margin-top: 5px; background-color: #f9f9f9;
+        padding: 8px; border-radius: 8px; text-align: center; 
+        border: 1px solid #ddd; background-color: #f8f9fa; margin-bottom: 5px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -61,7 +61,7 @@ def carregar_dados():
 
 df_bancos_cad, df_cats_cad, df_base = carregar_dados()
 
-# 4. INTERFACE
+# 4. LÓGICA DE INTERFACE
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Menu:", ["💰 Finanças", "🐾 Pets", "🚗 Veículo"])
 
@@ -77,7 +77,7 @@ if aba == "💰 Finanças":
         df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
         mes_atual = datetime.now().strftime('%m/%y')
 
-        # FILTRO
+        # FILTRO GLOBAL
         bancos_lista = ["Todos"] + sorted(df_base[c_bnc].unique().tolist())
         banco_sel = st.selectbox("🔍 Filtrar Visão por Banco:", bancos_lista)
         df_filtrado = df_base if banco_sel == "Todos" else df_base[df_base[c_bnc] == banco_sel]
@@ -89,18 +89,16 @@ if aba == "💰 Finanças":
             s_ini = df_bancos_cad[df_bancos_cad['Nome do Banco'] == banco_sel]['Saldo Inicial'].apply(limpar_v).sum()
             
         df_pago = df_filtrado[df_filtrado[c_sta] == 'Pago']
-        entradas = df_pago[df_pago[c_tip].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        saidas = df_pago[df_pago[c_tip] == 'Despesa']['V_Num'].sum()
-        saldo_atual = s_ini + entradas - saidas
+        saldo_atual = s_ini + df_pago[df_pago[c_tip].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_pago[df_pago[c_tip] == 'Despesa']['V_Num'].sum()
 
-        # MÉTRICAS DO MÊS
+        # MÉTRICAS
         df_mes = df_filtrado[df_filtrado['Mes_Ano'] == mes_atual]
         m_rec = df_mes[df_mes[c_tip] == 'Receita']['V_Num'].sum()
         m_des = df_mes[df_mes[c_tip] == 'Despesa']['V_Num'].sum()
         m_ren = df_mes[df_mes[c_tip] == 'Rendimento']['V_Num'].sum()
         m_pen = df_mes[df_mes[c_sta] == 'Pendente']['V_Num'].sum()
 
-        # DASHBOARD
+        # DASHBOARD SUPERIOR
         st.markdown(f'<div class="saldo-container"><small>Saldo Disponível ({banco_sel})</small><h2>R$ {saldo_atual:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
         m1, m2, m3, m4 = st.columns(4)
@@ -109,36 +107,27 @@ if aba == "💰 Finanças":
         m3.metric("💰 Rendimento", f"R$ {m_ren:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m4.metric("⏳ Pendente", f"R$ {m_pen:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
-        # RESUMO DA ECONOMIA (VALOR E PORCENTAGEM)
+        # --- RESUMO DA ECONOMIA (MINI CARDS) ---
         st.write("---")
-        st.subheader("📊 Resumo da Economia (Metas)")
-        
+        st.subheader("📋 Resumo por Categoria")
         gasto_cat = df_mes[df_mes[c_tip] == 'Despesa'].groupby(c_cat)['V_Num'].sum()
         df_m = pd.DataFrame({'Meta': df_cats_cad.set_index('Nome')['Meta'], 'Real': gasto_cat}).fillna(0.0)
         df_m = df_m[df_m['Meta'] > 0]
 
         if not df_m.empty:
-            cols_resumo = st.columns(4)
+            cols_res = st.columns(5) # 5 colunas para caber mais coisa horizontalmente
             for i, (categoria, row) in enumerate(df_m.iterrows()):
                 pct = (row['Real'] / row['Meta']) * 100 if row['Meta'] > 0 else 0
                 cor = "#28a745" if pct < 80 else ("#ffc107" if pct <= 100 else "#dc3545")
-                
-                with cols_resumo[i % 4]:
-                    st.markdown(f"""
-                        <div class="resumo-card">
-                            <small><b>{categoria}</b></small><br>
-                            <span style="color:{cor}; font-size:1.2rem; font-weight:bold;">{pct:.1f}%</span><br>
-                            <small>R$ {row['Real']:,.2f} de R$ {row['Meta']:,.2f}</small>
-                        </div>
-                    """, unsafe_allow_html=True)
-        else:
-            st.info("Cadastre metas na aba 'Categoria' para visualizar o resumo.")
-
-        # GRÁFICOS
+                with cols_res[i % 5]:
+                    st.markdown(f'<div class="resumo-card"><small><b>{categoria}</b></small><br><span style="color:{cor}; font-weight:bold;">{pct:.1f}%</span><br><small>R$ {row["Real"]:,.0f}</small></div>', unsafe_allow_html=True)
+        
+        # --- GRÁFICOS LADO A LADO ---
         st.write("---")
         g1, g2 = st.columns(2)
+        
         with g1:
-            st.subheader("🏦 Bancos")
+            st.subheader("🏦 Divisão por Bancos")
             s_pizza = []
             for b in df_bancos_cad['Nome do Banco'].unique():
                 si = df_bancos_cad[df_bancos_cad['Nome do Banco'] == b]['Saldo Inicial'].apply(limpar_v).sum()
@@ -146,21 +135,31 @@ if aba == "💰 Finanças":
                 de = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] == 'Pago') & (df_base[c_tip] == 'Despesa')]['V_Num'].sum()
                 s_pizza.append({'Banco': b, 'Saldo': si + re - de})
             df_p = pd.DataFrame(s_pizza)
-            fig_p = px.pie(df_p[df_p['Saldo'] > 0], values='Saldo', names='Banco', hole=.4)
+            fig_p = px.pie(df_p[df_p['Saldo'] > 0], values='Saldo', names='Banco', hole=.4, height=350)
             st.plotly_chart(fig_p, use_container_width=True)
 
         with g2:
-            st.subheader("📈 Metas (Visual)")
-            df_plot = df_m.sort_values('Meta')
-            fig_meta = go.Figure()
-            fig_meta.add_trace(go.Bar(y=df_plot.index, x=df_plot['Meta'], name='Meta', orientation='h', marker_color='#E0E0E0'))
-            fig_meta.add_trace(go.Bar(y=df_plot.index, x=df_plot['Real'], name='Real', orientation='h', marker_color='#007bff'))
-            fig_meta.update_layout(barmode='overlay', height=350, margin=dict(l=0, r=0, t=20, b=0))
-            st.plotly_chart(fig_meta, use_container_width=True)
+            st.subheader("📊 Comparativo de Metas")
+            if not df_m.empty:
+                df_plot = df_m.sort_values('Meta')
+                fig_meta = go.Figure()
+                fig_meta.add_trace(go.Bar(y=df_plot.index, x=df_plot['Meta'], name='Meta', orientation='h', marker_color='#E0E0E0'))
+                fig_meta.add_trace(go.Bar(y=df_plot.index, x=df_plot['Real'], name='Real', orientation='h', marker_color='#007bff'))
+                fig_meta.update_layout(barmode='overlay', height=350, margin=dict(l=0, r=0, t=20, b=0), legend=dict(orientation="h", y=1.1))
+                st.plotly_chart(fig_meta, use_container_width=True)
 
-        st.subheader("📋 Últimos Lançamentos")
+        # --- EVOLUÇÃO ---
+        st.write("---")
+        st.subheader("📈 Evolução de Receitas vs Despesas")
+        evol = df_filtrado.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0)
+        if not evol.empty:
+            st.bar_chart(evol, height=300)
+
+        # --- TABELA ---
+        st.subheader("📋 Histórico Recente")
         st.dataframe(df_filtrado.drop(columns=['V_Num', 'DT', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
 
+    # BARRA LATERAL (CADASTRO)
     with st.sidebar.form("novo"):
         st.write("### 🚀 Lançar")
         f_dat = st.date_input("Data", datetime.now())
