@@ -54,7 +54,7 @@ mes_atual = datetime.now().strftime('%m/%y')
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
-# FORMULÁRIO DE LANÇAMENTO
+# FORMULÁRIO DE NOVO LANÇAMENTO
 with st.sidebar.form("f_novo", clear_on_submit=True):
     st.write("### 🚀 Novo Lançamento")
     f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -144,10 +144,11 @@ elif "🚗" in aba:
 # 6. GERENCIADOR (EDIÇÃO E EXCLUSÃO) - SIDEBAR
 st.sidebar.divider()
 if not df_base.empty:
-    lista = {f"ID: {r['ID']} | {r['Descrição']}": r for _, r in df_base.tail(15).iterrows()}
+    lista = {f"ID: {r['ID']} | {r['Descrição']}": r for _, r in df_base.tail(20).iterrows()}
     sel = st.sidebar.selectbox("⚙️ Alterar Lançamento:", [""] + list(lista.keys()))
     if sel:
         item = lista[sel]
+        st.sidebar.write(f"**Editando ID: {item['ID']}**")
         v_desc = st.sidebar.text_input("Descrição:", value=item['Descrição'])
         v_val = st.sidebar.text_input("Valor:", value=item['Valor'])
         
