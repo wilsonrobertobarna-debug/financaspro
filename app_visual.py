@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
 
-# 1. CONFIGURAÇÃO E ESTILO
+# 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
 
 st.markdown("""
@@ -40,85 +40,101 @@ def conectar_google():
 client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# 3. CARREGAMENTO GERAL
+# 3. CARREGAMENTO REFORÇADO
 @st.cache_data(ttl=60)
-def carregar_aba(nome_aba):
+def carregar_dados():
     try:
-        ws = sh.worksheet(nome_aba)
-        dados = ws.get_all_values()
-        if len(dados) > 1:
-            return pd.DataFrame(dados[1:], columns=dados[0])
-        return pd.DataFrame()
+        df_b = pd.DataFrame(sh.worksheet("Bancos").get_all_records())
+        df_c = pd.DataFrame(sh.worksheet("Categoria").get_all_records())
+        ws_base = sh.get_worksheet(0)
+        dados = ws_base.get_all_values()
+        df_base = pd.DataFrame(dados[1:], columns=dados[0]) if len(dados) > 1 else pd.DataFrame()
+        return df_b, df_c, df_base
     except:
-        return pd.DataFrame()
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-# 4. NAVEGAÇÃO
+df_bancos_cad, df_cats_cad, df_base = carregar_dados()
+
+# 4. ABA FINANÇAS
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
-# --- LÓGICA DA ABA FINANÇAS (MANTIDA) ---
 if aba == "💰 Finanças":
-    df_bancos_cad = carregar_aba("Bancos")
-    df_cats_cad = carregar_aba("Categoria")
-    df_base = carregar_aba(sh.get_worksheet(0).title)
-    
     st.markdown("<h1 style='text-align: center;'>🛡️ FinançasPro Wilson</h1>", unsafe_allow_html=True)
-    # ... (Cálculos e Gráficos de Finanças permanecem aqui)
+    
+    if not df_base.empty:
+        # Padronizar nomes de colunas
+        df_base.columns = [c.strip() for c in df_base.columns]
+        c_dat, c_val, c_cat, c_tip, c_bnc, c_sta = df_base.columns[0], df_base.columns[1], df_base.columns[2], df_base.columns[3], df_base.columns[4], df_base.columns[5]
 
-# --- ABA MILO & BOLT (RESTAURADA) ---
+        def limpar_valor(v):
+            v = str(v).replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.')
+            return pd.to_numeric(v, errors='coerce') or 0.0
+
+        df_base['V_Num'] = df_base[c_val].apply(limpar_valor)
+        df_base['DT'] = pd.to_datetime(df_base[c_dat], dayfirst=True, errors='coerce')
+        df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
+        mes_atual = datetime.now().strftime('%m/%y')
+
+        # Filtro
+        bancos_unicos = ["Todos"] + sorted(df_base[c_bnc].unique().tolist())
+        banco_sel = st.selectbox("🔍 Pesquisar por Banco:", bancos_unicos)
+        df_filtrado = df_base if banco_sel == "Todos" else df_base[df_base[c_bnc] == banco_sel]
+
+        # Cálculos de Saldo (Sem pendentes no Geral)
+        s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
+        df_realizado = df_base[df_base[c_sta] != 'Pendente']
+        t_rec = df_realizado[(df_realizado[c_tip] == 'Receita') | (df_realizado[c_tip] == 'Rendimento')]['V_Num'].sum()
+        t_des = df_realizado[df_realizado[c_tip] == 'Despesa']['V_Num'].sum()
+        saldo_geral = s_ini + t_rec - t_des
+
+        # Tags do Mês
+        df_mes = df_filtrado[df_filtrado['Mes_Ano'] == mes_atual]
+        m_receita = df_mes[df_mes[c_tip] == 'Receita']['V_Num'].sum()
+        m_despesa = df_mes[df_mes[c_tip] == 'Despesa']['V_Num'].sum()
+        m_rendimento = df_mes[df_mes[c_tip] == 'Rendimento']['V_Num'].sum()
+        m_pendente = df_mes[df_mes[c_sta] == 'Pendente']['V_Num'].sum()
+
+        st.markdown(f'<div class="saldo-container"><small>Saldo Geral Realizado</small><h2>R$ {saldo_geral:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
+
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("📈 Receitas", f"R$ {m_receita:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        m2.metric("📉 Despesas", f"R$ {m_despesa:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        m3.metric("💰 Rendimentos", f"R$ {m_rendimento:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        m4.metric("⏳ Pendência", f"R$ {m_pendente:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+
+        # Gráfico por Banco
+        st.write("---")
+        st.subheader("🏦 Saldo por Banco")
+        saldos_lista = []
+        for b in df_bancos_cad['Nome do Banco'].unique():
+            si = df_bancos_cad[df_bancos_cad['Nome do Banco'] == b]['Saldo Inicial'].apply(limpar_valor).sum()
+            re = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] != 'Pendente') & ((df_base[c_tip] == 'Receita') | (df_base[c_tip] == 'Rendimento'))]['V_Num'].sum()
+            de = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] != 'Pendente') & (df_base[c_tip] == 'Despesa')]['V_Num'].sum()
+            saldos_lista.append({'Banco': b, 'Saldo': si + re - de})
+        df_sb = pd.DataFrame(saldos_lista)
+        df_sb = df_sb[df_sb['Saldo'] != 0]
+        if not df_sb.empty:
+            fig_p = px.pie(df_sb, values='Saldo', names='Banco', hole=.4)
+            st.plotly_chart(fig_p, use_container_width=True)
+
+        st.subheader("📋 Lançamentos")
+        st.dataframe(df_filtrado.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1], use_container_width=True)
+
+    with st.sidebar.form("f"):
+        st.write("### 🚀 Lançar")
+        f_dat = st.date_input("Data", datetime.now())
+        f_val = st.number_input("Valor", min_value=0.0)
+        f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
+        f_cat = st.selectbox("Categoria", sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Outros"])
+        f_bnc = st.selectbox("Banco", sorted(df_bancos_cad['Nome do Banco'].tolist() + ["Dinheiro"]))
+        f_sta = st.selectbox("Status", ["Pago", "Pendente"])
+        if st.form_submit_button("SALVAR"):
+            sh.get_worksheet(0).append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_sta])
+            st.cache_data.clear(); st.rerun()
+
 elif aba == "🐾 Milo & Bolt":
-    st.markdown("<h1 style='text-align: center;'>🐾 Controle: Milo & Bolt</h1>", unsafe_allow_html=True)
-    
-    df_p = carregar_aba("Controle_Pets")
-    
-    if not df_p.empty:
-        # Mostra o histórico completo primeiro, como estava antes
-        st.subheader("📋 Histórico de Registros")
-        st.dataframe(df_p.iloc[::-1], use_container_width=True)
-        
-        st.write("---")
-        st.subheader("📊 Resumo de Cuidados")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.info(f"🐶 **Último registro:** {df_p.iloc[-1][0]} - {df_p.iloc[-1][2]}")
-    else:
-        st.warning("Nenhum dado encontrado na aba Controle_Pets.")
+    st.info("Aba em manutenção. Vamos focar primeiro em ajustar as Finanças.")
 
-    # Formulário lateral para novos registros
-    with st.sidebar.form("f_pet"):
-        st.write("### 🐾 Novo Registro")
-        p_dat = st.date_input("Data", datetime.now())
-        p_pet = st.selectbox("Pet", ["Milo", "Bolt", "Ambos"])
-        p_tipo = st.selectbox("Tipo", ["Ração", "Vacina", "Banho", "Veterinário", "Outros"])
-        p_obs = st.text_input("Observação")
-        if st.form_submit_button("SALVAR"):
-            sh.worksheet("Controle_Pets").append_row([p_dat.strftime("%d/%m/%Y"), p_pet, p_tipo, p_obs])
-            st.cache_data.clear(); st.rerun()
-
-# --- ABA MEU VEÍCULO (RESTAURADA) ---
 else:
-    st.markdown("<h1 style='text-align: center;'>🚗 Manutenção e Veículo</h1>", unsafe_allow_html=True)
-    
-    df_v = carregar_aba("Controle_Veiculo")
-    
-    if not df_v.empty:
-        # Mostra a tabela de manutenção completa
-        st.subheader("📋 Histórico do Veículo")
-        st.dataframe(df_v.iloc[::-1], use_container_width=True)
-        
-        st.write("---")
-        ultima_km = df_v.iloc[-1][2] if 'KM' in df_v.columns or len(df_v.columns) > 2 else "Não informada"
-        st.success(f"📍 **KM Atual Registrada:** {ultima_km}")
-    else:
-        st.warning("Nenhum dado encontrado na aba Controle_Veiculo.")
-
-    # Formulário lateral para veículo
-    with st.sidebar.form("f_veic"):
-        st.write("### 🚗 Novo Registro")
-        v_dat = st.date_input("Data", datetime.now())
-        v_tipo = st.selectbox("Tipo", ["Combustível", "Troca de Óleo", "Pneus", "Revisão", "Outros"])
-        v_km = st.text_input("KM Atual")
-        v_val = st.text_input("Valor (R$)")
-        if st.form_submit_button("SALVAR"):
-            sh.worksheet("Controle_Veiculo").append_row([v_dat.strftime("%d/%m/%Y"), v_tipo, v_km, v_val])
-            st.cache_data.clear(); st.rerun()
+    st.info("Aba em manutenção. Vamos focar primeiro em ajustar as Finanças.")
