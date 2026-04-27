@@ -74,7 +74,7 @@ if aba == "💰 Finanças":
         df_base.columns = [c.strip() for c in df_base.columns]
         c_dat, c_val, c_cat, c_tip, c_bnc, c_sta = df_base.columns[0], df_base.columns[1], df_base.columns[2], df_base.columns[3], df_base.columns[4], df_base.columns[5]
 
-        # Tratamento Numérico (Limpeza de R$, pontos e vírgulas)
+        # Função de Limpeza Reforçada
         def limpar_valor(v):
             v = str(v).replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.')
             return pd.to_numeric(v, errors='coerce') or 0.0
@@ -89,31 +89,31 @@ if aba == "💰 Finanças":
         banco_sel = st.selectbox("🔍 Pesquisar por Banco:", bancos_unicos)
         df_filtrado = df_base if banco_sel == "Todos" else df_base[df_base[c_bnc] == banco_sel]
 
-        # Cálculos
+        # --- LÓGICA DAS MÉTRICAS ---
         s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
         
-        # Saldo Geral Absoluto
-        total_rec = df_base[df_base[c_tip] == 'Receita']['V_Num'].sum()
+        # Saldo Geral Absoluto (Receita + Rendimento - Despesa)
+        total_rec = df_base[(df_base[c_tip] == 'Receita') | (df_base[c_tip] == 'Rendimento')]['V_Num'].sum()
         total_desp = df_base[df_base[c_tip] == 'Despesa']['V_Num'].sum()
         saldo_geral = s_ini + total_rec - total_desp
 
-        # Valores do Mês Atual (Filtrados por Banco se selecionado)
+        # Filtro do Mês Atual
         df_mes = df_filtrado[df_filtrado['Mes_Ano'] == mes_atual]
+        
+        # Somas Individuais para as Tags
         m_receita = df_mes[df_mes[c_tip] == 'Receita']['V_Num'].sum()
         m_despesa = df_mes[df_mes[c_tip] == 'Despesa']['V_Num'].sum()
+        m_rendimento = df_mes[df_mes[c_tip] == 'Rendimento']['V_Num'].sum() # APENAS SOMA O TIPO RENDIMENTO
         m_pendente = df_mes[df_mes[c_sta] == 'Pendente']['V_Num'].sum()
-        
-        # Lógica de Rendimento: Aqui calculamos o que sobra no mês
-        m_rendimento = m_receita - m_despesa
 
-        # EXIBIÇÃO
+        # EXIBIÇÃO DO SALDO GERAL
         st.markdown(f'<div class="saldo-container"><small>Saldo Geral Consolidado</small><h2>R$ {saldo_geral:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
+        # TAGS DEMONSTRATIVAS
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Receitas", f"R$ {m_receita:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m2.metric("📉 Despesas", f"R$ {m_despesa:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        # Se for negativo, aparece em vermelho automaticamente no metric
-        m3.metric("💰 Rendimento Mensal", f"R$ {m_rendimento:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'), delta=f"{m_rendimento:,.2f}")
+        m3.metric("💰 Rendimentos", f"R$ {m_rendimento:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m4.metric("⏳ Pendência", f"R$ {m_pendente:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
         st.write("---")
@@ -144,12 +144,12 @@ if aba == "💰 Finanças":
         st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1], use_container_width=True)
 
-    # FORMULÁRIO
+    # FORMULÁRIO COM TIPO RENDIMENTO
     with st.sidebar.form("f_novo"):
         st.write("### 🚀 Novo Lançamento")
         f_dat = st.date_input("Data", datetime.now())
         f_val = st.number_input("Valor", min_value=0.0)
-        f_tip = st.selectbox("Tipo", ["Despesa", "Receita"])
+        f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"]) # ADICIONADO RENDIMENTO AQUI
         f_cat = st.selectbox("Categoria", sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Outros"])
         bancos = sorted(df_bancos_cad['Nome do Banco'].tolist() + ["Dinheiro"]) if not df_bancos_cad.empty else ["Dinheiro"]
         f_bnc = st.selectbox("Banco/Cartão", bancos)
