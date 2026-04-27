@@ -3,12 +3,13 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.express as px
-from datetime import datetime
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
-# 2. CONEXÃO (SEGURA E LIMPA)
+# 2. CONEXÃO
 @st.cache_resource
 def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
@@ -19,12 +20,9 @@ def conectar():
         pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
         if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
         final_creds = {
-            "type": creds_dict["type"],
-            "project_id": creds_dict["project_id"],
-            "private_key_id": creds_dict.get("private_key_id"),
-            "private_key": pk,
-            "client_email": creds_dict["client_email"],
-            "token_uri": creds_dict["token_uri"],
+            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
+            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
+            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
         }
         return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
     except Exception as e:
@@ -52,35 +50,41 @@ def carregar():
 df_base = carregar()
 mes_atual = datetime.now().strftime('%m/%y')
 
-# 4. SIDEBAR (ÍCONES RESTAURADOS)
+# 4. SIDEBAR (MENU E LANÇAMENTO COM PARCELAMENTO)
 st.sidebar.title("🎮 Painel Wilson")
-# Aqui voltamos com os ícones exatamente como você queria:
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
 with st.sidebar.form("f_novo", clear_on_submit=True):
     st.write("### 🚀 Novo Lançamento")
-    f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
-    f_val = st.number_input("Valor", min_value=0.0, step=0.01)
+    f_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY")
+    f_val = st.number_input("Valor (da parcela)", min_value=0.0, step=0.01)
+    f_par = st.number_input("Número de Parcelas", min_value=1, max_value=48, value=1)
     f_des = st.text_input("Descrição")
     f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
     
-    # Categorias mudam conforme a aba para facilitar sua vida
     lista_cats = ["Mercado", "Aluguel", "Luz/Água", "Internet", "Outros"]
-    if "🐾" in aba:
-        lista_cats = ["Pet: Milo", "Pet: Bolt", "Geral Pet"]
-    elif "🚗" in aba:
-        lista_cats = ["Combustível", "Manutenção", "IPVA/Seguro"]
+    if "🐾" in aba: lista_cats = ["Pet: Milo", "Pet: Bolt", "Geral Pet"]
+    elif "🚗" in aba: lista_cats = ["Combustível", "Manutenção", "IPVA/Seguro"]
         
     f_cat = st.selectbox("Categoria", lista_cats)
     f_bnc = st.selectbox("Banco", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro"])
     f_sta = st.selectbox("Status", ["Pago", "Pendente"])
     
-    if st.form_submit_button("SALVAR"):
+    if st.form_submit_button("SALVAR LANÇAMENTO"):
+        ws = sh.get_worksheet(0)
         v_str = f"{f_val:.2f}".replace('.', ',')
-        sh.get_worksheet(0).append_row([f_dat.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
-        st.cache_data.clear(); st.rerun()
+        
+        # Lógica de parcelamento: cria uma linha para cada mês
+        for i in range(f_par):
+            nova_data = f_dat + relativedelta(months=i)
+            desc_parc = f"{f_des} ({i+1}/{f_par})" if f_par > 1 else f_des
+            ws.append_row([nova_data.strftime("%d/%m/%Y"), v_str, desc_parc, f_cat, f_tip, f_bnc, f_sta])
+            
+        st.cache_data.clear()
+        st.success(f"{f_par} lançamento(s) criado(s)!")
+        st.rerun()
 
-# 5. ABAS
+# 5. ABAS DE VISUALIZAÇÃO
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
 if "💰" in aba:
@@ -105,12 +109,15 @@ if "💰" in aba:
         
         st.divider()
         st.subheader("🔍 Filtros de Lançamentos")
-        f1, f2 = st.columns(2)
+        f1, f2, f3 = st.columns(3)
         s_bnc = f1.multiselect("Banco:", sorted(df_base['Banco'].unique()))
         s_sta = f2.multiselect("Status:", ["Pago", "Pendente"])
+        s_tip = f3.multiselect("Tipo:", ["Despesa", "Receita", "Rendimento"])
+        
         df_v = df_base.copy()
         if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
+        if s_tip: df_v = df_v[df_v['Tipo'].isin(s_tip)]
         st.dataframe(df_v[['Data', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True)
 
 elif "🐾" in aba:
@@ -130,6 +137,10 @@ st.sidebar.divider()
 if not df_base.empty:
     opcoes = {f"L{i+2} | {r['Descrição']}": i+2 for i, r in df_base.tail(15).iterrows()}
     sel = st.sidebar.selectbox("Ação na linha:", [""] + list(opcoes.keys()))
-    if sel and st.sidebar.button("🚨 APAGAR"):
-        sh.get_worksheet(0).delete_rows(int(opcoes[sel]))
-        st.cache_data.clear(); st.rerun()
+    if sel:
+        if st.sidebar.button("🚨 APAGAR"):
+            sh.get_worksheet(0).delete_rows(int(opcoes[sel]))
+            st.cache_data.clear(); st.rerun()
+        if st.sidebar.button("✅ QUITAR (Pago)"):
+            sh.get_worksheet(0).update_cell(int(opcoes[sel]), 7, "Pago")
+            st.cache_data.clear(); st.rerun()
