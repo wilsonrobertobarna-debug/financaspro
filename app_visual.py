@@ -3,7 +3,6 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
@@ -76,7 +75,7 @@ if not df_base.empty:
     df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
     mes_atual = datetime.now().strftime('%m/%y')
 
-# 5. SIDEBAR
+# 5. SIDEBAR - LANÇAMENTO CORRIGIDO
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
@@ -84,10 +83,12 @@ with st.sidebar.form("f_novo"):
     st.write("### 🚀 Novo Lançamento")
     f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
     f_val = st.number_input("Valor", min_value=0.0)
-    f_des = st.text_input("Descrição")
+    f_des = st.text_input("Descrição (Ex: Ração Milo)")
     f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
+    
     lista_cats = sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Outros"]
     f_cat = st.selectbox("Categoria", lista_cats)
+    
     f_bnc = st.selectbox("Banco", sorted(df_bancos_cad['Nome do Banco'].tolist() + ["Dinheiro"]) if not df_bancos_cad.empty else ["Dinheiro"])
     f_sta = st.selectbox("Status", ["Pago", "Pendente"])
     f_parc = st.number_input("Parcelas", min_value=1, value=1)
@@ -97,7 +98,16 @@ with st.sidebar.form("f_novo"):
         for i in range(int(f_parc)):
             dt_p = f_dat + relativedelta(months=i)
             desc_p = f"{f_des} ({i+1}/{int(f_parc)})" if f_parc > 1 else f_des
-            ws.append_row([dt_p.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), desc_p, f_cat, f_tip, f_bnc, f_sta])
+            # ORDEM CRUCIAL: A=Data, B=Valor, C=Descrição, D=Categoria, E=Tipo, F=Banco, G=Status
+            ws.append_row([
+                dt_p.strftime("%d/%m/%Y"), 
+                str(f_val).replace('.', ','), 
+                desc_p, 
+                f_cat, 
+                f_tip, 
+                f_bnc, 
+                f_sta
+            ])
         st.cache_data.clear(); st.rerun()
 
 # 6. CONTEÚDO
@@ -123,36 +133,28 @@ if aba == "💰 Finanças":
         m3.metric("💰 Rendimentos", f"R$ {df_mes[df_mes['Tipo'] == 'Rendimento']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m4.metric("⏳ Pendência", f"R$ {df_mes[df_mes['Status'].str.strip() == 'Pendente']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
-        st.subheader("📋 Lançamentos")
+        st.write("---")
+        st.subheader("📋 Lançamentos Recentes")
         st.dataframe(df_filtrado.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1].head(15), use_container_width=True)
 
 elif aba == "🐾 Milo & Bolt":
     st.markdown("<h1 style='text-align: center;'>🐾 Milo & Bolt</h1>", unsafe_allow_html=True)
     if not df_base.empty:
-        # FILTRO AMPLIADO: Pega Milo, Bolt, Pet, Ração, Vacina, Vet ou Banho
-        palavras_chave = 'Milo|Bolt|Pet|Ração|Racao|Vacina|Vet|Banho|Tosa'
+        palavras_chave = 'Milo|Bolt|Pet|Ração|Racao|Vacina|Vet|Banho'
         df_pets = df_base[
             df_base['Categoria'].str.contains(palavras_chave, case=False, na=False) | 
             df_base['Descrição'].str.contains(palavras_chave, case=False, na=False)
         ]
-        
-        col_p1, col_p2 = st.columns(2)
-        with col_p1:
-            total_gasto = df_pets['V_Num'].sum()
-            st.info(f"Investimento Total: **R$ {total_gasto:,.2f}**".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        with col_p2:
-            st.success(f"Registros Localizados: **{len(df_pets)}**")
-            
-        st.write("---")
+        st.info(f"Investimento Total nos Pets: **R$ {df_pets['V_Num'].sum():,.2f}**".replace(',', 'X').replace('.', ',').replace('X', '.'))
         st.dataframe(df_pets.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1], use_container_width=True)
 
-# 7. GERENCIADOR
+# 7. GERENCIADOR (SINCRONIZADO)
 st.sidebar.write("---")
 st.sidebar.write("### ⚙️ Gerenciar")
 if not df_base.empty:
     df_manag = df_base.copy()
     df_manag['Linha_Planilha'] = df_manag.index + 2
-    lista_edit = df_manag.iloc[::-1].head(15)
+    lista_edit = df_manag.iloc[::-1].head(10)
     
     opcoes = {f"Linha {row['Linha_Planilha']} | {row['Data']} | {row['Descrição']}": row['Linha_Planilha'] for _, row in lista_edit.iterrows()}
     sel = st.sidebar.selectbox("Selecionar para Ação:", [""] + list(opcoes.keys()))
@@ -164,5 +166,5 @@ if not df_base.empty:
             sh.get_worksheet(0).delete_rows(int(linha_alvo))
             st.cache_data.clear(); st.rerun()
         if col_btn2.button("✅ QUITAR"):
-            sh.get_worksheet(0).update_cell(int(linha_alvo), 7, "Pago")
-            st.cache_data.clear(); st.rerun()
+            # Coluna 7 é o Status (G)
+            sh.get_worksheet(0).
