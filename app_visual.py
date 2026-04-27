@@ -4,7 +4,7 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime, timedelta, timezone # Para fuso horário nativo
+from datetime import datetime, timedelta, timezone
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(
@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilos CSS Personalizados (Mantidos)
+# Estilos CSS Personalizados (IGUAL AO ORIGINAL)
 st.markdown("""
     <style>
     .saldo-container {
@@ -66,9 +66,10 @@ def carregar_dados():
 
 df_bancos_cad, df_cats_cad, df_base = carregar_dados()
 
-# --- AJUSTE DE DATA BRASIL (GMT-3) ---
-fuso_br = timezone(timedelta(hours=-3))
-hoje_br = datetime.now(fuso_br)
+# --- CORREÇÃO DEFINITIVA DA DATA (GMT-3) ---
+agora_utc = datetime.now(timezone.utc)
+fuso_br = agora_utc - timedelta(hours=3)
+hoje_br = fuso_br.date() # Isso garante que a data seja o dia de hoje no Brasil
 
 # 4. INTERFACE
 st.sidebar.title("🎮 Painel Wilson")
@@ -94,7 +95,7 @@ if aba == "💰 Finanças":
         df_pago = df_filtrado[df_filtrado[c_sta] == 'Pago']
         saldo_atual = s_ini + df_pago[df_pago[c_tip].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_pago[df_pago[c_tip] == 'Despesa']['V_Num'].sum()
 
-        # Métricas do Mês Atual
+        # Métricas do Mês
         mes_atual = hoje_br.strftime('%m/%y')
         df_mes = df_filtrado[df_filtrado['Mes_Ano'] == mes_atual]
         m_rec = df_mes[df_mes[c_tip] == 'Receita']['V_Num'].sum()
@@ -149,20 +150,23 @@ if aba == "💰 Finanças":
                 fig_meta.update_layout(barmode='overlay', height=350, margin=dict(l=0, r=0, t=20, b=0))
                 st.plotly_chart(fig_meta, use_container_width=True)
 
-        # --- NOVO: GRÁFICO DE BARRAS MENSAL (RECEITA X DESPESA) ---
+        # --- GRÁFICO DE BARRAS MENSAL (RECEITA X DESPESA) ---
         st.write("---")
         st.subheader("📈 Evolução Mensal (Receita x Despesa)")
         evol = df_filtrado.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0)
         if not evol.empty:
-            st.bar_chart(evol)
+            # Garante que as colunas existam para o gráfico não dar erro
+            for col in ['Receita', 'Despesa']:
+                if col not in evol.columns: evol[col] = 0.0
+            st.bar_chart(evol[['Receita', 'Despesa']])
 
         st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['V_Num', 'DT', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
 
-    # BARRA LATERAL - FORMULÁRIO (DATA CORRIGIDA)
+    # BARRA LATERAL - FORMULÁRIO (ESTRUTURA ORIGINAL MANTIDA)
     with st.sidebar.form("novo"):
         st.write("### 🚀 Lançar")
-        f_dat = st.date_input("Data", hoje_br) # Puxa automaticamente o dia do Brasil
+        f_dat = st.date_input("Data", hoje_br) # USA A DATA CALCULADA DO BRASIL
         f_val = st.number_input("Valor", min_value=0.0)
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Geral"])
