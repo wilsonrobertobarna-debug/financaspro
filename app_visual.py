@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro", page_icon="🛡️", layout="wide")
 
-# Estilos CSS (Preservados)
+# Estilos CSS (Estrutura 100% preservada)
 st.markdown("""
     <style>
     .saldo-container { background-color: #007bff; color: white; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
@@ -43,9 +43,10 @@ def limpar_v(v):
     v = str(v).replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.')
     return pd.to_numeric(v, errors='coerce') or 0.0
 
-# Força o fuso horário de Brasília para o formulário
+# Pega o horário exato de Brasília agora
 fuso_br = timezone(timedelta(hours=-3))
-hoje_br = datetime.now(fuso_br).date()
+agora_br = datetime.now(fuso_br)
+hoje_br = agora_br.date()
 
 @st.cache_data(ttl=60)
 def carregar_dados():
@@ -71,6 +72,7 @@ if aba == "💰 Finanças":
         df_base.columns = [c.strip() for c in df_base.columns]
         c_dat, c_val, c_cat, c_tip, c_bnc, c_sta = df_base.columns[0:6]
         df_base['V_Num'] = df_base[c_val].apply(limpar_v)
+        # Lê a data da planilha tratando como dia/mês/ano
         df_base['DT'] = pd.to_datetime(df_base[c_dat], dayfirst=True, errors='coerce')
         df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
         
@@ -95,7 +97,7 @@ if aba == "💰 Finanças":
         col3.metric("💰 Rendimento", f"R$ {df_mes[df_mes[c_tip] == 'Rendimento']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         col4.metric("⏳ Pendente", f"R$ {df_mes[df_mes[c_sta] == 'Pendente']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
-        # --- SEÇÃO DE ECONOMIA (REINTRODUZIDA) ---
+        # --- ECONOMIA ---
         st.write("---")
         st.subheader("📊 Resumo de Economia")
         gasto_cat = df_mes[df_mes[c_tip] == 'Despesa'].groupby(c_cat)['V_Num'].sum()
@@ -110,7 +112,7 @@ if aba == "💰 Finanças":
                 with cols_res[i % 5]:
                     st.markdown(f'<div class="resumo-card"><small><b>{categoria}</b></small><br><span style="color:{cor}; font-weight:bold;">{pct:.1f}%</span><br><small>R$ {row["Real"]:,.0f} / {row["Meta"]:,.0f}</small></div>', unsafe_allow_html=True)
 
-        # --- GRÁFICOS (REINTRODUZIDOS) ---
+        # --- GRÁFICOS ---
         st.write("---")
         g1, g2 = st.columns(2)
         with g1:
@@ -122,42 +124,3 @@ if aba == "💰 Finanças":
                 de = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] == 'Pago') & (df_base[c_tip] == 'Despesa')]['V_Num'].sum()
                 s_pizza.append({'Banco': b, 'Saldo': si + re - de})
             st.plotly_chart(px.pie(pd.DataFrame(s_pizza), values='Saldo', names='Banco', hole=.4, height=350), use_container_width=True)
-
-        with g2:
-            st.subheader("📊 Gráfico de Metas")
-            if not df_m.empty:
-                df_plot = df_m.sort_values('Meta')
-                fig_meta = go.Figure()
-                fig_meta.add_trace(go.Bar(y=df_plot.index, x=df_plot['Meta'], name='Meta', orientation='h', marker_color='#E0E0E0'))
-                fig_meta.add_trace(go.Bar(y=df_plot.index, x=df_plot['Real'], name='Real', orientation='h', marker_color='#007bff'))
-                fig_meta.update_layout(barmode='overlay', height=350, margin=dict(l=0, r=0, t=20, b=0))
-                st.plotly_chart(fig_meta, use_container_width=True)
-
-        # --- EVOLUÇÃO MENSAL (VERDE/VERMELHO) ---
-        st.write("---")
-        st.subheader("📈 Evolução Mensal (Receita vs Despesa)")
-        evol = df_filtrado.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0)
-        if not evol.empty:
-            # Força as colunas para garantir a cor certa
-            for c in ['Receita', 'Despesa']:
-                if c not in evol.columns: evol[c] = 0.0
-            st.bar_chart(evol[['Receita', 'Despesa']], color=["#28a745", "#dc3545"])
-
-        st.subheader("📋 Lançamentos")
-        st.dataframe(df_filtrado.drop(columns=['V_Num', 'DT', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
-
-    # FORMULÁRIO (DATA FIXA)
-    with st.sidebar.form("novo"):
-        st.write("### 🚀 Lançar")
-        f_dat = st.date_input("Data", hoje_br)
-        f_val = st.number_input("Valor", min_value=0.0)
-        f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-        f_cat = st.selectbox("Categoria", sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Geral"])
-        f_bnc = st.selectbox("Banco", sorted(df_bancos_cad['Nome do Banco'].tolist() + ["Dinheiro"]))
-        f_sta = st.selectbox("Status", ["Pago", "Pendente"])
-        
-        if st.form_submit_button("SALVAR"):
-            # Envia como texto puro para o Sheets não processar errado
-            data_str = f_dat.strftime("%d/%m/%Y")
-            sh.get_worksheet(0).append_row([data_str, str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_sta], value_input_option='USER_ENTERED')
-            st.cache_data.clear(); st.rerun()
