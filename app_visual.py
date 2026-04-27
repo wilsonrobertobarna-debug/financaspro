@@ -9,6 +9,7 @@ from dateutil.relativedelta import relativedelta
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
 
+# Estilos Customizados
 st.markdown("""
     <style>
     .saldo-container { background-color: #007bff; color: white; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 10px; border: 1px solid #0056b3; }
@@ -22,12 +23,12 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXÃO COM TRATAMENTO DE CHAVE (Evita o ValueError)
+# 2. CONEXÃO SEGURA COM GOOGLE SHEETS
 @st.cache_resource
 def conectar_google():
     try:
         creds_info = st.secrets["connections"]["gsheets"]
-        # Limpa a chave privada para garantir que o formato PEM seja aceito
+        # Limpeza da chave privada para evitar erros de formatação PEM
         private_key = creds_info["private_key"].replace("\\n", "\n").strip()
         
         final_creds = {
@@ -41,17 +42,21 @@ def conectar_google():
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=scopes))
     except Exception as e:
-        st.error(f"Erro de Conexão: {e}"); st.stop()
+        st.error(f"Erro de Conexão Crítico: {e}")
+        st.stop()
 
 client = conectar_google()
+# ID da sua planilha original
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # 3. CARREGAMENTO DE DADOS
 @st.cache_data(ttl=5)
 def carregar_dados():
     try:
+        # Carrega abas auxiliares
         df_c = pd.DataFrame(sh.worksheet("Categoria").get_all_records())
         df_b = pd.DataFrame(sh.worksheet("Bancos").get_all_records())
+        # Carrega aba de lançamentos (página 0)
         ws_base = sh.get_worksheet(0)
         dados = ws_base.get_all_values()
         if len(dados) > 1:
@@ -59,7 +64,8 @@ def carregar_dados():
             df.columns = [c.strip() for c in df.columns]
             return df_b, df_c, df
         return df_b, df_c, pd.DataFrame()
-    except:
+    except Exception as e:
+        st.warning(f"Erro ao carregar dados: {e}")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
 df_bancos_cad, df_cats_cad, df_base = carregar_dados()
@@ -78,9 +84,9 @@ if not df_base.empty:
     df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
     mes_atual = datetime.now().strftime('%m/%y')
 
-# 4. BARRA LATERAL (Lançamento Restaurado)
+# 4. BARRA LATERAL (NAVEGAÇÃO E LANÇAMENTOS)
 st.sidebar.title("🎮 Painel Wilson")
-aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
+aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Veículo"])
 
 with st.sidebar.form("f_novo", clear_on_submit=True):
     st.write("### 🚀 Novo Lançamento")
@@ -101,12 +107,12 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
             ws.append_row([dt_p.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), desc_p, f_cat, f_tip, f_bnc, f_sta])
         st.cache_data.clear(); st.rerun()
 
-# 5. ABA FINANÇAS (Gráficos Restaurados)
+# 5. ABA FINANÇAS (DASHBOARD PRINCIPAL)
 if aba == "💰 Finanças":
     st.markdown("<h1 style='text-align: center;'>🛡️ FinançasPro Wilson</h1>", unsafe_allow_html=True)
     
     if not df_base.empty:
-        # Filtros
+        # Filtros Superiores
         c1, c2, c3 = st.columns(3)
         with c1:
             lista_bancos = ["Todos"] + sorted(df_bancos_cad['Nome do Banco'].unique().tolist()) if not df_bancos_cad.empty else ["Todos"]
@@ -116,9 +122,74 @@ if aba == "💰 Finanças":
         with c3:
             status_sel = st.multiselect("📌 Status:", ["Pago", "Pendente"], default=["Pago", "Pendente"])
 
+        # Aplicação dos Filtros
         df_f = df_base if banco_sel == "Todos" else df_base[df_base['Banco'] == banco_sel]
         if tipo_sel != "Todos": df_f = df_f[df_f['Tipo'] == tipo_sel]
         df_f = df_f[df_f['Status'].isin(status_sel)]
 
-        # Cálculos e Tags
-        receitas = df_f[(df_
+        # Cálculos de Resumo
+        receitas = df_f[(df_f['Tipo'] == 'Receita') & (df_f['Status'] == 'Pago')]['V_Num'].sum()
+        despesas = df_f[(df_f['Tipo'] == 'Despesa') & (df_f['Status'] == 'Pago')]['V_Num'].sum()
+        rendimentos = df_f[(df_f['Tipo'] == 'Rendimento') & (df_f['Status'] == 'Pago')]['V_Num'].sum()
+        pendentes = df_f[df_f['Status'] == 'Pendente']['V_Num'].sum()
+        
+        if banco_sel == "Todos":
+            s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
+        else:
+            s_ini = df_bancos_cad[df_bancos_cad['Nome do Banco'] == banco_sel]['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
+            
+        saldo_final = s_ini + receitas + rendimentos - despesas
+
+        # Renderização das Tags
+        st.markdown(f'''
+            <div class="saldo-container">
+                <small>Saldo Disponível ({banco_sel})</small>
+                <h2>R$ {saldo_final:,.2f}</h2>
+            </div>
+            <div class="tag-container">
+                <div class="tag-card tag-receita">Receitas<br>R$ {receitas:,.2f}</div>
+                <div class="tag-card tag-despesa">Despesas<br>R$ {despesas:,.2f}</div>
+                <div class="tag-card tag-rendimento">Rendimentos<br>R$ {rendimentos:,.2f}</div>
+                <div class="tag-card tag-pendente">Pendências<br>R$ {pendentes:,.2f}</div>
+            </div>
+        '''.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
+
+        # Seção de Gráficos
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
+            st.subheader("📈 Evolução Mensal")
+            df_evol = df_f.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().unstack().fillna(0).reset_index()
+            fig = go.Figure()
+            for t, cor in zip(['Receita', 'Despesa', 'Rendimento'], ['#28a745', '#dc3545', '#17a2b8']):
+                if t in df_evol.columns: 
+                    fig.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol[t], name=t, marker_color=cor))
+            fig.update_layout(barmode='group', height=350, margin=dict(l=0,r=0,t=20,b=0))
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col_g2:
+            st.subheader("📊 Despesas por Categoria")
+            df_mes = df_f[df_f['Mes_Ano'] == mes_atual]
+            gastos = df_mes[df_mes['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum()
+            if not gastos.empty:
+                fig_p = go.Figure(data=[go.Pie(labels=gastos.index, values=gastos.values, hole=.4)])
+                fig_p.update_layout(height=350, margin=dict(l=0,r=0,t=20,b=0))
+                st.plotly_chart(fig_p, use_container_width=True)
+            else: st.info("Sem despesas registradas no mês atual.")
+
+        st.write("---")
+        st.subheader("📋 Histórico de Lançamentos")
+        st.dataframe(df_f.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1], use_container_width=True)
+
+# 6. ABA MILO & BOLT
+elif aba == "🐾 Milo & Bolt":
+    st.markdown("<h1 style='text-align: center;'>🐾 Gastos com Milo & Bolt</h1>", unsafe_allow_html=True)
+    if not df_base.empty:
+        # Busca inteligente por termos pet
+        df_p = df_base[df_base['Descrição'].str.contains('Milo|Bolt|Pet|Ração|Vet|Cachorro', case=False, na=False) | 
+                       df_base['Categoria'].str.contains('Ração|Pet|Veterinário', case=False, na=False)]
+        st.metric("Total Investido nos Pets", f"R$ {df_p['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        st.dataframe(df_p.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1], use_container_width=True)
+
+# 7. ABA VEÍCULO
+elif aba == "🚗 Veículo":
+    st.markdown("<h1 style='text-align: center;'>🚗 Manutenção e Combustível</h1>", unsafe_
