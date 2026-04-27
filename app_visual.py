@@ -5,8 +5,9 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
+import pytz # Adicionado para o fuso horário
 
-# 1. CONFIGURAÇÃO DA PÁGINA (Para o ícone no telemóvel)
+# 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(
     page_title="FinançasPro",
     page_icon="🛡️",
@@ -117,7 +118,7 @@ if aba == "💰 Finanças":
                 excesso = row['Real'] - row['Meta']
                 st.error(f"🚨 **Atenção Wilson!** Ultrapassaste a meta de **{cat}** em **R$ {excesso:,.2f}**.")
 
-        # --- RESUMO DA ECONOMIA (MINI CARDS) ---
+        # --- RESUMO DA ECONOMIA ---
         st.write("---")
         st.subheader("📊 Resumo de Economia")
         if not df_m.empty:
@@ -128,7 +129,7 @@ if aba == "💰 Finanças":
                 with cols_res[i % 5]:
                     st.markdown(f'<div class="resumo-card"><small><b>{categoria}</b></small><br><span style="color:{cor}; font-weight:bold;">{pct:.1f}%</span><br><small>R$ {row["Real"]:,.0f} / {row["Meta"]:,.0f}</small></div>', unsafe_allow_html=True)
 
-        # --- GRÁFICOS LADO A LADO ---
+        # --- GRÁFICOS ---
         st.write("---")
         g1, g2 = st.columns(2)
         with g1:
@@ -163,15 +164,21 @@ if aba == "💰 Finanças":
         st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['V_Num', 'DT', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
 
-    # BARRA LATERAL - FORMULÁRIO
+    # BARRA LATERAL - FORMULÁRIO (CORRIGIDO PARA BRASÍLIA)
     with st.sidebar.form("novo"):
         st.write("### 🚀 Lançar")
-        f_dat = st.date_input("Data", datetime.now())
+        
+        # Ajuste do Fuso Horário
+        fuso_br = pytz.timezone('America/Sao_Paulo')
+        hoje_br = datetime.now(fuso_br)
+        
+        f_dat = st.date_input("Data", hoje_br)
         f_val = st.number_input("Valor", min_value=0.0)
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Geral"])
         f_bnc = st.selectbox("Banco", sorted(df_bancos_cad['Nome do Banco'].tolist() + ["Dinheiro"]))
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
+        
         if st.form_submit_button("SALVAR"):
             sh.get_worksheet(0).append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_sta])
             st.cache_data.clear(); st.rerun()
