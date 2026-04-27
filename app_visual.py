@@ -38,7 +38,7 @@ def conectar_google():
 client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# 3. CARREGAMENTO
+# 3. CARREGAMENTO COM LIMPEZA DE COLUNAS
 @st.cache_data(ttl=5)
 def carregar_dados():
     try:
@@ -46,9 +46,15 @@ def carregar_dados():
         df_c = pd.DataFrame(sh.worksheet("Categoria").get_all_records())
         ws_base = sh.get_worksheet(0)
         dados = ws_base.get_all_values()
-        df_base = pd.DataFrame(dados[1:], columns=dados[0]) if len(dados) > 1 else pd.DataFrame()
-        return df_b, df_c, df_base
-    except:
+        
+        if len(dados) > 1:
+            df = pd.DataFrame(dados[1:], columns=dados[0])
+            # REMOVE ESPAÇOS EM BRANCO DOS NOMES DAS COLUNAS
+            df.columns = [str(c).strip() for c in df.columns]
+            return df_b, df_c, df
+        return df_b, df_c, pd.DataFrame()
+    except Exception as e:
+        st.error(f"Erro ao ler colunas: {e}")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
 df_bancos_cad, df_cats_cad, df_base = carregar_dados()
@@ -58,9 +64,13 @@ def limpar_valor(v):
     try: return float(v)
     except: return 0.0
 
-# 4. PROCESSAMENTO
+# 4. PROCESSAMENTO SEGURO
 if not df_base.empty:
-    df_base.columns = [c.strip() for c in df_base.columns]
+    # Garante que as colunas existam para não dar KeyError
+    for col in ['Data', 'Valor', 'Categoria', 'Tipo', 'Banco', 'Status']:
+        if col not in df_base.columns:
+            df_base[col] = "" # Cria a coluna vazia se ela não existir na planilha
+
     df_base['V_Num'] = df_base['Valor'].apply(limpar_valor)
     df_base['DT'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
     df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
@@ -82,10 +92,12 @@ with st.sidebar.form("f_novo"):
     f_bnc = st.selectbox("Banco", sorted(df_bancos_cad['Nome do Banco'].tolist() + ["Dinheiro"]) if not df_bancos_cad.empty else ["Dinheiro"])
     f_sta = st.selectbox("Status", ["Pago", "Pendente"])
     f_parc = st.number_input("Parcelas", min_value=1, value=1)
+    
     if st.form_submit_button("SALVAR"):
         ws = sh.get_worksheet(0)
         for i in range(int(f_parc)):
             dt_p = f_dat + relativedelta(months=i)
+            # Respeitando a ordem das colunas da sua planilha
             ws.append_row([dt_p.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f"{f_cat} ({i+1}/{int(f_parc)})" if f_parc > 1 else f_cat, f_tip, f_bnc, f_sta])
         st.cache_data.clear(); st.rerun()
 
@@ -93,11 +105,12 @@ with st.sidebar.form("f_novo"):
 if aba == "💰 Finanças":
     st.markdown("<h1 style='text-align: center;'>🛡️ FinançasPro Wilson</h1>", unsafe_allow_html=True)
     if not df_base.empty:
-        # SALDO GERAL
-        df_real = df_base[df_base['Status'] != 'Pendente']
+        # SALDO GERAL (Proteção contra KeyError Status)
+        df_real = df_base[df_base['Status'].str.strip() != 'Pendente']
         s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
-        t_in = df_real[(df_real['Tipo'] == 'Receita') | (df_real['Tipo'] == 'Rendimento')]['V_Num'].sum()
+        t_in = df_real[df_real['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
         t_out = df_real[df_real['Tipo'] == 'Despesa']['V_Num'].sum()
+        
         st.markdown(f'<div class="saldo-container"><small>Saldo Geral Realizado</small><h2>R$ {s_ini + t_in - t_out:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
         # MÉTRICAS MÊS
@@ -106,32 +119,34 @@ if aba == "💰 Finanças":
         m1.metric("📈 Receitas", f"R$ {df_mes[df_mes['Tipo'] == 'Receita']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m2.metric("📉 Despesas", f"R$ {df_mes[df_mes['Tipo'] == 'Despesa']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m3.metric("💰 Rendimentos", f"R$ {df_mes[df_mes['Tipo'] == 'Rendimento']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        m4.metric("⏳ Pendência", f"R$ {df_mes[df_mes['Status'] == 'Pendente']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        m4.metric("⏳ Pendência", f"R$ {df_mes[df_mes['Status'].str.strip() == 'Pendente']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
         # GRÁFICOS
         st.write("---")
         col_g1, col_g2 = st.columns(2)
         with col_g1:
             st.subheader("📈 Evolução Mensal")
-            df_evol = df_base.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().unstack().fillna(0).reset_index()
-            fig = go.Figure()
-            for t, c in zip(['Receita', 'Despesa', 'Rendimento'], ['#28a745', '#dc3545', '#007bff']):
-                if t in df_evol.columns: fig.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol[t], name=t, marker_color=c))
-            fig.update_layout(barmode='group', height=300, margin=dict(l=20,r=20,t=20,b=20))
-            st.plotly_chart(fig, use_container_width=True)
+            if not df_base['Mes_Ano'].isna().all():
+                df_evol = df_base.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().unstack().fillna(0).reset_index()
+                fig = go.Figure()
+                for t, c in zip(['Receita', 'Despesa', 'Rendimento'], ['#28a745', '#dc3545', '#007bff']):
+                    if t in df_evol.columns: fig.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol[t], name=t, marker_color=c))
+                fig.update_layout(barmode='group', height=300, margin=dict(l=10,r=10,t=10,b=10))
+                st.plotly_chart(fig, use_container_width=True)
 
         with col_g2:
             st.subheader("🏦 Saldo por Banco")
-            s_bancos = []
-            for b in df_bancos_cad['Nome do Banco'].unique():
-                si = df_bancos_cad[df_bancos_cad['Nome do Banco'] == b]['Saldo Inicial'].apply(limpar_valor).sum()
-                re = df_base[(df_base['Banco'] == b) & (df_base['Status'] != 'Pendente') & (df_base['Tipo'] != 'Despesa')]['V_Num'].sum()
-                de = df_base[(df_base['Banco'] == b) & (df_base['Status'] != 'Pendente') & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
-                s_bancos.append({'Banco': b, 'Saldo': si + re - de})
-            df_sb = pd.DataFrame(s_bancos)
-            fig_p = px.pie(df_sb[df_sb['Saldo'] > 0], values='Saldo', names='Banco', hole=.4)
-            fig_p.update_layout(height=300, margin=dict(l=20,r=20,t=20,b=20))
-            st.plotly_chart(fig_p, use_container_width=True)
+            if not df_bancos_cad.empty:
+                s_bancos = []
+                for b in df_bancos_cad['Nome do Banco'].unique():
+                    si = df_bancos_cad[df_bancos_cad['Nome do Banco'] == b]['Saldo Inicial'].apply(limpar_valor).sum()
+                    re = df_base[(df_base['Banco'] == b) & (df_base['Status'] != 'Pendente') & (df_base['Tipo'] != 'Despesa')]['V_Num'].sum()
+                    de = df_base[(df_base['Banco'] == b) & (df_base['Status'] != 'Pendente') & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
+                    s_bancos.append({'Banco': b, 'Saldo': si + re - de})
+                df_sb = pd.DataFrame(s_bancos)
+                fig_p = px.pie(df_sb[df_sb['Saldo'] > 0], values='Saldo', names='Banco', hole=.4)
+                fig_p.update_layout(height=300, margin=dict(l=10,r=10,t=10,b=10))
+                st.plotly_chart(fig_p, use_container_width=True)
 
         st.write("---")
         st.subheader("📋 Últimos Lançamentos")
@@ -140,7 +155,7 @@ if aba == "💰 Finanças":
 elif aba == "🐾 Milo & Bolt":
     st.markdown("<h1 style='text-align: center;'>🐾 Milo & Bolt</h1>", unsafe_allow_html=True)
     if not df_base.empty:
-        df_pets = df_base[df_base['Categoria'].str.contains('Milo|Bolt|Pet|Ração', case=False)]
+        df_pets = df_base[df_base['Categoria'].str.contains('Milo|Bolt|Pet|Ração', case=False, na=False)]
         st.info(f"Investimento Total nos Pets: **R$ {df_pets['V_Num'].sum():,.2f}**".replace(',', 'X').replace('.', ',').replace('X', '.'))
         st.dataframe(df_pets.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1], use_container_width=True)
 
