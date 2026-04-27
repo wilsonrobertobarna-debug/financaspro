@@ -1,33 +1,34 @@
 import streamlit as st
-import pandas as pd
 from datetime import date
 
-# 1. Configuração da Página
+# 1. Configuração da Página (O Título que aparece no navegador)
 st.set_page_config(
     page_title="FinançasPro",
     page_icon="🛡️",
     layout="wide"
 )
 
-# Estilização para o botão ficar azul e ocupar a largura total
+# Estilo para o botão ficar azul e bonito
 st.markdown("""
     <style>
-    .stButton>button { width: 100%; background-color: #007bff; color: white; height: 3em; }
+    .stButton>button { 
+        width: 100%; 
+        background-color: #007bff; 
+        color: white; 
+        font-weight: bold;
+        height: 3em;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 st.title("🛡️ FinançasPro")
 
-# 2. Inicialização do Histórico (Estado da Sessão)
-if 'historico' not in st.session_state:
-    st.session_state.historico = pd.DataFrame(columns=[
-        'Data', 'Descrição', 'Categoria', 'Valor', 'Tipo', 'Banco', 'Cartão'
-    ])
-
-# 3. Formulário de Cadastro
-with st.form("form_lancamento", clear_on_submit=True):
-    st.subheader("Novo Lançamento")
+# 2. O Formulário de Lançamentos
+# O 'clear_on_submit=True' limpa os campos depois que você clica em salvar
+with st.form("meu_formulario", clear_on_submit=True):
+    st.subheader("Cadastro de Transações")
     
+    # Criando duas colunas para aproveitar o espaço
     col1, col2 = st.columns(2)
     
     with col1:
@@ -36,42 +37,25 @@ with st.form("form_lancamento", clear_on_submit=True):
         tipo = st.selectbox("Tipo", ["Saída", "Entrada"])
         
     with col2:
+        # Aqui estão os campos de Categoria, Bancos e Cartões que você pediu
         categoria = st.selectbox("Categoria", ["Alimentação", "Lazer", "Contas Fixas", "Saúde", "Transporte", "Outros"])
-        banco = st.selectbox("Banco", ["Nubank", "Itaú", "Bradesco", "Santander", "Caixa", "Dinheiro Vivo"])
-        cartao = st.selectbox("Cartão de Crédito", ["Nenhum", "Visa", "Mastercard", "Elo"])
+        banco = st.selectbox("Bancos", ["Nubank", "Itaú", "Bradesco", "Santander", "Caixa", "Dinheiro Vivo"])
+        cartao = st.selectbox("Cartões de Créditos", ["Nenhum", "Visa", "Mastercard", "Elo"])
 
-    descricao = st.text_input("Descrição", placeholder="Ex: Compra no mercado...")
+    # Campo de descrição logo abaixo
+    descricao = st.text_input("Descrição", placeholder="Ex: Compra no mercado, Salário...")
+    
+    # Botão de Salvar
     btn_salvar = st.form_submit_button("Salvar Lançamento")
 
-# 4. Lógica para Salvar
+# 3. O que acontece quando você clica no botão
 if btn_salvar:
-    # Saídas ficam negativas para o cálculo do saldo
-    valor_final = valor if tipo == "Entrada" else -valor
+    # Mostra uma mensagem de sucesso na tela
+    st.success(f"Lançamento de R$ {valor:.2f} registrado com sucesso!")
     
-    novo_dado = pd.DataFrame([{
-        'Data': data,
-        'Descrição': descricao,
-        'Categoria': categoria,
-        'Valor': valor_final,
-        'Tipo': tipo,
-        'Banco': banco,
-        'Cartão': cartao
-    }])
-    
-    st.session_state.historico = pd.concat([st.session_state.historico, novo_dado], ignore_index=True)
-    st.success("Lançamento registrado!")
-
-# 5. Visualização (A linha que causou o erro agora está correta aqui)
-st.divider()
-st.subheader("📋 Últimos Lançamentos")
-
-if not st.session_state.historico.empty:
-    # Exibe a tabela
-    st.dataframe(st.session_state.historico.sort_values(by='Data', ascending=False), use_container_width=True)
-    
-    # Cálculo do Saldo
-    saldo = st.session_state.historico['Valor'].sum()
-    cor = "green" if saldo >= 0 else "red"
-    st.markdown(f"### Saldo Atual: :[{cor}][R$ {saldo:.2f}]")
-else:
-    st.info("Nenhum dado cadastrado.")
+    # Cria uma pequena tabela só para conferir o que foi salvo agora
+    st.write("---")
+    st.write("**Resumo do Lançamento:**")
+    st.write(f"📅 **Data:** {data} | 🏷️ **Categoria:** {categoria}")
+    st.write(f"🏦 **Banco:** {banco} | 💳 **Cartão:** {cartao}")
+    st.write(f"📝 **Descrição:** {descricao}")
