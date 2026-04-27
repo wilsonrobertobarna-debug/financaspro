@@ -2,125 +2,182 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, date
+import os
 
 # 1. CONFIGURAÇÃO DA PÁGINA
-st.set_page_config(page_title="FinançasPro Wilson", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="💰")
 
-# Estilos CSS (Simples e funcional para não quebrar)
-st.markdown("""
-    <style>
-    .saldo-container { background-color: #007bff; color: white; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 25px; }
-    .stMetric { background-color: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #dee2e6; }
-    </style>
-    """, unsafe_allow_html=True)
+# 2. CHAVE DE ACESSO
+PK_LIST = [
+    "-----BEGIN PRIVATE KEY-----",
+    "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDF9qafCHj4HPHP",
+    "gcN1MxhHMlXJsmswR16gqEtwNmj1s4mLqZhifwA8qu7M16i6q0IU0RnQVufHfqNu",
+    "BPQh74sLQ1/xrvNZ8q/A4fO/QqJCAhlqtYo3djsVRfDI/LOoUiP+clQzN3M+1Qdx",
+    "74Df9cW6ELv3t8WpcCzBgkLX/3+V91dayvp+dr9OGRMTrVqDNRH8AnWDXdWlvhox",
+    "Ke7s3lFgk0JYU1ql6ffs0mdp9fJ6gB/MsKWcwZmbSIUGkrbiN5rfV9s8jANcNa1m",
+    "kJ2tr3XsPsqpGcgOWF4pOrY0P++Xse4pgwppGa3WbBuPg4OzzK1LIgCuIvsGuRhs",
+    "rwn3KZidAgMBAAECggEAB48kDKWPrPW5/BD57DM/xZQz92gzNJw9Dkhu3QGO33b0",
+    "FRusQHKWCTsDtFm1zS717oKPiEeRQSpiRjS1N8iEWDFB7CIgk7ozINvf6Vk7hea7",
+    "nroA5Z5DokvR5nLTz2UXj8NA2NXQtkD/MEgTdTnWy4SREOP5Db/FTbxSHhpY/lpq",
+    "xlTlOIoKkk6gZyt3oCZAUzLo+R0CfG6jEJy+pwwk6stjRVKp8DnP/mrJV8LaU8Au",
+    "fWxytSywY7XRxEjRHp2RplgVpQckuga3vbOcU0Y+FJNpkGT49DdH7PP7EEe/5J/t",
+    "McYkWUR1lvWDdlv/EzbO0GxqZ6FpPIA4MBO/krvPNwKBgQDwVqpWk48OkajwuMUL",
+    "YGFE1dTWk0axmbiZa3bxK+laqBTt0sfuaiKemgRqQSy5kJS7f9qC02Evc+RC7nnQ",
+    "BsSYeijNQiHwNcrjcbq6NGbCzYTcXu7FajM490tet7YF3XfGGTfuyA6GRYYpyNNT",
+    "qwBeVGNtP4iXBeT3DSHaR3n/awKBgQDS3RVh1whP4Cu6CEOheUgQuMxEWdEbnQQS",
+    "Ns8Le56t5Bed2PmfMGXjTLBed2PmfMGXjTLBzDXPYiemGnDnPwm5SErTE0emZUo4",
+    "N9sNRi3pnLTnZ4YSHrmQlW3UxkNpgph+VMxmUM+HlKw0lutfoeYIjzIWa2ZImLGw",
+    "GW7W8eJyFwKBgQCkOqR1OqnDy9cEf03uYzK0ZeXlpoflLmTNOXjyfg4ca8S5apJC",
+    "IXZ8qEQiE10rhFeN9GTthuHfGjM9ZVYJx8YpZzhgYjNswGVenEV7nfkmXmfOanSA",
+    "o/xSjfGLzL9uLJL+5BarbTs3l2SBQwDdKHm8+69hZMvCXz3Bb9DVJoh/9wKBgDTz",
+    "MXBdOAgeybwwYRNGSlNwpFKxnzHo7uHIA5vlkgYmlcucdaqE08ENO+3YPfPtRcf4",
+    "qQfD0kIn0l7uO1O2CGQuRG3q/cWnw1D1vrsJmXPlVwQY2fDo6D4nV+orUzhGhBaN",
+    "Irq6pjJsogWetEJSfFo/4xsAIzItrckDyfKN0QhHAoGBAN8pejg4WzSJjwrfTOgA",
+    "VnARRsrH8VVQ8FSpfWTsYnJe/z0K3hxF4OiWM0oIkZsXhj62yjiZDizWApjwlhcW",
+    "O02v3bvgkF+W/VSs/W1Rf0iMdp22KVEhL97fNWcfi/19QH+FRPeRzZpe2ujNcJyb",
+    "1GHhDwH33nMtylvbUkBN8pBU",
+    "-----END PRIVATE KEY-----"
+]
 
-# 2. CONEXÃO (Sem rodeios)
+# --- FUNÇÕES DE CALLBACK (LIMPEZA SEGURA) ---
+def acao_salvar():
+    # Pegamos os dados do estado da sessão
+    v = st.session_state.valor_input
+    if v > 0:
+        data_br = st.session_state.data_input.strftime('%d/%m/%Y')
+        desc_final = f"{st.session_state.desc_input} ({st.session_state.parcela_input})" if st.session_state.parcela_input != "1/1" else st.session_state.desc_input
+        
+        # Ordem correta das colunas para sua planilha
+        nova_linha = [
+            data_br, 
+            v, 
+            st.session_state.cat_input, 
+            st.session_state.banco_input, 
+            desc_final, 
+            st.session_state.benef_input, 
+            "Pessoal", 0, "", 
+            st.session_state.status_input, 
+            st.session_state.tipo_input
+        ]
+        
+        # Enviamos para o Google
+        ws_lanc.append_row(nova_linha)
+        st.toast("✅ Lançamento realizado com sucesso!")
+        
+        # LIMPAMOS OS CAMPOS AGORA
+        st.session_state.valor_input = 0.0
+        st.session_state.benef_input = ""
+        st.session_state.desc_input = ""
+        st.session_state.parcela_input = "1/1"
+
+def acao_excluir():
+    id_alvo = st.session_state.id_excluir_input
+    ws_lanc.delete_rows(int(id_alvo))
+    st.toast(f"🗑️ Registro {id_alvo} removido.")
+    st.session_state.id_excluir_input = 2
+
 @st.cache_resource
-def conectar():
-    try:
-        info = st.secrets["connections"]["gsheets"]
-        creds = Credentials.from_service_account_info(info, scopes=[
-            "https://www.googleapis.com/auth/spreadsheets", 
-            "https://www.googleapis.com/auth/drive"
-        ])
-        return gspread.authorize(creds)
-    except Exception as e:
-        st.error(f"Erro de Conexão: {e}"); st.stop()
+def conectar_google():
+    private_key = "\n".join([l.strip() for l in PK_LIST])
+    scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    creds_info = {
+        "type": "service_account", "project_id": "financaspro-wilson",
+        "client_email": "financas-wilson@financaspro-wilson.iam.gserviceaccount.com",
+        "token_uri": "https://oauth2.googleapis.com/token", "private_key": private_key
+    }
+    return gspread.authorize(Credentials.from_service_account_info(creds_info, scopes=scope))
 
-client = conectar()
-sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-
-# 3. CARREGAMENTO DE DADOS
-def limpar_v(v):
-    if not v or v == "": return 0.0
-    v = str(v).replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.')
-    return pd.to_numeric(v, errors='coerce') or 0.0
-
-@st.cache_data(ttl=60)
-def carregar_dados():
-    # Carrega as abas principais
-    df_l = pd.DataFrame(sh.get_worksheet(0).get_all_records())
-    df_b = pd.DataFrame(sh.worksheet("Bancos").get_all_records())
-    df_c = pd.DataFrame(sh.worksheet("Categoria").get_all_records())
-    return df_l, df_b, df_c
-
-df_base, df_bancos_cad, df_cats_cad = carregar_dados()
-hoje_br = (datetime.now(timezone.utc) - timedelta(hours=3)).date()
-
-# 4. BARRA LATERAL (LANÇAMENTOS)
-st.sidebar.header("🚀 Lançamentos")
-
-with st.sidebar.form("form_novo"):
-    f_dat = st.date_input("Data", hoje_br)
-    f_val = st.number_input("Valor", min_value=0.0, step=0.01)
-    f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-    f_cat = st.selectbox("Categoria", sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Geral"])
-    f_bnc = st.selectbox("Banco", sorted(df_bancos_cad['Nome do Banco'].tolist() + ["Dinheiro"]))
-    f_sta = st.selectbox("Status", ["Pago", "Pendente"])
+# --- PROCESSAMENTO ---
+try:
+    client = conectar_google()
+    sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+    ws_lanc = sh.get_worksheet(0)
     
-    if st.form_submit_button("SALVAR"):
-        # DATA: Enviamos como string pura. O segredo é o 'USER_ENTERED' abaixo.
-        data_str = f_dat.strftime("%d/%m/%Y")
-        sh.get_worksheet(0).append_row(
-            [data_str, str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_sta],
-            value_input_option='USER_ENTERED'
-        )
-        st.cache_data.clear()
-        st.rerun()
-
-st.sidebar.write("---")
-aba = st.sidebar.radio("Navegação", ["💰 Finanças", "🐾 Pets", "🚗 Veículo"])
-
-# 5. TELA DE FINANÇAS
-if aba == "💰 Finanças":
-    st.title("🛡️ FinançasPro")
+    # Leitura dos dados
+    raw_data = ws_lanc.get_all_records()
+    df = pd.DataFrame(raw_data)
     
-    if not df_base.empty:
-        # Padroniza nomes de colunas (remove espaços extras)
-        df_base.columns = [c.strip() for c in df_base.columns]
+    if not df.empty:
+        df.columns = [str(c).strip() for c in df.columns]
+        df['Data_dt'] = pd.to_datetime(df['Data'], format='%d/%m/%Y', errors='coerce').dt.date
+        df['Valor_num'] = pd.to_numeric(df['Valor'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip(), errors='coerce').fillna(0)
+        df['ID'] = range(2, len(df) + 2)
+
+    st.title("🛡️ FinançasPro Wilson")
+
+    # --- FILTROS E MÉTRICAS ---
+    if not df.empty:
+        c_filt1, c_filt2 = st.columns([2, 2])
+        with c_filt1:
+            hoje = date.today()
+            periodo = st.date_input("📅 Filtrar por Data:", value=(date(hoje.year, hoje.month, 1), hoje), format="DD/MM/YYYY")
         
-        # Identifica colunas por posição para evitar erro de nome
-        c_dat, c_val, _, c_tip, c_bnc, c_sta = df_base.columns[0:6]
+        with c_filt2:
+            st.write("🚀 Atalhos:")
+            col_b1, col_b2 = st.columns(2)
+            btn_matilha = col_b1.button("🐶 Matilha", use_container_width=True)
+            btn_geral = col_b2.button("📄 Geral", use_container_width=True)
+
+        # Lógica de filtro
+        if isinstance(periodo, tuple) and len(periodo) == 2:
+            d_ini, d_fim = periodo
+            df_view = df[(df['Data_dt'] >= d_ini) & (df['Data_dt'] <= d_fim)].copy()
+            
+            if btn_matilha:
+                df_view = df_view[df_view.astype(str).apply(lambda x: x.str.contains('Milo|Bolt', case=False)).any(axis=1)]
+
+            # Tags de Resumo
+            rec = df_view[df_view['Tipo'].str.contains('Receita', case=False, na=False)]['Valor_num'].sum()
+            desp = df_view[df_view['Tipo'].str.contains('Despesa', case=False, na=False)]['Valor_num'].sum()
+            rend = df_view[df_view['Categoria'].str.contains('Rendimento', case=False, na=False)]['Valor_num'].sum()
+            pend = df_view[(df_view['Tipo'].str.contains('Despesa', case=False, na=False)) & (df_view['Status'] != 'Pago')]['Valor_num'].sum()
+            
+            st.info(f"### 💰 Saldo do Período: R$ {rec - desp:,.2f}")
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Receitas", f"R$ {rec:,.2f}")
+            m2.metric("Despesas", f"R$ {desp:,.2f}")
+            m3.metric("Rendimentos", f"R$ {rend:,.2f}")
+            m4.metric("Pendências", f"R$ {pend:,.2f}")
+
+            # Gráficos
+            st.divider()
+            g1, g2 = st.columns(2)
+            with g1:
+                st.bar_chart(pd.DataFrame({'Total': [rec, desp]}, index=['Receitas', 'Despesas']))
+            with g2:
+                if st.checkbox("🔑 Ver Meta"):
+                    st.bar_chart(pd.DataFrame({'Valor': [10000.0, rec]}, index=['Meta', 'Realizado']), color="#3498db")
+
+    st.divider()
+
+    # --- FORMULÁRIO ---
+    c_form, c_hist = st.columns([1, 2.5])
+    
+    with c_form:
+        st.subheader("📝 Lançamento")
+        st.radio("Tipo", ["Despesa", "Receita"], horizontal=True, key="tipo_input")
+        st.date_input("Data", date.today(), format="DD/MM/YYYY", key="data_input")
+        st.number_input("Valor (R$)", min_value=0.0, step=0.01, key="valor_input")
+        st.text_input("Beneficiário", key="benef_input")
+        st.text_input("Descrição", key="desc_input")
+        st.text_input("Parcelamento", value="1/1", key="parcela_input")
+        st.selectbox("Categoria", ["Pets", "Aluguel", "Mercado", "Rendimento", "Trabalho", "Outros"], key="cat_input")
+        st.selectbox("Banco", ["Nubank", "Itaú", "Inter", "Bradesco", "Dinheiro"], key="banco_input")
+        st.selectbox("Status", ["Pago", "Pendente"], key="status_input")
         
-        df_base['V_Num'] = df_base[c_val].apply(limpar_v)
-        df_base['DT'] = pd.to_datetime(df_base[c_dat], dayfirst=True, errors='coerce')
-        df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
+        # Aqui o segredo: o on_click chama a função que salva E limpa
+        st.button("🚀 Salvar na Planilha", use_container_width=True, on_click=acao_salvar)
 
-        # Filtro de Banco
-        banco_sel = st.selectbox("Filtrar Banco:", ["Todos"] + sorted(df_base[c_bnc].unique().tolist()))
-        df_f = df_base if banco_sel == "Todos" else df_base[df_base[c_bnc] == banco_sel]
+    with c_hist:
+        st.subheader("📋 Histórico")
+        if not df_view.empty:
+            st.dataframe(df_view[['ID', 'Data', 'Valor', 'Tipo', 'Descrição', 'Beneficiário', 'Status']].sort_values('ID', ascending=False), use_container_width=True, hide_index=True)
+            
+            st.divider()
+            st.subheader("🗑️ Área de Exclusão")
+            st.number_input("ID do registro:", min_value=2, step=1, key="id_excluir_input")
+            st.button("🔴 Confirmar Exclusão", use_container_width=True, on_click=acao_excluir)
 
-        # Cálculo de Saldo (Simplificado)
-        saldo_pago = df_f[df_f[c_sta] == 'Pago']
-        entradas = saldo_pago[saldo_pago[c_tip].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        saidas = saldo_pago[saldo_pago[c_tip] == 'Despesa']['V_Num'].sum()
-        
-        st.markdown(f"""
-            <div class="saldo-container">
-                <small>Saldo Disponível ({banco_sel})</small>
-                <h2>R$ {entradas - saidas:,.2f}</h2>
-            </div>
-        """.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
-
-        # MÉTRICAS (TAGS)
-        m1, m2, m3 = st.columns(3)
-        m1.metric("📈 Receitas", f"R$ {entradas:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        m2.metric("📉 Despesas", f"R$ {saidas:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        m3.metric("⏳ Pendente", f"R$ {df_f[df_f[c_sta] == 'Pendente']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-
-        # GRÁFICO (Sem erro de cor)
-        st.write("---")
-        st.subheader("📊 Evolução Mensal")
-        evol = df_f.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0)
-        if not evol.empty:
-            # Se der erro de cor de novo, o Streamlit usará as cores padrão dele
-            try:
-                st.bar_chart(evol, color=["#dc3545", "#28a745", "#2ecc71"][:len(evol.columns)])
-            except:
-                st.bar_chart(evol)
-
-        # TABELA
-        st.write("---")
-        st.subheader("📋 Lançamentos")
-        st.dataframe(df_f.drop(columns=['V_Num', 'DT', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
+except Exception as e:
+    st.error(f"Erro detectado: {e}")
