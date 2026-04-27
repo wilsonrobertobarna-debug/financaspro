@@ -15,6 +15,7 @@ st.markdown("""
     .saldo-container { background-color: #007bff; color: white; padding: 10px 20px; border-radius: 12px; text-align: center; margin-bottom: 10px; }
     .saldo-container h2 { margin: 0; font-size: 2.2rem; font-weight: bold; }
     .resumo-box { background-color: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 5px solid #28a745; margin-top: 10px; }
+    [data-testid="stMetricValue"] { font-size: 1.4rem !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -41,21 +42,13 @@ sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 @st.cache_data(ttl=5)
 def carregar_dados():
     try:
-        # Bancos e Categorias
         df_b = pd.DataFrame(sh.worksheet("Bancos").get_all_records())
         df_c = pd.DataFrame(sh.worksheet("Categoria").get_all_records())
-        
-        # Base Principal (Geral)
         ws_base = sh.get_worksheet(0)
         dados = ws_base.get_all_values()
-        if len(dados) > 1:
-            df_base = pd.DataFrame(dados[1:], columns=dados[0])
-        else:
-            df_base = pd.DataFrame(columns=["Data", "Valor", "Categoria", "Tipo", "Banco", "Status"])
-        
+        df_base = pd.DataFrame(dados[1:], columns=dados[0]) if len(dados) > 1 else pd.DataFrame()
         return df_b, df_c, df_base
-    except Exception as e:
-        st.error(f"Erro ao carregar Planilha: {e}")
+    except:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
 df_bancos_cad, df_cats_cad, df_base = carregar_dados()
@@ -68,85 +61,90 @@ def limpar_valor(v):
 # 4. PROCESSAMENTO
 if not df_base.empty:
     df_base.columns = [c.strip() for c in df_base.columns]
-    # Garante que as colunas essenciais existem
-    cols_necessarias = ["Data", "Valor", "Categoria", "Tipo", "Banco", "Status"]
-    for col in cols_necessarias:
-        if col not in df_base.columns: df_base[col] = ""
-        
     df_base['V_Num'] = df_base['Valor'].apply(limpar_valor)
     df_base['DT'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
     df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
     mes_atual = datetime.now().strftime('%m/%y')
 
-# 5. SIDEBAR (LANÇAMENTOS E NAVEGAÇÃO)
+# 5. SIDEBAR
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
-# FORMULÁRIO ÚNICO (Geral ou Pets)
 with st.sidebar.form("f_novo"):
     st.write("### 🚀 Novo Lançamento")
     f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
     f_val = st.number_input("Valor", min_value=0.0)
     f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-    
-    # Se estiver na aba pet, sugere categorias pet, senão as gerais
     lista_cats = sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Outros"]
     if aba == "🐾 Milo & Bolt":
         lista_cats = ["Pet: Milo - Ração", "Pet: Milo - Vet", "Pet: Bolt - Ração", "Pet: Bolt - Vet", "Gasto Geral Pet"]
-    
     f_cat = st.selectbox("Categoria", lista_cats)
     f_bnc = st.selectbox("Banco", sorted(df_bancos_cad['Nome do Banco'].tolist() + ["Dinheiro"]) if not df_bancos_cad.empty else ["Dinheiro"])
     f_sta = st.selectbox("Status", ["Pago", "Pendente"])
-    f_parc = st.number_input("Número de Parcelas", min_value=1, value=1)
-    
+    f_parc = st.number_input("Parcelas", min_value=1, value=1)
     if st.form_submit_button("SALVAR"):
         ws = sh.get_worksheet(0)
         for i in range(int(f_parc)):
             dt_p = f_dat + relativedelta(months=i)
-            desc_p = f"{f_cat} ({i+1}/{int(f_parc)})" if f_parc > 1 else f_cat
-            ws.append_row([dt_p.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), desc_p, f_tip, f_bnc, f_sta])
-        st.cache_data.clear()
-        st.rerun()
+            ws.append_row([dt_p.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f"{f_cat} ({i+1}/{int(f_parc)})" if f_parc > 1 else f_cat, f_tip, f_bnc, f_sta])
+        st.cache_data.clear(); st.rerun()
 
-# 6. CONTEÚDO DAS ABAS
+# 6. CONTEÚDO
 if aba == "💰 Finanças":
     st.markdown("<h1 style='text-align: center;'>🛡️ FinançasPro Wilson</h1>", unsafe_allow_html=True)
-    
     if not df_base.empty:
-        # Métricas
-        df_realizado = df_base[df_base['Status'] != 'Pendente']
+        # SALDO GERAL
+        df_real = df_base[df_base['Status'] != 'Pendente']
         s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
-        t_rec = df_realizado[(df_realizado['Tipo'] == 'Receita') | (df_realizado['Tipo'] == 'Rendimento')]['V_Num'].sum()
-        t_des = df_realizado[df_realizado['Tipo'] == 'Despesa']['V_Num'].sum()
-        saldo_geral = s_ini + t_rec - t_des
+        t_in = df_real[(df_real['Tipo'] == 'Receita') | (df_real['Tipo'] == 'Rendimento')]['V_Num'].sum()
+        t_out = df_real[df_real['Tipo'] == 'Despesa']['V_Num'].sum()
+        st.markdown(f'<div class="saldo-container"><small>Saldo Geral Realizado</small><h2>R$ {s_ini + t_in - t_out:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
-        st.markdown(f'<div class="saldo-container"><small>Saldo Geral Realizado</small><h2>R$ {saldo_geral:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
-
+        # MÉTRICAS MÊS
         df_mes = df_base[df_base['Mes_Ano'] == mes_atual]
-        m_rec = df_mes[df_mes['Tipo'] == 'Receita']['V_Num'].sum()
-        m_des = df_mes[df_mes['Tipo'] == 'Despesa']['V_Num'].sum()
-        m_ren = df_mes[df_mes['Tipo'] == 'Rendimento']['V_Num'].sum()
-        m_pen = df_mes[df_mes['Status'] == 'Pendente']['V_Num'].sum()
-
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("📈 Receitas", f"R$ {m_rec:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        m2.metric("📉 Despesas", f"R$ {m_des:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        m3.metric("💰 Rendimentos", f"R$ {m_ren:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        m4.metric("⏳ Pendência", f"R$ {m_pen:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        m1.metric("📈 Receitas", f"R$ {df_mes[df_mes['Tipo'] == 'Receita']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        m2.metric("📉 Despesas", f"R$ {df_mes[df_mes['Tipo'] == 'Despesa']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        m3.metric("💰 Rendimentos", f"R$ {df_mes[df_mes['Tipo'] == 'Rendimento']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        m4.metric("⏳ Pendência", f"R$ {df_mes[df_mes['Status'] == 'Pendente']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
-        # Tabela e Resumo
+        # GRÁFICOS
+        st.write("---")
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
+            st.subheader("📈 Evolução Mensal")
+            df_evol = df_base.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().unstack().fillna(0).reset_index()
+            fig = go.Figure()
+            for t, c in zip(['Receita', 'Despesa', 'Rendimento'], ['#28a745', '#dc3545', '#007bff']):
+                if t in df_evol.columns: fig.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol[t], name=t, marker_color=c))
+            fig.update_layout(barmode='group', height=300, margin=dict(l=20,r=20,t=20,b=20))
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col_g2:
+            st.subheader("🏦 Saldo por Banco")
+            s_bancos = []
+            for b in df_bancos_cad['Nome do Banco'].unique():
+                si = df_bancos_cad[df_bancos_cad['Nome do Banco'] == b]['Saldo Inicial'].apply(limpar_valor).sum()
+                re = df_base[(df_base['Banco'] == b) & (df_base['Status'] != 'Pendente') & (df_base['Tipo'] != 'Despesa')]['V_Num'].sum()
+                de = df_base[(df_base['Banco'] == b) & (df_base['Status'] != 'Pendente') & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
+                s_bancos.append({'Banco': b, 'Saldo': si + re - de})
+            df_sb = pd.DataFrame(s_bancos)
+            fig_p = px.pie(df_sb[df_sb['Saldo'] > 0], values='Saldo', names='Banco', hole=.4)
+            fig_p.update_layout(height=300, margin=dict(l=20,r=20,t=20,b=20))
+            st.plotly_chart(fig_p, use_container_width=True)
+
         st.write("---")
         st.subheader("📋 Últimos Lançamentos")
-        st.dataframe(df_base.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1].head(20), use_container_width=True)
+        st.dataframe(df_base.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1].head(15), use_container_width=True)
 
 elif aba == "🐾 Milo & Bolt":
     st.markdown("<h1 style='text-align: center;'>🐾 Milo & Bolt</h1>", unsafe_allow_html=True)
     if not df_base.empty:
         df_pets = df_base[df_base['Categoria'].str.contains('Milo|Bolt|Pet|Ração', case=False)]
-        st.info(f"Total Investido nos Pets: **R$ {df_pets['V_Num'].sum():,.2f}**".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        st.info(f"Investimento Total nos Pets: **R$ {df_pets['V_Num'].sum():,.2f}**".replace(',', 'X').replace('.', ',').replace('X', '.'))
         st.dataframe(df_pets.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1], use_container_width=True)
 
-# 7. GERENCIADOR (Lado de fora para aparecer em qualquer aba)
+# GERENCIADOR
 st.sidebar.write("---")
 st.sidebar.write("### ⚙️ Gerenciar")
 if not df_base.empty:
