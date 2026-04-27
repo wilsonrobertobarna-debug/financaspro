@@ -8,26 +8,25 @@ from datetime import datetime
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
-# 2. CONEXÃO COM LIMPEZA DE ESPAÇOS (BLINDAGEM)
+# 2. CONEXÃO CORRIGIDA (ERRO DE VARIÁVEL RESOLVIDO)
 @st.cache_resource
 def conectar():
-    # Tenta ler o dicionário de conexões
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
     
     if not creds_dict:
-        st.error("⚠️ Wilson, o Streamlit ainda não 'leu' seus segredos.")
-        st.info("Dica: Clique em 'Reboot App' no painel do Streamlit Cloud para forçar a leitura.")
+        st.error("⚠️ Wilson, os SEGREDOS (Secrets) não foram encontrados!")
+        st.info("Dica: Clique em 'Reboot App' no painel do Streamlit Cloud.")
         st.stop()
         
     try:
-        # Limpa possíveis espaços ou quebras de linha invisíveis
         pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
         if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
         
+        # Correção aqui: usando apenas creds_dict
         final_creds = {
             "type": creds_dict["type"],
             "project_id": creds_dict["project_id"],
-            "private_key_id": creds_info["private_key_id"] if "private_key_id" in creds_dict else creds_dict.get("private_key_id"),
+            "private_key_id": creds_dict.get("private_key_id"),
             "private_key": pk,
             "client_email": creds_dict["client_email"],
             "token_uri": creds_dict["token_uri"],
@@ -38,15 +37,10 @@ def conectar():
         st.error(f"Erro técnico na chave: {e}")
         st.stop()
 
-# Tenta estabelecer o cliente
-try:
-    client = conectar()
-    sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-except:
-    st.warning("Aguardando conexão com o Google...")
-    st.stop()
+client = conectar()
+sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# 3. CARREGAMENTO DE DADOS (ORDEM E SOMA CORRETAS)
+# 3. CARREGAMENTO DE DADOS
 @st.cache_data(ttl=2)
 def carregar_tudo():
     ws = sh.get_worksheet(0)
@@ -54,7 +48,7 @@ def carregar_tudo():
     if len(dados) <= 1: return pd.DataFrame()
     
     df = pd.DataFrame(dados[1:], columns=dados[0])
-    df = df[df['Data'].str.strip() != ""].copy() # Mata linhas fantasmas
+    df = df[df['Data'].str.strip() != ""].copy()
     
     def para_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
@@ -82,8 +76,7 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
     if st.form_submit_button("SALVAR"):
         v_str = f"{f_val:.2f}".replace('.', ',')
         sh.get_worksheet(0).append_row([f_dat.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
-        st.cache_data.clear()
-        st.rerun()
+        st.cache_data.clear(); st.rerun()
 
 # 5. TELA PRINCIPAL (TAGS -> GRÁFICOS -> TABELA)
 st.title("🛡️ FinançasPro Wilson")
@@ -91,7 +84,7 @@ st.title("🛡️ FinançasPro Wilson")
 if not df_base.empty:
     df_mes = df_base[df_base['Mes_Ano'] == mes_atual].copy()
     
-    # --- TAGS NO TOPO ---
+    # TAGS
     t1, t2, t3, t4 = st.columns(4)
     def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
     
@@ -102,20 +95,20 @@ if not df_base.empty:
 
     st.divider()
 
-    # --- GRÁFICOS NO MEIO ---
+    # GRÁFICOS
     g1, g2 = st.columns(2)
     with g1:
         df_p = df_mes[df_mes['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         if not df_p.empty:
-            st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="Gastos por Categoria", hole=0.4), use_container_width=True)
+            st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="Gastos por Categoria"), use_container_width=True)
     with g2:
         df_b = df_mes.groupby('Tipo')['V_Num'].sum().reset_index()
         st.plotly_chart(px.bar(df_b, x='Tipo', y='V_Num', color='Tipo', title="Resumo do Mês"), use_container_width=True)
 
     st.divider()
 
-    # --- PESQUISA E TABELA EMBAIXO ---
-    st.subheader("🔍 Filtros de Pesquisa")
+    # PESQUISA E TABELA
+    st.subheader("🔍 Filtros e Lançamentos")
     c1, c2, c3 = st.columns(3)
     s_bnc = c1.multiselect("Banco:", df_base['Banco'].unique())
     s_sta = c2.multiselect("Status:", ["Pago", "Pendente"])
@@ -128,14 +121,13 @@ if not df_base.empty:
 
     st.dataframe(df_f[['Data', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True)
 
-# 8. GERENCIADOR (SIDEBAR)
+# 6. GERENCIADOR (SIDEBAR)
 st.sidebar.divider()
 if not df_base.empty:
     df_aux = df_base.copy()
     df_aux['ID'] = df_aux.index + 2
     opcoes = {f"L{r['ID']} | {r['Descrição']}": r['ID'] for _, r in df_aux.tail(10).iterrows()}
-    sel = st.sidebar.selectbox("Gerenciar Linha:", [""] + list(opcoes.keys()))
-    if sel:
-        if st.sidebar.button("🚨 APAGAR"):
-            sh.get_worksheet(0).delete_rows(int(opcoes[sel]))
-            st.cache_data.clear(); st.rerun()
+    sel = st.sidebar.selectbox("Ação na linha:", [""] + list(opcoes.keys()))
+    if sel and st.sidebar.button("🚨 APAGAR"):
+        sh.get_worksheet(0).delete_rows(int(opcoes[sel]))
+        st.cache_data.clear(); st.rerun()
