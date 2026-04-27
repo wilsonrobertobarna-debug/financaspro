@@ -41,7 +41,7 @@ def conectar_google():
 client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# 3. DADOS E LIMPEZA
+# 3. DADOS
 @st.cache_data(ttl=5)
 def carregar_dados():
     try:
@@ -100,25 +100,29 @@ if aba == "💰 Finanças":
     st.markdown("<h1 style='text-align: center;'>🛡️ FinançasPro Wilson</h1>", unsafe_allow_html=True)
     
     if not df_base.empty:
-        # ÁREA DE FILTROS (Lado a Lado)
-        c_filt1, c_filt2 = st.columns(2)
-        with c_filt1:
+        # --- FILTROS (3 COLUNAS) ---
+        c1, c2, c3 = st.columns(3)
+        with c1:
             lista_bancos = ["Todos"] + sorted(df_bancos_cad['Nome do Banco'].unique().tolist()) if not df_bancos_cad.empty else ["Todos", "Dinheiro"]
-            banco_sel = st.selectbox("🔍 Filtrar Banco:", lista_bancos)
-        with c_filt2:
-            status_sel = st.multiselect("📌 Filtrar Status:", ["Pago", "Pendente"], default=["Pago", "Pendente"])
+            banco_sel = st.selectbox("🔍 Banco:", lista_bancos)
+        with c2:
+            tipo_sel = st.selectbox("📂 Tipo:", ["Todos", "Despesa", "Receita", "Rendimento"])
+        with c3:
+            status_sel = st.multiselect("📌 Status:", ["Pago", "Pendente"], default=["Pago", "Pendente"])
 
-        # Aplicando os filtros para a tabela e gráficos
+        # Aplicar Filtros
         df_f = df_base if banco_sel == "Todos" else df_base[df_base['Banco'] == banco_sel]
+        if tipo_sel != "Todos": df_f = df_f[df_f['Tipo'] == tipo_sel]
         df_f = df_f[df_f['Status'].isin(status_sel)]
 
-        # Cálculos para as Tags (Somente Pago para refletir o saldo real)
-        receitas = df_f[(df_f['Tipo'] == 'Receita') & (df_f['Status'] == 'Pago')]['V_Num'].sum()
-        despesas = df_f[(df_f['Tipo'] == 'Despesa') & (df_f['Status'] == 'Pago')]['V_Num'].sum()
-        rendimentos = df_f[(df_f['Tipo'] == 'Rendimento') & (df_f['Status'] == 'Pago')]['V_Num'].sum()
-        pendentes = df_f[df_f['Status'] == 'Pendente']['V_Num'].sum()
+        # Cálculos Tags (Sempre no contexto do Banco selecionado)
+        df_calc = df_base if banco_sel == "Todos" else df_base[df_base['Banco'] == banco_sel]
+        receitas = df_calc[(df_calc['Tipo'] == 'Receita') & (df_calc['Status'] == 'Pago')]['V_Num'].sum()
+        despesas = df_calc[(df_calc['Tipo'] == 'Despesa') & (df_calc['Status'] == 'Pago')]['V_Num'].sum()
+        rendimentos = df_calc[(df_calc['Tipo'] == 'Rendimento') & (df_calc['Status'] == 'Pago')]['V_Num'].sum()
+        pendentes = df_calc[df_calc['Status'] == 'Pendente']['V_Num'].sum()
         
-        # Saldo Principal
+        # Saldo
         if banco_sel == "Todos":
             s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
         else:
@@ -126,7 +130,7 @@ if aba == "💰 Finanças":
         
         saldo_final = s_ini + receitas + rendimentos - despesas
 
-        # EXIBIÇÃO: Saldo + Tags
+        # EXIBIÇÃO
         st.markdown(f'''
             <div class="saldo-container">
                 <small>Saldo Disponível ({banco_sel})</small>
@@ -140,8 +144,9 @@ if aba == "💰 Finanças":
             </div>
         '''.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
-        col1, col2 = st.columns(2)
-        with col1:
+        # Gráficos
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
             st.subheader("📈 Evolução")
             df_evol = df_f.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().unstack().fillna(0).reset_index()
             fig = go.Figure()
@@ -150,7 +155,7 @@ if aba == "💰 Finanças":
             fig.update_layout(barmode='group', height=300, margin=dict(l=0,r=0,t=20,b=0))
             st.plotly_chart(fig, use_container_width=True)
 
-        with col2:
+        with col_g2:
             st.subheader("📊 Gastos por Categoria")
             df_mes = df_f[df_f['Mes_Ano'] == mes_atual]
             gastos = df_mes[df_mes['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum()
@@ -164,7 +169,7 @@ if aba == "💰 Finanças":
         st.subheader("📋 Tabela de Lançamentos")
         st.dataframe(df_f.drop(columns=['DT', 'Mes_Ano', 'V_Num', 'Linha'], errors='ignore').iloc[::-1], use_container_width=True)
 
-# 6. OUTRAS ABAS
+# Outras Abas
 elif aba == "🐾 Milo & Bolt":
     st.markdown("<h1 style='text-align: center;'>🐾 Milo & Bolt</h1>", unsafe_allow_html=True)
     df_p = df_base[df_base['Descrição'].str.contains('Milo|Bolt|Pet|Ração|Vet', case=False, na=False)]
@@ -177,7 +182,7 @@ elif aba == "🚗 Meu Veículo":
     st.metric("Total Gasto", f"R$ {df_v['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
     st.dataframe(df_v.iloc[::-1], use_container_width=True)
 
-# 7. GERENCIADOR
+# Gerenciador Lateral
 st.sidebar.write("---")
 if not df_base.empty:
     df_base['Linha'] = df_base.index + 2
