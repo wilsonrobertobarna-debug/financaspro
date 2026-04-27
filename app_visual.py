@@ -54,7 +54,7 @@ mes_atual = datetime.now().strftime('%m/%y')
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
-# FORMULÁRIO DE NOVO LANÇAMENTO
+# NOVO LANÇAMENTO
 with st.sidebar.form("f_novo", clear_on_submit=True):
     st.write("### 🚀 Novo Lançamento")
     f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -87,7 +87,6 @@ if "💰" in aba:
         m4.metric("⏳ Pendente Total", m_fmt(df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()))
         
         st.divider()
-
         g1, g2 = st.columns(2)
         with g1:
             df_p = df_m[df_m['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
@@ -98,7 +97,7 @@ if "💰" in aba:
             if not df_f.empty:
                 st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="Fluxo de Caixa"), use_container_width=True)
 
-        st.subheader("🎯 Metas por Categoria")
+        st.subheader("🎯 Metas")
         metas_f = {"Mercado": 1200, "Internet": 150, "Luz/Água": 350, "Pet: Milo": 400, "Pet: Bolt": 400, "Veículo": 600}
         df_metas = df_m[df_m['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         if not df_metas.empty:
@@ -106,27 +105,25 @@ if "💰" in aba:
             fig_m = go.Figure()
             fig_m.add_trace(go.Bar(x=df_metas['Categoria'], y=df_metas['V_Num'], name='Real', marker_color='#e74c3c'))
             fig_m.add_trace(go.Bar(x=df_metas['Categoria'], y=df_metas['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
-            fig_m.update_layout(barmode='group', height=350)
+            fig_m.update_layout(barmode='group', height=300)
             st.plotly_chart(fig_m, use_container_width=True)
 
         st.divider()
-        st.subheader("🔍 Pesquisa e Histórico")
+        st.subheader("🔍 Pesquisa")
         c1, c2, c3 = st.columns(3)
-        s_bnc = c1.multiselect("Filtrar Banco:", sorted(df_base['Banco'].unique()))
-        s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
-        b_desc = c3.text_input("Buscar Descrição:")
+        s_bnc = c1.multiselect("Banco:", sorted(df_base['Banco'].unique()))
+        s_sta = c2.multiselect("Status:", ["Pago", "Pendente"])
+        b_desc = c3.text_input("Descrição:")
 
         df_v = df_base.copy()
         if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-
         st.dataframe(df_v[['ID', 'Data', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True)
 
 elif "🐾" in aba:
-    st.title("🐾 Detalhes Milo & Bolt")
+    st.title("🐾 Milo & Bolt")
     df_pet = df_base[df_base['Categoria'].str.contains('Pet|Ração|Milo|Bolt', case=False, na=False)]
-    st.metric("Total Gasto", m_fmt(df_pet['V_Num'].sum()))
     st.dataframe(df_pet[['ID', 'Data', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True)
 
 elif "🚗" in aba:
@@ -141,23 +138,29 @@ elif "🚗" in aba:
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Carro|Combustível|Manutenção', case=False, na=False)]
     st.dataframe(df_car[['ID', 'Data', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True)
 
-# 6. GERENCIADOR (EDIÇÃO E EXCLUSÃO) - SIDEBAR
+# 6. ALTERAR LANÇAMENTO (CORRIGIDO)
 st.sidebar.divider()
 if not df_base.empty:
-    lista = {f"ID: {r['ID']} | {r['Descrição']}": r for _, r in df_base.tail(20).iterrows()}
-    sel = st.sidebar.selectbox("⚙️ Alterar Lançamento:", [""] + list(lista.keys()))
-    if sel:
-        item = lista[sel]
-        st.sidebar.write(f"**Editando ID: {item['ID']}**")
-        v_desc = st.sidebar.text_input("Descrição:", value=item['Descrição'])
-        v_val = st.sidebar.text_input("Valor:", value=item['Valor'])
+    # Mostra os últimos 20 lançamentos
+    opcoes = {f"ID {r['ID']} - {r['Data']} - {r['Descrição']}": r for _, r in df_base.tail(20).iterrows()}
+    selecionado = st.sidebar.selectbox("⚙️ Alterar Lançamento:", [""] + list(opcoes.keys()))
+    
+    if selecionado:
+        item = opcoes[selecionado]
+        st.sidebar.info(f"Editando ID: {item['ID']}")
         
-        col_ed1, col_ed2 = st.sidebar.columns(2)
-        if col_ed1.button("💾 SALVAR"):
-            ws_base.update_cell(int(item['ID']), 3, v_desc)
-            ws_base.update_cell(int(item['ID']), 2, v_val)
+        # CAMPOS DE EDIÇÃO
+        nova_data = st.sidebar.text_input("Data:", value=item['Data'])
+        nova_desc = st.sidebar.text_input("Descrição:", value=item['Descrição'])
+        novo_valor = st.sidebar.text_input("Valor:", value=item['Valor'])
+        
+        c_ed1, c_ed2 = st.sidebar.columns(2)
+        if c_ed1.button("💾 GRAVAR"):
+            ws_base.update_cell(int(item['ID']), 1, nova_data)
+            ws_base.update_cell(int(item['ID']), 3, nova_desc)
+            ws_base.update_cell(int(item['ID']), 2, novo_valor)
             st.cache_data.clear(); st.rerun()
             
-        if col_ed2.button("🚨 EXCLUIR"):
+        if c_ed2.button("🚨 APAGAR"):
             ws_base.delete_rows(int(item['ID']))
             st.cache_data.clear(); st.rerun()
