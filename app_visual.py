@@ -54,12 +54,17 @@ def carregar_aba(nome_aba):
     except: return pd.DataFrame()
 
 def limpar_moeda(v):
+    if not v: return 0.0
     v = str(v).replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.')
     return pd.to_numeric(v, errors='coerce') or 0.0
 
-# 4. DADOS DE APOIO
+# 4. CARREGAMENTO
 df_bancos_cad = carregar_aba("Bancos")
 df_cats_cad = carregar_aba("Categoria")
+
+# Tratamento de Metas (Garantir que a coluna Meta seja lida como número)
+if not df_cats_cad.empty and 'Meta' in df_cats_cad.columns:
+    df_cats_cad['Meta_Num'] = df_cats_cad['Meta'].apply(limpar_moeda)
 
 # 5. INTERFACE
 st.sidebar.title("🎮 Painel Wilson")
@@ -78,48 +83,41 @@ if aba == "💰 Finanças":
 
         df_base['V_Num'] = df_base[c_val].apply(limpar_moeda)
         df_base['DT'] = pd.to_datetime(df_base[c_dat], dayfirst=True, errors='coerce')
-        df_base = df_base.sort_values('DT')
         df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
         mes_atual = datetime.now().strftime('%m/%y')
 
-        # Filtro de Banco
-        banco_sel = st.selectbox("🔍 Visualizar Banco:", ["Todos"] + sorted(df_base[c_bnc].unique().tolist()))
-        df_viva = df_base if banco_sel == "Todos" else df_base[df_base[c_bnc] == banco_sel]
-
-        # CÁLCULOS TOTAIS (Para o Saldo Geral)
+        # Cálculos de Totais
         s_ini_total = df_bancos_cad['Saldo Inicial'].apply(limpar_moeda).sum() if not df_bancos_cad.empty else 0
         df_pago = df_base[df_base[c_sta] == 'Pago']
         t_rec = df_pago[df_pago[c_tip].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
         t_des = df_pago[df_pago[c_tip] == 'Despesa']['V_Num'].sum()
         saldo_geral = s_ini_total + t_rec - t_des
 
-        # CÁLCULOS DO MÊS (Filtro por mês atual)
-        df_mes = df_viva[df_viva['Mes_Ano'] == mes_atual]
+        # Cálculos do Mês
+        df_mes = df_base[df_base['Mes_Ano'] == mes_atual]
         m_rec = df_mes[df_mes[c_tip] == 'Receita']['V_Num'].sum()
         m_des = df_mes[df_mes[c_tip] == 'Despesa']['V_Num'].sum()
         m_ren = df_mes[df_mes[c_tip] == 'Rendimento']['V_Num'].sum()
         m_pen = df_mes[df_mes[c_sta] == 'Pendente']['V_Num'].sum()
 
-        # Resumo de Economia
-        economia_valor = (m_rec + m_ren) - m_des
-        perc_econ = (economia_valor / (m_rec + m_ren) * 100) if (m_rec + m_ren) > 0 else 0
+        # Resumo Economia
+        economia = (m_rec + m_ren) - m_des
+        perc_econ = (economia / (m_rec + m_ren) * 100) if (m_rec + m_ren) > 0 else 0
 
-        # EXIBIÇÃO
-        st.markdown(f'<div class="saldo-container"><small>Saldo Geral (Pago)</small><h2>R$ {saldo_geral:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
+        st.markdown(f'<div class="saldo-container"><small>Saldo Realizado</small><h2>R$ {saldo_geral:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Receitas", f"R$ {m_rec:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m2.metric("📉 Despesas", f"R$ {m_des:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m3.metric("💰 Rendimento", f"R$ {m_ren:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m4.metric("⏳ Pendente", f"R$ {m_pen:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-
-        # NOVO: Resumo de Economia abaixo das tags
-        st.write(f"**💰 Economia do Mês:** R$ {economia_valor:,.2f} ({perc_econ:.1f}%)")
         
+        st.write(f"**Economia no mês:** R$ {economia:,.2f} ({perc_econ:.1f}%)")
         st.write("---")
-        
+
         # GRÁFICOS
         g1, g2 = st.columns(2)
+        
         with g1:
             st.subheader("🏦 Saldo Real por Banco")
             s_bancos = []
@@ -129,25 +127,36 @@ if aba == "💰 Finanças":
                 de = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] == 'Pago') & (df_base[c_tip] == 'Despesa')]['V_Num'].sum()
                 s_bancos.append({'Banco': b, 'Saldo': si + re - de})
             df_sb = pd.DataFrame(s_bancos)
-            df_sb = df_sb[df_sb['Saldo'] > 0]
+            
             if not df_sb.empty:
-                fig_p = px.pie(df_sb, values='Saldo', names='Banco', hole=.5, color_discrete_sequence=px.colors.qualitative.Set3)
+                fig_p = px.pie(df_sb, values='Saldo', names='Banco', hole=.5, color_discrete_sequence=px.colors.qualitative.Safe)
                 fig_p.update_layout(height=350, margin=dict(l=20, r=20, t=20, b=20), legend=dict(orientation="h", y=-0.1))
                 st.plotly_chart(fig_p, use_container_width=True)
 
         with g2:
-            st.subheader("📊 Receitas x Despesas (Evolução)")
-            df_evol = df_base.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0)
-            if not df_evol.empty:
-                st.bar_chart(df_evol)
+            st.subheader(f"📊 Metas ({mes_atual})")
+            if not df_cats_cad.empty:
+                g_cat = df_mes[df_mes[c_tip] == 'Despesa'].groupby(c_cat)['V_Num'].sum()
+                df_metas = pd.DataFrame({'Meta': df_cats_cad.set_index('Nome')['Meta_Num'], 'Gasto': g_cat}).fillna(0)
+                # Só mostra categorias que tenham meta OU gasto
+                df_metas = df_metas[(df_metas['Meta'] > 0) | (df_metas['Gasto'] > 0)]
+                
+                if not df_metas.empty:
+                    fig_m = go.Figure()
+                    fig_m.add_trace(go.Bar(y=df_metas.index, x=df_metas['Meta'], name='Meta', orientation='h', marker_color='lightgrey'))
+                    fig_m.add_trace(go.Bar(y=df_metas.index, x=df_metas['Gasto'], name='Realizado', orientation='h', marker_color='#007bff'))
+                    fig_m.update_layout(barmode='group', height=350, margin=dict(l=0, r=0, t=20, b=0), legend=dict(orientation="h", y=1.1))
+                    st.plotly_chart(fig_m, use_container_width=True)
+                else:
+                    st.info("Cadastre metas na aba 'Categoria' da sua planilha.")
 
         st.write("---")
-        st.subheader("📋 Lançamentos Recentes")
-        st.dataframe(df_viva.drop(columns=['DT', 'V_Num', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
+        st.subheader("📋 Lançamentos")
+        st.dataframe(df_base.drop(columns=['DT', 'V_Num', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
 
-    # FORMULÁRIOS (LATERAIS)
-    with st.sidebar.form("f_add"):
-        st.write("### ➕ Novo")
+    # FORMULÁRIOS LATERAIS
+    with st.sidebar.form("f_novo"):
+        st.write("### 🚀 Adicionar")
         f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
         f_val = st.number_input("Valor", min_value=0.0)
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
@@ -163,17 +172,16 @@ if aba == "💰 Finanças":
             st.cache_data.clear(); st.rerun()
 
     st.sidebar.write("---")
-    st.sidebar.write("### ⚙️ Ações")
     if not df_base.empty:
         lista = df_base.iloc[::-1].head(15)
-        sel = st.sidebar.selectbox("Escolher Lançamento:", [""] + [f"{idx+2} | {r[c_dat]} | {r[c_cat]}" for idx, r in lista.iterrows()])
+        sel = st.sidebar.selectbox("Gerenciar:", [""] + [f"{idx+2} | {r[c_dat]} | {r[c_cat]}" for idx, r in lista.iterrows()])
         if sel:
             idx = int(sel.split(" | ")[0])
             if st.sidebar.button("✅ Quitar"):
                 ws_fin.update_cell(idx, 6, "Pago")
                 st.cache_data.clear(); st.rerun()
-            if st.sidebar.checkbox("⚠️ Liberar Exclusão") and st.sidebar.button("🗑️ EXCLUIR"):
+            if st.sidebar.checkbox("🔓 Liberar Exclusão") and st.sidebar.button("🗑️ EXCLUIR"):
                 ws_fin.delete_rows(idx)
                 st.cache_data.clear(); st.rerun()
 
-# (Mantenha o restante do código para Pets e Veículo como estava)
+# (Manter abas de Milo e Veículo abaixo conforme códigos anteriores)
