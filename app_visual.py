@@ -95,7 +95,6 @@ if aba == "💰 Finanças":
     st.markdown("<h1 style='text-align: center;'>🛡️ FinançasPro Wilson</h1>", unsafe_allow_html=True)
     
     if not df_base.empty:
-        # ÁREA DE PESQUISA (Restaurada e Organizada)
         st.write("### 🔍 Filtros de Pesquisa")
         c_p1, c_p2, c_p3 = st.columns(3)
         with c_p1:
@@ -105,13 +104,12 @@ if aba == "💰 Finanças":
         with c_p3:
             status_sel = st.selectbox("Filtrar por Status:", ["Todos", "Pago", "Pendente"])
 
-        # Aplicando os filtros
         df_f = df_base.copy()
         if banco_sel != "Todos": df_f = df_f[df_f['Banco'] == banco_sel]
         if tipo_sel != "Todos": df_f = df_f[df_f['Tipo'] == tipo_sel]
         if status_sel != "Todos": df_f = df_f[df_f['Status'] == status_sel]
 
-        # Saldo Real (Sempre baseado no que está PAGO)
+        # Saldo Real
         df_pago_calc = df_base[df_base['Status'].str.strip() == 'Pago']
         if banco_sel != "Todos": df_pago_calc = df_pago_calc[df_pago_calc['Banco'] == banco_sel]
         
@@ -121,7 +119,6 @@ if aba == "💰 Finanças":
         
         st.markdown(f'<div class="saldo-container"><small>Saldo Atual em Conta ({banco_sel})</small><h2>R$ {s_ini + entradas - saidas:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
-        # Gráficos
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("📈 Evolução Mensal")
@@ -129,26 +126,36 @@ if aba == "💰 Finanças":
             fig = go.Figure()
             for t, cor in zip(['Receita', 'Despesa', 'Rendimento'], ['#28a745', '#dc3545', '#007bff']):
                 if t in df_evol.columns: fig.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol[t], name=t, marker_color=cor))
-            fig.update_layout(barmode='group', height=300, margin=dict(l=0,r=0,t=20,b=0))
+            fig.update_layout(barmode='group', height=350, margin=dict(l=0,r=0,t=20,b=0))
             st.plotly_chart(fig, use_container_width=True)
 
         with col2:
-            st.subheader("📊 Metas por Categoria")
-            if not df_cats_cad.empty:
-                df_mes_atual = df_f[df_f['Mes_Ano'] == mes_atual]
-                real_cat = df_mes_atual[df_mes_atual['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum()
-                df_comp = pd.DataFrame({'Meta': df_cats_cad.set_index('Nome')['Meta'].apply(limpar_valor), 'Real': real_cat}).fillna(0).reset_index()
-                fig_m = go.Figure()
-                fig_m.add_trace(go.Bar(y=df_comp['index'], x=df_comp['Meta'], name='Meta', orientation='h', marker_color='#d3d3d3'))
-                fig_m.add_trace(go.Bar(y=df_comp['index'], x=df_comp['Real'], name='Real', orientation='h', marker_color='#007bff'))
-                fig_m.update_layout(barmode='overlay', height=300, margin=dict(l=0,r=0,t=20,b=0))
-                st.plotly_chart(fig_m, use_container_width=True)
+            st.subheader("📊 Resumo de Economia")
+            df_mes_atual = df_f[df_f['Mes_Ano'] == mes_atual]
+            gastos_por_cat = df_mes_atual[df_mes_atual['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum()
+            total_gasto_mes = gastos_por_cat.sum()
+            
+            if total_gasto_mes > 0:
+                # Criando rótulos com Nome + Valor + %
+                labels = [f"{cat}: R$ {val:,.2f} ({(val/total_gasto_mes)*100:.1f}%)" for cat, val in gastos_por_cat.items()]
+                
+                fig_resumo = go.Figure(data=[go.Pie(
+                    labels=labels, 
+                    values=gastos_por_cat.values, 
+                    hole=.4,
+                    textinfo='percent',
+                    insidetextorientation='radial'
+                )])
+                fig_resumo.update_layout(height=350, margin=dict(l=0,r=0,t=20,b=80), showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.5, xanchor="center", x=0.5))
+                st.plotly_chart(fig_resumo, use_container_width=True)
+            else:
+                st.info("Nenhuma despesa no mês atual para gerar o resumo.")
 
         st.write("---")
         st.subheader("📋 Tabela de Lançamentos")
         st.dataframe(df_f.drop(columns=['DT', 'Mes_Ano', 'V_Num', 'Linha'], errors='ignore').iloc[::-1], use_container_width=True)
 
-# 6. OUTRAS ABAS (PETS E VEÍCULO)
+# 6. OUTRAS ABAS
 elif aba == "🐾 Milo & Bolt":
     st.markdown("<h1 style='text-align: center;'>🐾 Milo & Bolt</h1>", unsafe_allow_html=True)
     df_pets = df_base[df_base['Descrição'].str.contains('Milo|Bolt|Pet|Ração|Vet', case=False, na=False)]
