@@ -11,8 +11,14 @@ st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="�
 
 st.markdown("""
     <style>
-    .saldo-container { background-color: #007bff; color: white; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 25px; border: 1px solid #0056b3; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .saldo-container h2 { margin: 0; font-size: 2.8rem; font-weight: bold; }
+    .saldo-container { background-color: #007bff; color: white; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 10px; border: 1px solid #0056b3; }
+    .saldo-container h2 { margin: 0; font-size: 2.5rem; font-weight: bold; }
+    .tag-container { display: flex; justify-content: space-around; margin-bottom: 25px; gap: 10px; }
+    .tag-card { flex: 1; padding: 10px; border-radius: 10px; text-align: center; color: white; font-weight: bold; font-size: 0.9rem; shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .tag-receita { background-color: #28a745; }
+    .tag-despesa { background-color: #dc3545; }
+    .tag-rendimento { background-color: #17a2b8; }
+    .tag-pendente { background-color: #ffc107; color: #333; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -35,7 +41,7 @@ def conectar_google():
 client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# 3. CARREGAMENTO DE DADOS
+# 3. CARREGAMENTO E LIMPEZA
 @st.cache_data(ttl=5)
 def carregar_dados():
     try:
@@ -87,103 +93,95 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
             dt_p = f_dat + relativedelta(months=i)
             desc_p = f"{f_des} ({i+1}/{int(f_parc)})" if f_parc > 1 else f_des
             ws.append_row([dt_p.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), desc_p, f_cat, f_tip, f_bnc, f_sta])
-        st.success("Salvo!")
         st.cache_data.clear(); st.rerun()
 
 # 5. ABA FINANÇAS
 if aba == "💰 Finanças":
     st.markdown("<h1 style='text-align: center;'>🛡️ FinançasPro Wilson</h1>", unsafe_allow_html=True)
+    
     if not df_base.empty:
-        st.write("### 🔍 Filtros de Pesquisa")
-        c_p1, c_p2, c_p3 = st.columns(3)
+        # Filtros
+        c_p1, c_p2 = st.columns([2, 1])
         with c_p1:
-            banco_sel = st.selectbox("Filtrar por Banco:", ["Todos"] + sorted(df_base['Banco'].unique().tolist()))
+            banco_sel = st.selectbox("🔍 Banco:", ["Todos"] + sorted(df_base['Banco'].unique().tolist()))
         with c_p2:
-            tipo_sel = st.selectbox("Filtrar por Tipo:", ["Todos", "Despesa", "Receita", "Rendimento"])
-        with c_p3:
-            status_sel = st.selectbox("Filtrar por Status:", ["Todos", "Pago", "Pendente"])
+            status_filtro = st.multiselect("Filtrar Status:", ["Pago", "Pendente"], default=["Pago", "Pendente"])
 
-        df_f = df_base.copy()
-        if banco_sel != "Todos": df_f = df_f[df_f['Banco'] == banco_sel]
-        if tipo_sel != "Todos": df_f = df_f[df_f['Tipo'] == tipo_sel]
-        if status_sel != "Todos": df_f = df_f[df_f['Status'] == status_sel]
+        df_f = df_base if banco_sel == "Todos" else df_base[df_base['Banco'] == banco_sel]
+        df_f = df_f[df_f['Status'].isin(status_filtro)]
 
-        # Saldo Real
-        df_pago_calc = df_base[df_base['Status'].str.strip() == 'Pago']
-        if banco_sel != "Todos": df_pago_calc = df_pago_calc[df_pago_calc['Banco'] == banco_sel]
+        # Cálculos de Resumo (Baseados no Filtro de Banco)
+        df_resumo = df_base if banco_sel == "Todos" else df_base[df_base['Banco'] == banco_sel]
         
+        receitas_total = df_resumo[(df_resumo['Tipo'] == 'Receita') & (df_resumo['Status'] == 'Pago')]['V_Num'].sum()
+        despesas_total = df_resumo[(df_resumo['Tipo'] == 'Despesa') & (df_resumo['Status'] == 'Pago')]['V_Num'].sum()
+        rendimentos_total = df_resumo[(df_resumo['Tipo'] == 'Rendimento') & (df_resumo['Status'] == 'Pago')]['V_Num'].sum()
+        pendencias_total = df_resumo[df_resumo['Status'] == 'Pendente']['V_Num'].sum()
+        
+        # Saldo Principal
         s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if banco_sel == "Todos" else df_bancos_cad[df_bancos_cad['Nome do Banco'] == banco_sel]['Saldo Inicial'].apply(limpar_valor).sum()
-        entradas = df_pago_calc[df_pago_calc['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        saidas = df_pago_calc[df_pago_calc['Tipo'] == 'Despesa']['V_Num'].sum()
-        
-        st.markdown(f'<div class="saldo-container"><small>Saldo Atual em Conta ({banco_sel})</small><h2>R$ {s_ini + entradas - saidas:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
+        saldo_atual = s_ini + receitas_total + rendimentos_total - despesas_total
 
+        # EXIBIÇÃO: Saldo + Tags Coloridas
+        st.markdown(f'''
+            <div class="saldo-container">
+                <small>Saldo Disponível ({banco_sel})</small>
+                <h2>R$ {saldo_atual:,.2f}</h2>
+            </div>
+            <div class="tag-container">
+                <div class="tag-card tag-receita">Receitas<br>R$ {receitas_total:,.2f}</div>
+                <div class="tag-card tag-despesa">Despesas<br>R$ {despesas_total:,.2f}</div>
+                <div class="tag-card tag-rendimento">Rendimentos<br>R$ {rendimentos_total:,.2f}</div>
+                <div class="tag-card tag-pendente">Pendências<br>R$ {pendencias_total:,.2f}</div>
+            </div>
+        '''.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
+
+        # Gráficos e Tabela
         col1, col2 = st.columns(2)
         with col1:
-            st.subheader("📈 Evolução Mensal")
+            st.subheader("📈 Evolução")
             df_evol = df_f.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().unstack().fillna(0).reset_index()
             fig = go.Figure()
-            for t, cor in zip(['Receita', 'Despesa', 'Rendimento'], ['#28a745', '#dc3545', '#007bff']):
+            for t, cor in zip(['Receita', 'Despesa', 'Rendimento'], ['#28a745', '#dc3545', '#17a2b8']):
                 if t in df_evol.columns: fig.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol[t], name=t, marker_color=cor))
-            fig.update_layout(barmode='group', height=350, margin=dict(l=0,r=0,t=20,b=0))
+            fig.update_layout(barmode='group', height=300, margin=dict(l=0,r=0,t=20,b=0))
             st.plotly_chart(fig, use_container_width=True)
 
         with col2:
-            st.subheader("📊 Resumo de Economia")
-            df_mes_atual = df_f[df_f['Mes_Ano'] == mes_atual]
-            gastos_por_cat = df_mes_atual[df_mes_atual['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum()
-            total_gasto_mes = gastos_por_cat.sum()
-            
-            if total_gasto_mes > 0:
-                labels = [f"{cat}: R$ {val:,.2f} ({(val/total_gasto_mes)*100:.1f}%)" for cat, val in gastos_por_cat.items()]
-                fig_resumo = go.Figure(data=[go.Pie(labels=labels, values=gastos_por_cat.values, hole=.4, textinfo='percent')])
-                fig_resumo.update_layout(height=350, showlegend=True, legend=dict(orientation="h", y=-0.5))
-                st.plotly_chart(fig_resumo, use_container_width=True)
-            else:
-                st.info("Sem despesas este mês.")
+            st.subheader("📊 Resumo de Gastos")
+            df_mes = df_f[df_f['Mes_Ano'] == mes_atual]
+            gastos = df_mes[df_mes['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum()
+            if not gastos.empty:
+                fig_p = go.Figure(data=[go.Pie(labels=gastos.index, values=gastos.values, hole=.4)])
+                fig_p.update_layout(height=300, margin=dict(l=0,r=0,t=20,b=0))
+                st.plotly_chart(fig_p, use_container_width=True)
+            else: st.info("Sem despesas no mês.")
 
         st.write("---")
-        st.subheader("📋 Tabela de Lançamentos")
+        st.subheader("📋 Lançamentos")
         st.dataframe(df_f.drop(columns=['DT', 'Mes_Ano', 'V_Num', 'Linha'], errors='ignore').iloc[::-1], use_container_width=True)
 
-# 6. ABA MILO & BOLT (CORRIGIDA)
+# Outras Abas (Milo / Veículo) simplificadas
 elif aba == "🐾 Milo & Bolt":
     st.markdown("<h1 style='text-align: center;'>🐾 Milo & Bolt</h1>", unsafe_allow_html=True)
-    if not df_base.empty:
-        # Busca por termos chave na Descrição OU na Categoria
-        palavras_chave = 'Milo|Bolt|Pet|Ração|Veterinário|Banho|Tosa|Cachorro'
-        df_pets = df_base[
-            df_base['Descrição'].str.contains(palavras_chave, case=False, na=False) | 
-            df_base['Categoria'].str.contains(palavras_chave, case=False, na=False)
-        ].copy()
-        
-        st.metric("Total Investido nos Pets", f"R$ {df_pets['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        st.dataframe(df_pets.drop(columns=['DT', 'Mes_Ano', 'V_Num', 'Linha'], errors='ignore').iloc[::-1], use_container_width=True)
+    df_p = df_base[df_base['Descrição'].str.contains('Milo|Bolt|Pet|Ração|Vet', case=False, na=False)]
+    st.metric("Total Gasto", f"R$ {df_p['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+    st.dataframe(df_p.iloc[::-1], use_container_width=True)
 
 elif aba == "🚗 Meu Veículo":
-    st.markdown("<h1 style='text-align: center;'>🚗 Meu Veículo</h1>", unsafe_allow_html=True)
-    if not df_base.empty:
-        palavras_veic = 'Veículo|Carro|Combustível|IPVA|Manutenção|Oficina|Gasolina|Etanol'
-        df_veic = df_base[
-            df_base['Descrição'].str.contains(palavras_veic, case=False, na=False) | 
-            df_base['Categoria'].str.contains('Veículo|Transporte', case=False, na=False)
-        ].copy()
-        st.metric("Total Gasto com Veículo", f"R$ {df_veic['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        st.dataframe(df_veic.drop(columns=['DT', 'Mes_Ano', 'V_Num', 'Linha'], errors='ignore').iloc[::-1], use_container_width=True)
+    st.markdown("<h1 style='text-align: center;'>🚗 Veículo</h1>", unsafe_allow_html=True)
+    df_v = df_base[df_base['Descrição'].str.contains('Veículo|Carro|Gasolina|Etanol|Oficina', case=False, na=False)]
+    st.metric("Total Gasto", f"R$ {df_v['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+    st.dataframe(df_v.iloc[::-1], use_container_width=True)
 
-# 7. GERENCIADOR
+# Gerenciador
 st.sidebar.write("---")
-st.sidebar.write("### ⚙️ Gerenciar Linhas")
 if not df_base.empty:
     df_base['Linha'] = df_base.index + 2
-    opcoes_manag = {f"L{r['Linha']} | {r['Data']} | {r['Descrição']}": r['Linha'] for _, r in df_base.iloc[::-1].head(15).iterrows()}
-    sel = st.sidebar.selectbox("Ação rápida:", [""] + list(opcoes_manag.keys()))
+    opcoes = {f"L{r['Linha']} | {r['Descrição']}": r['Linha'] for _, r in df_base.iloc[::-1].head(10).iterrows()}
+    sel = st.sidebar.selectbox("Ação rápida:", [""] + list(opcoes.keys()))
     if sel:
-        l_alvo = opcoes_manag[sel]
-        c1, c2 = st.sidebar.columns(2)
-        if c1.button("🗑️ APAGAR"):
-            sh.get_worksheet(0).delete_rows(int(l_alvo))
-            st.cache_data.clear(); st.rerun()
-        if c2.button("✅ PAGO"):
-            sh.get_worksheet(0).update_cell(int(l_alvo), 7, "Pago")
+        l = opcoes[sel]
+        if st.sidebar.button("🗑️ APAGAR"):
+            sh.get_worksheet(0).delete_rows(int(l))
             st.cache_data.clear(); st.rerun()
