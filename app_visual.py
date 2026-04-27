@@ -32,7 +32,7 @@ client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 ws_base = sh.get_worksheet(0)
 
-# 3. CARREGAMENTO
+# 3. CARREGAMENTO 
 @st.cache_data(ttl=2)
 def carregar():
     dados = ws_base.get_all_values()
@@ -119,7 +119,6 @@ if "💰" in aba:
         if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-        # Ocultar o índice chato aqui
         st.dataframe(df_v[['ID', 'Data', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "🐾" in aba:
@@ -139,18 +138,18 @@ elif "🚗" in aba:
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Carro|Combustível|Manutenção', case=False, na=False)]
     st.dataframe(df_car[['ID', 'Data', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
 
-# 6. ALTERAR LANÇAMENTO (SIMPLIFICADO)
+# 6. ALTERAR LANÇAMENTO (BARRINHA CORRIGIDA)
 st.sidebar.divider()
 if not df_base.empty:
-    # Criamos uma lista limpa para o Wilson escolher
-    lista_edit = {f"ID {r['ID']} - {r['Descrição']}": r for _, r in df_base.tail(20).iterrows()}
+    # AQUI ESTÁ A CORREÇÃO: Montando o texto da barrinha com ID, Data, Valor e Descrição
+    lista_edit = {f"ID {r['ID']} | {r['Data']} | R$ {r['Valor']} | {r['Descrição']}": r for _, r in df_base.tail(30).iterrows()}
     escolha = st.sidebar.selectbox("⚙️ Alterar Lançamento:", [""] + list(lista_edit.keys()))
     
     if escolha:
         dados_item = lista_edit[escolha]
-        st.sidebar.warning(f"Editando ID: {dados_item['ID']}")
+        st.sidebar.warning(f"Editando Registro ID: {dados_item['ID']}")
         
-        # Agora forçamos os campos a aparecerem
+        # Campos que aparecem logo abaixo da escolha
         ed_data = st.sidebar.text_input("Data:", value=str(dados_item['Data']))
         ed_desc = st.sidebar.text_input("Descrição:", value=str(dados_item['Descrição']))
         ed_valor = st.sidebar.text_input("Valor:", value=str(dados_item['Valor']))
