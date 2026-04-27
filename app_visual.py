@@ -9,11 +9,12 @@ from datetime import datetime, timedelta, timezone
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", page_icon="🛡️", layout="wide")
 
-# Estilos Visuais
+# Estilos Visuais para os Cards e Saldos
 st.markdown("""
     <style>
     .saldo-container { background-color: #007bff; color: white; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
     .saldo-container h2 { margin: 0; font-size: 2.2rem; font-weight: bold; }
+    .stMetric { background-color: #ffffff; padding: 10px; border-radius: 10px; border: 1px solid #e0e0e0; }
     .resumo-card { padding: 8px; border-radius: 8px; text-align: center; border: 1px solid #ddd; background-color: #f8f9fa; margin-bottom: 5px; }
     </style>
     """, unsafe_allow_html=True)
@@ -51,11 +52,9 @@ def carregar_dados():
     return df_l, df_b, df_c
 
 df_base, df_bancos_cad, df_cats_cad = carregar_dados()
-
-# Ajuste de Fuso Horário (Brasília)
 hoje_br = (datetime.now(timezone.utc) - timedelta(hours=3)).date()
 
-# 4. BARRA LATERAL (LANÇAMENTOS)
+# 4. BARRA LATERAL (LANÇAMENTOS SEMPRE VISÍVEIS)
 st.sidebar.title("🎮 Painel Wilson")
 
 with st.sidebar.form("novo_lancamento"):
@@ -68,25 +67,22 @@ with st.sidebar.form("novo_lancamento"):
     f_sta = st.selectbox("Status", ["Pago", "Pendente"])
     
     if st.form_submit_button("SALVAR LANÇAMENTO"):
-        # O SEGREDO DA DATA: Salva como texto DD/MM/AAAA e força o Sheets a aceitar
         data_formatada = f_dat.strftime("%d/%m/%Y")
         sh.get_worksheet(0).append_row(
             [data_formatada, str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_sta], 
             value_input_option='USER_ENTERED'
         )
         st.cache_data.clear()
-        st.success("Salvo com sucesso!")
         st.rerun()
 
 st.sidebar.write("---")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Pets", "🚗 Veículo"])
 
-# 5. ABA PRINCIPAL: FINANÇAS
+# 5. CONTEÚDO PRINCIPAL
 if aba == "💰 Finanças":
     st.markdown("<h1 style='text-align: center;'>🛡️ FinançasPro Wilson</h1>", unsafe_allow_html=True)
     
     if not df_base.empty:
-        # Padronização de colunas e limpeza
         df_base.columns = [c.strip() for c in df_base.columns]
         c_dat, c_val, c_cat, c_tip, c_bnc, c_sta = df_base.columns[0:6]
         
@@ -94,34 +90,52 @@ if aba == "💰 Finanças":
         df_base['DT'] = pd.to_datetime(df_base[c_dat], dayfirst=True, errors='coerce')
         df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
 
-        # Filtro de Banco
-        bancos_visiveis = ["Todos"] + sorted(df_base[c_bnc].unique().tolist())
-        banco_sel = st.selectbox("🔍 Visualizar Banco:", bancos_visiveis)
+        # Filtro e Saldo
+        bancos_lista = ["Todos"] + sorted(df_base[c_bnc].unique().tolist())
+        banco_sel = st.selectbox("🔍 Visualizar Banco:", bancos_lista)
         df_f = df_base if banco_sel == "Todos" else df_base[df_base[c_bnc] == banco_sel]
 
-        # Métrica de Saldo
+        # Cálculos de Saldo
         s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_v).sum() if banco_sel == "Todos" else df_bancos_cad[df_bancos_cad['Nome do Banco'] == banco_sel]['Saldo Inicial'].apply(limpar_v).sum()
         df_pago = df_f[df_f[c_sta] == 'Pago']
-        receitas = df_pago[df_pago[c_tip].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        despesas = df_pago[df_pago[c_tip] == 'Despesa']['V_Num'].sum()
-        saldo_atual = s_ini + receitas - despesas
+        saldo_atual = s_ini + df_pago[df_pago[c_tip].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_pago[df_pago[c_tip] == 'Despesa']['V_Num'].sum()
 
-        st.markdown(f'<div class="saldo-container"><small>Saldo Disponível ({banco_sel})</small><h2>R$ {saldo_atual:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
+        st.markdown(f'<div class="saldo-container"><small>Saldo Atual ({banco_sel})</small><h2>R$ {saldo_atual:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
-        # --- GRÁFICO DE EVOLUÇÃO (CORES FIXAS) ---
-        st.write("---")
-        st.subheader("📈 Evolução Mensal")
-        evol = df_f.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0)
+        # Mapeamento de métricas do mês atual
+        mes_f_atual = hoje_br.strftime('%m/%y')
+        df_mes = df_f[df_f['Mes_Ano'] == mes_f_atual]
         
-        if not evol.empty:
-            # Mapeamento para evitar o erro de cores
-            cores_map = {"Receita": "#28a745", "Despesa": "#dc3545", "Rendimento": "#2ecc71"}
-            cores_finais = [cores_map.get(col, "#808080") for col in evol.columns]
-            st.bar_chart(evol, color=cores_finais)
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("📈 Receitas", f"R$ {df_mes[df_mes[c_tip] == 'Receita']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        m2.metric("📉 Despesas", f"R$ {df_mes[df_mes[c_tip] == 'Despesa']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        m3.metric("💰 Rendimento", f"R$ {df_mes[df_mes[c_tip] == 'Rendimento']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        m4.metric("⏳ Pendente", f"R$ {df_mes[df_mes[c_sta] == 'Pendente']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
-        # --- TABELA DE LANÇAMENTOS ---
+        # --- GRÁFICOS (FIXADOS) ---
         st.write("---")
-        st.subheader("📋 Últimos Lançamentos")
+        col_g1, col_g2 = st.columns(2)
+        
+        with col_g1:
+            st.subheader("📊 Evolução Mensal")
+            evol = df_f.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0)
+            if not evol.empty:
+                cores_map = {"Receita": "#28a745", "Despesa": "#dc3545", "Rendimento": "#2ecc71"}
+                cores_finais = [cores_map.get(col, "#808080") for col in evol.columns]
+                st.bar_chart(evol, color=cores_finais)
+
+        with col_g2:
+            st.subheader("🏦 Distribuição por Banco")
+            s_pizza = []
+            for b in df_bancos_cad['Nome do Banco'].unique():
+                si = df_bancos_cad[df_bancos_cad['Nome do Banco'] == b]['Saldo Inicial'].apply(limpar_v).sum()
+                re = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] == 'Pago') & (df_base[c_tip].isin(['Receita', 'Rendimento']))]['V_Num'].sum()
+                de = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] == 'Pago') & (df_base[c_tip] == 'Despesa')]['V_Num'].sum()
+                s_pizza.append({'Banco': b, 'Saldo': si + re - de})
+            fig_pizza = px.pie(pd.DataFrame(s_pizza), values='Saldo', names='Banco', hole=.4, height=300)
+            st.plotly_chart(fig_pizza, use_container_width=True)
+
+        # --- LANÇAMENTOS ---
+        st.write("---")
+        st.subheader("📋 Histórico de Lançamentos")
         st.dataframe(df_f.drop(columns=['V_Num', 'DT', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
-    else:
-        st.warning("Aguardando dados da planilha...")
