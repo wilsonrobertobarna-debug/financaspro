@@ -4,7 +4,7 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime, timedelta, timezone # Importação nativa, sem erro
+from datetime import datetime, timedelta, timezone
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(
@@ -66,6 +66,10 @@ def carregar_dados():
 
 df_bancos_cad, df_cats_cad, df_base = carregar_dados()
 
+# Fuso Horário de Brasília (GMT-3)
+fuso_br = timezone(timedelta(hours=-3))
+hoje_br = datetime.now(fuso_br)
+
 # 4. INTERFACE
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Menu:", ["💰 Finanças", "🐾 Pets", "🚗 Veículo"])
@@ -80,9 +84,8 @@ if aba == "💰 Finanças":
         df_base['DT'] = pd.to_datetime(df_base[c_dat], dayfirst=True, errors='coerce')
         df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
         
-        # Data atual ajustada para o fuso do Brasil para os filtros
-        fuso_br = timezone(timedelta(hours=-3))
-        mes_atual = datetime.now(fuso_br).strftime('%m/%y')
+        # Sincroniza o mês atual com o fuso do Brasil
+        mes_atual = hoje_br.strftime('%m/%y')
 
         # Filtros
         bancos_lista = ["Todos"] + sorted(df_base[c_bnc].unique().tolist())
@@ -152,14 +155,9 @@ if aba == "💰 Finanças":
         st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['V_Num', 'DT', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
 
-    # BARRA LATERAL - FORMULÁRIO (DATA AJUSTADA)
+    # BARRA LATERAL - FORMULÁRIO
     with st.sidebar.form("novo"):
         st.write("### 🚀 Lançar")
-        
-        # Ajuste nativo de Fuso Horário (GMT-3)
-        fuso_br = timezone(timedelta(hours=-3))
-        hoje_br = datetime.now(fuso_br)
-        
         f_dat = st.date_input("Data", hoje_br)
         f_val = st.number_input("Valor", min_value=0.0)
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
