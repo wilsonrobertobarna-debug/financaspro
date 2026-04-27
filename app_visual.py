@@ -4,7 +4,7 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime
+from datetime import datetime, timedelta # Importado timedelta para parcelas
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide", page_icon="🛡️")
@@ -47,7 +47,6 @@ def carregar_dados():
         df_b = pd.DataFrame(sh.worksheet("Bancos").get_all_records())
         df_c = pd.DataFrame(sh.worksheet("Categoria").get_all_records())
         
-        # Limpeza da Meta na origem
         df_c.columns = [str(c).strip() for c in df_c.columns]
         if 'Meta' in df_c.columns:
             df_c['Meta'] = df_c['Meta'].astype(str).str.replace('R$', '').str.replace('.', '').str.replace(',', '.').str.strip()
@@ -82,12 +81,10 @@ if aba == "💰 Finanças":
         df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
         mes_atual = datetime.now().strftime('%m/%y')
 
-        # Filtro
         bancos_unicos = ["Todos"] + sorted(df_base[c_bnc].unique().tolist())
         banco_sel = st.selectbox("🔍 Pesquisar por Banco:", bancos_unicos)
         df_filtrado = df_base if banco_sel == "Todos" else df_base[df_base[c_bnc] == banco_sel]
 
-        # Cálculos
         s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
         df_realizado = df_base[df_base[c_sta] != 'Pendente']
         t_rec = df_realizado[(df_realizado[c_tip] == 'Receita') | (df_realizado[c_tip] == 'Rendimento')]['V_Num'].sum()
@@ -108,7 +105,6 @@ if aba == "💰 Finanças":
         m3.metric("💰 Rendimentos", f"R$ {m_rendimento:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m4.metric("⏳ Pendência", f"R$ {m_pendente:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
-        # --- SEÇÃO DE GRÁFICOS ---
         st.write("---")
         col_esq, col_dir = st.columns(2)
         
@@ -148,20 +144,32 @@ if aba == "💰 Finanças":
         st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1], use_container_width=True)
 
+    # FORMULÁRIO COM DATA BRASIL E PARCELAMENTO
     with st.sidebar.form("f"):
         st.write("### 🚀 Lançar")
-        f_dat = st.date_input("Data", datetime.now())
-        f_val = st.number_input("Valor", min_value=0.0)
+        f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY") # DATA NO PADRÃO BRASIL
+        f_val = st.number_input("Valor total ou da parcela", min_value=0.0)
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Outros"])
         f_bnc = st.selectbox("Banco", sorted(df_bancos_cad['Nome do Banco'].tolist() + ["Dinheiro"]))
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
+        
+        # PARCELAMENTO
+        st.write("---")
+        f_parc = st.number_input("Número de Parcelas", min_value=1, value=1)
+        
         if st.form_submit_button("SALVAR"):
-            sh.get_worksheet(0).append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_sta])
+            ws = sh.get_worksheet(0)
+            for i in range(f_parc):
+                # Calcula a data da parcela (mês a mês)
+                data_parcela = f_dat + relativedelta(months=i) if 'relativedelta' in globals() else f_dat + timedelta(days=30*i)
+                desc_parcela = f"{f_cat} ({i+1}/{f_parc})" if f_parc > 1 else f_cat
+                ws.append_row([data_parcela.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), desc_parcela, f_tip, f_bnc, f_sta])
+            
             st.cache_data.clear(); st.rerun()
 
 elif aba == "🐾 Milo & Bolt":
-    st.info("Aba em manutenção controlada. Focando na estabilidade de Finanças.")
+    st.info("Aba em manutenção controlada.")
 
 else:
-    st.info("Aba em manutenção controlada. Focando na estabilidade de Finanças.")
+    st.info("Aba em manutenção controlada.")
