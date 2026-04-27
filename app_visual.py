@@ -7,29 +7,19 @@ import plotly.express as px
 from datetime import datetime, timedelta, timezone
 
 # 1. CONFIGURAÇÃO DA PÁGINA
-st.set_page_config(
-    page_title="FinançasPro",
-    page_icon="🛡️",
-    layout="wide"
-)
+st.set_page_config(page_title="FinançasPro", page_icon="🛡️", layout="wide")
 
-# Estilos CSS Personalizados (IGUAL AO ORIGINAL)
+# Estilos CSS (Estrutura preservada)
 st.markdown("""
     <style>
-    .saldo-container {
-        background-color: #007bff; color: white; padding: 15px;
-        border-radius: 12px; text-align: center; margin-bottom: 20px;
-    }
+    .saldo-container { background-color: #007bff; color: white; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
     .saldo-container h2 { margin: 0; font-size: 2.2rem; font-weight: bold; }
     .stMetric { background-color: #ffffff; padding: 10px; border-radius: 10px; border: 1px solid #e0e0e0; }
-    .resumo-card { 
-        padding: 8px; border-radius: 8px; text-align: center; 
-        border: 1px solid #ddd; background-color: #f8f9fa; margin-bottom: 5px;
-    }
+    .resumo-card { padding: 8px; border-radius: 8px; text-align: center; border: 1px solid #ddd; background-color: #f8f9fa; margin-bottom: 5px; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXÃO COM GOOGLE SHEETS
+# 2. CONEXÃO
 @st.cache_resource
 def conectar():
     try:
@@ -42,7 +32,7 @@ def conectar():
         }, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"])
         return gspread.authorize(creds)
     except Exception as e:
-        st.error(f"Erro de Conexão: {e}"); st.stop()
+        st.error(f"Erro: {e}"); st.stop()
 
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
@@ -66,10 +56,8 @@ def carregar_dados():
 
 df_bancos_cad, df_cats_cad, df_base = carregar_dados()
 
-# --- CORREÇÃO DEFINITIVA DA DATA (GMT-3) ---
-agora_utc = datetime.now(timezone.utc)
-fuso_br = agora_utc - timedelta(hours=3)
-hoje_br = fuso_br.date() # Isso garante que a data seja o dia de hoje no Brasil
+# AJUSTE DE DATA BRASIL
+hoje_br = (datetime.now(timezone.utc) - timedelta(hours=3)).date()
 
 # 4. INTERFACE
 st.sidebar.title("🎮 Painel Wilson")
@@ -90,28 +78,23 @@ if aba == "💰 Finanças":
         banco_sel = st.selectbox("🔍 Filtrar Visão por Banco:", bancos_lista)
         df_filtrado = df_base if banco_sel == "Todos" else df_base[df_base[c_bnc] == banco_sel]
 
-        # Saldo Total
+        # Saldo e Métricas
         s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_v).sum() if banco_sel == "Todos" else df_bancos_cad[df_bancos_cad['Nome do Banco'] == banco_sel]['Saldo Inicial'].apply(limpar_v).sum()
         df_pago = df_filtrado[df_filtrado[c_sta] == 'Pago']
         saldo_atual = s_ini + df_pago[df_pago[c_tip].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_pago[df_pago[c_tip] == 'Despesa']['V_Num'].sum()
 
-        # Métricas do Mês
         mes_atual = hoje_br.strftime('%m/%y')
         df_mes = df_filtrado[df_filtrado['Mes_Ano'] == mes_atual]
-        m_rec = df_mes[df_mes[c_tip] == 'Receita']['V_Num'].sum()
-        m_des = df_mes[df_mes[c_tip] == 'Despesa']['V_Num'].sum()
-        m_ren = df_mes[df_mes[c_tip] == 'Rendimento']['V_Num'].sum()
-        m_pen = df_mes[df_mes[c_sta] == 'Pendente']['V_Num'].sum()
-
+        
         st.markdown(f'<div class="saldo-container"><small>Saldo Disponível ({banco_sel})</small><h2>R$ {saldo_atual:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("📈 Receitas", f"R$ {m_rec:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        col2.metric("📉 Despesas", f"R$ {m_des:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        col3.metric("💰 Rendimento", f"R$ {m_ren:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        col4.metric("⏳ Pendente", f"R$ {m_pen:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        col1.metric("📈 Receitas", f"R$ {df_mes[df_mes[c_tip] == 'Receita']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        col2.metric("📉 Despesas", f"R$ {df_mes[df_mes[c_tip] == 'Despesa']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        col3.metric("💰 Rendimento", f"R$ {df_mes[df_mes[c_tip] == 'Rendimento']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        col4.metric("⏳ Pendente", f"R$ {df_mes[df_mes[c_sta] == 'Pendente']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
-        # --- RESUMO DA ECONOMIA ---
+        # --- ECONOMIA ---
         st.write("---")
         st.subheader("📊 Resumo de Economia")
         gasto_cat = df_mes[df_mes[c_tip] == 'Despesa'].groupby(c_cat)['V_Num'].sum()
@@ -126,7 +109,7 @@ if aba == "💰 Finanças":
                 with cols_res[i % 5]:
                     st.markdown(f'<div class="resumo-card"><small><b>{categoria}</b></small><br><span style="color:{cor}; font-weight:bold;">{pct:.1f}%</span><br><small>R$ {row["Real"]:,.0f} / {row["Meta"]:,.0f}</small></div>', unsafe_allow_html=True)
 
-        # --- GRÁFICOS (METAS E PIZZA) ---
+        # --- GRÁFICOS ---
         st.write("---")
         g1, g2 = st.columns(2)
         with g1:
@@ -137,8 +120,7 @@ if aba == "💰 Finanças":
                 re = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] == 'Pago') & (df_base[c_tip].isin(['Receita', 'Rendimento']))]['V_Num'].sum()
                 de = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] == 'Pago') & (df_base[c_tip] == 'Despesa')]['V_Num'].sum()
                 s_pizza.append({'Banco': b, 'Saldo': si + re - de})
-            fig_p = px.pie(pd.DataFrame(s_pizza), values='Saldo', names='Banco', hole=.4, height=350)
-            st.plotly_chart(fig_p, use_container_width=True)
+            st.plotly_chart(px.pie(pd.DataFrame(s_pizza), values='Saldo', names='Banco', hole=.4, height=350), use_container_width=True)
 
         with g2:
             st.subheader("📊 Gráfico de Metas")
@@ -150,23 +132,22 @@ if aba == "💰 Finanças":
                 fig_meta.update_layout(barmode='overlay', height=350, margin=dict(l=0, r=0, t=20, b=0))
                 st.plotly_chart(fig_meta, use_container_width=True)
 
-        # --- GRÁFICO DE BARRAS MENSAL (RECEITA X DESPESA) ---
+        # --- GRÁFICO MENSAL (CORES FIXAS) ---
         st.write("---")
-        st.subheader("📈 Evolução Mensal (Receita x Despesa)")
+        st.subheader("📈 Evolução Mensal")
         evol = df_filtrado.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0)
         if not evol.empty:
-            # Garante que as colunas existam para o gráfico não dar erro
-            for col in ['Receita', 'Despesa']:
-                if col not in evol.columns: evol[col] = 0.0
-            st.bar_chart(evol[['Receita', 'Despesa']])
+            cols_graf = [c for c in ['Receita', 'Despesa'] if c in evol.columns]
+            # Cores: Receita = Verde (#28a745), Despesa = Vermelho (#dc3545)
+            st.bar_chart(evol[cols_graf], color=["#dc3545", "#28a745"] if len(cols_graf)==2 else None)
 
         st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['V_Num', 'DT', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
 
-    # BARRA LATERAL - FORMULÁRIO (ESTRUTURA ORIGINAL MANTIDA)
+    # FORMULÁRIO (DATA BLINDADA)
     with st.sidebar.form("novo"):
         st.write("### 🚀 Lançar")
-        f_dat = st.date_input("Data", hoje_br) # USA A DATA CALCULADA DO BRASIL
+        f_dat = st.date_input("Data", hoje_br)
         f_val = st.number_input("Valor", min_value=0.0)
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Geral"])
@@ -174,5 +155,7 @@ if aba == "💰 Finanças":
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         
         if st.form_submit_button("SALVAR"):
-            sh.get_worksheet(0).append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_sta])
+            # Envia como Texto para o Google Sheets não inverter o dia
+            data_texto = f_dat.strftime("%d/%m/%Y") 
+            sh.get_worksheet(0).append_row([data_texto, str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_sta], value_input_option='USER_ENTERED')
             st.cache_data.clear(); st.rerun()
