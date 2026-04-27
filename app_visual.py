@@ -4,8 +4,7 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime
-import pytz # Adicionado para o fuso horário
+from datetime import datetime, timedelta, timezone # Importação nativa, sem erro
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(
@@ -80,7 +79,10 @@ if aba == "💰 Finanças":
         df_base['V_Num'] = df_base[c_val].apply(limpar_v)
         df_base['DT'] = pd.to_datetime(df_base[c_dat], dayfirst=True, errors='coerce')
         df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
-        mes_atual = datetime.now().strftime('%m/%y')
+        
+        # Data atual ajustada para o fuso do Brasil para os filtros
+        fuso_br = timezone(timedelta(hours=-3))
+        mes_atual = datetime.now(fuso_br).strftime('%m/%y')
 
         # Filtros
         bancos_lista = ["Todos"] + sorted(df_base[c_bnc].unique().tolist())
@@ -107,20 +109,13 @@ if aba == "💰 Finanças":
         col3.metric("💰 Rendimento", f"R$ {m_ren:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         col4.metric("⏳ Pendente", f"R$ {m_pen:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
-        # --- ALERTAS DE METAS ---
+        # --- RESUMO DA ECONOMIA ---
+        st.write("---")
+        st.subheader("📊 Resumo de Economia")
         gasto_cat = df_mes[df_mes[c_tip] == 'Despesa'].groupby(c_cat)['V_Num'].sum()
         df_m = pd.DataFrame({'Meta': df_cats_cad.set_index('Nome')['Meta'], 'Real': gasto_cat}).fillna(0.0)
         df_m = df_m[df_m['Meta'] > 0]
 
-        categorias_estouradas = df_m[df_m['Real'] > df_m['Meta']]
-        if not categorias_estouradas.empty:
-            for cat, row in categorias_estouradas.iterrows():
-                excesso = row['Real'] - row['Meta']
-                st.error(f"🚨 **Atenção Wilson!** Ultrapassaste a meta de **{cat}** em **R$ {excesso:,.2f}**.")
-
-        # --- RESUMO DA ECONOMIA ---
-        st.write("---")
-        st.subheader("📊 Resumo de Economia")
         if not df_m.empty:
             cols_res = st.columns(5)
             for i, (categoria, row) in enumerate(df_m.iterrows()):
@@ -154,22 +149,15 @@ if aba == "💰 Finanças":
                 fig_meta.update_layout(barmode='overlay', height=350, margin=dict(l=0, r=0, t=20, b=0))
                 st.plotly_chart(fig_meta, use_container_width=True)
 
-        # --- EVOLUÇÃO ---
-        st.write("---")
-        st.subheader("📈 Evolução Mensal")
-        evol = df_filtrado.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0)
-        if not evol.empty:
-            st.bar_chart(evol)
-
         st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['V_Num', 'DT', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
 
-    # BARRA LATERAL - FORMULÁRIO (CORRIGIDO PARA BRASÍLIA)
+    # BARRA LATERAL - FORMULÁRIO (DATA AJUSTADA)
     with st.sidebar.form("novo"):
         st.write("### 🚀 Lançar")
         
-        # Ajuste do Fuso Horário
-        fuso_br = pytz.timezone('America/Sao_Paulo')
+        # Ajuste nativo de Fuso Horário (GMT-3)
+        fuso_br = timezone(timedelta(hours=-3))
         hoje_br = datetime.now(fuso_br)
         
         f_dat = st.date_input("Data", hoje_br)
