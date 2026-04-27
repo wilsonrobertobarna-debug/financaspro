@@ -123,43 +123,25 @@ if aba == "💰 Finanças":
         m3.metric("💰 Rendimentos", f"R$ {df_mes[df_mes['Tipo'] == 'Rendimento']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m4.metric("⏳ Pendência", f"R$ {df_mes[df_mes['Status'].str.strip() == 'Pendente']['V_Num'].sum():,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
-        st.write("---")
-        col_g1, col_g2 = st.columns(2)
-        with col_g1:
-            st.subheader("📈 Evolução Mensal")
-            df_evol = df_filtrado.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().unstack().fillna(0).reset_index()
-            fig = go.Figure()
-            for t, c in zip(['Receita', 'Despesa', 'Rendimento'], ['#28a745', '#dc3545', '#007bff']):
-                if t in df_evol.columns: fig.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol[t], name=t, marker_color=c))
-            fig.update_layout(barmode='group', height=300, margin=dict(l=10,r=10,t=10,b=10))
-            st.plotly_chart(fig, use_container_width=True)
-        with col_g2:
-            st.subheader("📊 Metas vs Real")
-            g_cat = df_mes[df_mes['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum()
-            df_m = pd.DataFrame({'Meta': df_cats_cad.set_index('Nome')['Meta'], 'Real': g_cat}).fillna(0).query("Meta > 0 or Real > 0")
-            fig_m = go.Figure()
-            fig_m.add_trace(go.Bar(y=df_m.index, x=df_m['Meta'], name='Meta', orientation='h', marker_color='#D3D3D3'))
-            fig_m.add_trace(go.Bar(y=df_m.index, x=df_m['Real'], name='Real', orientation='h', marker_color='#007bff'))
-            fig_m.update_layout(barmode='group', height=300, margin=dict(l=10,r=10,t=10,b=10))
-            st.plotly_chart(fig_m, use_container_width=True)
-
         st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1].head(15), use_container_width=True)
 
 elif aba == "🐾 Milo & Bolt":
     st.markdown("<h1 style='text-align: center;'>🐾 Milo & Bolt</h1>", unsafe_allow_html=True)
     if not df_base.empty:
-        # FILTRO ROBUSTO: Procura Milo ou Bolt em Categoria OU Descrição
+        # FILTRO AMPLIADO: Pega Milo, Bolt, Pet, Ração, Vacina, Vet ou Banho
+        palavras_chave = 'Milo|Bolt|Pet|Ração|Racao|Vacina|Vet|Banho|Tosa'
         df_pets = df_base[
-            df_base['Categoria'].str.contains('Milo|Bolt|Pet', case=False, na=False) | 
-            df_base['Descrição'].str.contains('Milo|Bolt', case=False, na=False)
+            df_base['Categoria'].str.contains(palavras_chave, case=False, na=False) | 
+            df_base['Descrição'].str.contains(palavras_chave, case=False, na=False)
         ]
         
         col_p1, col_p2 = st.columns(2)
         with col_p1:
-            st.info(f"Investimento Total nos Pets: **R$ {df_pets['V_Num'].sum():,.2f}**".replace(',', 'X').replace('.', ',').replace('X', '.'))
+            total_gasto = df_pets['V_Num'].sum()
+            st.info(f"Investimento Total: **R$ {total_gasto:,.2f}**".replace(',', 'X').replace('.', ',').replace('X', '.'))
         with col_p2:
-            st.success(f"Itens Cadastrados: **{len(df_pets)}**")
+            st.success(f"Registros Localizados: **{len(df_pets)}**")
             
         st.write("---")
         st.dataframe(df_pets.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1], use_container_width=True)
@@ -178,11 +160,9 @@ if not df_base.empty:
     if sel:
         linha_alvo = opcoes[sel]
         col_btn1, col_btn2 = st.sidebar.columns(2)
-        
         if col_btn1.button("🗑️ EXCLUIR"):
             sh.get_worksheet(0).delete_rows(int(linha_alvo))
             st.cache_data.clear(); st.rerun()
-                
         if col_btn2.button("✅ QUITAR"):
             sh.get_worksheet(0).update_cell(int(linha_alvo), 7, "Pago")
             st.cache_data.clear(); st.rerun()
