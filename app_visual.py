@@ -88,30 +88,28 @@ if aba == "💰 Finanças":
         # Cálculos de Saldo
         s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
         df_realizado = df_base[df_base[c_sta] != 'Pendente']
-        t_rec = df_realizado[(df_realizado[c_tip] == 'Receita') | (df_realizado[c_tip] == 'Rendimento')]['V_Num'].sum()
+        t_rec = df_realizado[df_realizado[c_tip] == 'Receita']['V_Num'].sum()
         t_des = df_realizado[df_realizado[c_tip] == 'Despesa']['V_Num'].sum()
         saldo_geral = s_ini + t_rec - t_des
 
         df_mes = df_filtrado[df_filtrado['Mes_Ano'] == mes_atual]
         m_receita = df_mes[df_mes[c_tip] == 'Receita']['V_Num'].sum()
         m_despesa = df_mes[df_mes[c_tip] == 'Despesa']['V_Num'].sum()
-        m_rendimento = df_mes[df_mes[c_tip] == 'Rendimento']['V_Num'].sum()
         m_pendente = df_mes[df_mes[c_sta] == 'Pendente']['V_Num'].sum()
 
         st.markdown(f'<div class="saldo-container"><small>Saldo Geral Realizado</small><h2>R$ {saldo_geral:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
-        m1, m2, m3, m4 = st.columns(4)
+        m1, m2, m3 = st.columns(3)
         m1.metric("📈 Receitas", f"R$ {m_receita:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m2.metric("📉 Despesas", f"R$ {m_despesa:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        m3.metric("💰 Rendimentos", f"R$ {m_rendimento:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        m4.metric("⏳ Pendência", f"R$ {m_pendente:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+        m3.metric("⏳ Pendência", f"R$ {m_pendente:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
-        # --- NOVO: RESUMO ECONOMIA ---
+        # --- RESUMO ECONOMIA ---
         st.write("---")
         with st.container():
             col_rec, col_tabela = st.columns([1, 2])
             
-            total_mes = m_receita + m_rendimento
+            total_mes = m_receita
             sobra = total_mes - m_despesa
             perc_sobra = (sobra / total_mes * 100) if total_mes > 0 else 0
             
@@ -131,7 +129,6 @@ if aba == "💰 Finanças":
                     df_res_cat['%'] = (df_res_cat['Valor'] / m_despesa * 100) if m_despesa > 0 else 0
                     df_res_cat = df_res_cat.sort_values(by='Valor', ascending=False)
                     
-                    # Formatação para exibição
                     df_display = df_res_cat.copy()
                     df_display['Valor'] = df_display['Valor'].apply(lambda x: f"R$ {x:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
                     df_display['%'] = df_display['%'].apply(lambda x: f"{x:.1f}%")
@@ -157,7 +154,7 @@ if aba == "💰 Finanças":
             bancos_p = [banco_sel] if banco_sel != "Todos" else df_bancos_cad['Nome do Banco'].unique()
             for b in bancos_p:
                 si = df_bancos_cad[df_bancos_cad['Nome do Banco'] == b]['Saldo Inicial'].apply(limpar_valor).sum()
-                re = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] != 'Pendente') & ((df_base[c_tip] == 'Receita') | (df_base[c_tip] == 'Rendimento'))]['V_Num'].sum()
+                re = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] != 'Pendente') & (df_base[c_tip] == 'Receita')]['V_Num'].sum()
                 de = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] != 'Pendente') & (df_base[c_tip] == 'Despesa')]['V_Num'].sum()
                 saldos_lista.append({'Banco': b, 'Saldo': si + re - de})
             df_sb = pd.DataFrame(saldos_lista)
@@ -187,7 +184,7 @@ if aba == "💰 Finanças":
         st.write("### 🚀 Novo Lançamento")
         f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
         f_val = st.number_input("Valor", min_value=0.0)
-        f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
+        f_tip = st.selectbox("Tipo", ["Despesa", "Receita"])
         f_cat = st.selectbox("Categoria", sorted(df_cats_cad['Nome'].tolist()) if not df_cats_cad.empty else ["Outros"])
         f_bnc = st.selectbox("Banco", sorted(df_bancos_cad['Nome do Banco'].tolist() + ["Dinheiro"]))
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
