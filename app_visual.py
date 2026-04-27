@@ -42,7 +42,6 @@ sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 @st.cache_data(ttl=5)
 def carregar_dados():
     try:
-        # Carrega categorias para as Metas
         df_c = pd.DataFrame(sh.worksheet("Categoria").get_all_records())
         df_c.columns = [str(c).strip() for c in df_c.columns]
         if 'Meta' in df_c.columns:
@@ -101,13 +100,27 @@ with st.sidebar.form("f_novo"):
 if aba == "💰 Finanças":
     st.markdown("<h1 style='text-align: center;'>🛡️ FinançasPro Wilson</h1>", unsafe_allow_html=True)
     if not df_base.empty:
-        df_real = df_base[df_base['Status'].str.strip() != 'Pendente']
-        s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
-        t_in = df_real[df_real['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        t_out = df_real[df_real['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.markdown(f'<div class="saldo-container"><small>Saldo Geral Realizado</small><h2>R$ {s_ini + t_in - t_out:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
+        # --- FILTRO POR BANCO ---
+        bancos_unicos = ["Todos"] + sorted(df_base['Banco'].unique().tolist())
+        banco_sel = st.selectbox("🔍 Pesquisar por Banco:", bancos_unicos)
+        df_filtrado = df_base if banco_sel == "Todos" else df_base[df_base['Banco'] == banco_sel]
 
-        df_mes = df_base[df_base['Mes_Ano'] == mes_atual]
+        # --- MÉTRICAS GERAIS (Sempre baseadas no filtro) ---
+        df_real_filt = df_filtrado[df_filtrado['Status'].str.strip() != 'Pendente']
+        
+        # Cálculo de Saldo Inicial do Banco selecionado
+        if banco_sel == "Todos":
+            s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
+        else:
+            s_ini = df_bancos_cad[df_bancos_cad['Nome do Banco'] == banco_sel]['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
+            
+        t_in = df_real_filt[df_real_filt['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        t_out = df_real_filt[df_real_filt['Tipo'] == 'Despesa']['V_Num'].sum()
+        
+        st.markdown(f'<div class="saldo-container"><small>Saldo Geral Realizado ({banco_sel})</small><h2>R$ {s_ini + t_in - t_out:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
+
+        # MÉTRICAS MÊS ATUAL
+        df_mes = df_filtrado[df_filtrado['Mes_Ano'] == mes_atual]
         m_rec = df_mes[df_mes['Tipo'] == 'Receita']['V_Num'].sum()
         m_des = df_mes[df_mes['Tipo'] == 'Despesa']['V_Num'].sum()
         m_ren = df_mes[df_mes['Tipo'] == 'Rendimento']['V_Num'].sum()
@@ -126,12 +139,12 @@ if aba == "💰 Finanças":
             total_entrada = m_rec + m_ren
             sobra = total_entrada - m_des
             perc = (sobra / total_entrada * 100) if total_entrada > 0 else 0
-            st.markdown(f'<div class="resumo-box"><h4>💰 Economia do Mês</h4><p>Sobrou: <b>R$ {sobra:,.2f}</b></p><p style="color:#28a745;"><b>{perc:.1f}%</b> do total que entrou.</p></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
+            st.markdown(f'<div class="resumo-box"><h4>💰 Economia do Mês</h4><p>Sobrou: <b>R$ {sobra:,.2f}</b></p><p style="color:#28a745;"><b>{perc:.1f}%</b> do que entrou.</p></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
         with c_ec2:
             df_res_cat = df_mes[df_mes['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index().sort_values(by='V_Num', ascending=False)
             if not df_res_cat.empty:
                 df_res_cat.columns = ['Categoria', 'Valor']
-                df_res_cat['%'] = (df_res_cat['Valor'] / m_des * 100).apply(lambda x: f"{x:.1f}%")
+                df_res_cat['%'] = (df_res_cat['Valor'] / (m_des if m_des > 0 else 1) * 100).apply(lambda x: f"{x:.1f}%")
                 df_res_cat['Valor'] = df_res_cat['Valor'].apply(lambda x: f"R$ {x:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
                 st.dataframe(df_res_cat, use_container_width=True, hide_index=True)
 
@@ -140,7 +153,7 @@ if aba == "💰 Finanças":
         col_g1, col_g2 = st.columns(2)
         with col_g1:
             st.subheader("📈 Evolução Mensal")
-            df_evol = df_base.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().unstack().fillna(0).reset_index()
+            df_evol = df_filtrado.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().unstack().fillna(0).reset_index()
             fig = go.Figure()
             for t, c in zip(['Receita', 'Despesa', 'Rendimento'], ['#28a745', '#dc3545', '#007bff']):
                 if t in df_evol.columns: fig.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol[t], name=t, marker_color=c))
@@ -160,8 +173,8 @@ if aba == "💰 Finanças":
                 st.plotly_chart(fig_m, use_container_width=True)
 
         st.write("---")
-        st.subheader("📋 Últimos Lançamentos")
-        st.dataframe(df_base.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1].head(15), use_container_width=True)
+        st.subheader("📋 Lançamentos Selecionados")
+        st.dataframe(df_filtrado.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1].head(20), use_container_width=True)
 
 elif aba == "🐾 Milo & Bolt":
     st.markdown("<h1 style='text-align: center;'>🐾 Milo & Bolt</h1>", unsafe_allow_html=True)
