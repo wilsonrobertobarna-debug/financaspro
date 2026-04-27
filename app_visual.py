@@ -74,45 +74,51 @@ if aba == "💰 Finanças":
         df_base.columns = [c.strip() for c in df_base.columns]
         c_dat, c_val, c_cat, c_tip, c_bnc, c_sta = df_base.columns[0], df_base.columns[1], df_base.columns[2], df_base.columns[3], df_base.columns[4], df_base.columns[5]
 
-        # Tratamento Numérico
-        df_base['V_Num'] = pd.to_numeric(df_base[c_val].astype(str).str.replace('.', '').str.replace(',', '.'), errors='coerce').fillna(0.0)
+        # Tratamento Numérico (Limpeza de R$, pontos e vírgulas)
+        def limpar_valor(v):
+            v = str(v).replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.')
+            return pd.to_numeric(v, errors='coerce') or 0.0
+
+        df_base['V_Num'] = df_base[c_val].apply(limpar_valor)
         df_base['DT'] = pd.to_datetime(df_base[c_dat], dayfirst=True, errors='coerce')
         df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
         mes_atual = datetime.now().strftime('%m/%y')
 
-        # --- FILTRO POR BANCO ---
+        # Filtro por Banco
         bancos_unicos = ["Todos"] + sorted(df_base[c_bnc].unique().tolist())
         banco_sel = st.selectbox("🔍 Pesquisar por Banco:", bancos_unicos)
-        
         df_filtrado = df_base if banco_sel == "Todos" else df_base[df_base[c_bnc] == banco_sel]
 
-        # --- CÁLCULOS DOS CARTÕES (TAGS) ---
-        s_ini = pd.to_numeric(df_bancos_cad['Saldo Inicial'].astype(str).str.replace(',', '.'), errors='coerce').sum() if not df_bancos_cad.empty else 0
+        # Cálculos
+        s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_valor).sum() if not df_bancos_cad.empty else 0
         
-        # Saldo Geral (sempre considera tudo)
+        # Saldo Geral Absoluto
         total_rec = df_base[df_base[c_tip] == 'Receita']['V_Num'].sum()
         total_desp = df_base[df_base[c_tip] == 'Despesa']['V_Num'].sum()
         saldo_geral = s_ini + total_rec - total_desp
 
-        # Valores do Mês Atual (para as Tags)
+        # Valores do Mês Atual (Filtrados por Banco se selecionado)
         df_mes = df_filtrado[df_filtrado['Mes_Ano'] == mes_atual]
         m_receita = df_mes[df_mes[c_tip] == 'Receita']['V_Num'].sum()
         m_despesa = df_mes[df_mes[c_tip] == 'Despesa']['V_Num'].sum()
         m_pendente = df_mes[df_mes[c_sta] == 'Pendente']['V_Num'].sum()
+        
+        # Lógica de Rendimento: Aqui calculamos o que sobra no mês
+        m_rendimento = m_receita - m_despesa
 
-        # EXIBIÇÃO DO SALDO GERAL
+        # EXIBIÇÃO
         st.markdown(f'<div class="saldo-container"><small>Saldo Geral Consolidado</small><h2>R$ {saldo_geral:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
-        # TAGS ABAIXO DO SALDO
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Receitas", f"R$ {m_receita:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m2.metric("📉 Despesas", f"R$ {m_despesa:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        m3.metric("💰 Rendimentos", f"R$ {m_receita - m_despesa:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-        m4.metric("⏳ Pendência", f"R$ {m_pendente:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'), delta_color="inverse")
+        # Se for negativo, aparece em vermelho automaticamente no metric
+        m3.metric("💰 Rendimento Mensal", f"R$ {m_rendimento:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'), delta=f"{m_rendimento:,.2f}")
+        m4.metric("⏳ Pendência", f"R$ {m_pendente:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
         st.write("---")
         
-        # --- GRÁFICOS ---
+        # GRÁFICOS
         col1, col2 = st.columns(2)
         with col1:
             st.subheader(f"📊 Metas vs Gasto ({mes_atual})")
@@ -138,7 +144,7 @@ if aba == "💰 Finanças":
         st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1], use_container_width=True)
 
-    # FORMULÁRIO LATERAL
+    # FORMULÁRIO
     with st.sidebar.form("f_novo"):
         st.write("### 🚀 Novo Lançamento")
         f_dat = st.date_input("Data", datetime.now())
@@ -152,13 +158,3 @@ if aba == "💰 Finanças":
             ws = sh.get_worksheet(0)
             ws.append_row([f_dat.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), f_cat, f_tip, f_bnc, f_sta])
             st.cache_data.clear(); st.rerun()
-
-elif aba == "🐾 Milo & Bolt":
-    st.title("🐾 Milo & Bolt")
-    ws_p = sh.worksheet("Controle_Pets"); dados = ws_p.get_all_values()
-    st.dataframe(pd.DataFrame(dados[1:], columns=dados[0]).iloc[::-1], use_container_width=True)
-
-else:
-    st.title("🚗 Meu Veículo")
-    ws_v = sh.worksheet("Controle_Veiculo"); dados = ws_v.get_all_values()
-    st.dataframe(pd.DataFrame(dados[1:], columns=dados[0]).iloc[::-1], use_container_width=True)
