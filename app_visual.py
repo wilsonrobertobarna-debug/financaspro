@@ -119,12 +119,13 @@ if "💰" in aba:
         if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-        st.dataframe(df_v[['ID', 'Data', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True)
+        # Ocultar o índice chato aqui
+        st.dataframe(df_v[['ID', 'Data', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "🐾" in aba:
     st.title("🐾 Milo & Bolt")
     df_pet = df_base[df_base['Categoria'].str.contains('Pet|Ração|Milo|Bolt', case=False, na=False)]
-    st.dataframe(df_pet[['ID', 'Data', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True)
+    st.dataframe(df_pet[['ID', 'Data', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "🚗" in aba:
     st.title("🚗 Meu Veículo")
@@ -136,31 +137,31 @@ elif "🚗" in aba:
         else: c3.warning("Vá de GASOLINA!")
     st.divider()
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Carro|Combustível|Manutenção', case=False, na=False)]
-    st.dataframe(df_car[['ID', 'Data', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True)
+    st.dataframe(df_car[['ID', 'Data', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
 
-# 6. ALTERAR LANÇAMENTO (CORRIGIDO)
+# 6. ALTERAR LANÇAMENTO (SIMPLIFICADO)
 st.sidebar.divider()
 if not df_base.empty:
-    # Mostra os últimos 20 lançamentos
-    opcoes = {f"ID {r['ID']} - {r['Data']} - {r['Descrição']}": r for _, r in df_base.tail(20).iterrows()}
-    selecionado = st.sidebar.selectbox("⚙️ Alterar Lançamento:", [""] + list(opcoes.keys()))
+    # Criamos uma lista limpa para o Wilson escolher
+    lista_edit = {f"ID {r['ID']} - {r['Descrição']}": r for _, r in df_base.tail(20).iterrows()}
+    escolha = st.sidebar.selectbox("⚙️ Alterar Lançamento:", [""] + list(lista_edit.keys()))
     
-    if selecionado:
-        item = opcoes[selecionado]
-        st.sidebar.info(f"Editando ID: {item['ID']}")
+    if escolha:
+        dados_item = lista_edit[escolha]
+        st.sidebar.warning(f"Editando ID: {dados_item['ID']}")
         
-        # CAMPOS DE EDIÇÃO
-        nova_data = st.sidebar.text_input("Data:", value=item['Data'])
-        nova_desc = st.sidebar.text_input("Descrição:", value=item['Descrição'])
-        novo_valor = st.sidebar.text_input("Valor:", value=item['Valor'])
+        # Agora forçamos os campos a aparecerem
+        ed_data = st.sidebar.text_input("Data:", value=str(dados_item['Data']))
+        ed_desc = st.sidebar.text_input("Descrição:", value=str(dados_item['Descrição']))
+        ed_valor = st.sidebar.text_input("Valor:", value=str(dados_item['Valor']))
         
-        c_ed1, c_ed2 = st.sidebar.columns(2)
-        if c_ed1.button("💾 GRAVAR"):
-            ws_base.update_cell(int(item['ID']), 1, nova_data)
-            ws_base.update_cell(int(item['ID']), 3, nova_desc)
-            ws_base.update_cell(int(item['ID']), 2, novo_valor)
+        c_bt1, c_bt2 = st.sidebar.columns(2)
+        if c_bt1.button("💾 GRAVAR"):
+            ws_base.update_cell(int(dados_item['ID']), 1, ed_data)
+            ws_base.update_cell(int(dados_item['ID']), 3, ed_desc)
+            ws_base.update_cell(int(dados_item['ID']), 2, ed_valor)
             st.cache_data.clear(); st.rerun()
             
-        if c_ed2.button("🚨 APAGAR"):
-            ws_base.delete_rows(int(item['ID']))
+        if c_bt2.button("🚨 APAGAR"):
+            ws_base.delete_rows(int(dados_item['ID']))
             st.cache_data.clear(); st.rerun()
