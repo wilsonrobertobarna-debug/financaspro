@@ -42,7 +42,7 @@ client = conectar_google()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # 3. CARREGAMENTO REFORÇADO
-@st.cache_data(ttl=10) # Reduzido o TTL para 10 segundos para maior fluidez
+@st.cache_data(ttl=10)
 def carregar_dados():
     try:
         df_b = pd.DataFrame(sh.worksheet("Bancos").get_all_records())
@@ -109,8 +109,6 @@ if aba == "💰 Finanças":
 
         # --- SEÇÃO DE GRÁFICOS ---
         st.write("---")
-        
-        # 1. Gráfico de Evolução Mensal (Receita vs Despesa)
         st.subheader("📈 Evolução Mensal")
         df_evol = df_filtrado.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0).reset_index()
         if not df_evol.empty:
@@ -119,34 +117,26 @@ if aba == "💰 Finanças":
                 fig_bar.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol['Receita'], name='Receita', marker_color='#28a745'))
             if 'Despesa' in df_evol.columns:
                 fig_bar.add_trace(go.Bar(x=df_evol['Mes_Ano'], y=df_evol['Despesa'], name='Despesa', marker_color='#dc3545'))
-            fig_bar.update_layout(barmode='group', height=350, margin=dict(l=20, r=20, t=20, b=20))
+            fig_bar.update_layout(barmode='group', height=350)
             st.plotly_chart(fig_bar, use_container_width=True)
 
         col_esq, col_dir = st.columns(2)
         with col_esq:
-            # 2. Gráfico de Pizza (Saldo por Banco) - CORRIGIDO PARA SER DINÂMICO
             st.subheader("🏦 Saldo por Banco")
             saldos_lista = []
-            
-            # Se um banco estiver selecionado, mostramos apenas ele na pizza, caso contrário mostramos todos
-            bancos_para_pizza = [banco_sel] if banco_sel != "Todos" else df_bancos_cad['Nome do Banco'].unique()
-            
-            for b in bancos_para_pizza:
+            bancos_p = [banco_sel] if banco_sel != "Todos" else df_bancos_cad['Nome do Banco'].unique()
+            for b in bancos_p:
                 si = df_bancos_cad[df_bancos_cad['Nome do Banco'] == b]['Saldo Inicial'].apply(limpar_valor).sum()
                 re = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] != 'Pendente') & ((df_base[c_tip] == 'Receita') | (df_base[c_tip] == 'Rendimento'))]['V_Num'].sum()
                 de = df_base[(df_base[c_bnc] == b) & (df_base[c_sta] != 'Pendente') & (df_base[c_tip] == 'Despesa')]['V_Num'].sum()
                 saldos_lista.append({'Banco': b, 'Saldo': si + re - de})
-            
             df_sb = pd.DataFrame(saldos_lista)
             if not df_sb.empty and df_sb['Saldo'].sum() != 0:
                 fig_p = px.pie(df_sb, values='Saldo', names='Banco', hole=.4)
-                fig_p.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=300)
-                st.plotly_chart(fig_p, use_container_width=True, key=f"pizza_{banco_sel}") # Key dinâmica força o refresh
-            else:
-                st.info("Sem saldo para exibir neste banco.")
+                fig_p.update_layout(height=300, margin=dict(l=20, r=20, t=20, b=20))
+                st.plotly_chart(fig_p, use_container_width=True, key=f"pizza_{banco_sel}")
 
         with col_dir:
-            # 3. Metas vs Gasto
             st.subheader(f"📊 Metas vs Gasto ({mes_atual})")
             gasto_cat = df_mes[df_mes[c_tip] == 'Despesa'].groupby(c_cat)['V_Num'].sum()
             df_m = pd.DataFrame({'Meta': df_cats_cad.set_index('Nome')['Meta'], 'Real': gasto_cat}).fillna(0.0)
@@ -155,14 +145,14 @@ if aba == "💰 Finanças":
                 fig_m = go.Figure()
                 fig_m.add_trace(go.Bar(y=df_m.index, x=df_m['Meta'], name='Meta', orientation='h', marker_color='#D3D3D3'))
                 fig_m.add_trace(go.Bar(y=df_m.index, x=df_m['Real'], name='Real', orientation='h', marker_color='#007bff'))
-                fig_m.update_layout(barmode='group', height=300, margin=dict(l=0, r=0, t=20, b=0), legend=dict(orientation="h", y=1.2))
+                fig_m.update_layout(barmode='group', height=300, legend=dict(orientation="h", y=1.2))
                 st.plotly_chart(fig_m, use_container_width=True)
 
         st.write("---")
         st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['DT', 'Mes_Ano', 'V_Num'], errors='ignore').iloc[::-1], use_container_width=True)
 
-    # --- FORMULÁRIO LATERAL (ADICIONAR) ---
+    # --- FORMULÁRIO LATERAL ---
     with st.sidebar.form("f_novo"):
         st.write("### 🚀 Novo Lançamento")
         f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -177,4 +167,28 @@ if aba == "💰 Finanças":
             ws = sh.get_worksheet(0)
             for i in range(f_parc):
                 dt_p = f_dat + relativedelta(months=i)
-                desc = f"{f_cat} ({i+
+                desc_p = f"{f_cat} ({i+1}/{f_parc})" if f_parc > 1 else f_cat
+                ws.append_row([dt_p.strftime("%d/%m/%Y"), str(f_val).replace('.', ','), desc_p, f_tip, f_bnc, f_sta])
+            st.cache_data.clear(); st.rerun()
+
+    # --- GERENCIAR ---
+    st.sidebar.write("---")
+    st.sidebar.write("### ⚙️ Gerenciar Lançamentos")
+    if not df_base.empty:
+        lista_edit = df_base.iloc[::-1].head(20) 
+        opcoes = [f"{idx+2} | {row[c_dat]} | {row[c_cat]} | {row[c_val]}" for idx, row in lista_edit.iterrows()]
+        item_sel = st.sidebar.selectbox("Selecione o item:", [""] + opcoes)
+        if item_sel:
+            linha_idx = int(item_sel.split(" | ")[0])
+            c1, c2 = st.sidebar.columns(2)
+            if c1.button("🗑️ Excluir"):
+                sh.get_worksheet(0).delete_rows(linha_idx)
+                st.cache_data.clear(); st.rerun()
+            if c2.button("✅ Quitar"):
+                sh.get_worksheet(0).update_cell(linha_idx, 6, "Pago")
+                st.cache_data.clear(); st.rerun()
+
+elif aba == "🐾 Milo & Bolt":
+    st.info("Aba em manutenção controlada.")
+else:
+    st.info("Aba em manutenção controlada.")
