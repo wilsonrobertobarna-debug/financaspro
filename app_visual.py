@@ -61,7 +61,7 @@ def carregar_dados():
 
 df_bancos_cad, df_cats_cad, df_base = carregar_dados()
 
-# 4. LÓGICA DE INTERFACE
+# 4. INTERFACE
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Menu:", ["💰 Finanças", "🐾 Pets", "🚗 Veículo"])
 
@@ -71,23 +71,18 @@ if aba == "💰 Finanças":
     if not df_base.empty:
         df_base.columns = [c.strip() for c in df_base.columns]
         c_dat, c_val, c_cat, c_tip, c_bnc, c_sta = df_base.columns[0:6]
-        
         df_base['V_Num'] = df_base[c_val].apply(limpar_v)
         df_base['DT'] = pd.to_datetime(df_base[c_dat], dayfirst=True, errors='coerce')
         df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%y')
         mes_atual = datetime.now().strftime('%m/%y')
 
-        # FILTRO GLOBAL
+        # FILTROS
         bancos_lista = ["Todos"] + sorted(df_base[c_bnc].unique().tolist())
         banco_sel = st.selectbox("🔍 Filtrar Visão por Banco:", bancos_lista)
         df_filtrado = df_base if banco_sel == "Todos" else df_base[df_base[c_bnc] == banco_sel]
 
         # SALDOS
-        if banco_sel == "Todos":
-            s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_v).sum()
-        else:
-            s_ini = df_bancos_cad[df_bancos_cad['Nome do Banco'] == banco_sel]['Saldo Inicial'].apply(limpar_v).sum()
-            
+        s_ini = df_bancos_cad['Saldo Inicial'].apply(limpar_v).sum() if banco_sel == "Todos" else df_bancos_cad[df_bancos_cad['Nome do Banco'] == banco_sel]['Saldo Inicial'].apply(limpar_v).sum()
         df_pago = df_filtrado[df_filtrado[c_sta] == 'Pago']
         saldo_atual = s_ini + df_pago[df_pago[c_tip].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_pago[df_pago[c_tip] == 'Despesa']['V_Num'].sum()
 
@@ -98,7 +93,6 @@ if aba == "💰 Finanças":
         m_ren = df_mes[df_mes[c_tip] == 'Rendimento']['V_Num'].sum()
         m_pen = df_mes[df_mes[c_sta] == 'Pendente']['V_Num'].sum()
 
-        # DASHBOARD SUPERIOR
         st.markdown(f'<div class="saldo-container"><small>Saldo Disponível ({banco_sel})</small><h2>R$ {saldo_atual:,.2f}</h2></div>'.replace(',', 'X').replace('.', ',').replace('X', '.'), unsafe_allow_html=True)
 
         m1, m2, m3, m4 = st.columns(4)
@@ -107,27 +101,34 @@ if aba == "💰 Finanças":
         m3.metric("💰 Rendimento", f"R$ {m_ren:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
         m4.metric("⏳ Pendente", f"R$ {m_pen:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
-        # --- RESUMO DA ECONOMIA (MINI CARDS) ---
-        st.write("---")
-        st.subheader("📋 Resumo por Categoria")
+        # --- CÁLCULO DE METAS E ALERTAS ---
         gasto_cat = df_mes[df_mes[c_tip] == 'Despesa'].groupby(c_cat)['V_Num'].sum()
         df_m = pd.DataFrame({'Meta': df_cats_cad.set_index('Nome')['Meta'], 'Real': gasto_cat}).fillna(0.0)
         df_m = df_m[df_m['Meta'] > 0]
 
+        # ALERTAS DE ESTOURO (POP-UPS VISUAIS)
+        st.write("---")
+        categorias_estouradas = df_m[df_m['Real'] > df_m['Meta']]
+        if not categorias_estouradas.empty:
+            for cat, row in categorias_estouradas.iterrows():
+                excesso = row['Real'] - row['Meta']
+                st.error(f"🚨 **Atenção Wilson!** Você ultrapassou a meta de **{cat}** em **R$ {excesso:,.2f}**.")
+
+        # --- RESUMO DA ECONOMIA (MINI CARDS) ---
+        st.subheader("📊 Resumo de Economia (% e Valor)")
         if not df_m.empty:
-            cols_res = st.columns(5) # 5 colunas para caber mais coisa horizontalmente
+            cols_res = st.columns(5)
             for i, (categoria, row) in enumerate(df_m.iterrows()):
                 pct = (row['Real'] / row['Meta']) * 100 if row['Meta'] > 0 else 0
                 cor = "#28a745" if pct < 80 else ("#ffc107" if pct <= 100 else "#dc3545")
                 with cols_res[i % 5]:
-                    st.markdown(f'<div class="resumo-card"><small><b>{categoria}</b></small><br><span style="color:{cor}; font-weight:bold;">{pct:.1f}%</span><br><small>R$ {row["Real"]:,.0f}</small></div>', unsafe_allow_html=True)
-        
-        # --- GRÁFICOS LADO A LADO ---
+                    st.markdown(f'<div class="resumo-card"><small><b>{categoria}</b></small><br><span style="color:{cor}; font-weight:bold;">{pct:.1f}%</span><br><small>R$ {row["Real"]:,.0f} / {row["Meta"]:,.0f}</small></div>', unsafe_allow_html=True)
+
+        # --- GRÁFICOS ---
         st.write("---")
         g1, g2 = st.columns(2)
-        
         with g1:
-            st.subheader("🏦 Divisão por Bancos")
+            st.subheader("🏦 Bancos")
             s_pizza = []
             for b in df_bancos_cad['Nome do Banco'].unique():
                 si = df_bancos_cad[df_bancos_cad['Nome do Banco'] == b]['Saldo Inicial'].apply(limpar_v).sum()
@@ -139,27 +140,22 @@ if aba == "💰 Finanças":
             st.plotly_chart(fig_p, use_container_width=True)
 
         with g2:
-            st.subheader("📊 Comparativo de Metas")
-            if not df_m.empty:
-                df_plot = df_m.sort_values('Meta')
-                fig_meta = go.Figure()
-                fig_meta.add_trace(go.Bar(y=df_plot.index, x=df_plot['Meta'], name='Meta', orientation='h', marker_color='#E0E0E0'))
-                fig_meta.add_trace(go.Bar(y=df_plot.index, x=df_plot['Real'], name='Real', orientation='h', marker_color='#007bff'))
-                fig_meta.update_layout(barmode='overlay', height=350, margin=dict(l=0, r=0, t=20, b=0), legend=dict(orientation="h", y=1.1))
-                st.plotly_chart(fig_meta, use_container_width=True)
+            st.subheader("📊 Gráfico de Metas")
+            df_plot = df_m.sort_values('Meta')
+            fig_meta = go.Figure()
+            fig_meta.add_trace(go.Bar(y=df_plot.index, x=df_plot['Meta'], name='Meta', orientation='h', marker_color='#E0E0E0'))
+            fig_meta.add_trace(go.Bar(y=df_plot.index, x=df_plot['Real'], name='Real', orientation='h', marker_color='#007bff'))
+            fig_meta.update_layout(barmode='overlay', height=350, margin=dict(l=0, r=0, t=20, b=0))
+            st.plotly_chart(fig_meta, use_container_width=True)
 
-        # --- EVOLUÇÃO ---
         st.write("---")
-        st.subheader("📈 Evolução de Receitas vs Despesas")
+        st.subheader("📈 Evolução Mensal")
         evol = df_filtrado.groupby(['Mes_Ano', c_tip])['V_Num'].sum().unstack().fillna(0)
-        if not evol.empty:
-            st.bar_chart(evol, height=300)
+        st.bar_chart(evol)
 
-        # --- TABELA ---
-        st.subheader("📋 Histórico Recente")
+        st.subheader("📋 Lançamentos")
         st.dataframe(df_filtrado.drop(columns=['V_Num', 'DT', 'Mes_Ano'], errors='ignore').iloc[::-1], use_container_width=True)
 
-    # BARRA LATERAL (CADASTRO)
     with st.sidebar.form("novo"):
         st.write("### 🚀 Lançar")
         f_dat = st.date_input("Data", datetime.now())
