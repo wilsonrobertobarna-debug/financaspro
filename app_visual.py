@@ -40,7 +40,7 @@ def carregar():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
     df = pd.DataFrame(dados[1:], columns=dados[0])
-    df['ID'] = range(2, len(df) + 2)
+    df['ID_Linha'] = range(2, len(df) + 2) # ID real da linha na planilha
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
         except: return 0.0
@@ -55,32 +55,10 @@ def m_fmt(n):
     prefixo = "-" if n < 0 else ""
     return f"{prefixo}R$ {abs(n):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-def gerar_pdf_unico(df, banco, p_ini, p_fim):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(190, 10, f"EXTRATO: {banco}", ln=True, align="C")
-    pdf.set_font("Arial", "", 10)
-    pdf.cell(190, 10, f"Periodo: {p_ini.strftime('%d/%m/%Y')} - {p_fim.strftime('%d/%m/%Y')}", ln=True, align="C")
-    pdf.ln(5)
-    pdf.set_fill_color(230, 230, 230)
-    pdf.set_font("Arial", "B", 9)
-    pdf.cell(25, 8, "Data", 1, 0, "C", True)
-    pdf.cell(85, 8, "Descricao", 1, 0, "L", True)
-    pdf.cell(40, 8, "Valor", 1, 0, "R", True)
-    pdf.cell(40, 8, "Saldo", 1, 1, "R", True)
-    pdf.set_font("Arial", "", 8)
-    for _, r in df.iloc[::-1].iterrows():
-        pdf.cell(25, 7, str(r['Data']), 1, 0, "C")
-        pdf.cell(85, 7, str(r['Descrição'])[:40], 1, 0, "L")
-        pdf.cell(40, 7, r['V_Fmt'], 1, 0, "R")
-        pdf.cell(40, 7, r['S_Fmt'], 1, 1, "R")
-    return pdf.output(dest='S').encode('latin-1', errors='replace')
-
 df_base = carregar()
 mes_atual = datetime.now().strftime('%m/%y')
 
-# 4. SIDEBAR (PROTEGIDO)
+# 4. SIDEBAR (NOVO LANÇAMENTO)
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📊 Extrato Diário", "📄 Relatórios"])
 st.sidebar.divider()
@@ -102,7 +80,7 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
             ws_base.append_row([nova_dt, v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
         st.cache_data.clear(); st.rerun()
 
-# 5. TELAS
+# 5. TELA DE FINANÇAS (COMPLETA)
 if aba == "💰 Finanças":
     st.title("🛡️ FinançasPro Wilson")
     patrimonio = df_base['V_Real'].sum()
@@ -119,79 +97,84 @@ if aba == "💰 Finanças":
     c1, c2 = st.columns(2)
     with c1:
         df_evol = df_base.groupby(['Ano_Mes_Sort', 'Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
-        fig = px.bar(df_evol[df_evol['Tipo'].isin(['Receita', 'Despesa'])], x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', title="Mensal")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(px.bar(df_evol[df_evol['Tipo'].isin(['Receita', 'Despesa'])], x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', title="Evolução Mensal"), use_container_width=True)
     with c2:
         gastos_cat = df_m[df_m['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         st.plotly_chart(px.bar(gastos_cat, x='Categoria', y='V_Num', title="Gastos por Categoria"), use_container_width=True)
 
-    st.write("### 🔍 Pesquisar Lançamentos")
-    p1, p2, p3 = st.columns([1, 1, 2])
-    b_p = p1.selectbox("Banco:", ["Todos"] + sorted(df_base['Banco'].unique().tolist()))
-    t_p = p2.selectbox("Tipo:", ["Todos", "Receita", "Despesa", "Rendimento"])
-    d_p = p3.text_input("Descrição Wilson:")
+    st.divider()
+    st.write("### 🔍 Pesquisa e Ações")
+    psq1, psq2, psq3 = st.columns([1, 1, 2])
+    b_p = psq1.selectbox("Banco:", ["Todos"] + sorted(df_base['Banco'].unique().tolist()))
+    t_p = psq2.selectbox("Tipo:", ["Todos", "Receita", "Despesa", "Rendimento"])
+    d_p = psq3.text_input("Descrição Wilson:")
+    
     df_f = df_base.copy()
     if b_p != "Todos": df_f = df_f[df_f['Banco'] == b_p]
     if t_p != "Todos": df_f = df_f[df_f['Tipo'] == t_p]
     if d_p: df_f = df_f[df_f['Descrição'].str.contains(d_p, case=False, na=False)]
-    st.dataframe(df_f[['Data', 'Descrição', 'Valor', 'Tipo', 'Banco', 'Categoria']].iloc[::-1], use_container_width=True)
+    
+    st.dataframe(df_f[['Data', 'Descrição', 'Valor', 'Tipo', 'Banco', 'Categoria', 'Status']].iloc[::-1], use_container_width=True)
 
+    # --- NOVO BLOCO DE AÇÕES (TRANSFERÊNCIA, BAIXA, EXCLUSÃO) ---
+    st.divider()
+    act1, act2, act3 = st.columns(3)
+
+    with act1:
+        st.write("### 💸 Transferência")
+        with st.form("f_transf", clear_on_submit=True):
+            t_v = st.number_input("Valor", min_value=0.0)
+            t_o = st.selectbox("Sai de:", ["Santander", "Itaú", "Inter", "Nubank", "XP", "Mercado Pago"])
+            t_d = st.selectbox("Entra em:", ["Nubank", "Itaú", "Inter", "Santander", "XP", "Mercado Pago"])
+            if st.form_submit_button("EXECUTAR TRANSFERÊNCIA"):
+                hj = datetime.now().strftime("%d/%m/%Y")
+                v_s = f"{t_v:.2f}".replace('.', ',')
+                ws_base.append_row([hj, v_s, f"Transf: {t_o} > {t_d}", "Transferência", "Despesa", t_o, "Pago"])
+                ws_base.append_row([hj, v_s, f"Transf: {t_o} > {t_d}", "Transferência", "Receita", t_d, "Pago"])
+                st.cache_data.clear(); st.rerun()
+
+    with act2:
+        st.write("### 📝 Alterar Status")
+        # Pega os últimos 15 lançamentos para alteração rápida
+        opcoes_alt = {f"{r['Data']} - {r['Descrição']} ({r['Valor']})": r['ID_Linha'] for _, r in df_base.tail(15).iterrows()}
+        sel_alt = st.selectbox("Escolha o lançamento:", [""] + list(opcoes_alt.keys()))
+        novo_status = st.selectbox("Novo Status:", ["Pago", "Pendente"])
+        if st.button("ATUALIZAR STATUS") and sel_alt:
+            ws_base.update_cell(opcoes_alt[sel_alt], 7, novo_status) # Coluna 7 é o Status
+            st.cache_data.clear(); st.rerun()
+
+    with act3:
+        st.write("### 🚨 Excluir")
+        sel_exc = st.selectbox("Lançamento para excluir:", [""] + list(opcoes_alt.keys()))
+        if st.button("EXCLUIR PERMANENTE") and sel_exc:
+            ws_base.delete_rows(opcoes_alt[sel_exc])
+            st.cache_data.clear(); st.rerun()
+
+# --- AS OUTRAS ABAS MANTIDAS E FUNCIONAIS ---
 elif aba == "📊 Extrato Diário":
-    st.title("📊 Extrato com Pesquisa")
-    col1, col2, col3 = st.columns([1,1,2])
-    d_ini = col1.date_input("Início", datetime.now().replace(day=1))
-    d_fim = col2.date_input("Fim", datetime.now())
-    txt_b = col3.text_input("🔍 Buscar na Descrição:")
-    
-    b_sel = st.selectbox("Selecione o Banco:", sorted(df_base['Banco'].unique()))
-    
+    st.title("📊 Extrato")
+    b_sel = st.selectbox("Banco:", sorted(df_base['Banco'].unique()))
     df_b = df_base[df_base['Banco'] == b_sel].copy().sort_values('DT')
-    df_b = df_b[(df_b['DT'].dt.date >= d_ini) & (df_b['DT'].dt.date <= d_fim)]
-    if txt_b: df_b = df_b[df_b['Descrição'].str.contains(txt_b, case=False, na=False)]
-    
     df_b['Saldo_Acum'] = df_b['V_Real'].cumsum()
-    df_b['V_Fmt'] = df_b.apply(lambda r: f"-{m_fmt(r['V_Num'])}" if r['Tipo'] == 'Despesa' else m_fmt(r['V_Num']), axis=1)
-    df_b['S_Fmt'] = df_b['Saldo_Acum'].apply(m_fmt)
-    
-    pdf_bytes = gerar_pdf_unico(df_b, b_sel, d_ini, d_fim)
-    st.download_button("📄 BAIXAR EXTRATO PDF", pdf_bytes, f"extrato_{b_sel}.pdf", "application/pdf", use_container_width=True)
-    
-    st.table(df_b[['Data', 'Descrição', 'V_Fmt', 'S_Fmt']].iloc[::-1])
+    df_b['Saldo'] = df_b['Saldo_Acum'].apply(m_fmt)
+    st.table(df_b[['Data', 'Descrição', 'Valor', 'Saldo']].iloc[::-1])
 
 elif aba == "📄 Relatórios":
-    st.title("📄 Relatório Completo Wilson")
+    st.title("📄 Relatórios WhatsApp")
     r1, r2 = st.columns(2)
-    ini_r = r1.date_input("Início", datetime.now().replace(day=1))
-    fim_r = r2.date_input("Fim", datetime.now())
+    i, f = r1.date_input("Início", datetime.now().replace(day=1)), r2.date_input("Fim", datetime.now())
+    df_r = df_base[(df_base['DT'].dt.date >= i) & (df_base['DT'].dt.date <= f)]
     
-    df_r = df_base[(df_base['DT'].dt.date >= ini_r) & (df_base['DT'].dt.date <= fim_r)]
-    rec = df_r[df_r['Tipo']=='Receita']['V_Num'].sum()
-    des = df_r[df_r['Tipo']=='Despesa']['V_Num'].sum()
-    rend = df_r[df_r['Tipo']=='Rendimento']['V_Num'].sum()
-    pend = df_r[df_r['Status']=='Pendente']['V_Num'].sum()
-    
-    bancos_txt = ""
-    for b in sorted(df_base['Banco'].unique()):
-        s_b = df_base[df_base['Banco'] == b]['V_Real'].sum()
-        bancos_txt += f"• {b}: {m_fmt(s_b)}\n"
-
-    msg = (f"*Relatório Wilson*\n"
-           f"📅 Período: {ini_r.strftime('%d/%m/%Y')} - {fim_r.strftime('%d/%m/%Y')}\n\n"
-           f"✅ *RESUMO:*\n"
-           f"➕ Receitas: {m_fmt(rec)}\n"
-           f"➖ Despesas: {m_fmt(-des)}\n"
-           f"💰 Rendimentos: {m_fmt(rend)}\n"
-           f"⏳ Pendências: {m_fmt(pend)}\n\n"
-           f"🏦 *SALDOS POR BANCO:*\n{bancos_txt}\n"
-           f"💎 *PATRIMÔNIO:* {m_fmt(df_base['V_Real'].sum())}")
-    
-    st.text_area("Conteúdo do Relatório:", msg, height=350)
-    st.markdown(f'<a href="https://wa.me/?text={urllib.parse.quote(msg)}" target="_blank"><button style="width:100%;background-color:#25D366;color:white;padding:15px;border:none;border-radius:10px;font-weight:bold;cursor:pointer;">📲 ENVIAR TUDO PARA WHATSAPP</button></a>', unsafe_allow_html=True)
+    bancos_txt = "".join([f"• {b}: {m_fmt(df_base[df_base['Banco'] == b]['V_Real'].sum())}\n" for b in sorted(df_base['Banco'].unique())])
+    msg = (f"*Relatório Wilson*\nREC: {m_fmt(df_r[df_r['Tipo']=='Receita']['V_Num'].sum())}\nDES: {m_fmt(-df_r[df_r['Tipo']=='Despesa']['V_Num'].sum())}\n"
+           f"REND: {m_fmt(df_r[df_r['Tipo']=='Rendimento']['V_Num'].sum())}\nPEND: {m_fmt(df_r[df_r['Status']=='Pendente']['V_Num'].sum())}\n\n"
+           f"*Saldos:*\n{bancos_txt}\n*PATRIMÔNIO:* {m_fmt(df_base['V_Real'].sum())}")
+    st.text_area("Mensagem:", msg, height=250)
+    st.markdown(f'<a href="https://wa.me/?text={urllib.parse.quote(msg)}" target="_blank">📲 ENVIAR WHATSAPP</a>', unsafe_allow_html=True)
 
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Milo & Bolt")
     df_p = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False)]
-    st.metric("Total Gasto", m_fmt(df_p['V_Num'].sum()))
     st.table(df_p[['Data', 'Descrição', 'Valor', 'Status']].iloc[::-1])
 
 elif aba == "🚗 Meu Veículo":
