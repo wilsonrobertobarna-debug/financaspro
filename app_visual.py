@@ -91,6 +91,24 @@ if aba == "💰 Finanças":
     m4.metric("⏳ Pendente", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
     
     st.divider()
+    # --- GRÁFICOS RESTAURADOS ---
+    col_g1, col_g2 = st.columns(2)
+    with col_g1:
+        df_evol = df_base.groupby(['Ano_Mes_Sort', 'Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
+        fig_evol = px.bar(df_evol[df_evol['Tipo'].isin(['Receita', 'Despesa'])], x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', 
+                          title="Evolução Mensal (Rec x Desp)", color_discrete_map={'Receita': '#00CC96', 'Despesa': '#EF553B'})
+        st.plotly_chart(fig_evol, use_container_width=True)
+    with col_g2:
+        metas = {"Mercado": 1200.0, "Aluguel": 2500.0, "Luz/Água": 400.0, "Internet": 150.0, "Pet: Milo": 500.0, "Pet: Bolt": 500.0, "Veículo": 1000.0}
+        gastos_cat = df_m[df_m['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        gastos_cat['Meta'] = gastos_cat['Categoria'].map(metas).fillna(500.0)
+        fig_meta = go.Figure()
+        fig_meta.add_trace(go.Bar(x=gastos_cat['Categoria'], y=gastos_cat['V_Num'], name='Gasto Real', marker_color='#EF553B'))
+        fig_meta.add_trace(go.Bar(x=gastos_cat['Categoria'], y=gastos_cat['Meta'], name='Meta', marker_color='#3B82F6', opacity=0.4))
+        fig_meta.update_layout(title="Metas por Categoria (Mês Atual)", barmode='overlay')
+        st.plotly_chart(fig_meta, use_container_width=True)
+
+    st.divider()
     st.write("### 🔍 Pesquisa")
     p1, p2, p3 = st.columns([1, 1, 2])
     b_p = p1.selectbox("Banco:", ["Todos"] + sorted(df_base['Banco'].unique().tolist()))
@@ -129,7 +147,7 @@ if aba == "💰 Finanças":
                 a_dat = st.text_input("Data", item['Data'])
                 a_des = st.text_input("Descrição", item['Descrição'])
                 a_val = st.text_input("Valor", item['Valor'])
-                a_bnc = st.selectbox("Banco", ["Santander", "Itaú", "Inter", "Nubank", "XP", "Dinheiro"], index=0)
+                a_bnc = st.selectbox("Banco", ["Santander", "Itaú", "Inter", "Nubank", "XP", "Dinheiro"])
                 a_sta = st.selectbox("Status", ["Pago", "Pendente"], index=0 if item['Status'] == "Pago" else 1)
                 if st.form_submit_button("SALVAR ALTERAÇÕES"):
                     ws_base.update(f"A{item['ID_Linha']}:G{item['ID_Linha']}", [[a_dat, a_val, a_des, item['Categoria'], item['Tipo'], a_bnc, a_sta]])
@@ -141,7 +159,17 @@ if aba == "💰 Finanças":
             ws_base.delete_rows(int(ultimos[exc_sel]['ID_Linha']))
             st.cache_data.clear(); st.rerun()
 
-# --- ABAS Milo, Veículo, Extrato e Relatórios permanecem com a lógica anterior atualizada ---
+# --- ABAS Milo, Veículo, Extrato e Relatórios ---
+elif aba == "🐾 Milo & Bolt":
+    st.title("🐾 Milo & Bolt")
+    df_p = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False)]
+    st.table(df_p[['Data', 'Descrição', 'Valor', 'Status']].iloc[::-1])
+
+elif aba == "🚗 Meu Veículo":
+    st.title("🚗 Meu Veículo")
+    df_v = df_base[df_base['Categoria'].isin(['Veículo', 'Combustível', 'Manutenção'])]
+    st.table(df_v[['Data', 'Descrição', 'Valor', 'Status']].iloc[::-1])
+
 elif aba == "📊 Extrato Diário":
     st.title("📊 Extrato por Banco")
     b_sel = st.selectbox("Selecione o Banco:", sorted(df_base['Banco'].unique()))
@@ -156,13 +184,3 @@ elif aba == "📄 Relatórios":
     msg = f"*Relatório Wilson*\nPATRIMÔNIO: {m_fmt(df_base['V_Real'].sum())}\n\n*Saldos:*\n{bancos_txt}"
     st.text_area("Cópia:", msg, height=200)
     st.markdown(f'<a href="https://wa.me/?text={urllib.parse.quote(msg)}" target="_blank">📲 ENVIAR</a>', unsafe_allow_html=True)
-
-elif aba == "🐾 Milo & Bolt":
-    st.title("🐾 Milo & Bolt")
-    df_p = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False)]
-    st.table(df_p[['Data', 'Descrição', 'Valor', 'Status']].iloc[::-1])
-
-elif aba == "🚗 Meu Veículo":
-    st.title("🚗 Meu Veículo")
-    df_v = df_base[df_base['Categoria'].isin(['Veículo', 'Combustível', 'Manutenção'])]
-    st.table(df_v[['Data', 'Descrição', 'Valor', 'Status']].iloc[::-1])
