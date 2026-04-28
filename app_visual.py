@@ -39,10 +39,9 @@ def carregar():
         except: return 0.0
         
     df['V_Num'] = df['Valor'].apply(p_float)
-    # DT_ORDEM garante que a pesquisa por data funcione (Lê Dia primeiro)
+    
+    # CRÍTICO: DT_ORDEM força o Python a entender que o DIA vem antes do MÊS (formato BR)
     df['DT_ORDEM'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-    df['Status_LIMPO'] = df['Status'].str.strip().str.upper()
-    df['V_Real'] = df.apply(lambda r: r['V_Num'] if r['Tipo'] in ['Receita', 'Rendimento', 'Entrada'] else -r['V_Num'], axis=1)
     
     return df.sort_values(['DT_ORDEM', 'ID_Linha'])
 
@@ -51,7 +50,6 @@ def m_fmt(n):
     prefixo = "-" if n < 0 else ""
     return f"{prefixo}R$ {abs(n):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-# Carregamento base
 df_base = carregar()
 
 # 3. INTERFACE
@@ -59,58 +57,38 @@ st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "📊 Extrato Diário", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios"])
 
 if aba == "📊 Extrato Diário":
-    st.title("📊 Extrato Diário Detalhado")
+    st.title("📊 Extrato Diário")
     
     if df_base.empty:
         st.warning("Sem dados na planilha.")
     else:
-        # ÁREA DE PESQUISA - Ajustada para formato BR
-        c1, c2, c3, c4 = st.columns([1, 1, 1.5, 1])
+        # CORREÇÃO DA PESQUISA: format="DD/MM/YYYY" garante o visual brasileiro
+        c1, c2, c3 = st.columns([1, 1, 2])
         d_ini = c1.date_input("Início", datetime.now().replace(day=1), format="DD/MM/YYYY")
         d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
-        b_sel = c3.selectbox("Banco:", sorted(df_base['Banco'].unique()))
-        s_filter = c4.selectbox("Filtro Status:", ["Todos", "Pago", "Pendente"])
+        b_sel = c3.selectbox("Filtrar por Banco:", sorted(df_base['Banco'].unique()))
         
-        # Filtro de Banco e Cálculo do Saldo
-        df_b = df_base[df_base['Banco'] == b_sel].copy()
+        # Aplicando os filtros
+        df_f = df_base[
+            (df_base['Banco'] == b_sel) & 
+            (df_base['DT_ORDEM'].dt.date >= d_ini) & 
+            (df_base['DT_ORDEM'].dt.date <= d_fim)
+        ].copy()
         
-        # Calculamos o saldo acumulado de TUDO o que for PAGO para o banco selecionado
-        df_b['Saldo_Acum'] = df_b[df_b['Status_LIMPO'] == 'PAGO']['V_Real'].cumsum()
-        df_b['Saldo_Acum'] = df_b['Saldo_Acum'].ffill().fillna(0)
-        
-        # Filtramos o que vai aparecer na tela
-        df_f = df_b[(df_b['DT_ORDEM'].dt.date >= d_ini) & (df_b['DT_ORDEM'].dt.date <= d_fim)].copy()
-        
-        if s_filter == "Pago": df_f = df_f[df_f['Status_LIMPO'] == 'PAGO']
-        elif s_filter == "Pendente": df_f = df_f[df_f['Status_LIMPO'] != 'PAGO']
-        
-        # Preparamos as colunas de texto
-        df_f['Valor_Exibir'] = df_f.apply(lambda r: f"-{m_fmt(r['V_Num'])}" if r['V_Real'] < 0 else m_fmt(r['V_Num']), axis=1)
-        df_f['Saldo_Exibir'] = df_f['Saldo_Acum'].apply(m_fmt)
+        # Preparando valor para exibição
+        df_f['Valor_Exibir'] = df_f.apply(lambda r: f"-{m_fmt(r['V_Num'])}" if r['Tipo'] not in ['Receita', 'Rendimento', 'Entrada'] else m_fmt(r['V_Num']), axis=1)
 
         st.divider()
 
-        # Função de cores
-        def colorir(row):
-            estilo = [''] * len(row)
-            v_idx = row.index.get_loc('Valor_Exibir')
-            estilo[v_idx] = 'color: red' if '-' in str(row['Valor_Exibir']) else 'color: green'
-            s_idx = row.index.get_loc('Saldo_Exibir')
-            estilo[s_idx] = 'color: blue; font-weight: bold' if row['Saldo_Acum'] >= 0 else 'color: red; font-weight: bold'
-            return estilo
-
-        # EXIBIÇÃO DA TABELA
+        # TABELA DE EXIBIÇÃO
         st.dataframe(
-            df_f.iloc[::-1].style.apply(colorir, axis=1),
-            column_order=("ID_Linha", "Data", "Descrição", "Tipo", "Status", "Valor_Exibir", "Saldo_Exibir"),
+            df_f.iloc[::-1], # Mais recente no topo
+            column_order=("ID_Linha", "Data", "Descrição", "Tipo", "Status", "Valor_Exibir"),
             column_config={
                 "ID_Linha": st.column_config.TextColumn("ID", width="small"),
-                "Data": st.column_config.TextColumn("Data", width="small"),
+                "Data": st.column_config.TextColumn("Data", width="medium"), # Usa a data original da planilha
                 "Descrição": st.column_config.TextColumn("Descrição", width="large"),
-                "Tipo": st.column_config.TextColumn("Tipo", width="medium"),
-                "Status": st.column_config.TextColumn("Status", width="small"),
                 "Valor_Exibir": st.column_config.TextColumn("Valor", width="medium"),
-                "Saldo_Exibir": st.column_config.TextColumn("Saldo Acumulado", width="medium"),
             },
             use_container_width=True, 
             hide_index=True
@@ -118,6 +96,4 @@ if aba == "📊 Extrato Diário":
 
 elif aba == "💰 Finanças":
     st.title("🛡️ FinançasPro Wilson")
-    if not df_base.empty:
-        total = df_base[df_base['Status_LIMPO'] == 'PAGO']['V_Real'].sum()
-        st.success(f"### 🏦 SALDO TOTAL CONSOLIDADO: {m_fmt(total)}")
+    st.info("Ajustando as datas primeiro. O saldo consolidado voltará em breve.")
