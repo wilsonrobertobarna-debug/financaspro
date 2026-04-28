@@ -6,6 +6,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+import urllib.parse
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -52,10 +53,11 @@ mes_atual = datetime.now().strftime('%m/%y')
 
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-# 4. SIDEBAR
+# 4. SIDEBAR - FORMULÁRIOS E NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios"])
 
+# NOVO LANÇAMENTO
 with st.sidebar.form("f_novo", clear_on_submit=True):
     st.write("### 🚀 Novo Lançamento")
     f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -73,7 +75,24 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
             ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
         st.cache_data.clear(); st.rerun()
 
-# 5. TELAS
+# TRANSFERÊNCIA
+with st.sidebar.form("f_transf", clear_on_submit=True):
+    st.write("### 💸 Transferência")
+    t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+    t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
+    t_orig = st.selectbox("Origem (Sai):", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix"])
+    t_dest = st.selectbox("Destino (Entra):", ["Nubank", "Itaú", "Inter", "Santander", "Dinheiro", "Pix"])
+    t_desc = st.text_input("Nota")
+    if st.form_submit_button("TRANSFERIR"):
+        if t_orig == t_dest: st.error("Escolha bancos diferentes!")
+        else:
+            v_str = f"{t_val:.2f}".replace('.', ',')
+            d_str = t_dat.strftime("%d/%m/%Y")
+            ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago"])
+            ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago"])
+            st.cache_data.clear(); st.rerun()
+
+# 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
@@ -128,19 +147,38 @@ if "💰" in aba:
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
         st.dataframe(df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
 
+elif "🐾" in aba:
+    st.title("🐾 Gestão Milo & Bolt")
+    df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False)]
+    if not df_pet.empty:
+        st.metric("Gasto Total com Pets (Mês Atual)", m_fmt(df_pet[df_pet['Mes_Ano'] == mes_atual]['V_Num'].sum()))
+        st.dataframe(df_pet[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+    else:
+        st.write("Nenhum lançamento encontrado para os pets.")
+
+elif "🚗" in aba:
+    st.title("🚗 Gestão do Veículo")
+    c1, c2, c3 = st.columns([1,1,2])
+    alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
+    gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
+    if alc > 0 and gas > 0:
+        if (alc/gas) <= 0.7: c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
+        else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
+    st.divider()
+    df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
+    if not df_car.empty:
+        st.dataframe(df_car[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']].iloc[::-1], use_container_width=True, hide_index=True)
+
 elif "📄" in aba:
-    st.title("📄 Relatório para WhatsApp / E-mail")
+    st.title("📄 Relatório Wilson")
     c1, c2 = st.columns(2)
-    d_ini = c1.date_input("Início do Período", datetime.now() - relativedelta(months=1))
-    d_fim = c2.date_input("Fim do Período", datetime.now())
-    
+    d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1))
+    d_fim = c2.date_input("Fim", datetime.now())
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     if not df_per.empty:
         r_v = df_per[df_per['Tipo'] == 'Receita']['V_Num'].sum()
         d_v = df_per[df_per['Tipo'] == 'Despesa']['V_Num'].sum()
         rend_v = df_per[df_per['Tipo'] == 'Rendimento']['V_Num'].sum()
-        sobra_v = (r_v + rend_v) - d_v
-        
         bancos = sorted(df_base['Banco'].unique())
         saldos_txt = ""
         total_b = 0
@@ -148,17 +186,27 @@ elif "📄" in aba:
             s = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento']))]['V_Num'].sum() - df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
             saldos_txt += f"- {b}: {m_fmt(s)}\n"
             total_b += s
-
-        relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
-        relat += f"========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nSOBRA: {m_fmt(sobra_v)}\n"
-        relat += f"========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
-        
-        st.text_area("Conteúdo do Relatório (Copie abaixo):", relat, height=400)
-        
-        # Link que abre o WhatsApp com o texto (Funciona em alguns navegadores)
-        import urllib.parse
+        relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
+        st.text_area("Copiar para Zap/E-mail", relat, height=400)
         zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
         st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
-        st.info("Dica: Se o botão acima não abrir direto, basta selecionar o texto do quadro, copiar e colar no seu WhatsApp ou E-mail.")
 
-# Restante das abas (Milo e Veículo) e edição na sidebar permanecem...
+# 6. ALTERAÇÃO E EXCLUSÃO (SIDEBAR)
+st.sidebar.divider()
+if not df_base.empty:
+    st.sidebar.write("### ⚙️ Ajustar Lançamento")
+    # Pega os últimos 30 lançamentos para facilitar a escolha
+    lista_edit = {f"ID {r['ID']} | {r['Data']} | {r['Descrição']}": r for _, r in df_base.tail(30).iterrows()}
+    escolha = st.sidebar.selectbox("Escolha para editar:", [""] + list(lista_edit.keys()))
+    if escolha:
+        item = lista_edit[escolha]
+        ed_val = st.sidebar.text_input("Novo Valor:", value=str(item['Valor']))
+        ed_desc = st.sidebar.text_input("Nova Descrição:", value=str(item['Descrição']))
+        col_ed1, col_ed2 = st.sidebar.columns(2)
+        if col_ed1.button("💾 ATUALIZAR"):
+            ws_base.update_cell(int(item['ID']), 2, ed_val)
+            ws_base.update_cell(int(item['ID']), 3, ed_desc)
+            st.cache_data.clear(); st.rerun()
+        if col_ed2.button("🚨 EXCLUIR"):
+            ws_base.delete_rows(int(item['ID']))
+            st.cache_data.clear(); st.rerun()
