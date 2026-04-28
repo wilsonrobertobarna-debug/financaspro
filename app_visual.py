@@ -33,7 +33,7 @@ client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 ws_base = sh.get_worksheet(0)
 
-# 3. CARREGAMENTO E FUNÇÕES DE APOIO
+# 3. CARREGAMENTO E FUNÇÕES
 @st.cache_data(ttl=2)
 def carregar():
     dados = ws_base.get_all_values()
@@ -61,22 +61,18 @@ def gerar_pdf_extrato(df, banco, p_ini, p_fim):
     pdf.set_font("Arial", "", 10)
     pdf.cell(190, 10, f"Periodo: {p_ini.strftime('%d/%m/%Y')} ate {p_fim.strftime('%d/%m/%Y')}", ln=True, align="C")
     pdf.ln(5)
-    
-    # Cabeçalho da Tabela
     pdf.set_fill_color(200, 200, 200)
     pdf.set_font("Arial", "B", 9)
     pdf.cell(25, 8, "Data", 1, 0, "C", True)
     pdf.cell(80, 8, "Descricao", 1, 0, "L", True)
     pdf.cell(40, 8, "Valor", 1, 0, "R", True)
     pdf.cell(45, 8, "Saldo", 1, 1, "R", True)
-    
     pdf.set_font("Arial", "", 8)
     for _, r in df.iloc[::-1].iterrows():
         pdf.cell(25, 7, str(r['Data']), 1, 0, "C")
         pdf.cell(80, 7, str(r['Descrição'])[:45], 1, 0, "L")
         pdf.cell(40, 7, r['Valor Item'], 1, 0, "R")
         pdf.cell(45, 7, r['Saldo'], 1, 1, "R")
-    
     return pdf.output(dest='S').encode('latin-1', errors='replace')
 
 df_base = carregar()
@@ -90,17 +86,14 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
     st.write("### 🚀 Novo Lançamento")
     f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
     f_val = st.number_input("Valor", min_value=0.0, step=0.01)
-    f_par = st.number_input("Parcelas", min_value=1, value=1)
-    f_des = st.text_input("Descrição / Beneficiário")
+    f_des = st.text_input("Descrição")
     f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-    f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet", "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
-    f_bnc = st.selectbox("Banco/Cartão", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"])
+    f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção", "Outros"])
+    f_bnc = st.selectbox("Banco/Cartão", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "XP", "Mercado Pago"])
     f_sta = st.selectbox("Status", ["Pago", "Pendente"])
     if st.form_submit_button("SALVAR"):
         v_str = f"{f_val:.2f}".replace('.', ',')
-        for i in range(f_par):
-            nova_dt = (f_dat + relativedelta(months=i)).strftime("%d/%m/%Y")
-            ws_base.append_row([nova_dt, v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
+        ws_base.append_row([f_dat.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
         st.cache_data.clear(); st.rerun()
 
 # 5. TELAS
@@ -123,38 +116,45 @@ elif aba == "🐾 Milo & Bolt":
 
 elif aba == "🚗 Meu Veículo":
     st.title("🚗 Meu Veículo")
+    
+    # --- CÁLCULO ÁLCOOL VS GASOLINA ---
+    st.write("### ⛽ Calculadora de Combustível")
+    c_alc, c_gas = st.columns(2)
+    p_alc = c_alc.number_input("Preço do Álcool (L)", min_value=0.0, step=0.01)
+    p_gas = c_gas.number_input("Preço da Gasolina (L)", min_value=0.0, step=0.01)
+    
+    if p_alc > 0 and p_gas > 0:
+        ratio = p_alc / p_gas
+        if ratio <= 0.7:
+            st.success(f"✅ Compensa **ÁLCOOL**! (Proporção: {ratio:.2%})")
+        else:
+            st.warning(f"⛽ Vá de **GASOLINA**! (Proporção: {ratio:.2%})")
+    
+    st.divider()
     df_v = df_base[df_base['Categoria'].isin(['Veículo', 'Combustível', 'Manutenção'])]
+    st.write("### 📅 Histórico do Veículo")
     st.table(df_v[['Data', 'Descrição', 'Valor', 'Banco', 'Status']].iloc[::-1])
 
 elif aba == "📊 Extrato Diário":
     st.title("📊 Extrato Diário")
-    
-    col1, col2, col3 = st.columns([1, 1, 2])
-    data_ini = col1.date_input("Início", datetime.now().replace(day=1))
-    data_fim = col2.date_input("Fim", datetime.now())
-    busca = col3.text_input("Filtrar Descrição:")
-
+    c1, c2, c3 = st.columns([1, 1, 2])
+    data_ini = c1.date_input("Início", datetime.now().replace(day=1))
+    data_fim = c2.date_input("Fim", datetime.now())
+    busca = c3.text_input("Filtrar Descrição:")
     b_sel = st.selectbox("Escolha o Banco:", sorted(df_base['Banco'].unique()))
-    
-    # Processamento do Extrato
     df_b = df_base[df_base['Banco'] == b_sel].copy().sort_values('DT')
     df_b = df_b[(df_b['DT'].dt.date >= data_ini) & (df_b['DT'].dt.date <= data_fim)]
-    if busca:
-        df_b = df_b[df_b['Descrição'].str.contains(busca, case=False, na=False)]
-
+    if busca: df_b = df_b[df_b['Descrição'].str.contains(busca, case=False, na=False)]
     df_b['Saldo_Acum'] = df_b['V_Real'].cumsum()
     df_b['Valor Item'] = df_b.apply(lambda r: f"-{m_fmt(r['V_Num'])}" if r['Tipo'] == 'Despesa' else m_fmt(r['V_Num']), axis=1)
     df_b['Saldo'] = df_b['Saldo_Acum'].apply(m_fmt)
-    
-    # Botões de Ação
     c_btn1, c_btn2 = st.columns(2)
     with c_btn1:
         pdf_data = gerar_pdf_extrato(df_b, b_sel, data_ini, data_fim)
         st.download_button("📄 BAIXAR EXTRATO PDF", pdf_data, f"extrato_{b_sel}.pdf", "application/pdf", use_container_width=True)
     with c_btn2:
-        link_zap_ext = f"https://wa.me/?text={urllib.parse.quote('Wilson, segue extrato do banco ' + b_sel)}"
+        link_zap_ext = f"https://wa.me/?text={urllib.parse.quote(' Wilson, aqui está o extrato do ' + b_sel)}"
         st.markdown(f"""<a href="{link_zap_ext}" target="_blank"><button style="width:100%;background-color:#25D366;color:white;padding:10px;border:none;border-radius:5px;font-weight:bold;cursor:pointer;">📲 NOTIFICAR VIA WHATSAPP</button></a>""", unsafe_allow_html=True)
-    
     st.table(df_b[['Data', 'Descrição', 'Tipo', 'Valor Item', 'Saldo', 'Status']].iloc[::-1])
 
 elif aba == "📄 Relatórios":
@@ -162,25 +162,20 @@ elif aba == "📄 Relatórios":
     d1, d2 = st.columns(2)
     ini = d1.date_input("Início Período", datetime.now().replace(day=1))
     fim = d2.date_input("Fim Período", datetime.now())
-    
     df_p = df_base[(df_base['DT'].dt.date >= ini) & (df_base['DT'].dt.date <= fim)]
-    
     rec = df_p[df_p['Tipo'] == 'Receita']['V_Num'].sum()
     des = df_p[df_p['Tipo'] == 'Despesa']['V_Num'].sum()
     rend = df_p[df_p['Tipo'] == 'Rendimento']['V_Num'].sum()
     pend = df_p[df_p['Status'] == 'Pendente']['V_Num'].sum()
-    
     saldos_txt = ""
     total_pat = 0
     for b in sorted(df_base['Banco'].unique()):
         s = df_base[df_base['Banco'] == b]['V_Real'].sum()
         saldos_txt += f"- {b}: {m_fmt(s)}\n"
         total_pat += s
-
     relat = f"--- RELATÓRIO WILSON ---\nPeríodo: {ini.strftime('%d/%m/%Y')} a {fim.strftime('%d/%m/%Y')}\n"
     relat += f"==========================\n📈 REC: {m_fmt(rec)}\n📉 DES: {m_fmt(-des)}\n💰 REND: {m_fmt(rend)}\n⏳ PEND: {m_fmt(pend)}\n💵 SOBRA: {m_fmt(df_p['V_Real'].sum())}\n"
     relat += f"==========================\n🏦 SALDO POR BANCOS:\n{saldos_txt}==========================\n🏦 PATRIMÔNIO: {m_fmt(total_pat)}"
-    
     st.text_area("Relatório Wilson:", relat, height=350)
     link_zap = f"https://wa.me/?text={urllib.parse.quote(relat)}"
     st.markdown(f"""<a href="{link_zap}" target="_blank"><button style="width:100%;background-color:#25D366;color:white;padding:15px;border:none;border-radius:10px;font-weight:bold;cursor:pointer;">📲 ENVIAR PARA WHATSAPP</button></a>""", unsafe_allow_html=True)
