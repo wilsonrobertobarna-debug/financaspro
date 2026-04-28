@@ -3,6 +3,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime
+from fpdf import FPDF
 
 # 1. CONFIGURAÇÃO E CONEXÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -39,10 +40,7 @@ def carregar():
         except: return 0.0
         
     df['V_Num'] = df['Valor'].apply(p_float)
-    
-    # CRÍTICO: DT_ORDEM força o Python a entender que o DIA vem antes do MÊS (formato BR)
     df['DT_ORDEM'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-    
     return df.sort_values(['DT_ORDEM', 'ID_Linha'])
 
 def m_fmt(n): 
@@ -50,50 +48,66 @@ def m_fmt(n):
     prefixo = "-" if n < 0 else ""
     return f"{prefixo}R$ {abs(n):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
+def gerar_pdf(df, titulo):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(190, 10, f"RELATÓRIO: {titulo}", ln=True, align="C")
+    pdf.ln(5)
+    pdf.set_font("Arial", "", 8)
+    for _, r in df.iterrows():
+        txt = f"{r['Data']} - {r['Descrição'][:40]} - {r['Valor']}"
+        pdf.cell(190, 7, txt, border=1, ln=True)
+    return pdf.output(dest='S').encode('latin-1', errors='replace')
+
 df_base = carregar()
 
-# 3. INTERFACE
+# 3. BARRA LATERAL
 st.sidebar.title("🎮 Painel Wilson")
-aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "📊 Extrato Diário", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios"])
+aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "📊 Extrato Diário", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
+# Link direto para o WhatsApp no final da barra lateral
+st.sidebar.markdown("---")
+st.sidebar.link_button("💬 Abrir WhatsApp", "https://web.whatsapp.com")
+
+# 4. TELAS
 if aba == "📊 Extrato Diário":
     st.title("📊 Extrato Diário")
+    c1, c2, c3 = st.columns([1, 1, 2])
+    d_ini = c1.date_input("Início", datetime.now().replace(day=1), format="DD/MM/YYYY")
+    d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
+    b_sel = c3.selectbox("Banco:", sorted(df_base['Banco'].unique()))
     
-    if df_base.empty:
-        st.warning("Sem dados na planilha.")
+    df_f = df_base[(df_base['Banco'] == b_sel) & (df_base['DT_ORDEM'].dt.date >= d_ini) & (df_base['DT_ORDEM'].dt.date <= d_fim)].copy()
+    
+    if not df_f.empty:
+        pdf = gerar_pdf(df_f, f"Extrato {b_sel}")
+        st.download_button("🖨️ Imprimir Extrato (PDF)", pdf, f"extrato_{b_sel}.pdf", "application/pdf")
+        st.dataframe(df_f.iloc[::-1], column_order=("ID_Linha", "Data", "Descrição", "Valor", "Status"), use_container_width=True, hide_index=True)
+
+elif aba == "🐾 Milo & Bolt":
+    st.title("🐾 Gastos com Milo & Bolt")
+    # Filtra tudo que contém Milo ou Bolt na descrição ou categoria
+    df_pets = df_base[df_base.apply(lambda row: row.astype(str).str.contains('Milo|Bolt|Ração', case=False).any(), axis=1)].copy()
+    if not df_pets.empty:
+        pdf_p = gerar_pdf(df_pets, "Gastos Pets")
+        st.download_button("🖨️ Imprimir Gastos Pets", pdf_p, "gastos_pets.pdf")
+        st.dataframe(df_pets.iloc[::-1], use_container_width=True, hide_index=True)
     else:
-        # CORREÇÃO DA PESQUISA: format="DD/MM/YYYY" garante o visual brasileiro
-        c1, c2, c3 = st.columns([1, 1, 2])
-        d_ini = c1.date_input("Início", datetime.now().replace(day=1), format="DD/MM/YYYY")
-        d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
-        b_sel = c3.selectbox("Filtrar por Banco:", sorted(df_base['Banco'].unique()))
-        
-        # Aplicando os filtros
-        df_f = df_base[
-            (df_base['Banco'] == b_sel) & 
-            (df_base['DT_ORDEM'].dt.date >= d_ini) & 
-            (df_base['DT_ORDEM'].dt.date <= d_fim)
-        ].copy()
-        
-        # Preparando valor para exibição
-        df_f['Valor_Exibir'] = df_f.apply(lambda r: f"-{m_fmt(r['V_Num'])}" if r['Tipo'] not in ['Receita', 'Rendimento', 'Entrada'] else m_fmt(r['V_Num']), axis=1)
+        st.info("Nenhum registro encontrado para os pets.")
 
-        st.divider()
-
-        # TABELA DE EXIBIÇÃO
-        st.dataframe(
-            df_f.iloc[::-1], # Mais recente no topo
-            column_order=("ID_Linha", "Data", "Descrição", "Tipo", "Status", "Valor_Exibir"),
-            column_config={
-                "ID_Linha": st.column_config.TextColumn("ID", width="small"),
-                "Data": st.column_config.TextColumn("Data", width="medium"), # Usa a data original da planilha
-                "Descrição": st.column_config.TextColumn("Descrição", width="large"),
-                "Valor_Exibir": st.column_config.TextColumn("Valor", width="medium"),
-            },
-            use_container_width=True, 
-            hide_index=True
-        )
+elif aba == "🚗 Meu Veículo":
+    st.title("🚗 Manutenção e Combustível")
+    # Filtra gastos relacionados a veículo (ex: gasolina, oficina)
+    df_car = df_base[df_base.apply(lambda row: row.astype(str).str.contains('Carro|Moto|Combustível|Gasolina|Oficina', case=False).any(), axis=1)].copy()
+    if not df_car.empty:
+        pdf_c = gerar_pdf(df_car, "Relatório Veículo")
+        st.download_button("🖨️ Imprimir Relatório Veículo", pdf_c, "relatorio_veiculo.pdf")
+        st.dataframe(df_car.iloc[::-1], use_container_width=True, hide_index=True)
+    else:
+        st.info("Nenhum registro de veículo encontrado.")
 
 elif aba == "💰 Finanças":
-    st.title("🛡️ FinançasPro Wilson")
-    st.info("Ajustando as datas primeiro. O saldo consolidado voltará em breve.")
+    st.title("🛡️ FinançasPro")
+    total = df_base['V_Num'].sum()
+    st.metric("Volume Total Movimentado", m_fmt(total))
