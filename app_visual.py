@@ -40,17 +40,19 @@ def carregar():
         except: return 0.0
         
     df['V_Num'] = df['Valor'].apply(p_float)
-    df['DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-    df['Status_Limpo'] = df['Status'].str.strip().str.upper()
+    # Criamos uma coluna técnica de data para ordenação, mas manteremos a original para exibição
+    df['DT_ORDEM'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
+    df['Status_LIMPO'] = df['Status'].str.strip().str.upper()
     df['V_Real'] = df.apply(lambda r: r['V_Num'] if r['Tipo'] in ['Receita', 'Rendimento', 'Entrada'] else -r['V_Num'], axis=1)
-    return df.sort_values(['DT', 'ID_Linha'])
+    
+    return df.sort_values(['DT_ORDEM', 'ID_Linha'])
 
 def m_fmt(n): 
     if n == "" or pd.isna(n) or n == 0: return ""
     prefixo = "-" if n < 0 else ""
     return f"{prefixo}R$ {abs(n):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-# CARREGAMENTO INICIAL (Essencial para evitar o NameError)
+# Carregamento
 df_base = carregar()
 
 # 3. INTERFACE
@@ -61,27 +63,27 @@ if aba == "📊 Extrato Diário":
     st.title("📊 Extrato Diário Detalhado")
     
     if df_base.empty:
-        st.warning("Nenhum dado encontrado na planilha.")
+        st.warning("Sem dados na planilha.")
     else:
+        # ÁREA DE PESQUISA (DATAS)
         c1, c2, c3, c4 = st.columns([1, 1, 1.5, 1])
-        d_ini = c1.date_input("Início", datetime.now().replace(day=1))
-        d_fim = c2.date_input("Fim", datetime.now())
+        d_ini = c1.date_input("Início (Pesquisa)", datetime.now().replace(day=1))
+        d_fim = c2.date_input("Fim (Pesquisa)", datetime.now())
         b_sel = c3.selectbox("Banco:", sorted(df_base['Banco'].unique()))
         s_filter = c4.selectbox("Filtro Status:", ["Todos", "Pago", "Pendente"])
         
-        # Filtro por Banco e Cálculo do Saldo
+        # Filtro de Banco e Cálculo do Saldo
         df_b = df_base[df_base['Banco'] == b_sel].copy()
-        df_b['Saldo_Acum'] = df_b[df_b['Status_Limpo'] == 'PAGO']['V_Real'].cumsum()
+        df_b['Saldo_Acum'] = df_b[df_b['Status_LIMPO'] == 'PAGO']['V_Real'].cumsum()
         df_b['Saldo_Acum'] = df_b['Saldo_Acum'].ffill().fillna(0)
         
-        # Filtros de Data e Status para exibição
-        df_f = df_b[(df_b['DT'].dt.date >= d_ini) & (df_b['DT'].dt.date <= d_fim)].copy()
-        if s_filter == "Pago": 
-            df_f = df_f[df_f['Status_Limpo'] == 'PAGO']
-        elif s_filter == "Pendente": 
-            df_f = df_f[df_f['Status_Limpo'] != 'PAGO']
+        # Filtro de Data (Usando a coluna técnica de ordenação)
+        df_f = df_b[(df_b['DT_ORDEM'].dt.date >= d_ini) & (df_b['DT_ORDEM'].dt.date <= d_fim)].copy()
         
-        # Lógica para mostrar o saldo apenas na última linha do dia
+        if s_filter == "Pago": df_f = df_f[df_f['Status_LIMPO'] == 'PAGO']
+        elif s_filter == "Pendente": df_f = df_f[df_f['Status_LIMPO'] != 'PAGO']
+        
+        # Lógica do Saldo: Só aparece na última linha do dia
         df_f['Ultima_Linha_Dia'] = False
         if not df_f.empty:
             idx_ultimas = df_f.groupby('Data')['ID_Linha'].idxmax()
@@ -92,7 +94,7 @@ if aba == "📊 Extrato Diário":
 
         st.divider()
 
-        # Configuração das Cores
+        # Função de cores
         def colorir(row):
             estilo = [''] * len(row)
             v_idx = row.index.get_loc('Valor_Exibir')
@@ -102,7 +104,8 @@ if aba == "📊 Extrato Diário":
                 estilo[s_idx] = 'color: blue; font-weight: bold' if row['Saldo_Acum'] >= 0 else 'color: red; font-weight: bold'
             return estilo
 
-        # Exibição da Tabela com Saldo, ID e Descrição
+        # EXIBIÇÃO FINAL
+        # Nota: Usamos a coluna 'Data' original (texto) para não inverter dia/mês
         st.dataframe(
             df_f.iloc[::-1].style.apply(colorir, axis=1),
             column_order=("ID_Linha", "Data", "Descrição", "Tipo", "Status", "Valor_Exibir", "Saldo_Exibir"),
@@ -113,7 +116,7 @@ if aba == "📊 Extrato Diário":
                 "Tipo": st.column_config.TextColumn("Tipo", width="medium"),
                 "Status": st.column_config.TextColumn("Status", width="small"),
                 "Valor_Exibir": st.column_config.TextColumn("Valor", width="medium"),
-                "Saldo_Exibir": st.column_config.TextColumn("Saldo do Dia", width="medium"),
+                "Saldo_Exibir": st.column_config.TextColumn("Saldo Acumulado", width="medium"),
             },
             use_container_width=True, 
             hide_index=True
@@ -122,9 +125,5 @@ if aba == "📊 Extrato Diário":
 elif aba == "💰 Finanças":
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
-        total = df_base[df_base['Status_Limpo'] == 'PAGO']['V_Real'].sum()
-        st.success(f"### 🏦 SALDO TOTAL (PAGO): {m_fmt(total)}")
-
-else:
-    st.title(f"{aba}")
-    st.info("Aguardando configurações.")
+        total = df_base[df_base['Status_LIMPO'] == 'PAGO']['V_Real'].sum()
+        st.success(f"### 🏦 SALDO TOTAL EM BANCOS: {m_fmt(total)}")
