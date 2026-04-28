@@ -78,7 +78,7 @@ def gerar_pdf_extrato(df, banco, p_ini, p_fim):
 df_base = carregar()
 mes_atual = datetime.now().strftime('%m/%y')
 
-# 4. SIDEBAR (FORMULÁRIOS E AJUSTES)
+# 4. SIDEBAR (ESTRUTURA INTOCADA)
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📊 Extrato Diário", "📄 Relatórios"])
 
@@ -121,7 +121,7 @@ if escolha and st.sidebar.button("🚨 EXCLUIR"):
     ws_base.delete_rows(int(ultimos[escolha]['ID']))
     st.cache_data.clear(); st.rerun()
 
-# 5. TELAS PRINCIPAIS
+# 5. TELAS PRINCIPAIS (COM EXTRATO E PESQUISA RESTAURADOS)
 if aba == "💰 Finanças":
     st.title("🛡️ FinançasPro Wilson")
     patrimonio = df_base['V_Real'].sum()
@@ -144,9 +144,9 @@ elif aba == "🐾 Milo & Bolt":
 elif aba == "🚗 Meu Veículo":
     st.title("🚗 Meu Veículo")
     st.write("### ⛽ Calculadora Álcool x Gasolina")
-    c1, c2 = st.columns(2)
-    p_alc = c1.number_input("Preço Álcool", min_value=0.0, step=0.01)
-    p_gas = c2.number_input("Preço Gasolina", min_value=0.0, step=0.01)
+    cv1, cv2 = st.columns(2)
+    p_alc = cv1.number_input("Preço Álcool", min_value=0.0, step=0.01)
+    p_gas = cv2.number_input("Preço Gasolina", min_value=0.0, step=0.01)
     if p_alc > 0 and p_gas > 0:
         if p_alc / p_gas <= 0.7: st.success("Vá de ÁLCOOL!")
         else: st.warning("Vá de GASOLINA!")
@@ -155,40 +155,46 @@ elif aba == "🚗 Meu Veículo":
     st.table(df_v[['Data', 'Descrição', 'Valor', 'Banco', 'Status']].iloc[::-1])
 
 elif aba == "📊 Extrato Diário":
-    st.title("📊 Extrato Diário")
-    col1, col2, col3 = st.columns([1, 1, 2])
-    d_ini = col1.date_input("Início", datetime.now().replace(day=1))
-    d_fim = col2.date_input("Fim", datetime.now())
-    busca = col3.text_input("🔍 Pesquisar na Descrição:")
+    st.title("📊 Extrato Diário Detalhado")
+    
+    # --- ÁREA DE PESQUISA E FILTROS ---
+    f1, f2, f3 = st.columns([1, 1, 2])
+    data_ini = f1.date_input("De:", datetime.now().replace(day=1))
+    data_fim = f2.date_input("Até:", datetime.now())
+    busca_txt = f3.text_input("🔍 Buscar na Descrição:", placeholder="Ex: Mercado, Posto...")
     
     b_sel = st.selectbox("Escolha o Banco:", sorted(df_base['Banco'].unique()))
-    df_b = df_base[df_base['Banco'] == b_sel].copy().sort_values('DT')
-    df_b = df_b[(df_b['DT'].dt.date >= d_ini) & (df_b['DT'].dt.date <= d_fim)]
-    if busca: df_b = df_b[df_b['Descrição'].str.contains(busca, case=False, na=False)]
     
+    # Processamento dos dados com filtros
+    df_b = df_base[df_base['Banco'] == b_sel].copy().sort_values('DT')
+    df_b = df_b[(df_b['DT'].dt.date >= data_ini) & (df_b['DT'].dt.date <= data_fim)]
+    if busca_txt:
+        df_b = df_b[df_b['Descrição'].str.contains(busca_txt, case=False, na=False)]
+        
     df_b['Saldo_Acum'] = df_b['V_Real'].cumsum()
     df_b['Valor Item'] = df_b.apply(lambda r: f"-{m_fmt(r['V_Num'])}" if r['Tipo'] == 'Despesa' else m_fmt(r['V_Num']), axis=1)
     df_b['Saldo'] = df_b['Saldo_Acum'].apply(m_fmt)
     
-    c_btn1, c_btn2 = st.columns(2)
-    with c_btn1:
-        pdf_data = gerar_pdf_extrato(df_b, b_sel, d_ini, d_fim)
-        st.download_button("📄 GERAR EXTRATO PDF", pdf_data, f"extrato_{b_sel}.pdf", "application/pdf", use_container_width=True)
-    with c_btn2:
-        txt_zap = urllib.parse.quote(f"Wilson, segue extrato {b_sel}")
-        st.markdown(f'<a href="https://wa.me/?text={txt_zap}" target="_blank"><button style="width:100%;background-color:#25D366;color:white;padding:10px;border:none;border-radius:5px;font-weight:bold;cursor:pointer;">📲 NOTIFICAR WHATSAPP</button></a>', unsafe_allow_html=True)
+    # Botões de Ação
+    bt1, bt2 = st.columns(2)
+    with bt1:
+        pdf_file = gerar_pdf_extrato(df_b, b_sel, data_ini, data_fim)
+        st.download_button("📄 BAIXAR EXTRATO EM PDF", pdf_file, f"extrato_{b_sel}.pdf", "application/pdf", use_container_width=True)
+    with bt2:
+        link_zap = f"https://wa.me/?text={urllib.parse.quote('Wilson, segue extrato verificado de ' + b_sel)}"
+        st.markdown(f'<a href="{link_zap}" target="_blank"><button style="width:100%;background-color:#25D366;color:white;padding:10px;border:none;border-radius:5px;font-weight:bold;cursor:pointer;">📲 NOTIFICAR VIA WHATSAPP</button></a>', unsafe_allow_html=True)
     
     st.table(df_b[['Data', 'Descrição', 'Tipo', 'Valor Item', 'Saldo', 'Status']].iloc[::-1])
 
 elif aba == "📄 Relatórios":
     st.title("📄 Relatório Detalhado")
     d1, d2 = st.columns(2)
-    ini = d1.date_input("De:", datetime.now().replace(day=1))
-    fim = d2.date_input("Até:", datetime.now())
+    ini = d1.date_input("Início Período", datetime.now().replace(day=1))
+    fim = d2.date_input("Fim Período", datetime.now())
     df_p = df_base[(df_base['DT'].dt.date >= ini) & (df_base['DT'].dt.date <= fim)]
     
-    saldos = "".join([f"- {b}: {m_fmt(df_base[df_base['Banco'] == b]['V_Real'].sum())}\n" for b in sorted(df_base['Banco'].unique())])
-    relat = f"*Relatório Wilson*\nREC: {m_fmt(df_p[df_p['Tipo'] == 'Receita']['V_Num'].sum())}\nDES: {m_fmt(-df_p[df_p['Tipo'] == 'Despesa']['V_Num'].sum())}\nREND: {m_fmt(df_p[df_p['Tipo'] == 'Rendimento']['V_Num'].sum())}\n\n*Saldos:*\n{saldos}\n*PATRIMÔNIO:* {m_fmt(df_base['V_Real'].sum())}"
+    saldos_txt = "".join([f"- {b}: {m_fmt(df_base[df_base['Banco'] == b]['V_Real'].sum())}\n" for b in sorted(df_base['Banco'].unique())])
+    relat = f"*Relatório Wilson*\nPeríodo: {ini.strftime('%d/%m/%Y')} a {fim.strftime('%d/%m/%Y')}\n\nREC: {m_fmt(df_p[df_p['Tipo'] == 'Receita']['V_Num'].sum())}\nDES: {m_fmt(-df_p[df_p['Tipo'] == 'Despesa']['V_Num'].sum())}\nREND: {m_fmt(df_p[df_p['Tipo'] == 'Rendimento']['V_Num'].sum())}\n\n*Saldos:*\n{saldos_txt}\n*PATRIMÔNIO:* {m_fmt(df_base['V_Real'].sum())}"
     
-    st.text_area("Cópia:", relat, height=300)
+    st.text_area("Cópia do Relatório:", relat, height=300)
     st.markdown(f'<a href="https://wa.me/?text={urllib.parse.quote(relat)}" target="_blank"><button style="width:100%;background-color:#25D366;color:white;padding:15px;border:none;border-radius:10px;font-weight:bold;cursor:pointer;">📲 ENVIAR PARA WHATSAPP</button></a>', unsafe_allow_html=True)
