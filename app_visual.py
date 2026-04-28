@@ -3,10 +3,10 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import urllib.parse
+from fpdf import FPDF # Certifique-se de ter 'fpdf2' no requirements.txt
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -33,7 +33,7 @@ client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 ws_base = sh.get_worksheet(0)
 
-# 3. CARREGAMENTO
+# 3. FUNÇÕES DE APOIO
 @st.cache_data(ttl=2)
 def carregar():
     dados = ws_base.get_all_values()
@@ -46,63 +46,63 @@ def carregar():
     df['V_Num'] = df['Valor'].apply(p_float)
     df['DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
-    # Lógica de sinal: Receita/Rendimento é positivo, Despesa é negativo
     df['V_Real'] = df.apply(lambda r: r['V_Num'] if r['Tipo'] in ['Receita', 'Rendimento'] else -r['V_Num'], axis=1)
     return df.sort_values('DT')
-
-df_base = carregar()
-mes_atual = datetime.now().strftime('%m/%y')
 
 def m_fmt(n): 
     prefixo = "-" if n < 0 else ""
     return f"{prefixo}R$ {abs(n):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
+def gerar_pdf_extrato(df, banco):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(190, 10, f"Extrato Bancario - {banco}", ln=True, align="C")
+    pdf.set_font("Arial", "B", 10)
+    pdf.ln(5)
+    # Cabeçalho
+    pdf.cell(30, 10, "Data", 1)
+    pdf.cell(80, 10, "Descricao", 1)
+    pdf.cell(40, 10, "Valor", 1)
+    pdf.cell(40, 10, "Saldo", 1)
+    pdf.ln()
+    # Dados
+    pdf.set_font("Arial", "", 10)
+    for _, row in df.iloc[::-1].iterrows():
+        pdf.cell(30, 10, str(row['Data']), 1)
+        pdf.cell(80, 10, str(row['Descrição'])[:40], 1)
+        pdf.cell(40, 10, row['Valor Formatado'], 1)
+        pdf.cell(40, 10, row['Saldo Diário'], 1)
+        pdf.ln()
+    return pdf.output(dest='S').encode('latin-1', errors='replace')
+
+df_base = carregar()
+
 # 4. SIDEBAR
 st.sidebar.title("🎮 Painel Wilson")
-aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📊 Extrato Diário", "📄 Relatórios"])
-
-# Form de lançamento omitido aqui para brevidade, mas mantido no seu app original
+aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "📊 Extrato Diário", "📄 Relatórios"])
 
 # 5. TELAS
 if aba == "💰 Finanças":
     st.title("🛡️ FinançasPro Wilson")
-    if not df_base.empty:
-        patrimonio = df_base['V_Real'].sum()
-        st.info(f"### 🏦 PATRIMÔNIO TOTAL: {m_fmt(patrimonio)}")
-        
-        # Grid de métricas e gráficos coloridos (Verde/Vermelho) conforme pedido anterior
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[df_m['Categoria'] != 'Transferência']
-        
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Gasto", m_fmt(-df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        m4.metric("⏳ Pendente", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
-
-        g1, g2 = st.columns(2)
-        with g1:
-            df_fluxo = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
-            fig_bar = px.bar(df_fluxo, x='Tipo', y='V_Num', color='Tipo', 
-                             color_discrete_map={'Receita':'#2ecc71', 'Despesa':'#e74c3c', 'Rendimento':'#27ae60'})
-            st.plotly_chart(fig_bar, use_container_width=True)
-        with g2:
-            df_pie = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-            st.plotly_chart(px.pie(df_pie, values='V_Num', names='Categoria'), use_container_width=True)
+    patrimonio = df_base['V_Real'].sum()
+    st.info(f"### 🏦 PATRIMÔNIO TOTAL: {m_fmt(patrimonio)}")
 
 elif aba == "📊 Extrato Diário":
-    st.title("📊 Extrato com Sinal de Negativo")
+    st.title("📊 Extrato Bancário")
     b_sel = st.selectbox("Escolha o Banco:", sorted(df_base['Banco'].unique()))
     df_b = df_base[df_base['Banco'] == b_sel].copy().sort_values('DT')
     df_b['Saldo_Acum'] = df_b['V_Real'].cumsum()
-    
-    # Formatação com sinal negativo para despesas no extrato
     df_b['Valor Formatado'] = df_b.apply(lambda r: f"-R$ {r['V_Num']:.2f}".replace('.', ',') if r['Tipo'] == 'Despesa' else f"R$ {r['V_Num']:.2f}".replace('.', ','), axis=1)
     
-    df_b['Saldo Diário'] = ""
-    last_idx = df_b.groupby('DT').tail(1).index
-    df_b.loc[last_idx, 'Saldo Diário'] = df_b.loc[last_idx, 'Saldo_Acum'].apply(m_fmt)
-    st.table(df_b[['Data', 'Descrição', 'Tipo', 'Valor Formatado', 'Saldo Diário']].iloc[::-1])
+    df_b['Saldo Diário'] = df_b['Saldo_Acum'].apply(m_fmt)
+    df_mostrar = df_b[['Data', 'Descrição', 'Tipo', 'Valor Formatado', 'Saldo Diário']].iloc[::-1]
+    
+    # Botão de PDF
+    pdf_bytes = gerar_pdf_extrato(df_b, b_sel)
+    st.download_button(label="📄 Baixar Extrato em PDF", data=pdf_bytes, file_name=f"extrato_{b_sel}.pdf", mime="application/pdf")
+    
+    st.table(df_mostrar)
 
 elif aba == "📄 Relatórios":
     st.title("📄 Relatório Wilson")
@@ -124,12 +124,11 @@ elif aba == "📄 Relatórios":
     relat += "========================================\n"
     relat += f"REC: {m_fmt(df_p[df_p['Tipo'] == 'Receita']['V_Num'].sum())}\n"
     relat += f"DES: {m_fmt(-df_p[df_p['Tipo'] == 'Despesa']['V_Num'].sum())}\n"
-    relat += f"REND: {m_fmt(df_p[df_p['Tipo'] == 'Rendimento']['V_Num'].sum())}\n"
     relat += f"SOBRA: {m_fmt(df_p['V_Real'].sum())}\n"
-    relat += "========================================\n\nSALDOS:\n"
+    relat += "========================================\n\nSALDOS POR BANCO:\n"
     relat += saldos_txt
-    relat += f"TOTAL BANCOS: {m_fmt(total_consolidado)}\n"
-    relat += f"PATRIMÔNIO: {m_fmt(total_consolidado)}"
+    relat += "========================================\n"
+    relat += f"PATRIMÔNIO TOTAL: {m_fmt(total_consolidado)}\n" # ADICIONADO AQUI
     
     st.text_area("Copiar Relatório:", relat, height=400)
     zap_url = f"https://wa.me/?text={urllib.parse.quote(relat)}"
