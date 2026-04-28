@@ -56,22 +56,19 @@ def m_fmt(n):
 df_base = carregar()
 mes_atual = datetime.now().strftime('%m/%y')
 
-# 4. SIDEBAR - TUDO RESTAURADO
+# 4. SIDEBAR
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📊 Extrato Diário", "📄 Relatórios"])
 
-st.sidebar.divider()
-
-# FORMULÁRIO DE NOVO LANÇAMENTO
 with st.sidebar.form("f_novo", clear_on_submit=True):
     st.write("### 🚀 Novo Lançamento")
     f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
     f_val = st.number_input("Valor", min_value=0.0, step=0.01)
     f_par = st.number_input("Parcelas", min_value=1, value=1)
-    f_des = st.text_input("Descrição / Beneficiário")
+    f_des = st.text_input("Descrição")
     f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-    f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet", "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
-    f_bnc = st.selectbox("Banco/Cartão", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"])
+    f_cat = st.selectbox("Categoria", ["Mercado", "Luz/Água", "Internet", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção", "Outros"])
+    f_bnc = st.selectbox("Banco/Cartão", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "XP", "Mercado Pago"])
     f_sta = st.selectbox("Status", ["Pago", "Pendente"])
     if st.form_submit_button("SALVAR"):
         v_str = f"{f_val:.2f}".replace('.', ',')
@@ -80,97 +77,58 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
             ws_base.append_row([nova_dt, v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
         st.cache_data.clear(); st.rerun()
 
-# FORMULÁRIO DE TRANSFERÊNCIA
-with st.sidebar.form("f_transf", clear_on_submit=True):
-    st.write("### 💸 Transferência entre Contas")
-    t_val = st.number_input("Valor da Transferência", min_value=0.0)
-    t_orig = st.selectbox("Origem (Sai de):", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix"])
-    t_dest = st.selectbox("Destino (Entra em):", ["Nubank", "Itaú", "Inter", "Santander", "Dinheiro", "Pix"])
-    if st.form_submit_button("EXECUTAR TRANSFERÊNCIA"):
-        d_s = datetime.now().strftime("%d/%m/%Y")
-        v_s = f"{t_val:.2f}".replace('.', ',')
-        ws_base.append_row([d_s, v_s, "Transferência Saída", "Transferência", "Despesa", t_orig, "Pago"])
-        ws_base.append_row([d_s, v_s, "Transferência Entrada", "Transferência", "Receita", t_dest, "Pago"])
-        st.cache_data.clear(); st.rerun()
-
-# 5. TELAS PRINCIPAIS
+# 5. TELAS
 if aba == "💰 Finanças":
     st.title("🛡️ FinançasPro Wilson")
-    if not df_base.empty:
-        patrimonio = df_base['V_Real'].sum()
-        st.info(f"### 🏦 PATRIMÔNIO TOTAL: {m_fmt(patrimonio)}")
-        
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[df_m['Categoria'] != 'Transferência']
-        
-        # Métricas de Resumo
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Gasto", m_fmt(-df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        m4.metric("⏳ Pendente", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
-
-        # Gráficos
-        g1, g2 = st.columns(2)
-        with g1:
-            df_fig = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
-            st.plotly_chart(px.bar(df_fig, x='Tipo', y='V_Num', color='Tipo', title="Fluxo Mensal", color_discrete_map={'Receita':'#2ecc71', 'Despesa':'#e74c3c', 'Rendimento':'#27ae60'}), use_container_width=True)
-        with g2:
-            df_pie = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-            st.plotly_chart(px.pie(df_pie, values='V_Num', names='Categoria', title="Gastos por Categoria"), use_container_width=True)
-        
-        st.divider()
-        st.subheader("📑 Últimos Lançamentos")
-        st.dataframe(df_base[['Data', 'Descrição', 'Valor', 'Tipo', 'Banco', 'Status']].iloc[::-1], use_container_width=True)
-
-# As outras abas (Milo & Bolt, Veículo, Extrato, Relatórios) continuam funcionando normalmente abaixo...
-# (Omitidas aqui para garantir que o código caiba sem cortes, mas estão inclusas no fluxo do radio aba)
-
-elif aba == "🐾 Milo & Bolt":
-    st.title("🐾 Milo & Bolt")
-    df_pets = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False)]
-    st.metric("Total Acumulado Pets", m_fmt(df_pets['V_Num'].sum()))
-    st.dataframe(df_pets[['Data', 'Descrição', 'Valor', 'Status']].iloc[::-1], use_container_width=True)
+    patrimonio = df_base['V_Real'].sum()
+    st.info(f"### 🏦 PATRIMÔNIO TOTAL: {m_fmt(patrimonio)}")
+    df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("📈 Receita", m_fmt(df_m[df_m['Tipo'] == 'Receita']['V_Num'].sum()))
+    m2.metric("📉 Gasto", m_fmt(df_m[df_m['Tipo'] == 'Despesa']['V_Num'].sum()))
+    m3.metric("💰 Rendimento", m_fmt(df_m[df_m['Tipo'] == 'Rendimento']['V_Num'].sum()))
+    m4.metric("⏳ Pendente", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
 
 elif aba == "🚗 Meu Veículo":
-    st.title("🚗 Gestão do Veículo")
-    col1, col2 = st.columns(2)
-    p_alc = col1.number_input("Álcool", min_value=0.0, step=0.01)
-    p_gas = col2.number_input("Gasolina", min_value=0.0, step=0.01)
-    if p_alc > 0 and p_gas > 0:
-        if p_alc / p_gas <= 0.7: st.success("Vá de ÁLCOOL!")
-        else: st.warning("Vá de GASOLINA!")
-    df_v = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False)]
-    st.dataframe(df_v.iloc[::-1], use_container_width=True)
+    st.title("🚗 Meu Veículo")
+    # Filtro rigoroso para não sobrar lançamento de outras categorias
+    df_v = df_base[df_base['Categoria'].isin(['Veículo', 'Combustível', 'Manutenção'])]
+    st.metric("Total Gasto com Veículo", m_fmt(df_v['V_Num'].sum()))
+    st.table(df_v[['Data', 'Descrição', 'Valor', 'Banco', 'Status']].iloc[::-1])
 
 elif aba == "📊 Extrato Diário":
-    st.title("📊 Extrato Bancário")
-    # ... código do extrato com PDF mantido ...
+    st.title("📊 Extrato Diário")
     b_sel = st.selectbox("Escolha o Banco:", sorted(df_base['Banco'].unique()))
     df_b = df_base[df_base['Banco'] == b_sel].copy().sort_values('DT')
     df_b['Saldo_Acum'] = df_b['V_Real'].cumsum()
-    df_b['Valor Formatado'] = df_b.apply(lambda r: f"-R$ {r['V_Num']:.2f}".replace('.', ',') if r['Tipo'] == 'Despesa' else f"R$ {r['V_Num']:.2f}".replace('.', ','), axis=1)
-    df_b['Saldo Diário'] = df_b['Saldo_Acum'].apply(m_fmt)
-    st.table(df_b[['Data', 'Descrição', 'Valor Formatado', 'Saldo Diário']].iloc[::-1])
+    # Exibição limpa sem "valor formatado" como título de coluna
+    df_b['Valor Item'] = df_b.apply(lambda r: f"-{m_fmt(r['V_Num'])}" if r['Tipo'] == 'Despesa' else m_fmt(r['V_Num']), axis=1)
+    df_b['Saldo'] = df_b['Saldo_Acum'].apply(m_fmt)
+    st.table(df_b[['Data', 'Descrição', 'Tipo', 'Valor Item', 'Saldo', 'Status']].iloc[::-1])
 
 elif aba == "📄 Relatórios":
-    st.title("📄 Relatório Wilson")
-    # ... código do relatório consolidado mantido ...
+    st.title("📄 Relatório Detalhado")
     d1, d2 = st.columns(2)
     ini = d1.date_input("Início", datetime.now().replace(day=1))
     fim = d2.date_input("Fim", datetime.now())
     df_p = df_base[(df_base['DT'].dt.date >= ini) & (df_base['DT'].dt.date <= fim)]
-    total_pat = df_base['V_Real'].sum()
-    relat = f"PATRIMÔNIO: {m_fmt(total_pat)}\nREC: {m_fmt(df_p[df_p['Tipo'] == 'Receita']['V_Num'].sum())}\nDES: {m_fmt(-df_p[df_p['Tipo'] == 'Despesa']['V_Num'].sum())}"
-    st.text_area("Texto:", relat, height=200)
+    
+    # Cálculo de Saldos por Banco
+    saldos_txt = ""
+    total_pat = 0
+    for b in sorted(df_base['Banco'].unique()):
+        s = df_base[df_base['Banco'] == b]['V_Real'].sum()
+        saldos_txt += f"{b}: {m_fmt(s)}\n"
+        total_pat += s
 
-# 6. EDIÇÃO/EXCLUSÃO NA SIDEBAR
-st.sidebar.divider()
-st.sidebar.write("### ⚙️ Ajustes")
-lista = {f"{r['ID']} | {r['Descrição']}": r for _, r in df_base.tail(10).iterrows()}
-escolha = st.sidebar.selectbox("Selecionar para editar:", [""] + list(lista.keys()))
-if escolha:
-    item = lista[escolha]
-    if st.sidebar.button("🚨 EXCLUIR"):
-        ws_base.delete_rows(int(item['ID']))
-        st.cache_data.clear(); st.rerun()
+    relat = f"--- RELATÓRIO WILSON ---\n"
+    relat += f"Período: {ini.strftime('%d/%m/%Y')} a {fim.strftime('%d/%m/%Y')}\n\n"
+    relat += f"REC: {m_fmt(df_p[df_p['Tipo'] == 'Receita']['V_Num'].sum())}\n"
+    relat += f"DES: {m_fmt(-df_p[df_p['Tipo'] == 'Despesa']['V_Num'].sum())}\n"
+    relat += f"REND: {m_fmt(df_p[df_p['Tipo'] == 'Rendimento']['V_Num'].sum())}\n"
+    relat += f"PEND: {m_fmt(df_p[df_p['Status'] == 'Pendente']['V_Num'].sum())}\n"
+    relat += f"SOBRA: {m_fmt(df_p['V_Real'].sum())}\n\n"
+    relat += f"SALDO POR BANCOS:\n{saldos_txt}\n"
+    relat += f"PATRIMÔNIO: {m_fmt(total_pat)}"
+    
+    st.text_area("Copiar para WhatsApp:", relat, height=350)
