@@ -33,6 +33,7 @@ def carregar():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
     df = pd.DataFrame(dados[1:], columns=dados[0])
+    # O ID_Linha garante que a ordem de digitação seja respeitada
     df['ID_Linha'] = range(2, len(df) + 2)
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
@@ -40,6 +41,7 @@ def carregar():
     df['V_Num'] = df['Valor'].apply(p_float)
     df['DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
     df['V_Real'] = df.apply(lambda r: r['V_Num'] if r['Tipo'] in ['Receita', 'Rendimento'] else -r['V_Num'], axis=1)
+    # ORDENAÇÃO CRÍTICA: Data e depois ID
     return df.sort_values(['DT', 'ID_Linha'])
 
 def m_fmt(n): 
@@ -53,7 +55,6 @@ def gerar_pdf(df, banco, p_ini, p_fim):
     pdf.set_font("Arial", "B", 16)
     pdf.cell(190, 10, f"EXTRATO: {banco}", ln=True, align="C")
     pdf.set_font("Arial", "", 10)
-    # CORREÇÃO DO ERRO AQUI: p_fim em vez de p_f
     pdf.cell(190, 10, f"Periodo: {p_ini} a {p_fim}", ln=True, align="C")
     pdf.ln(5)
     pdf.set_fill_color(200, 220, 255)
@@ -84,13 +85,14 @@ if aba == "📊 Extrato Diário":
     d_fim_sel = c2.date_input("Fim", datetime.now())
     b_sel = st.selectbox("Banco:", sorted(df_base['Banco'].unique()))
     
-    # Processamento e Filtro
-    df_b = df_base[df_base['Banco'] == b_sel].copy().sort_values(['DT', 'ID_Linha'])
+    # Processamento do Saldo Acumulado específico do Banco
+    df_b = df_base[df_base['Banco'] == b_sel].copy()
     df_b['Saldo_Acum'] = df_b['V_Real'].cumsum()
     
+    # Filtro de data
     df_f = df_b[(df_b['DT'].dt.date >= d_ini) & (df_b['DT'].dt.date <= d_fim_sel)].copy()
     
-    # Identifica a última linha do dia DENTRO do filtro para mostrar o saldo
+    # Lógica de Fechamento: Saldo apenas na última ID do dia dentro do filtro
     df_f['Ultima_Linha_Dia'] = False
     if not df_f.empty:
         idx_ultimas = df_f.groupby('Data')['ID_Linha'].idxmax()
@@ -107,15 +109,21 @@ if aba == "📊 Extrato Diário":
     
     def colorir(row):
         estilo = [''] * len(row)
+        # Cor da coluna Valor
         estilo[row.index.get_loc('Valor_Exibir')] = 'color: red' if '-' in str(row['Valor_Exibir']) else 'color: green'
+        # Cor da coluna Saldo (Azul para positivo, Vermelho para negativo)
         if row['Ultima_Linha_Dia']:
             estilo[row.index.get_loc('Saldo_Exibir')] = 'color: red; font-weight: bold' if row['Saldo_Acum'] < 0 else 'color: blue; font-weight: bold'
         return estilo
 
+    # Mostra o extrato invertido (mais recente no topo)
     st.dataframe(
-        df_f[['Data', 'Descrição', 'Valor_Exibir', 'Saldo_Exibir', 'Saldo_Acum', 'Ultima_Linha_Dia']].iloc[::-1].style.apply(colorir, axis=1),
+        df_f[['Data', 'Descrição', 'Valor_Exibir', 'Saldo_Exibir', 'Saldo_Acum', 'Ultima_Linha_Dia', 'ID_Linha']].iloc[::-1].style.apply(colorir, axis=1),
         column_order=("Data", "Descrição", "Valor_Exibir", "Saldo_Exibir"),
-        column_config={"Valor_Exibir": "Valor", "Saldo_Exibir": "Saldo"},
+        column_config={
+            "Valor_Exibir": "Valor",
+            "Saldo_Exibir": "Saldo"
+        },
         use_container_width=True, hide_index=True
     )
 
@@ -125,4 +133,4 @@ elif aba == "💰 Finanças":
 
 elif aba in ["🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios"]:
     st.title(f"{aba}")
-    st.info("Tela limpa e pronta para nova configuração.")
+    st.info("Tela pronta para as próximas configurações.")
