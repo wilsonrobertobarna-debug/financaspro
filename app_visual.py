@@ -33,7 +33,6 @@ def carregar():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
     df = pd.DataFrame(dados[1:], columns=dados[0])
-    df['ID_Linha'] = range(2, len(df) + 2)
     
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
@@ -43,7 +42,7 @@ def carregar():
     df['DT_ORDEM'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
     df['Status_LIMPO'] = df['Status'].str.strip().str.upper()
     df['V_Real'] = df.apply(lambda r: r['V_Num'] if r['Tipo'] in ['Receita', 'Rendimento', 'Entrada'] else -r['V_Num'], axis=1)
-    return df.sort_values(['DT_ORDEM', 'ID_Linha'])
+    return df.sort_values(['DT_ORDEM'])
 
 def m_fmt(n): 
     if n == "" or pd.isna(n) or n == 0: return "R$ 0,00"
@@ -58,7 +57,9 @@ def gerar_pdf(df, titulo):
     pdf.ln(5)
     pdf.set_font("Arial", "", 8)
     for _, r in df.iterrows():
-        txt = f"{r['Data']} - {r['Descricao'][:40]} - {r['Valor']}"
+        # CORREÇÃO AQUI: 'Descrição' com til para bater com a planilha
+        desc = str(r['Descrição'])[:40]
+        txt = f"{r['Data']} - {desc} - {r['Valor']}"
         pdf.cell(190, 7, txt.encode('latin-1', 'ignore').decode('latin-1'), border=1, ln=True)
     return pdf.output(dest='S').encode('latin-1', errors='replace')
 
@@ -79,22 +80,35 @@ if aba == "📊 Extrato Diário":
     d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
     b_sel = c3.selectbox("Banco:", sorted(df_base['Banco'].unique()))
     
-    df_f = df_base[(df_base['Banco'] == b_sel) & (df_base['DT_ORDEM'].dt.date >= d_ini) & (df_base['DT_ORDEM'].dt.date <= d_fim)].copy()
+    # Filtro base por banco
+    df_b = df_base[df_base['Banco'] == b_sel].copy()
     
-    if not df_f.empty:
-        # Cálculo de saldo apenas para visualização
-        df_f['Saldo_Acum'] = df_f[df_f['Status_LIMPO'] == 'PAGO']['V_Real'].cumsum()
-        df_f['Saldo_Acum'] = df_f['Saldo_Acum'].ffill().fillna(0)
-        df_f['Saldo_Exibir'] = df_f['Saldo_Acum'].apply(m_fmt)
+    if not df_b.empty:
+        # Cálculo do Saldo Acumulado (baseado em tudo que foi PAGO no banco)
+        df_b['Saldo_Acum'] = df_b[df_b['Status_LIMPO'] == 'PAGO']['V_Real'].cumsum()
+        df_b['Saldo_Acum'] = df_b['Saldo_Acum'].ffill().fillna(0)
+        df_b['Saldo_Exibir'] = df_b['Saldo_Acum'].apply(m_fmt)
+        
+        # Filtro de data para exibição
+        df_f = df_b[(df_b['DT_ORDEM'].dt.date >= d_ini) & (df_b['DT_ORDEM'].dt.date <= d_fim)].copy()
         
         pdf = gerar_pdf(df_f, f"Extrato {b_sel}")
         st.download_button("🖨️ Imprimir Extrato (PDF)", pdf, f"extrato_{b_sel}.pdf", "application/pdf")
-        st.dataframe(df_f.iloc[::-1], column_order=("Data", "Descrição", "Valor", "Status", "Saldo_Exibir"), use_container_width=True, hide_index=True)
+        
+        st.dataframe(
+            df_f.iloc[::-1], 
+            column_order=("Data", "Descrição", "Valor", "Status", "Saldo_Exibir"), 
+            column_config={
+                "Saldo_Exibir": st.column_config.TextColumn("Saldo Acumulado", width="medium"),
+                "Data": st.column_config.TextColumn("Data", width="small"),
+            },
+            use_container_width=True, 
+            hide_index=True
+        )
 
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Gastos com Milo & Bolt")
-    # Filtro que busca Milo ou Bolt na descrição ou categoria
-    df_pets = df_base[df_base.apply(lambda row: row.astype(str).str.contains('Milo|Bolt|Ração|Veterinário', case=False).any(), axis=1)].copy()
+    df_pets = df_base[df_base.apply(lambda row: row.astype(str).str.contains('Milo|Bolt|Ração|Veterinário|Pet', case=False).any(), axis=1)].copy()
     if not df_pets.empty:
         pdf_p = gerar_pdf(df_pets, "Gastos Pets")
         st.download_button("🖨️ Imprimir Gastos Pets", pdf_p, "gastos_pets.pdf")
@@ -104,7 +118,7 @@ elif aba == "🐾 Milo & Bolt":
 
 elif aba == "🚗 Meu Veículo":
     st.title("🚗 Manutenção e Combustível")
-    df_car = df_base[df_base.apply(lambda row: row.astype(str).str.contains('Carro|Moto|Combustível|Gasolina|Oficina|Troca de Óleo', case=False).any(), axis=1)].copy()
+    df_car = df_base[df_base.apply(lambda row: row.astype(str).str.contains('Carro|Moto|Gasolina|Oficina|Óleo|Pneu', case=False).any(), axis=1)].copy()
     if not df_car.empty:
         pdf_c = gerar_pdf(df_car, "Relatorio Veiculo")
         st.download_button("🖨️ Imprimir Relatório Veículo", pdf_c, "relatorio_veiculo.pdf")
@@ -113,6 +127,6 @@ elif aba == "🚗 Meu Veículo":
         st.info("Nenhum registro de veículo encontrado.")
 
 elif aba == "💰 Finanças":
-    st.title("🛡️ FinançasPro")
+    st.title("🛡️ FinançasPro Wilson")
     total_pago = df_base[df_base['Status_LIMPO'] == 'PAGO']['V_Real'].sum()
-    st.metric("Saldo Consolidado (Pago)", m_fmt(total_pago))
+    st.metric("Saldo Geral (Pago)", m_fmt(total_pago))
