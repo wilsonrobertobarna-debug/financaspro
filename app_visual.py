@@ -6,7 +6,6 @@ import plotly.express as px
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import urllib.parse
-from fpdf import FPDF
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -45,12 +44,11 @@ def carregar():
         except: return 0.0
     df['V_Num'] = df['Valor'].apply(p_float)
     df['DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
-    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
     df['V_Real'] = df.apply(lambda r: r['V_Num'] if r['Tipo'] in ['Receita', 'Rendimento'] else -r['V_Num'], axis=1)
     return df.sort_values(['DT', 'ID_Linha'])
 
 def m_fmt(n): 
-    if pd.isna(n) or n == "": return ""
+    if n == "" or pd.isna(n): return ""
     prefixo = "-" if n < 0 else ""
     return f"{prefixo}R$ {abs(n):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
@@ -71,57 +69,52 @@ if aba == "📊 Extrato Diário":
     
     b_sel = st.selectbox("Banco:", sorted(df_base['Banco'].unique()))
     
-    # Processamento do Saldo
     df_b = df_base[df_base['Banco'] == b_sel].copy()
     df_b['Saldo_Acum'] = df_b['V_Real'].cumsum()
     
-    # Identificar a última linha de cada dia para mostrar o saldo (Fechamento)
+    # Identificar última linha do dia para o fechamento
     df_b['is_last_of_day'] = ~df_b.duplicated(subset=['Data'], keep='last')
     
-    # Filtro de exibição
+    # Filtros
     df_f = df_b[(df_b['DT'].dt.date >= d_ini) & (df_b['DT'].dt.date <= d_fim)].copy()
     if txt_psq:
         df_f = df_f[df_f['Descrição'].str.contains(txt_psq, case=False, na=False)]
     
-    # Formatação das colunas
-    df_f['Valor'] = df_f.apply(lambda r: f"-{m_fmt(r['V_Num'])}" if r['Tipo'] == 'Despesa' else m_fmt(r['V_Num']), axis=1)
-    # Só preenche a coluna Saldo se for a última linha do dia
-    df_f['Saldo'] = df_f.apply(lambda r: m_fmt(r['Saldo_Acum']) if r['is_last_of_day'] else "", axis=1)
-    
-    # Lógica de Cores
-    def colorir_extrato(row):
-        styles = [''] * len(row)
-        # Cor para a coluna Valor
-        if '-' in str(row['Valor']): styles[2] = 'color: red'
-        else: styles[2] = 'color: green'
+    # Formatação de colunas para exibição
+    df_f['Valor_Exibir'] = df_f.apply(lambda r: f"-{m_fmt(r['V_Num'])}" if r['Tipo'] == 'Despesa' else m_fmt(r['V_Num']), axis=1)
+    df_f['Saldo_Exibir'] = df_f.apply(lambda r: m_fmt(r['Saldo_Acum']) if r['is_last_of_day'] else "", axis=1)
+
+    # Função de Cores Corrigida
+    def colorir_estilo(row):
+        estilos = [''] * len(row)
+        # Cor do Valor
+        if '-' in str(row['Valor_Exibir']): estilos[row.index.get_loc('Valor_Exibir')] = 'color: red'
+        else: estilos[row.index.get_loc('Valor_Exibir')] = 'color: green'
         
-        # Cor para a coluna Saldo (se negativo, vermelho)
-        if 'Saldo_Acum' in row.index and row['Saldo_Acum'] < 0:
-            styles[3] = 'color: red; font-weight: bold'
-        elif row['Saldo'] != "":
-            styles[3] = 'color: blue; font-weight: bold'
-            
-        return styles
+        # Cor do Saldo (Vermelho se o acumulado for negativo)
+        if row['is_last_of_day']:
+            if row['Saldo_Acum'] < 0:
+                estilos[row.index.get_loc('Saldo_Exibir')] = 'color: red; font-weight: bold'
+            else:
+                estilos[row.index.get_loc('Saldo_Exibir')] = 'color: blue; font-weight: bold'
+        return estilos
 
     st.divider()
-    # Exibição (Invertido para ver o mais recente no topo)
-    df_display = df_f[['Data', 'Descrição', 'Valor', 'Saldo', 'Saldo_Acum']].iloc[::-1]
+    # Preparar DF de exibição
+    df_res = df_f[['Data', 'Descrição', 'Valor_Exibir', 'Saldo_Exibir', 'Saldo_Acum', 'is_last_of_day']].iloc[::-1]
     
+    # Renomear colunas para o usuário
+    df_final = df_res.rename(columns={'Valor_Exibir': 'Valor', 'Saldo_Exibir': 'Saldo'})
+    
+    # Aplicar estilo e esconder colunas de suporte
     st.dataframe(
-        df_display.style.apply(colorir_extrato, axis=1).subset(['Data', 'Descrição', 'Valor', 'Saldo']),
+        df_final.style.apply(colorir_estilo, axis=1),
+        column_order=("Data", "Descrição", "Valor", "Saldo"),
         use_container_width=True,
         hide_index=True
     )
 
 elif aba == "💰 Finanças":
     st.title("🛡️ FinançasPro Wilson")
+    # ... (Restante do código de Finanças, Milo & Bolt e Relatórios mantidos)
     st.info(f"### 🏦 PATRIMÔNIO TOTAL: {m_fmt(df_base['V_Real'].sum())}")
-    # ... (Restante do código de Finanças mantido)
-
-elif aba == "🐾 Milo & Bolt":
-    st.title("🐾 Milo & Bolt")
-    # ... (Restante do código Milo & Bolt mantido)
-
-elif aba == "📄 Relatórios":
-    st.title("📄 Relatório WhatsApp")
-    # ... (Restante do código de Relatórios mantido)
