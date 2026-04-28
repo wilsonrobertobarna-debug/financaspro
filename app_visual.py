@@ -41,6 +41,7 @@ def carregar():
     df['V_Num'] = df['Valor'].apply(p_float)
     df['DT_ORDEM'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
     df['Status_LIMPO'] = df['Status'].str.strip().str.upper()
+    df['V_Real'] = df.apply(lambda r: r['V_Num'] if r['Tipo'] in ['Receita', 'Rendimento', 'Entrada'] else -r['V_Num'], axis=1)
     return df.sort_values(['DT_ORDEM'])
 
 def m_fmt(n): 
@@ -56,7 +57,7 @@ def gerar_pdf(df, titulo):
     pdf.ln(5)
     pdf.set_font("Arial", "", 8)
     for _, r in df.iterrows():
-        desc = str(r['Descrição'])[:40]
+        desc = str(r.get('Descrição', r.get('Descricao', 'Sem Descrição')))[:40]
         txt = f"{r['Data']} - {desc} - {r['Valor']}"
         pdf.cell(190, 7, txt.encode('latin-1', 'ignore').decode('latin-1'), border=1, ln=True)
     return pdf.output(dest='S').encode('latin-1', errors='replace')
@@ -69,39 +70,57 @@ aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "📊 Extrato Diário"
 st.sidebar.markdown("---")
 st.sidebar.link_button("💬 Abrir WhatsApp", "https://web.whatsapp.com")
 
-# 4. TELA MEU VEÍCULO
-if aba == "🚗 Meu Veículo":
-    st.title("🚗 Meu Veículo - Manutenção e Combustível")
+# 4. LOGICA DAS ABAS
+if aba == "💰 Finanças":
+    st.title("🛡️ FinançasPro Wilson")
+    if not df_base.empty:
+        total_pago = df_base[df_base['Status_LIMPO'] == 'PAGO']['V_Real'].sum()
+        st.metric("Saldo Geral (Pago)", m_fmt(total_pago))
+        st.divider()
+        st.info("Utilize o menu lateral para navegar entre os extratos detalhados.")
+
+elif aba == "📊 Extrato Diário":
+    st.title("📊 Extrato Diário Detalhado")
+    c1, c2, c3 = st.columns([1, 1, 2])
+    d_ini = c1.date_input("Início", datetime.now().replace(day=1), format="DD/MM/YYYY")
+    d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
+    b_sel = c3.selectbox("Filtrar Banco:", sorted(df_base['Banco'].unique()))
     
-    # Filtro inteligente para capturar tudo relacionado ao veículo
+    df_b = df_base[df_base['Banco'] == b_sel].copy()
+    if not df_b.empty:
+        df_b['Saldo_Acum'] = df_b[df_b['Status_LIMPO'] == 'PAGO']['V_Real'].cumsum()
+        df_b['Saldo_Acum'] = df_b['Saldo_Acum'].ffill().fillna(0)
+        df_b['Saldo_Exibir'] = df_b['Saldo_Acum'].apply(m_fmt)
+        
+        df_f = df_b[(df_b['DT_ORDEM'].dt.date >= d_ini) & (df_b['DT_ORDEM'].dt.date <= d_fim)].copy()
+        
+        col_btn, col_txt = st.columns([1,3])
+        with col_btn:
+            pdf = gerar_pdf(df_f, f"Extrato {b_sel}")
+            st.download_button("🖨️ Imprimir PDF", pdf, f"extrato_{b_sel}.pdf")
+            
+        st.dataframe(df_f.iloc[::-1], column_order=("Data", "Descrição", "Valor", "Status", "Saldo_Exibir"), use_container_width=True, hide_index=True)
+
+elif aba == "🐾 Milo & Bolt":
+    st.title("🐾 Gastos com Milo & Bolt")
+    termos_pets = 'Milo|Bolt|Ração|Veterinário|Pet|Banho'
+    df_pets = df_base[df_base['Descrição'].str.contains(termos_pets, case=False, na=False)].copy()
+    
+    if not df_pets.empty:
+        pdf_p = gerar_pdf(df_pets, "Gastos Pets")
+        st.download_button("🖨️ Imprimir PDF", pdf_p, "gastos_pets.pdf")
+        st.dataframe(df_pets.iloc[::-1], column_order=("Data", "Descrição", "Valor", "Status", "Banco"), use_container_width=True, hide_index=True)
+    else:
+        st.info("Nenhum registro encontrado para Milo ou Bolt.")
+
+elif aba == "🚗 Meu Veículo":
+    st.title("🚗 Meu Veículo - Manutenção e Combustível")
     termos_veiculo = 'Carro|Moto|Gasolina|Combustível|Etanol|Oficina|Óleo|Pneu|Mecânico|Peças'
     df_car = df_base[df_base['Descrição'].str.contains(termos_veiculo, case=False, na=False)].copy()
     
     if not df_car.empty:
-        c1, c2 = st.columns([1, 3])
-        with c1:
-            pdf_c = gerar_pdf(df_car, "Relatorio Veiculo")
-            st.download_button("🖨️ Imprimir Relatório (PDF)", pdf_c, "relatorio_veiculo.pdf")
-        
-        with c2:
-            total_veiculo = df_car['V_Num'].sum()
-            st.info(f"**Total Investido no Veículo:** {m_fmt(total_veiculo)}")
-
-        st.divider()
-        
-        # Exibição Limpa
-        st.dataframe(
-            df_car.iloc[::-1], 
-            column_order=("Data", "Descrição", "Valor", "Status", "Banco"),
-            column_config={
-                "Data": st.column_config.TextColumn("Data", width="small"),
-                "Descrição": st.column_config.TextColumn("Descrição", width="large"),
-                "Valor": st.column_config.TextColumn("Valor", width="medium"),
-            },
-            use_container_width=True, 
-            hide_index=True
-        )
+        pdf_c = gerar_pdf(df_car, "Relatorio Veiculo")
+        st.download_button("🖨️ Imprimir PDF", pdf_c, "relatorio_veiculo.pdf")
+        st.dataframe(df_car.iloc[::-1], column_order=("Data", "Descrição", "Valor", "Status", "Banco"), use_container_width=True, hide_index=True)
     else:
-        st.info("Nenhum registro de veículo encontrado na planilha com os termos monitorados.")
-
-# Restante do código das outras abas (Finanças, Extrato, Pets) segue a mesma lógica...
+        st.info("Nenhum registro de veículo encontrado.")
