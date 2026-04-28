@@ -175,4 +175,31 @@ elif aba == "📄 Relatórios":
     relat += f"REND: {m_fmt(df_p[df_p['Tipo'] == 'Rendimento']['V_Num'].sum())}\n"
     relat += f"SOBRA: {m_fmt(df_p['V_Real'].sum())}\n"
     relat += "========================================\n\nSALDOS:\n"
-    relat += saldos
+    relat += saldos_txt # AQUI ESTAVA O ERRO, CORRIGIDO!
+    relat += f"TOTAL BANCOS: {m_fmt(total_bancos)}\n"
+    relat += f"TOTAL CARTÕES: {m_fmt(0.0)}\n"
+    relat += f"PATRIMÔNIO: {m_fmt(df_base['V_Real'].sum())}"
+    
+    st.text_area("Texto do Relatório:", relat, height=400)
+    
+    zap_url = f"https://wa.me/?text={urllib.parse.quote(relat)}"
+    st.markdown(f'''<a href="{zap_url}" target="_blank"><button style="width:100%; height:50px; background-color:#25D366; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">📲 ENVIAR PARA WHATSAPP</button></a>''', unsafe_allow_html=True)
+
+# 6. EDITAR / EXCLUIR
+st.sidebar.divider()
+if not df_base.empty:
+    st.sidebar.write("### ⚙️ Ajustes")
+    lista = {f"{r['ID']} | {r['Data']} | {r['Descrição']}": r for _, r in df_base.tail(20).iterrows()}
+    escolha = st.sidebar.selectbox("Selecionar lançamento:", [""] + list(lista.keys()))
+    if escolha:
+        item = lista[escolha]
+        ed_v = st.sidebar.text_input("Novo Valor:", value=str(item['Valor']))
+        ed_d = st.sidebar.text_input("Nova Descrição:", value=str(item['Descrição']))
+        c1, c2 = st.sidebar.columns(2)
+        if c1.button("💾 SALVAR"):
+            ws_base.update_cell(int(item['ID']), 2, ed_v)
+            ws_base.update_cell(int(item['ID']), 3, ed_d)
+            st.cache_data.clear(); st.rerun()
+        if c2.button("🚨 EXCLUIR"):
+            ws_base.delete_rows(int(item['ID']))
+            st.cache_data.clear(); st.rerun()
