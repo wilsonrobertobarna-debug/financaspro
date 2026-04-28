@@ -5,7 +5,6 @@ import pandas as pd
 from datetime import datetime
 import urllib.parse
 from fpdf import FPDF
-import base64
 
 # 1. CONFIGURAÇÃO E CONEXÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -35,13 +34,14 @@ def carregar():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
     df = pd.DataFrame(dados[1:], columns=dados[0])
+    df['ID_Linha'] = range(2, len(df) + 2)
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
         except: return 0.0
     df['V_Num'] = df['Valor'].apply(p_float)
     df['DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
     df['V_Real'] = df.apply(lambda r: r['V_Num'] if r['Tipo'] in ['Receita', 'Rendimento'] else -r['V_Num'], axis=1)
-    return df.sort_values(['DT'])
+    return df.sort_values(['DT', 'ID_Linha'])
 
 def m_fmt(n): 
     if n == "" or pd.isna(n): return ""
@@ -54,23 +54,20 @@ def gerar_pdf(df, banco, p_ini, p_fim):
     pdf.set_font("Arial", "B", 16)
     pdf.cell(190, 10, f"EXTRATO: {banco}", ln=True, align="C")
     pdf.set_font("Arial", "", 10)
-    pdf.cell(190, 10, f"Periodo: {p_ini} a {p_fim}", ln=True, align="C")
+    pdf.cell(190, 10, f"Periodo: {p_ini} a {p_f}", ln=True, align="C")
     pdf.ln(5)
-    
-    # Cabeçalho da Tabela
     pdf.set_fill_color(200, 220, 255)
     pdf.cell(30, 8, "Data", 1, 0, "C", True)
     pdf.cell(80, 8, "Descricao", 1, 0, "L", True)
     pdf.cell(40, 8, "Valor", 1, 0, "R", True)
     pdf.cell(40, 8, "Saldo", 1, 1, "R", True)
-    
     pdf.set_font("Arial", "", 9)
     for _, r in df.iterrows():
         pdf.cell(30, 7, str(r['Data']), 1, 0, "C")
         pdf.cell(80, 7, str(r['Descrição'])[:40], 1, 0, "L")
-        pdf.cell(40, 7, r['Valor_F'], 1, 0, "R")
-        pdf.cell(40, 7, r['Saldo_F'], 1, 1, "R")
-    return pdf.output(dest='S').encode('latin-1')
+        pdf.cell(40, 7, r['Valor_Exibir'], 1, 0, "R")
+        pdf.cell(40, 7, r['Saldo_Exibir'], 1, 1, "R")
+    return pdf.output(dest='S').encode('latin-1', errors='replace')
 
 df_base = carregar()
 
@@ -87,46 +84,47 @@ if aba == "📊 Extrato Diário":
     d_f = c2.date_input("Fim", datetime.now())
     b_sel = st.selectbox("Banco:", sorted(df_base['Banco'].unique()))
     
-    # Processamento de Saldo
-    df_b = df_base[df_base['Banco'] == b_sel].copy()
+    # Processamento de Saldo (Ordem de ID para desempate)
+    df_b = df_base[df_base['Banco'] == b_sel].copy().sort_values(['DT', 'ID_Linha'])
     df_b['Saldo_Acum'] = df_b['V_Real'].cumsum()
-    df_b['Ultima_Linha_Dia'] = ~df_b.duplicated(subset=['Data'], keep='last')
     
-    # Filtro
+    # Marca apenas a ÚLTIMA LINHA de cada dia
+    df_b['Ultima_Linha_Dia'] = False
+    idx_ultimas = df_b.groupby('Data')['ID_Linha'].idxmax()
+    df_b.loc[idx_ultimas, 'Ultima_Linha_Dia'] = True
+    
+    # Filtro de data e exibição
     df_f = df_b[(df_b['DT'].dt.date >= d_ini) & (df_b['DT'].dt.date <= d_f)].copy()
-    
-    df_f['Valor_F'] = df_f.apply(lambda r: f"-{m_fmt(r['V_Num'])}" if r['Tipo'] == 'Despesa' else m_fmt(r['V_Num']), axis=1)
-    df_f['Saldo_F'] = df_f.apply(lambda r: m_fmt(r['Saldo_Acum']) if r['Ultima_Linha_Dia'] else "", axis=1)
+    df_f['Valor_Exibir'] = df_f.apply(lambda r: f"-{m_fmt(r['V_Num'])}" if r['Tipo'] == 'Despesa' else m_fmt(r['V_Num']), axis=1)
+    df_f['Saldo_Exibir'] = df_f.apply(lambda r: m_fmt(r['Saldo_Acum']) if r['Ultima_Linha_Dia'] else "", axis=1)
 
     # Botão PDF
     if not df_f.empty:
-        pdf_data = gerar_pdf(df_f, b_sel, d_ini, d_f)
-        st.download_button(label="📥 Imprimir PDF", data=pdf_data, file_name=f"extrato_{b_sel}.pdf", mime="application/pdf")
+        pdf_bytes = gerar_pdf(df_f, b_sel, d_ini, d_f)
+        st.download_button("📥 Baixar PDF do Extrato", pdf_bytes, f"extrato_{b_sel}.pdf", "application/pdf")
 
     st.divider()
     
     # Estilização de Cores
     def colorir(row):
         estilo = [''] * len(row)
-        # Cor do Valor
-        estilo[row.index.get_loc('Valor_F')] = 'color: red' if '-' in str(row['Valor_F']) else 'color: green'
-        # Cor do Saldo no fechamento
+        estilo[row.index.get_loc('Valor_Exibir')] = 'color: red' if '-' in str(row['Valor_Exibir']) else 'color: green'
         if row['Ultima_Linha_Dia']:
-            estilo[row.index.get_loc('Saldo_F')] = 'color: red; font-weight: bold' if row['Saldo_Acum'] < 0 else 'color: blue; font-weight: bold'
+            estilo[row.index.get_loc('Saldo_Exibir')] = 'color: red; font-weight: bold' if row['Saldo_Acum'] < 0 else 'color: blue; font-weight: bold'
         return estilo
 
     st.dataframe(
-        df_f[['Data', 'Descrição', 'Valor_F', 'Saldo_F', 'Saldo_Acum', 'Ultima_Linha_Dia']].iloc[::-1].style.apply(colorir, axis=1),
-        column_order=("Data", "Descrição", "Valor_F", "Saldo_F"),
-        column_config={"Valor_F": "Valor", "Saldo_F": "Saldo"},
+        df_f[['Data', 'Descrição', 'Valor_Exibir', 'Saldo_Exibir', 'Saldo_Acum', 'Ultima_Linha_Dia']].iloc[::-1].style.apply(colorir, axis=1),
+        column_order=("Data", "Descrição", "Valor_Exibir", "Saldo_Exibir"),
+        column_config={"Valor_Exibir": "Valor", "Saldo_Exibir": "Saldo"},
         use_container_width=True, hide_index=True
     )
-
-elif aba in ["🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios"]:
-    st.title(f"{aba}")
-    st.write("### Em desenvolvimento")
-    st.info("Esta tela está limpa conforme solicitado, pronta para receber os novos filtros e gráficos.")
 
 elif aba == "💰 Finanças":
     st.title("🛡️ FinançasPro Wilson")
     st.success(f"### 🏦 PATRIMÔNIO TOTAL: {m_fmt(df_base['V_Real'].sum())}")
+    # Aqui entra seu código de Dashboard principal
+
+elif aba in ["🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios"]:
+    st.title(f"{aba}")
+    st.info("Tela pronta para configuração.")
