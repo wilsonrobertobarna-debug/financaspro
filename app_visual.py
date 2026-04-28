@@ -66,7 +66,6 @@ df_base = carregar()
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "📊 Extrato Diário", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
-# Link direto para o WhatsApp no final da barra lateral
 st.sidebar.markdown("---")
 st.sidebar.link_button("💬 Abrir WhatsApp", "https://web.whatsapp.com")
 
@@ -83,31 +82,22 @@ if aba == "📊 Extrato Diário":
     if not df_f.empty:
         pdf = gerar_pdf(df_f, f"Extrato {b_sel}")
         st.download_button("🖨️ Imprimir Extrato (PDF)", pdf, f"extrato_{b_sel}.pdf", "application/pdf")
-        st.dataframe(df_f.iloc[::-1], column_order=("ID_Linha", "Data", "Descrição", "Valor", "Status"), use_container_width=True, hide_index=True)
+        # Removidas colunas técnicas da exibição
+        st.dataframe(df_f.iloc[::-1], column_order=("Data", "Descrição", "Valor", "Status"), use_container_width=True, hide_index=True)
 
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Gastos com Milo & Bolt")
-    # Filtra tudo que contém Milo ou Bolt na descrição ou categoria
     df_pets = df_base[df_base.apply(lambda row: row.astype(str).str.contains('Milo|Bolt|Ração', case=False).any(), axis=1)].copy()
     if not df_pets.empty:
         pdf_p = gerar_pdf(df_pets, "Gastos Pets")
         st.download_button("🖨️ Imprimir Gastos Pets", pdf_p, "gastos_pets.pdf")
-        st.dataframe(df_pets.iloc[::-1], use_container_width=True, hide_index=True)
+        # EXIBIÇÃO LIMPA: Apenas o que interessa
+        st.dataframe(df_pets.iloc[::-1], column_order=("Data", "Descrição", "Valor", "Status", "Banco"), use_container_width=True, hide_index=True)
     else:
-        st.info("Nenhum registro encontrado para os pets.")
+        st.info("Nenhum registro encontrado para Milo ou Bolt.")
 
 elif aba == "🚗 Meu Veículo":
     st.title("🚗 Manutenção e Combustível")
-    # Filtra gastos relacionados a veículo (ex: gasolina, oficina)
-    df_car = df_base[df_base.apply(lambda row: row.astype(str).str.contains('Carro|Moto|Combustível|Gasolina|Oficina', case=False).any(), axis=1)].copy()
+    df_car = df_base[df_base.apply(lambda row: row.astype(str).str.contains('Carro|Moto|Combustível|Gasolina|Oficina|Troca de Óleo', case=False).any(), axis=1)].copy()
     if not df_car.empty:
-        pdf_c = gerar_pdf(df_car, "Relatório Veículo")
-        st.download_button("🖨️ Imprimir Relatório Veículo", pdf_c, "relatorio_veiculo.pdf")
-        st.dataframe(df_car.iloc[::-1], use_container_width=True, hide_index=True)
-    else:
-        st.info("Nenhum registro de veículo encontrado.")
-
-elif aba == "💰 Finanças":
-    st.title("🛡️ FinançasPro")
-    total = df_base['V_Num'].sum()
-    st.metric("Volume Total Movimentado", m_fmt(total))
+        pdf_c = gerar_pdf(
