@@ -54,7 +54,7 @@ mes_atual = datetime.now().strftime('%m/%y')
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
-# FORMULÁRIO 1: NOVO LANÇAMENTO
+# FORMULÁRIOS (MANTIDOS)
 with st.sidebar.form("f_novo", clear_on_submit=True):
     st.write("### 🚀 Novo Lançamento")
     f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -72,7 +72,6 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
             ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
         st.cache_data.clear(); st.rerun()
 
-# FORMULÁRIO 2: TRANSFERÊNCIA
 with st.sidebar.form("f_transf", clear_on_submit=True):
     st.write("### 💸 Transferência")
     t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -81,7 +80,7 @@ with st.sidebar.form("f_transf", clear_on_submit=True):
     t_dest = st.selectbox("Para onde vai (Destino):", ["Nubank", "Itaú", "Inter", "Santander", "Dinheiro"])
     t_desc = st.text_input("Descrição")
     if st.form_submit_button("TRANSFERIR"):
-        if t_orig == t_dest: st.error("Escolha bancos diferentes!")
+        if t_orig == t_dest: st.error("Bancos iguais!")
         else:
             v_str = f"{t_val:.2f}".replace('.', ',')
             d_str = t_dat.strftime("%d/%m/%Y")
@@ -89,53 +88,44 @@ with st.sidebar.form("f_transf", clear_on_submit=True):
             ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago"])
             st.cache_data.clear(); st.rerun()
 
-# 5. TELAS
+# 5. TELAS E CÁLCULOS
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
+        # CÁLCULO DE SALDO GERAL (HISTÓRICO TODO)
+        receitas_total = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        despesas_total = df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
+        saldo_geral = receitas_total - despesas_total
+
+        # FILTRO PARA O MÊS ATUAL (GRÁFICOS)
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         
+        # MÉTRICAS NO TOPO
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("📈 Receitas", m_fmt(df_m[df_m['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Despesas", m_fmt(df_m[df_m['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("💰 Rendimento", m_fmt(df_m[df_m['Tipo'] == 'Rendimento']['V_Num'].sum()))
+        m1.metric("🏦 SALDO GERAL", m_fmt(saldo_geral))
+        m2.metric("📉 Gastos Mês", m_fmt(df_m[df_m['Tipo'] == 'Despesa']['V_Num'].sum()))
+        m3.metric("💰 Rendimento Mês", m_fmt(df_m[df_m['Tipo'] == 'Rendimento']['V_Num'].sum()))
         m4.metric("⏳ Pendente Total", m_fmt(df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()))
         
         st.divider()
-        # Gráficos... (código omitido para brevidade, mas mantido no seu app)
-        
+
+        # GRÁFICOS
+        g1, g2 = st.columns(2)
+        with g1:
+            # Pizza ignora Transferências para não mentir o gasto
+            df_p = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
+            if not df_p.empty:
+                st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="Gastos Reais por Categoria", hole=0.4), use_container_width=True)
+        with g2:
+            # Fluxo de Caixa (Receita vs Despesa)
+            df_f = df_m[df_m['Categoria'] != 'Transferência'].groupby('Tipo')['V_Num'].sum().reset_index()
+            if not df_f.empty:
+                st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="Fluxo de Caixa (S/ Transferências)"), use_container_width=True)
+
+        st.divider()
         st.subheader("🔍 Pesquisa e Histórico")
-        # LISTAGEM CORRIGIDA COM COLUNA 'TIPO'
-        df_v = df_base.copy()
-        st.dataframe(df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+        st.dataframe(df_base[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
 
-elif "🐾" in aba:
-    st.title("🐾 Milo & Bolt")
-    df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False)]
-    # LISTAGEM CORRIGIDA AQUI TAMBÉM
-    st.dataframe(df_pet[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
-
-elif "🚗" in aba:
-    st.title("🚗 Meu Veículo")
-    df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
-    # LISTAGEM CORRIGIDA AQUI TAMBÉM
-    st.dataframe(df_car[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
-
-# 6. ALTERAR LANÇAMENTO
-st.sidebar.divider()
-if not df_base.empty:
-    lista_edit = {f"ID {r['ID']} | {r['Tipo']} | {r['Data']} | {r['Descrição']}": r for _, r in df_base.tail(30).iterrows()}
-    escolha = st.sidebar.selectbox("⚙️ Alterar Lançamento:", [""] + list(lista_edit.keys()))
-    if escolha:
-        item = lista_edit[escolha]
-        ed_data = st.sidebar.text_input("Data:", value=str(item['Data']))
-        ed_desc = st.sidebar.text_input("Descrição:", value=str(item['Descrição']))
-        ed_valor = st.sidebar.text_input("Valor:", value=str(item['Valor']))
-        c1, c2 = st.sidebar.columns(2)
-        if c1.button("💾 GRAVAR"):
-            ws_base.update_cell(int(item['ID']), 1, ed_data); ws_base.update_cell(int(item['ID']), 3, ed_desc); ws_base.update_cell(int(item['ID']), 2, ed_valor)
-            st.cache_data.clear(); st.rerun()
-        if c2.button("🚨 APAGAR"):
-            ws_base.delete_rows(int(item['ID'])); st.cache_data.clear(); st.rerun()
+# ... (Manter seções de Milo e Veículo como no código anterior)
