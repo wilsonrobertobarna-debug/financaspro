@@ -56,7 +56,7 @@ def m_fmt(n):
 df_base = carregar()
 mes_atual = datetime.now().strftime('%m/%y')
 
-# 4. SIDEBAR - TUDO RESTAURADO
+# 4. SIDEBAR
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📊 Extrato Diário", "📄 Relatórios"])
 
@@ -80,19 +80,6 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
             ws_base.append_row([nova_dt, v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
         st.cache_data.clear(); st.rerun()
 
-# FORMULÁRIO DE TRANSFERÊNCIA
-with st.sidebar.form("f_transf", clear_on_submit=True):
-    st.write("### 💸 Transferência")
-    t_val = st.number_input("Valor Transf.", min_value=0.0)
-    t_orig = st.selectbox("Sai de:", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix"])
-    t_dest = st.selectbox("Entra em:", ["Nubank", "Itaú", "Inter", "Santander", "Dinheiro", "Pix"])
-    if st.form_submit_button("EXECUTAR"):
-        d_s = datetime.now().strftime("%d/%m/%Y")
-        v_s = f"{t_val:.2f}".replace('.', ',')
-        ws_base.append_row([d_s, v_s, "Transferência Saída", "Transferência", "Despesa", t_orig, "Pago"])
-        ws_base.append_row([d_s, v_s, "Transferência Entrada", "Transferência", "Receita", t_dest, "Pago"])
-        st.cache_data.clear(); st.rerun()
-
 # 5. TELAS
 if aba == "💰 Finanças":
     st.title("🛡️ FinançasPro Wilson")
@@ -113,24 +100,34 @@ elif aba == "🐾 Milo & Bolt":
 
 elif aba == "🚗 Meu Veículo":
     st.title("🚗 Meu Veículo")
-    st.write("### ⛽ Álcool ou Gasolina?")
-    col1, col2 = st.columns(2)
-    p_alc = col1.number_input("Preço Álcool", min_value=0.0, step=0.01)
-    p_gas = col2.number_input("Preço Gasolina", min_value=0.0, step=0.01)
-    if p_alc > 0 and p_gas > 0:
-        if p_alc / p_gas <= 0.7: st.success("Vá de ÁLCOOL!")
-        else: st.warning("Vá de GASOLINA!")
-    st.divider()
     df_v = df_base[df_base['Categoria'].isin(['Veículo', 'Combustível', 'Manutenção'])]
     st.table(df_v[['Data', 'Descrição', 'Valor', 'Banco', 'Status']].iloc[::-1])
 
 elif aba == "📊 Extrato Diário":
     st.title("📊 Extrato Diário")
+    
+    # --- FILTROS DE PESQUISA ---
+    c1, c2, c3 = st.columns([1, 1, 2])
+    data_ini = c1.date_input("De:", datetime.now().replace(day=1))
+    data_fim = c2.date_input("Até:", datetime.now())
+    busca_texto = c3.text_input("🔍 Buscar na descrição:", placeholder="Ex: Mercado, Aluguel...")
+
     b_sel = st.selectbox("Escolha o Banco:", sorted(df_base['Banco'].unique()))
+    
+    # Aplicando os Filtros
     df_b = df_base[df_base['Banco'] == b_sel].copy().sort_values('DT')
+    df_b = df_b[(df_b['DT'].dt.date >= data_ini) & (df_b['DT'].dt.date <= data_fim)]
+    if busca_texto:
+        df_b = df_b[df_b['Descrição'].str.contains(busca_texto, case=False, na=False)]
+
     df_b['Saldo_Acum'] = df_b['V_Real'].cumsum()
     df_b['Valor Item'] = df_b.apply(lambda r: f"-{m_fmt(r['V_Num'])}" if r['Tipo'] == 'Despesa' else m_fmt(r['V_Num']), axis=1)
     df_b['Saldo'] = df_b['Saldo_Acum'].apply(m_fmt)
+    
+    # Botões de Ação
+    link_zap_ext = f"https://wa.me/?text={urllib.parse.quote('Extrato ' + b_sel + ': Periodo selecionado verificado no sistema.')}"
+    st.markdown(f"""<a href="{link_zap_ext}" target="_blank"><button style="width:100%;background-color:#25D366;color:white;padding:10px;border:none;border-radius:5px;font-weight:bold;cursor:pointer;">📲 NOTIFICAR EXTRATO VIA WHATSAPP</button></a>""", unsafe_allow_html=True)
+    
     st.table(df_b[['Data', 'Descrição', 'Tipo', 'Valor Item', 'Saldo', 'Status']].iloc[::-1])
 
 elif aba == "📄 Relatórios":
@@ -138,10 +135,8 @@ elif aba == "📄 Relatórios":
     d1, d2 = st.columns(2)
     ini = d1.date_input("Início", datetime.now().replace(day=1))
     fim = d2.date_input("Fim", datetime.now())
-    
     df_p = df_base[(df_base['DT'].dt.date >= ini) & (df_base['DT'].dt.date <= fim)]
     
-    # Cálculos
     rec = df_p[df_p['Tipo'] == 'Receita']['V_Num'].sum()
     des = df_p[df_p['Tipo'] == 'Despesa']['V_Num'].sum()
     rend = df_p[df_p['Tipo'] == 'Rendimento']['V_Num'].sum()
@@ -154,31 +149,10 @@ elif aba == "📄 Relatórios":
         saldos_txt += f"- {b}: {m_fmt(s)}\n"
         total_pat += s
 
-    relat = f"--- RELATÓRIO WILSON ---\n"
-    relat += f"📅 Período: {ini.strftime('%d/%m/%Y')} a {fim.strftime('%d/%m/%Y')}\n"
-    relat += "==========================\n"
-    relat += f"📈 REC: {m_fmt(rec)}\n"
-    relat += f"📉 DES: {m_fmt(-des)}\n"
-    relat += f"💰 REND: {m_fmt(rend)}\n"
-    relat += f"⏳ PEND: {m_fmt(pend)}\n"
-    relat += f"💵 SOBRA: {m_fmt(df_p['V_Real'].sum())}\n"
-    relat += "==========================\n"
-    relat += f"🏦 SALDO POR BANCOS:\n{saldos_txt}"
-    relat += "==========================\n"
-    relat += f"🏦 PATRIMÔNIO: {m_fmt(total_pat)}"
+    relat = f"--- RELATÓRIO WILSON ---\nPeríodo: {ini.strftime('%d/%m/%Y')} a {fim.strftime('%d/%m/%Y')}\n"
+    relat += f"==========================\n📈 REC: {m_fmt(rec)}\n📉 DES: {m_fmt(-des)}\n💰 REND: {m_fmt(rend)}\n⏳ PEND: {m_fmt(pend)}\n💵 SOBRA: {m_fmt(df_p['V_Real'].sum())}\n"
+    relat += f"==========================\n🏦 SALDO POR BANCOS:\n{saldos_txt}==========================\n🏦 PATRIMÔNIO: {m_fmt(total_pat)}"
     
-    st.text_area("Relatório Gerado:", relat, height=400)
-    
+    st.text_area("Texto Gerado:", relat, height=350)
     link_zap = f"https://wa.me/?text={urllib.parse.quote(relat)}"
     st.markdown(f"""<a href="{link_zap}" target="_blank"><button style="width:100%;background-color:#25D366;color:white;padding:15px;border:none;border-radius:10px;font-weight:bold;cursor:pointer;">📲 ENVIAR PARA WHATSAPP</button></a>""", unsafe_allow_html=True)
-
-# 6. AJUSTES
-st.sidebar.divider()
-st.sidebar.write("### ⚙️ Ajustes")
-lista = {f"{r['ID']} | {r['Descrição']}": r for _, r in df_base.tail(10).iterrows()}
-escolha = st.sidebar.selectbox("Selecionar para excluir:", [""] + list(lista.keys()))
-if escolha:
-    item = lista[escolha]
-    if st.sidebar.button("🚨 EXCLUIR ITEM"):
-        ws_base.delete_rows(int(item['ID']))
-        st.cache_data.clear(); st.rerun()
