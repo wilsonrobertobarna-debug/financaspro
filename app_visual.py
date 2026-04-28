@@ -3,7 +3,6 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime
-import urllib.parse
 from fpdf import FPDF
 
 # 1. CONFIGURAÇÃO E CONEXÃO
@@ -54,7 +53,8 @@ def gerar_pdf(df, banco, p_ini, p_fim):
     pdf.set_font("Arial", "B", 16)
     pdf.cell(190, 10, f"EXTRATO: {banco}", ln=True, align="C")
     pdf.set_font("Arial", "", 10)
-    pdf.cell(190, 10, f"Periodo: {p_ini} a {p_f}", ln=True, align="C")
+    # CORREÇÃO DO ERRO AQUI: p_fim em vez de p_f
+    pdf.cell(190, 10, f"Periodo: {p_ini} a {p_fim}", ln=True, align="C")
     pdf.ln(5)
     pdf.set_fill_color(200, 220, 255)
     pdf.cell(30, 8, "Data", 1, 0, "C", True)
@@ -75,37 +75,36 @@ df_base = carregar()
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "📊 Extrato Diário", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios"])
 
-# 4. LÓGICA DAS TELAS
+# 4. TELA EXTRATO
 if aba == "📊 Extrato Diário":
     st.title("📊 Extrato com Fechamento Diário")
     
     c1, c2, c3 = st.columns([1,1,2])
     d_ini = c1.date_input("Início", datetime.now().replace(day=1))
-    d_f = c2.date_input("Fim", datetime.now())
+    d_fim_sel = c2.date_input("Fim", datetime.now())
     b_sel = st.selectbox("Banco:", sorted(df_base['Banco'].unique()))
     
-    # Processamento de Saldo (Ordem de ID para desempate)
+    # Processamento e Filtro
     df_b = df_base[df_base['Banco'] == b_sel].copy().sort_values(['DT', 'ID_Linha'])
     df_b['Saldo_Acum'] = df_b['V_Real'].cumsum()
     
-    # Marca apenas a ÚLTIMA LINHA de cada dia
-    df_b['Ultima_Linha_Dia'] = False
-    idx_ultimas = df_b.groupby('Data')['ID_Linha'].idxmax()
-    df_b.loc[idx_ultimas, 'Ultima_Linha_Dia'] = True
+    df_f = df_b[(df_b['DT'].dt.date >= d_ini) & (df_b['DT'].dt.date <= d_fim_sel)].copy()
     
-    # Filtro de data e exibição
-    df_f = df_b[(df_b['DT'].dt.date >= d_ini) & (df_b['DT'].dt.date <= d_f)].copy()
+    # Identifica a última linha do dia DENTRO do filtro para mostrar o saldo
+    df_f['Ultima_Linha_Dia'] = False
+    if not df_f.empty:
+        idx_ultimas = df_f.groupby('Data')['ID_Linha'].idxmax()
+        df_f.loc[idx_ultimas, 'Ultima_Linha_Dia'] = True
+    
     df_f['Valor_Exibir'] = df_f.apply(lambda r: f"-{m_fmt(r['V_Num'])}" if r['Tipo'] == 'Despesa' else m_fmt(r['V_Num']), axis=1)
     df_f['Saldo_Exibir'] = df_f.apply(lambda r: m_fmt(r['Saldo_Acum']) if r['Ultima_Linha_Dia'] else "", axis=1)
 
-    # Botão PDF
     if not df_f.empty:
-        pdf_bytes = gerar_pdf(df_f, b_sel, d_ini, d_f)
+        pdf_bytes = gerar_pdf(df_f, b_sel, d_ini.strftime('%d/%m/%Y'), d_fim_sel.strftime('%d/%m/%Y'))
         st.download_button("📥 Baixar PDF do Extrato", pdf_bytes, f"extrato_{b_sel}.pdf", "application/pdf")
 
     st.divider()
     
-    # Estilização de Cores
     def colorir(row):
         estilo = [''] * len(row)
         estilo[row.index.get_loc('Valor_Exibir')] = 'color: red' if '-' in str(row['Valor_Exibir']) else 'color: green'
@@ -123,8 +122,7 @@ if aba == "📊 Extrato Diário":
 elif aba == "💰 Finanças":
     st.title("🛡️ FinançasPro Wilson")
     st.success(f"### 🏦 PATRIMÔNIO TOTAL: {m_fmt(df_base['V_Real'].sum())}")
-    # Aqui entra seu código de Dashboard principal
 
 elif aba in ["🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios"]:
     st.title(f"{aba}")
-    st.info("Tela pronta para configuração.")
+    st.info("Tela limpa e pronta para nova configuração.")
