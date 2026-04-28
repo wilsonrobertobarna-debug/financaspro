@@ -41,6 +41,8 @@ def carregar():
         
     df['V_Num'] = df['Valor'].apply(p_float)
     df['DT_ORDEM'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
+    df['Status_LIMPO'] = df['Status'].str.strip().str.upper()
+    df['V_Real'] = df.apply(lambda r: r['V_Num'] if r['Tipo'] in ['Receita', 'Rendimento', 'Entrada'] else -r['V_Num'], axis=1)
     return df.sort_values(['DT_ORDEM', 'ID_Linha'])
 
 def m_fmt(n): 
@@ -52,12 +54,12 @@ def gerar_pdf(df, titulo):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(190, 10, f"RELATÓRIO: {titulo}", ln=True, align="C")
+    pdf.cell(190, 10, f"RELATORIO: {titulo}", ln=True, align="C")
     pdf.ln(5)
     pdf.set_font("Arial", "", 8)
     for _, r in df.iterrows():
-        txt = f"{r['Data']} - {r['Descrição'][:40]} - {r['Valor']}"
-        pdf.cell(190, 7, txt, border=1, ln=True)
+        txt = f"{r['Data']} - {r['Descricao'][:40]} - {r['Valor']}"
+        pdf.cell(190, 7, txt.encode('latin-1', 'ignore').decode('latin-1'), border=1, ln=True)
     return pdf.output(dest='S').encode('latin-1', errors='replace')
 
 df_base = carregar()
@@ -80,18 +82,22 @@ if aba == "📊 Extrato Diário":
     df_f = df_base[(df_base['Banco'] == b_sel) & (df_base['DT_ORDEM'].dt.date >= d_ini) & (df_base['DT_ORDEM'].dt.date <= d_fim)].copy()
     
     if not df_f.empty:
+        # Cálculo de saldo apenas para visualização
+        df_f['Saldo_Acum'] = df_f[df_f['Status_LIMPO'] == 'PAGO']['V_Real'].cumsum()
+        df_f['Saldo_Acum'] = df_f['Saldo_Acum'].ffill().fillna(0)
+        df_f['Saldo_Exibir'] = df_f['Saldo_Acum'].apply(m_fmt)
+        
         pdf = gerar_pdf(df_f, f"Extrato {b_sel}")
         st.download_button("🖨️ Imprimir Extrato (PDF)", pdf, f"extrato_{b_sel}.pdf", "application/pdf")
-        # Removidas colunas técnicas da exibição
-        st.dataframe(df_f.iloc[::-1], column_order=("Data", "Descrição", "Valor", "Status"), use_container_width=True, hide_index=True)
+        st.dataframe(df_f.iloc[::-1], column_order=("Data", "Descrição", "Valor", "Status", "Saldo_Exibir"), use_container_width=True, hide_index=True)
 
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Gastos com Milo & Bolt")
-    df_pets = df_base[df_base.apply(lambda row: row.astype(str).str.contains('Milo|Bolt|Ração', case=False).any(), axis=1)].copy()
+    # Filtro que busca Milo ou Bolt na descrição ou categoria
+    df_pets = df_base[df_base.apply(lambda row: row.astype(str).str.contains('Milo|Bolt|Ração|Veterinário', case=False).any(), axis=1)].copy()
     if not df_pets.empty:
         pdf_p = gerar_pdf(df_pets, "Gastos Pets")
         st.download_button("🖨️ Imprimir Gastos Pets", pdf_p, "gastos_pets.pdf")
-        # EXIBIÇÃO LIMPA: Apenas o que interessa
         st.dataframe(df_pets.iloc[::-1], column_order=("Data", "Descrição", "Valor", "Status", "Banco"), use_container_width=True, hide_index=True)
     else:
         st.info("Nenhum registro encontrado para Milo ou Bolt.")
@@ -100,4 +106,13 @@ elif aba == "🚗 Meu Veículo":
     st.title("🚗 Manutenção e Combustível")
     df_car = df_base[df_base.apply(lambda row: row.astype(str).str.contains('Carro|Moto|Combustível|Gasolina|Oficina|Troca de Óleo', case=False).any(), axis=1)].copy()
     if not df_car.empty:
-        pdf_c = gerar_pdf(
+        pdf_c = gerar_pdf(df_car, "Relatorio Veiculo")
+        st.download_button("🖨️ Imprimir Relatório Veículo", pdf_c, "relatorio_veiculo.pdf")
+        st.dataframe(df_car.iloc[::-1], column_order=("Data", "Descrição", "Valor", "Status", "Banco"), use_container_width=True, hide_index=True)
+    else:
+        st.info("Nenhum registro de veículo encontrado.")
+
+elif aba == "💰 Finanças":
+    st.title("🛡️ FinançasPro")
+    total_pago = df_base[df_base['Status_LIMPO'] == 'PAGO']['V_Real'].sum()
+    st.metric("Saldo Consolidado (Pago)", m_fmt(total_pago))
