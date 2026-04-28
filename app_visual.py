@@ -3,7 +3,6 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime
-from fpdf import FPDF
 
 # 1. CONFIGURAÇÃO E CONEXÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -40,7 +39,7 @@ def carregar():
         except: return 0.0
         
     df['V_Num'] = df['Valor'].apply(p_float)
-    # Criamos uma coluna técnica de data para ordenação, mas manteremos a original para exibição
+    # DT_ORDEM garante que a pesquisa por data funcione (Lê Dia primeiro)
     df['DT_ORDEM'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
     df['Status_LIMPO'] = df['Status'].str.strip().str.upper()
     df['V_Real'] = df.apply(lambda r: r['V_Num'] if r['Tipo'] in ['Receita', 'Rendimento', 'Entrada'] else -r['V_Num'], axis=1)
@@ -48,11 +47,11 @@ def carregar():
     return df.sort_values(['DT_ORDEM', 'ID_Linha'])
 
 def m_fmt(n): 
-    if n == "" or pd.isna(n) or n == 0: return ""
+    if n == "" or pd.isna(n) or n == 0: return "R$ 0,00"
     prefixo = "-" if n < 0 else ""
     return f"{prefixo}R$ {abs(n):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-# Carregamento
+# Carregamento base
 df_base = carregar()
 
 # 3. INTERFACE
@@ -65,32 +64,29 @@ if aba == "📊 Extrato Diário":
     if df_base.empty:
         st.warning("Sem dados na planilha.")
     else:
-        # ÁREA DE PESQUISA (DATAS)
+        # ÁREA DE PESQUISA - Ajustada para formato BR
         c1, c2, c3, c4 = st.columns([1, 1, 1.5, 1])
-        d_ini = c1.date_input("Início (Pesquisa)", datetime.now().replace(day=1))
-        d_fim = c2.date_input("Fim (Pesquisa)", datetime.now())
+        d_ini = c1.date_input("Início", datetime.now().replace(day=1), format="DD/MM/YYYY")
+        d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
         b_sel = c3.selectbox("Banco:", sorted(df_base['Banco'].unique()))
         s_filter = c4.selectbox("Filtro Status:", ["Todos", "Pago", "Pendente"])
         
         # Filtro de Banco e Cálculo do Saldo
         df_b = df_base[df_base['Banco'] == b_sel].copy()
+        
+        # Calculamos o saldo acumulado de TUDO o que for PAGO para o banco selecionado
         df_b['Saldo_Acum'] = df_b[df_b['Status_LIMPO'] == 'PAGO']['V_Real'].cumsum()
         df_b['Saldo_Acum'] = df_b['Saldo_Acum'].ffill().fillna(0)
         
-        # Filtro de Data (Usando a coluna técnica de ordenação)
+        # Filtramos o que vai aparecer na tela
         df_f = df_b[(df_b['DT_ORDEM'].dt.date >= d_ini) & (df_b['DT_ORDEM'].dt.date <= d_fim)].copy()
         
         if s_filter == "Pago": df_f = df_f[df_f['Status_LIMPO'] == 'PAGO']
         elif s_filter == "Pendente": df_f = df_f[df_f['Status_LIMPO'] != 'PAGO']
         
-        # Lógica do Saldo: Só aparece na última linha do dia
-        df_f['Ultima_Linha_Dia'] = False
-        if not df_f.empty:
-            idx_ultimas = df_f.groupby('Data')['ID_Linha'].idxmax()
-            df_f.loc[idx_ultimas, 'Ultima_Linha_Dia'] = True
-            
+        # Preparamos as colunas de texto
         df_f['Valor_Exibir'] = df_f.apply(lambda r: f"-{m_fmt(r['V_Num'])}" if r['V_Real'] < 0 else m_fmt(r['V_Num']), axis=1)
-        df_f['Saldo_Exibir'] = df_f.apply(lambda r: m_fmt(r['Saldo_Acum']) if r['Ultima_Linha_Dia'] else "", axis=1)
+        df_f['Saldo_Exibir'] = df_f['Saldo_Acum'].apply(m_fmt)
 
         st.divider()
 
@@ -100,12 +96,10 @@ if aba == "📊 Extrato Diário":
             v_idx = row.index.get_loc('Valor_Exibir')
             estilo[v_idx] = 'color: red' if '-' in str(row['Valor_Exibir']) else 'color: green'
             s_idx = row.index.get_loc('Saldo_Exibir')
-            if row['Ultima_Linha_Dia']:
-                estilo[s_idx] = 'color: blue; font-weight: bold' if row['Saldo_Acum'] >= 0 else 'color: red; font-weight: bold'
+            estilo[s_idx] = 'color: blue; font-weight: bold' if row['Saldo_Acum'] >= 0 else 'color: red; font-weight: bold'
             return estilo
 
-        # EXIBIÇÃO FINAL
-        # Nota: Usamos a coluna 'Data' original (texto) para não inverter dia/mês
+        # EXIBIÇÃO DA TABELA
         st.dataframe(
             df_f.iloc[::-1].style.apply(colorir, axis=1),
             column_order=("ID_Linha", "Data", "Descrição", "Tipo", "Status", "Valor_Exibir", "Saldo_Exibir"),
@@ -126,4 +120,4 @@ elif aba == "💰 Finanças":
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
         total = df_base[df_base['Status_LIMPO'] == 'PAGO']['V_Real'].sum()
-        st.success(f"### 🏦 SALDO TOTAL EM BANCOS: {m_fmt(total)}")
+        st.success(f"### 🏦 SALDO TOTAL CONSOLIDADO: {m_fmt(total)}")
