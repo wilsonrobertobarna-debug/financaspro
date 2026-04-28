@@ -56,7 +56,7 @@ def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace(
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo"])
 
-# FORMULÁRIOS (MANTIDOS)
+# FORMULÁRIO NOVO LANÇAMENTO
 with st.sidebar.form("f_novo", clear_on_submit=True):
     st.write("### 🚀 Novo Lançamento")
     f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -74,6 +74,7 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
             ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
         st.cache_data.clear(); st.rerun()
 
+# FORMULÁRIO TRANSFERÊNCIA
 with st.sidebar.form("f_transf", clear_on_submit=True):
     st.write("### 💸 Transferência")
     t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -90,11 +91,10 @@ with st.sidebar.form("f_transf", clear_on_submit=True):
             ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago"])
             st.cache_data.clear(); st.rerun()
 
-# 5. TELA FINANÇAS
+# 5. TELAS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
-        # SALDO GERAL
         saldo_geral = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
 
@@ -102,44 +102,35 @@ if "💰" in aba:
         df_m_limpo = df_m[df_m['Categoria'] != 'Transferência']
         
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("📈 Receita (Abril)", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Gasto (Abril)", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("💰 Rendimento (Abril)", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        m4.metric("⏳ Pendente (Abril)", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
+        m1.metric("📈 Receita (Mês)", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+        m2.metric("📉 Gasto (Mês)", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+        m3.metric("💰 Rendimento (Mês)", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+        m4.metric("⏳ Pendente (Mês)", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
         
         st.divider()
-
-        # GERENCIADOR DE METAS INTELIGENTE
-        with st.expander("🎯 Configurar Metas (Todas as Categorias)"):
-            st.write("Defina o limite de gastos para cada categoria usada:")
+        with st.expander("🎯 Configurar Metas"):
             todas_cats = sorted(df_base['Categoria'].unique())
             metas_map = {}
             cols = st.columns(3)
             for i, cat in enumerate(todas_cats):
                 if cat != "Transferência":
-                    # Define um valor padrão de 400 se for nova, ou valores conhecidos
                     default_v = 1200.0 if cat == "Mercado" else 400.0
-                    metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"meta_{cat}")
+                    metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
 
-        # GRÁFICOS
         g1, g2 = st.columns(2)
         with g1:
-            # Gráfico de Pizza
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             if not df_p.empty: st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="Gastos por Categoria (%)", hole=0.4), use_container_width=True)
-        
         with g2:
-            # RESTAURADO: Gráfico de Barras Receita x Despesa
             df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
-            if not df_f.empty:
-                st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="Fluxo de Caixa Mensal"), use_container_width=True)
+            if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="Fluxo de Caixa"), use_container_width=True)
 
         st.subheader("📊 Metas vs Realizado")
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         if not df_metas_graph.empty:
             df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(metas_map).fillna(0.0)
             fig_m = go.Figure()
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Gasto Real', marker_color='#e74c3c'))
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
             fig_m.update_layout(barmode='group', height=350); st.plotly_chart(fig_m, use_container_width=True)
 
@@ -155,4 +146,39 @@ if "💰" in aba:
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
         st.dataframe(df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
 
-# ... (Mantenha as abas de Milo e Veículo do código anterior)
+elif "🐾" in aba:
+    st.title("🐾 Milo & Bolt")
+    df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False)]
+    st.dataframe(df_pet[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+
+elif "🚗" in aba:
+    st.title("🚗 Meu Veículo")
+    c1, c2, c3 = st.columns([1,1,2])
+    alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
+    gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
+    if alc > 0 and gas > 0:
+        if (alc/gas) <= 0.7: c3.success("💡 Vá de ÁLCOOL!")
+        else: c3.warning("💡 Vá de GASOLINA!")
+    st.divider()
+    df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
+    st.dataframe(df_car[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+
+# 6. ALTERAÇÃO E EXCLUSÃO (RESTAURADO)
+st.sidebar.divider()
+if not df_base.empty:
+    st.sidebar.write("### ⚙️ Ajustar Lançamento")
+    lista_edit = {f"ID {r['ID']} | {r['Data']} | {r['Descrição']}": r for _, r in df_base.tail(20).iterrows()}
+    escolha = st.sidebar.selectbox("Escolha para editar:", [""] + list(lista_edit.keys()))
+    if escolha:
+        item = lista_edit[escolha]
+        ed_data = st.sidebar.text_input("Data:", value=str(item['Data']))
+        ed_desc = st.sidebar.text_input("Descrição:", value=str(item['Descrição']))
+        ed_valor = st.sidebar.text_input("Valor:", value=str(item['Valor']))
+        c_ed1, c_ed2 = st.sidebar.columns(2)
+        if c_ed1.button("💾 ATUALIZAR"):
+            ws_base.update_cell(int(item['ID']), 1, ed_data)
+            ws_base.update_cell(int(item['ID']), 3, ed_desc)
+            ws_base.update_cell(int(item['ID']), 2, ed_valor)
+            st.cache_data.clear(); st.rerun()
+        if c_ed2.button("🚨 EXCLUIR"):
+            ws_base.delete_rows(int(item['ID'])); st.cache_data.clear(); st.rerun()
