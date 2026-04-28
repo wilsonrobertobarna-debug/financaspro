@@ -65,9 +65,9 @@ def gerar_pdf(df, titulo):
     pdf.ln()
     pdf.set_font("Arial", "", 8)
     for _, r in df.iloc[::-1].iterrows():
-        pdf.cell(45, 7, str(r['Data']), 1)
-        pdf.cell(45, 7, str(r['Descrição'])[:25], 1)
-        pdf.cell(45, 7, f"R$ {r['V_Num']:.2f}", 1)
+        pdf.cell(30, 7, str(r['Data']), 1)
+        pdf.cell(75, 7, str(r['Descrição'])[:35], 1)
+        pdf.cell(40, 7, f"R$ {r['V_Num']:.2f}", 1)
         pdf.cell(45, 7, str(r['Banco']), 1)
         pdf.ln()
     return pdf.output(dest='S').encode('latin-1', errors='replace')
@@ -75,7 +75,7 @@ def gerar_pdf(df, titulo):
 df_base = carregar()
 mes_atual = datetime.now().strftime('%m/%y')
 
-# 4. SIDEBAR - TUDO RESTAURADO
+# 4. SIDEBAR - CONTROLES COMPLETOS
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📊 Extrato Diário", "📄 Relatórios"])
 
@@ -98,7 +98,7 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
 
 with st.sidebar.form("f_transf", clear_on_submit=True):
     st.write("### 💸 Transferência")
-    t_val = st.number_input("Valor", min_value=0.0)
+    t_val = st.number_input("Valor Transf.", min_value=0.0)
     t_orig = st.selectbox("Sai de:", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix"])
     t_dest = st.selectbox("Entra em:", ["Nubank", "Itaú", "Inter", "Santander", "Dinheiro", "Pix"])
     if st.form_submit_button("EXECUTAR"):
@@ -133,13 +133,13 @@ elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Gastos Milo & Bolt")
     df_pets = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False)]
     st.metric("Total Acumulado Pets", m_fmt(df_pets['V_Num'].sum()))
-    st.dataframe(df_pets.iloc[::-1], use_container_width=True)
+    st.dataframe(df_pets[['Data', 'Descrição', 'Valor', 'Status']].iloc[::-1], use_container_width=True)
 
 elif aba == "🚗 Meu Veículo":
     st.title("🚗 Gastos Veículo")
     df_v = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False)]
     st.metric("Total Acumulado Veículo", m_fmt(df_v['V_Num'].sum()))
-    st.dataframe(df_v.iloc[::-1], use_container_width=True)
+    st.dataframe(df_v[['Data', 'Descrição', 'Valor', 'Status']].iloc[::-1], use_container_width=True)
 
 elif aba == "📊 Extrato Diário":
     st.title("📊 Extrato Bancário")
@@ -182,5 +182,18 @@ elif aba == "📄 Relatórios":
     zap_url = f"https://wa.me/?text={urllib.parse.quote(relat)}"
     st.markdown(f'''<a href="{zap_url}" target="_blank"><button style="width:100%; height:50px; background-color:#25D366; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">📲 ENVIAR PARA WHATSAPP</button></a>''', unsafe_allow_html=True)
 
-# 6. AJUSTES FINAIS NA SIDEBAR (EDITAR/EXCLUIR)
-st.sidebar.
+# 6. AJUSTES (EDITAR/EXCLUIR)
+st.sidebar.divider()
+if not df_base.empty:
+    st.sidebar.write("### ⚙️ Ajustes Rápidos")
+    lista = {f"{r['ID']} | {r['Data']} | {r['Descrição']}": r for _, r in df_base.tail(15).iterrows()}
+    escolha = st.sidebar.selectbox("Selecionar para Ajuste:", [""] + list(lista.keys()))
+    if escolha:
+        item = lista[escolha]
+        ed_v = st.sidebar.text_input("Novo Valor:", value=str(item['Valor']))
+        if st.sidebar.button("💾 SALVAR ALTERAÇÃO"):
+            ws_base.update_cell(int(item['ID']), 2, ed_v)
+            st.cache_data.clear(); st.rerun()
+        if st.sidebar.button("🚨 EXCLUIR ITEM"):
+            ws_base.delete_rows(int(item['ID']))
+            st.cache_data.clear(); st.rerun()
