@@ -7,7 +7,6 @@ import plotly.graph_objects as go
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import urllib.parse
-from fpdf import FPDF
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -34,13 +33,13 @@ client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 ws_base = sh.get_worksheet(0)
 
-# 3. CARREGAMENTO E FUNÇÕES
+# 3. CARREGAMENTO
 @st.cache_data(ttl=2)
 def carregar():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
     df = pd.DataFrame(dados[1:], columns=dados[0])
-    df['ID_Linha'] = range(2, len(df) + 2) # ID real da linha na planilha
+    df['ID_Linha'] = range(2, len(df) + 2)
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
         except: return 0.0
@@ -58,7 +57,7 @@ def m_fmt(n):
 df_base = carregar()
 mes_atual = datetime.now().strftime('%m/%y')
 
-# 4. SIDEBAR (NOVO LANÇAMENTO)
+# 4. SIDEBAR
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📊 Extrato Diário", "📄 Relatórios"])
 st.sidebar.divider()
@@ -74,17 +73,15 @@ with st.sidebar.form("f_novo", clear_on_submit=True):
     f_bnc = st.selectbox("Banco", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "XP", "Mercado Pago"])
     f_sta = st.selectbox("Status", ["Pago", "Pendente"])
     if st.form_submit_button("SALVAR"):
-        v_str = f"{f_val:.2f}".replace('.', ',')
         for i in range(f_par):
             nova_dt = (f_dat + relativedelta(months=i)).strftime("%d/%m/%Y")
-            ws_base.append_row([nova_dt, v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
+            ws_base.append_row([nova_dt, f"{f_val:.2f}".replace('.', ','), f_des, f_cat, f_tip, f_bnc, f_sta])
         st.cache_data.clear(); st.rerun()
 
-# 5. TELA DE FINANÇAS (COMPLETA)
+# 5. TELA DE FINANÇAS
 if aba == "💰 Finanças":
     st.title("🛡️ FinançasPro Wilson")
-    patrimonio = df_base['V_Real'].sum()
-    st.info(f"### 🏦 PATRIMÔNIO TOTAL: {m_fmt(patrimonio)}")
+    st.info(f"### 🏦 PATRIMÔNIO TOTAL: {m_fmt(df_base['V_Real'].sum())}")
     
     df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
     m1, m2, m3, m4 = st.columns(4)
@@ -94,83 +91,71 @@ if aba == "💰 Finanças":
     m4.metric("⏳ Pendente", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
     
     st.divider()
-    c1, c2 = st.columns(2)
-    with c1:
-        df_evol = df_base.groupby(['Ano_Mes_Sort', 'Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
-        st.plotly_chart(px.bar(df_evol[df_evol['Tipo'].isin(['Receita', 'Despesa'])], x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', title="Evolução Mensal"), use_container_width=True)
-    with c2:
-        gastos_cat = df_m[df_m['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-        st.plotly_chart(px.bar(gastos_cat, x='Categoria', y='V_Num', title="Gastos por Categoria"), use_container_width=True)
-
-    st.divider()
-    st.write("### 🔍 Pesquisa e Ações")
-    psq1, psq2, psq3 = st.columns([1, 1, 2])
-    b_p = psq1.selectbox("Banco:", ["Todos"] + sorted(df_base['Banco'].unique().tolist()))
-    t_p = psq2.selectbox("Tipo:", ["Todos", "Receita", "Despesa", "Rendimento"])
-    d_p = psq3.text_input("Descrição Wilson:")
-    
+    st.write("### 🔍 Pesquisa")
+    p1, p2, p3 = st.columns([1, 1, 2])
+    b_p = p1.selectbox("Banco:", ["Todos"] + sorted(df_base['Banco'].unique().tolist()))
+    t_p = p2.selectbox("Tipo:", ["Todos", "Receita", "Despesa", "Rendimento"])
+    d_p = p3.text_input("Descrição Wilson:")
     df_f = df_base.copy()
     if b_p != "Todos": df_f = df_f[df_f['Banco'] == b_p]
     if t_p != "Todos": df_f = df_f[df_f['Tipo'] == t_p]
     if d_p: df_f = df_f[df_f['Descrição'].str.contains(d_p, case=False, na=False)]
-    
     st.dataframe(df_f[['Data', 'Descrição', 'Valor', 'Tipo', 'Banco', 'Categoria', 'Status']].iloc[::-1], use_container_width=True)
 
-    # --- NOVO BLOCO DE AÇÕES (TRANSFERÊNCIA, BAIXA, EXCLUSÃO) ---
     st.divider()
-    act1, act2, act3 = st.columns(3)
+    st.write("### 🛠️ Ações de Lançamento")
+    tab1, tab2, tab3 = st.tabs(["💸 Transferência", "📝 Alteração", "🚨 Exclusão"])
 
-    with act1:
-        st.write("### 💸 Transferência")
-        with st.form("f_transf", clear_on_submit=True):
+    with tab1:
+        with st.form("form_transf", clear_on_submit=True):
             t_v = st.number_input("Valor", min_value=0.0)
-            t_o = st.selectbox("Sai de:", ["Santander", "Itaú", "Inter", "Nubank", "XP", "Mercado Pago"])
-            t_d = st.selectbox("Entra em:", ["Nubank", "Itaú", "Inter", "Santander", "XP", "Mercado Pago"])
-            if st.form_submit_button("EXECUTAR TRANSFERÊNCIA"):
+            t_desc = st.text_input("Descrição da Transferência", "Transferência entre contas")
+            c_o, c_d = st.columns(2)
+            t_o = c_o.selectbox("Sai de:", ["Santander", "Itaú", "Inter", "Nubank", "XP", "Dinheiro"])
+            t_d = c_d.selectbox("Entra em:", ["Nubank", "Itaú", "Inter", "Santander", "XP", "Dinheiro"])
+            if st.form_submit_button("EXECUTAR"):
                 hj = datetime.now().strftime("%d/%m/%Y")
                 v_s = f"{t_v:.2f}".replace('.', ',')
-                ws_base.append_row([hj, v_s, f"Transf: {t_o} > {t_d}", "Transferência", "Despesa", t_o, "Pago"])
-                ws_base.append_row([hj, v_s, f"Transf: {t_o} > {t_d}", "Transferência", "Receita", t_d, "Pago"])
+                ws_base.append_rows([[hj, v_s, t_desc, "Transferência", "Despesa", t_o, "Pago"], 
+                                     [hj, v_s, t_desc, "Transferência", "Receita", t_d, "Pago"]])
                 st.cache_data.clear(); st.rerun()
 
-    with act2:
-        st.write("### 📝 Alterar Status")
-        # Pega os últimos 15 lançamentos para alteração rápida
-        opcoes_alt = {f"{r['Data']} - {r['Descrição']} ({r['Valor']})": r['ID_Linha'] for _, r in df_base.tail(15).iterrows()}
-        sel_alt = st.selectbox("Escolha o lançamento:", [""] + list(opcoes_alt.keys()))
-        novo_status = st.selectbox("Novo Status:", ["Pago", "Pendente"])
-        if st.button("ATUALIZAR STATUS") and sel_alt:
-            ws_base.update_cell(opcoes_alt[sel_alt], 7, novo_status) # Coluna 7 é o Status
+    with tab2:
+        ultimos = {f"{r['Data']} | {r['Descrição']} ({r['Valor']})": r for _, r in df_base.tail(20).iterrows()}
+        escolha = st.selectbox("Selecione para alterar:", [""] + list(ultimos.keys()))
+        if escolha:
+            item = ultimos[escolha]
+            with st.form("form_alt"):
+                a_dat = st.text_input("Data", item['Data'])
+                a_des = st.text_input("Descrição", item['Descrição'])
+                a_val = st.text_input("Valor", item['Valor'])
+                a_bnc = st.selectbox("Banco", ["Santander", "Itaú", "Inter", "Nubank", "XP", "Dinheiro"], index=0)
+                a_sta = st.selectbox("Status", ["Pago", "Pendente"], index=0 if item['Status'] == "Pago" else 1)
+                if st.form_submit_button("SALVAR ALTERAÇÕES"):
+                    ws_base.update(f"A{item['ID_Linha']}:G{item['ID_Linha']}", [[a_dat, a_val, a_des, item['Categoria'], item['Tipo'], a_bnc, a_sta]])
+                    st.cache_data.clear(); st.rerun()
+
+    with tab3:
+        exc_sel = st.selectbox("Lançamento para excluir:", [""] + list(ultimos.keys()))
+        if st.button("CONFIRMAR EXCLUSÃO") and exc_sel:
+            ws_base.delete_rows(int(ultimos[exc_sel]['ID_Linha']))
             st.cache_data.clear(); st.rerun()
 
-    with act3:
-        st.write("### 🚨 Excluir")
-        sel_exc = st.selectbox("Lançamento para excluir:", [""] + list(opcoes_alt.keys()))
-        if st.button("EXCLUIR PERMANENTE") and sel_exc:
-            ws_base.delete_rows(opcoes_alt[sel_exc])
-            st.cache_data.clear(); st.rerun()
-
-# --- AS OUTRAS ABAS MANTIDAS E FUNCIONAIS ---
+# --- ABAS Milo, Veículo, Extrato e Relatórios permanecem com a lógica anterior atualizada ---
 elif aba == "📊 Extrato Diário":
-    st.title("📊 Extrato")
-    b_sel = st.selectbox("Banco:", sorted(df_base['Banco'].unique()))
+    st.title("📊 Extrato por Banco")
+    b_sel = st.selectbox("Selecione o Banco:", sorted(df_base['Banco'].unique()))
     df_b = df_base[df_base['Banco'] == b_sel].copy().sort_values('DT')
     df_b['Saldo_Acum'] = df_b['V_Real'].cumsum()
     df_b['Saldo'] = df_b['Saldo_Acum'].apply(m_fmt)
     st.table(df_b[['Data', 'Descrição', 'Valor', 'Saldo']].iloc[::-1])
 
 elif aba == "📄 Relatórios":
-    st.title("📄 Relatórios WhatsApp")
-    r1, r2 = st.columns(2)
-    i, f = r1.date_input("Início", datetime.now().replace(day=1)), r2.date_input("Fim", datetime.now())
-    df_r = df_base[(df_base['DT'].dt.date >= i) & (df_base['DT'].dt.date <= f)]
-    
+    st.title("📄 Relatório WhatsApp")
     bancos_txt = "".join([f"• {b}: {m_fmt(df_base[df_base['Banco'] == b]['V_Real'].sum())}\n" for b in sorted(df_base['Banco'].unique())])
-    msg = (f"*Relatório Wilson*\nREC: {m_fmt(df_r[df_r['Tipo']=='Receita']['V_Num'].sum())}\nDES: {m_fmt(-df_r[df_r['Tipo']=='Despesa']['V_Num'].sum())}\n"
-           f"REND: {m_fmt(df_r[df_r['Tipo']=='Rendimento']['V_Num'].sum())}\nPEND: {m_fmt(df_r[df_r['Status']=='Pendente']['V_Num'].sum())}\n\n"
-           f"*Saldos:*\n{bancos_txt}\n*PATRIMÔNIO:* {m_fmt(df_base['V_Real'].sum())}")
-    st.text_area("Mensagem:", msg, height=250)
-    st.markdown(f'<a href="https://wa.me/?text={urllib.parse.quote(msg)}" target="_blank">📲 ENVIAR WHATSAPP</a>', unsafe_allow_html=True)
+    msg = f"*Relatório Wilson*\nPATRIMÔNIO: {m_fmt(df_base['V_Real'].sum())}\n\n*Saldos:*\n{bancos_txt}"
+    st.text_area("Cópia:", msg, height=200)
+    st.markdown(f'<a href="https://wa.me/?text={urllib.parse.quote(msg)}" target="_blank">📲 ENVIAR</a>', unsafe_allow_html=True)
 
 elif aba == "🐾 Milo & Bolt":
     st.title("🐾 Milo & Bolt")
