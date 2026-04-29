@@ -174,7 +174,6 @@ elif "📄" in aba:
     c1, c2 = st.columns(2)
     d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
     d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
-    
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     if not df_per.empty:
         r_v = df_per[df_per['Tipo'] == 'Receita']['V_Num'].sum()
@@ -187,28 +186,37 @@ elif "📄" in aba:
             s = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento']))]['V_Num'].sum() - df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
             saldos_txt += f"- {b}: {m_fmt(s)}\n"
             total_b += s
-        
         relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
         st.text_area("Copiar para Zap/E-mail", relat, height=400)
         zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
         st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
 
-# 6. ALTERAÇÃO E EXCLUSÃO (SIDEBAR)
+# 6. FERRAMENTA DE AJUSTE (SIDEBAR)
 st.sidebar.divider()
 if not df_base.empty:
     st.sidebar.write("### ⚙️ Ajustar Lançamento")
-    # ALTERAÇÃO ABAIXO: Incluído o Valor no texto da seleção
-    lista_edit = {f"ID {r['ID']} | {r['Data']} | R$ {r['Valor']} | {r['Descrição']}": r for _, r in df_base.tail(30).iterrows()}
-    escolha = st.sidebar.selectbox("Escolha para editar/excluir:", [""] + list(lista_edit.keys()))
+    # Texto da barrinha: ID ! DATA ! DESCRIÇÃO ! VALOR
+    lista_edit = {f"ID {r['ID']} ! {r['Data']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
+    escolha = st.sidebar.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
+    
     if escolha:
         item = lista_edit[escolha]
-        ed_val = st.sidebar.text_input("Novo Valor:", value=str(item['Valor']))
-        ed_desc = st.sidebar.text_input("Nova Descrição:", value=str(item['Descrição']))
+        # Campo para alterar a Data
+        data_atual_dt = datetime.strptime(item['Data'], "%d/%m/%Y")
+        ed_dat = st.sidebar.date_input("Alterar Data:", value=data_atual_dt, format="DD/MM/YYYY")
+        
+        # Campo para alterar Status (Botão para Pago se estiver Pendente)
+        status_opcoes = ["Pago", "Pendente"]
+        index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
+        ed_sta = st.sidebar.selectbox("Status Atual:", status_opcoes, index=index_status)
+        
         col_ed1, col_ed2 = st.sidebar.columns(2)
         if col_ed1.button("💾 ATUALIZAR"):
-            ws_base.update_cell(int(item['ID']), 2, ed_val)
-            ws_base.update_cell(int(item['ID']), 3, ed_desc)
+            # Atualiza Data (Coluna A/1) e Status (Coluna G/7)
+            ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
+            ws_base.update_cell(int(item['ID']), 7, ed_sta)
             st.cache_data.clear(); st.rerun()
+            
         if col_ed2.button("🚨 EXCLUIR"):
             ws_base.delete_rows(int(item['ID']))
             st.cache_data.clear(); st.rerun()
