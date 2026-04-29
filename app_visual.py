@@ -1,6 +1,6 @@
 # PROGRAMA: FinançasPro Wilson
-# VERSÃO: V 1.9
-# STATUS: VISUAL SLIM + TAGS REDUZIDAS
+# VERSÃO: V 2.0
+# STATUS: RESTAURAÇÃO TOTAL + TAGS CURTAS (VISUAL LIMPO)
 
 import streamlit as st
 import gspread
@@ -15,7 +15,7 @@ from fpdf import FPDF
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
-st.sidebar.markdown(f"**Versão:** `V 1.9`")
+st.sidebar.markdown(f"**Versão:** `V 2.0`")
 
 # 2. CONEXÃO
 @st.cache_resource
@@ -59,30 +59,25 @@ mes_atual = datetime.now().strftime('%m/%y')
 
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-# 4. SIDEBAR
+# 4. SIDEBAR - TUDO VOLTOU PARA CÁ
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Pets", "🚗 Veículo", "📄 Relatórios", "📋 PDF"])
 st.sidebar.divider()
 
-# BARRINHA 1: NOVO (Tags Curtas)
+# BARRINHA 1: NOVO LANÇAMENTO
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
     with st.form("f_novo", clear_on_submit=True):
         c1, c2 = st.columns(2)
         f_dat = c1.date_input("Data", datetime.now(), format="DD/MM/YYYY")
         f_val = c2.number_input("Valor", min_value=0.0, step=0.01)
-        
         f_des = st.text_input("Desc.")
-        
         c3, c4 = st.columns(2)
         f_tip = c3.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = c4.selectbox("Cat.", ["Mercado", "Aluguel", "Luz/Água", "Internet", "Outros", "Pet", "Veículo", "Combustível", "Manutenção"])
-        
         f_bnc = st.selectbox("Bco", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago"])
-        
         c5, c6 = st.columns(2)
         f_sta = c5.selectbox("Status", ["Pago", "Pendente"])
         f_par = c6.number_input("Parc.", min_value=1, value=1)
-        
         if st.form_submit_button("SALVAR"):
             v_str = f"{f_val:.2f}".replace('.', ',')
             for i in range(f_par):
@@ -90,42 +85,65 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
                 ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
             st.cache_data.clear(); st.rerun()
 
-# BARRINHA 2: TRANSFERIR
-with st.sidebar.expander("💸 Transferir", expanded=False):
+# BARRINHA 2: TRANSFERÊNCIA
+with st.sidebar.expander("💸 Transferência", expanded=False):
     with st.form("f_transf", clear_on_submit=True):
-        t_val = st.number_input("Valor", min_value=0.0)
+        t_val = st.number_input("Valor", min_value=0.0, step=0.01)
         t_orig = st.selectbox("Sai:", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix"])
         t_dest = st.selectbox("Entra:", ["Nubank", "Itaú", "Inter", "Santander", "Dinheiro", "Pix"])
-        if st.form_submit_button("OK"):
+        t_desc = st.text_input("Nota")
+        if st.form_submit_button("TRANSFERIR"):
             if t_orig != t_dest:
                 v_str = f"{t_val:.2f}".replace('.', ',')
                 d_str = datetime.now().strftime("%d/%m/%Y")
-                ws_base.append_row([d_str, v_str, "Transf.", "Transf.", "Despesa", t_orig, "Pago"])
-                ws_base.append_row([d_str, v_str, "Transf.", "Transf.", "Receita", t_dest, "Pago"])
+                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago"])
+                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago"])
+                st.cache_data.clear(); st.rerun()
+
+# BARRINHA 3: AJUSTE / EXCLUSÃO
+with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
+    if not df_base.empty:
+        lista_edit = {f"{r['Data']} - {r['Descrição']}": r for _, r in df_base.tail(20).iloc[::-1].iterrows()}
+        escolha = st.selectbox("Selecione:", [""] + list(lista_edit.keys()))
+        if escolha:
+            item = lista_edit[escolha]
+            ed_sta = st.selectbox("Status:", ["Pago", "Pendente"], index=0 if item['Status'] == "Pago" else 1)
+            col_ed1, col_ed2 = st.columns(2)
+            if col_ed1.button("💾 SALVAR"):
+                ws_base.update_cell(int(item['ID']), 7, ed_sta)
+                st.cache_data.clear(); st.rerun()
+            if col_ed2.button("🚨 EXCLUIR"):
+                ws_base.delete_rows(int(item['ID']))
                 st.cache_data.clear(); st.rerun()
 
 # 5. TELAS
-if "💰" in aba:
+if aba == "💰 Finanças":
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
-        saldo = df_base[df_base['Tipo'] != 'Despesa']['V_Num'].sum() - df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.subheader(f"🏦 Saldo Geral: {m_fmt(saldo)}")
+        saldo_geral = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
+        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Rec.", m_fmt(df_m[df_m['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("Desp.", m_fmt(df_m[df_m['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("Pend.", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
-        
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("📈 Rec.", m_fmt(df_m[df_m['Tipo'] == 'Receita']['V_Num'].sum()))
+        m2.metric("📉 Gast.", m_fmt(df_m[df_m['Tipo'] == 'Despesa']['V_Num'].sum()))
+        m3.metric("💰 Rend.", m_fmt(df_m[df_m['Tipo'] == 'Rendimento']['V_Num'].sum()))
+        m4.metric("⏳ Pend.", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
+
         st.divider()
+        with st.expander("🎯 Metas"):
+            metas_map = {cat: st.number_input(f"Meta {cat}", value=1000.0) for cat in sorted(df_base['Categoria'].unique()) if cat != "Transferência"}
+        
         g1, g2 = st.columns(2)
         with g1:
             df_p = df_m[df_m['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             if not df_p.empty: st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', hole=0.4, title="Gastos (%)"), use_container_width=True)
         with g2:
-            df_g = df_m[df_m['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-            fig = go.Figure(go.Bar(x=df_g['Categoria'], y=df_g['V_Num'], marker_color='#e74c3c'))
-            fig.update_layout(title="Gastos/Cat", height=300); st.plotly_chart(fig, use_container_width=True)
+            df_metas_graph = df_m[df_m['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            if not df_metas_graph.empty:
+                fig_m = go.Figure()
+                fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
+                st.plotly_chart(fig_m, use_container_width=True)
 
         st.subheader("🔍 Busca")
         c1, c2 = st.columns([1,2])
@@ -134,41 +152,40 @@ if "💰" in aba:
         df_v = df_base.copy()
         if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-        st.dataframe(df_v[['Data', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+        st.dataframe(df_v[['Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
 
-elif "🐾" in aba:
+elif aba == "🐾 Pets":
     st.title("🐾 Pets")
     df_pet = df_base[df_base['Categoria'].str.contains('Pet', case=False, na=False)]
-    st.metric("Gasto Mês", m_fmt(df_pet[df_pet['Mes_Ano'] == mes_atual]['V_Num'].sum()))
-    st.dataframe(df_pet[['Data', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+    st.metric("Gasto do Mês", m_fmt(df_pet[df_pet['Mes_Ano'] == mes_atual]['V_Num'].sum()))
+    st.dataframe(df_pet[['Data', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True)
 
-elif "🚗" in aba:
+elif aba == "🚗 Veículo":
     st.title("🚗 Veículo")
     c1, c2, c3 = st.columns([1,1,2])
     alc = c1.number_input("Álcool", value=0.0)
     gas = c2.number_input("Gasolina", value=0.0)
     if alc > 0 and gas > 0:
         c3.info(f"Dica: {'⛽ ÁLCOOL' if (alc/gas) <= 0.7 else '⛽ GASOLINA'}")
-    st.dataframe(df_base[df_base['Categoria'].isin(['Veículo', 'Combustível', 'Manutenção'])].iloc[::-1], use_container_width=True, hide_index=True)
+    st.dataframe(df_base[df_base['Categoria'].isin(['Veículo', 'Combustível', 'Manutenção'])].iloc[::-1], use_container_width=True)
 
-elif "📄" in aba:
+elif aba == "📄 Relatórios":
     st.title("📄 Relatório")
-    d1 = st.date_input("De", datetime.now() - relativedelta(months=1))
-    d2 = st.date_input("Até", datetime.now())
+    d1 = st.date_input("Início", datetime.now() - relativedelta(months=1))
+    d2 = st.date_input("Fim", datetime.now())
     df_per = df_base[(df_base['DT'].dt.date >= d1) & (df_base['DT'].dt.date <= d2)]
     if not df_per.empty:
-        rel = f"WILSON: REC {m_fmt(df_per[df_per['Tipo'] == 'Receita']['V_Num'].sum())} | DESP {m_fmt(df_per[df_per['Tipo'] == 'Despesa']['V_Num'].sum())}"
-        st.text_area("Relatório Zap", rel, height=100)
-        st.markdown(f'[📲 Enviar WhatsApp](https://wa.me/?text={urllib.parse.quote(rel)})')
+        rel = f"RELATÓRIO WILSON\nREC: {m_fmt(df_per[df_per['Tipo'] == 'Receita']['V_Num'].sum())}\nDES: {m_fmt(df_per[df_per['Tipo'] == 'Despesa']['V_Num'].sum())}"
+        st.text_area("Copiar Relatório", rel, height=150)
+        st.markdown(f'[📲 WhatsApp](https://wa.me/?text={urllib.parse.quote(rel)})')
 
-elif "📋" in aba:
+elif aba == "📋 PDF":
     st.title("📋 PDF")
     if st.button("Gerar PDF"):
         pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", 'B', 12)
+        pdf.add_page(); pdf.set_font("Arial", 'B', 14)
         pdf.cell(190, 10, "FinançasPro Wilson", 0, 1, 'C')
-        for _, r in df_base.tail(20).iterrows():
+        for _, r in df_base.tail(30).iterrows():
             pdf.set_font("Arial", '', 9)
             pdf.cell(190, 7, f"{r['Data']} - {r['Descrição']} - R$ {r['Valor']}", 1, 1)
-        st.download_button("📥 Baixar", pdf.output(dest='S').encode('latin-1','replace'), "relatorio.pdf")
+        st.download_button("📥 Baixar PDF", pdf.output(dest='S').encode('latin-1','replace'), "relatorio.pdf")
