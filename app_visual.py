@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 import urllib.parse
 
 # --- 1. CONFIGURAÇÃO E CONEXÃO ---
-st.set_page_config(page_title="FinançasPro Wilson v3.2", layout="wide")
+st.set_page_config(page_title="FinançasPro Wilson v3.3", layout="wide")
 
 @st.cache_resource
 def conectar():
@@ -48,7 +48,7 @@ aba = st.sidebar.radio("Navegação:", ["💰 Finanças (Geral)", "📄 Relatór
 
 st.sidebar.divider()
 
-# AÇÃO 1: NOVO LANÇAMENTO (FIXO)
+# AÇÕES RÁPIDAS NA BARRA LATERAL
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
     with st.form("f_novo", clear_on_submit=True):
         f_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY")
@@ -65,28 +65,26 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
                 ws.append_row([dt_p, v_str, desc_p, f_cat, "Despesa", f_bnc, "Pago"])
             st.cache_data.clear(); st.rerun()
 
-# AÇÃO 2: TRANSFERÊNCIA (FIXA - A COLA)
 with st.sidebar.expander("💸 Transferência", expanded=False):
-    with st.form("f_tr_fixa", clear_on_submit=True):
-        t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
-        t_val = st.number_input("Valor", min_value=0.0)
-        t_des = st.text_input("Descrição da TR")
+    with st.form("f_tr", clear_on_submit=True):
+        t_dat = st.date_input("Data TR", datetime.now(), format="DD/MM/YYYY")
+        t_val = st.number_input("Valor TR", min_value=0.0)
+        t_des = st.text_input("Motivo")
         t_sai = st.selectbox("Sai de:", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro"])
         t_ent = st.selectbox("Entra em:", ["Nubank", "Itaú", "Inter", "Santander", "Dinheiro"])
-        if st.form_submit_button("EXECUTAR TR"):
+        if st.form_submit_button("EXECUTAR"):
             v_s = f"{t_val:.2f}".replace('.', ',')
             d_s = t_dat.strftime("%d/%m/%Y")
             ws.append_row([d_s, v_s, f"TR: {t_des}", "Transferência", "Despesa", t_sai, "Pago"])
             ws.append_row([d_s, v_s, f"TR: {t_des}", "Transferência", "Receita", t_ent, "Pago"])
             st.cache_data.clear(); st.rerun()
 
-# AÇÃO 3: EXCLUSÃO (FIXA - A COLA)
 with st.sidebar.expander("🗑️ Excluir Item", expanded=False):
     if not df_base.empty:
         recente = df_base.tail(15).iloc[::-1]
         opcoes = [f"{r['ID_Planilha']} | {r['Data']} | {r['Descrição']} | {m_fmt(r['V_Num'])}" for _, r in recente.iterrows()]
-        sel_del = st.selectbox("Escolha:", [""] + opcoes, key="del_sidebar")
-        if sel_del and st.button("CONFIRMAR DELEÇÃO"):
+        sel_del = st.selectbox("Escolha:", [""] + opcoes)
+        if sel_del and st.button("CONFIRMAR EXCLUSÃO"):
             ws.delete_rows(int(sel_del.split(" | ")[0]))
             st.cache_data.clear(); st.rerun()
 
@@ -128,17 +126,42 @@ elif aba == "✏️ Editar Lançamento":
             n_d = st.date_input("Data", it['DT'].iloc[0].to_pydatetime(), format="DD/MM/YYYY")
             n_v = st.number_input("Valor", float(it['V_Num'].iloc[0]))
             n_t = st.text_input("Descrição", it['Descrição'].iloc[0])
-            st_at = it['Status'].iloc[0] if 'Status' in it.columns else "Pago"
-            n_st = st.selectbox("Status", ["Pago", "Pendente"], index=0 if st_at == "Pago" else 1)
+            n_st = st.selectbox("Status", ["Pago", "Pendente"], index=0 if it['Status'].iloc[0] == "Pago" else 1)
             if st.form_submit_button("SALVAR"):
                 ws.update_cell(id_e, 1, n_d.strftime("%d/%m/%Y")); ws.update_cell(id_e, 2, f"{n_v:.2f}".replace('.', ',')); ws.update_cell(id_e, 3, n_t); ws.update_cell(id_e, 7, n_st)
                 st.cache_data.clear(); st.rerun()
 
 elif aba == "🐾 Milo & Bolt":
-    st.title("🐾 Painel Milo & Bolt")
-    df_p = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False)]
-    st.metric("Total Gasto Pets", m_fmt(df_p['V_Num'].sum()))
-    st.dataframe(df_p.sort_values('DT', ascending=False), column_order=("ID_Planilha", "Data", "Descrição", "Valor", "Status"), use_container_width=True, hide_index=True)
+    st.title("🐾 Painel de Cuidado: Milo & Bolt")
+    df_p = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
+    
+    # Indicadores
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total Gasto Pets", m_fmt(df_p['V_Num'].sum()))
+    saude = df_p[df_p['Descrição'].str.contains('Vet|Vacina|Vermif|Remed', case=False, na=False)]
+    c2.metric("Saúde/Prevenção", m_fmt(saude['V_Num'].sum()))
+    c3.info("Milo: 7 meses aprox.")
+
+    # RESTAURAÇÃO DO CHECKLIST
+    st.divider()
+    st.subheader("🏥 Cronograma de Saúde Wilson")
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.markdown("### 🦮 Milo")
+        st.checkbox("Vacina V10 (Anual)", key="m1")
+        st.checkbox("Vacina Raiva (Anual)", key="m2")
+        st.checkbox("Vermífugo / Antipulgas", key="m3")
+    with col_b:
+        st.markdown("### 🐕 Bolt")
+        st.checkbox("Vacina V8/V10", key="b1")
+        st.checkbox("Vacina Raiva", key="b2")
+        st.checkbox("Vermífugo / Antipulgas", key="b3")
+
+    st.divider()
+    st.subheader("📑 Histórico de Lançamentos")
+    st.dataframe(df_p.sort_values('DT', ascending=False), 
+                 column_order=("ID_Planilha", "Data", "Descrição", "Valor", "Status"), 
+                 use_container_width=True, hide_index=True)
 
 elif aba == "🚗 Meu Veículo":
     st.title("🚗 Gestão Veicular")
