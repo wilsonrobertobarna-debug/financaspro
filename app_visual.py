@@ -25,8 +25,7 @@ def conectar():
             "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
             "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
         }
-        # CORREÇÃO DO PARÊNTESE ABAIXO:
-        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
+        return gspread.authorize(Credentials.from_service_account_info(final_creds), scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"])
     except Exception as e:
         st.error(f"Erro: {e}"); st.stop()
 
@@ -103,10 +102,10 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir", expanded=False):
         if escolha:
             item = lista_edit[escolha]
             data_atual_dt = datetime.strptime(item['Data'], "%d/%m/%Y")
-            ed_dat = st.date_input("Nova Data:", value=data_atual_dt, format="DD/MM/YYYY")
+            ed_dat = st.date_input("Alterar Data:", value=data_atual_dt, format="DD/MM/YYYY")
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
-            ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
+            ed_sta = st.selectbox("Mudar Status:", status_opcoes, index=index_status)
             c_ed1, c_ed2 = st.columns(2)
             if c_ed1.button("💾 ATUALIZAR"):
                 ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
@@ -167,4 +166,7 @@ elif "📄" in aba:
             
         relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nSOBRA: {m_fmt(sobra)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_p)}"
         st.text_area("Relatório Completo", relat, height=450)
-        zap_link = f
+        
+        # CORREÇÃO DA LINHA ABAIXO:
+        zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
+        st.markdown(f'[📲 Enviar WhatsApp]({zap_link})')
