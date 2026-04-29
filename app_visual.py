@@ -32,7 +32,16 @@ def conectar():
 
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-ws_base = sh.get_worksheet(0)
+ws_base = sh.get_worksheet(0) # Aba de Lançamentos
+
+# --- BUSCA DE BANCOS/CARTÕES OFICIAIS ---
+try:
+    ws_bancos = sh.worksheet("BANCOS") # Tenta abrir a aba chamada BANCOS
+    lista_cadastrada = ws_bancos.get_all_values()
+    # Pega os nomes da primeira coluna, ignorando o cabeçalho
+    bancos_oficiais = [linha[0] for linha in lista_cadastrada[1:] if linha[0]]
+except:
+    bancos_oficiais = []
 
 # 3. CARREGAMENTO
 @st.cache_data(ttl=2)
@@ -52,11 +61,15 @@ def carregar():
 df_base = carregar()
 mes_atual = datetime.now().strftime('%m/%y')
 
-# --- LISTA DINÂMICA DE BANCOS/CARTÕES ---
-# Aqui o sistema lê o que você já escreveu na planilha
-if not df_base.empty:
+# --- LÓGICA DA LISTA DINÂMICA ---
+if bancos_oficiais:
+    # Se existe a aba BANCOS, usa o que está lá
+    lista_bancos_dinamica = sorted(list(set(bancos_oficiais)))
+elif not df_base.empty:
+    # Caso contrário, usa os bancos que já têm lançamentos
     lista_bancos_dinamica = sorted(df_base['Banco'].unique().tolist())
 else:
+    # Fallback de segurança
     lista_bancos_dinamica = ["Dinheiro", "Pix"]
 
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
@@ -76,7 +89,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet", "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
-        # Usa a lista que vem da planilha
         f_bnc = st.selectbox("Banco/Cartão", lista_bancos_dinamica)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         if st.form_submit_button("SALVAR"):
@@ -207,9 +219,9 @@ elif "📄" in aba:
         total_b = 0
         for b in lista_bancos_dinamica:
             s = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento']))]['V_Num'].sum() - df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
-            saldos_txt += f"- {b}: {m_fmt(s)}\n"
+            saldos_txt += f"- {b}: {m_fmt(s)}\\n"
             total_b += s
-        relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
+        relat = f"RELATÓRIO WILSON\\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\\n========================================\\nREC: {m_fmt(r_v)}\\nDES: {m_fmt(d_v)}\\nREND: {m_fmt(rend_v)}\\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\\n========================================\\n\\nSALDOS:\\n{saldos_txt}\\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
         st.text_area("Copiar para Zap/E-mail", relat, height=400)
         zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
         st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
