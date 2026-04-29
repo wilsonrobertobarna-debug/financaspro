@@ -1,3 +1,7 @@
+# PROGRAMA: FinançasPro Wilson
+# VERSÃO: V 1.1
+# STATUS: Completo e Revisado
+
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
@@ -11,6 +15,9 @@ from fpdf import FPDF # Nova biblioteca para o PDF
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
+
+# Exibe a versão no topo do painel lateral para controle do Wilson
+st.sidebar.markdown(f"**Versão:** `V 1.1`")
 
 # 2. CONEXÃO
 @st.cache_resource
@@ -179,7 +186,7 @@ elif "🚗" in aba:
     gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
     if alc > 0 and gas > 0:
         if (alc/gas) <= 0.7: c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
-        else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA WITH GASOLINA!")
+        else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
     st.divider()
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
     if not df_car.empty:
@@ -202,7 +209,20 @@ elif "📄" in aba:
             s = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento']))]['V_Num'].sum() - df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
             saldos_txt += f"- {b}: {m_fmt(s)}\n"
             total_b += s
-        relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
+        
+        # MONTAGEM DO TEXTO PARA O WHATSAPP (CORRIGIDO SEM \\N)
+        relat = (
+            f"RELATÓRIO WILSON\n"
+            f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
+            f"========================================\n"
+            f"REC: {m_fmt(r_v)}\n"
+            f"DES: {m_fmt(d_v)}\n"
+            f"REND: {m_fmt(rend_v)}\n"
+            f"SOBRA: {m_fmt((r_v+rend_v)-d_v)}\n"
+            f"========================================\n\n"
+            f"SALDOS:\n{saldos_txt}\n"
+            f"TOTAL PATRIMÔNIO: {m_fmt(total_b)}"
+        )
         st.text_area("Copiar para Zap/E-mail", relat, height=400)
         zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
         st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
