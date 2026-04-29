@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import urllib.parse
+from fpdf import FPDF # Nova biblioteca para o PDF
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -55,7 +56,7 @@ def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace(
 
 # 4. SIDEBAR - NAVEGAÇÃO E BARRINHAS
 st.sidebar.title("🎮 Painel Wilson")
-aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios"])
+aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios", "📋 Relatório PDF"])
 
 st.sidebar.divider()
 
@@ -178,7 +179,7 @@ elif "🚗" in aba:
     gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
     if alc > 0 and gas > 0:
         if (alc/gas) <= 0.7: c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
-        else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
+        else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA WITH GASOLINA!")
     st.divider()
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
     if not df_car.empty:
@@ -205,3 +206,63 @@ elif "📄" in aba:
         st.text_area("Copiar para Zap/E-mail", relat, height=400)
         zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
         st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
+
+# NOVA ABA: RELATÓRIO PDF
+elif "📋" in aba:
+    st.title("📋 Gerador de Relatório PDF")
+    
+    # Filtros de Busca
+    c1, c2, c3 = st.columns(3)
+    b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY", key="pdf_ini")
+    b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY", key="pdf_fim")
+    b_bnc = c3.multiselect("Bancos", sorted(df_base['Banco'].unique()), key="pdf_bnc")
+    
+    c4, c5 = st.columns([1, 2])
+    b_sta = c4.multiselect("Status", ["Pago", "Pendente"], key="pdf_sta")
+    b_desc = c5.text_input("Filtrar Descrição", key="pdf_desc")
+    
+    # Aplicar Filtros
+    df_pdf = df_base.copy()
+    df_pdf = df_pdf[(df_pdf['DT'].dt.date >= b_ini) & (df_pdf['DT'].dt.date <= b_fim)]
+    if b_bnc: df_pdf = df_pdf[df_pdf['Banco'].isin(b_bnc)]
+    if b_sta: df_pdf = df_pdf[df_pdf['Status'].isin(b_sta)]
+    if b_desc: df_pdf = df_pdf[df_pdf['Descrição'].str.contains(b_desc, case=False, na=False)]
+    
+    st.write(f"**Lançamentos encontrados:** {len(df_pdf)}")
+    st.dataframe(df_pdf[['Data', 'Descrição', 'Valor', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+    
+    if st.button("📄 GERAR PDF AGORA"):
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(190, 10, "Relatório FinançasPro - Wilson", 0, 1, 'C')
+        pdf.set_font("Arial", '', 10)
+        pdf.cell(190, 10, f"Período: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", 0, 1, 'C')
+        pdf.ln(5)
+        
+        # Cabeçalho da Tabela
+        pdf.set_fill_color(200, 200, 200)
+        pdf.set_font("Arial", 'B', 10)
+        pdf.cell(25, 8, "Data", 1, 0, 'C', 1)
+        pdf.cell(75, 8, "Descricao", 1, 0, 'L', 1)
+        pdf.cell(30, 8, "Valor", 1, 0, 'C', 1)
+        pdf.cell(30, 8, "Banco", 1, 0, 'C', 1)
+        pdf.cell(30, 8, "Status", 1, 1, 'C', 1)
+        
+        # Dados
+        pdf.set_font("Arial", '', 9)
+        total_periodo = 0
+        for _, row in df_pdf.iterrows():
+            pdf.cell(25, 7, str(row['Data']), 1, 0, 'C')
+            pdf.cell(75, 7, str(row['Descrição'])[:40], 1, 0, 'L')
+            pdf.cell(30, 7, f"R$ {row['Valor']}", 1, 0, 'R')
+            pdf.cell(30, 7, str(row['Banco']), 1, 0, 'C')
+            pdf.cell(30, 7, str(row['Status']), 1, 1, 'C')
+            total_periodo += row['V_Num']
+            
+        pdf.ln(5)
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(190, 10, f"Total dos Lancamentos Filtrados: {m_fmt(total_periodo)}", 0, 1, 'R')
+        
+        pdf_output = pdf.output(dest='S').encode('latin-1', 'replace')
+        st.download_button(label="📥 Baixar PDF", data=pdf_output, file_name=f"Relatorio_Wilson_{datetime.now().strftime('%d%m%y')}.pdf", mime="application/pdf")
