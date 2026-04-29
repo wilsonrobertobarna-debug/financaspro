@@ -25,7 +25,8 @@ def conectar():
             "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
             "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
         }
-        return gspread.authorize(Credentials.from_service_account_info(final_creds), scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
+        # CORREÇÃO DO PARÊNTESE ABAIXO:
+        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
     except Exception as e:
         st.error(f"Erro: {e}"); st.stop()
 
@@ -53,7 +54,7 @@ mes_atual = datetime.now().strftime('%m/%y')
 
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-# 4. SIDEBAR - NAVEGAÇÃO E BARRINHAS (EXPANDERS)
+# 4. SIDEBAR - NAVEGAÇÃO E BARRINHAS
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios"])
 
@@ -70,7 +71,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet", "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"])
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
-        if st.form_submit_button("SALVAR LANÇAMENTO"):
+        if st.form_submit_button("SALVAR"):
             v_str = f"{f_val:.2f}".replace('.', ',')
             for i in range(f_par):
                 nova_data = f_dat + relativedelta(months=i)
@@ -105,7 +106,7 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir", expanded=False):
             ed_dat = st.date_input("Nova Data:", value=data_atual_dt, format="DD/MM/YYYY")
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
-            ed_sta = st.selectbox("Novo Status:", status_opcoes, index=index_status)
+            ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             c_ed1, c_ed2 = st.columns(2)
             if c_ed1.button("💾 ATUALIZAR"):
                 ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
@@ -129,18 +130,19 @@ if "💰" in aba:
         m3.metric("💰 Rendimento (Mês)", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
         m4.metric("⏳ Pendente (Mês)", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
         st.divider()
-        with st.expander("🎯 Metas"):
-            todas_cats = sorted(df_base['Categoria'].unique())
-            metas_map = {cat: st.number_input(f"Meta: {cat}", value=400.0) for cat in todas_cats if cat != "Transferência"}
-        g1, g2 = st.columns(2)
-        with g1:
-            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-            if not df_p.empty: st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', hole=0.4), use_container_width=True)
-        with g2:
-            df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
-            if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo'), use_container_width=True)
-        st.subheader("🔍 Lançamentos")
         st.dataframe(df_base[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+
+elif "🐾" in aba:
+    st.title("🐾 Gestão Milo & Bolt")
+    df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False)]
+    if not df_pet.empty:
+        st.metric("Gasto com Pets (Mês)", m_fmt(df_pet[df_pet['Mes_Ano'] == mes_atual]['V_Num'].sum()))
+        st.dataframe(df_pet[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+
+elif "🚗" in aba:
+    st.title("🚗 Gestão do Veículo")
+    df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
+    st.dataframe(df_car[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']].iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "📄" in aba:
     st.title("📄 Relatório Wilson")
@@ -165,4 +167,4 @@ elif "📄" in aba:
             
         relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nSOBRA: {m_fmt(sobra)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_p)}"
         st.text_area("Relatório Completo", relat, height=450)
-        st.markdown(f'[📲 Enviar WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
+        zap_link = f
