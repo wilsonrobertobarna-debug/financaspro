@@ -7,11 +7,6 @@ import plotly.graph_objects as go
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import urllib.parse
-st.set_page_config(
-    page_title="FinançasPro - Wilson",
-    page_icon="icon.png",
-    layout="centered"
-)
 from fpdf import FPDF # Nova biblioteca para o PDF
 
 # 1. CONFIGURAÇÃO
