@@ -1,6 +1,6 @@
 # PROGRAMA: FinançasPro Wilson
-# VERSÃO: V 1.2
-# STATUS: Implementação Segura de Bancos Dinâmicos
+# VERSÃO: V 1.3
+# STATUS: Leitura de Aba 'Bancos' Existente
 
 import streamlit as st
 import gspread
@@ -15,7 +15,7 @@ from fpdf import FPDF
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
-st.sidebar.markdown(f"**Versão:** `V 1.2`")
+st.sidebar.markdown(f"**Versão:** `V 1.3`")
 
 # 2. CONEXÃO
 @st.cache_resource
@@ -39,21 +39,24 @@ client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 ws_base = sh.get_worksheet(0)
 
-# --- BUSCA DINÂMICA DE BANCOS (SEM QUEBRAR A ESTRUTURA) ---
-lista_padrao_bancos = ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"]
+# --- BUSCA DINÂMICA NA SUA ABA 'Bancos' ---
+lista_padrao = ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix"]
 
 try:
-    ws_bancos = sh.worksheet("BANCOS")
-    coluna_bancos = ws_bancos.col_values(1) # Lê a coluna A
-    # Remove o cabeçalho se houver e limpa espaços vazios
-    bancos_extras = [b for b in coluna_bancos if b and b.upper() != "BANCOS"]
-    if bancos_extras:
-        lista_final_bancos = sorted(list(set(bancos_extras)))
+    # Tenta conectar na aba que você já tem
+    ws_bancos = sh.worksheet("Bancos")
+    # Pega todos os valores da primeira coluna (onde estão os nomes)
+    coluna_nomes = ws_bancos.col_values(1) 
+    # Remove o título "Bancos" e espaços vazios
+    bancos_planilha = [b.strip() for b in coluna_nomes if b and b.strip().lower() != "bancos"]
+    
+    if bancos_planilha:
+        lista_final_bancos = bancos_planilha # Usa o que está na sua coluna A
     else:
-        lista_final_bancos = lista_padrao_bancos
+        lista_final_bancos = lista_padrao
 except:
-    # Se a aba BANCOS não existir, ele usa a lista padrão e não dá erro
-    lista_final_bancos = lista_padrao_bancos
+    # Se der qualquer problema com a aba, ele volta para o padrão e não quebra o programa
+    lista_final_bancos = lista_padrao
 
 # 3. CARREGAMENTO
 @st.cache_data(ttl=2)
@@ -75,12 +78,12 @@ mes_atual = datetime.now().strftime('%m/%y')
 
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-# 4. SIDEBAR - NAVEGAÇÃO
+# 4. SIDEBAR
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios", "📋 Relatório PDF"])
 st.sidebar.divider()
 
-# BARRINHA 1: NOVO LANÇAMENTO
+# BARRINHA 1: NOVO LANÇAMENTO (Puxando da sua aba Bancos)
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
     with st.form("f_novo", clear_on_submit=True):
         f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -89,7 +92,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet", "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
-        # USANDO A LISTA DINÂMICA AQUI:
         f_bnc = st.selectbox("Banco/Cartão", lista_final_bancos)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         if st.form_submit_button("SALVAR"):
@@ -137,7 +139,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 ws_base.delete_rows(int(item['ID']))
                 st.cache_data.clear(); st.rerun()
 
-# 5. TELAS PRINCIPAIS (Tudo mantido igual cristal)
+# 5. TELAS PRINCIPAIS (Tudo mantido original)
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
@@ -166,7 +168,6 @@ if "💰" in aba:
         with g2:
             df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
             if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="Fluxo de Caixa"), use_container_width=True)
-        
         st.subheader("📊 Metas vs Realizado")
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         if not df_metas_graph.empty:
