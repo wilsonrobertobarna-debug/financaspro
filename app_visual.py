@@ -1,6 +1,6 @@
 # PROGRAMA: FinançasPro Wilson
-# VERSÃO: V 1.3
-# STATUS: Leitura de Aba 'Bancos' Existente
+# VERSÃO: V 1.4
+# STATUS: Sincronização Total de Bancos (Formulários e Filtros)
 
 import streamlit as st
 import gspread
@@ -15,7 +15,7 @@ from fpdf import FPDF
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
-st.sidebar.markdown(f"**Versão:** `V 1.3`")
+st.sidebar.markdown(f"**Versão:** `V 1.4`")
 
 # 2. CONEXÃO
 @st.cache_resource
@@ -39,23 +39,14 @@ client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 ws_base = sh.get_worksheet(0)
 
-# --- BUSCA DINÂMICA NA SUA ABA 'Bancos' ---
+# --- BUSCA DINÂMICA NA SUA ABA 'Bancos' (CENTRALIZADA) ---
 lista_padrao = ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix"]
-
 try:
-    # Tenta conectar na aba que você já tem
     ws_bancos = sh.worksheet("Bancos")
-    # Pega todos os valores da primeira coluna (onde estão os nomes)
     coluna_nomes = ws_bancos.col_values(1) 
-    # Remove o título "Bancos" e espaços vazios
     bancos_planilha = [b.strip() for b in coluna_nomes if b and b.strip().lower() != "bancos"]
-    
-    if bancos_planilha:
-        lista_final_bancos = bancos_planilha # Usa o que está na sua coluna A
-    else:
-        lista_final_bancos = lista_padrao
+    lista_final_bancos = bancos_planilha if bancos_planilha else lista_padrao
 except:
-    # Se der qualquer problema com a aba, ele volta para o padrão e não quebra o programa
     lista_final_bancos = lista_padrao
 
 # 3. CARREGAMENTO
@@ -83,7 +74,7 @@ st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios", "📋 Relatório PDF"])
 st.sidebar.divider()
 
-# BARRINHA 1: NOVO LANÇAMENTO (Puxando da sua aba Bancos)
+# BARRINHA 1: NOVO LANÇAMENTO
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
     with st.form("f_novo", clear_on_submit=True):
         f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -139,7 +130,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 ws_base.delete_rows(int(item['ID']))
                 st.cache_data.clear(); st.rerun()
 
-# 5. TELAS PRINCIPAIS (Tudo mantido original)
+# 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
@@ -161,25 +152,11 @@ if "💰" in aba:
                 if cat != "Transferência":
                     default_v = 1200.0 if cat == "Mercado" else 400.0
                     metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
-        g1, g2 = st.columns(2)
-        with g1:
-            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-            if not df_p.empty: st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="Gastos por Categoria (%)", hole=0.4), use_container_width=True)
-        with g2:
-            df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
-            if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="Fluxo de Caixa"), use_container_width=True)
-        st.subheader("📊 Metas vs Realizado")
-        df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-        if not df_metas_graph.empty:
-            df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(metas_map).fillna(0.0)
-            fig_m = go.Figure()
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
-            fig_m.update_layout(barmode='group', height=350); st.plotly_chart(fig_m, use_container_width=True)
-        st.divider()
+        
         st.subheader("🔍 Busca e Lançamentos")
         c1, c2, c3 = st.columns(3)
-        s_bnc = c1.multiselect("Filtrar Banco:", sorted(df_base['Banco'].unique()))
+        # AJUSTE: Filtro agora usa a lista da aba Bancos
+        s_bnc = c1.multiselect("Filtrar Banco:", lista_final_bancos)
         s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
         b_desc = c3.text_input("Buscar Beneficiário:")
         df_v = df_base.copy()
@@ -218,10 +195,10 @@ elif "📄" in aba:
         r_v = df_per[df_per['Tipo'] == 'Receita']['V_Num'].sum()
         d_v = df_per[df_per['Tipo'] == 'Despesa']['V_Num'].sum()
         rend_v = df_per[df_per['Tipo'] == 'Rendimento']['V_Num'].sum()
-        bancos = sorted(df_base['Banco'].unique())
+        # AJUSTE: O resumo de saldos agora segue a lista da aba Bancos
         saldos_txt = ""
         total_b = 0
-        for b in bancos:
+        for b in lista_final_bancos:
             s = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento']))]['V_Num'].sum() - df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
             saldos_txt += f"- {b}: {m_fmt(s)}\n"
             total_b += s
@@ -247,7 +224,8 @@ elif "📋" in aba:
     c1, c2, c3 = st.columns(3)
     b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY", key="pdf_ini")
     b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY", key="pdf_fim")
-    b_bnc = c3.multiselect("Bancos", sorted(df_base['Banco'].unique()), key="pdf_bnc")
+    # AJUSTE: Filtro do PDF agora usa a lista da aba Bancos
+    b_bnc = c3.multiselect("Bancos", lista_final_bancos, key="pdf_bnc")
     c4, c5 = st.columns([1, 2])
     b_sta = c4.multiselect("Status", ["Pago", "Pendente"], key="pdf_sta")
     b_desc = c5.text_input("Filtrar Descrição", key="pdf_desc")
