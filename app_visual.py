@@ -25,7 +25,7 @@ def conectar():
             "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
             "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
         }
-        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
+        return gspread.authorize(Credentials.from_service_account_info(final_creds), scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
     except Exception as e:
         st.error(f"Erro: {e}"); st.stop()
 
@@ -53,39 +53,39 @@ mes_atual = datetime.now().strftime('%m/%y')
 
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-# 4. SIDEBAR - NAVEGAÇÃO E FORMULÁRIOS
+# 4. SIDEBAR - NAVEGAÇÃO E BARRINHAS (EXPANDERS)
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios"])
 
 st.sidebar.divider()
 
-# NOVO LANÇAMENTO (Fica sempre visível conforme sua preferência)
-with st.sidebar.form("f_novo", clear_on_submit=True):
-    st.write("### 🚀 Novo Lançamento")
-    f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
-    f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
-    f_par = st.number_input("Parcelas", min_value=1, value=1)
-    f_des = st.text_input("Descrição / Beneficiário")
-    f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-    f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet", "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
-    f_bnc = st.selectbox("Banco", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"])
-    f_sta = st.selectbox("Status", ["Pago", "Pendente"])
-    if st.form_submit_button("SALVAR"):
-        v_str = f"{f_val:.2f}".replace('.', ',')
-        for i in range(f_par):
-            nova_data = f_dat + relativedelta(months=i)
-            ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
-        st.cache_data.clear(); st.rerun()
+# BARRINHA 1: NOVO LANÇAMENTO
+with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
+    with st.form("f_novo", clear_on_submit=True):
+        f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+        f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
+        f_par = st.number_input("Parcelas", min_value=1, value=1)
+        f_des = st.text_input("Descrição / Beneficiário")
+        f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
+        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet", "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
+        f_bnc = st.selectbox("Banco", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"])
+        f_sta = st.selectbox("Status", ["Pago", "Pendente"])
+        if st.form_submit_button("SALVAR LANÇAMENTO"):
+            v_str = f"{f_val:.2f}".replace('.', ',')
+            for i in range(f_par):
+                nova_data = f_dat + relativedelta(months=i)
+                ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
+            st.cache_data.clear(); st.rerun()
 
-# TRANSFERÊNCIA (Agora dentro de uma "barrinha" expansível)
-with st.sidebar.expander("💸 Fazer Transferência"):
+# BARRINHA 2: TRANSFERÊNCIA
+with st.sidebar.expander("💸 Transferência", expanded=False):
     with st.form("f_transf", clear_on_submit=True):
         t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
         t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         t_orig = st.selectbox("Origem (Sai):", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix"])
         t_dest = st.selectbox("Destino (Entra):", ["Nubank", "Itaú", "Inter", "Santander", "Dinheiro", "Pix"])
         t_desc = st.text_input("Nota")
-        if st.form_submit_button("EXECUTAR TRANSFERÊNCIA"):
+        if st.form_submit_button("EXECUTAR"):
             if t_orig == t_dest: st.error("Escolha bancos diferentes!")
             else:
                 v_str = f"{t_val:.2f}".replace('.', ',')
@@ -94,31 +94,28 @@ with st.sidebar.expander("💸 Fazer Transferência"):
                 ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago"])
                 st.cache_data.clear(); st.rerun()
 
-# AJUSTAR LANÇAMENTO (Também dentro de uma "barrinha" expansível para limpar a tela)
-with st.sidebar.expander("⚙️ Ajustar / Excluir"):
+# BARRINHA 3: AJUSTAR / EXCLUIR
+with st.sidebar.expander("⚙️ Ajustar / Excluir", expanded=False):
     if not df_base.empty:
         lista_edit = {f"ID {r['ID']} ! {r['Data']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
-        escolha = st.selectbox("Selecione o Lançamento:", [""] + list(lista_edit.keys()))
-        
+        escolha = st.selectbox("Selecione:", [""] + list(lista_edit.keys()))
         if escolha:
             item = lista_edit[escolha]
             data_atual_dt = datetime.strptime(item['Data'], "%d/%m/%Y")
-            ed_dat = st.date_input("Alterar Data:", value=data_atual_dt, format="DD/MM/YYYY")
+            ed_dat = st.date_input("Nova Data:", value=data_atual_dt, format="DD/MM/YYYY")
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
-            ed_sta = st.selectbox("Mudar Status:", status_opcoes, index=index_status)
-            
+            ed_sta = st.selectbox("Novo Status:", status_opcoes, index=index_status)
             c_ed1, c_ed2 = st.columns(2)
             if c_ed1.button("💾 ATUALIZAR"):
                 ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
                 st.cache_data.clear(); st.rerun()
-                
             if c_ed2.button("🚨 EXCLUIR"):
                 ws_base.delete_rows(int(item['ID']))
                 st.cache_data.clear(); st.rerun()
 
-# 5. TELAS PRINCIPAIS (Tudo igual abaixo)
+# 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
@@ -134,12 +131,7 @@ if "💰" in aba:
         st.divider()
         with st.expander("🎯 Metas"):
             todas_cats = sorted(df_base['Categoria'].unique())
-            metas_map = {}
-            cols = st.columns(3)
-            for i, cat in enumerate(todas_cats):
-                if cat != "Transferência":
-                    default_v = 1200.0 if cat == "Mercado" else 400.0
-                    metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
+            metas_map = {cat: st.number_input(f"Meta: {cat}", value=400.0) for cat in todas_cats if cat != "Transferência"}
         g1, g2 = st.columns(2)
         with g1:
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
@@ -147,41 +139,30 @@ if "💰" in aba:
         with g2:
             df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
             if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo'), use_container_width=True)
-        st.subheader("🔍 Busca Rápida")
-        c1, c2, c3 = st.columns(3)
-        s_bnc = c1.multiselect("Banco:", sorted(df_base['Banco'].unique()))
-        s_sta = c2.multiselect("Status:", ["Pago", "Pendente"])
-        b_desc = c3.text_input("Buscar Nome:")
-        df_v = df_base.copy()
-        if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
-        if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
-        if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-        st.dataframe(df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
-
-elif "🐾" in aba:
-    st.title("🐾 Gestão Milo & Bolt")
-    df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False)]
-    if not df_pet.empty:
-        st.metric("Gasto com Pets (Mês)", m_fmt(df_pet[df_pet['Mes_Ano'] == mes_atual]['V_Num'].sum()))
-        st.dataframe(df_pet[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
-
-elif "🚗" in aba:
-    st.title("🚗 Gestão do Veículo")
-    c1, c2, c3 = st.columns([1,1,2])
-    alc, gas = c1.number_input("Preço Álcool", value=0.0), c2.number_input("Preço Gasolina", value=0.0)
-    if alc > 0 and gas > 0:
-        if (alc/gas) <= 0.7: c3.success("💡 ABASTEÇA COM ÁLCOOL!")
-        else: c3.warning("💡 ABASTEÇA COM GASOLINA!")
-    df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
-    st.dataframe(df_car[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']].iloc[::-1], use_container_width=True, hide_index=True)
+        st.subheader("🔍 Lançamentos")
+        st.dataframe(df_base[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "📄" in aba:
     st.title("📄 Relatório Wilson")
     c1, c2 = st.columns(2)
     d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
     d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
+    
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     if not df_per.empty:
-        relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(df_per[df_per['Tipo'] == 'Receita']['V_Num'].sum())}\nDES: {m_fmt(df_per[df_per['Tipo'] == 'Despesa']['V_Num'].sum())}\n========================================\n"
-        st.text_area("Copiar Relatório", relat, height=300)
+        r_v = df_per[df_per['Tipo'] == 'Receita']['V_Num'].sum()
+        d_v = df_per[df_per['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend_v = df_per[df_per['Tipo'] == 'Rendimento']['V_Num'].sum()
+        sobra = (r_v + rend_v) - d_v
+        
+        bancos = sorted(df_base['Banco'].unique())
+        saldos_txt = ""
+        total_p = 0
+        for b in bancos:
+            s = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento']))]['V_Num'].sum() - df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
+            saldos_txt += f"- {b}: {m_fmt(s)}\n"
+            total_p += s
+            
+        relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nSOBRA: {m_fmt(sobra)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_p)}"
+        st.text_area("Relatório Completo", relat, height=450)
         st.markdown(f'[📲 Enviar WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
