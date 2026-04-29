@@ -172,7 +172,6 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 Relatório Wilson")
     c1, c2 = st.columns(2)
-    # AJUSTE NAS DATAS DE PESQUISA ABAIXO (Padrao Brasil DD/MM/YYYY)
     d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
     d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
     
@@ -198,8 +197,9 @@ elif "📄" in aba:
 st.sidebar.divider()
 if not df_base.empty:
     st.sidebar.write("### ⚙️ Ajustar Lançamento")
-    lista_edit = {f"ID {r['ID']} | {r['Data']} | {r['Descrição']}": r for _, r in df_base.tail(30).iterrows()}
-    escolha = st.sidebar.selectbox("Escolha para editar:", [""] + list(lista_edit.keys()))
+    # ALTERAÇÃO ABAIXO: Incluído o Valor no texto da seleção
+    lista_edit = {f"ID {r['ID']} | {r['Data']} | R$ {r['Valor']} | {r['Descrição']}": r for _, r in df_base.tail(30).iterrows()}
+    escolha = st.sidebar.selectbox("Escolha para editar/excluir:", [""] + list(lista_edit.keys()))
     if escolha:
         item = lista_edit[escolha]
         ed_val = st.sidebar.text_input("Novo Valor:", value=str(item['Valor']))
