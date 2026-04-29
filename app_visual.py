@@ -186,6 +186,7 @@ elif "📄" in aba:
             s = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento']))]['V_Num'].sum() - df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
             saldos_txt += f"- {b}: {m_fmt(s)}\n"
             total_b += s
+        # AJUSTE DE DATA PARA BRASIL ABAIXO:
         relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
         st.text_area("Copiar para Zap/E-mail", relat, height=400)
         zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
@@ -195,7 +196,6 @@ elif "📄" in aba:
 st.sidebar.divider()
 if not df_base.empty:
     st.sidebar.write("### ⚙️ Ajustar Lançamento")
-    # Pega os últimos 30 lançamentos para facilitar a escolha
     lista_edit = {f"ID {r['ID']} | {r['Data']} | {r['Descrição']}": r for _, r in df_base.tail(30).iterrows()}
     escolha = st.sidebar.selectbox("Escolha para editar:", [""] + list(lista_edit.keys()))
     if escolha:
