@@ -21,7 +21,6 @@ def conectar():
         pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
         if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
         
-        # Escopos definidos fora para evitar o erro de 'scopes'
         escopos = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         
         final_creds = {
@@ -30,12 +29,12 @@ def conectar():
             "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
         }
         
-        # CORREÇÃO DEFINITIVA: Criando as credenciais corretamente
+        # Conexão simplificada e correta
         credentials = Credentials.from_service_account_info(final_creds, scopes=escopos)
         return gspread.authorize(credentials)
         
     except Exception as e:
-        st.error(f"Erro: {e}"); st.stop()
+        st.error(f"Erro na Conexão: {e}"); st.stop()
 
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
@@ -78,7 +77,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet", "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"])
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
-        if st.form_submit_button("SALVAR"):
+        if st.form_submit_button("SALVAR LANÇAMENTO"):
             v_str = f"{f_val:.2f}".replace('.', ',')
             for i in range(f_par):
                 nova_data = f_dat + relativedelta(months=i)
@@ -93,7 +92,7 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
         t_orig = st.selectbox("Origem (Sai):", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix"])
         t_dest = st.selectbox("Destino (Entra):", ["Nubank", "Itaú", "Inter", "Santander", "Dinheiro", "Pix"])
         t_desc = st.text_input("Nota")
-        if st.form_submit_button("EXECUTAR"):
+        if st.form_submit_button("EXECUTAR TRANSFERÊNCIA"):
             if t_orig == t_dest: st.error("Escolha bancos diferentes!")
             else:
                 v_str = f"{t_val:.2f}".replace('.', ',')
@@ -106,20 +105,20 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 with st.sidebar.expander("⚙️ Ajustar / Excluir", expanded=False):
     if not df_base.empty:
         lista_edit = {f"ID {r['ID']} ! {r['Data']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
-        escolha = st.selectbox("Selecione:", [""] + list(lista_edit.keys()))
+        escolha = st.selectbox("Selecione o Lançamento:", [""] + list(lista_edit.keys()))
         if escolha:
             item = lista_edit[escolha]
             data_atual_dt = datetime.strptime(item['Data'], "%d/%m/%Y")
             ed_dat = st.date_input("Mudar Data:", value=data_atual_dt, format="DD/MM/YYYY")
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
-            ed_sta = st.selectbox("Alterar Status:", status_opcoes, index=index_status)
-            c_ed1, c_ed2 = st.columns(2)
-            if c_ed1.button("💾 ATUALIZAR"):
+            ed_sta = st.selectbox("Novo Status:", status_opcoes, index=index_status)
+            c1, c2 = st.columns(2)
+            if c1.button("💾 ATUALIZAR"):
                 ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
                 st.cache_data.clear(); st.rerun()
-            if c_ed2.button("🚨 EXCLUIR"):
+            if c2.button("🚨 EXCLUIR"):
                 ws_base.delete_rows(int(item['ID']))
                 st.cache_data.clear(); st.rerun()
 
@@ -168,6 +167,7 @@ elif "📄" in aba:
         saldos_txt = ""
         total_p = 0
         for b in bancos:
+            # Cálculo do saldo por banco
             s = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento']))]['V_Num'].sum() - df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
             saldos_txt += f"- {b}: {m_fmt(s)}\n"
             total_p += s
