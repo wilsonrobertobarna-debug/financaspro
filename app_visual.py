@@ -7,22 +7,10 @@ import plotly.graph_objects as go
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import urllib.parse
-from fpdf import FPDF # Nova biblioteca para o PDF
+from fpdf import FPDF 
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
-
-# --- AJUSTE DE TAMANHO DAS TAGS (CSS) ---
-st.markdown("""
-    <style>
-    [data-testid="stMetricValue"] {
-        font-size: 1.8rem !important;
-    }
-    [data-testid="stMetricLabel"] {
-        font-size: 1rem !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
 
 # 2. CONEXÃO
 @st.cache_resource
@@ -66,13 +54,12 @@ mes_atual = datetime.now().strftime('%m/%y')
 
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-# 4. SIDEBAR - NAVEGAÇÃO E BARRINHAS
+# 4. SIDEBAR
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Pets", "🚗 Veículo", "📄 Relatórios", "📋 PDF"])
 
 st.sidebar.divider()
 
-# BARRINHA 1: NOVO LANÇAMENTO
 with st.sidebar.expander("🚀 Novo", expanded=False):
     with st.form("f_novo", clear_on_submit=True):
         f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -90,7 +77,6 @@ with st.sidebar.expander("🚀 Novo", expanded=False):
                 ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
             st.cache_data.clear(); st.rerun()
 
-# BARRINHA 2: TRANSFERÊNCIA
 with st.sidebar.expander("💸 Transf.", expanded=False):
     with st.form("f_transf", clear_on_submit=True):
         t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -107,7 +93,6 @@ with st.sidebar.expander("💸 Transf.", expanded=False):
                 ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago"])
                 st.cache_data.clear(); st.rerun()
 
-# BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar", expanded=False):
     if not df_base.empty:
         lista_edit = {f"ID {r['ID']} | {r['Data']} | {r['Descrição']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
@@ -138,12 +123,12 @@ if "💰" in aba:
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[df_m['Categoria'] != 'Transferência']
         
-        # MÉTDRICAS COM CSS APLICADO NO INÍCIO
+        # AQUI MUDOU: NOMES CURTOS PARA CABER O VALOR
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("📈 Rec.", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Gast.", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("💰 Rend.", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        m4.metric("⏳ Pend.", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
+        m1.metric("Rec.", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+        m2.metric("Gast.", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+        m3.metric("Rend.", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+        m4.metric("Pend.", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
         
         st.divider()
         with st.expander("🎯 Metas"):
