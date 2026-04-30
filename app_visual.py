@@ -101,7 +101,7 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
             ws_base.append_row([d_str, v_str, f"{t_des} (Entrada)", "Transferência", "Receita", t_dest, "Pago"])
             st.cache_data.clear(); st.rerun()
 
-# ALTERAR / EXCLUIR (CORREÇÃO DA DATA INVERTIDA)
+# ALTERAR / EXCLUIR
 with st.sidebar.expander("⚙️ Alterar / Excluir", expanded=False):
     if not df_base.empty:
         lista_edit = {f"{r['ID']} / {r['Data']} / {r['Descrição']} / R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
@@ -109,7 +109,6 @@ with st.sidebar.expander("⚙️ Alterar / Excluir", expanded=False):
         
         if escolha:
             item = lista_edit[escolha]
-            # Ajuste para garantir que a data apareça certa no calendário
             data_objeto = datetime.strptime(item['Data'], "%d/%m/%Y").date()
             
             ed_dat = st.date_input("Nova Data:", value=data_objeto, format="DD/MM/YYYY")
@@ -120,16 +119,16 @@ with st.sidebar.expander("⚙️ Alterar / Excluir", expanded=False):
             if c_ed1.button("💾 Salvar"):
                 v_str_edit = f"{ed_val:.2f}".replace('.', ',')
                 d_str_edit = ed_dat.strftime("%d/%m/%Y")
-                ws_base.update_cell(int(item['ID']), 1, d_str_edit) # Coluna Data
-                ws_base.update_cell(int(item['ID']), 2, v_str_edit) # Coluna Valor
-                ws_base.update_cell(int(item['ID']), 7, ed_sta)     # Coluna Status
+                ws_base.update_cell(int(item['ID']), 1, d_str_edit) 
+                ws_base.update_cell(int(item['ID']), 2, v_str_edit) 
+                ws_base.update_cell(int(item['ID']), 7, ed_sta)     
                 st.cache_data.clear(); st.rerun()
             
             if c_ed2.button("🚨 Excluir"):
                 ws_base.delete_rows(int(item['ID']))
                 st.cache_data.clear(); st.rerun()
 
-# 5. TELAS PRINCIPAIS (CÓDIGO RESTANTE MANTIDO)
+# 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
@@ -163,6 +162,16 @@ elif "🐾" in aba:
 
 elif "🚗" in aba:
     st.title("🚗 Veículo")
+    # RECUPERADO: Calculo de Combustível
+    st.subheader("⛽ Álcool ou Gasolina?")
+    col_c1, col_c2, col_c3 = st.columns([1, 1, 2])
+    preco_alc = col_c1.number_input("Preço Álcool", min_value=0.0, step=0.01)
+    preco_gas = col_c2.number_input("Preço Gasolina", min_value=0.0, step=0.01)
+    if preco_alc > 0 and preco_gas > 0:
+        res = preco_alc / preco_gas
+        if res <= 0.7: col_c3.success(f"✅ VÁ DE ÁLCOOL ({res:.2%})")
+        else: col_c3.warning(f"✅ VÁ DE GASOLINA ({res:.2%})")
+    
     st.divider()
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
     st.dataframe(df_car[['Data', 'Valor', 'Descrição', 'Status', 'Banco']].iloc[::-1], use_container_width=True, hide_index=True)
