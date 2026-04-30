@@ -12,7 +12,7 @@ from fpdf import FPDF
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
-# DIMINUIR O VALOR (Métricas) - Única mudança visual mantida
+# DIMINUIR O VALOR (Métricas)
 st.markdown("""
     <style>
     [data-testid="stMetricValue"] {
@@ -69,6 +69,7 @@ aba = st.sidebar.radio("Ir para:", ["💰 Finanças", "🐾 Pets", "🚗 Veícul
 
 st.sidebar.divider()
 
+# NOVO LANÇAMENTO
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
     with st.form("f_novo", clear_on_submit=True):
         f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -86,6 +87,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
                 ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
             st.cache_data.clear(); st.rerun()
 
+# TRANSFERÊNCIA
 with st.sidebar.expander("💸 Transferência", expanded=False):
     with st.form("f_transf", clear_on_submit=True):
         t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -99,18 +101,25 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
             ws_base.append_row([d_str, v_str, "Transferência Entrada", "Transferência", "Receita", t_dest, "Pago"])
             st.cache_data.clear(); st.rerun()
 
+# ALTERAR / EXCLUIR (COM VALOR INCLUÍDO)
 with st.sidebar.expander("⚙️ Alterar / Excluir", expanded=False):
     if not df_base.empty:
         lista_edit = {f"ID {r['ID']} | {r['Data']} | {r['Descrição']}": r for _, r in df_base.tail(30).iloc[::-1].iterrows()}
-        escolha = st.selectbox("Selecione:", [""] + list(lista_edit.keys()))
+        escolha = st.selectbox("Selecione o item:", [""] + list(lista_edit.keys()))
         if escolha:
             item = lista_edit[escolha]
-            ed_sta = st.selectbox("Mudar Status:", ["Pago", "Pendente"], index=0 if item['Status'] == "Pago" else 1)
-            col_ed1, col_ed2 = st.columns(2)
-            if col_ed1.button("💾 Salvar"):
-                ws_base.update_cell(int(item['ID']), 7, ed_sta)
+            # Campos para edição
+            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+            ed_sta = st.selectbox("Alterar Status:", ["Pago", "Pendente"], index=0 if item['Status'] == "Pago" else 1)
+            
+            c_ed1, c_ed2 = st.columns(2)
+            if c_ed1.button("💾 Salvar"):
+                v_str_edit = f"{ed_val:.2f}".replace('.', ',')
+                ws_base.update_cell(int(item['ID']), 2, v_str_edit) # Coluna Valor
+                ws_base.update_cell(int(item['ID']), 7, ed_sta)     # Coluna Status
                 st.cache_data.clear(); st.rerun()
-            if col_ed2.button("🚨 Excluir"):
+            
+            if c_ed2.button("🚨 Excluir"):
                 ws_base.delete_rows(int(item['ID']))
                 st.cache_data.clear(); st.rerun()
 
