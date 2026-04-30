@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.8.7")
+st.caption("Versão 1.8.8")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -312,8 +312,11 @@ elif "📄" in aba:
         utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
         disponivel = limite - utilizado
         
-        # Força exibição de todos os dados de cartões ou contas
-        saldos_txt += f"- {b}: Limite: {m_fmt(limite)} | Saldo/Fatura: {m_fmt(saldo)} (Usado: {m_fmt(utilizado)} | Disp: {m_fmt(disponivel)})\n"
+        # Formato limpo e simplificado
+        if limite > 0:
+            saldos_txt += f"- {b}: Limite: {m_fmt(limite)} | Disponível: {m_fmt(disponivel)} | A utilizar: {m_fmt(utilizado)}\n"
+        else:
+            saldos_txt += f"- {b}: {m_fmt(saldo)}\n"
             
         # Ignora cartões no cálculo do patrimônio
         if "cartão" not in b.lower():
