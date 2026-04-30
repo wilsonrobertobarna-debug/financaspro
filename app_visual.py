@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.9.3")
+st.caption("Versão 1.9.4")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -315,7 +315,7 @@ elif "📄" in aba:
             if limite > 0:
                 disponivel = limite - utilizado
             else:
-                disponivel = saldo - utilizado
+                disponivel = saldo - utilizedo
             saldos_txt += f"- {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
         else:
             saldos_txt += f"- {b}: Saldo: {m_fmt(saldo)}\n"
@@ -326,16 +326,21 @@ elif "📄" in aba:
             
     # Correção da lógica de cálculo de período para f-string
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
+    
     if not df_per.empty:
-        r_v = df_per[df_per['Tipo'] == 'Receita']['V_Num'].sum()
-        d_v = df_per[df_per['Tipo'] == 'Despesa']['V_Num'].sum()
-        rend_v = df_per[df_per['Tipo'] == 'Rendimento']['V_Num'].sum()
+        # Exclui transferências do relatório do WhatsApp
+        df_per_limpo = df_per[df_per['Categoria'] != 'Transferência']
+        r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+        d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        pend_v = df_per_limpo[df_per_limpo['Status'] == 'Pendente']['V_Num'].sum()
     else:
         r_v = 0
         d_v = 0
         rend_v = 0
+        pend_v = 0
         
-    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
+    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nPEND: {m_fmt(pend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
     
     st.text_area("Copiar para Zap/E-mail", relat, height=400)
     zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
