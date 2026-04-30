@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.8.4")
+st.caption("Versão 1.8.5")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -148,10 +148,10 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             if col_ed1.button("💾 ATUALIZAR"):
                 v_str = f"{ed_val:.2f}".replace('.', ',')
                 ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
-                ws_base.update_cell(int(item['ID']), 2, v_str) # Atualiza o valor
-                ws_base.update_cell(int(item['ID']), 3, ed_desc) # Atualiza a descrição
-                ws_base.update_cell(int(item['ID']), 6, ed_bnc) # Atualiza o Banco
-                ws_base.update_cell(int(item['ID']), 7, ed_sta) # Atualiza o Status
+                ws_base.update_cell(int(item['ID']), 2, v_str)
+                ws_base.update_cell(int(item['ID']), 3, ed_desc)
+                ws_base.update_cell(int(item['ID']), 6, ed_bnc)
+                ws_base.update_cell(int(item['ID']), 7, ed_sta)
                 st.cache_data.clear(); st.rerun()
             if col_ed2.button("🚨 EXCLUIR"):
                 ws_base.delete_rows(int(item['ID']))
@@ -241,7 +241,7 @@ elif "🚗" in aba:
     
     st.divider()
     
-    # Controle de Manutenção (Troca de Óleo)
+    # Controle de Manutenção
     st.subheader("⚙️ Controle de Troca de Óleo")
     km1, km2, km3 = st.columns(3)
     km_atual = km1.number_input("Quilometragem Atual (km)", value=0, step=500)
@@ -320,13 +320,11 @@ elif "📄" in aba:
         else:
             saldos_txt += f"- {b}: {m_fmt(saldo)}\n"
             
-        # Ignora cartões no cálculo do patrimônio (soma apenas se não conter a palavra "Cartão" / "cartão")
+        # Ignora cartões no cálculo do patrimônio
         if "cartão" not in b.lower():
             total_b += saldo
-        
-    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v := df_per[df_per['Tipo'] == 'Receita']['V_Num'].sum() if not (df_per := df_base[(df_base['DT'].dt.date >= d_ini) & (df_per := df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy(), df_per.empty)][0] else 0)}\nDES: {m_fmt(d_v := df_per[df_per['Tipo'] == 'Despesa']['V_Num'].sum() if not df_per.empty else 0)}\nREND: {m_fmt(rend_v := df_per[df_per['Tipo'] == 'Rendimento']['V_Num'].sum() if not df_per.empty else 0)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}" if 'df_per' in locals() else "" # Ajustado para compatibilidade com o escopo
-    
-    # Refazendo o cálculo do df_per para segurança e limpeza de visualização
+            
+    # Correção da lógica de cálculo de período para f-string
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     if not df_per.empty:
         r_v = df_per[df_per['Tipo'] == 'Receita']['V_Num'].sum()
