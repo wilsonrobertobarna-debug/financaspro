@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.3")
+st.caption("Versão 1.4")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -71,6 +71,13 @@ def carregar_bancos_manual():
 
 df_base = carregar()
 df_bancos_info = carregar_bancos_manual()
+
+# CARREGA OS BANCOS DINAMICAMENTE DA PLANILHA OU USA OS PADRÕES
+if not df_bancos_info.empty:
+    bancos_disponiveis = [str(x) for x in df_bancos_info.iloc[:, 0].tolist() if str(x).strip() != ""]
+else:
+    bancos_disponiveis = ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"]
+
 mes_atual = datetime.now().strftime('%m/%y')
 
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
@@ -90,7 +97,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet", "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
-        f_bnc = st.selectbox("Banco", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"])
+        f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         if st.form_submit_button("SALVAR"):
             v_str = f"{f_val:.2f}".replace('.', ',')
@@ -104,8 +111,8 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
     with st.form("f_transf", clear_on_submit=True):
         t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
         t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
-        t_orig = st.selectbox("Origem (Sai):", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix"])
-        t_dest = st.selectbox("Destino (Entra):", ["Nubank", "Itaú", "Inter", "Santander", "Dinheiro", "Pix"])
+        t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
+        t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
         t_desc = st.text_input("Nota")
         if st.form_submit_button("TRANSFERIR"):
             if t_orig == t_dest: st.error("Escolha bancos diferentes!")
@@ -130,7 +137,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
-            bancos_disponiveis = ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"]
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
             ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
             
@@ -206,7 +212,7 @@ if "💰" in aba:
         st.divider()
         st.subheader("🔍 Busca e Lançamentos")
         c1, c2, c3 = st.columns(3)
-        s_bnc = c1.multiselect("Filtrar Banco:", sorted(df_base['Banco'].unique()))
+        s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
         s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
         b_desc = c3.text_input("Buscar Beneficiário:")
         df_v = df_base.copy()
@@ -295,7 +301,7 @@ elif "📋" in aba:
     c1, c2, c3 = st.columns(3)
     b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY", key="pdf_ini")
     b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY", key="pdf_fim")
-    b_bnc = c3.multiselect("Bancos", sorted(df_base['Banco'].unique()), key="pdf_bnc")
+    b_bnc = c3.multiselect("Bancos", sorted(bancos_disponiveis), key="pdf_bnc")
     
     c4, c5 = st.columns([1, 2])
     b_sta = c4.multiselect("Status", ["Pago", "Pendente"], key="pdf_sta")
