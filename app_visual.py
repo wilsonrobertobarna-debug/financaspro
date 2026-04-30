@@ -421,4 +421,124 @@ elif "📄" in aba:
         r_v = 0.0
         d_v = 0.0
         rend_v = 0.0
-        pend_v =
+        pend_v = 0.0
+        
+    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nPEND: {m_fmt(pend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
+    
+    st.text_area("Copiar para Zap/E-mail", relat, height=300)
+    zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
+    st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
+
+elif "📋" in aba:
+    st.title("📋 Gerador de Relatório PDF")
+    
+    c1, c2, c3 = st.columns(3)
+    b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY", key="pdf_ini")
+    b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY", key="pdf_fim")
+    b_bnc = c3.multiselect("Bancos", sorted(bancos_disponiveis), key="pdf_bnc")
+    
+    c4, c5 = st.columns([1, 2])
+    b_sta = c4.multiselect("Status", ["Pago", "Pendente"], key="pdf_sta")
+    b_desc = c5.text_input("Filtrar Descrição", key="pdf_desc")
+    
+    # Filtro de datas seguro
+    df_valid_pdf = df_base.dropna(subset=['DT']).copy()
+    df_pdf = df_valid_pdf[(df_valid_pdf['DT'].dt.date >= b_ini) & (df_valid_pdf['DT'].dt.date <= b_fim)]
+    
+    if b_bnc: df_pdf = df_pdf[df_pdf['Banco'].isin(b_bnc)]
+    if b_sta: df_pdf = df_pdf[df_pdf['Status'].isin(b_sta)]
+    if b_desc: df_pdf = df_pdf[df_pdf['Descrição'].str.contains(b_desc, case=False, na=False)]
+    
+    st.write(f"**Lançamentos encontrados:** {len(df_pdf)}")
+    st.dataframe(df_pdf[['Data', 'Descrição', 'Valor', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+    
+    if st.button("📄 GERAR PDF AGORA"):
+        pdf = FPDF()
+        pdf.add_page()
+        
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(190, 10, "Relatório FinançasPro - Wilson", 0, 1, 'C')
+        pdf.set_font("Arial", '', 10)
+        pdf.cell(190, 10, f"Período: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", 0, 1, 'C')
+        pdf.ln(5)
+        
+        pdf.set_fill_color(200, 200, 200)
+        pdf.set_font("Arial", 'B', 10)
+        pdf.cell(25, 8, "Data", 1, 0, 'C', 1)
+        pdf.cell(75, 8, "Descricao", 1, 0, 'L', 1)
+        pdf.cell(30, 8, "Valor", 1, 0, 'C', 1)
+        pdf.cell(30, 8, "Banco", 1, 0, 'C', 1)
+        pdf.cell(30, 8, "Status", 1, 1, 'C', 1)
+        
+        pdf.set_font("Arial", '', 9)
+        total_periodo = 0
+        r_v, d_v, rend_v = 0, 0, 0
+        
+        df_per_pdf = df_base.dropna(subset=['DT']).copy()
+        df_per_pdf = df_per_pdf[(df_per_pdf['DT'].dt.date >= b_ini) & (df_per_pdf['DT'].dt.date <= b_fim)]
+        if not df_per_pdf.empty:
+            df_per_limpo = df_per_pdf[df_per_pdf['Categoria'] != 'Transferência']
+            r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+            d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+            rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+
+        totais_diarios = {}
+
+        for _, row in df_pdf.iterrows():
+            pdf.cell(25, 7, str(row['Data']), 1, 0, 'C')
+            pdf.cell(75, 7, str(row['Descrição'])[:40], 1, 0, 'L')
+            pdf.cell(30, 7, f"R$ {row['Valor']}", 1, 0, 'R')
+            pdf.cell(30, 7, str(row['Banco']), 1, 0, 'C')
+            pdf.cell(30, 7, str(row['Status']), 1, 1, 'C')
+            total_periodo += row['V_Num']
+            
+            d_atual = row['Data']
+            tipo = row['Tipo']
+            v_num = row['V_Num']
+            
+            if d_atual not in totais_diarios:
+                totais_diarios[d_atual] = {'Receita': 0.0, 'Despesa': 0.0, 'Rendimento': 0.0}
+            
+            if tipo in ['Receita', 'Rendimento']:
+                totais_diarios[d_atual][tipo] += v_num
+            elif tipo == 'Despesa':
+                totais_diarios[d_atual]['Despesa'] += v_num
+            
+        pdf.ln(5)
+        
+        pdf.set_font("Arial", 'B', 10)
+        pdf.cell(190, 6, "Resumo do Periodo", 0, 1, 'L')
+        pdf.set_font("Arial", '', 9)
+        pdf.cell(95, 5, f"Total Receitas: {m_fmt(r_v)}", 0, 0, 'L')
+        pdf.cell(95, 5, f"Total Despesas: {m_fmt(d_v)}", 0, 1, 'L')
+        pdf.cell(95, 5, f"Total Rendimentos: {m_fmt(rend_v)}", 0, 0, 'L')
+        pdf.cell(95, 5, f"Saldo (Sobra): {m_fmt((r_v + rend_v) - d_v)}", 0, 1, 'L')
+        
+        pdf.ln(5)
+        
+        pdf.set_font("Arial", 'B', 10)
+        pdf.cell(190, 6, "Saldo Dia a Dia", 0, 1, 'L')
+        
+        pdf.set_fill_color(220, 220, 220)
+        pdf.set_font("Arial", 'B', 8)
+        pdf.cell(30, 6, "Data", 1, 0, 'C', 1)
+        pdf.cell(40, 6, "Receitas", 1, 0, 'C', 1)
+        pdf.cell(40, 6, "Despesas", 1, 0, 'C', 1)
+        pdf.cell(40, 6, "Rendimentos", 1, 0, 'C', 1)
+        pdf.cell(40, 6, "Saldo do Dia", 1, 1, 'C', 1)
+        
+        pdf.set_font("Arial", '', 8)
+        for data, valores in totais_diarios.items():
+            saldo_dia = (valores['Receita'] + valores['Rendimento']) - valores['Despesa']
+            pdf.cell(30, 5, str(data), 1, 0, 'C')
+            pdf.cell(40, 5, m_fmt(valores['Receita']), 1, 0, 'R')
+            pdf.cell(40, 5, m_fmt(valores['Despesa']), 1, 0, 'R')
+            pdf.cell(40, 5, m_fmt(valores['Rendimento']), 1, 0, 'R')
+            pdf.cell(40, 5, m_fmt(saldo_dia), 1, 1, 'R')
+            
+        pdf.ln(5)
+        pdf.set_font("Arial", 'B', 11)
+        pdf.cell(190, 8, f"Total dos Lancamentos: {m_fmt(total_periodo)}", 0, 1, 'R')
+        
+        pdf_output = pdf.output(dest='S').encode('latin-1', 'replace')
+        st.download_button(label="📥 Baixar PDF", data=pdf_output, file_name=f"Relatorio_Wilson_{datetime.now().strftime('%d%m%y')}.pdf", mime="application/pdf")
