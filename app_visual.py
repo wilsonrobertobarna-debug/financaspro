@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.7")
+st.caption("Versão 1.8")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -285,9 +285,11 @@ elif "📄" in aba:
     total_b = 0
     for b in bancos:
         saldo = 0.0
+        row_found = None
         if not df_bancos_info.empty:
             for _, row in df_bancos_info.iterrows():
                 if str(row.iloc[0]).strip() == b:
+                    row_found = row
                     if len(row) > 1:
                         try:
                             val_str = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
@@ -295,13 +297,28 @@ elif "📄" in aba:
                         except:
                             saldo = 0.0
                     break
-        saldos_txt += f"- {b}: {m_fmt(saldo)}\n"
+                    
+        # Verifica se é cartão de crédito para calcular utilizado e disponível
+        if "cartão" in b.lower():
+            limite = 0.0
+            if row_found is not None and len(row_found) > 2:
+                try:
+                    lim_str = str(row_found.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                    limite = float(lim_str)
+                except:
+                    limite = 0.0
+                    
+            utilizado = abs(saldo)
+            disponivel = limite - utilizado
+            saldos_txt += f"- {b}: Fatura: {m_fmt(saldo)} (Usado: {m_fmt(utilizado)} | Disp: {m_fmt(disponivel)})\n"
+        else:
+            saldos_txt += f"- {b}: {m_fmt(saldo)}\n"
         
         # Ignora cartões no cálculo do patrimônio (soma apenas se não conter a palavra "Cartão" / "cartão")
         if "cartão" not in b.lower():
             total_b += saldo
         
-    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
+    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_per['DT'].dt.date <= d_fim)].copy()
     if not df_per.empty:
         r_v = df_per[df_per['Tipo'] == 'Receita']['V_Num'].sum()
         d_v = df_per[df_per['Tipo'] == 'Despesa']['V_Num'].sum()
