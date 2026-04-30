@@ -12,6 +12,15 @@ from fpdf import FPDF
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
+# --- AQUI ESTÁ O QUE VOCÊ PEDIU: DIMINUIR O VALOR ---
+st.markdown("""
+    <style>
+    [data-testid="stMetricValue"] {
+        font-size: 1.8rem !important; /* Diminui o tamanho do número */
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 # 2. CONEXÃO
 @st.cache_resource
 def conectar():
@@ -123,12 +132,11 @@ if "💰" in aba:
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[df_m['Categoria'] != 'Transferência']
         
-        # AQUI MUDOU: NOMES CURTOS PARA CABER O VALOR
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Rec.", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("Gast.", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("Rend.", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        m4.metric("Pend.", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
+        m1.metric("Receitas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+        m2.metric("Despesas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+        m3.metric("Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+        m4.metric("Pendente", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
         
         st.divider()
         with st.expander("🎯 Metas"):
