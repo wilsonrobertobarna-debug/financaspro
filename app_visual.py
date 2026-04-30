@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.9.2")
+st.caption("Versão 1.9.3")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -311,14 +311,14 @@ elif "📄" in aba:
                     
         utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
         
-        # Se houver limite cadastrado e maior que zero, calcula a partir do limite. 
-        # Caso contrário, subtrai do saldo para mostrar o disponível na conta.
-        if limite > 0:
-            disponivel = limite - utilizado
+        if "cartão" in b.lower():
+            if limite > 0:
+                disponivel = limite - utilizado
+            else:
+                disponivel = saldo - utilizado
+            saldos_txt += f"- {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
         else:
-            disponivel = saldo - utilizado
-            
-        saldos_txt += f"- {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
+            saldos_txt += f"- {b}: Saldo: {m_fmt(saldo)}\n"
             
         # Ignora cartões no cálculo do patrimônio
         if "cartão" not in b.lower():
