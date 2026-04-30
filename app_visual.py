@@ -12,6 +12,18 @@ from fpdf import FPDF # Nova biblioteca para o PDF
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
+# --- AJUSTE DE TAMANHO DAS TAGS (CSS) ---
+st.markdown("""
+    <style>
+    [data-testid="stMetricValue"] {
+        font-size: 1.8rem !important;
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 1rem !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 # 2. CONEXÃO
 @st.cache_resource
 def conectar():
@@ -126,7 +138,7 @@ if "💰" in aba:
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[df_m['Categoria'] != 'Transferência']
         
-        # TAGS ABAIXO DO SALDO (METRICAS COM LABELS CURTOS)
+        # MÉTDRICAS COM CSS APLICADO NO INÍCIO
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Rec.", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
         m2.metric("📉 Gast.", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
