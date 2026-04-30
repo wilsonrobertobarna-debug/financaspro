@@ -86,39 +86,41 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
                 ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
             st.cache_data.clear(); st.rerun()
 
-# TRANSFERÊNCIA
+# TRANSFERÊNCIA (DESCRIÇÃO DE VOLTA)
 with st.sidebar.expander("💸 Transferência", expanded=False):
     with st.form("f_transf", clear_on_submit=True):
         t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
         t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
+        t_des = st.text_input("Descrição", "Transferência")
         t_orig = st.selectbox("Sai de:", ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix"])
         t_dest = st.selectbox("Entra em:", ["Nubank", "Itaú", "Inter", "Santander", "Dinheiro", "Pix"])
         if st.form_submit_button("EXECUTAR"):
             v_str = f"{t_val:.2f}".replace('.', ',')
             d_str = t_dat.strftime("%d/%m/%Y")
-            ws_base.append_row([d_str, v_str, "Transferência Saída", "Transferência", "Despesa", t_orig, "Pago"])
-            ws_base.append_row([d_str, v_str, "Transferência Entrada", "Transferência", "Receita", t_dest, "Pago"])
+            ws_base.append_row([d_str, v_str, f"{t_des} (Saída)", "Transferência", "Despesa", t_orig, "Pago"])
+            ws_base.append_row([d_str, v_str, f"{t_des} (Entrada)", "Transferência", "Receita", t_dest, "Pago"])
             st.cache_data.clear(); st.rerun()
 
-# ALTERAR / EXCLUIR (FORMATO: ID / DATA / DESC / VALOR)
+# ALTERAR / EXCLUIR (APENAS DATA E VALOR)
 with st.sidebar.expander("⚙️ Alterar / Excluir", expanded=False):
     if not df_base.empty:
-        # AQUI ESTÁ O ID COMO REFERÊNCIA COMO VOCÊ PEDIU
         lista_edit = {f"{r['ID']} / {r['Data']} / {r['Descrição']} / R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione o item:", [""] + list(lista_edit.keys()))
         
         if escolha:
             item = lista_edit[escolha]
-            ed_des = st.text_input("Alterar Descrição:", value=str(item['Descrição']))
-            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
-            ed_sta = st.selectbox("Alterar Status:", ["Pago", "Pendente"], index=0 if item['Status'] == "Pago" else 1)
+            # Mudar Data e Valor conforme pedido
+            ed_dat = st.date_input("Nova Data:", value=pd.to_datetime(item['Data'], dayfirst=True))
+            ed_val = st.number_input("Novo Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+            ed_sta = st.selectbox("Novo Status:", ["Pago", "Pendente"], index=0 if item['Status'] == "Pago" else 1)
             
             c_ed1, c_ed2 = st.columns(2)
             if c_ed1.button("💾 Salvar"):
                 v_str_edit = f"{ed_val:.2f}".replace('.', ',')
+                d_str_edit = ed_dat.strftime("%d/%m/%Y")
+                ws_base.update_cell(int(item['ID']), 1, d_str_edit) # Coluna Data
                 ws_base.update_cell(int(item['ID']), 2, v_str_edit) # Coluna Valor
-                ws_base.update_cell(int(item['ID']), 3, ed_des)    # Coluna Descrição
-                ws_base.update_cell(int(item['ID']), 7, ed_sta)    # Coluna Status
+                ws_base.update_cell(int(item['ID']), 7, ed_sta)     # Coluna Status
                 st.cache_data.clear(); st.rerun()
             
             if c_ed2.button("🚨 Excluir"):
@@ -138,20 +140,6 @@ if "💰" in aba:
         m2.metric("Despesas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
         m3.metric("Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
         m4.metric("Pendente", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
-        st.divider()
-        with st.expander("🎯 Metas"):
-            todas_cats = sorted(df_base['Categoria'].unique())
-            metas_map = {}
-            cols = st.columns(3)
-            for i, cat in enumerate(todas_cats):
-                if cat != "Transferência": metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=500.0, key=f"m_{cat}")
-        g1, g2 = st.columns(2)
-        with g1:
-            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-            if not df_p.empty: st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="Gastos %", hole=0.4), use_container_width=True)
-        with g2:
-            df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
-            if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="Fluxo"), use_container_width=True)
         st.divider()
         st.subheader("🔍 Lançamentos")
         c1, c2, c3 = st.columns(3)
