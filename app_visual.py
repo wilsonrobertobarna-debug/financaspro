@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.6")
+st.caption("Versão 1.7")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -279,7 +279,7 @@ elif "📄" in aba:
     d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
     d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
     
-    # Calcula saldos lendo diretamente da aba Bancos
+    # Calcula saldos lendo diretamente da aba Bancos, excluindo cartões de crédito do patrimônio
     bancos = sorted(bancos_disponiveis)
     saldos_txt = ""
     total_b = 0
@@ -296,7 +296,10 @@ elif "📄" in aba:
                             saldo = 0.0
                     break
         saldos_txt += f"- {b}: {m_fmt(saldo)}\n"
-        total_b += saldo
+        
+        # Ignora cartões no cálculo do patrimônio (soma apenas se não conter a palavra "Cartão" / "cartão")
+        if "cartão" not in b.lower():
+            total_b += saldo
         
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     if not df_per.empty:
