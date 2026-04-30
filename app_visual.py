@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.0")
+st.caption("Versão 1.1")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -125,13 +125,25 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             item = lista_edit[escolha]
             data_atual_dt = datetime.strptime(item['Data'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Data:", value=data_atual_dt, format="DD/MM/YYYY")
+            
+            # Novos campos editáveis
+            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+            
+            bancos_disponiveis = ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"]
+            idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
+            ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
+            
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
+            
             col_ed1, col_ed2 = st.columns(2)
             if col_ed1.button("💾 ATUALIZAR"):
+                v_str = f"{ed_val:.2f}".replace('.', ',')
                 ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
-                ws_base.update_cell(int(item['ID']), 7, ed_sta)
+                ws_base.update_cell(int(item['ID']), 2, v_str) # Atualiza o valor
+                ws_base.update_cell(int(item['ID']), 6, ed_bnc) # Atualiza o Banco
+                ws_base.update_cell(int(item['ID']), 7, ed_sta) # Atualiza o Status
                 st.cache_data.clear(); st.rerun()
             if col_ed2.button("🚨 EXCLUIR"):
                 ws_base.delete_rows(int(item['ID']))
@@ -148,10 +160,10 @@ if "💰" in aba:
         df_m_limpo = df_m[df_m['Categoria'] != 'Transferência']
         
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("📈 Receita (Mês)", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Gasto (Mês)", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("💰 Rendimento (Mês)", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        m4.metric("⏳ Pendente (Mês)", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
+        m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+        m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+        m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+        m4.metric("⏳ Pendente", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
         
         st.divider()
         
