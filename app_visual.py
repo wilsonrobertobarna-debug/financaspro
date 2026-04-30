@@ -12,7 +12,7 @@ from fpdf import FPDF
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
-# ESTILO PARA DIMINUIR O VALOR DAS MÉTRICAS (RECEITA, DESPESA, ETC)
+# ESTILO PARA MANTER AS TAGS PEQUENAS
 st.markdown("<style>[data-testid='stMetricValue'] {font-size: 1.2rem !important;}</style>", unsafe_allow_html=True)
 
 # 2. CONEXÃO
@@ -35,7 +35,13 @@ def conectar():
 
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-ws_base = sh.get_worksheet(0)
+
+# ACESSO ÀS DUAS ABAS
+ws_base = sh.get_worksheet(0)  # Lançamentos
+try:
+    ws_bancos = sh.worksheet("banco") # Aba de Bancos e Cartões que você criou
+except:
+    ws_bancos = None
 
 # 3. CARREGAMENTO
 @st.cache_data(ttl=2)
@@ -52,14 +58,23 @@ def carregar():
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
     return df
 
+@st.cache_data(ttl=2)
+def carregar_bancos():
+    if ws_bancos:
+        dados = ws_bancos.get_all_values()
+        if len(dados) <= 1: return pd.DataFrame()
+        return pd.DataFrame(dados[1:], columns=dados[0])
+    return pd.DataFrame()
+
 df_base = carregar()
+df_bancos = carregar_bancos()
 mes_atual = datetime.now().strftime('%m/%y')
 
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
 # 4. SIDEBAR
 st.sidebar.title("🎮 Painel Wilson")
-aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios", "📋 Relatório PDF"])
+aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🏦 Bancos & Cartões", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios", "📋 Relatório PDF"])
 
 st.sidebar.divider()
 
@@ -169,6 +184,24 @@ if "💰" in aba:
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
         st.dataframe(df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+
+# NOVA ABA: BANCOS & CARTÕES
+elif "🏦" in aba:
+    st.title("🏦 Gestão de Bancos e Cartões")
+    if not df_bancos.empty:
+        st.subheader("Dados da Planilha 'banco'")
+        st.dataframe(df_bancos, use_container_width=True, hide_index=True)
+        
+        st.divider()
+        st.subheader("💰 Resumo de Saldo Atual")
+        bancos_ativos = sorted(df_base['Banco'].unique())
+        c_b = st.columns(4)
+        for i, b in enumerate(bancos_ativos):
+            if b:
+                s = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento']))]['V_Num'].sum() - df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
+                c_b[i % 4].metric(b, m_fmt(s))
+    else:
+        st.warning("Aba 'banco' não encontrada ou vazia. Verifique o nome da aba no Google Sheets.")
 
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
