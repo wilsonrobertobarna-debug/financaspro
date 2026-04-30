@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 2.0.0")
+st.caption("Versão 2.0.1")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -46,8 +46,8 @@ try:
 except:
     ws_bancos = None
 
-# 3. CARREGAMENTO
-@st.cache_data(ttl=2)
+# 3. CARREGAMENTO COM CACHE OTIMIZADO
+@st.cache_data(ttl=60)
 def carregar():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
@@ -61,7 +61,7 @@ def carregar():
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
     return df
 
-@st.cache_data(ttl=2)
+@st.cache_data(ttl=60)
 def carregar_bancos_manual():
     if ws_bancos:
         dados = ws_bancos.get_all_values()
@@ -224,15 +224,12 @@ if "💰" in aba:
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
     
-    # Filtro de dados dos pets (Categoria, Descrição contendo Pet, Milo ou Bolt)
     df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
                      df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
     
     if not df_pet.empty:
-        # Gastos gerais
         gasto_total_mes = df_pet[df_pet['Mes_Ano'] == mes_atual]['V_Num'].sum()
         
-        # Filtros individualizados (Milo e Bolt)
         df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
                           df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
         df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
@@ -247,7 +244,6 @@ elif "🐾" in aba:
         c_p3.metric("🐱 Com o Bolt (Mês)", m_fmt(m_bolt))
         
         st.divider()
-        
         st.subheader("📋 Controle de Saúde e Ração")
         c_v1, c_v2 = st.columns(2)
         with c_v1:
@@ -258,7 +254,6 @@ elif "🐾" in aba:
             st.info("💡 *Dica: Use a categoria 'Pet: Milo' ou 'Pet: Bolt' para facilitar a separação!*")
             
         st.divider()
-        
         st.subheader("🔍 Lançamentos dos Meninos")
         
         c_f1, c_f2 = st.columns([1, 2])
@@ -277,7 +272,6 @@ elif "🐾" in aba:
 elif "🚗" in aba:
     st.title("🚗 Gestão do Veículo")
     
-    # Preços para álcool x gasolina
     c1, c2, c3 = st.columns([1,1,2])
     alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
     gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
@@ -287,7 +281,6 @@ elif "🚗" in aba:
     
     st.divider()
     
-    # Controle de Manutenção
     st.subheader("⚙️ Controle de Troca de Óleo")
     km1, km2, km3 = st.columns(3)
     km_atual = km1.number_input("Quilometragem Atual (km)", value=0, step=500)
@@ -303,7 +296,6 @@ elif "🚗" in aba:
             
     st.divider()
     
-    # Média de consumo de combustível
     st.subheader("⛽ Cálculo de Consumo (Km/L)")
     c_cons1, c_cons2, c_cons3 = st.columns(3)
     litros = c_cons1.number_input("Litros Abastecidos", value=0.0, step=0.5)
@@ -314,7 +306,6 @@ elif "🚗" in aba:
         c_cons3.success(f"📊 Consumo Médio: {consumo:.2f} km/l")
         
     st.divider()
-    
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
     if not df_car.empty:
         st.dataframe(df_car[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']].iloc[::-1], use_container_width=True, hide_index=True)
@@ -412,7 +403,6 @@ elif "📋" in aba:
         pdf = FPDF()
         pdf.add_page()
         
-        # Cabeçalho
         pdf.set_font("Arial", 'B', 16)
         pdf.cell(190, 10, "Relatório FinançasPro - Wilson", 0, 1, 'C')
         pdf.set_font("Arial", '', 10)
@@ -439,7 +429,6 @@ elif "📋" in aba:
             d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
             rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
 
-        # Dicionário para totalizar por dia
         totais_diarios = {}
 
         for _, row in df_pdf.iterrows():
@@ -450,7 +439,6 @@ elif "📋" in aba:
             pdf.cell(30, 7, str(row['Status']), 1, 1, 'C')
             total_periodo += row['V_Num']
             
-            # Agrupa os valores diários
             d_atual = row['Data']
             tipo = row['Tipo']
             v_num = row['V_Num']
@@ -465,7 +453,6 @@ elif "📋" in aba:
             
         pdf.ln(5)
         
-        # Resumo do Período
         pdf.set_font("Arial", 'B', 10)
         pdf.cell(190, 6, "Resumo do Periodo", 0, 1, 'L')
         pdf.set_font("Arial", '', 9)
@@ -476,7 +463,6 @@ elif "📋" in aba:
         
         pdf.ln(5)
         
-        # Tabela de Saldo Diário
         pdf.set_font("Arial", 'B', 10)
         pdf.cell(190, 6, "Saldo Dia a Dia", 0, 1, 'L')
         
@@ -491,7 +477,7 @@ elif "📋" in aba:
         pdf.set_font("Arial", '', 8)
         for data, valores in totais_diarios.items():
             saldo_dia = (valores['Receita'] + valores['Rendimento']) - valores['Despesa']
-            pdf.cell(30, 5, data, 1, 0, 'C')
+            pdf.cell(30, 5, str(data), 1, 0, 'C')
             pdf.cell(40, 5, m_fmt(valores['Receita']), 1, 0, 'R')
             pdf.cell(40, 5, m_fmt(valores['Despesa']), 1, 0, 'R')
             pdf.cell(40, 5, m_fmt(valores['Rendimento']), 1, 0, 'R')
