@@ -110,7 +110,6 @@ with st.sidebar.expander("⚙️ Alterar / Excluir", expanded=False):
         if escolha:
             item = lista_edit[escolha]
             data_objeto = datetime.strptime(item['Data'], "%d/%m/%Y").date()
-            
             ed_dat = st.date_input("Nova Data:", value=data_objeto, format="DD/MM/YYYY")
             ed_val = st.number_input("Novo Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_sta = st.selectbox("Novo Status:", ["Pago", "Pendente"], index=0 if item['Status'] == "Pago" else 1)
@@ -134,13 +133,38 @@ if "💰" in aba:
     if not df_base.empty:
         saldo_geral = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
         st.info(f"### 🏦 SALDO GERAL: {m_fmt(saldo_geral)}")
+        
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[df_m['Categoria'] != 'Transferência']
+        
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Receitas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
         m2.metric("Despesas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
         m3.metric("Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
         m4.metric("Pendente", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
+        
+        st.divider()
+        
+        # RESTAURADO: Metas
+        with st.expander("🎯 Metas de Gastos"):
+            todas_cats = sorted(df_base[df_base['Tipo']=='Despesa']['Categoria'].unique())
+            metas_map = {}
+            cols_m = st.columns(3)
+            for i, cat in enumerate(todas_cats):
+                if cat != "Transferência":
+                    metas_map[cat] = cols_m[i % 3].number_input(f"Meta: {cat}", value=1000.0, key=f"meta_{cat}")
+        
+        # RESTAURADO: Gráficos
+        g1, g2 = st.columns(2)
+        with g1:
+            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            if not df_p.empty:
+                st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="Distribuição de Gastos", hole=0.4), use_container_width=True)
+        with g2:
+            df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
+            if not df_f.empty:
+                st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', title="Fluxo Mensal", color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}), use_container_width=True)
+
         st.divider()
         st.subheader("🔍 Lançamentos")
         c1, c2, c3 = st.columns(3)
@@ -162,7 +186,6 @@ elif "🐾" in aba:
 
 elif "🚗" in aba:
     st.title("🚗 Veículo")
-    # RECUPERADO: Calculo de Combustível
     st.subheader("⛽ Álcool ou Gasolina?")
     col_c1, col_c2, col_c3 = st.columns([1, 1, 2])
     preco_alc = col_c1.number_input("Preço Álcool", min_value=0.0, step=0.01)
@@ -171,7 +194,6 @@ elif "🚗" in aba:
         res = preco_alc / preco_gas
         if res <= 0.7: col_c3.success(f"✅ VÁ DE ÁLCOOL ({res:.2%})")
         else: col_c3.warning(f"✅ VÁ DE GASOLINA ({res:.2%})")
-    
     st.divider()
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
     st.dataframe(df_car[['Data', 'Valor', 'Descrição', 'Status', 'Banco']].iloc[::-1], use_container_width=True, hide_index=True)
@@ -194,7 +216,7 @@ elif "📲" in aba:
                 s = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento']))]['V_Num'].sum() - df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
                 saldos_txt += f"- {b}: {m_fmt(s)}\n"
                 total_p += s
-        relat = f"*📊 RELATÓRIO WILSON*\n📅 Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n============================\n🟢 REC: {m_fmt(r_v)}\n🔴 DES: {m_fmt(d_v)}\n💰 REND: {m_fmt(rend_v)}\n⚖️ SOBRA: {m_fmt((r_v+rend_v)-d_v)}\n============================\n\n🏦 *SALDOS:*\n{saldos_txt}\n⭐ *PATRIMÔNIO:* {m_fmt(total_p)}"
+        relat = f"*📊 RELATÓRIO WILSON*\n📅 Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n============================\n\n🏦 *SALDOS:*\n{saldos_txt}\n⭐ *PATRIMÔNIO:* {m_fmt(total_p)}"
         st.text_area("Cópia", relat, height=400)
         st.markdown(f'[📲 Enviar via WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
 
