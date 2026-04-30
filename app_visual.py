@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.9.5")
+st.caption("Versão 1.9.6")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -223,10 +223,56 @@ if "💰" in aba:
 
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
-    df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False)]
+    
+    # Filtro de dados dos pets (Categoria, Descrição contendo Pet, Milo ou Bolt)
+    df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
+                     df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
+    
     if not df_pet.empty:
-        st.metric("Gasto Total com Pets (Mês Atual)", m_fmt(df_pet[df_pet['Mes_Ano'] == mes_atual]['V_Num'].sum()))
-        st.dataframe(df_pet[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+        # Gastos gerais
+        gasto_total_mes = df_pet[df_pet['Mes_Ano'] == mes_atual]['V_Num'].sum()
+        
+        # Filtros individualizados (Milo e Bolt)
+        df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
+                          df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
+        df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
+                          df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
+        
+        m_milo = df_milo[df_milo['Mes_Ano'] == mes_atual]['V_Num'].sum()
+        m_bolt = df_bolt[df_bolt['Mes_Ano'] == mes_atual]['V_Num'].sum()
+        
+        c_p1, c_p2, c_p3 = st.columns(3)
+        c_p1.metric("Gasto Total (Mês)", m_fmt(gasto_total_mes))
+        c_p2.metric("Com o Milo (Mês)", m_fmt(m_milo))
+        c_p3.metric("Com o Bolt (Mês)", m_fmt(m_bolt))
+        
+        st.divider()
+        
+        st.subheader("📋 Controle de Saúde e Ração")
+        c_v1, c_v2 = st.columns(2)
+        with c_v1:
+            st.markdown("**💊 Vacinas, Vermífugos e Veterinário**")
+            st.info("💡 *Dica: Ao lançar na descrição, coloque o nome do pet (ex: Vacina V10 Milo).*")
+        with c_v2:
+            st.markdown("**🛍️ Controle de Ração e PetShop**")
+            st.info("💡 *Dica: Use a categoria 'Pet: Milo' ou 'Pet: Bolt' para facilitar a separação!*")
+            
+        st.divider()
+        
+        st.subheader("🔍 Lançamentos dos Meninos")
+        
+        c_f1, c_f2 = st.columns([1, 2])
+        pet_escolha = c_f1.radio("Filtrar por Pet:", ["Todos", "Milo", "Bolt"], horizontal=True)
+        
+        df_show = df_pet.copy()
+        if pet_escolha == "Milo":
+            df_show = df_milo
+        elif pet_escolha == "Bolt":
+            df_show = df_bolt
+            
+        st.dataframe(df_show[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+    else:
+        st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
 
 elif "🚗" in aba:
     st.title("🚗 Gestão do Veículo")
@@ -315,7 +361,7 @@ elif "📄" in aba:
             if limite > 0:
                 disponivel = limite - utilizado
             else:
-                disponivel = saldo - utilizado # CORRIGIDO AQUI!
+                disponivel = saldo - utilizedo
             saldos_txt += f"- {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
         else:
             saldos_txt += f"- {b}: Saldo: {m_fmt(saldo)}\n"
@@ -325,9 +371,6 @@ elif "📄" in aba:
             total_b += saldo
             
     # Correção da lógica de cálculo de período para f-string
-    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_per['DT'].dt.date <= d_fim)].copy() if 'df_per' in locals() else pd.DataFrame() # Precaução
-    
-    # Refazendo o cálculo de df_per
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     
     if not df_per.empty:
