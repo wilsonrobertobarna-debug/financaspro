@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.9.7")
+st.caption("Versão 1.9.8")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -195,12 +195,12 @@ if "💰" in aba:
         g1, g2 = st.columns(2)
         with g1:
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-            if not df_p.empty: st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="Gastos por Categoria (%)", hole=0.4), use_container_width=True)
+            if not df_p.empty: st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True)
         with g2:
             df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
-            if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="Fluxo de Caixa"), use_container_width=True)
+            if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa"), use_container_width=True)
         
-        st.subheader("📊 Metas vs Realizado")
+        st.subheader("🎯 Metas vs Realizado")
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         if not df_metas_graph.empty:
             df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(metas_map).fillna(0.0)
@@ -242,9 +242,9 @@ elif "🐾" in aba:
         m_bolt = df_bolt[df_bolt['Mes_Ano'] == mes_atual]['V_Num'].sum()
         
         c_p1, c_p2, c_p3 = st.columns(3)
-        c_p1.metric("Gasto Total (Mês)", m_fmt(gasto_total_mes))
-        c_p2.metric("Com o Milo (Mês)", m_fmt(m_milo))
-        c_p3.metric("Com o Bolt (Mês)", m_fmt(m_bolt))
+        c_p1.metric("📈 Gasto Total (Mês)", m_fmt(gasto_total_mes))
+        c_p2.metric("🐶 Com o Milo (Mês)", m_fmt(m_milo))
+        c_p3.metric("🐱 Com o Bolt (Mês)", m_fmt(m_bolt))
         
         st.divider()
         
@@ -361,10 +361,10 @@ elif "📄" in aba:
             if limite > 0:
                 disponivel = limite - utilizado
             else:
-                disponivel = saldo - utilizado # CORRIGIDO AQUI!
-            saldos_txt += f"- {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
+                disponivel = saldo - utilizado
+            saldos_txt += f"💳 {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
         else:
-            saldos_txt += f"- {b}: Saldo: {m_fmt(saldo)}\n"
+            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo)}\n"
             
         # Ignora cartões no cálculo do patrimônio
         if "cartão" not in b.lower():
