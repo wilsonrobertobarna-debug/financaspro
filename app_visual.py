@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.9.9")
+st.caption("Versão 2.0.0")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -411,12 +411,15 @@ elif "📋" in aba:
     if st.button("📄 GERAR PDF AGORA"):
         pdf = FPDF()
         pdf.add_page()
+        
+        # Cabeçalho
         pdf.set_font("Arial", 'B', 16)
         pdf.cell(190, 10, "Relatório FinançasPro - Wilson", 0, 1, 'C')
         pdf.set_font("Arial", '', 10)
         pdf.cell(190, 10, f"Período: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", 0, 1, 'C')
         pdf.ln(5)
         
+        # Tabela de lançamentos
         pdf.set_fill_color(200, 200, 200)
         pdf.set_font("Arial", 'B', 10)
         pdf.cell(25, 8, "Data", 1, 0, 'C', 1)
@@ -429,13 +432,15 @@ elif "📋" in aba:
         total_periodo = 0
         r_v, d_v, rend_v = 0, 0, 0
         
-        # Calcula os totais do período
         df_per = df_base[(df_base['DT'].dt.date >= b_ini) & (df_base['DT'].dt.date <= b_fim)].copy()
         if not df_per.empty:
             df_per_limpo = df_per[df_per['Categoria'] != 'Transferência']
             r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
             d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
             rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+
+        # Dicionário para totalizar por dia
+        totais_diarios = {}
 
         for _, row in df_pdf.iterrows():
             pdf.cell(25, 7, str(row['Data']), 1, 0, 'C')
@@ -445,9 +450,22 @@ elif "📋" in aba:
             pdf.cell(30, 7, str(row['Status']), 1, 1, 'C')
             total_periodo += row['V_Num']
             
+            # Agrupa os valores diários
+            d_atual = row['Data']
+            tipo = row['Tipo']
+            v_num = row['V_Num']
+            
+            if d_atual not in totais_diarios:
+                totais_diarios[d_atual] = {'Receita': 0.0, 'Despesa': 0.0, 'Rendimento': 0.0}
+            
+            if tipo in ['Receita', 'Rendimento']:
+                totais_diarios[d_atual][tipo] += v_num
+            elif tipo == 'Despesa':
+                totais_diarios[d_atual]['Despesa'] += v_num
+            
         pdf.ln(5)
         
-        # Adiciona o resumo e o saldo do período ao relatório
+        # Resumo do Período
         pdf.set_font("Arial", 'B', 10)
         pdf.cell(190, 6, "Resumo do Periodo", 0, 1, 'L')
         pdf.set_font("Arial", '', 9)
@@ -456,6 +474,29 @@ elif "📋" in aba:
         pdf.cell(95, 5, f"Total Rendimentos: {m_fmt(rend_v)}", 0, 0, 'L')
         pdf.cell(95, 5, f"Saldo (Sobra): {m_fmt((r_v + rend_v) - d_v)}", 0, 1, 'L')
         
+        pdf.ln(5)
+        
+        # Tabela de Saldo Diário
+        pdf.set_font("Arial", 'B', 10)
+        pdf.cell(190, 6, "Saldo Dia a Dia", 0, 1, 'L')
+        
+        pdf.set_fill_color(220, 220, 220)
+        pdf.set_font("Arial", 'B', 8)
+        pdf.cell(30, 6, "Data", 1, 0, 'C', 1)
+        pdf.cell(40, 6, "Receitas", 1, 0, 'C', 1)
+        pdf.cell(40, 6, "Despesas", 1, 0, 'C', 1)
+        pdf.cell(40, 6, "Rendimentos", 1, 0, 'C', 1)
+        pdf.cell(40, 6, "Saldo do Dia", 1, 1, 'C', 1)
+        
+        pdf.set_font("Arial", '', 8)
+        for data, valores in totais_diarios.items():
+            saldo_dia = (valores['Receita'] + valores['Rendimento']) - valores['Despesa']
+            pdf.cell(30, 5, data, 1, 0, 'C')
+            pdf.cell(40, 5, m_fmt(valores['Receita']), 1, 0, 'R')
+            pdf.cell(40, 5, m_fmt(valores['Despesa']), 1, 0, 'R')
+            pdf.cell(40, 5, m_fmt(valores['Rendimento']), 1, 0, 'R')
+            pdf.cell(40, 5, m_fmt(saldo_dia), 1, 1, 'R')
+            
         pdf.ln(5)
         pdf.set_font("Arial", 'B', 11)
         pdf.cell(190, 8, f"Total dos Lancamentos: {m_fmt(total_periodo)}", 0, 1, 'R')
