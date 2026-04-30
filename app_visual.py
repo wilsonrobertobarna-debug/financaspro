@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.2")
+st.caption("Versão 1.3")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -224,13 +224,45 @@ elif "🐾" in aba:
 
 elif "🚗" in aba:
     st.title("🚗 Gestão do Veículo")
+    
+    # Preços para álcool x gasolina
     c1, c2, c3 = st.columns([1,1,2])
     alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
     gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
     if alc > 0 and gas > 0:
         if (alc/gas) <= 0.7: c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
         else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
+    
     st.divider()
+    
+    # Controle de Manutenção (Troca de Óleo)
+    st.subheader("⚙️ Controle de Troca de Óleo")
+    km1, km2, km3 = st.columns(3)
+    km_atual = km1.number_input("Quilometragem Atual (km)", value=0, step=500)
+    km_oleo = km2.number_input("Km Última Troca de Óleo", value=0, step=500)
+    limite_oleo = km3.number_input("Limite de Troca (km rodados)", value=10000, step=1000)
+    
+    if km_atual > 0 and km_oleo > 0:
+        km_rodados = km_atual - km_oleo
+        if km_rodados >= limite_oleo:
+            st.error(f"🚨 ALERTA: Passou do limite para trocar o óleo! Rodou {km_rodados:,} km desde a última troca.")
+        else:
+            st.info(f"👍 Óleo em dia! Você rodou {km_rodados:,} km. Faltam {limite_oleo - km_rodados:,} km para a próxima troca.")
+            
+    st.divider()
+    
+    # Média de consumo de combustível
+    st.subheader("⛽ Cálculo de Consumo (Km/L)")
+    c_cons1, c_cons2, c_cons3 = st.columns(3)
+    litros = c_cons1.number_input("Litros Abastecidos", value=0.0, step=0.5)
+    distancia = c_cons2.number_input("Distância Percorrida (km)", value=0.0, step=10.0)
+    
+    if litros > 0 and distancia > 0:
+        consumo = distancia / litros
+        c_cons3.success(f"📊 Consumo Médio: {consumo:.2f} km/l")
+        
+    st.divider()
+    
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
     if not df_car.empty:
         st.dataframe(df_car[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']].iloc[::-1], use_container_width=True, hide_index=True)
