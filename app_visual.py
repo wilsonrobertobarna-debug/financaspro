@@ -290,11 +290,19 @@ if "💰" in aba:
         s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
         s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
         b_desc = c3.text_input("Buscar Beneficiário:")
+        
+        # Formatação de Moeda e Valores
         df_v = df_base.copy()
         if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-        st.dataframe(df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+        
+        df_v_view = df_v[['ID', 'Data', 'Tipo', 'V_Num', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1].copy()
+        df_v_view['Valor'] = df_v_view['V_Num'].apply(m_fmt)
+        df_v_view = df_v_view.drop(columns=['V_Num'])
+        df_v_view = df_v_view[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']]
+        
+        st.dataframe(df_v_view, use_container_width=True, hide_index=True)
 
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
@@ -340,7 +348,12 @@ elif "🐾" in aba:
         elif pet_escolha == "Bolt":
             df_show = df_bolt
             
-        st.dataframe(df_show[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+        df_show_view = df_show[['ID', 'Data', 'Tipo', 'V_Num', 'Descrição', 'Categoria', 'Status']].iloc[::-1].copy()
+        df_show_view['Valor'] = df_show_view['V_Num'].apply(m_fmt)
+        df_show_view = df_show_view.drop(columns=['V_Num'])
+        df_show_view = df_show_view[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']]
+        
+        st.dataframe(df_show_view, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
 
@@ -381,9 +394,14 @@ elif "🚗" in aba:
         c_cons3.success(f"📊 Consumo Médio: {consumo:.2f} km/l")
         
     st.divider()
+    
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
     if not df_car.empty:
-        st.dataframe(df_car[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']].iloc[::-1], use_container_width=True, hide_index=True)
+        df_car_view = df_car[['ID', 'Data', 'Tipo', 'V_Num', 'Descrição', 'Status', 'Banco']].iloc[::-1].copy()
+        df_car_view['Valor'] = df_car_view['V_Num'].apply(m_fmt)
+        df_car_view = df_car_view.drop(columns=['V_Num'])
+        df_car_view = df_car_view[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']]
+        st.dataframe(df_car_view, use_container_width=True, hide_index=True)
 
 elif "📄" in aba:
     st.title("📄 WhatsApp")
@@ -391,7 +409,7 @@ elif "📄" in aba:
     d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
     d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
     
-    # Filtro seguro de datas (evita quebrar com linhas nulas)
+    # Filtro seguro de datas
     df_valid = df_base.dropna(subset=['DT']).copy()
     df_per = df_valid[(df_valid['DT'].dt.date >= d_ini) & (df_valid['DT'].dt.date <= d_fim)]
     
@@ -476,7 +494,13 @@ elif "📋" in aba:
     if b_desc: df_pdf = df_pdf[df_pdf['Descrição'].str.contains(b_desc, case=False, na=False)]
     
     st.write(f"**Lançamentos encontrados:** {len(df_pdf)}")
-    st.dataframe(df_pdf[['Data', 'Descrição', 'Valor', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+    
+    df_pdf_view = df_pdf[['Data', 'Descrição', 'V_Num', 'Banco', 'Status']].iloc[::-1].copy()
+    df_pdf_view['Valor'] = df_pdf_view['V_Num'].apply(m_fmt)
+    df_pdf_view = df_pdf_view.drop(columns=['V_Num'])
+    df_pdf_view = df_pdf_view[['Data', 'Descrição', 'Valor', 'Banco', 'Status']]
+    
+    st.dataframe(df_pdf_view, use_container_width=True, hide_index=True)
     
     if st.button("📄 GERAR PDF AGORA"):
         pdf = FPDF()
@@ -513,7 +537,7 @@ elif "📋" in aba:
         for _, row in df_pdf.iterrows():
             pdf.cell(25, 7, str(row['Data']), 1, 0, 'C')
             pdf.cell(75, 7, str(row['Descrição'])[:40], 1, 0, 'L')
-            pdf.cell(30, 7, f"R$ {row['Valor']}", 1, 0, 'R')
+            pdf.cell(30, 7, f"R$ {row['V_Num']:.2f}".replace('.', ','), 1, 0, 'R') # Ajuste na saída do PDF
             pdf.cell(30, 7, str(row['Banco']), 1, 0, 'C')
             pdf.cell(30, 7, str(row['Status']), 1, 1, 'C')
             total_periodo += row['V_Num']
