@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.1")
+st.caption("Versão 1.2")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -126,8 +126,9 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             data_atual_dt = datetime.strptime(item['Data'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Data:", value=data_atual_dt, format="DD/MM/YYYY")
             
-            # Novos campos editáveis
+            # Campos editáveis
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+            ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
             bancos_disponiveis = ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"]
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
@@ -142,6 +143,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 v_str = f"{ed_val:.2f}".replace('.', ',')
                 ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
                 ws_base.update_cell(int(item['ID']), 2, v_str) # Atualiza o valor
+                ws_base.update_cell(int(item['ID']), 3, ed_desc) # Atualiza a descrição
                 ws_base.update_cell(int(item['ID']), 6, ed_bnc) # Atualiza o Banco
                 ws_base.update_cell(int(item['ID']), 7, ed_sta) # Atualiza o Status
                 st.cache_data.clear(); st.rerun()
