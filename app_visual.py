@@ -10,20 +10,25 @@ import urllib.parse
 from fpdf import FPDF 
 
 # --- 1. CONFIGURAÇÃO E ESTILO ---
-st.set_page_config(page_title="Wilson Finanças v3.0", layout="wide")
+st.set_page_config(page_title="FinançasPro Wilson v3.0", layout="wide")
 st.markdown("<style>[data-testid='stMetricValue'] {font-size: 1.8rem !important;}</style>", unsafe_allow_html=True)
 
-# --- 2. CONEXÃO COM GOOGLE SHEETS ---
+# --- 2. CONEXÃO COM GOOGLE SHEETS (CORREÇÃO ERRO 92 / PEM) ---
 @st.cache_resource
 def conectar_planilha():
     try:
-        creds_dict = st.secrets["connections"]["gsheets"]
-        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
-        if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
+        # Pega as credenciais dos Secrets
+        creds_dict = dict(st.secrets["connections"]["gsheets"])
+        
+        # O segredo para não dar erro de PEM: Limpar as barras invertidas e aspas
+        if "private_key" in creds_dict:
+            creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n").strip().strip('"').strip("'")
         
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
         client = gspread.authorize(creds)
+        
+        # Abre a planilha pelo ID que você forneceu
         return client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4").get_worksheet(0)
     except Exception as e:
         st.error(f"Erro na conexão: {e}")
@@ -57,7 +62,6 @@ def real_br(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replac
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação", ["💰 Finanças", "🐾 Pets", "🚗 Veículo", "📲 WhatsApp", "📄 PDF"])
 
-# --- FORMULÁRIOS NA SIDEBAR ---
 st.sidebar.divider()
 
 # NOVO LANÇAMENTO
@@ -118,10 +122,8 @@ with st.sidebar.expander("⚙️ Alterar / Excluir"):
 # --- 5. ÁREAS DE CONTEÚDO ---
 
 if aba == "💰 Finanças":
-    st.title("🛡️ Dashboard Financeiro")
-    
+    st.title("🛡️ Finanças do Wilson")
     if not df.empty:
-        # Métricas
         rec = df[df['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
         des = df[df['Tipo'] == 'Despesa']['V_Num'].sum()
         st.info(f"### 🏦 SALDO GERAL: {real_br(rec - des)}")
@@ -132,76 +134,63 @@ if aba == "💰 Finanças":
         col2.metric("Gastos (Mês)", real_br(df_m[df_m['Tipo'] == 'Despesa']['V_Num'].sum()))
         col3.metric("Pendentes", real_br(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
         
-        # Metas
+        # Metas Gráfico Horizontal
         st.divider()
-        with st.expander("🎯 Controle de Metas", expanded=True):
+        with st.expander("🎯 Metas de Gastos", expanded=True):
             cats_desp = sorted(df[df['Tipo']=='Despesa']['Categoria'].unique())
             if "Transferência" in cats_desp: cats_desp.remove("Transferência")
             
-            metas_w = {}
-            cols = st.columns(len(cats_desp[:4])) # Mostra as 4 primeiras
-            for i, c in enumerate(cats_desp[:4]):
-                metas_w[c] = cols[i].number_input(f"Meta {c}", value=1000.0)
+            fig_metas = go.Figure()
+            for cat in cats_desp[:6]:
+                gasto = df_m[df_m['Categoria'] == cat]['V_Num'].sum()
+                meta_val = 1500.0 # Valor padrão
+                fig_metas.add_trace(go.Bar(y=[cat], x=[meta_val], orientation='h', name='Meta', marker_color='rgba(0,0,0,0.1)'))
+                fig_metas.add_trace(go.Bar(y=[cat], x=[gasto], orientation='h', name='Gasto', marker_color='#e74c3c' if gasto > meta_val else '#2ecc71'))
             
-            # Gráfico de Metas
-            fig_m = go.Figure()
-            for c in cats_desp[:4]:
-                gasto = df_m[df_m['Categoria'] == c]['V_Num'].sum()
-                fig_m.add_trace(go.Bar(name='Gasto', x=[c], y=[gasto], marker_color='#e74c3c'))
-                fig_m.add_trace(go.Bar(name='Meta', x=[c], y=[metas_w[c]], marker_color='rgba(0,0,0,0.1)'))
-            fig_m.update_layout(barmode='overlay', height=300, title="Gasto Atual vs Meta")
-            st.plotly_chart(fig_m, use_container_width=True)
+            fig_metas.update_layout(barmode='overlay', height=350, title="Progresso por Categoria")
+            st.plotly_chart(fig_metas, use_container_width=True)
 
-        # Gráficos Gerais
-        g1, g2 = st.columns(2)
-        with g1:
-            st.plotly_chart(px.pie(df_m[df_m['Tipo']=='Despesa'], values='V_Num', names='Categoria', title="Gastos por Categoria"), use_container_width=True)
-        with g2:
-            st.plotly_chart(px.bar(df_m.groupby('Tipo')['V_Num'].sum().reset_index(), x='Tipo', y='V_Num', title="Fluxo de Caixa"), use_container_width=True)
-
-        # Tabela
         st.subheader("🔍 Últimos Lançamentos")
         st.dataframe(df.iloc[::-1][['Data', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], use_container_width=True, hide_index=True)
 
 elif aba == "🐾 Pets":
-    st.title("🐾 Central dos Pets")
+    st.title("🐾 Central Pets (Milo & Bolt)")
     df_p = df[df['Categoria'].str.contains("Pet|Milo|Bolt", case=False, na=False)]
-    st.metric("Total Gasto com Pets", real_br(df_p['V_Num'].sum()))
-    st.dataframe(df_p.iloc[::-1][['Data', 'Descrição', 'Valor', 'Status']], use_container_width=True)
+    if not df_p.empty:
+        st.metric("Gasto Total Pets", real_br(df_p['V_Num'].sum()))
+        st.dataframe(df_p.iloc[::-1][['Data', 'Descrição', 'Valor', 'Status']], use_container_width=True)
 
 elif aba == "🚗 Veículo":
-    st.title("🚗 Meu Veículo")
+    st.title("🚗 Veículo")
     c1, c2, c3 = st.columns([1,1,2])
-    pa = c1.number_input("Preço Álcool", 0.0)
-    pg = c2.number_input("Preço Gasolina", 0.0)
+    pa = c1.number_input("Álcool", 0.0)
+    pg = c2.number_input("Gasolina", 0.0)
     if pa > 0 and pg > 0:
-        ratio = pa/pg
-        if ratio <= 0.7: c3.success(f"Abasteça com ÁLCOOL ({ratio:.1%})")
-        else: c3.warning(f"Abasteça com GASOLINA ({ratio:.1%})")
+        if pa/pg <= 0.7: c3.success("✅ VÁ DE ÁLCOOL")
+        else: c3.warning("✅ VÁ DE GASOLINA")
     
-    st.divider()
     df_v = df[df['Categoria'].isin(['Veículo', 'Combustível', 'Manutenção'])]
-    st.dataframe(df_v.iloc[::-1][['Data', 'Descrição', 'Valor', 'Status']], use_container_width=True)
+    st.dataframe(df_v.iloc[::-1][['Data', 'Descrição', 'Valor', 'Banco']], use_container_width=True)
 
 elif aba == "📲 WhatsApp":
-    st.title("📲 Enviar Relatório")
-    msg = f"*RELATÓRIO FINANCEIRO - WILSON*\n\n"
+    st.title("📲 Relatório WhatsApp")
+    resumo = f"*BALANÇO WILSON*\n\n"
     for b in sorted(df['Banco'].unique()):
-        if b:
-            s = df[df['Banco']==b & df['Tipo'].isin(['Receita','Rendimento'])]['V_Num'].sum() - df[df['Banco']==b & df['Tipo']=='Despesa']['V_Num'].sum()
-            msg += f"• {b}: {real_br(s)}\n"
+        if b.strip():
+            s = df[df['Banco']==b][df['Tipo'].isin(['Receita','Rendimento'])]['V_Num'].sum() - df[(df['Banco']==b) & (df['Tipo']=='Despesa')]['V_Num'].sum()
+            resumo += f"• {b}: {real_br(s)}\n"
     
-    st.text_area("Prévia da Mensagem", msg, height=200)
-    st.markdown(f"[Enviar para WhatsApp](https://wa.me/?text={urllib.parse.quote(msg)})")
+    st.text_area("Cópia:", resumo, height=150)
+    st.markdown(f"[📲 Enviar para WhatsApp](https://wa.me/?text={urllib.parse.quote(resumo)})")
 
 elif aba == "📄 PDF":
-    st.title("📄 Exportar PDF")
-    if st.button("Gerar Relatório"):
+    st.title("📄 Relatório em PDF")
+    if st.button("Gerar e Baixar"):
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", 'B', 14)
-        pdf.cell(190, 10, "RELATÓRIO FINANCEIRO WILSON", 0, 1, 'C')
+        pdf.cell(190, 10, "RELATORIO FINANCEIRO", 0, 1, 'C')
         pdf.set_font("Arial", '', 10)
-        for _, r in df.tail(20).iterrows():
-            pdf.cell(190, 8, f"{r['Data']} - {r['Descrição']} - R$ {r['Valor']}", 1, 1)
-        st.download_button("Baixar PDF", pdf.output(dest='S').encode('latin-1'), "relatorio.pdf")
+        for _, r in df.tail(25).iterrows():
+            pdf.cell(190, 8, f"{r['Data']} - {r['Descrição']} - {real_br(r['V_Num'])}", 1, 1)
+        st.download_button("Baixar PDF", pdf.output(dest='S').encode('latin-1'), "financeiro_wilson.pdf")
