@@ -103,8 +103,51 @@ if "💰" in aba:
         m4.metric("Pendente", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
         
         st.divider()
+
+        # VOLTA DAS METAS
+        with st.expander("🎯 Metas"):
+            todas_cats = sorted(df_base['Categoria'].unique())
+            metas_map = {}
+            cols = st.columns(3)
+            for i, cat in enumerate(todas_cats):
+                if cat != "Transferência":
+                    default_v = 1200.0 if cat == "Mercado" else 400.0
+                    metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
+        
+        # VOLTA DOS GRÁFICOS
+        g1, g2 = st.columns(2)
+        with g1:
+            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            if not df_p.empty: st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="Gastos %", hole=0.4), use_container_width=True)
+        with g2:
+            df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
+            if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="Fluxo"), use_container_width=True)
+        
+        # GRÁFICO META VS REAL
+        st.subheader("📊 Metas vs Real")
+        df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        if not df_metas_graph.empty:
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(metas_map).fillna(0.0)
+            fig_m = go.Figure()
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
+            fig_m.update_layout(barmode='group', height=350); st.plotly_chart(fig_m, use_container_width=True)
+
+        st.divider()
+        
+        # VOLTA DA PESQUISA (BANCO, STATUS, DESCRIÇÃO)
         st.subheader("🔍 Lançamentos")
-        st.dataframe(df_base[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+        c1, c2, c3 = st.columns(3)
+        s_bnc = c1.multiselect("Bco:", sorted(df_base['Banco'].unique()))
+        s_sta = c2.multiselect("Status:", ["Pago", "Pendente"])
+        b_desc = c3.text_input("Busca:")
+        
+        df_v = df_base.copy()
+        if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
+        if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
+        if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
+        
+        st.dataframe(df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "🚗" in aba:
     st.title("🚗 Veículo")
@@ -122,46 +165,19 @@ elif "📲" in aba:
     c1, c2 = st.columns(2)
     d_ini = c1.date_input("De", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
     d_fim = c2.date_input("Até", datetime.now(), format="DD/MM/YYYY")
-    
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
-    
     if not df_per.empty:
-        # Cálculos do Período
         r_v = df_per[df_per['Tipo'] == 'Receita']['V_Num'].sum()
         d_v = df_per[df_per['Tipo'] == 'Despesa']['V_Num'].sum()
         rend_v = df_per[df_per['Tipo'] == 'Rendimento']['V_Num'].sum()
-        sobra = (r_v + rend_v) - d_v
-        
-        # Cálculo de Saldos por Banco (Tudo desde o início)
         bancos = sorted(df_base['Banco'].unique())
         saldos_txt = ""
-        total_patrimonio = 0
+        total_p = 0
         for b in bancos:
             if b.strip():
-                entrou = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento']))]['V_Num'].sum()
-                saiu = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
-                saldo_b = entrou - saiu
-                saldos_txt += f"- {b}: {m_fmt(saldo_b)}\n"
-                total_patrimonio += saldo_b
-
-        # Montagem do Relatório igual ao que você tinha
-        relat = (
-            f"📊 *RELATÓRIO WILSON*\n"
-            f"📅 Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
-            f"============================\n"
-            f"🟢 REC: {m_fmt(r_v)}\n"
-            f"🔴 DES: {m_fmt(d_v)}\n"
-            f"💰 REND: {m_fmt(rend_v)}\n"
-            f"⚖️ SOBRA: {m_fmt(sobra)}\n"
-            f"============================\n\n"
-            f"🏦 *SALDOS ATUAIS:*\n"
-            f"{saldos_txt}\n"
-            f"⭐ *PATRIMÔNIO:* {m_fmt(total_patrimonio)}"
-        )
-        
+                s = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento']))]['V_Num'].sum() - df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
+                saldos_txt += f"- {b}: {m_fmt(s)}\n"
+                total_p += s
+        relat = f"*RELATÓRIO WILSON*\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n============================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n============================\n\n🏦 *SALDOS:*\n{saldos_txt}\n⭐ *PATRIMÔNIO:* {m_fmt(total_p)}"
         st.text_area("Cópia", relat, height=400)
         st.markdown(f'[📲 Enviar via WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
-
-elif "📄" in aba:
-    st.title("📄 Relatório PDF")
-    # ... (Restante do código do PDF permanece igual)
