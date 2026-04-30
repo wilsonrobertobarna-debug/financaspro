@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import urllib.parse
-from fpdf import FPDF # Nova biblioteca para o PDF
+from fpdf import FPDF 
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -54,7 +54,7 @@ mes_atual = datetime.now().strftime('%m/%y')
 
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-# 4. SIDEBAR - NAVEGAÇÃO E BARRINHAS
+# 4. SIDEBAR
 st.sidebar.title("🎮 Painel Wilson")
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios", "📋 Relatório PDF"])
 
@@ -136,8 +136,10 @@ if "💰" in aba:
             cols = st.columns(3)
             for i, cat in enumerate(todas_cats):
                 if cat != "Transferência":
-                    default_v = 1200.0 if cat == "Mercado" else 400.0
+                    # VALORES REDUZIDOS AQUI
+                    default_v = 800.0 if cat == "Mercado" else 250.0
                     metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
+        
         g1, g2 = st.columns(2)
         with g1:
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
@@ -145,6 +147,7 @@ if "💰" in aba:
         with g2:
             df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
             if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="Fluxo de Caixa"), use_container_width=True)
+        
         st.subheader("📊 Metas vs Realizado")
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         if not df_metas_graph.empty:
@@ -179,7 +182,7 @@ elif "🚗" in aba:
     gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
     if alc > 0 and gas > 0:
         if (alc/gas) <= 0.7: c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
-        else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA WITH GASOLINA!")
+        else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
     st.divider()
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
     if not df_car.empty:
@@ -207,11 +210,8 @@ elif "📄" in aba:
         zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
         st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
 
-# NOVA ABA: RELATÓRIO PDF
 elif "📋" in aba:
     st.title("📋 Gerador de Relatório PDF")
-    
-    # Filtros de Busca
     c1, c2, c3 = st.columns(3)
     b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY", key="pdf_ini")
     b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY", key="pdf_fim")
@@ -221,7 +221,6 @@ elif "📋" in aba:
     b_sta = c4.multiselect("Status", ["Pago", "Pendente"], key="pdf_sta")
     b_desc = c5.text_input("Filtrar Descrição", key="pdf_desc")
     
-    # Aplicar Filtros
     df_pdf = df_base.copy()
     df_pdf = df_pdf[(df_pdf['DT'].dt.date >= b_ini) & (df_pdf['DT'].dt.date <= b_fim)]
     if b_bnc: df_pdf = df_pdf[df_pdf['Banco'].isin(b_bnc)]
@@ -240,7 +239,6 @@ elif "📋" in aba:
         pdf.cell(190, 10, f"Período: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", 0, 1, 'C')
         pdf.ln(5)
         
-        # Cabeçalho da Tabela
         pdf.set_fill_color(200, 200, 200)
         pdf.set_font("Arial", 'B', 10)
         pdf.cell(25, 8, "Data", 1, 0, 'C', 1)
@@ -249,7 +247,6 @@ elif "📋" in aba:
         pdf.cell(30, 8, "Banco", 1, 0, 'C', 1)
         pdf.cell(30, 8, "Status", 1, 1, 'C', 1)
         
-        # Dados
         pdf.set_font("Arial", '', 9)
         total_periodo = 0
         for _, row in df_pdf.iterrows():
