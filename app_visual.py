@@ -14,12 +14,12 @@ st.markdown("""
     <style>
     .version-tag {
         position: fixed;
-        top: 10px;
-        left: 10px;
+        top: 12px;
+        left: 12px;
         font-family: sans-serif;
         font-size: 10px;
         color: #7f8c8d;
-        z-index: 1000;
+        z-index: 9999;
     }
     .stButton>button {
         border-radius: 4px;
@@ -34,20 +34,18 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Exibe a versão atual do sistema no topo
+# Exibe a versão no canto superior esquerdo
 st.markdown('<div class="version-tag">Versão 1</div>', unsafe_allow_html=True)
 
 # Título do aplicativo
 st.title("FinançasPro")
 st.markdown("---")
 
-# Inicialização do estado das transações na sessão
+# Inicialização do estado da sessão com uma lista vazia
 if "transacoes" not in st.session_state:
-    st.session_state.transacoes = pd.DataFrame(columns=[
-        "Data", "Tipo", "Valor", "Descrição", "Centro de Custo", "Beneficiário"
-    ])
+    st.session_state.transacoes = []
 
-# Navegação por abas para manter o layout limpo
+# Abas de navegação
 aba_dashboard, aba_lancamentos, aba_metas, aba_sistema = st.tabs([
     "Dashboard", "Lançamentos", "Metas", "Gerenciamento"
 ])
@@ -55,19 +53,20 @@ aba_dashboard, aba_lancamentos, aba_metas, aba_sistema = st.tabs([
 with aba_dashboard:
     st.subheader("Resumo Financeiro")
     
-    if st.session_state.transacoes.empty:
+    # Validação segura utilizando verificação de lista vazia
+    if not st.session_state.transacoes:
         st.info("Nenhuma transação registrada no momento.")
     else:
-        st.dataframe(st.session_state.transacoes, use_container_width=True)
+        # Converte a lista de transações para DataFrame para exibição
+        df_transacoes = pd.DataFrame(st.session_state.transacoes)
+        st.dataframe(df_transacoes, use_container_width=True)
         
-        # Totalizadores
-        total_despesas = st.session_state.transacoes[
-            st.session_state.transacoes["Tipo"] == "Despesa"
-        ]["Valor"].sum()
+        # Calcula os totalizadores
+        df_despesas = df_transacoes[df_transacoes["Tipo"] == "Despesa"]
+        total_despesas = df_despesas["Valor"].sum() if not df_despesas.empty else 0.0
         
-        total_outros = st.session_state.transacoes[
-            st.session_state.transacoes["Tipo"] == "Outros"
-        ]["Valor"].sum()
+        df_outros = df_transacoes[df_transacoes["Tipo"] == "Outros"]
+        total_outros = df_outros["Valor"].sum() if not df_outros.empty else 0.0
         
         col1, col2 = st.columns(2)
         with col1:
@@ -85,10 +84,10 @@ with aba_lancamentos:
             # Data sincronizada com o sistema operacional
             data_lancamento = st.date_input("Data", value=date.today())
             
-            # Tipo de transação sem o botão de rendimentos
+            # Tipo de transação (sem o botão de rendimentos)
             tipo_lancamento = st.selectbox("Tipo de Lançamento", ["Despesa", "Outros"])
             
-            # Valor em Reais
+            # Valor na moeda Real (R$)
             valor_lancamento = st.number_input("Valor (R$)", min_value=0.0, step=0.01, format="%.2f")
             
         with c2:
@@ -99,16 +98,16 @@ with aba_lancamentos:
         submit = st.form_submit_button("Adicionar Transação")
         
         if submit:
-            nova_linha = pd.DataFrame([{
-                "Data": data_lancamento,
+            nova_transacao = {
+                "Data": str(data_lancamento),
                 "Tipo": tipo_lancamento,
                 "Valor": valor_lancamento,
                 "Descrição": descricao,
                 "Centro de Custo": centro_custo,
                 "Beneficiário": beneficiario
-            }])
+            }
             
-            st.session_state.transacoes = pd.concat([st.session_state.transacoes, nova_linha], ignore_index=True)
+            st.session_state.transacoes.append(nova_transacao)
             st.success("Transação adicionada com sucesso!")
             st.rerun()
 
@@ -126,7 +125,7 @@ with aba_metas:
         'Valor': [1200.00, 2400.00, 450.00, 300.00]
     })
     
-    # Linha corrigida sem o ponto final
+    # Correção aplicada sem o ponto final
     df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(metas_map)
     
     st.dataframe(df_metas_graph, use_container_width=True)
@@ -136,8 +135,6 @@ with aba_sistema:
     st.write("Gerencie os dados e os parâmetros do aplicativo.")
     
     if st.button("Limpar todos os registros"):
-        st.session_state.transacoes = pd.DataFrame(columns=[
-            "Data", "Tipo", "Valor", "Descrição", "Centro de Custo", "Beneficiário"
-        ])
+        st.session_state.transacoes = []
         st.success("Dados limpos com sucesso!")
         st.rerun()
