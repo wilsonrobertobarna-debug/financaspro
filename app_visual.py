@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 2.0.8")
+st.caption("Version 2.0.9")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -401,9 +401,10 @@ elif "📄" in aba:
         
         if "cartão" in b.lower():
             if limite > 0:
-                disponivel = limite - utilizedo
+                disponivel = limite - utilizado
             else:
-                disponivel = saldo - utilizedo
+                # CORREÇÃO AQUI: era 'utilizedo' e agora está correto como 'utilizado'
+                disponivel = saldo - utilizado
             saldos_txt += f"💳 {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
         else:
             saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo)}\n"
