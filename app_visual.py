@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 2.0.1")
+st.caption("Versão 2.0.3")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -46,9 +46,8 @@ try:
 except:
     ws_bancos = None
 
-# 3. CARREGAMENTO COM CACHE OTIMIZADO
-@st.cache_data(ttl=60)
-def carregar():
+# FUNÇÕES DE CARREGAMENTO DIRETO
+def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
     df = pd.DataFrame(dados[1:], columns=dados[0])
@@ -61,16 +60,26 @@ def carregar():
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
     return df
 
-@st.cache_data(ttl=60)
-def carregar_bancos_manual():
+def carregar_bancos_manual_gs():
     if ws_bancos:
         dados = ws_bancos.get_all_values()
         if len(dados) > 1:
             return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
 
-df_base = carregar()
-df_bancos_info = carregar_bancos_manual()
+# INICIALIZA O CACHE NA SESSÃO
+if 'df_base' not in st.session_state:
+    st.session_state['df_base'] = carregar_dados_gs()
+if 'df_bancos_info' not in st.session_state:
+    st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
+
+# FUNÇÃO PARA ATUALIZAR O ESTADO
+def atualizar_sessao():
+    st.session_state['df_base'] = carregar_dados_gs()
+    st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
+
+df_base = st.session_state['df_base']
+df_bancos_info = st.session_state['df_bancos_info']
 
 # CARREGA OS BANCOS DINAMICAMENTE DA PLANILHA OU USA OS PADRÕES
 if not df_bancos_info.empty:
@@ -84,6 +93,12 @@ def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace(
 
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
+
+# Botão de atualização manual
+if st.sidebar.button("🔄 Atualizar dados do Sheets"):
+    atualizar_sessao()
+    st.rerun()
+
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF"])
 
 st.sidebar.divider()
@@ -104,7 +119,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
             for i in range(f_par):
                 nova_data = f_dat + relativedelta(months=i)
                 ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
-            st.cache_data.clear(); st.rerun()
+            atualizar_sessao()
+            st.rerun()
 
 # BARRINHA 2: TRANSFERÊNCIA
 with st.sidebar.expander("💸 Transferência", expanded=False):
@@ -121,7 +137,8 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
                 d_str = t_dat.strftime("%d/%m/%Y")
                 ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago"])
                 ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago"])
-                st.cache_data.clear(); st.rerun()
+                atualizar_sessao()
+                st.rerun()
 
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
@@ -152,10 +169,12 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 ws_base.update_cell(int(item['ID']), 3, ed_desc)
                 ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
-                st.cache_data.clear(); st.rerun()
+                atualizar_sessao()
+                st.rerun()
             if col_ed2.button("🚨 EXCLUIR"):
                 ws_base.delete_rows(int(item['ID']))
-                st.cache_data.clear(); st.rerun()
+                atualizar_sessao()
+                st.rerun()
 
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
@@ -200,6 +219,22 @@ if "💰" in aba:
             df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
             if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa"), use_container_width=True)
         
+        # NOVO GRÁFICO: EVOLUÇÃO DO SALDO ACUMULADO
+        st.divider()
+        st.subheader("📈 Evolução do Saldo Acumulado")
+        df_saldo_dia = df_base.sort_values('DT').copy()
+        if not df_saldo_dia.empty:
+            df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
+                lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
+            )
+            df_saldo_dia = df_saldo_dia.groupby('Data')['Valor_Com_Sinal'].sum().reset_index()
+            df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
+            
+            fig_acum = px.line(df_saldo_dia, x='Data', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
+            fig_acum.update_layout(height=350)
+            st.plotly_chart(fig_acum, use_container_width=True)
+            
+        st.divider()
         st.subheader("🎯 Metas vs Realizado")
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         if not df_metas_graph.empty:
@@ -409,7 +444,6 @@ elif "📋" in aba:
         pdf.cell(190, 10, f"Período: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", 0, 1, 'C')
         pdf.ln(5)
         
-        # Tabela de lançamentos
         pdf.set_fill_color(200, 200, 200)
         pdf.set_font("Arial", 'B', 10)
         pdf.cell(25, 8, "Data", 1, 0, 'C', 1)
