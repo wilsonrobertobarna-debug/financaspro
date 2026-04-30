@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Version 2.0.9")
+st.caption("Version 2.0.10")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -302,7 +302,12 @@ if "💰" in aba:
         df_v_view = df_v_view.drop(columns=['V_Num'])
         df_v_view = df_v_view[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']]
         
-        st.dataframe(df_v_view, use_container_width=True, hide_index=True)
+        # Exibição alinhada à direita
+        st.dataframe(
+            df_v_view.style.set_properties(subset=['Valor'], **{'text-align': 'right'}), 
+            use_container_width=True, 
+            hide_index=True
+        )
 
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
@@ -353,7 +358,12 @@ elif "🐾" in aba:
         df_show_view = df_show_view.drop(columns=['V_Num'])
         df_show_view = df_show_view[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']]
         
-        st.dataframe(df_show_view, use_container_width=True, hide_index=True)
+        # Exibição alinhada à direita
+        st.dataframe(
+            df_show_view.style.set_properties(subset=['Valor'], **{'text-align': 'right'}), 
+            use_container_width=True, 
+            hide_index=True
+        )
     else:
         st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
 
@@ -401,7 +411,13 @@ elif "🚗" in aba:
         df_car_view['Valor'] = df_car_view['V_Num'].apply(m_fmt)
         df_car_view = df_car_view.drop(columns=['V_Num'])
         df_car_view = df_car_view[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']]
-        st.dataframe(df_car_view, use_container_width=True, hide_index=True)
+        
+        # Exibição alinhada à direita
+        st.dataframe(
+            df_car_view.style.set_properties(subset=['Valor'], **{'text-align': 'right'}), 
+            use_container_width=True, 
+            hide_index=True
+        )
 
 elif "📄" in aba:
     st.title("📄 WhatsApp")
@@ -500,7 +516,12 @@ elif "📋" in aba:
     df_pdf_view = df_pdf_view.drop(columns=['V_Num'])
     df_pdf_view = df_pdf_view[['Data', 'Descrição', 'Valor', 'Banco', 'Status']]
     
-    st.dataframe(df_pdf_view, use_container_width=True, hide_index=True)
+    # Exibição alinhada à direita
+    st.dataframe(
+        df_pdf_view.style.set_properties(subset=['Valor'], **{'text-align': 'right'}), 
+        use_container_width=True, 
+        hide_index=True
+    )
     
     if st.button("📄 GERAR PDF AGORA"):
         pdf = FPDF()
@@ -537,7 +558,7 @@ elif "📋" in aba:
         for _, row in df_pdf.iterrows():
             pdf.cell(25, 7, str(row['Data']), 1, 0, 'C')
             pdf.cell(75, 7, str(row['Descrição'])[:40], 1, 0, 'L')
-            pdf.cell(30, 7, f"R$ {row['V_Num']:.2f}".replace('.', ','), 1, 0, 'R') # Ajuste na saída do PDF
+            pdf.cell(30, 7, f"R$ {row['V_Num']:.2f}".replace('.', ','), 1, 0, 'R')
             pdf.cell(30, 7, str(row['Banco']), 1, 0, 'C')
             pdf.cell(30, 7, str(row['Status']), 1, 1, 'C')
             total_periodo += row['V_Num']
