@@ -145,25 +145,42 @@ if "💰" in aba:
         
         st.divider()
         
-        # RESTAURADO: Metas
-        with st.expander("🎯 Metas de Gastos"):
+        # SEÇÃO DE METAS (COM GRÁFICO AGORA)
+        with st.expander("🎯 Metas de Gastos", expanded=False):
             todas_cats = sorted(df_base[df_base['Tipo']=='Despesa']['Categoria'].unique())
+            if "Transferência" in todas_cats: todas_cats.remove("Transferência")
+            
             metas_map = {}
             cols_m = st.columns(3)
             for i, cat in enumerate(todas_cats):
-                if cat != "Transferência":
-                    metas_map[cat] = cols_m[i % 3].number_input(f"Meta: {cat}", value=1000.0, key=f"meta_{cat}")
-        
-        # RESTAURADO: Gráficos
+                metas_map[cat] = cols_m[i % 3].number_input(f"Meta: {cat}", value=1000.0, key=f"meta_{cat}")
+            
+            # Gerando o gráfico de Metas
+            df_gastos_cat = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            dados_metas = []
+            for cat in todas_cats:
+                gasto = df_gastos_cat[df_gastos_cat['Categoria'] == cat]['V_Num'].sum()
+                dados_metas.append({'Categoria': cat, 'Valor': gasto, 'Tipo': 'Gasto Atual'})
+                dados_metas.append({'Categoria': cat, 'Valor': metas_map[cat], 'Tipo': 'Meta'})
+            
+            if dados_metas:
+                df_metas_plot = pd.DataFrame(dados_metas)
+                fig_metas = px.bar(df_metas_plot, x='Categoria', y='Valor', color='Tipo', barmode='group',
+                                   title="Comparativo: Gasto Atual vs Meta",
+                                   color_discrete_map={'Gasto Atual': '#e74c3c', 'Meta': '#3498db'})
+                st.plotly_chart(fig_metas, use_container_width=True)
+
+        # GRÁFICOS PRINCIPAIS
         g1, g2 = st.columns(2)
         with g1:
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             if not df_p.empty:
-                st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="Distribuição de Gastos", hole=0.4), use_container_width=True)
+                st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="Onde você mais gastou", hole=0.4), use_container_width=True)
         with g2:
             df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
             if not df_f.empty:
-                st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', title="Fluxo Mensal", color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}), use_container_width=True)
+                st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', title="Entradas vs Saídas", 
+                                     color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}), use_container_width=True)
 
         st.divider()
         st.subheader("🔍 Lançamentos")
