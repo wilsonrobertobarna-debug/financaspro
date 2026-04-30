@@ -196,14 +196,16 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
-        saldo_geral = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
+        # SALDO GERAL ATUAL CONSIDERANDO APENAS TRANSAÇÕES PAGAS
+        saldo_df = df_base[df_base['Status'] == 'Pago']
+        saldo_geral = saldo_df[saldo_df['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - saldo_df[saldo_df['Tipo'] == 'Despesa']['V_Num'].sum()
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
         st.subheader("💡 Resumo de Economia")
         
         mes_anterior = (datetime.now() - relativedelta(months=1)).strftime('%m/%y')
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[df_m['Categoria'] != 'Transferência']
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
         r_v = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
         d_v = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
@@ -212,7 +214,7 @@ if "💰" in aba:
         
         df_ant = df_base[df_base['Mes_Ano'] == mes_anterior].copy()
         if not df_ant.empty:
-            df_ant_limpo = df_ant[df_ant['Categoria'] != 'Transferência']
+            df_ant_limpo = df_ant[(df_ant['Categoria'] != 'Transferência') & (df_ant['Status'] == 'Pago')]
             r_ant = df_ant_limpo[df_ant_limpo['Tipo'] == 'Receita']['V_Num'].sum()
             d_ant = df_ant_limpo[df_ant_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
             rend_ant = df_ant_limpo[df_ant_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
@@ -232,7 +234,11 @@ if "💰" in aba:
         m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
         m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
         m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        m4.metric("⏳ Pendente", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
+        
+        # Métrica de pendentes atualizada para o mês atual e anterior
+        df_pendentes = df_base[df_base['Status'] == 'Pendente']
+        v_pendente = df_pendentes[df_pendentes['Mes_Ano'].isin([mes_atual, mes_anterior])]['V_Num'].sum()
+        m4.metric("⏳ Pendente", m_fmt(v_pendente))
         
         st.divider()
         
@@ -408,7 +414,7 @@ elif "🚗" in aba:
     if litros > 0 and distancia > 0:
         consumo = distancia / litros
         c_cons3.success(f"📊 Consumo Médio: {consumo:.2f} km/l")
-        
+    
     st.divider()
     
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
