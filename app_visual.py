@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.9.4")
+st.caption("Versão 1.9.5")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -315,7 +315,7 @@ elif "📄" in aba:
             if limite > 0:
                 disponivel = limite - utilizado
             else:
-                disponivel = saldo - utilizedo
+                disponivel = saldo - utilizado # CORRIGIDO AQUI!
             saldos_txt += f"- {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
         else:
             saldos_txt += f"- {b}: Saldo: {m_fmt(saldo)}\n"
@@ -325,6 +325,9 @@ elif "📄" in aba:
             total_b += saldo
             
     # Correção da lógica de cálculo de período para f-string
+    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_per['DT'].dt.date <= d_fim)].copy() if 'df_per' in locals() else pd.DataFrame() # Precaução
+    
+    # Refazendo o cálculo de df_per
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     
     if not df_per.empty:
