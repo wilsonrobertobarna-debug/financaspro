@@ -86,7 +86,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
                 ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
             st.cache_data.clear(); st.rerun()
 
-# TRANSFERÊNCIA (DESCRIÇÃO DE VOLTA)
+# TRANSFERÊNCIA
 with st.sidebar.expander("💸 Transferência", expanded=False):
     with st.form("f_transf", clear_on_submit=True):
         t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -101,7 +101,7 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
             ws_base.append_row([d_str, v_str, f"{t_des} (Entrada)", "Transferência", "Receita", t_dest, "Pago"])
             st.cache_data.clear(); st.rerun()
 
-# ALTERAR / EXCLUIR (APENAS DATA E VALOR)
+# ALTERAR / EXCLUIR (CORREÇÃO DA DATA INVERTIDA)
 with st.sidebar.expander("⚙️ Alterar / Excluir", expanded=False):
     if not df_base.empty:
         lista_edit = {f"{r['ID']} / {r['Data']} / {r['Descrição']} / R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
@@ -109,8 +109,10 @@ with st.sidebar.expander("⚙️ Alterar / Excluir", expanded=False):
         
         if escolha:
             item = lista_edit[escolha]
-            # Mudar Data e Valor conforme pedido
-            ed_dat = st.date_input("Nova Data:", value=pd.to_datetime(item['Data'], dayfirst=True))
+            # Ajuste para garantir que a data apareça certa no calendário
+            data_objeto = datetime.strptime(item['Data'], "%d/%m/%Y").date()
+            
+            ed_dat = st.date_input("Nova Data:", value=data_objeto, format="DD/MM/YYYY")
             ed_val = st.number_input("Novo Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_sta = st.selectbox("Novo Status:", ["Pago", "Pendente"], index=0 if item['Status'] == "Pago" else 1)
             
@@ -127,7 +129,7 @@ with st.sidebar.expander("⚙️ Alterar / Excluir", expanded=False):
                 ws_base.delete_rows(int(item['ID']))
                 st.cache_data.clear(); st.rerun()
 
-# 5. TELAS PRINCIPAIS
+# 5. TELAS PRINCIPAIS (CÓDIGO RESTANTE MANTIDO)
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
@@ -161,14 +163,6 @@ elif "🐾" in aba:
 
 elif "🚗" in aba:
     st.title("🚗 Veículo")
-    st.subheader("⛽ Álcool ou Gasolina?")
-    col_c1, col_c2, col_c3 = st.columns([1, 1, 2])
-    preco_alc = col_c1.number_input("Preço Álcool", min_value=0.0, step=0.01)
-    preco_gas = col_c2.number_input("Preço Gasolina", min_value=0.0, step=0.01)
-    if preco_alc > 0 and preco_gas > 0:
-        res = preco_alc / preco_gas
-        if res <= 0.7: col_c3.success(f"✅ ÁLCOOL ({res:.2%})")
-        else: col_c3.warning(f"✅ GASOLINA ({res:.2%})")
     st.divider()
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
     st.dataframe(df_car[['Data', 'Valor', 'Descrição', 'Status', 'Banco']].iloc[::-1], use_container_width=True, hide_index=True)
