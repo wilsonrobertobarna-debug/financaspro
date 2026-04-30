@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.9.8")
+st.caption("Versão 1.9.9")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -336,7 +336,6 @@ elif "📄" in aba:
         if not df_bancos_info.empty:
             for _, row in df_bancos_info.iterrows():
                 if str(row.iloc[0]).strip() == b:
-                    # Extrai Saldo/Fatura da 2ª coluna
                     if len(row) > 1:
                         try:
                             val_str = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
@@ -345,7 +344,6 @@ elif "📄" in aba:
                         except:
                             saldo = 0.0
                             
-                    # Extrai Limite da 3ª coluna
                     if len(row) >= 3:
                         try:
                             lim_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
@@ -366,15 +364,12 @@ elif "📄" in aba:
         else:
             saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo)}\n"
             
-        # Ignora cartões no cálculo do patrimônio
         if "cartão" not in b.lower():
             total_b += saldo
             
-    # Correção da lógica de cálculo de período para f-string
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     
     if not df_per.empty:
-        # Exclui transferências do relatório do WhatsApp
         df_per_limpo = df_per[df_per['Categoria'] != 'Transferência']
         r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
         d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
@@ -432,6 +427,16 @@ elif "📋" in aba:
         
         pdf.set_font("Arial", '', 9)
         total_periodo = 0
+        r_v, d_v, rend_v = 0, 0, 0
+        
+        # Calcula os totais do período
+        df_per = df_base[(df_base['DT'].dt.date >= b_ini) & (df_base['DT'].dt.date <= b_fim)].copy()
+        if not df_per.empty:
+            df_per_limpo = df_per[df_per['Categoria'] != 'Transferência']
+            r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+            d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+            rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+
         for _, row in df_pdf.iterrows():
             pdf.cell(25, 7, str(row['Data']), 1, 0, 'C')
             pdf.cell(75, 7, str(row['Descrição'])[:40], 1, 0, 'L')
@@ -441,8 +446,19 @@ elif "📋" in aba:
             total_periodo += row['V_Num']
             
         pdf.ln(5)
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(190, 10, f"Total dos Lançamentos: {m_fmt(total_periodo)}", 0, 1, 'R')
+        
+        # Adiciona o resumo e o saldo do período ao relatório
+        pdf.set_font("Arial", 'B', 10)
+        pdf.cell(190, 6, "Resumo do Periodo", 0, 1, 'L')
+        pdf.set_font("Arial", '', 9)
+        pdf.cell(95, 5, f"Total Receitas: {m_fmt(r_v)}", 0, 0, 'L')
+        pdf.cell(95, 5, f"Total Despesas: {m_fmt(d_v)}", 0, 1, 'L')
+        pdf.cell(95, 5, f"Total Rendimentos: {m_fmt(rend_v)}", 0, 0, 'L')
+        pdf.cell(95, 5, f"Saldo (Sobra): {m_fmt((r_v + rend_v) - d_v)}", 0, 1, 'L')
+        
+        pdf.ln(5)
+        pdf.set_font("Arial", 'B', 11)
+        pdf.cell(190, 8, f"Total dos Lancamentos: {m_fmt(total_periodo)}", 0, 1, 'R')
         
         pdf_output = pdf.output(dest='S').encode('latin-1', 'replace')
         st.download_button(label="📥 Baixar PDF", data=pdf_output, file_name=f"Relatorio_Wilson_{datetime.now().strftime('%d%m%y')}.pdf", mime="application/pdf")
