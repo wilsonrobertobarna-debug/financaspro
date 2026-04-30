@@ -12,6 +12,9 @@ from fpdf import FPDF
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
+# ESTILO PARA DIMINUIR O VALOR DAS MÉTRICAS (RECEITA, DESPESA, ETC)
+st.markdown("<style>[data-testid='stMetricValue'] {font-size: 1.2rem !important;}</style>", unsafe_allow_html=True)
+
 # 2. CONEXÃO
 @st.cache_resource
 def conectar():
@@ -136,7 +139,6 @@ if "💰" in aba:
             cols = st.columns(3)
             for i, cat in enumerate(todas_cats):
                 if cat != "Transferência":
-                    # VALORES REDUZIDOS AQUI
                     default_v = 800.0 if cat == "Mercado" else 250.0
                     metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
         
