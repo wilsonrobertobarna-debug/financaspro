@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.8.5")
+st.caption("Versão 1.8.6")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -316,7 +316,7 @@ elif "📄" in aba:
         if limite > 0:
             utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
             disponivel = limite - utilizado
-            saldos_txt += f"- {b}: Fatura: {m_fmt(saldo)} (Usado: {m_fmt(utilizado)} | Disp: {m_fmt(disponivel)})\n"
+            saldos_txt += f"- {b}: Limite: {m_fmt(limite)} | Fatura: {m_fmt(saldo)} (Usado: {m_fmt(utilizado)} | Disp: {m_fmt(disponivel)})\n"
         else:
             saldos_txt += f"- {b}: {m_fmt(saldo)}\n"
             
