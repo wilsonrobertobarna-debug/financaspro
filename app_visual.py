@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.4")
+st.caption("Versão 1.5")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -84,7 +84,7 @@ def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace(
 
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
-aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios", "📋 Relatório PDF"])
+aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF"])
 
 st.sidebar.divider()
 
@@ -274,26 +274,34 @@ elif "🚗" in aba:
         st.dataframe(df_car[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']].iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "📄" in aba:
-    st.title("📄 Relatório Wilson")
+    st.title("📄 WhatsApp")
     c1, c2 = st.columns(2)
     d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
     d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
+    
+    # Calcula saldos independentemente de haver transações no período
+    bancos = sorted(bancos_disponiveis)
+    saldos_txt = ""
+    total_b = 0
+    for b in bancos:
+        s = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento']))]['V_Num'].sum() - df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
+        saldos_txt += f"- {b}: {m_fmt(s)}\n"
+        total_b += s
+        
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     if not df_per.empty:
         r_v = df_per[df_per['Tipo'] == 'Receita']['V_Num'].sum()
         d_v = df_per[df_per['Tipo'] == 'Despesa']['V_Num'].sum()
         rend_v = df_per[df_per['Tipo'] == 'Rendimento']['V_Num'].sum()
-        bancos = sorted(df_base['Banco'].unique())
-        saldos_txt = ""
-        total_b = 0
-        for b in bancos:
-            s = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento']))]['V_Num'].sum() - df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
-            saldos_txt += f"- {b}: {m_fmt(s)}\n"
-            total_b += s
-        relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
-        st.text_area("Copiar para Zap/E-mail", relat, height=400)
-        zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
-        st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
+    else:
+        r_v = 0
+        d_v = 0
+        rend_v = 0
+        
+    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
+    st.text_area("Copiar para Zap/E-mail", relat, height=400)
+    zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
+    st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
 
 elif "📋" in aba:
     st.title("📋 Gerador de Relatório PDF")
