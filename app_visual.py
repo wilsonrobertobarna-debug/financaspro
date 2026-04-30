@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.8.2")
+st.caption("Versão 1.8.4")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -279,46 +279,54 @@ elif "📄" in aba:
     d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
     d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
     
-    # Calcula saldos lendo diretamente da aba Bancos, excluindo cartões de crédito do patrimônio
     bancos = sorted(bancos_disponiveis)
     saldos_txt = ""
     total_b = 0
+    
     for b in bancos:
         saldo = 0.0
+        limite = 0.0
         row_found = None
+        
         if not df_bancos_info.empty:
             for _, row in df_bancos_info.iterrows():
                 if str(row.iloc[0]).strip() == b:
                     row_found = row
+                    
+                    # Extrai Saldo/Fatura da 2ª coluna
                     if len(row) > 1:
                         try:
                             val_str = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                            saldo = float(val_str)
+                            if val_str:
+                                saldo = float(val_str)
                         except:
                             saldo = 0.0
+                            
+                    # Extrai Limite da 3ª coluna
+                    if len(row) >= 3:
+                        try:
+                            lim_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                            if lim_str:
+                                limite = float(lim_str)
+                        except:
+                            limite = 0.0
                     break
                     
-        # Verifica se é cartão de crédito para calcular utilizado e disponível
-        if "cartão" in b.lower():
-            limite = 0.0
-            if row_found is not None and len(row_found) > 2:
-                try:
-                    lim_str = str(row_found.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                    limite = float(lim_str)
-                except:
-                    limite = 0.0
-                    
-            # Calcula o valor utilizado somando as despesas lançadas na base de dados (que tenham este banco)
+        # Exibe como cartão apenas se o limite cadastrado for maior que zero, senão mostra apenas o saldo
+        if limite > 0:
             utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
             disponivel = limite - utilizado
             saldos_txt += f"- {b}: Fatura: {m_fmt(saldo)} (Usado: {m_fmt(utilizado)} | Disp: {m_fmt(disponivel)})\n"
         else:
             saldos_txt += f"- {b}: {m_fmt(saldo)}\n"
-        
+            
         # Ignora cartões no cálculo do patrimônio (soma apenas se não conter a palavra "Cartão" / "cartão")
         if "cartão" not in b.lower():
             total_b += saldo
         
+    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v := df_per[df_per['Tipo'] == 'Receita']['V_Num'].sum() if not (df_per := df_base[(df_base['DT'].dt.date >= d_ini) & (df_per := df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy(), df_per.empty)][0] else 0)}\nDES: {m_fmt(d_v := df_per[df_per['Tipo'] == 'Despesa']['V_Num'].sum() if not df_per.empty else 0)}\nREND: {m_fmt(rend_v := df_per[df_per['Tipo'] == 'Rendimento']['V_Num'].sum() if not df_per.empty else 0)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}" if 'df_per' in locals() else "" # Ajustado para compatibilidade com o escopo
+    
+    # Refazendo o cálculo do df_per para segurança e limpeza de visualização
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     if not df_per.empty:
         r_v = df_per[df_per['Tipo'] == 'Receita']['V_Num'].sum()
@@ -330,6 +338,7 @@ elif "📄" in aba:
         rend_v = 0
         
     relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
+    
     st.text_area("Copiar para Zap/E-mail", relat, height=400)
     zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
     st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
