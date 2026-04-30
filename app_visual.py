@@ -189,8 +189,35 @@ if "💰" in aba:
         saldo_geral = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
+        # 1. NOVO CARD DE RESUMO DE ECONOMIA
+        st.subheader("💡 Resumo de Economia")
+        
+        mes_anterior = (datetime.now() - relativedelta(months=1)).strftime('%m/%y')
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[df_m['Categoria'] != 'Transferência']
+        
+        r_v = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+        d_v = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend_v = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        sobra_atual = (r_v + rend_v) - d_v
+        
+        df_ant = df_base[df_base['Mes_Ano'] == mes_anterior].copy()
+        if not df_ant.empty:
+            df_ant_limpo = df_ant[df_ant['Categoria'] != 'Transferência']
+            r_ant = df_ant_limpo[df_ant_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+            d_ant = df_ant_limpo[df_ant_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+            rend_ant = df_ant_limpo[df_ant_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+            sobra_anterior = (r_ant + rend_ant) - d_ant
+        else:
+            sobra_anterior = 0.0
+            
+        dif_eco = sobra_atual - sobra_anterior
+        
+        col_eco1, col_eco2 = st.columns(2)
+        col_eco1.metric("💰 Sobra deste Mês", m_fmt(sobra_atual))
+        col_eco2.metric("📉 Comparação com Mês Anterior", m_fmt(dif_eco), delta=m_fmt(dif_eco), help="Sobra do mês atual comparada com a sobra do mês passado")
+        
+        st.divider()
         
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
@@ -272,7 +299,6 @@ if "💰" in aba:
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
     
-    # Excluindo Parafuso do filtro
     df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
                      df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
     
