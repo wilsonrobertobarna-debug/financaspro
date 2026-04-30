@@ -122,13 +122,17 @@ if "💰" in aba:
     if not df_base.empty:
         saldo_geral = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
         st.info(f"### 🏦 SALDO GERAL: {m_fmt(saldo_geral)}")
+        
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[df_m['Categoria'] != 'Transferência']
+        
+        # TAGS ABAIXO DO SALDO (METRICAS COM LABELS CURTOS)
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Rec.", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
         m2.metric("📉 Gast.", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
         m3.metric("💰 Rend.", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
         m4.metric("⏳ Pend.", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
+        
         st.divider()
         with st.expander("🎯 Metas"):
             todas_cats = sorted(df_base['Categoria'].unique())
@@ -138,6 +142,7 @@ if "💰" in aba:
                 if cat != "Transferência":
                     default_v = 1200.0 if cat == "Mercado" else 400.0
                     metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
+        
         g1, g2 = st.columns(2)
         with g1:
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
@@ -145,6 +150,7 @@ if "💰" in aba:
         with g2:
             df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
             if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="Fluxo"), use_container_width=True)
+        
         st.subheader("📊 Metas vs Real")
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         if not df_metas_graph.empty:
@@ -153,6 +159,7 @@ if "💰" in aba:
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
             fig_m.update_layout(barmode='group', height=350); st.plotly_chart(fig_m, use_container_width=True)
+        
         st.divider()
         st.subheader("🔍 Lançamentos")
         c1, c2, c3 = st.columns(3)
