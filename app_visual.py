@@ -304,7 +304,7 @@ if "💰" in aba:
         
         # Exibição alinhada à direita
         st.dataframe(
-            df_v_view.style.set_properties(subset=['Valor'], **{'text-align': 'right'}), 
+            df_v_view.style.set_properties(subset=['Valor'], **{'text-align': 'right !important'}), 
             use_container_width=True, 
             hide_index=True
         )
@@ -358,9 +358,9 @@ elif "🐾" in aba:
         df_show_view = df_show_view.drop(columns=['V_Num'])
         df_show_view = df_show_view[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']]
         
-        # Exibição alinhada à direita
+        # Exibição alinhada à direita com !important
         st.dataframe(
-            df_show_view.style.set_properties(subset=['Valor'], **{'text-align': 'right'}), 
+            df_show_view.style.set_properties(subset=['Valor'], **{'text-align': 'right !important'}), 
             use_container_width=True, 
             hide_index=True
         )
@@ -412,9 +412,9 @@ elif "🚗" in aba:
         df_car_view = df_car_view.drop(columns=['V_Num'])
         df_car_view = df_car_view[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']]
         
-        # Exibição alinhada à direita
+        # Exibição alinhada à direita com !important
         st.dataframe(
-            df_car_view.style.set_properties(subset=['Valor'], **{'text-align': 'right'}), 
+            df_car_view.style.set_properties(subset=['Valor'], **{'text-align': 'right !important'}), 
             use_container_width=True, 
             hide_index=True
         )
@@ -516,9 +516,9 @@ elif "📋" in aba:
     df_pdf_view = df_pdf_view.drop(columns=['V_Num'])
     df_pdf_view = df_pdf_view[['Data', 'Descrição', 'Valor', 'Banco', 'Status']]
     
-    # Exibição alinhada à direita
+    # Exibição alinhada à direita com !important
     st.dataframe(
-        df_pdf_view.style.set_properties(subset=['Valor'], **{'text-align': 'right'}), 
+        df_pdf_view.style.set_properties(subset=['Valor'], **{'text-align': 'right !important'}), 
         use_container_width=True, 
         hide_index=True
     )
