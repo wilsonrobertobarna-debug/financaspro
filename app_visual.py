@@ -7,10 +7,16 @@ import plotly.graph_objects as go
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import urllib.parse
-from fpdf import FPDF # Nova biblioteca para o PDF
+from fpdf import FPDF 
+
+# 0. VERSÃO NO TOPO
+st.caption("Versão 1.0")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
+
+# ESTILO PARA VALORES MAIS COMPACTOS
+st.markdown("<style>[data-testid='stMetricValue'] {font-size: 0.95rem !important;}</style>", unsafe_allow_html=True)
 
 # 2. CONEXÃO
 @st.cache_resource
@@ -32,7 +38,13 @@ def conectar():
 
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+
+# IDENTIFICAÇÃO DAS ABAS
 ws_base = sh.get_worksheet(0)
+try:
+    ws_bancos = sh.worksheet("Bancos")
+except:
+    ws_bancos = None
 
 # 3. CARREGAMENTO
 @st.cache_data(ttl=2)
@@ -49,14 +61,23 @@ def carregar():
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
     return df
 
+@st.cache_data(ttl=2)
+def carregar_bancos_manual():
+    if ws_bancos:
+        dados = ws_bancos.get_all_values()
+        if len(dados) > 1:
+            return pd.DataFrame(dados[1:], columns=dados[0])
+    return pd.DataFrame()
+
 df_base = carregar()
+df_bancos_info = carregar_bancos_manual()
 mes_atual = datetime.now().strftime('%m/%y')
 
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-# 4. SIDEBAR - NAVEGAÇÃO E BARRINHAS
+# 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
-aba = st.sidebar.radio("Navegação:", ["💰 Finanças", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios", "📋 Relatório PDF"])
+aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 Relatórios", "📋 Relatório PDF"])
 
 st.sidebar.divider()
 
@@ -122,14 +143,26 @@ if "💰" in aba:
     if not df_base.empty:
         saldo_geral = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
+        
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[df_m['Categoria'] != 'Transferência']
+        
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Receita (Mês)", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
         m2.metric("📉 Gasto (Mês)", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
         m3.metric("💰 Rendimento (Mês)", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
         m4.metric("⏳ Pendente (Mês)", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
+        
         st.divider()
+        
+        st.subheader("🏦 Informações de Contas e Cartões")
+        if not df_bancos_info.empty:
+            st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+        else:
+            st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
+        
+        st.divider()
+        
         with st.expander("🎯 Configurar Metas"):
             todas_cats = sorted(df_base['Categoria'].unique())
             metas_map = {}
@@ -138,6 +171,7 @@ if "💰" in aba:
                 if cat != "Transferência":
                     default_v = 1200.0 if cat == "Mercado" else 400.0
                     metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
+        
         g1, g2 = st.columns(2)
         with g1:
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
@@ -145,6 +179,7 @@ if "💰" in aba:
         with g2:
             df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
             if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="Fluxo de Caixa"), use_container_width=True)
+        
         st.subheader("📊 Metas vs Realizado")
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         if not df_metas_graph.empty:
@@ -153,6 +188,7 @@ if "💰" in aba:
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
             fig_m.update_layout(barmode='group', height=350); st.plotly_chart(fig_m, use_container_width=True)
+        
         st.divider()
         st.subheader("🔍 Busca e Lançamentos")
         c1, c2, c3 = st.columns(3)
@@ -179,7 +215,7 @@ elif "🚗" in aba:
     gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
     if alc > 0 and gas > 0:
         if (alc/gas) <= 0.7: c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
-        else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA WITH GASOLINA!")
+        else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
     st.divider()
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
     if not df_car.empty:
@@ -207,11 +243,9 @@ elif "📄" in aba:
         zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
         st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
 
-# NOVA ABA: RELATÓRIO PDF
 elif "📋" in aba:
     st.title("📋 Gerador de Relatório PDF")
     
-    # Filtros de Busca
     c1, c2, c3 = st.columns(3)
     b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY", key="pdf_ini")
     b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY", key="pdf_fim")
@@ -221,7 +255,6 @@ elif "📋" in aba:
     b_sta = c4.multiselect("Status", ["Pago", "Pendente"], key="pdf_sta")
     b_desc = c5.text_input("Filtrar Descrição", key="pdf_desc")
     
-    # Aplicar Filtros
     df_pdf = df_base.copy()
     df_pdf = df_pdf[(df_pdf['DT'].dt.date >= b_ini) & (df_pdf['DT'].dt.date <= b_fim)]
     if b_bnc: df_pdf = df_pdf[df_pdf['Banco'].isin(b_bnc)]
@@ -240,7 +273,6 @@ elif "📋" in aba:
         pdf.cell(190, 10, f"Período: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", 0, 1, 'C')
         pdf.ln(5)
         
-        # Cabeçalho da Tabela
         pdf.set_fill_color(200, 200, 200)
         pdf.set_font("Arial", 'B', 10)
         pdf.cell(25, 8, "Data", 1, 0, 'C', 1)
@@ -249,7 +281,6 @@ elif "📋" in aba:
         pdf.cell(30, 8, "Banco", 1, 0, 'C', 1)
         pdf.cell(30, 8, "Status", 1, 1, 'C', 1)
         
-        # Dados
         pdf.set_font("Arial", '', 9)
         total_periodo = 0
         for _, row in df_pdf.iterrows():
@@ -262,7 +293,7 @@ elif "📋" in aba:
             
         pdf.ln(5)
         pdf.set_font("Arial", 'B', 12)
-        pdf.cell(190, 10, f"Total dos Lancamentos Filtrados: {m_fmt(total_periodo)}", 0, 1, 'R')
+        pdf.cell(190, 10, f"Total dos Lançamentos: {m_fmt(total_periodo)}", 0, 1, 'R')
         
         pdf_output = pdf.output(dest='S').encode('latin-1', 'replace')
         st.download_button(label="📥 Baixar PDF", data=pdf_output, file_name=f"Relatorio_Wilson_{datetime.now().strftime('%d%m%y')}.pdf", mime="application/pdf")
