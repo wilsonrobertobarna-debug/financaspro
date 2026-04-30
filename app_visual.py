@@ -10,7 +10,7 @@ import urllib.parse
 from fpdf import FPDF 
 
 # 0. VERSÃO NO TOPO
-st.caption("Versão 1.5")
+st.caption("Versão 1.6")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -279,14 +279,24 @@ elif "📄" in aba:
     d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
     d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
     
-    # Calcula saldos independentemente de haver transações no período
+    # Calcula saldos lendo diretamente da aba Bancos
     bancos = sorted(bancos_disponiveis)
     saldos_txt = ""
     total_b = 0
     for b in bancos:
-        s = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento']))]['V_Num'].sum() - df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
-        saldos_txt += f"- {b}: {m_fmt(s)}\n"
-        total_b += s
+        saldo = 0.0
+        if not df_bancos_info.empty:
+            for _, row in df_bancos_info.iterrows():
+                if str(row.iloc[0]).strip() == b:
+                    if len(row) > 1:
+                        try:
+                            val_str = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                            saldo = float(val_str)
+                        except:
+                            saldo = 0.0
+                    break
+        saldos_txt += f"- {b}: {m_fmt(saldo)}\n"
+        total_b += saldo
         
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     if not df_per.empty:
