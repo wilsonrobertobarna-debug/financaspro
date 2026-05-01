@@ -191,7 +191,9 @@ if "💰" in aba:
         m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
         m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
         m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        m4.metric("⏳ Pendente", m_fmt(df_base[df_base['Status'] == 'Pendente']['V_Num'].sum())) # Atualizado
+        
+        # Ajuste feito para considerar os meses anteriores
+        m4.metric("⏳ Pendente", m_fmt(df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()))
         
         st.divider()
         
@@ -261,7 +263,7 @@ elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
     
     df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
-                     df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
+                       df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
     
     if not df_pet.empty:
         df_pet_mes = df_pet[(df_pet['Mes_Ano'] == mes_atual) & (df_pet['Status'] == 'Pago')]
