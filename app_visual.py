@@ -26,7 +26,7 @@ st.markdown(
 )
 
 # 0. VERSÃO NO TOPO
-st.caption("Version 2.0.11")
+st.caption("Version 2.0.12")
 
 # 2. CONEXÃO
 @st.cache_resource
@@ -482,11 +482,14 @@ elif "📄" in aba:
             total_b += saldo
             
     if not df_per.empty:
-        df_per_limpo = df_per[df_per['Categoria'] != 'Transferência']
+        df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
         r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
         d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-        pend_v = df_per_limpo[df_per_limpo['Status'] == 'Pendente']['V_Num'].sum()
+        
+        mes_atual_str = datetime.now().strftime('%m/%y')
+        mes_anterior_str = (datetime.now() - relativedelta(months=1)).strftime('%m/%y')
+        pend_v = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'].isin([mes_atual_str, mes_anterior_str]))]['V_Num'].sum()
     else:
         r_v = 0.0
         d_v = 0.0
