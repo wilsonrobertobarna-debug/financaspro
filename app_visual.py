@@ -4,10 +4,14 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from dateutil.relativedelta import relativedelta
 import urllib.parse
 from fpdf import FPDF 
+
+# Função para garantir a data do dia correto no Brasil (UTC-3)
+def obter_data_atual_br():
+    return datetime.now(timezone(timedelta(hours=-3))).date()
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -104,7 +108,7 @@ if not df_bancos_info.empty:
 else:
     bancos_disponiveis = ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"]
 
-mes_atual = datetime.now().strftime('%m/%y')
+mes_atual = obter_data_atual_br().strftime('%m/%y')
 
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
@@ -123,7 +127,7 @@ st.sidebar.divider()
 # BARRINHA 1: NOVO LANÇAMENTO
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
     with st.form("f_novo", clear_on_submit=True):
-        f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+        f_dat = st.date_input("Data", obter_data_atual_br(), format="DD/MM/YYYY")
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         f_des = st.text_input("Descrição / Beneficiário")
@@ -142,7 +146,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
 # BARRINHA 2: TRANSFERÊNCIA
 with st.sidebar.expander("💸 Transferência", expanded=False):
     with st.form("f_transf", clear_on_submit=True):
-        t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+        t_dat = st.date_input("Data", obter_data_atual_br(), format="DD/MM/YYYY")
         t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
         t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
@@ -196,15 +200,21 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
-        saldo_geral = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
+        # Saldo geral recalculado apenas com itens PAGO
+        df_base_pago = df_base[df_base['Status'] != 'Pendente'].copy()
+        saldo_geral = df_base_pago[df_base_pago['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_base_pago[df_base_pago['Tipo'] == 'Despesa']['V_Num'].sum()
+        
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
         st.subheader("💡 Resumo de Economia")
         
-        mes_anterior = (datetime.now() - relativedelta(months=1)).strftime('%m/%y')
+        mes_anterior = (obter_data_atual_br() - relativedelta(months=1)).strftime('%m/%y')
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[df_m['Categoria'] != 'Transferência']
         
+        # Filtra os meses de maneira a ignorar pendências
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] != 'Pendente')]
+        
+        # Receita incluindo rendimentos
         r_v = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
         d_v = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         rend_v = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
@@ -212,7 +222,7 @@ if "💰" in aba:
         
         df_ant = df_base[df_base['Mes_Ano'] == mes_anterior].copy()
         if not df_ant.empty:
-            df_ant_limpo = df_ant[df_ant['Categoria'] != 'Transferência']
+            df_ant_limpo = df_ant[(df_ant['Categoria'] != 'Transferência') & (df_ant['Status'] != 'Pendente')]
             r_ant = df_ant_limpo[df_ant_limpo['Tipo'] == 'Receita']['V_Num'].sum()
             d_ant = df_ant_limpo[df_ant_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
             rend_ant = df_ant_limpo[df_ant_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
@@ -228,11 +238,12 @@ if "💰" in aba:
         
         st.divider()
         
+        # Receita com Rendimentos somados no Mês
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        m4.metric("⏳ Pendente", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
+        m1.metric("📈 Receita", m_fmt(r_v + rend_v))
+        m2.metric("📉 Gasto", m_fmt(d_v))
+        m3.metric("💰 Rendimento", m_fmt(rend_v))
+        m4.metric("⏳ Pendente", m_fmt(df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()))
         
         st.divider()
         
@@ -264,7 +275,7 @@ if "💰" in aba:
         st.divider()
         st.subheader("📈 Evolução do Saldo Acumulado")
         
-        df_saldo_dia = df_base.dropna(subset=['DT']).sort_values('DT').copy()
+        df_saldo_dia = df_base[df_base['Status'] != 'Pendente'].dropna(subset=['DT']).sort_values('DT').copy()
         if not df_saldo_dia.empty:
             df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
                 lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
@@ -323,15 +334,15 @@ elif "🐾" in aba:
                      df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
     
     if not df_pet.empty:
-        gasto_total_mes = df_pet[df_pet['Mes_Ano'] == mes_atual]['V_Num'].sum()
+        gasto_total_mes = df_pet[(df_pet['Mes_Ano'] == mes_atual) & (df_pet['Status'] != 'Pendente')]['V_Num'].sum()
         
         df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
                           df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
         df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
                           df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
         
-        m_milo = df_milo[df_milo['Mes_Ano'] == mes_atual]['V_Num'].sum()
-        m_bolt = df_bolt[df_bolt['Mes_Ano'] == mes_atual]['V_Num'].sum()
+        m_milo = df_milo[(df_milo['Mes_Ano'] == mes_atual) & (df_milo['Status'] != 'Pendente')]['V_Num'].sum()
+        m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'] != 'Pendente')]['V_Num'].sum()
         
         c_p1, c_p2, c_p3 = st.columns(3)
         c_p1.metric("📈 Gasto Total (Mês)", m_fmt(gasto_total_mes))
@@ -427,8 +438,10 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     c1, c2 = st.columns(2)
-    d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-    d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
+    
+    # Datas com a data atual ajustada
+    d_ini = c1.date_input("Início", obter_data_atual_br() - relativedelta(months=1), format="DD/MM/YYYY")
+    d_fim = c2.date_input("Fim", obter_data_atual_br(), format="DD/MM/YYYY")
     
     df_valid = df_base.dropna(subset=['DT']).copy()
     df_per = df_valid[(df_valid['DT'].dt.date >= d_ini) & (df_valid['DT'].dt.date <= d_fim)]
@@ -461,33 +474,34 @@ elif "📄" in aba:
                             limite = 0.0
                     break
                     
-        utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
+        # Ignora itens PENDENTES para contabilizar o saldo utilizado
+        utilizado = df_base[(df_base['Banco'] == b) & (df_base['Status'] != 'Pendente') & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
         
         if "cartão" in b.lower():
             if limite > 0:
                 disponivel = limite - utilizado
             else:
-                disponivel = saldo - utilizado
+                disponivel = saldo - utilizedo if 'utilizedo' in locals() else saldo - utilizado
             saldos_txt += f"💳 {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
         else:
             saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo)}\n"
             
         if "cartão" not in b.lower():
             total_b += saldo
-            
+        
     if not df_per.empty:
-        df_per_limpo = df_per[df_per['Categoria'] != 'Transferência']
-        r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+        df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] != 'Pendente')]
+        r_v = df_per_limpo[df_per_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
         d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-        pend_v = df_per_limpo[df_per_limpo['Status'] == 'Pendente']['V_Num'].sum()
+        pend_v = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
     else:
         r_v = 0.0
         d_v = 0.0
         rend_v = 0.0
         pend_v = 0.0
         
-    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nPEND: {m_fmt(pend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
+    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v + rend_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nPEND: {m_fmt(pend_v)}\nSOBRA: {m_fmt(r_v - d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
     
     st.text_area("Copiar para Zap/E-mail", relat, height=300)
     zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
@@ -497,8 +511,8 @@ elif "📋" in aba:
     st.title("📋 Gerador de Relatório PDF")
     
     c1, c2, c3 = st.columns(3)
-    b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY", key="pdf_ini")
-    b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY", key="pdf_fim")
+    b_ini = c1.date_input("Data Inicial", obter_data_atual_br() - relativedelta(months=1), format="DD/MM/YYYY", key="pdf_ini")
+    b_fim = c2.date_input("Data Final", obter_data_atual_br(), format="DD/MM/YYYY", key="pdf_fim")
     b_bnc = c3.multiselect("Bancos", sorted(bancos_disponiveis), key="pdf_bnc")
     
     c4, c5 = st.columns([1, 2])
@@ -551,7 +565,7 @@ elif "📋" in aba:
         df_per_pdf = df_base.dropna(subset=['DT']).copy()
         df_per_pdf = df_per_pdf[(df_per_pdf['DT'].dt.date >= b_ini) & (df_per_pdf['DT'].dt.date <= b_fim)]
         if not df_per_pdf.empty:
-            df_per_limpo = df_per_pdf[df_per_pdf['Categoria'] != 'Transferência']
+            df_per_limpo = df_per_pdf[(df_per_pdf['Categoria'] != 'Transferência') & (df_per_pdf['Status'] != 'Pendente')]
             r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
             d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
             rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
@@ -583,10 +597,10 @@ elif "📋" in aba:
         pdf.set_font("Arial", 'B', 10)
         pdf.cell(190, 6, "Resumo do Periodo", 0, 1, 'L')
         pdf.set_font("Arial", '', 9)
-        pdf.cell(95, 5, f"Total Receitas: {m_fmt(r_v)}", 0, 0, 'L')
+        pdf.cell(95, 5, f"Total Receitas: {m_fmt(r_v + rend_v)}", 0, 0, 'L')
         pdf.cell(95, 5, f"Total Despesas: {m_fmt(d_v)}", 0, 1, 'L')
         pdf.cell(95, 5, f"Total Rendimentos: {m_fmt(rend_v)}", 0, 0, 'L')
-        pdf.cell(95, 5, f"Saldo (Sobra): {m_fmt((r_v + rend_v) - d_v)}", 0, 1, 'L')
+        pdf.cell(95, 5, f"Saldo (Sobra): {m_fmt(r_v - d_v)}", 0, 1, 'L')
         
         pdf.ln(5)
         
