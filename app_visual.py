@@ -91,6 +91,13 @@ mes_atual = datetime.now().strftime('%m/%y')
 
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
+# FUNÇÃO PARA OBTER O VALOR PENDENTE ATUAL
+def get_valor_pendente(df):
+    now = datetime.now()
+    end_of_month = datetime(now.year, now.month, 1) + relativedelta(months=1, days=-1)
+    df_p = df[(df['Status'] == 'Pendente') & (df['DT'].dt.date <= end_of_month.date())]
+    return df_p['V_Num'].sum()
+
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 
@@ -192,8 +199,8 @@ if "💰" in aba:
         m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
         m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
         
-        # Ajuste feito para considerar os meses anteriores
-        m4.metric("⏳ Pendente", m_fmt(df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()))
+        # Valor pendente ajustado
+        m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
         
         st.divider()
         
@@ -222,7 +229,6 @@ if "💰" in aba:
             df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
             if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa"), use_container_width=True)
         
-        # NOVO GRÁFICO: EVOLUÇÃO DO SALDO ACUMULADO
         st.divider()
         st.subheader("📈 Evolução do Saldo Acumulado")
         df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
@@ -404,7 +410,7 @@ elif "📄" in aba:
         r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
         d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-        pend_v = df_per[df_per['Status'] == 'Pendente']['V_Num'].sum()
+        pend_v = get_valor_pendente(df_base)
     else:
         r_v = 0
         d_v = 0
