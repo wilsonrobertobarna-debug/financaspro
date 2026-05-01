@@ -30,7 +30,7 @@ st.markdown(
 )
 
 # 0. VERSÃO NO TOPO
-st.caption("Version 2.0.11")
+st.caption("Version 2.0.12")
 
 # 2. CONEXÃO
 @st.cache_resource
@@ -243,7 +243,10 @@ if "💰" in aba:
         m1.metric("📈 Receita", m_fmt(r_v + rend_v))
         m2.metric("📉 Gasto", m_fmt(d_v))
         m3.metric("💰 Rendimento", m_fmt(rend_v))
-        m4.metric("⏳ Pendente", m_fmt(df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()))
+        
+        # Correção: Soma apenas os pendentes de datas até o dia de hoje (limita os pendentes até o mês/ano atual)
+        df_pendentes_atuais = df_base[(df_base['Status'] == 'Pendente') & (df_base['DT'].dt.date <= obter_data_atual_br())]
+        m4.metric("⏳ Pendente", m_fmt(df_pendentes_atuais['V_Num'].sum()))
         
         st.divider()
         
@@ -494,7 +497,8 @@ elif "📄" in aba:
         r_v = df_per_limpo[df_per_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
         d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-        pend_v = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
+        # Correção: Soma apenas os pendentes de datas até o dia de hoje
+        pend_v = df_base[(df_base['Status'] == 'Pendente') & (df_base['DT'].dt.date <= obter_data_atual_br())]['V_Num'].sum()
     else:
         r_v = 0.0
         d_v = 0.0
