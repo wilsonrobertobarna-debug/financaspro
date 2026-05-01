@@ -187,19 +187,17 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
-        df_saldo = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
-        saldo_geral = df_saldo[df_saldo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_saldo[df_saldo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
-        
+        # Cálculo baseado no mês atual
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+        
+        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
         m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
         m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        
-        # Valor pendente ajustado
         m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
         
         st.divider()
