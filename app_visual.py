@@ -4,10 +4,14 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from dateutil.relativedelta import relativedelta
 import urllib.parse
-from fpdf import FPDF
+from fpdf import FPDF 
+
+# Função para garantir a data do dia correto no Brasil (UTC-3)
+def obter_data_atual_br():
+    return datetime.now(timezone(timedelta(hours=-3))).date()
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -26,7 +30,7 @@ st.markdown(
 )
 
 # 0. VERSÃO NO TOPO
-st.caption("Version 2.0.11")
+st.caption("Version 2.0.13")
 
 # 2. CONEXÃO
 @st.cache_resource
@@ -104,7 +108,7 @@ if not df_bancos_info.empty:
 else:
     bancos_disponiveis = ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"]
 
-mes_atual = datetime.now().strftime('%m/%y')
+mes_atual = obter_data_atual_br().strftime('%m/%y')
 
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
@@ -123,11 +127,11 @@ st.sidebar.divider()
 # BARRINHA 1: NOVO LANÇAMENTO
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
     with st.form("f_novo", clear_on_submit=True):
-        f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+        f_dat = st.date_input("Data", obter_data_atual_br(), format="DD/MM/YYYY")
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         f_des = st.text_input("Descrição / Beneficiário")
-        f_tip = st.selectbox("Tipo", ["Despesa", "Receita"])
+        f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet", "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
@@ -142,7 +146,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
 # BARRINHA 2: TRANSFERÊNCIA
 with st.sidebar.expander("💸 Transferência", expanded=False):
     with st.form("f_transf", clear_on_submit=True):
-        t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+        t_dat = st.date_input("Data", obter_data_atual_br(), format="DD/MM/YYYY")
         t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
         t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
@@ -187,51 +191,454 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
                 atualizar_sessao()
                 st.rerun()
-            if col_ed2.button("🗑️ APAGAR"):
+            if col_ed2.button("🚨 EXCLUIR"):
                 ws_base.delete_rows(int(item['ID']))
                 atualizar_sessao()
                 st.rerun()
 
-# --- Conteúdo Principal ---
-if aba == "💰 Finanças & Bancos":
-    st.subheader("💰 Finanças e Bancos")
+# 5. TELAS PRINCIPAIS
+if "💰" in aba:
+    st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
-        # Exclui pendentes do saldo/receitas/despesas
-        df_ativos = df_base[df_base['Status'] != 'Pendente'].copy()
+        # Saldo geral recalculado apenas com itens PAGO
+        df_base_pago = df_base[df_base['Status'] != 'Pendente'].copy()
+        saldo_geral = df_base_pago[df_base_pago['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_base_pago[df_base_pago['Tipo'] == 'Despesa']['V_Num'].sum()
         
-        total_receitas = df_ativos[df_ativos['Tipo'] == 'Receita']['V_Num'].sum()
-        total_despesas = df_ativos[df_ativos['Tipo'] == 'Despesa']['V_Num'].sum()
-        saldo_atual = total_receitas - total_despesas
+        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
+        st.subheader("💡 Resumo de Economia")
+        
+        mes_anterior = (obter_data_atual_br() - relativedelta(months=1)).strftime('%m/%y')
+        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+        
+        # Filtra os meses de maneira a ignorar pendências
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] != 'Pendente')]
+        
+        # Receita incluindo rendimentos
+        r_v = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+        d_v = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend_v = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        sobra_atual = (r_v + rend_v) - d_v
+        
+        df_ant = df_base[df_base['Mes_Ano'] == mes_anterior].copy()
+        if not df_ant.empty:
+            df_ant_limpo = df_ant[(df_ant['Categoria'] != 'Transferência') & (df_ant['Status'] != 'Pendente')]
+            r_ant = df_ant_limpo[df_ant_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+            d_ant = df_ant_limpo[df_ant_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+            rend_ant = df_ant_limpo[df_ant_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+            sobra_anterior = (r_ant + rend_ant) - d_ant
+        else:
+            sobra_anterior = 0.0
+            
+        dif_eco = sobra_atual - sobra_anterior
+        
+        col_eco1, col_eco2 = st.columns(2)
+        col_eco1.metric("💰 Sobra deste Mês", m_fmt(sobra_atual))
+        col_eco2.metric("📉 Comparação com Mês Anterior", m_fmt(dif_eco), delta=m_fmt(dif_eco), help="Sobra do mês atual comparada com a sobra do mês passado")
+        
+        st.divider()
+        
+        # Receita com Rendimentos somados no Mês
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("📈 Receita", m_fmt(r_v + rend_v))
+        m2.metric("📉 Gasto", m_fmt(d_v))
+        m3.metric("💰 Rendimento", m_fmt(rend_v))
+        
+        # Correção: Soma apenas os pendentes de datas até o dia de hoje (limita os pendentes até o mês/ano atual)
+        df_pendentes_atuais = df_base[(df_base['Status'] == 'Pendente') & (df_base['DT'].dt.date <= obter_data_atual_br())]
+        m4.metric("⏳ Pendente", m_fmt(df_pendentes_atuais['V_Num'].sum()))
+        
+        st.divider()
+        
+        st.subheader("🏦 Informações de Contas e Cartões")
+        if not df_bancos_info.empty:
+            st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+        else:
+            st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
+        
+        st.divider()
+        
+        with st.expander("🎯 Configurar Metas"):
+            todas_cats = sorted(df_base['Categoria'].unique())
+            metas_map = {}
+            cols = st.columns(3)
+            for i, cat in enumerate(todas_cats):
+                if cat != "Transferência":
+                    default_v = 1200.0 if cat == "Mercado" else 400.0
+                    metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
+        
+        g1, g2 = st.columns(2)
+        with g1:
+            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            if not df_p.empty: st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True)
+        with g2:
+            df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
+            if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa"), use_container_width=True)
+        
+        st.divider()
+        st.subheader("📈 Evolução do Saldo Acumulado")
+        
+        df_saldo_dia = df_base[df_base['Status'] != 'Pendente'].dropna(subset=['DT']).sort_values('DT').copy()
+        if not df_saldo_dia.empty:
+            df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
+                lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
+            )
+            df_grouped = df_saldo_dia.groupby('DT', as_index=False)['Valor_Com_Sinal'].sum()
+            
+            full_date_range = pd.date_range(start=df_grouped['DT'].min(), end=df_grouped['DT'].max(), freq='D')
+            df_full = pd.DataFrame({'DT': full_date_range})
+            
+            df_full = df_full.merge(df_grouped, on='DT', how='left').fillna({'Valor_Com_Sinal': 0.0})
+            df_full = df_full.sort_values('DT')
+            
+            df_full['Saldo_Acumulado'] = df_full['Valor_Com_Sinal'].cumsum()
+            
+            fig_acum = px.line(df_full, x='DT', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
+            fig_acum.update_layout(height=350, xaxis_title="Data", yaxis_title="Saldo Acumulado (R$)")
+            st.plotly_chart(fig_acum, use_container_width=True)
+            
+        st.divider()
+        st.subheader("🎯 Metas vs Realizado")
+        df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        if not df_metas_graph.empty:
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(metas_map).fillna(0.0)
+            fig_m = go.Figure()
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
+            fig_m.update_layout(barmode='group', height=350); st.plotly_chart(fig_m, use_container_width=True)
+        
+        st.divider()
+        st.subheader("🔍 Busca e Lançamentos")
         c1, c2, c3 = st.columns(3)
-        c1.metric(label="Receitas (Ativas)", value=m_fmt(total_receitas))
-        c2.metric(label="Despesas (Ativas)", value=m_fmt(total_despesas))
-        c3.metric(label="Saldo Atual", value=m_fmt(saldo_atual))
+        s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
+        s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
+        b_desc = c3.text_input("Buscar Beneficiário:")
         
-        st.dataframe(df_base, use_container_width=True)
+        df_v = df_base.copy()
+        if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
+        if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
+        if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
+        
+        df_v_view = df_v[['ID', 'Data', 'Tipo', 'V_Num', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1].copy()
+        df_v_view['Valor'] = df_v_view['V_Num'].apply(m_fmt)
+        df_v_view = df_v_view.drop(columns=['V_Num'])
+        df_v_view = df_v_view[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']]
+        
+        st.dataframe(
+            df_v_view, 
+            use_container_width=True, 
+            hide_index=True
+        )
+
+elif "🐾" in aba:
+    st.title("🐾 Gestão Milo & Bolt")
+    
+    df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
+                     df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
+    
+    if not df_pet.empty:
+        gasto_total_mes = df_pet[(df_pet['Mes_Ano'] == mes_atual) & (df_pet['Status'] != 'Pendente')]['V_Num'].sum()
+        
+        df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
+                          df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
+        df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
+                          df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
+        
+        m_milo = df_milo[(df_milo['Mes_Ano'] == mes_atual) & (df_milo['Status'] != 'Pendente')]['V_Num'].sum()
+        m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'] != 'Pendente')]['V_Num'].sum()
+        
+        c_p1, c_p2, c_p3 = st.columns(3)
+        c_p1.metric("📈 Gasto Total (Mês)", m_fmt(gasto_total_mes))
+        c_p2.metric("🐶 Com o Milo (Mês)", m_fmt(m_milo))
+        c_p3.metric("🐱 Com o Bolt (Mês)", m_fmt(m_bolt))
+        
+        st.divider()
+        st.subheader("📋 Controle de Saúde e Ração")
+        c_v1, c_v2 = st.columns(2)
+        with c_v1:
+            st.markdown("**💊 Vacinas, Vermífugos e Veterinário**")
+            st.info("💡 *Dica: Ao lançar na descrição, coloque o nome do pet (ex: Vacina V10 Milo).*")
+        with c_v2:
+            st.markdown("**🛍️ Controle de Ração e PetShop**")
+            st.info("💡 *Dica: Use a categoria 'Pet: Milo' ou 'Pet: Bolt' para facilitar a separação!*")
+            
+        st.divider()
+        st.subheader("🔍 Lançamentos dos Meninos")
+        
+        c_f1, c_f2 = st.columns([1, 2])
+        pet_escolha = c_f1.radio("Filtrar por Pet:", ["Todos", "Milo", "Bolt"], horizontal=True)
+        
+        df_show = df_pet.copy()
+        if pet_escolha == "Milo":
+            df_show = df_milo
+        elif pet_escolha == "Bolt":
+            df_show = df_bolt
+            
+        df_show_view = df_show[['ID', 'Data', 'Tipo', 'V_Num', 'Descrição', 'Categoria', 'Status']].iloc[::-1].copy()
+        df_show_view['Valor'] = df_show_view['V_Num'].apply(m_fmt)
+        df_show_view = df_show_view.drop(columns=['V_Num'])
+        df_show_view = df_show_view[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']]
+        
+        st.dataframe(
+            df_show_view, 
+            use_container_width=True, 
+            hide_index=True
+        )
     else:
-        st.info("Nenhum dado carregado.")
+        st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
 
-elif aba == "🐾 Milo & Bolt":
-    st.subheader("🐾 Milo & Bolt")
-    if not df_base.empty:
-        df_pet = df_base[df_base['Categoria'].str.contains("Pet", case=False, na=False)]
-        st.dataframe(df_pet, use_container_width=True)
+elif "🚗" in aba:
+    st.title("🚗 Gestão do Veículo")
+    
+    c1, c2, c3 = st.columns([1,1,2])
+    alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
+    gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
+    if alc > 0 and gas > 0:
+        if (alc/gas) <= 0.7: c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
+        else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
+    
+    st.divider()
+    
+    st.subheader("⚙️ Controle de Troca de Óleo")
+    km1, km2, km3 = st.columns(3)
+    km_atual = km1.number_input("Quilometragem Atual (km)", value=0, step=500)
+    km_oleo = km2.number_input("Km Última Troca de Óleo", value=0, step=500)
+    limite_oleo = km3.number_input("Limite de Troca (km rodados)", value=10000, step=1000)
+    
+    if km_atual > 0 and km_oleo > 0:
+        km_rodados = km_atual - km_oleo
+        if km_rodados >= limite_oleo:
+            st.error(f"🚨 ALERTA: Passou do limite para trocar o óleo! Rodou {km_rodados:,} km desde a última troca.")
+        else:
+            st.info(f"👍 Óleo em dia! Você rodou {km_rodados:,} km. Faltam {limite_oleo - km_rodados:,} km para a próxima troca.")
+            
+    st.divider()
+    
+    st.subheader("⛽ Cálculo de Consumo (Km/L)")
+    c_cons1, c_cons2, c_cons3 = st.columns(3)
+    litros = c_cons1.number_input("Litros Abastecidos", value=0.0, step=0.5)
+    distancia = c_cons2.number_input("Distância Percorrida (km)", value=0.0, step=10.0)
+    
+    if litros > 0 and distancia > 0:
+        consumo = distancia / litros
+        c_cons3.success(f"📊 Consumo Médio: {consumo:.2f} km/l")
+        
+    st.divider()
+    
+    df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
+    if not df_car.empty:
+        df_car_view = df_car[['ID', 'Data', 'Tipo', 'V_Num', 'Descrição', 'Status', 'Banco']].iloc[::-1].copy()
+        df_car_view['Valor'] = df_car_view['V_Num'].apply(m_fmt)
+        df_car_view = df_car_view.drop(columns=['V_Num'])
+        df_car_view = df_car_view[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']]
+        
+        st.dataframe(
+            df_car_view, 
+            use_container_width=True, 
+            hide_index=True
+        )
+
+elif "📄" in aba:
+    st.title("📄 WhatsApp")
+    c1, c2 = st.columns(2)
+    
+    # Datas com a data atual ajustada
+    d_ini = c1.date_input("Início", obter_data_atual_br() - relativedelta(months=1), format="DD/MM/YYYY")
+    d_fim = c2.date_input("Fim", obter_data_atual_br(), format="DD/MM/YYYY")
+    
+    df_valid = df_base.dropna(subset=['DT']).copy()
+    df_per = df_valid[(df_valid['DT'].dt.date >= d_ini) & (df_valid['DT'].dt.date <= d_fim)]
+    
+    bancos = sorted(bancos_disponiveis)
+    saldos_txt = ""
+    total_b = 0
+    
+    saldos_banco_txt = ""
+    saldos_cartao_txt = ""
+    
+    for b in bancos:
+        saldo = 0.0
+        limite = 0.0
+        
+        if not df_bancos_info.empty:
+            for _, row in df_bancos_info.iterrows():
+                if str(row.iloc[0]).strip() == b:
+                    if len(row) > 1:
+                        try:
+                            val_str = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                            if val_str:
+                                saldo = float(val_str)
+                        except:
+                            saldo = 0.0
+                            
+                    if len(row) >= 3:
+                        try:
+                            lim_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                            if lim_str:
+                                limite = float(lim_str)
+                        except:
+                            limite = 0.0
+                    break
+                    
+        # Ignora itens PENDENTES para contabilizar o saldo utilizado
+        utilizado = df_base[(df_base['Banco'] == b) & (df_base['Status'] != 'Pendente') & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
+        
+        if "cartão" in b.lower():
+            if limite > 0:
+                disponivel = limite - utilizado
+            else:
+                disponivel = saldo - utilizado
+            saldos_cartao_txt += f"💳 {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
+        else:
+            saldos_banco_txt += f"🏦 {b}: Saldo: {m_fmt(saldo)}\n"
+            
+        if "cartão" not in b.lower():
+            total_b += saldo
+            
+    saldos_txt = saldos_banco_txt
+    if saldos_banco_txt and saldos_cartao_txt:
+        saldos_txt += "----------------------------------------\n"
+    saldos_txt += saldos_cartao_txt
+        
+    if not df_per.empty:
+        df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] != 'Pendente')]
+        r_v = df_per_limpo[df_per_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        # Correção: Soma apenas os pendentes de datas até o dia de hoje
+        pend_v = df_base[(df_base['Status'] == 'Pendente') & (df_base['DT'].dt.date <= obter_data_atual_br())]['V_Num'].sum()
     else:
-        st.info("Nenhum dado encontrado.")
+        r_v = 0.0
+        d_v = 0.0
+        rend_v = 0.0
+        pend_v = 0.0
+        
+    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v + rend_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nPEND: {m_fmt(pend_v)}\nSOBRA: {m_fmt(r_v - d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
+    
+    st.text_area("Copiar para Zap/E-mail", relat, height=300)
+    zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
+    st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
 
-elif aba == "🚗 Meu Veículo":
-    st.subheader("🚗 Meu Veículo")
-    if not df_base.empty:
-        df_veiculo = df_base[df_base['Categoria'].str.contains("Veículo|Combustível|Manutenção", case=False, na=False)]
-        st.dataframe(df_veiculo, use_container_width=True)
-    else:
-        st.info("Nenhum dado encontrado.")
+elif "📋" in aba:
+    st.title("📋 Gerador de Relatório PDF")
+    
+    c1, c2, c3 = st.columns(3)
+    b_ini = c1.date_input("Data Inicial", obter_data_atual_br() - relativedelta(months=1), format="DD/MM/YYYY", key="pdf_ini")
+    b_fim = c2.date_input("Data Final", obter_data_atual_br(), format="DD/MM/YYYY", key="pdf_fim")
+    b_bnc = c3.multiselect("Bancos", sorted(bancos_disponiveis), key="pdf_bnc")
+    
+    c4, c5 = st.columns([1, 2])
+    b_sta = c4.multiselect("Status", ["Pago", "Pendente"], key="pdf_sta")
+    b_desc = c5.text_input("Filtrar Descrição", key="pdf_desc")
+    
+    # Filtro de datas seguro
+    df_valid_pdf = df_base.dropna(subset=['DT']).copy()
+    df_pdf = df_valid_pdf[(df_valid_pdf['DT'].dt.date >= b_ini) & (df_valid_pdf['DT'].dt.date <= b_fim)]
+    
+    if b_bnc: df_pdf = df_pdf[df_pdf['Banco'].isin(b_bnc)]
+    if b_sta: df_pdf = df_pdf[df_pdf['Status'].isin(b_sta)]
+    if b_desc: df_pdf = df_pdf[df_pdf['Descrição'].str.contains(b_desc, case=False, na=False)]
+    
+    st.write(f"**Lançamentos encontrados:** {len(df_pdf)}")
+    
+    df_pdf_view = df_pdf[['Data', 'Descrição', 'V_Num', 'Banco', 'Status']].iloc[::-1].copy()
+    df_pdf_view['Valor'] = df_pdf_view['V_Num'].apply(m_fmt)
+    df_pdf_view = df_pdf_view.drop(columns=['V_Num'])
+    df_pdf_view = df_pdf_view[['Data', 'Descrição', 'Valor', 'Banco', 'Status']]
+    
+    st.dataframe(
+        df_pdf_view, 
+        use_container_width=True, 
+        hide_index=True
+    )
+    
+    if st.button("📄 GERAR PDF AGORA"):
+        pdf = FPDF()
+        pdf.add_page()
+        
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(190, 10, "Relatório FinançasPro - Wilson", 0, 1, 'C')
+        pdf.set_font("Arial", '', 10)
+        pdf.cell(190, 10, f"Período: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", 0, 1, 'C')
+        pdf.ln(5)
+        
+        pdf.set_fill_color(200, 200, 200)
+        pdf.set_font("Arial", 'B', 10)
+        pdf.cell(25, 8, "Data", 1, 0, 'C', 1)
+        pdf.cell(75, 8, "Descricao", 1, 0, 'L', 1)
+        pdf.cell(30, 8, "Valor", 1, 0, 'C', 1)
+        pdf.cell(30, 8, "Banco", 1, 0, 'C', 1)
+        pdf.cell(30, 8, "Status", 1, 1, 'C', 1)
+        
+        pdf.set_font("Arial", '', 9)
+        total_periodo = 0
+        r_v, d_v, rend_v = 0, 0, 0
+        
+        df_per_pdf = df_base.dropna(subset=['DT']).copy()
+        df_per_pdf = df_per_pdf[(df_per_pdf['DT'].dt.date >= b_ini) & (df_per_pdf['DT'].dt.date <= b_fim)]
+        if not df_per_pdf.empty:
+            df_per_limpo = df_per_pdf[(df_per_pdf['Categoria'] != 'Transferência') & (df_per_pdf['Status'] != 'Pendente')]
+            r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+            d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+            rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
 
-elif aba == "📄 WhatsApp":
-    st.subheader("📄 WhatsApp")
-    st.info("Função em construção.")
+        totais_diarios = {}
 
-elif aba == "📋 Relatório PDF":
-    st.subheader("📋 Relatório PDF")
-    st.info("Função em construção.")
+        for _, row in df_pdf.iterrows():
+            pdf.cell(25, 7, str(row['Data']), 1, 0, 'C')
+            pdf.cell(75, 7, str(row['Descrição'])[:40], 1, 0, 'L')
+            pdf.cell(30, 7, f"R$ {row['V_Num']:.2f}".replace('.', ','), 1, 0, 'R')
+            pdf.cell(30, 7, str(row['Banco']), 1, 0, 'C')
+            pdf.cell(30, 7, str(row['Status']), 1, 1, 'C')
+            total_periodo += row['V_Num']
+            
+            d_atual = row['Data']
+            tipo = row['Tipo']
+            v_num = row['V_Num']
+            
+            if d_atual not in totais_diarios:
+                totais_diarios[d_atual] = {'Receita': 0.0, 'Despesa': 0.0, 'Rendimento': 0.0}
+            
+            if tipo in ['Receita', 'Rendimento']:
+                totais_diarios[d_atual][tipo] += v_num
+            elif tipo == 'Despesa':
+                totais_diarios[d_atual]['Despesa'] += v_num
+            
+        pdf.ln(5)
+        
+        pdf.set_font("Arial", 'B', 10)
+        pdf.cell(190, 6, "Resumo do Periodo", 0, 1, 'L')
+        pdf.set_font("Arial", '', 9)
+        pdf.cell(95, 5, f"Total Receitas: {m_fmt(r_v + rend_v)}", 0, 0, 'L')
+        pdf.cell(95, 5, f"Total Despesas: {m_fmt(d_v)}", 0, 1, 'L')
+        pdf.cell(95, 5, f"Total Rendimentos: {m_fmt(rend_v)}", 0, 0, 'L')
+        pdf.cell(95, 5, f"Saldo (Sobra): {m_fmt(r_v - d_v)}", 0, 1, 'L')
+        
+        pdf.ln(5)
+        
+        pdf.set_font("Arial", 'B', 10)
+        pdf.cell(190, 6, "Saldo Dia a Dia", 0, 1, 'L')
+        
+        pdf.set_fill_color(220, 220, 220)
+        pdf.set_font("Arial", 'B', 8)
+        pdf.cell(30, 6, "Data", 1, 0, 'C', 1)
+        pdf.cell(40, 6, "Receitas", 1, 0, 'C', 1)
+        pdf.cell(40, 6, "Despesas", 1, 0, 'C', 1)
+        pdf.cell(40, 6, "Rendimentos", 1, 0, 'C', 1)
+        pdf.cell(40, 6, "Saldo do Dia", 1, 1, 'C', 1)
+        
+        pdf.set_font("Arial", '', 8)
+        for data, valores in totais_diarios.items():
+            saldo_dia = (valores['Receita'] + valores['Rendimento']) - valores['Despesa']
+            pdf.cell(30, 5, str(data), 1, 0, 'C')
+            pdf.cell(40, 5, m_fmt(valores['Receita']), 1, 0, 'R')
+            pdf.cell(40, 5, m_fmt(valores['Despesa']), 1, 0, 'R')
+            pdf.cell(40, 5, m_fmt(valores['Rendimento']), 1, 0, 'R')
+            pdf.cell(40, 5, m_fmt(saldo_dia), 1, 1, 'R')
+            
+        pdf.ln(5)
+        pdf.set_font("Arial", 'B', 11)
+        pdf.cell(190, 8, f"Total dos Lancamentos: {m_fmt(total_periodo)}", 0, 1, 'R')
+        
+        pdf_output = pdf.output(dest='S').encode('latin-1', 'replace')
+        st.download_button(label="📥 Baixar PDF", data=pdf_output, file_name=f"Relatorio_Wilson_{datetime.now().strftime('%d%m%y')}.pdf", mime="application/pdf")
