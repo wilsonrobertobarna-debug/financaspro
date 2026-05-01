@@ -127,7 +127,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         f_des = st.text_input("Descrição / Beneficiário")
-        f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
+        f_tip = st.selectbox("Tipo", ["Despesa", "Receita"])
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet", "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
@@ -196,26 +196,30 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
-        saldo_geral = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
+        df_saldo = df_base[df_base['Status'] == 'Pago'].copy()
+        saldo_geral = df_saldo[df_saldo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_saldo[df_saldo['Tipo'] == 'Despesa']['V_Num'].sum()
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
         st.subheader("💡 Resumo de Economia")
         
         mes_anterior = (datetime.now() - relativedelta(months=1)).strftime('%m/%y')
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[df_m['Categoria'] != 'Transferência']
+        df_m_limpo = df_m[df_m['Categoria'] != 'Transferência'].copy()
         
-        r_v = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-        d_v = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        rend_v = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        df_m_pago = df_m_limpo[df_m_limpo['Status'] == 'Pago'].copy()
+        
+        r_v = df_m_pago[df_m_pago['Tipo'] == 'Receita']['V_Num'].sum()
+        d_v = df_m_pago[df_m_pago['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend_v = df_m_pago[df_m_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
         sobra_atual = (r_v + rend_v) - d_v
         
         df_ant = df_base[df_base['Mes_Ano'] == mes_anterior].copy()
         if not df_ant.empty:
-            df_ant_limpo = df_ant[df_ant['Categoria'] != 'Transferência']
-            r_ant = df_ant_limpo[df_ant_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-            d_ant = df_ant_limpo[df_ant_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-            rend_ant = df_ant_limpo[df_ant_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+            df_ant_limpo = df_ant[df_ant['Categoria'] != 'Transferência'].copy()
+            df_ant_pago = df_ant_limpo[df_ant_limpo['Status'] == 'Pago'].copy()
+            r_ant = df_ant_pago[df_ant_pago['Tipo'] == 'Receita']['V_Num'].sum()
+            d_ant = df_ant_pago[df_ant_pago['Tipo'] == 'Despesa']['V_Num'].sum()
+            rend_ant = df_ant_pago[df_ant_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
             sobra_anterior = (r_ant + rend_ant) - d_ant
         else:
             sobra_anterior = 0.0
@@ -229,9 +233,9 @@ if "💰" in aba:
         st.divider()
         
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+        m1.metric("📈 Receita", m_fmt(r_v))
+        m2.metric("📉 Gasto", m_fmt(d_v))
+        m3.metric("💰 Rendimento", m_fmt(rend_v))
         m4.metric("⏳ Pendente", m_fmt(df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()))
         
         st.divider()
@@ -255,16 +259,16 @@ if "💰" in aba:
         
         g1, g2 = st.columns(2)
         with g1:
-            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            df_p = df_m_pago[df_m_pago['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             if not df_p.empty: st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True)
         with g2:
-            df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
+            df_f = df_m_pago.groupby('Tipo')['V_Num'].sum().reset_index()
             if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa"), use_container_width=True)
         
         st.divider()
         st.subheader("📈 Evolução do Saldo Acumulado")
         
-        df_saldo_dia = df_base.dropna(subset=['DT']).sort_values('DT').copy()
+        df_saldo_dia = df_base[df_base['Status'] == 'Pago'].dropna(subset=['DT']).sort_values('DT').copy()
         if not df_saldo_dia.empty:
             df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
                 lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
@@ -285,7 +289,7 @@ if "💰" in aba:
             
         st.divider()
         st.subheader("🎯 Metas vs Realizado")
-        df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        df_metas_graph = df_m_pago[df_m_pago['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         if not df_metas_graph.empty:
             df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(metas_map).fillna(0.0)
             fig_m = go.Figure()
@@ -320,18 +324,18 @@ elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
     
     df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
-                     df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
+                      df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
     
     if not df_pet.empty:
-        gasto_total_mes = df_pet[df_pet['Mes_Ano'] == mes_atual]['V_Num'].sum()
+        gasto_total_mes = df_pet[(df_pet['Mes_Ano'] == mes_atual) & (df_pet['Status'] == 'Pago')]['V_Num'].sum()
         
         df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
-                         df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
+                          df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
         df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
-                         df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
+                          df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
         
-        m_milo = df_milo[df_milo['Mes_Ano'] == mes_atual]['V_Num'].sum()
-        m_bolt = df_bolt[df_bolt['Mes_Ano'] == mes_atual]['V_Num'].sum()
+        m_milo = df_milo[(df_milo['Mes_Ano'] == mes_atual) & (df_milo['Status'] == 'Pago')]['V_Num'].sum()
+        m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'] == 'Pago')]['V_Num'].sum()
         
         c_p1, c_p2, c_p3 = st.columns(3)
         c_p1.metric("📈 Gasto Total (Mês)", m_fmt(gasto_total_mes))
@@ -476,11 +480,12 @@ elif "📄" in aba:
             total_b += saldo
             
     if not df_per.empty:
-        df_per_limpo = df_per[df_per['Categoria'] != 'Transferência']
-        r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-        d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-        pend_v = df_per_limpo[df_per_limpo['Status'] == 'Pendente']['V_Num'].sum()
+        df_per_limpo = df_per[df_per['Categoria'] != 'Transferência'].copy()
+        df_per_pago = df_per_limpo[df_per_limpo['Status'] == 'Pago'].copy()
+        r_v = df_per_pago[df_per_pago['Tipo'] == 'Receita']['V_Num'].sum()
+        d_v = df_per_pago[df_per_pago['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend_v = df_per_pago[df_per_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
+        pend_v = df_per[df_per['Status'] == 'Pendente']['V_Num'].sum()
     else:
         r_v = 0.0
         d_v = 0.0
@@ -551,10 +556,11 @@ elif "📋" in aba:
         df_per_pdf = df_base.dropna(subset=['DT']).copy()
         df_per_pdf = df_per_pdf[(df_per_pdf['DT'].dt.date >= b_ini) & (df_per_pdf['DT'].dt.date <= b_fim)]
         if not df_per_pdf.empty:
-            df_per_limpo = df_per_pdf[df_per_pdf['Categoria'] != 'Transferência']
-            r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-            d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-            rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+            df_per_limpo = df_per_pdf[df_per_pdf['Categoria'] != 'Transferência'].copy()
+            df_per_pago = df_per_limpo[df_per_limpo['Status'] == 'Pago'].copy()
+            r_v = df_per_pago[df_per_pago['Tipo'] == 'Receita']['V_Num'].sum()
+            d_v = df_per_pago[df_per_pago['Tipo'] == 'Despesa']['V_Num'].sum()
+            rend_v = df_per_pago[df_per_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
 
         totais_diarios = {}
 
