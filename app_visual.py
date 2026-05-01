@@ -30,7 +30,7 @@ st.markdown(
 )
 
 # 0. VERSÃO NO TOPO
-st.caption("Version 2.0.13")
+st.caption("Version 2.0.14")
 
 # 2. CONEXÃO
 @st.cache_resource
@@ -120,7 +120,17 @@ if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     atualizar_sessao()
     st.rerun()
 
-aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF"])
+aba = st.sidebar.radio("Navegação:", [
+    "📊 Dashboard", 
+    "📝 Lançamentos", 
+    "💰 Finanças", 
+    "🏦 Bancos", 
+    "⏳ Pendências", 
+    "🐾 Milo & Bolt", 
+    "🚗 Meu Veículo", 
+    "📄 WhatsApp", 
+    "📋 Relatório PDF"
+])
 
 st.sidebar.divider()
 
@@ -197,24 +207,19 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 st.rerun()
 
 # 5. TELAS PRINCIPAIS
-if "💰" in aba:
-    st.title("🛡️ FinançasPro Wilson")
+if "📊 Dashboard" in aba:
+    st.title("🛡️ Dashboard Geral")
     if not df_base.empty:
-        # Saldo geral recalculado apenas com itens PAGO
         df_base_pago = df_base[df_base['Status'] != 'Pendente'].copy()
         saldo_geral = df_base_pago[df_base_pago['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_base_pago[df_base_pago['Tipo'] == 'Despesa']['V_Num'].sum()
         
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
         st.subheader("💡 Resumo de Economia")
-        
         mes_anterior = (obter_data_atual_br() - relativedelta(months=1)).strftime('%m/%y')
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         
-        # Filtra os meses de maneira a ignorar pendências
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] != 'Pendente')]
-        
-        # Receita incluindo rendimentos
         r_v = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
         d_v = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         rend_v = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
@@ -231,49 +236,19 @@ if "💰" in aba:
             sobra_anterior = 0.0
             
         dif_eco = sobra_atual - sobra_anterior
-        
         col_eco1, col_eco2 = st.columns(2)
         col_eco1.metric("💰 Sobra deste Mês", m_fmt(sobra_atual))
         col_eco2.metric("📉 Comparação com Mês Anterior", m_fmt(dif_eco), delta=m_fmt(dif_eco), help="Sobra do mês atual comparada com a sobra do mês passado")
         
         st.divider()
         
-        # Receita com Rendimentos somados no Mês
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Receita", m_fmt(r_v + rend_v))
         m2.metric("📉 Gasto", m_fmt(d_v))
         m3.metric("💰 Rendimento", m_fmt(rend_v))
         
-        # Correção: Soma apenas os pendentes de datas até o dia de hoje (limita os pendentes até o mês/ano atual)
         df_pendentes_atuais = df_base[(df_base['Status'] == 'Pendente') & (df_base['DT'].dt.date <= obter_data_atual_br())]
         m4.metric("⏳ Pendente", m_fmt(df_pendentes_atuais['V_Num'].sum()))
-        
-        st.divider()
-        
-        st.subheader("🏦 Informações de Contas e Cartões")
-        if not df_bancos_info.empty:
-            st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
-        else:
-            st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
-        
-        st.divider()
-        
-        with st.expander("🎯 Configurar Metas"):
-            todas_cats = sorted(df_base['Categoria'].unique())
-            metas_map = {}
-            cols = st.columns(3)
-            for i, cat in enumerate(todas_cats):
-                if cat != "Transferência":
-                    default_v = 1200.0 if cat == "Mercado" else 400.0
-                    metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
-        
-        g1, g2 = st.columns(2)
-        with g1:
-            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-            if not df_p.empty: st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True)
-        with g2:
-            df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
-            if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa"), use_container_width=True)
         
         st.divider()
         st.subheader("📈 Evolução do Saldo Acumulado")
@@ -296,19 +271,10 @@ if "💰" in aba:
             fig_acum = px.line(df_full, x='DT', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
             fig_acum.update_layout(height=350, xaxis_title="Data", yaxis_title="Saldo Acumulado (R$)")
             st.plotly_chart(fig_acum, use_container_width=True)
-            
-        st.divider()
-        st.subheader("🎯 Metas vs Realizado")
-        df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-        if not df_metas_graph.empty:
-            df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(metas_map).fillna(0.0)
-            fig_m = go.Figure()
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
-            fig_m.update_layout(barmode='group', height=350); st.plotly_chart(fig_m, use_container_width=True)
-        
-        st.divider()
-        st.subheader("🔍 Busca e Lançamentos")
+
+elif "📝" in aba:
+    st.title("📝 Busca e Lançamentos")
+    if not df_base.empty:
         c1, c2, c3 = st.columns(3)
         s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
         s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
@@ -330,12 +296,80 @@ if "💰" in aba:
             hide_index=True
         )
 
+elif "💰" in aba:
+    st.title("💰 Controle de Finanças")
+    if not df_base.empty:
+        mes_anterior = (obter_data_atual_br() - relativedelta(months=1)).strftime('%m/%y')
+        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+        
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] != 'Pendente')]
+        r_v = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+        d_v = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend_v = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        
+        m1, m2, m3 = st.columns(3)
+        m1.metric("📈 Receita", m_fmt(r_v + rend_v))
+        m2.metric("📉 Gasto", m_fmt(d_v))
+        m3.metric("💰 Rendimento", m_fmt(rend_v))
+        
+        st.divider()
+        
+        with st.expander("🎯 Configurar Metas", expanded=True):
+            todas_cats = sorted(df_base['Categoria'].unique())
+            metas_map = {}
+            cols = st.columns(3)
+            for i, cat in enumerate(todas_cats):
+                if cat != "Transferência":
+                    default_v = 1200.0 if cat == "Mercado" else 400.0
+                    metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
+        
+        g1, g2 = st.columns(2)
+        with g1:
+            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            if not df_p.empty: st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True)
+        with g2:
+            df_f = df_m_limpo.groupby('Tipo')['V_Num'].sum().reset_index()
+            if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa"), use_container_width=True)
+        
+        st.divider()
+        st.subheader("🎯 Metas vs Realizado")
+        df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        if not df_metas_graph.empty:
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(metas_map).fillna(0.0)
+            fig_m = go.Figure()
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
+            fig_m.update_layout(barmode='group', height=350); st.plotly_chart(fig_m, use_container_width=True)
+
+elif "🏦" in aba:
+    st.title("🏦 Informações de Contas e Cartões")
+    if not df_bancos_info.empty:
+        st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+    else:
+        st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
+
+elif "⏳" in aba:
+    st.title("⏳ Controle de Pendências")
+    df_pendentes = df_base[df_base['Status'] == 'Pendente'].copy()
+    
+    st.info(f"### ⏳ TOTAL DE PENDÊNCIAS: {m_fmt(df_pendentes['V_Num'].sum())}")
+    
+    if not df_pendentes.empty:
+        df_p_view = df_pendentes[['ID', 'Data', 'Tipo', 'V_Num', 'Descrição', 'Categoria', 'Banco']].iloc[::-1].copy()
+        df_p_view['Valor'] = df_p_view['V_Num'].apply(m_fmt)
+        df_p_view = df_p_view.drop(columns=['V_Num'])
+        df_p_view = df_p_view[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco']]
+        
+        st.dataframe(
+            df_p_view, 
+            use_container_width=True, 
+            hide_index=True
+        )
+
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
-    
     df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
                      df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
-    
     if not df_pet.empty:
         gasto_total_mes = df_pet[(df_pet['Mes_Ano'] == mes_atual) & (df_pet['Status'] != 'Pendente')]['V_Num'].sum()
         
@@ -357,14 +391,11 @@ elif "🐾" in aba:
         c_v1, c_v2 = st.columns(2)
         with c_v1:
             st.markdown("**💊 Vacinas, Vermífugos e Veterinário**")
-            st.info("💡 *Dica: Ao lançar na descrição, coloque o nome do pet (ex: Vacina V10 Milo).*")
         with c_v2:
             st.markdown("**🛍️ Controle de Ração e PetShop**")
-            st.info("💡 *Dica: Use a categoria 'Pet: Milo' ou 'Pet: Bolt' para facilitar a separação!*")
             
         st.divider()
         st.subheader("🔍 Lançamentos dos Meninos")
-        
         c_f1, c_f2 = st.columns([1, 2])
         pet_escolha = c_f1.radio("Filtrar por Pet:", ["Todos", "Milo", "Bolt"], horizontal=True)
         
@@ -389,7 +420,6 @@ elif "🐾" in aba:
 
 elif "🚗" in aba:
     st.title("🚗 Gestão do Veículo")
-    
     c1, c2, c3 = st.columns([1,1,2])
     alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
     gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
@@ -442,7 +472,6 @@ elif "📄" in aba:
     st.title("📄 WhatsApp")
     c1, c2 = st.columns(2)
     
-    # Datas com a data atual ajustada
     d_ini = c1.date_input("Início", obter_data_atual_br() - relativedelta(months=1), format="DD/MM/YYYY")
     d_fim = c2.date_input("Fim", obter_data_atual_br(), format="DD/MM/YYYY")
     
@@ -459,7 +488,6 @@ elif "📄" in aba:
     for b in bancos:
         saldo = 0.0
         limite = 0.0
-        
         if not df_bancos_info.empty:
             for _, row in df_bancos_info.iterrows():
                 if str(row.iloc[0]).strip() == b:
@@ -480,7 +508,6 @@ elif "📄" in aba:
                             limite = 0.0
                     break
                     
-        # Ignora itens PENDENTES para contabilizar o saldo utilizado
         utilizado = df_base[(df_base['Banco'] == b) & (df_base['Status'] != 'Pendente') & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
         
         if "cartão" in b.lower():
@@ -505,7 +532,6 @@ elif "📄" in aba:
         r_v = df_per_limpo[df_per_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
         d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-        # Correção: Soma apenas os pendentes de datas até o dia de hoje
         pend_v = df_base[(df_base['Status'] == 'Pendente') & (df_base['DT'].dt.date <= obter_data_atual_br())]['V_Num'].sum()
     else:
         r_v = 0.0
@@ -521,7 +547,6 @@ elif "📄" in aba:
 
 elif "📋" in aba:
     st.title("📋 Gerador de Relatório PDF")
-    
     c1, c2, c3 = st.columns(3)
     b_ini = c1.date_input("Data Inicial", obter_data_atual_br() - relativedelta(months=1), format="DD/MM/YYYY", key="pdf_ini")
     b_fim = c2.date_input("Data Final", obter_data_atual_br(), format="DD/MM/YYYY", key="pdf_fim")
@@ -531,7 +556,6 @@ elif "📋" in aba:
     b_sta = c4.multiselect("Status", ["Pago", "Pendente"], key="pdf_sta")
     b_desc = c5.text_input("Filtrar Descrição", key="pdf_desc")
     
-    # Filtro de datas seguro
     df_valid_pdf = df_base.dropna(subset=['DT']).copy()
     df_pdf = df_valid_pdf[(df_valid_pdf['DT'].dt.date >= b_ini) & (df_valid_pdf['DT'].dt.date <= b_fim)]
     
