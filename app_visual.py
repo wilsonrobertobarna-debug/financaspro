@@ -118,7 +118,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet", "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
+        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet","Vestuário","Moradia", "Saúde","Previdência" "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         if st.form_submit_button("SALVAR"):
