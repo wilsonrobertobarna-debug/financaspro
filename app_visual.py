@@ -1,6 +1,5 @@
 import streamlit as st
-from datetime import datetime
-import pytz
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 
 # Configurações da página
@@ -10,8 +9,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Definir o fuso horário (America/Sao_Paulo para espelhar o sistema)
-fuso_sp = pytz.timezone('America/Sao_Paulo')
+# Definir o fuso horário do Brasil (UTC-3) nativamente
+fuso_sp = timezone(timedelta(hours=-3))
 
 # Inicializa o session state
 if 'lancamentos' not in st.session_state:
@@ -22,7 +21,7 @@ if 'pendencias' not in st.session_state:
 
 # --- Funções Auxiliares ---
 def obter_data_atual():
-    """Retorna a data atual respeitando o fuso horário correto."""
+    """Retorna a data atual respeitando o fuso horário correto sem dependências externas."""
     return datetime.now(fuso_sp).date()
 
 # --- Sidebar ---
