@@ -334,7 +334,7 @@ elif "🚗" in aba:
         if km_rodados >= limite_oleo:
             st.error(f"🚨 ALERTA: Passou do limite para trocar o óleo! Rodou {km_rodados:,} km desde a última troca.")
         else:
-            st.info(f"👍 Óleo em dia! Você rodou {km_rodados:,} km. Faltam {limite_oleo - km_rodados:,} km para a próxima troca.")
+            st.info(f"👍 Óleo em dia! Você rodou {km_rodados:,} km. Faltam {limite_oleo - km_rodados:,} km para la próxima troca.")
             
     st.divider()
     
@@ -390,8 +390,8 @@ elif "📄" in aba:
         
         # SÓ APLICA O CÁLCULO DE SALDO NOS BANCOS, CARTÕES PERMANECEM INALTERADOS
         if "cartão" not in b.lower():
-            receitas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento'])) & (df_base['Mes_Ano'] == mes_atual)]['V_Num'].sum()
-            despesas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['Mes_Ano'] == mes_atual)]['V_Num'].sum()
+            receitas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento'])) & (df_base['Status'] != 'Pendente')]['V_Num'].sum()
+            despesas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] != 'Pendente')]['V_Num'].sum()
             saldo = saldo + receitas_b - despesas_b
         
         if "cartão" in b.lower():
