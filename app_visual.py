@@ -187,4 +187,51 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
                 atualizar_sessao()
                 st.rerun()
-            if col
+            if col_ed2.button("🗑️ APAGAR"):
+                ws_base.delete_rows(int(item['ID']))
+                atualizar_sessao()
+                st.rerun()
+
+# --- Conteúdo Principal ---
+if aba == "💰 Finanças & Bancos":
+    st.subheader("💰 Finanças e Bancos")
+    if not df_base.empty:
+        # Exclui pendentes do saldo/receitas/despesas
+        df_ativos = df_base[df_base['Status'] != 'Pendente'].copy()
+        
+        total_receitas = df_ativos[df_ativos['Tipo'] == 'Receita']['V_Num'].sum()
+        total_despesas = df_ativos[df_ativos['Tipo'] == 'Despesa']['V_Num'].sum()
+        saldo_atual = total_receitas - total_despesas
+        
+        c1, c2, c3 = st.columns(3)
+        c1.metric(label="Receitas (Ativas)", value=m_fmt(total_receitas))
+        c2.metric(label="Despesas (Ativas)", value=m_fmt(total_despesas))
+        c3.metric(label="Saldo Atual", value=m_fmt(saldo_atual))
+        
+        st.dataframe(df_base, use_container_width=True)
+    else:
+        st.info("Nenhum dado carregado.")
+
+elif aba == "🐾 Milo & Bolt":
+    st.subheader("🐾 Milo & Bolt")
+    if not df_base.empty:
+        df_pet = df_base[df_base['Categoria'].str.contains("Pet", case=False, na=False)]
+        st.dataframe(df_pet, use_container_width=True)
+    else:
+        st.info("Nenhum dado encontrado.")
+
+elif aba == "🚗 Meu Veículo":
+    st.subheader("🚗 Meu Veículo")
+    if not df_base.empty:
+        df_veiculo = df_base[df_base['Categoria'].str.contains("Veículo|Combustível|Manutenção", case=False, na=False)]
+        st.dataframe(df_veiculo, use_container_width=True)
+    else:
+        st.info("Nenhum dado encontrado.")
+
+elif aba == "📄 WhatsApp":
+    st.subheader("📄 WhatsApp")
+    st.info("Função em construção.")
+
+elif aba == "📋 Relatório PDF":
+    st.subheader("📋 Relatório PDF")
+    st.info("Função em construção.")
