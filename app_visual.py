@@ -30,7 +30,7 @@ st.markdown(
 )
 
 # 0. VERSÃO NO TOPO
-st.caption("Version 2.0.12")
+st.caption("Version 2.0.13")
 
 # 2. CONEXÃO
 @st.cache_resource
@@ -453,6 +453,9 @@ elif "📄" in aba:
     saldos_txt = ""
     total_b = 0
     
+    saldos_banco_txt = ""
+    saldos_cartao_txt = ""
+    
     for b in bancos:
         saldo = 0.0
         limite = 0.0
@@ -484,13 +487,18 @@ elif "📄" in aba:
             if limite > 0:
                 disponivel = limite - utilizado
             else:
-                disponivel = saldo - utilizedo if 'utilizedo' in locals() else saldo - utilizado
-            saldos_txt += f"💳 {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
+                disponivel = saldo - utilizedo if 'utilizedo' in locals() else saldo - utilizedo
+            saldos_cartao_txt += f"💳 {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
         else:
-            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo)}\n"
+            saldos_banco_txt += f"🏦 {b}: Saldo: {m_fmt(saldo)}\n"
             
         if "cartão" not in b.lower():
             total_b += saldo
+            
+    saldos_txt = saldos_banco_txt
+    if saldos_banco_txt and saldos_cartao_txt:
+        saldos_txt += "----------------------------------------\n"
+    saldos_txt += saldos_cartao_txt
         
     if not df_per.empty:
         df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] != 'Pendente')]
