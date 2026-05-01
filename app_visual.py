@@ -326,9 +326,9 @@ elif "🐾" in aba:
         gasto_total_mes = df_pet[df_pet['Mes_Ano'] == mes_atual]['V_Num'].sum()
         
         df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
-                          df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
+                         df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
         df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
-                          df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
+                         df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
         
         m_milo = df_milo[df_milo['Mes_Ano'] == mes_atual]['V_Num'].sum()
         m_bolt = df_bolt[df_bolt['Mes_Ano'] == mes_atual]['V_Num'].sum()
@@ -408,7 +408,7 @@ elif "🚗" in aba:
     if litros > 0 and distancia > 0:
         consumo = distancia / litros
         c_cons3.success(f"📊 Consumo Médio: {consumo:.2f} km/l")
-        
+    
     st.divider()
     
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
