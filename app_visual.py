@@ -187,7 +187,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
-        # Cálculo baseado no mês atual
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
@@ -389,11 +388,17 @@ elif "📄" in aba:
                     
         utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
         
+        # SÓ APLICA O CÁLCULO DE SALDO NOS BANCOS, CARTÕES PERMANECEM INALTERADOS
+        if "cartão" not in b.lower():
+            receitas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento']))]['V_Num'].sum()
+            despesas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
+            saldo = saldo + receitas_b - despesas_b
+        
         if "cartão" in b.lower():
             if limite > 0:
                 disponivel = limite - utilizado
             else:
-                disponivel = saldo - utilizado
+                disponivel = saldo - utilizedo
             saldos_txt += f"💳 {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
         else:
             saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo)}\n"
