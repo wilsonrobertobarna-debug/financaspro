@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st 
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
@@ -198,6 +198,29 @@ if "💰" in aba:
         m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
         m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
         m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
+        
+        st.divider()
+        
+        # Módulo Comparativo Mensal Integrado
+        with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
+            df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
+            df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
+            
+            rec_mar = df_mar[df_mar['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            desp_mar = df_mar[df_mar['Tipo'] == 'Despesa']['V_Num'].sum()
+            sobra_mar = rec_mar - desp_mar
+            
+            rec_abr = df_abr[df_abr['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            desp_abr = df_abr[df_abr['Tipo'] == 'Despesa']['V_Num'].sum()
+            sobra_abr = rec_abr - desp_abr
+            
+            var_valor = sobra_abr - sobra_mar
+            var_pct = ((sobra_abr - sobra_mar) / abs(sobra_mar) * 100) if sobra_mar != 0 else 0.0
+            
+            c_c1, c_c2, c_c3 = st.columns(3)
+            c_c1.metric("Sobra de Março", m_fmt(sobra_mar))
+            c_c2.metric("Sobra de Abril", m_fmt(sobra_abr))
+            c_c3.metric("Variação Líquida", m_fmt(var_valor), delta=f"{var_pct:.1f}%")
         
         st.divider()
         
