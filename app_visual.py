@@ -425,6 +425,8 @@ elif "🚗" in aba:
     st.divider()
     
     st.subheader("⛽ Cálculo de Consumo (Km/L)")
+    st.info("💡 **Atenção:** Digite a quantidade de combustível em **Litros** (ex: 50.0) e a distância em **Quilômetros** (ex: 600.0), e não o valor monetário em R$.")
+    
     c_cons1, c_cons2, c_cons3 = st.columns(3)
     litros = c_cons1.number_input("Litros Abastecidos", value=0.0, step=0.5)
     distancia = c_cons2.number_input("Distância Percorrida (km)", value=0.0, step=10.0)
