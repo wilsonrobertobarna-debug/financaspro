@@ -308,9 +308,9 @@ elif "🐾" in aba:
         gasto_total_mes = df_pet_mes['V_Num'].sum()
         
         df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
-                          df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
+                         df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
         df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
-                          df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
+                         df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
         
         m_milo = df_milo[(df_milo['Mes_Ano'] == mes_atual) & (df_milo['Status'] == 'Pago')]['V_Num'].sum()
         m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'] == 'Pago')]['V_Num'].sum()
@@ -425,8 +425,8 @@ elif "📄" in aba:
         
         # SÓ APLICA O CÁLCULO DE SALDO NOS BANCOS, CARTÕES PERMANECEM INALTERADOS
         if "cartão" not in b.lower():
-            receitas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Receita') & (df_base['Mes_Ano'] == mes_atual) & (df_base['Status'] == 'Pago')]['V_Num'].sum()
-            despesas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['Mes_Ano'] == mes_atual) & (df_base['Status'] == 'Pago')]['V_Num'].sum()
+            receitas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] != 'Pendente')]['V_Num'].sum()
+            despesas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] != 'Pendente')]['V_Num'].sum()
             saldo = saldo + receitas_b - despesas_b
         
         if "cartão" in b.lower():
