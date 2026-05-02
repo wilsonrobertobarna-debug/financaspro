@@ -494,7 +494,7 @@ elif "📄" in aba:
         if "cartão" not in b.lower():
             total_b += saldo
             
-    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
+    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy() # Keeping it exact to your original
     
     if not df_per.empty:
         df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
@@ -626,4 +626,4 @@ elif "📋" in aba:
         pdf.cell(190, 8, f"Total dos Lancamentos: {m_fmt(total_periodo)}", 0, 1, 'R')
         
         pdf_output = pdf.output(dest='S').encode('latin-1', 'replace')
-        st.download_button(label="📥 Baixar PDF", data=pdf_output
+        st.download_button(label="📥 Baixar PDF", data=pdf_output)
