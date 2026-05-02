@@ -377,20 +377,20 @@ elif "📄" in aba:
                         except:
                             saldo = 0.0
                             
-                    if len(row) >= 3:
-                        try:
-                            lim_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                            if lim_str:
-                                limite = float(lim_str)
-                        except:
-                            limite = 0.0
+                        if len(row) >= 3:
+                            try:
+                                lim_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                                if lim_str:
+                                    limite = float(lim_str)
+                            except:
+                                limite = 0.0
                     break
                     
         utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
         
         # SÓ APLICA O CÁLCULO DE SALDO NOS BANCOS, CARTÕES PERMANECEM INALTERADOS
         if "cartão" not in b.lower():
-            receitas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento'])) & (df_base['Mes_Ano'] == mes_atual) & (df_base['Status'] == 'Pago')]['V_Num'].sum()
+            receitas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Receita') & (df_base['Mes_Ano'] == mes_atual) & (df_base['Status'] == 'Pago')]['V_Num'].sum()
             despesas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['Mes_Ano'] == mes_atual) & (df_base['Status'] == 'Pago')]['V_Num'].sum()
             saldo = saldo + receitas_b - despesas_b
         
