@@ -179,7 +179,22 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
             if col_ed2.button("🚨 EXCLUIR"):
-                ws_base.delete_rows(int(item['ID']))
+                if item['Categoria'] == 'Transferência':
+                    desc = item['Descrição']
+                    data = item['Data']
+                    v_num = item['V_Num']
+                    ids_para_excluir = []
+                    for idx, row in df_base.iterrows():
+                        if (row['Data'] == data and 
+                            abs(row['V_Num'] - v_num) < 0.01 and 
+                            row['Descrição'] == desc and 
+                            row['Categoria'] == 'Transferência'):
+                            ids_para_excluir.append(int(row['ID']))
+                    ids_para_excluir = sorted(list(set(ids_para_excluir)), reverse=True)
+                    for id_linha in ids_para_excluir:
+                        ws_base.delete_rows(id_linha)
+                else:
+                    ws_base.delete_rows(int(item['ID']))
                 atualizar_sessao()
                 st.rerun()
 
