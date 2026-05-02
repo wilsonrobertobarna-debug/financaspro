@@ -15,8 +15,19 @@ st.caption("Versão 2.0.3")
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
-# ESTILO PARA VALORES MAIS COMPACTOS
-st.markdown("<style>[data-testid='stMetricValue'] {font-size: 0.95rem !important;}</style>", unsafe_allow_html=True)
+# ESTILO PARA VALORES E RÓTULOS DOS METRICS
+st.markdown("""
+    <style>
+    [data-testid='stMetricLabel'] {
+        font-size: 1.1rem !important;
+        font-weight: bold !important;
+    }
+    [data-testid='stMetricValue'] {
+        font-size: 1.1rem !important;
+        font-weight: bold !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # 2. CONEXÃO
 @st.cache_resource
@@ -346,9 +357,9 @@ elif "🐾" in aba:
         gasto_total_mes = df_pet_mes['V_Num'].sum()
         
         df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
-                           df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
+                         df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
         df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
-                           df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
+                         df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
         
         m_milo = df_milo[(df_milo['Mes_Ano'] == mes_atual) & (df_milo['Status'] == 'Pago')]['V_Num'].sum()
         m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'] == 'Pago')]['V_Num'].sum()
@@ -454,13 +465,13 @@ elif "📄" in aba:
                         except:
                             saldo = 0.0
                             
-                    if len(row) >= 3:
-                        try:
-                            lim_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                            if lim_str:
-                                limite = float(lim_str)
-                        except:
-                            limite = 0.0
+                        if len(row) >= 3:
+                            try:
+                                lim_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                                if lim_str:
+                                    limite = float(lim_str)
+                            except:
+                                limite = 0.0
                     break
                     
         utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
@@ -615,4 +626,4 @@ elif "📋" in aba:
         pdf.cell(190, 8, f"Total dos Lancamentos: {m_fmt(total_periodo)}", 0, 1, 'R')
         
         pdf_output = pdf.output(dest='S').encode('latin-1', 'replace')
-        st.download_button(label="📥 Baixar PDF", data=pdf_output, file_name=f"Relatorio_Wilson_{datetime.now().strftime('%d%m%y')}.pdf", mime="application/pdf")
+        st.download_button(label="📥 Baixar PDF", data=pdf_output
