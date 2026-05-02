@@ -377,13 +377,13 @@ elif "📄" in aba:
                         except:
                             saldo = 0.0
                             
-                        if len(row) >= 3:
-                            try:
-                                lim_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                                if lim_str:
-                                    limite = float(lim_str)
-                            except:
-                                limite = 0.0
+                    if len(row) >= 3:
+                        try:
+                            lim_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                            if lim_str:
+                                limite = float(lim_str)
+                        except:
+                            limite = 0.0
                     break
                     
         utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
