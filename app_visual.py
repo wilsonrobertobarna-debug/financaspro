@@ -212,7 +212,6 @@ if "💰" in aba:
         st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
         df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
         if not df_aviso.empty:
-            # Correção feita aqui:
             df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
             df_venc = df_aviso[df_aviso['Dias'].isin([0, 3])]
             if not df_venc.empty:
@@ -331,7 +330,10 @@ if "💰" in aba:
         if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-        st.dataframe(df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+        
+        df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
@@ -378,7 +380,9 @@ elif "🐾" in aba:
         elif pet_escolha == "Bolt":
             df_show = df_bolt
             
-        st.dataframe(df_show[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+        df_show_display = df_show[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']].copy()
+        df_show_display['Valor'] = df_show['V_Num'].apply(m_fmt)
+        st.dataframe(df_show_display.iloc[::-1], use_container_width=True, hide_index=True)
     else:
         st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
 
@@ -421,7 +425,9 @@ elif "🚗" in aba:
     st.divider()
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
     if not df_car.empty:
-        st.dataframe(df_car[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']].iloc[::-1], use_container_width=True, hide_index=True)
+        df_car_display = df_car[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']].copy()
+        df_car_display['Valor'] = df_car['V_Num'].apply(m_fmt)
+        st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "📄" in aba:
     st.title("📄 WhatsApp")
@@ -516,7 +522,10 @@ elif "📋" in aba:
     if b_desc: df_pdf = df_pdf[df_pdf['Descrição'].str.contains(b_desc, case=False, na=False)]
     
     st.write(f"**Lançamentos encontrados:** {len(df_pdf)}")
-    st.dataframe(df_pdf[['Data', 'Descrição', 'Valor', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+    
+    df_pdf_display = df_pdf[['Data', 'Descrição', 'Valor', 'Banco', 'Status']].copy()
+    df_pdf_display['Valor'] = df_pdf['V_Num'].apply(m_fmt)
+    st.dataframe(df_pdf_display.iloc[::-1], use_container_width=True, hide_index=True)
     
     if st.button("📄 GERAR PDF AGORA"):
         pdf = FPDF()
