@@ -208,6 +208,26 @@ if "💰" in aba:
         saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
+        # Notificações de Vencimento
+        st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
+        df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
+        if not df_aviso.empty:
+            df_aviso['Dias'] = (df_aviso['DT'].dt.date - datetime.now().date()).dt.days
+            df_venc = df_aviso[df_aviso['Dias'].isin([0, 3])]
+            if not df_venc.empty:
+                for _, row in df_venc.iterrows():
+                    d_aviso = row['Dias']
+                    if d_aviso == 0:
+                        st.warning(f"⚠️ **Vence hoje:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    else:
+                        st.warning(f"⚠️ **Vence em 3 dias:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+            else:
+                st.info("Nenhum lançamento a vencer hoje ou em 3 dias.")
+        else:
+            st.info("Nenhum lançamento pendente.")
+            
+        st.divider()
+        
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
         m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
@@ -323,9 +343,9 @@ elif "🐾" in aba:
         gasto_total_mes = df_pet_mes['V_Num'].sum()
         
         df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
-                         df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
+                           df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
         df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
-                         df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
+                           df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
         
         m_milo = df_milo[(df_milo['Mes_Ano'] == mes_atual) & (df_milo['Status'] == 'Pago')]['V_Num'].sum()
         m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'] == 'Pago')]['V_Num'].sum()
