@@ -212,7 +212,8 @@ if "💰" in aba:
         st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
         df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
         if not df_aviso.empty:
-            df_aviso['Dias'] = (df_aviso['DT'].dt.date - datetime.now().date()).dt.days
+            # Correção feita aqui:
+            df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
             df_venc = df_aviso[df_aviso['Dias'].isin([0, 3])]
             if not df_venc.empty:
                 for _, row in df_venc.iterrows():
