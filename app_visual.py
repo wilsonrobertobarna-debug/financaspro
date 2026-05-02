@@ -398,7 +398,7 @@ elif "📄" in aba:
             if limite > 0:
                 disponivel = limite - utilizado
             else:
-                disponivel = saldo - utilizedo
+                disponivel = saldo - utilizado
             saldos_txt += f"💳 {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
         else:
             saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo)}\n"
