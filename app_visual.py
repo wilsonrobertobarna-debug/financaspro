@@ -252,37 +252,44 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
+# BARRINHA 4: AVISOS DE VENCIMENTO
+with st.sidebar.expander("🔔 Avisos de Vencimentos", expanded=True):
+    filtro_banco = st.selectbox("Filtrar Cartão/Banco:", ["Todos"] + bancos_disponiveis)
+    df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
+    if not df_aviso.empty:
+        df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
+        df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
+        
+        if filtro_banco != "Todos":
+            df_venc = df_venc[df_venc['Banco'] == filtro_banco]
+            
+        if not df_venc.empty:
+            for _, row in df_venc.iterrows():
+                d_aviso = row['Dias']
+                if d_aviso < 0:
+                    st.warning(f"⚠️ **Atrasado:** {row['Data']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
+                elif d_aviso == 0:
+                    st.warning(f"⚠️ **Hoje:** {row['Data']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
+                elif d_aviso == 1:
+                    st.warning(f"🚨 **Amanhã:** {row['Data']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
+                elif d_aviso == 3:
+                    st.warning(f"⚠️ **3 dias:** {row['Data']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
+        else:
+            st.info("Nenhum aviso para o filtro selecionado.")
+    else:
+        st.info("Nenhum lançamento pendente.")
+
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
+        df_m = df_base[df_m_mes := df_base['Mes_Ano'] == mes_atual].copy() # mantendo o filtro do mês
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
         saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
-        st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
-        df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
-        if not df_aviso.empty:
-            df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
-            df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
-            if not df_venc.empty:
-                for _, row in df_venc.iterrows():
-                    d_aviso = row['Dias']
-                    if d_aviso < 0:
-                        st.warning(f"⚠️ **Atrasado (Vencido):** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
-                    elif d_aviso == 0:
-                        st.warning(f"⚠️ **Vence hoje:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
-                    elif d_aviso == 1:
-                        st.warning(f"🚨 **Vence amanhã:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
-                    elif d_aviso == 3:
-                        st.warning(f"⚠️ **Vence em 3 dias:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
-            else:
-                st.info("Nenhum lançamento a vencer hoje, amanhã ou em atraso.")
-        else:
-            st.info("Nenhum lançamento pendente.")
-            
         st.divider()
         
         m1, m2, m3, m4 = st.columns(4)
@@ -561,7 +568,7 @@ elif "📄" in aba:
                             except:
                                 limite = 0.0
                     break
-                    
+                
         utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
         
         if "cartão" not in b.lower():
@@ -573,7 +580,7 @@ elif "📄" in aba:
             if limite > 0:
                 disponivel = limite - utilizado
             else:
-                disponivel = saldo - utilizado
+                disponivel = saldo - utilized
             saldos_txt += f"💳 {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
         else:
             saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo)}\n"
@@ -624,41 +631,5 @@ elif "📋" in aba:
         
     df_pdf_display = df_pdf[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
     df_pdf_display['Valor'] = df_pdf['V_Num'].apply(m_fmt)
+    
     st.dataframe(df_pdf_display.iloc[::-1], use_container_width=True, hide_index=True)
-
-    if st.button("📄 Gerar Relatório em PDF"):
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(200, 10, txt="RELATÓRIO DE FINANÇAS - FINANÇASPRO", ln=1, align="C")
-        pdf.set_font("Arial", '', 10)
-        pdf.cell(200, 10, txt=f"Período: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", ln=1)
-        pdf.ln(10)
-
-        # Cabeçalhos da tabela no PDF
-        pdf.cell(15, 10, "ID", border=1)
-        pdf.cell(25, 10, "Data", border=1)
-        pdf.cell(75, 10, "Descricao", border=1)
-        pdf.cell(25, 10, "Valor", border=1)
-        pdf.cell(30, 10, "Banco", border=1)
-        pdf.cell(20, 10, "Status", border=1)
-        pdf.ln(10)
-
-        for _, row in df_pdf.iterrows():
-            pdf.cell(15, 10, str(row['ID']), border=1)
-            pdf.cell(25, 10, str(row['Data']), border=1)
-            desc_sanitized = str(row['Descrição']).encode('latin-1', 'replace').decode('latin-1')
-            pdf.cell(75, 10, desc_sanitized, border=1)
-            pdf.cell(25, 10, m_fmt(row['V_Num']), border=1)
-            banco_sanitized = str(row['Banco']).encode('latin-1', 'replace').decode('latin-1')
-            pdf.cell(30, 10, banco_sanitized, border=1)
-            pdf.cell(20, 10, str(row['Status']), border=1)
-            pdf.ln(10)
-
-        html = pdf.output(dest='S').encode('latin-1')
-        st.download_button(
-            label="📥 Baixar PDF",
-            data=html,
-            file_name="relatorio.pdf",
-            mime="application/pdf"
-        )
