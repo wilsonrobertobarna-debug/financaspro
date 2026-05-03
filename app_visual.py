@@ -122,7 +122,7 @@ def enviar_whatsapp_pendencias(df):
                                     mensagem += f"🚨 Vence Amanhã: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
                                 elif row['Dias'] == 3:
                                     mensagem += f"⚠️ Vence em 3 dias: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
-                        
+                            
                             client_tw.messages.create(body=mensagem, from_=w_from, to=w_to)
                             st.session_state['last_wa_date'] = now.date()
                 except Exception as e:
@@ -154,7 +154,7 @@ if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     atualizar_sessao()
     st.rerun()
 
-aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF"])
+aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF"])
 
 st.sidebar.divider()
 
@@ -262,27 +262,6 @@ if "💰" in aba:
         saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
-        st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
-        df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
-        if not df_aviso.empty:
-            df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
-            df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
-            if not df_venc.empty:
-                for _, row in df_venc.iterrows():
-                    d_aviso = row['Dias']
-                    if d_aviso < 0:
-                        st.warning(f"⚠️ **Atrasado (Vencido):** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
-                    elif d_aviso == 0:
-                        st.warning(f"⚠️ **Vence hoje:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
-                    elif d_aviso == 1:
-                        st.warning(f"🚨 **Vence amanhã:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
-                    elif d_aviso == 3:
-                        st.warning(f"⚠️ **Vence em 3 dias:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
-            else:
-                st.info("Nenhum lançamento a vencer hoje, amanhã ou em atraso.")
-        else:
-            st.info("Nenhum lançamento pendente.")
-            
         st.divider()
         
         m1, m2, m3, m4 = st.columns(4)
@@ -357,7 +336,7 @@ if "💰" in aba:
             fig_acum = px.line(df_saldo_dia, x='Data', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
             fig_acum.update_layout(height=350)
             st.plotly_chart(fig_acum, use_container_width=True, config={'staticPlot': True})
-            
+        
         st.divider()
         st.subheader("🎯 Metas vs Realizado")
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
@@ -390,6 +369,48 @@ if "💰" in aba:
         df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+
+elif "Pendências" in aba:
+    st.title("📋 Lançamentos Pendentes")
+    st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
+    df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
+    if not df_aviso.empty:
+        df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
+        df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
+        if not df_venc.empty:
+            for _, row in df_venc.iterrows():
+                d_aviso = row['Dias']
+                if d_aviso < 0:
+                    st.warning(f"⚠️ **Atrasado (Vencido):** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                elif d_aviso == 0:
+                    st.warning(f"⚠️ **Vence hoje:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                elif d_aviso == 1:
+                    st.warning(f"🚨 **Vence amanhã:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                elif d_aviso == 3:
+                    st.warning(f"⚠️ **Vence em 3 dias:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+        else:
+            st.info("Nenhum lançamento a vencer hoje, amanhã ou em atraso.")
+    else:
+        st.info("Nenhum lançamento pendente.")
+        
+    st.divider()
+    
+    st.subheader("🔍 Busca de Lançamentos Pendentes")
+    
+    c1, c2 = st.columns(2)
+    s_bnc = c1.multiselect("Filtrar Banco/Cartão:", sorted(bancos_disponiveis))
+    b_desc = c2.text_input("Buscar Descrição:")
+    
+    df_v = df_base[df_base['Status'] == 'Pendente'].copy()
+    df_v = df_v[df_v['DT'].notna()]
+    if s_bnc:
+        df_v = df_v[df_v['Banco'].isin(s_bnc)]
+    if b_desc:
+        df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
+        
+    df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+    df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
@@ -621,44 +642,3 @@ elif "📋" in aba:
         df_pdf = df_pdf[df_pdf['Status'].isin(b_sta)]
     if b_desc: 
         df_pdf = df_pdf[df_pdf['Descrição'].str.contains(b_desc, case=False, na=False)]
-        
-    df_pdf_display = df_pdf[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
-    df_pdf_display['Valor'] = df_pdf['V_Num'].apply(m_fmt)
-    st.dataframe(df_pdf_display.iloc[::-1], use_container_width=True, hide_index=True)
-
-    if st.button("📄 Gerar Relatório em PDF"):
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(200, 10, txt="RELATÓRIO DE FINANÇAS - FINANÇASPRO", ln=1, align="C")
-        pdf.set_font("Arial", '', 10)
-        pdf.cell(200, 10, txt=f"Período: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", ln=1)
-        pdf.ln(10)
-
-        # Cabeçalhos da tabela no PDF
-        pdf.cell(15, 10, "ID", border=1)
-        pdf.cell(25, 10, "Data", border=1)
-        pdf.cell(75, 10, "Descricao", border=1)
-        pdf.cell(25, 10, "Valor", border=1)
-        pdf.cell(30, 10, "Banco", border=1)
-        pdf.cell(20, 10, "Status", border=1)
-        pdf.ln(10)
-
-        for _, row in df_pdf.iterrows():
-            pdf.cell(15, 10, str(row['ID']), border=1)
-            pdf.cell(25, 10, str(row['Data']), border=1)
-            desc_sanitized = str(row['Descrição']).encode('latin-1', 'replace').decode('latin-1')
-            pdf.cell(75, 10, desc_sanitized, border=1)
-            pdf.cell(25, 10, m_fmt(row['V_Num']), border=1)
-            banco_sanitized = str(row['Banco']).encode('latin-1', 'replace').decode('latin-1')
-            pdf.cell(30, 10, banco_sanitized, border=1)
-            pdf.cell(20, 10, str(row['Status']), border=1)
-            pdf.ln(10)
-
-        html = pdf.output(dest='S').encode('latin-1')
-        st.download_button(
-            label="📥 Baixar PDF",
-            data=html,
-            file_name="relatorio.pdf",
-            mime="application/pdf"
-        )
