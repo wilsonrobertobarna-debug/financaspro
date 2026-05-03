@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import urllib.parse
-from fpdf import FPDF 
+from fpdf import FPDF
 
 # 0. VERSÃO NO TOPO
 st.caption("Versão 2.0.3")
@@ -110,15 +110,20 @@ def enviar_whatsapp_pendencias(df):
                     df_aviso = df[df['Status'] == 'Pendente'].copy()
                     if not df_aviso.empty:
                         df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(now)).dt.days
-                        df_venc = df_aviso[df_aviso['Dias'].isin([0, 3])].copy()
+                        # Verifica atrasados (< 0), vence hoje (0), vence amanhã (1) e vence em 3 dias (3)
+                        df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)].copy()
                         if not df_venc.empty:
                             mensagem = "🔔 *Aviso de Pendências - FinançasPro*\n\n"
                             for _, row in df_venc.iterrows():
-                                if row['Dias'] == 0:
-                                    mensagem += f"⚠️ Vence Hoje: {row['Data']} - {row['Descrição']} no valor de R$ {row['Valor']} ({row['Banco']})\n"
-                                else:
-                                    mensagem += f"⚠️ Vence em 3 dias: {row['Data']} - {row['Descrição']} no valor de R$ {row['Valor']} ({row['Banco']})\n"
-                            
+                                if row['Dias'] < 0:
+                                    mensagem += f"⚠️ Lançamento Atrasado: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                                elif row['Dias'] == 0:
+                                    mensagem += f"⚠️ Vence Hoje: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                                elif row['Dias'] == 1:
+                                    mensagem += f"🚨 Vence Amanhã: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                                elif row['Dias'] == 3:
+                                    mensagem += f"⚠️ Vence em 3 dias: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                        
                             client_tw.messages.create(body=mensagem, from_=w_from, to=w_to)
                             st.session_state['last_wa_date'] = now.date()
                 except Exception as e:
@@ -258,16 +263,21 @@ if "💰" in aba:
         df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
         if not df_aviso.empty:
             df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
-            df_venc = df_aviso[df_aviso['Dias'].isin([0, 3])]
+            # Exibir Atrasados (< 0), Vencendo hoje (0), amanhã (1) e em 3 dias (3)
+            df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
             if not df_venc.empty:
                 for _, row in df_venc.iterrows():
                     d_aviso = row['Dias']
-                    if d_aviso == 0:
+                    if d_aviso < 0:
+                        st.warning(f"⚠️ **Atrasado (Vencido):** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    elif d_aviso == 0:
                         st.warning(f"⚠️ **Vence hoje:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
-                    else:
+                    elif d_aviso == 1:
+                        st.warning(f"🚨 **Vence amanhã:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    elif d_aviso == 3:
                         st.warning(f"⚠️ **Vence em 3 dias:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
             else:
-                st.info("Nenhum lançamento a vencer hoje ou em 3 dias.")
+                st.info("Nenhum lançamento a vencer hoje, amanhã ou em atraso.")
         else:
             st.info("Nenhum lançamento pendente.")
             
@@ -495,21 +505,23 @@ elif "📄" in aba:
                 df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
                 if not df_aviso.empty:
                     df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(now)).dt.days
-                    df_venc = df_aviso[df_aviso['Dias'].isin([0, 3])].copy()
+                    df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)].copy()
                     if not df_venc.empty:
                         mensagem = "🔔 *Aviso de Pendências - FinançasPro*\n\n"
                         for _, row in df_venc.iterrows():
-                            if row['Dias'] == 0:
+                            if row['Dias'] < 0:
+                                mensagem += f"⚠️ Lançamento Atrasado: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                            elif row['Dias'] == 0:
                                 mensagem += f"⚠️ Vence Hoje: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
-                            else:
+                            elif row['Dias'] == 1:
+                                mensagem += f"🚨 Vence Amanhã: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                            elif row['Dias'] == 3:
                                 mensagem += f"⚠️ Vence em 3 dias: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
                         
                         client_tw.messages.create(body=mensagem, from_=w_from, to=w_to)
                         st.success("Mensagem enviada com sucesso pelo WhatsApp!")
                     else:
-                        st.info("Nenhum lançamento a vencer hoje ou em 3 dias.")
-                else:
-                    st.info("Nenhum lançamento pendente.")
+                        st.info("Nenhum lançamento a vencer hoje, amanhã ou em 3 dias.")
             except Exception as e:
                 st.error(f"Erro ao enviar pelo Twilio: {e}")
         else:
@@ -569,7 +581,7 @@ elif "📄" in aba:
         if "cartão" not in b.lower():
             total_b += saldo
             
-    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy() # Keeping it exact to your original
+    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     
     if not df_per.empty:
         df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
@@ -640,65 +652,3 @@ elif "📋" in aba:
             df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
             r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
             d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-            rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-
-        totais_diarios = {}
-
-        for _, row in df_pdf.iterrows():
-            pdf.cell(25, 7, str(row['Data']), 1, 0, 'C')
-            pdf.cell(75, 7, str(row['Descrição'])[:40], 1, 0, 'L')
-            pdf.cell(30, 7, f"R$ {row['Valor']}", 1, 0, 'R')
-            pdf.cell(30, 7, str(row['Banco']), 1, 0, 'C')
-            pdf.cell(30, 7, str(row['Status']), 1, 1, 'C')
-            total_periodo += row['V_Num']
-            
-            d_atual = row['Data']
-            tipo = row['Tipo']
-            v_num = row['V_Num']
-            
-            if d_atual not in totais_diarios:
-                totais_diarios[d_atual] = {'Receita': 0.0, 'Despesa': 0.0, 'Rendimento': 0.0}
-            
-            if tipo in ['Receita', 'Rendimento']:
-                totais_diarios[d_atual][tipo] += v_num
-            elif tipo == 'Despesa':
-                totais_diarios[d_atual]['Despesa'] += v_num
-            
-        pdf.ln(5)
-        
-        pdf.set_font("Arial", 'B', 10)
-        pdf.cell(190, 6, "Resumo do Periodo", 0, 1, 'L')
-        pdf.set_font("Arial", '', 9)
-        pdf.cell(95, 5, f"Total Receitas: {m_fmt(r_v)}", 0, 0, 'L')
-        pdf.cell(95, 5, f"Total Despesas: {m_fmt(d_v)}", 0, 1, 'L')
-        pdf.cell(95, 5, f"Total Rendimentos: {m_fmt(rend_v)}", 0, 0, 'L')
-        pdf.cell(95, 5, f"Saldo (Sobra): {m_fmt((r_v + rend_v) - d_v)}", 0, 1, 'L')
-        
-        pdf.ln(5)
-        
-        pdf.set_font("Arial", 'B', 10)
-        pdf.cell(190, 6, "Saldo Dia a Dia", 0, 1, 'L')
-        
-        pdf.set_fill_color(220, 220, 220)
-        pdf.set_font("Arial", 'B', 8)
-        pdf.cell(30, 6, "Data", 1, 0, 'C', 1)
-        pdf.cell(40, 6, "Receitas", 1, 0, 'C', 1)
-        pdf.cell(40, 6, "Despesas", 1, 0, 'C', 1)
-        pdf.cell(40, 6, "Rendimentos", 1, 0, 'C', 1)
-        pdf.cell(40, 6, "Saldo do Dia", 1, 1, 'C', 1)
-        
-        pdf.set_font("Arial", '', 8)
-        for data, valores in totais_diarios.items():
-            saldo_dia = (valores['Receita'] + valores['Rendimento']) - valores['Despesa']
-            pdf.cell(30, 5, str(data), 1, 0, 'C')
-            pdf.cell(40, 5, m_fmt(valores['Receita']), 1, 0, 'R')
-            pdf.cell(40, 5, m_fmt(valores['Despesa']), 1, 0, 'R')
-            pdf.cell(40, 5, m_fmt(valores['Rendimento']), 1, 0, 'R')
-            pdf.cell(40, 5, m_fmt(saldo_dia), 1, 1, 'R')
-            
-        pdf.ln(5)
-        pdf.set_font("Arial", 'B', 11)
-        pdf.cell(190, 8, f"Total dos Lancamentos: {m_fmt(total_periodo)}", 0, 1, 'R')
-        
-        pdf_output = pdf.output(dest='S').encode('latin-1', 'replace')
-        st.download_button(label="📥 Baixar PDF", data=pdf_output)
