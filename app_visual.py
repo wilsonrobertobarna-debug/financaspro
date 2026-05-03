@@ -110,7 +110,6 @@ def enviar_whatsapp_pendencias(df):
                     df_aviso = df[df['Status'] == 'Pendente'].copy()
                     if not df_aviso.empty:
                         df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(now)).dt.days
-                        # Verifica atrasados (< 0), vence hoje (0), vence amanhã (1) e vence em 3 dias (3)
                         df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)].copy()
                         if not df_venc.empty:
                             mensagem = "🔔 *Aviso de Pendências - FinançasPro*\n\n"
@@ -151,7 +150,6 @@ def get_valor_pendente(df):
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 
-# Botão de atualização manual
 if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     atualizar_sessao()
     st.rerun()
@@ -171,11 +169,18 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet","Vestuário","Moradia", "Saúde","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
+        
+        # Campo de Vencimento do Cartão
+        f_venc_cartao = st.date_input("Vencimento do Cartão (Opcional)", value=None, format="DD/MM/YYYY")
+        
         if st.form_submit_button("SALVAR"):
             v_str = f"{f_val:.2f}".replace('.', ',')
+            venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
+            
             for i in range(f_par):
                 nova_data = f_dat + relativedelta(months=i)
-                ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta])
+                ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta, venc_str])
+            
             atualizar_sessao()
             st.rerun()
 
@@ -192,8 +197,8 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
             else:
                 v_str = f"{t_val:.2f}".replace('.', ',')
                 d_str = t_dat.strftime("%d/%m/%Y")
-                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago"])
-                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago"])
+                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", ""])
+                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", ""])
                 atualizar_sessao()
                 st.rerun()
 
@@ -207,7 +212,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             data_atual_dt = datetime.strptime(item['Data'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Data:", value=data_atual_dt, format="DD/MM/YYYY")
             
-            # Campos editáveis
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
@@ -258,12 +262,10 @@ if "💰" in aba:
         saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
-        # Notificações de Vencimento
         st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
         df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
         if not df_aviso.empty:
             df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
-            # Exibir Atrasados (< 0), Vencendo hoje (0), amanhã (1) e em 3 dias (3)
             df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
             if not df_venc.empty:
                 for _, row in df_venc.iterrows():
@@ -291,7 +293,6 @@ if "💰" in aba:
         
         st.divider()
         
-        # Módulo Comparativo Mensal Integrado
         with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
             df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
@@ -563,7 +564,6 @@ elif "📄" in aba:
                     
         utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
         
-        # SÓ APLICA O CÁLCULO DE SALDO NOS BANCOS, CARTÕES PERMANECEM INALTERADOS
         if "cartão" not in b.lower():
             receitas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] != 'Pendente')]['V_Num'].sum()
             despesas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] != 'Pendente')]['V_Num'].sum()
@@ -615,40 +615,50 @@ elif "📋" in aba:
     
     df_pdf = df_base.copy()
     df_pdf = df_pdf[(df_pdf['DT'].dt.date >= b_ini) & (df_pdf['DT'].dt.date <= b_fim)]
-    if b_bnc: df_pdf = df_pdf[df_pdf['Banco'].isin(b_bnc)]
-    if b_sta: df_pdf = df_pdf[df_pdf['Status'].isin(b_sta)]
-    if b_desc: df_pdf = df_pdf[df_pdf['Descrição'].str.contains(b_desc, case=False, na=False)]
-    
-    st.write(f"**Lançamentos encontrados:** {len(df_pdf)}")
-    
-    df_pdf_display = df_pdf[['Data', 'Descrição', 'Valor', 'Banco', 'Status']].copy()
+    if b_bnc: 
+        df_pdf = df_pdf[df_pdf['Banco'].isin(b_bnc)]
+    if b_sta: 
+        df_pdf = df_pdf[df_pdf['Status'].isin(b_sta)]
+    if b_desc: 
+        df_pdf = df_pdf[df_pdf['Descrição'].str.contains(b_desc, case=False, na=False)]
+        
+    df_pdf_display = df_pdf[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
     df_pdf_display['Valor'] = df_pdf['V_Num'].apply(m_fmt)
     st.dataframe(df_pdf_display.iloc[::-1], use_container_width=True, hide_index=True)
-    
-    if st.button("📄 GERAR PDF AGORA"):
+
+    if st.button("📄 Gerar Relatório em PDF"):
         pdf = FPDF()
         pdf.add_page()
-        
-        pdf.set_font("Arial", 'B', 16)
-        pdf.cell(190, 10, "Relatório FinançasPro - Wilson", 0, 1, 'C')
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(200, 10, txt="RELATÓRIO DE FINANÇAS - FINANÇASPRO", ln=1, align="C")
         pdf.set_font("Arial", '', 10)
-        pdf.cell(190, 10, f"Período: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", 0, 1, 'C')
-        pdf.ln(5)
-        
-        pdf.set_fill_color(200, 200, 200)
-        pdf.set_font("Arial", 'B', 10)
-        pdf.cell(25, 8, "Data", 1, 0, 'C', 1)
-        pdf.cell(75, 8, "Descricao", 1, 0, 'L', 1)
-        pdf.cell(30, 8, "Valor", 1, 0, 'C', 1)
-        pdf.cell(30, 8, "Banco", 1, 0, 'C', 1)
-        pdf.cell(30, 8, "Status", 1, 1, 'C', 1)
-        
-        pdf.set_font("Arial", '', 9)
-        total_periodo = 0
-        r_v, d_v, rend_v = 0, 0, 0
-        
-        df_per = df_base[(df_base['DT'].dt.date >= b_ini) & (df_base['DT'].dt.date <= b_fim)].copy()
-        if not df_per.empty:
-            df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
-            r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-            d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        pdf.cell(200, 10, txt=f"Período: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", ln=1)
+        pdf.ln(10)
+
+        # Cabeçalhos da tabela no PDF
+        pdf.cell(15, 10, "ID", border=1)
+        pdf.cell(25, 10, "Data", border=1)
+        pdf.cell(75, 10, "Descricao", border=1)
+        pdf.cell(25, 10, "Valor", border=1)
+        pdf.cell(30, 10, "Banco", border=1)
+        pdf.cell(20, 10, "Status", border=1)
+        pdf.ln(10)
+
+        for _, row in df_pdf.iterrows():
+            pdf.cell(15, 10, str(row['ID']), border=1)
+            pdf.cell(25, 10, str(row['Data']), border=1)
+            desc_sanitized = str(row['Descrição']).encode('latin-1', 'replace').decode('latin-1')
+            pdf.cell(75, 10, desc_sanitized, border=1)
+            pdf.cell(25, 10, m_fmt(row['V_Num']), border=1)
+            banco_sanitized = str(row['Banco']).encode('latin-1', 'replace').decode('latin-1')
+            pdf.cell(30, 10, banco_sanitized, border=1)
+            pdf.cell(20, 10, str(row['Status']), border=1)
+            pdf.ln(10)
+
+        html = pdf.output(dest='S').encode('latin-1')
+        st.download_button(
+            label="📥 Baixar PDF",
+            data=html,
+            file_name="relatorio.pdf",
+            mime="application/pdf"
+        )
