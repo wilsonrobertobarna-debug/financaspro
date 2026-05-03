@@ -1,4 +1,4 @@
-import streamlit as st 
+import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
@@ -91,6 +91,40 @@ def atualizar_sessao():
 
 df_base = st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
+
+# INTEGRAÇÃO DE AVISOS NO WHATSAPP VIA TWILIO
+def enviar_whatsapp_pendencias(df):
+    now = datetime.now()
+    if now.hour >= 8:
+        if 'last_wa_date' not in st.session_state or st.session_state['last_wa_date'] != now.date():
+            twilio_secrets = st.secrets.get("twilio", {})
+            sid = twilio_secrets.get("account_sid")
+            token = twilio_secrets.get("auth_token")
+            w_from = twilio_secrets.get("whatsapp_from")
+            w_to = twilio_secrets.get("whatsapp_to")
+            
+            if sid and token and w_from and w_to:
+                try:
+                    from twilio.rest import Client
+                    client_tw = Client(sid, token)
+                    df_aviso = df[df['Status'] == 'Pendente'].copy()
+                    if not df_aviso.empty:
+                        df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(now)).dt.days
+                        df_venc = df_aviso[df_aviso['Dias'].isin([0, 3])].copy()
+                        if not df_venc.empty:
+                            mensagem = "🔔 *Aviso de Pendências - FinançasPro*\n\n"
+                            for _, row in df_venc.iterrows():
+                                if row['Dias'] == 0:
+                                    mensagem += f"⚠️ Vence Hoje: {row['Data']} - {row['Descrição']} no valor de R$ {row['Valor']} ({row['Banco']})\n"
+                                else:
+                                    mensagem += f"⚠️ Vence em 3 dias: {row['Data']} - {row['Descrição']} no valor de R$ {row['Valor']} ({row['Banco']})\n"
+                            
+                            client_tw.messages.create(body=mensagem, from_=w_from, to=w_to)
+                            st.session_state['last_wa_date'] = now.date()
+                except Exception as e:
+                    pass
+
+enviar_whatsapp_pendencias(df_base)
 
 # CARREGA OS BANCOS DINAMICAMENTE DA PLANILHA OU USA OS PADRÕES
 if not df_bancos_info.empty:
@@ -444,6 +478,45 @@ elif "🚗" in aba:
 
 elif "📄" in aba:
     st.title("📄 WhatsApp")
+    
+    st.subheader("📲 Notificações Automáticas e Manuais")
+    if st.button("📲 Enviar mensagens de pendências agora via WhatsApp"):
+        twilio_secrets = st.secrets.get("twilio", {})
+        sid = twilio_secrets.get("account_sid")
+        token = twilio_secrets.get("auth_token")
+        w_from = twilio_secrets.get("whatsapp_from")
+        w_to = twilio_secrets.get("whatsapp_to")
+        
+        if sid and token and w_from and w_to:
+            try:
+                from twilio.rest import Client
+                client_tw = Client(sid, token)
+                now = datetime.now()
+                df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
+                if not df_aviso.empty:
+                    df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(now)).dt.days
+                    df_venc = df_aviso[df_aviso['Dias'].isin([0, 3])].copy()
+                    if not df_venc.empty:
+                        mensagem = "🔔 *Aviso de Pendências - FinançasPro*\n\n"
+                        for _, row in df_venc.iterrows():
+                            if row['Dias'] == 0:
+                                mensagem += f"⚠️ Vence Hoje: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                            else:
+                                mensagem += f"⚠️ Vence em 3 dias: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                        
+                        client_tw.messages.create(body=mensagem, from_=w_from, to=w_to)
+                        st.success("Mensagem enviada com sucesso pelo WhatsApp!")
+                    else:
+                        st.info("Nenhum lançamento a vencer hoje ou em 3 dias.")
+                else:
+                    st.info("Nenhum lançamento pendente.")
+            except Exception as e:
+                st.error(f"Erro ao enviar pelo Twilio: {e}")
+        else:
+            st.error("⚠️ Wilson, configure as credenciais do Twilio nos seus Secrets (twilio)!")
+            
+    st.divider()
+
     c1, c2 = st.columns(2)
     d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
     d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
