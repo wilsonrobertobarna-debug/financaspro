@@ -370,7 +370,7 @@ if "💰" in aba:
         if not df_metas_graph.empty:
             df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(metas_map).fillna(0.0)
             fig_m = go.Figure()
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#95a5a6'))
-            fig_m.update_layout(barmode='group', title="🎯 Metas vs Realizado")
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado'))
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta'))
+            fig_m.update_layout(barmode='group', title="Metas vs Realizado")
             st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
