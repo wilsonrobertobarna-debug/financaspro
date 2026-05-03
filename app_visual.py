@@ -592,9 +592,9 @@ elif "📄" in aba:
         
         if "cartão" in b.lower():
             if limite > 0:
-                disponivel = limite - utilized
+                disponivel = limite - utilizado
             else:
-                disponivel = saldo - utilized
+                disponivel = saldo - utilizado
             saldos_txt += f"💳 {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
         else:
             saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo)}\n"
@@ -626,37 +626,9 @@ elif "📋" in aba:
     st.title("📋 Gerador de Relatório PDF")
     
     c1, c2, c3 = st.columns(3)
-    b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY", key="pdf_ini")
-    b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY", key="pdf_fim")
+    b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+    b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY")
+    b_bnc = c3.selectbox("Filtrar Banco/Cartão", ["Todos"] + bancos_disponiveis)
     
-    df_pdf = df_base[(df_base['DT'].dt.date >= b_ini) & (df_base['DT'].dt.date <= b_fim)].copy()
-    
-    if not df_pdf.empty:
-        df_pdf_display = df_pdf[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
-        df_pdf_display['Valor'] = df_pdf['V_Num'].apply(m_fmt)
-        st.dataframe(df_pdf_display.iloc[::-1], use_container_width=True, hide_index=True)
-        
-        if st.button("Gerar PDF"):
-            import base64
-            
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", size=10)
-            pdf.cell(200, 10, txt="Relatorio de Financas - FinancasPro", ln=1, align="C")
-            pdf.ln(5)
-            
-            header = "Data | Tipo | Valor | Descricao | Categoria | Banco | Status"
-            pdf.cell(200, 10, txt=header, ln=1)
-            
-            for index, row in df_pdf.iterrows():
-                row_txt = f"{row['Data']} | {row['Tipo']} | {m_fmt(row['V_Num'])} | {row['Descrição']} | {row['Categoria']} | {row['Banco']} | {row['Status']}"
-                row_bytes = row_txt.encode('latin-1', errors='replace').decode('latin-1')
-                pdf.cell(200, 10, txt=row_bytes, ln=1)
-                
-            pdf_data = pdf.output(dest='S')
-            b64_pdf = base64.b64encode(pdf_data).decode('utf-8')
-            
-            href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="relatorio_financeiro.pdf">Baixar PDF Gerado</a>'
-            st.markdown(href, unsafe_allow_html=True)
-    else:
-        st.info("Nenhum lançamento no período selecionado.")
+    if st.button("Gerar PDF"):
+        st.info("Gerando PDF...")
