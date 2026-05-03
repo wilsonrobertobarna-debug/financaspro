@@ -423,9 +423,9 @@ elif "🐾" in aba:
         gasto_total_mes = df_pet_mes['V_Num'].sum()
         
         df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
-                         df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
+                          df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
         df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
-                         df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
+                          df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
         
         m_milo = df_milo[(df_milo['Mes_Ano'] == mes_atual) & (df_milo['Status'] == 'Pago')]['V_Num'].sum()
         m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'] == 'Pago')]['V_Num'].sum()
@@ -628,17 +628,55 @@ elif "📋" in aba:
     c1, c2, c3 = st.columns(3)
     b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY", key="pdf_ini")
     b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY", key="pdf_fim")
-    b_bnc = c3.multiselect("Bancos", sorted(bancos_disponiveis), key="pdf_bnc")
     
-    c4, c5 = st.columns([1, 2])
-    b_sta = c4.multiselect("Status", ["Pago", "Pendente"], key="pdf_sta")
-    b_desc = c5.text_input("Filtrar Descrição", key="pdf_desc")
-    
-    df_pdf = df_base.copy()
+    # Filtra os dados de lançamentos no período
+    df_pdf = df_base[df_base['DT'].notna()].copy()
     df_pdf = df_pdf[(df_pdf['DT'].dt.date >= b_ini) & (df_pdf['DT'].dt.date <= b_fim)]
-    if b_bnc: 
-        df_pdf = df_pdf[df_pdf['Banco'].isin(b_bnc)]
-    if b_sta: 
-        df_pdf = df_pdf[df_pdf['Status'].isin(b_sta)]
-    if b_desc: 
-        df_pdf = df_pdf[df_pdf['Descrição'].str.contains(b_desc, case=False, na=False)]
+    
+    # Expandir para mostrar os lançamentos
+    with st.expander("Lançamentos no Período", expanded=True):
+        if not df_pdf.empty:
+            df_pdf_display = df_pdf[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+            df_pdf_display['Valor'] = df_pdf['V_Num'].apply(m_fmt)
+            st.dataframe(df_pdf_display.iloc[::-1], use_container_width=True, hide_index=True)
+        else:
+            st.info("Nenhum lançamento no período selecionado.")
+            
+    # Botão para criar o PDF
+    if st.button("📄 Gerar e Baixar PDF"):
+        if not df_pdf.empty:
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", size=11)
+            
+            # Cabeçalho do PDF
+            pdf.cell(200, 10, txt="Relatorio de Financas - FinancasPro", ln=1, align='C')
+            pdf.cell(200, 10, txt=f"Periodo: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", ln=1, align='C')
+            pdf.ln(10)
+            
+            # Cabeçalhos da Tabela no PDF
+            pdf.cell(15, 10, "ID", 1)
+            pdf.cell(25, 10, "Data", 1)
+            pdf.cell(30, 10, "Tipo", 1)
+            pdf.cell(25, 10, "Valor", 1)
+            pdf.cell(95, 10, "Descricao", 1)
+            pdf.ln()
+            
+            # Conteúdo da Tabela
+            for _, row in df_pdf.iterrows():
+                pdf.cell(15, 10, str(row['ID']), 1)
+                pdf.cell(25, 10, str(row['Data']), 1)
+                pdf.cell(30, 10, str(row['Tipo']), 1)
+                pdf.cell(25, 10, str(m_fmt(row['V_Num'])), 1)
+                pdf.cell(95, 10, str(row['Descrição'])[:45], 1)
+                pdf.ln()
+                
+            pdf_output = pdf.output(dest='S')
+            st.download_button(
+                label="📥 Baixar PDF",
+                data=pdf_output,
+                file_name=f"relatorio_{b_ini.strftime('%Y%m%d')}_{b_fim.strftime('%Y%m%d')}.pdf",
+                mime="application/pdf"
+            )
+        else:
+            st.error("Não há dados para gerar o PDF no período selecionado.")
