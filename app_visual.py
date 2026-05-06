@@ -336,3 +336,394 @@ if "💰" in aba:
             if not df_p.empty: 
                 st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True, config={'staticPlot': True})
         with g2:
+            df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
+            df_f = df_f.sort_values('DT')
+            df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
+            if not df_f_grouped.empty: 
+                st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa Mensal"), use_container_width=True, config={'staticPlot': True})
+        
+        st.divider()
+        st.subheader("📈 Evolução do Saldo Acumulado")
+        df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
+        if not df_saldo_dia.empty:
+            df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
+                lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
+            )
+            df_saldo_dia = df_saldo_dia.groupby('Data')['Valor_Com_Sinal'].sum().reset_index()
+            df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
+            
+            fig_acum = px.line(df_saldo_dia, x='Data', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
+            fig_acum.update_layout(height=350)
+            st.plotly_chart(fig_acum, use_container_width=True, config={'staticPlot': True})
+        
+        st.divider()
+        st.subheader("🎯 Metas vs Realizado")
+        df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        if not df_metas_graph.empty:
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(metas_map).fillna(0.0)
+            fig_m = go.Figure()
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
+            fig_m.update_layout(barmode='group', height=350); st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
+        
+        st.divider()
+        st.subheader("🔍 Busca e Lançamentos")
+        
+        c_d1, c_d2 = st.columns(2)
+        s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+        s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
+        
+        c1, c2, c3 = st.columns(3)
+        s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
+        s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
+        b_desc = c3.text_input("Buscar Beneficiário:")
+        
+        df_v = df_base.copy()
+        df_v = df_v[df_v['DT'].notna()]
+        df_v = df_v[(df_v['DT'].dt.date >= s_ini) & (df_v['DT'].dt.date <= s_fim)]
+        if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
+        if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
+        if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
+        
+        df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+
+elif "Pendências" in aba:
+    st.title("📋 Lançamentos Pendentes")
+    st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
+    df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
+    if not df_aviso.empty:
+        df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
+        df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
+        if not df_venc.empty:
+            for _, row in df_venc.iterrows():
+                d_aviso = row['Dias']
+                if d_aviso < 0:
+                    st.warning(f"⚠️ **Atrasado (Vencido):** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                elif d_aviso == 0:
+                    st.warning(f"⚠️ **Vence hoje:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                elif d_aviso == 1:
+                    st.warning(f"🚨 **Vence amanhã:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                elif d_aviso == 3:
+                    st.warning(f"⚠️ **Vence em 3 dias:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+        else:
+            st.info("Nenhum lançamento a vencer hoje, amanhã ou em atraso.")
+    else:
+        st.info("Nenhum lançamento pendente.")
+        
+    st.divider()
+    
+    st.subheader("🔍 Busca de Lançamentos Pendentes")
+    
+    c1, c2 = st.columns(2)
+    s_bnc = c1.multiselect("Filtrar Banco/Cartão:", sorted(bancos_disponiveis))
+    b_desc = c2.text_input("Buscar Descrição:")
+    
+    df_v = df_base[df_base['Status'] == 'Pendente'].copy()
+    df_v = df_v[df_v['DT'].notna()]
+    if s_bnc:
+        df_v = df_v[df_v['Banco'].isin(s_bnc)]
+    if b_desc:
+        df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
+        
+    df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+    df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+
+elif "🐾" in aba:
+    st.title("🐾 Gestão Milo & Bolt")
+    
+    df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
+                     df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
+    
+    if not df_pet.empty:
+        df_pet_mes = df_pet[(df_pet['Mes_Ano'] == mes_atual) & (df_pet['Status'] == 'Pago')]
+        gasto_total_mes = df_pet_mes['V_Num'].sum()
+        
+        df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
+                          df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
+        df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
+                          df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
+        
+        m_milo = df_milo[(df_milo['Mes_Ano'] == mes_atual) & (df_milo['Status'] == 'Pago')]['V_Num'].sum()
+        m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'] == 'Pago')]['V_Num'].sum()
+        
+        c_p1, c_p2, c_p3 = st.columns(3)
+        c_p1.metric("📈 Gasto Total (Mês)", m_fmt(gasto_total_mes))
+        c_p2.metric("🐶 Com o Milo (Mês)", m_fmt(m_milo))
+        c_p3.metric("🐱 Com o Bolt (Mês)", m_fmt(m_bolt))
+        
+        st.divider()
+        
+        st.subheader("📋 Controle de Saúde e Ração")
+        c_v1, c_v2 = st.columns(2)
+        with c_v1:
+            st.markdown("**💊 Vacinas, Vermífugos e Veterinário**")
+            st.info("💡 *Dica: Ao lançar na descrição, coloque o nome do pet (ex: Vacina V10 Milo).*")
+        with c_v2:
+            st.markdown("**🛍️ Controle de Ração e PetShop**")
+            st.info("💡 *Dica: Use a categoria 'Pet / Pet: Milo' ou 'Pet: Bolt' para facilitar a separação!*")
+            
+        st.divider()
+        st.subheader("🔍 Lançamentos dos Meninos")
+        
+        c_f1, c_f2 = st.columns([1, 2])
+        pet_escolha = c_f1.radio("Filtrar por Pet:", ["Todos", "Milo", "Bolt"], horizontal=True)
+        
+        df_show = df_pet.copy()
+        if pet_escolha == "Milo":
+            df_show = df_milo
+        elif pet_escolha == "Bolt":
+            df_show = df_bolt
+            
+        df_show_display = df_show[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']].copy()
+        df_show_display['Valor'] = df_show['V_Num'].apply(m_fmt)
+        st.dataframe(df_show_display.iloc[::-1], use_container_width=True, hide_index=True)
+    else:
+        st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
+
+elif "🚗" in aba:
+    st.title("🚗 Gestão do Veículo")
+    
+    c1, c2, c3 = st.columns([1,1,2])
+    alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
+    gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
+    if alc > 0 and gas > 0:
+        if (alc/gas) <= 0.7: c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
+        else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
+    
+    st.divider()
+    
+    st.subheader("⚙️ Controle de Troca de Óleo")
+    km1, km2, km3 = st.columns(3)
+    km_atual = km1.number_input("Quilometragem Atual (km)", value=0, step=500)
+    km_oleo = km2.number_input("Km Última Troca de Óleo", value=0, step=500)
+    limite_oleo = km3.number_input("Limite de Troca (km rodados)", value=10000, step=1000)
+    
+    if km_atual > 0 and km_oleo > 0:
+        km_rodados = km_atual - km_oleo
+        if km_rodados >= limite_oleo:
+            st.error(f"🚨 ALERTA: Passou do limite para trocar o óleo! Rodou {km_rodados:,} km desde a última troca.")
+        else:
+            st.info(f"👍 Óleo em dia! Você rodou {km_rodados:,} km. Faltam {limite_oleo - km_rodados:,} km para a próxima troca.")
+            
+    st.divider()
+    
+    st.subheader("⛽ Cálculo de Consumo (Km/L)")
+    st.info("💡 **Atenção:** Digite a quantidade de combustível em **Litros** (ex: 50.0) e a distância em **Quilômetros** (ex: 600.0), e não o valor monetário em R$.")
+    
+    c_cons1, c_cons2, c_cons3 = st.columns(3)
+    litros = c_cons1.number_input("Litros Abastecidos", value=0.0, step=0.5)
+    distancia = c_cons2.number_input("Distância Percorrida (km)", value=0.0, step=10.0)
+    
+    if litros > 0 and distancia > 0:
+        consumo = distancia / litros
+        c_cons3.success(f"📊 Consumo Médio: {consumo:.2f} km/l")
+        
+    st.divider()
+    df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
+    if not df_car.empty:
+        df_car_display = df_car[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']].copy()
+        df_car_display['Valor'] = df_car['V_Num'].apply(m_fmt)
+        st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
+
+elif "📄" in aba:
+    st.title("📄 WhatsApp")
+    
+    st.subheader("📲 Notificações Automáticas e Manuais")
+    if st.button("📲 Enviar mensagens de pendências agora via WhatsApp"):
+        twilio_secrets = st.secrets.get("twilio", {})
+        sid = twilio_secrets.get("account_sid")
+        token = twilio_secrets.get("auth_token")
+        w_from = twilio_secrets.get("whatsapp_from")
+        w_to = twilio_secrets.get("whatsapp_to")
+        
+        if sid and token and w_from and w_to:
+            try:
+                from twilio.rest import Client
+                client_tw = Client(sid, token)
+                now = datetime.now()
+                df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
+                if not df_aviso.empty:
+                    df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(now)).dt.days
+                    df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)].copy()
+                    if not df_venc.empty:
+                        mensagem = "🔔 *Aviso de Pendências - FinançasPro*\n\n"
+                        for _, row in df_venc.iterrows():
+                            if row['Dias'] < 0:
+                                mensagem += f"⚠️ Lançamento Atrasado: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                            elif row['Dias'] == 0:
+                                mensagem += f"⚠️ Vence Hoje: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                            elif row['Dias'] == 1:
+                                mensagem += f"🚨 Vence Amanhã: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                            elif row['Dias'] == 3:
+                                mensagem += f"⚠️ Vence em 3 dias: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                        
+                        client_tw.messages.create(body=mensagem, from_=w_from, to=w_to)
+                        st.success("Mensagem enviada com sucesso pelo WhatsApp!")
+                    else:
+                        st.info("Nenhum lançamento a vencer hoje, amanhã ou em 3 dias.")
+            except Exception as e:
+                st.error(f"Erro ao enviar pelo Twilio: {e}")
+        else:
+            st.error("⚠️ Wilson, configure as credenciais do Twilio nos seus Secrets (twilio)!")
+            
+    st.divider()
+
+    c1, c2 = st.columns(2)
+    d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+    d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
+    
+    bancos = sorted(bancos_disponiveis)
+    saldos_txt = ""
+    total_b = 0
+    
+    for b in bancos:
+        saldo = 0.0
+        limite = 0.0
+        
+        if not df_bancos_info.empty:
+            for _, row in df_bancos_info.iterrows():
+                if str(row.iloc[0]).strip() == b:
+                    if len(row) > 1:
+                        try:
+                            val_str = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                            if val_str:
+                                saldo = float(val_str)
+                        except:
+                            saldo = 0.0
+                            
+                        if len(row) >= 3:
+                            try:
+                                lim_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                                if lim_str:
+                                    limite = float(lim_str)
+                            except:
+                                limite = 0.0
+                    break
+        
+        utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
+        
+        if "cartão" not in b.lower():
+            receitas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] != 'Pendente')]['V_Num'].sum()
+            despesas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] != 'Pendente')]['V_Num'].sum()
+            saldo = saldo + receitas_b - despesas_b
+        
+        if "cartão" in b.lower():
+            if limite > 0:
+                disponivel = limite - utilizado
+            else:
+                disponivel = saldo - utilizado
+            saldos_txt += f"💳 {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
+        else:
+            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo)}\n"
+            
+        if "cartão" not in b.lower():
+            total_b += saldo
+            
+    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
+    
+    if not df_per.empty:
+        df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
+        r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+        d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        pend_v = get_valor_pendente(df_base)
+    else:
+        r_v = 0
+        d_v = 0
+        rend_v = 0
+        pend_v = 0
+        
+    relat = (
+        f"RELATÓRIO WILSON\n"
+        f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
+        f"========================================\n"
+        f"Receitas: {m_fmt(r_v)}\n"
+        f"Despesas: {m_fmt(d_v)}\n"
+        f"Rendimentos: {m_fmt(rend_v)}\n"
+        f"Pendentes: {m_fmt(pend_v)}\n"
+        f"----------------------------------------\n"
+        f"Saldos dos Bancos:\n{saldos_txt}"
+    )
+    st.text_area("Texto do Relatório:", relat, height=250)
+
+elif "📋 Relatório PDF" in aba:
+    st.title("📋 Relatório PDF")
+    
+    st.subheader("📄 Gerar Relatório em PDF")
+    c1, c2 = st.columns(2)
+    p_ini = c1.date_input("Início do Período", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+    p_fim = c2.date_input("Fim do Período", datetime.now(), format="DD/MM/YYYY")
+    
+    c_pdf1, c_pdf2, c_pdf3 = st.columns(3)
+    p_bnc = c_pdf1.multiselect("Filtrar Banco (PDF):", sorted(bancos_disponiveis))
+    p_sta = c_pdf2.multiselect("Filtrar Status (PDF):", ["Pago", "Pendente"])
+    p_desc = c_pdf3.text_input("Buscar Descrição (PDF):")
+    
+    if st.button("📥 Gerar PDF do Período"):
+        df_per = df_base[(df_base['DT'].dt.date >= p_ini) & (df_base['DT'].dt.date <= p_fim)].copy()
+        
+        if p_bnc:
+            df_per = df_per[df_per['Banco'].isin(p_bnc)]
+        if p_sta:
+            df_per = df_per[df_per['Status'].isin(p_sta)]
+        if p_desc:
+            df_per = df_per[df_per['Descrição'].str.contains(p_desc, case=False, na=False)]
+            
+        if not df_per.empty:
+            df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
+            r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+            d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+            rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+            pend_v = get_valor_pendente(df_base)
+        else:
+            r_v = 0.0
+            d_v = 0.0
+            rend_v = 0.0
+            pend_v = 0.0
+            
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+        pdf.cell(200, 10, txt="RELATORIO FINANCEIRO - FINANCASPRO", ln=1, align="C")
+        pdf.ln(10)
+        pdf.cell(200, 10, txt=f"Periodo: {p_ini.strftime('%d/%m/%Y')} a {p_fim.strftime('%d/%m/%Y')}", ln=1)
+        pdf.ln(5)
+        pdf.cell(200, 10, txt=f"Receitas: {m_fmt(r_v)}", ln=1)
+        pdf.cell(200, 10, txt=f"Despesas: {m_fmt(d_v)}", ln=1)
+        pdf.cell(200, 10, txt=f"Rendimentos: {m_fmt(rend_v)}", ln=1)
+        pdf.cell(200, 10, txt=f"Pendentes: {m_fmt(pend_v)}", ln=1)
+        pdf.ln(10)
+
+        pdf.cell(200, 10, txt="Lancamentos do Periodo:", ln=1)
+        pdf.set_font("Arial", size=8)
+        
+        pdf.cell(18, 6, txt="Data", border=1)
+        pdf.cell(20, 6, txt="Tipo", border=1)
+        pdf.cell(22, 6, txt="Valor", border=1)
+        pdf.cell(60, 6, txt="Descricao", border=1)
+        pdf.cell(38, 6, txt="Categoria", border=1)
+        pdf.cell(22, 6, txt="Banco", border=1)
+        pdf.ln(6)
+        
+        for _, row in df_per.iterrows():
+            desc = str(row['Descrição'])[:34].encode('latin-1', 'replace').decode('latin-1')
+            cat = str(row['Categoria'])[:22].encode('latin-1', 'replace').decode('latin-1')
+            banco = str(row['Banco'])[:14].encode('latin-1', 'replace').decode('latin-1')
+            
+            pdf.cell(18, 6, txt=str(row['Data']), border=1)
+            pdf.cell(20, 6, txt=str(row['Tipo']), border=1)
+            pdf.cell(22, 6, txt=m_fmt(row['V_Num']), border=1)
+            pdf.cell(60, 6, txt=desc, border=1)
+            pdf.cell(38, 6, txt=cat, border=1)
+            pdf.cell(22, 6, txt=banco, border=1)
+            pdf.ln(6)
+            
+        st.download_button(
+            label="📥 Baixar Relatório PDF",
+            data=pdf.output(dest='S').encode('latin-1'),
+            file_name=f"relatorio_{p_ini.strftime('%m%y')}_{p_fim.strftime('%m%y')}.pdf",
+            mime="application/pdf"
+        )
