@@ -657,9 +657,12 @@ elif "📋" in aba:
         st.divider()
         
 elif "📋" in aba:
+        st.write("DEBUG: A aba do relatório foi acessada com sucesso.") # <- Adicione esta linha
         st.title("📋 Gerador de Relatório PDF")
         
         # Define automaticamente o primeiro e o último dia do mês atual
+        ...
+              
         hoje = datetime.now()
         primeiro_dia_mes = hoje.replace(day=1)
         ultimo_dia_mes = primeiro_dia_mes + relativedelta(months=1) - relativedelta(days=1)
