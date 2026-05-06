@@ -656,7 +656,7 @@ elif "📋" in aba:
         
         st.divider()
         
-       elif "📋" in aba:
+     elif "📋" in aba:
         st.title("📋 Gerador de Relatório PDF")
         
         # Define automaticamente o primeiro e o último dia do mês atual
