@@ -678,7 +678,21 @@ elif "📋" in aba:
         
         df_v = df_base.copy()
         df_v = df_v[df_v['DT'].notna()]
-        df_v = df_v[(df_v['DT'].dt.date >= b_ini) & (df_v['DT'].dt.date <= b_fim)]
+        
+        # Considera os lançamentos anteriores e do mês atual (até o limite b_fim)
+        df_v = df_v[df_v['DT'].dt.date <= b_fim]
+        
+        # Garantir que a coluna Vencimento existe para usar no filtro
+        if 'Vencimento' not in df_v.columns:
+            if 'vencimento' in df_v.columns:
+                df_v['Vencimento'] = df_v['vencimento']
+            else:
+                df_v['Vencimento'] = df_v['Data'] # Fallback
+                
+        # Filtra para remover lançamentos onde o vencimento é do próximo mês (ou posterior ao período)
+        df_v['V_DT'] = pd.to_datetime(df_v['Vencimento'], errors='coerce')
+        b_fim_period = pd.to_datetime(b_fim).to_period('M')
+        df_v = df_v[df_v['V_DT'].isna() | (df_v['V_DT'].dt.to_period('M') <= b_fim_period)]
         
         if s_bnc_rel:
             df_v = df_v[df_v['Banco'].isin(s_bnc_rel)]
@@ -721,14 +735,7 @@ elif "📋" in aba:
                     pdf.cell(200, 10, txt=texto_filtros, ln=1, align="L")
                     pdf.ln(2)
                     
-                    # Garantir que a coluna Vencimento existe para usar no agrupamento
-                    if 'Vencimento' not in df_v.columns:
-                        if 'vencimento' in df_v.columns:
-                            df_v['Vencimento'] = df_v['vencimento']
-                        else:
-                            df_v['Vencimento'] = df_v['Data'] # Fallback
-                    
-                    # Ordenando por Vencimento
+                    # Ordenar e calcular o saldo acumulado
                     df_v = df_v.sort_values(by='Vencimento')
                     df_v['Saldo'] = df_v['V_Num'].cumsum()
                     
