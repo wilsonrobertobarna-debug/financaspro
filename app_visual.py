@@ -167,30 +167,34 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         
-        # Categoria com Transferência de volta ao topo e visível
+        # Categoria restaurada com os campos originais
         f_cat = st.selectbox("Categoria", [
-            "Transferência", 
-            "Mercado", 
-            "Aluguel", 
-            "Luz/Água", 
-            "Internet", 
-            "Vestuário", 
-            "Moradia", 
-            "Saúde", 
-            "Previdência", 
-            "Outros", 
-            "Pet: Milo", 
-            "Pet: Bolt", 
-            "Veículo", 
-            "Combustível", 
-            "Manutenção", 
-            "Salário", 
-            "Rendimentos", 
-            "Reembolsos", 
-            "Seguro", 
-            "Imposto", 
-            "Salão Beleza", 
-            "Assinatura", 
+            "Mercado",
+            "Aluguel",
+            "Luz/Água",
+            "Internet",
+            "Vestuário",
+            "Moradia",
+            "Saúde",
+            "Previdência",
+            "Outros",
+            "Pet: Milo - Ração",
+            "Pet: Milo - Saúde",
+            "Pet: Milo - Acessórios",
+            "Pet: Bolt - Ração",
+            "Pet: Bolt - Saúde",
+            "Pet: Bolt - Acessórios",
+            "Veículo - Combustível",
+            "Veículo - Manutenção",
+            "Veículo - Seguro",
+            "Salário",
+            "Rendimentos",
+            "Reembolsos",
+            "Transferência",
+            "Seguro",
+            "Imposto",
+            "Salão Beleza",
+            "Assinatura",
             "Celular"
         ])
         
@@ -207,7 +211,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
             v_str = f"{f_val:.2f}".replace('.', ',')
             venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
             
-            # Combina categoria e subcategoria 
+            # Combina categoria e subcategoria
             cat_final = f"{f_cat} - {f_sub}" if f_sub.strip() else f_cat
             
             for i in range(f_par):
