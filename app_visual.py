@@ -158,7 +158,6 @@ if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     atualizar_sessao()
     st.rerun()
 
-# Sincroniza o valor da aba com o session_state para evitar o NameError
 aba = st.sidebar.radio(
     "Navegação:", 
     ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF"],
@@ -630,50 +629,4 @@ elif "📄" in aba:
     
     st.text_area("Copiar para Zap/E-mail", relat, height=400)
     zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
-    st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
-
-elif "📋" in aba:
-    st.title("📋 Gerador de Relatório PDF")
-    
-    c1, c2, c3 = st.columns(3)
-    b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-    b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY")
-    
-    st.divider()
-    
-    if st.button("📄 Gerar e Baixar PDF"):
-        df_per = df_base[(df_base['DT'].dt.date >= b_ini) & (df_base['DT'].dt.date <= b_fim)].copy()
-        
-        if not df_per.empty:
-            df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
-            r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-            d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-            rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-            pend_v = get_valor_pendente(df_base)
-        else:
-            r_v = 0
-            d_v = 0
-            rend_v = 0
-            pend_v = 0
-            
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, txt="RELATORIO DE FINANCAS - FINANCASPRO", ln=1, align="C")
-        pdf.cell(200, 10, txt=f"Periodo: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", ln=1, align="C")
-        pdf.cell(200, 10, txt="", ln=1)
-        pdf.cell(200, 10, txt=f"Receitas: {m_fmt(r_v)}", ln=1)
-        pdf.cell(200, 10, txt=f"Despesas: {m_fmt(d_v)}", ln=1)
-        pdf.cell(200, 10, txt=f"Rendimentos: {m_fmt(rend_v)}", ln=1)
-        pdf.cell(200, 10, txt=f"Pendentes: {m_fmt(pend_v)}", ln=1)
-        pdf.cell(200, 10, txt=f"Sobra: {m_fmt((r_v+rend_v)-d_v)}", ln=1)
-        
-        pdf_bytes = pdf.output(dest='S').encode('latin-1')
-        
-        st.download_button(
-            label="📥 Baixar Relatório",
-            data=pdf_bytes,
-            file_name=f"relatorio_financas_{b_ini.strftime('%d%m%Y')}_{b_fim.strftime('%d%m%Y')}.pdf",
-            mime="application/pdf"
-        )
-        st.success("PDF gerado com sucesso!")
+    st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})', unsafe_allow_html=True)
