@@ -664,9 +664,7 @@ elif "📋" in aba:
         # Botão mais simples possível do Streamlit
         if st.button("Clique aqui para testar o botão", type="primary"):
             st.success("O botão está funcionando e visível na tela!")
-        # Define automaticamente o primeiro e o último dia do mês atual
-        ...
-              
+        
         hoje = datetime.now()
         primeiro_dia_mes = hoje.replace(day=1)
         ultimo_dia_mes = primeiro_dia_mes + relativedelta(months=1) - relativedelta(days=1)
