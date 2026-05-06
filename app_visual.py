@@ -8,6 +8,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import urllib.parse
 from fpdf import FPDF
+import base64
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
@@ -161,7 +162,7 @@ st.sidebar.divider()
 # CATEGORIAS COM SUBCATEGORIAS
 categorias_com_sub = {
     "Alimentação": ["Mercado", "Restaurante", "Padaria", "Lanches", "Outros"],
-    "Moradia": ["Aluguel", "Luz/Água", "Internet", "Celular", "Vestuário", "Condomínio", "Outros"],
+    "Moradia": ["Aluguel", "Água e Luz", "Internet", "Celular", "Vestuário", "Condomínio", "Outros"],
     "Transporte": ["Veículo", "Combustível", "Manutenção", "Transporte Público", "Outros"],
     "Saúde": ["Farmácia", "Plano de Saúde", "Consultas", "Exames", "Outros"],
     "Pet": ["Pet: Milo", "Pet: Bolt", "Ração", "Veterinário", "Outros"],
@@ -639,12 +640,78 @@ elif "📄" in aba:
         f"RELATÓRIO WILSON\n"
         f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
         f"========================================\n"
-        f"REC: {m_fmt(r_v)}\n"
-        f"DESP: {m_fmt(d_v)}\n"
-        f"REND: {m_fmt(rend_v)}\n"
-        f"PEND: {m_fmt(pend_v)}\n\n"
-        f"SALDOS BANCÁRIOS E CARTÕES:\n"
-        f"{saldos_txt}\n"
-        f"Total Contas: {m_fmt(total_b)}"
+        f"Receitas: {m_fmt(r_v)}\n"
+        f"Despesas: {m_fmt(d_v)}\n"
+        f"Rendimentos: {m_fmt(rend_v)}\n"
+        f"Pendentes: {m_fmt(pend_v)}\n"
+        f"----------------------------------------\n"
+        f"Saldos dos Bancos:\n{saldos_txt}"
     )
-    st.text_area("Cópia do Relatório", relat, height=250)
+    st.text_area("Texto do Relatório:", relat, height=250)
+
+elif "📋 Relatório PDF" in aba:
+    st.title("📋 Relatório PDF")
+    
+    st.subheader("📄 Gerar Relatório em PDF")
+    c1, c2 = st.columns(2)
+    p_ini = c1.date_input("Início do Período", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+    p_fim = c2.date_input("Fim do Período", datetime.now(), format="DD/MM/YYYY")
+    
+    if st.button("📥 Gerar PDF do Período"):
+        df_per = df_base[(df_base['DT'].dt.date >= p_ini) & (df_base['DT'].dt.date <= p_fim)].copy()
+        
+        if not df_per.empty:
+            df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
+            r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+            d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+            rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+            pend_v = get_valor_pendente(df_base)
+        else:
+            r_v = 0.0
+            d_v = 0.0
+            rend_v = 0.0
+            pend_v = 0.0
+            
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+        pdf.cell(200, 10, txt="RELATORIO FINANCEIRO - FINANCASPRO", ln=1, align="C")
+        pdf.ln(10)
+        pdf.cell(200, 10, txt=f"Periodo: {p_ini.strftime('%d/%m/%Y')} a {p_fim.strftime('%d/%m/%Y')}", ln=1)
+        pdf.ln(5)
+        pdf.cell(200, 10, txt=f"Receitas: {m_fmt(r_v)}", ln=1)
+        pdf.cell(200, 10, txt=f"Despesas: {m_fmt(d_v)}", ln=1)
+        pdf.cell(200, 10, txt=f"Rendimentos: {m_fmt(rend_v)}", ln=1)
+        pdf.cell(200, 10, txt=f"Pendentes: {m_fmt(pend_v)}", ln=1)
+        pdf.ln(10)
+
+        pdf.cell(200, 10, txt="Lancamentos do Periodo:", ln=1)
+        pdf.set_font("Arial", size=8)
+        
+        pdf.cell(18, 6, txt="Data", border=1)
+        pdf.cell(20, 6, txt="Tipo", border=1)
+        pdf.cell(22, 6, txt="Valor", border=1)
+        pdf.cell(60, 6, txt="Descricao", border=1)
+        pdf.cell(38, 6, txt="Categoria", border=1)
+        pdf.cell(22, 6, txt="Banco", border=1)
+        pdf.ln(6)
+        
+        for _, row in df_per.iterrows():
+            desc = str(row['Descrição'])[:34].encode('latin-1', 'replace').decode('latin-1')
+            cat = str(row['Categoria'])[:22].encode('latin-1', 'replace').decode('latin-1')
+            banco = str(row['Banco'])[:14].encode('latin-1', 'replace').decode('latin-1')
+            
+            pdf.cell(18, 6, txt=str(row['Data']), border=1)
+            pdf.cell(20, 6, txt=str(row['Tipo']), border=1)
+            pdf.cell(22, 6, txt=m_fmt(row['V_Num']), border=1)
+            pdf.cell(60, 6, txt=desc, border=1)
+            pdf.cell(38, 6, txt=cat, border=1)
+            pdf.cell(22, 6, txt=banco, border=1)
+            pdf.ln(6)
+            
+        st.download_button(
+            label="📥 Baixar Relatório PDF",
+            data=pdf.output(dest='S').encode('latin-1'),
+            file_name=f"relatorio_{p_ini.strftime('%m%y')}_{p_fim.strftime('%m%y')}.pdf",
+            mime="application/pdf"
+        )
