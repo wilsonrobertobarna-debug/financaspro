@@ -677,21 +677,21 @@ elif "📋" in aba:
         
         st.divider()
         
-        df_v = df_base.copy()
-        df_v = df_v[df_v['DT'].notna()]
-        
-        # Filtro direto pelo período selecionado na tela
-        df_v = df_v[(df_v['DT'].dt.date >= b_ini) & (df_v['DT'].dt.date <= b_fim)]
-        
-        if s_bnc_rel:
-            df_v = df_v[df_v['Banco'].isin(s_bnc_rel)]
-        if s_sta_rel:
-            df_v = df_v[df_v['Status'].isin(s_sta_rel)]
-        if b_desc_rel:
-            df_v = df_v[df_v['Descrição'].str.contains(b_desc_rel, case=False, na=False)]
+        # Botão de PDF destacado na parte superior
+        if st.button("📄 Gerar PDF", type="primary", use_container_width=True):
+            df_v = df_base.copy()
+            df_v = df_v[df_v['DT'].notna()]
             
-        # Botão posicionado na parte superior da tela para evitar que suma de vista
-        if st.button("📄 Gerar PDF"):
+            # Filtro direto pelo período selecionado na tela
+            df_v = df_v[(df_v['DT'].dt.date >= b_ini) & (df_v['DT'].dt.date <= b_fim)]
+            
+            if s_bnc_rel:
+                df_v = df_v[df_v['Banco'].isin(s_bnc_rel)]
+            if s_sta_rel:
+                df_v = df_v[df_v['Status'].isin(s_sta_rel)]
+            if b_desc_rel:
+                df_v = df_v[df_v['Descrição'].str.contains(b_desc_rel, case=False, na=False)]
+                
             if df_v.empty:
                 st.warning("Nenhum lançamento selecionado para gerar o PDF.")
             else:
@@ -705,7 +705,6 @@ elif "📋" in aba:
                     pdf.ln(2)
                     pdf.cell(200, 10, txt=f"Periodo: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", ln=1, align="L")
                     
-                    # Exibindo os filtros selecionados logo abaixo do período
                     filtros_texto = []
                     if s_bnc_rel:
                         filtros_texto.append(f"Bancos: {', '.join(s_bnc_rel)}")
@@ -718,18 +717,15 @@ elif "📋" in aba:
                     pdf.cell(200, 10, txt=texto_filtros, ln=1, align="L")
                     pdf.ln(2)
                     
-                    # Garantir que a coluna Vencimento existe para usar no agrupamento
                     if 'Vencimento' not in df_v.columns:
                         if 'vencimento' in df_v.columns:
                             df_v['Vencimento'] = df_v['vencimento']
                         else:
-                            df_v['Vencimento'] = df_v['Data'] # Fallback
+                            df_v['Vencimento'] = df_v['Data']
                     
-                    # Ordenando por Vencimento
                     df_v = df_v.sort_values(by='Vencimento')
                     df_v['Saldo'] = df_v['V_Num'].cumsum()
                     
-                    # Cabeçalho da tabela (Largura total = 190 mm)
                     pdf.cell(18, 8, "Data", 1)
                     pdf.cell(18, 8, "Vencimento", 1)
                     pdf.cell(22, 8, "Tipo", 1)
@@ -739,7 +735,6 @@ elif "📋" in aba:
                     pdf.cell(20, 8, "Status", 1)
                     pdf.ln()
                     
-                    # Linhas da tabela
                     total_valor = 0.0
                     vencimentos = df_v['Vencimento'].unique()
                     
@@ -761,7 +756,6 @@ elif "📋" in aba:
                             pdf.cell(22, 6, str(row['Tipo']), 1)
                             pdf.cell(22, 6, f"R$ {row['V_Num']:.2f}".replace('.', ','), 1)
                             
-                            # Imprime o saldo apenas na última movimentação do dia/linha
                             if index == df_v[df_v['Data'] == row['Data']].index[-1]:
                                 pdf.cell(22, 6, f"R$ {row['Saldo']:.2f}".replace('.', ','), 1)
                             else:
@@ -772,7 +766,6 @@ elif "📋" in aba:
                             pdf.ln()
                             total_valor += float(row['V_Num'])
                     
-                    # Total da página
                     pdf.ln(2)
                     pdf.cell(18 + 18 + 22, 8, "Total", 1, 0, 'L')
                     pdf.cell(22, 8, f"R$ {total_valor:.2f}".replace('.', ','), 1, 0, 'R')
@@ -783,10 +776,11 @@ elif "📋" in aba:
                         pdf_output = pdf_output.encode('latin-1')
                         
                     st.download_button(
-                        label="📥 Baixar PDF",
+                        label="📥 Baixar PDF do Relatório",
                         data=pdf_output,
                         file_name="relatorio.pdf",
-                        mime="application/pdf"
+                        mime="application/pdf",
+                        use_container_width=True
                     )
                     st.success("PDF gerado com sucesso!")
                 except Exception as e:
@@ -794,6 +788,18 @@ elif "📋" in aba:
         
         st.divider()
         st.subheader("Lançamentos Filtrados")
-        df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
-        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        
+        df_display_all = df_base.copy()
+        df_display_all = df_display_all[df_display_all['DT'].notna()]
+        df_display_all = df_display_all[(df_display_all['DT'].dt.date >= b_ini) & (df_display_all['DT'].dt.date <= b_fim)]
+        
+        if s_bnc_rel:
+            df_display_all = df_display_all[df_display_all['Banco'].isin(s_bnc_rel)]
+        if s_sta_rel:
+            df_display_all = df_display_all[df_display_all['Status'].isin(s_sta_rel)]
+        if b_desc_rel:
+            df_display_all = df_display_all[df_display_all['Descrição'].str.contains(b_desc_rel, case=False, na=False)]
+            
+        df_v_display = df_display_all[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+        df_v_display['Valor'] = df_display_all['V_Num'].apply(m_fmt)
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
