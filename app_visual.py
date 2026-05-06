@@ -656,8 +656,7 @@ elif "📋" in aba:
         
         st.divider()
         
- File "/mount/src/financaspro/app_visual.py", line 659
-    elif "📋" in aba:
+elif "📋" in aba:
         st.title("📋 Gerador de Relatório PDF")
         
         # Define automaticamente o primeiro e o último dia do mês atual
@@ -797,4 +796,4 @@ elif "📋" in aba:
                     )
                     st.success("PDF gerado com sucesso!")
                 except Exception as e:
-                    st.error(f"Erro ao gerar o PDF: {e}")ch any outer indentation level
+                    st.error(f"Erro ao gerar o PDF: {e}")
