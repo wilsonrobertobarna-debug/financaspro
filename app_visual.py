@@ -12,6 +12,12 @@ import tempfile
 import os
 import unicodedata
 
+# 1. CONFIGURAÇÃO (Deve ser o primeiro comando Streamlit)
+st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
+
+# 0. VERSÃO NO TOPO
+st.caption("Versão 2.0.3")
+
 # Função para remover acentos para compatibilidade com FPDF (Latin-1)
 def remover_acentos(texto):
     if not texto:
@@ -20,11 +26,12 @@ def remover_acentos(texto):
         c for c in unicodedata.normalize("NFD", str(texto)) if unicodedata.category(c) != "Mn"
     )
 
-# 0. VERSÃO NO TOPO
-st.caption("Versão 2.0.3")
-
-# 1. CONFIGURAÇÃO
-st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
+# Função de formatação de moeda
+def m_fmt(v):
+    try:
+        return f"R$ {float(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except:
+        return "R$ 0,00"
 
 # ESTILO PARA VALORES E RÓTULOS DOS METRICS
 st.markdown("""
@@ -142,4 +149,7 @@ def enviar_whatsapp_pendencias(df):
 enviar_whatsapp_pendencias(df_base)
 
 # CARREGA OS BANCOS DINAMICAMENTE DA PLANILHA OU USA OS PADRÕES
-if not df_bancos_info.empty
+if not df_bancos_info.empty:
+    bancos = df_bancos_info.iloc[:, 0].tolist() if df_bancos_info.shape[1] > 0 else []
+else:
+    bancos = ["Nubank", "Itaú", "Bradesco", "Banco do Brasil", "Caixa"]
