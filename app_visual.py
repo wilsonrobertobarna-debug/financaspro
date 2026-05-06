@@ -657,6 +657,144 @@ elif "📋" in aba:
         st.divider()
         
  File "/mount/src/financaspro/app_visual.py", line 659
-     elif "📋" in aba:
-                     ^
-IndentationError: unindent does not match any outer indentation level
+    elif "📋" in aba:
+        st.title("📋 Gerador de Relatório PDF")
+        
+        # Define automaticamente o primeiro e o último dia do mês atual
+        hoje = datetime.now()
+        primeiro_dia_mes = hoje.replace(day=1)
+        ultimo_dia_mes = primeiro_dia_mes + relativedelta(months=1) - relativedelta(days=1)
+        
+        c1, c2, c3 = st.columns(3)
+        b_ini = c1.date_input("Data Inicial", primeiro_dia_mes, format="DD/MM/YYYY")
+        b_fim = c2.date_input("Data Final", ultimo_dia_mes, format="DD/MM/YYYY")
+        
+        st.divider()
+        
+        c_b1, c_b2, c_b3 = st.columns(3)
+        s_bnc_rel = c_b1.multiselect("Filtrar por Banco:", sorted(bancos_disponiveis))
+        s_sta_rel = c_b2.multiselect("Filtrar por Status:", ["Pago", "Pendente"])
+        b_desc_rel = c_b3.text_input("Buscar por Descrição:")
+        
+        st.divider()
+        
+        df_v = df_base.copy()
+        df_v = df_v[df_v['DT'].notna()]
+        
+        # Filtro direto pelo período selecionado na tela
+        df_v = df_v[(df_v['DT'].dt.date >= b_ini) & (df_v['DT'].dt.date <= b_fim)]
+        
+        if s_bnc_rel:
+            df_v = df_v[df_v['Banco'].isin(s_bnc_rel)]
+        if s_sta_rel:
+            df_v = df_v[df_v['Status'].isin(s_sta_rel)]
+        if b_desc_rel:
+            df_v = df_v[df_v['Descrição'].str.contains(b_desc_rel, case=False, na=False)]
+            
+        st.subheader("Lançamentos Filtrados")
+        df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+        
+        st.divider()
+        
+        if st.button("📄 Gerar PDF"):
+            if df_v.empty:
+                st.warning("Nenhum lançamento selecionado para gerar o PDF.")
+            else:
+                try:
+                    pdf = FPDF()
+                    pdf.add_page()
+                    pdf.set_font("Arial", size=10)
+                    
+                    # Cabeçalho do PDF
+                    pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
+                    pdf.ln(2)
+                    pdf.cell(200, 10, txt=f"Periodo: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", ln=1, align="L")
+                    
+                    # Exibindo os filtros selecionados logo abaixo do período
+                    filtros_texto = []
+                    if s_bnc_rel:
+                        filtros_texto.append(f"Bancos: {', '.join(s_bnc_rel)}")
+                    if s_sta_rel:
+                        filtros_texto.append(f"Status: {', '.join(s_sta_rel)}")
+                    if b_desc_rel:
+                        filtros_texto.append(f"Descrição: {b_desc_rel}")
+                    
+                    texto_filtros = "Filtros: " + (" | ".join(filtros_texto) if filtros_texto else "Nenhum")
+                    pdf.cell(200, 10, txt=texto_filtros, ln=1, align="L")
+                    pdf.ln(2)
+                    
+                    # Garantir que a coluna Vencimento existe para usar no agrupamento
+                    if 'Vencimento' not in df_v.columns:
+                        if 'vencimento' in df_v.columns:
+                            df_v['Vencimento'] = df_v['vencimento']
+                        else:
+                            df_v['Vencimento'] = df_v['Data'] # Fallback
+                    
+                    # Ordenando por Vencimento
+                    df_v = df_v.sort_values(by='Vencimento')
+                    df_v['Saldo'] = df_v['V_Num'].cumsum()
+                    
+                    # Cabeçalho da tabela (Largura total = 190 mm)
+                    pdf.cell(18, 8, "Data", 1)
+                    pdf.cell(18, 8, "Vencimento", 1)
+                    pdf.cell(22, 8, "Tipo", 1)
+                    pdf.cell(22, 8, "Valor", 1)
+                    pdf.cell(22, 8, "Saldo Acum.", 1)
+                    pdf.cell(68, 8, "Descrição", 1)
+                    pdf.cell(20, 8, "Status", 1)
+                    pdf.ln()
+                    
+                    # Linhas da tabela
+                    total_valor = 0.0
+                    vencimentos = df_v['Vencimento'].unique()
+                    
+                    for v in vencimentos:
+                        df_venc = df_v[df_v['Vencimento'] == v]
+                        for index, row in df_venc.iterrows():
+                            pdf.cell(18, 6, str(row['Data']), 1)
+                            
+                            venc_val = row['Vencimento']
+                            if pd.notna(venc_val):
+                                if hasattr(venc_val, 'strftime'):
+                                    venc_str = venc_val.strftime('%d/%m/%Y')
+                                else:
+                                    venc_str = str(venc_val)
+                            else:
+                                venc_str = ""
+                                
+                            pdf.cell(18, 6, venc_str, 1)
+                            pdf.cell(22, 6, str(row['Tipo']), 1)
+                            pdf.cell(22, 6, f"R$ {row['V_Num']:.2f}".replace('.', ','), 1)
+                            
+                            # Imprime o saldo apenas na última movimentação do dia/linha
+                            if index == df_v[df_v['Data'] == row['Data']].index[-1]:
+                                pdf.cell(22, 6, f"R$ {row['Saldo']:.2f}".replace('.', ','), 1)
+                            else:
+                                pdf.cell(22, 6, "", 1)
+                                
+                            pdf.cell(68, 6, str(row['Descrição']), 1)
+                            pdf.cell(20, 6, str(row['Status']), 1)
+                            pdf.ln()
+                            total_valor += float(row['V_Num'])
+                    
+                    # Total da página
+                    pdf.ln(2)
+                    pdf.cell(18 + 18 + 22, 8, "Total", 1, 0, 'L')
+                    pdf.cell(22, 8, f"R$ {total_valor:.2f}".replace('.', ','), 1, 0, 'R')
+                    pdf.cell(22 + 68 + 20, 8, "", 1, 0, 'L')
+                    
+                    pdf_output = pdf.output(dest='S')
+                    if isinstance(pdf_output, str):
+                        pdf_output = pdf_output.encode('latin-1')
+                        
+                    st.download_button(
+                        label="📥 Baixar PDF",
+                        data=pdf_output,
+                        file_name="relatorio.pdf",
+                        mime="application/pdf"
+                    )
+                    st.success("PDF gerado com sucesso!")
+                except Exception as e:
+                    st.error(f"Erro ao gerar o PDF: {e}")ch any outer indentation level
