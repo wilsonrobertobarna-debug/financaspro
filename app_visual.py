@@ -69,6 +69,14 @@ def carregar_dados_gs():
     df['V_Num'] = df['Valor'].apply(p_float)
     df['DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+    
+    # Tratamento da coluna de vencimento do cartão
+    if len(df.columns) >= 8:
+        col_venc = df.columns[7]
+        df['DT_Vencimento'] = pd.to_datetime(df[col_venc], dayfirst=True, errors='coerce')
+    else:
+        df['DT_Vencimento'] = pd.NaT
+        
     return df
 
 def carregar_bancos_manual_gs():
@@ -272,6 +280,20 @@ if "💰" in aba:
         
         st.divider()
         
+        # Seção para visualização dos vencimentos mensais
+        st.subheader("💳 Faturas de Cartão de Crédito (Vencimento)")
+        if len(df_base.columns) >= 8:
+            col_venc = df_base.columns[7]
+            df_cartao = df_base[df_base[col_venc].astype(str).str.strip() != ''].copy()
+            if not df_cartao.empty:
+                df_cartao['Mês/Ano Venc.'] = pd.to_datetime(df_cartao[col_venc], dayfirst=True, errors='coerce').dt.strftime('%m/%y')
+                df_cartao_agrupado = df_cartao.groupby('Mês/Ano Venc.')['V_Num'].sum().reset_index()
+                st.dataframe(df_cartao_agrupado, use_container_width=True, hide_index=True)
+            else:
+                st.info("ℹ️ Não há lançamentos com vencimento de cartão cadastrados.")
+        
+        st.divider()
+        
         with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
             df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
@@ -368,6 +390,11 @@ if "💰" in aba:
         
         df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        
+        # Adiciona coluna de vencimento na busca
+        if len(df_v.columns) >= 8:
+            df_v_display['Vencimento'] = df_v[df_v.columns[7]]
+            
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "Pendências" in aba:
@@ -410,7 +437,13 @@ elif "Pendências" in aba:
         
     df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+    
+    if len(df_v.columns) >= 8:
+        df_v_display['Vencimento'] = df_v[df_v.columns[7]]
+        
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+
+# As outras abas continuam idênticas...
 
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
