@@ -677,7 +677,11 @@ elif "📋" in aba:
         
         st.divider()
         
-        # Botão de PDF destacado na parte superior
+        # Inicializa a variável na memória do Streamlit
+        if "relatorio_bytes" not in st.session_state:
+            st.session_state.relatorio_bytes = None
+            
+        # Botão para gerar o PDF no topo da página
         if st.button("📄 Gerar PDF", type="primary", use_container_width=True):
             df_v = df_base.copy()
             df_v = df_v[df_v['DT'].notna()]
@@ -694,6 +698,7 @@ elif "📋" in aba:
                 
             if df_v.empty:
                 st.warning("Nenhum lançamento selecionado para gerar o PDF.")
+                st.session_state.relatorio_bytes = None
             else:
                 try:
                     pdf = FPDF()
@@ -775,17 +780,22 @@ elif "📋" in aba:
                     if isinstance(pdf_output, str):
                         pdf_output = pdf_output.encode('latin-1')
                         
-                    st.download_button(
-                        label="📥 Baixar PDF do Relatório",
-                        data=pdf_output,
-                        file_name="relatorio.pdf",
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
+                    st.session_state.relatorio_bytes = pdf_output
                     st.success("PDF gerado com sucesso!")
                 except Exception as e:
                     st.error(f"Erro ao gerar o PDF: {e}")
+                    st.session_state.relatorio_bytes = None
         
+        # Exibe o botão de download caso o relatório exista na memória
+        if st.session_state.relatorio_bytes is not None:
+            st.download_button(
+                label="📥 Baixar PDF do Relatório",
+                data=st.session_state.relatorio_bytes,
+                file_name="relatorio.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+            
         st.divider()
         st.subheader("Lançamentos Filtrados")
         
