@@ -166,35 +166,11 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-        f_cat = st.selectbox("Categoria", [
-            "Mercado",
-            "Aluguel",
-            "Luz/Água",
-            "Internet",
-            "Vestuário",
-            "Moradia",
-            "Saúde",
-            "Previdência",
-            "Outros",
-            "Pet: Milo - Ração",
-            "Pet: Milo - Saúde",
-            "Pet: Milo - Acessórios",
-            "Pet: Bolt - Ração",
-            "Pet: Bolt - Saúde",
-            "Pet: Bolt - Acessórios",
-            "Veículo - Combustível",
-            "Veículo - Manutenção",
-            "Veículo - Seguro",
-            "Salário",
-            "Rendimentos",
-            "Reembolsos",
-            "Transferência",
-            "Seguro",
-            "Imposto",
-            "Salão Beleza",
-            "Assinatura",
-            "Celular"
-        ])
+        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet", "Vestuário", "Moradia", "Saúde", "Previdência", "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção", "Salário", "Rendimentos", "Reembolsos", "Transferência", "Seguro", "Imposto", "Salão Beleza", "Assinatura", "Celular"])
+        
+        # Adicionado o campo para digitar subcategoria
+        f_sub = st.text_input("Subcategoria (Opcional)")
+        
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         
@@ -205,30 +181,15 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
             v_str = f"{f_val:.2f}".replace('.', ',')
             venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
             
+            # Formata a categoria combinando com a subcategoria (se preenchida)
+            cat_final = f"{f_cat} - {f_sub}" if f_sub.strip() else f_cat
+            
             for i in range(f_par):
                 nova_data = f_dat + relativedelta(months=i)
-                ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta, venc_str])
+                ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, cat_final, f_tip, f_bnc, f_sta, venc_str])
             
             atualizar_sessao()
             st.rerun()
-# BARRINHA 2: TRANSFERÊNCIA
-with st.sidebar.expander("💸 Transferência", expanded=False):
-    with st.form("f_transf", clear_on_submit=True):
-        t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
-        t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
-        t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
-        t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
-        t_desc = st.text_input("Nota")
-        if st.form_submit_button("TRANSFERIR"):
-            if t_orig == t_dest: st.error("Escolha bancos diferentes!")
-            else:
-                v_str = f"{t_val:.2f}".replace('.', ',')
-                d_str = t_dat.strftime("%d/%m/%Y")
-                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", ""])
-                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", ""])
-                atualizar_sessao()
-                st.rerun()
-
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
