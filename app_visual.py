@@ -167,7 +167,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         
-        # Categoria restaurada com os campos originais
         f_cat = st.selectbox("Categoria", [
             "Mercado",
             "Aluguel",
@@ -204,7 +203,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         
-        # Campo de Vencimento do Cartão
         f_venc_cartao = st.date_input("Vencimento do Cartão (Opcional)", value=None, format="DD/MM/YYYY")
         
         if st.form_submit_button("SALVAR"):
@@ -220,6 +218,46 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
             
             atualizar_sessao()
             st.rerun()
+
+# BARRINHA 2: NOVA TRANSFERÊNCIA
+with st.sidebar.expander("💸 Nova Transferência", expanded=False):
+    with st.form("f_transf", clear_on_submit=True):
+        t_dat = st.date_input("Data da Transferência", datetime.now(), format="DD/MM/YYYY")
+        t_val = st.number_input("Valor da Transferência", min_value=0.0, step=0.01, format="%.2f", key="t_val")
+        t_orig = st.selectbox("Conta Origem", bancos_disponiveis, key="t_orig")
+        t_dest = st.selectbox("Conta Destino", bancos_disponiveis, key="t_dest")
+        t_obs = st.text_input("Observação / Descrição (Opcional)", key="t_obs")
+        
+        if st.form_submit_button("TRANSFERIR"):
+            if t_val > 0:
+                t_val_str = f"{t_val:.2f}".replace('.', ',')
+                
+                # Registra a saída na conta de origem
+                ws_base.append_row([
+                    t_dat.strftime("%d/%m/%Y"), 
+                    t_val_str, 
+                    f"Transferência para {t_dest} - {t_obs}", 
+                    "Transferência", 
+                    "Despesa", 
+                    t_orig, 
+                    "Pago", 
+                    ""
+                ])
+                
+                # Registra a entrada na conta de destino
+                ws_base.append_row([
+                    t_dat.strftime("%d/%m/%Y"), 
+                    t_val_str, 
+                    f"Transferência de {t_orig} - {t_obs}", 
+                    "Transferência", 
+                    "Receita", 
+                    t_dest, 
+                    "Pago", 
+                    ""
+                ])
+                
+                atualizar_sessao()
+                st.rerun()
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
