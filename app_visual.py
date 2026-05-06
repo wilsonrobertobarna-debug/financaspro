@@ -18,7 +18,7 @@ st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 # 0. VERSÃO NO TOPO
 st.caption("Versão 2.0.3")
 
-# Função para remover acentos para compatibilidade com FPDF (Latin-1)
+# Funções auxiliares
 def remover_acentos(texto):
     if not texto:
         return ""
@@ -26,7 +26,6 @@ def remover_acentos(texto):
         c for c in unicodedata.normalize("NFD", str(texto)) if unicodedata.category(c) != "Mn"
     )
 
-# Função de formatação de moeda
 def m_fmt(v):
     try:
         return f"R$ {float(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -153,3 +152,87 @@ if not df_bancos_info.empty:
     bancos = df_bancos_info.iloc[:, 0].tolist() if df_bancos_info.shape[1] > 0 else []
 else:
     bancos = ["Nubank", "Itaú", "Bradesco", "Banco do Brasil", "Caixa"]
+
+# ==========================================
+# 3. INTERFACE DO USUÁRIO PRINCIPAL
+# ==========================================
+st.title("💰 FinançasPro - Dashboard e Controle")
+
+if df_base.empty:
+    st.warning("Nenhum dado encontrado na planilha. Verifique a aba inicial.")
+else:
+    aba_dash, aba_lancamentos, aba_relatorios, aba_bancos = st.tabs([
+        "📊 Dashboard", "➕ Lançamentos", "📑 Relatórios", "🏦 Controle Bancário"
+    ])
+
+    with aba_dash:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Receitas", m_fmt(df_base[df_base['Tipo'] == 'Receita']['V_Num'].sum()))
+        with col2:
+            st.metric("Total Despesas", m_fmt(df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()))
+        with col3:
+            saldo = df_base[df_base['Tipo'] == 'Receita']['V_Num'].sum() - df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
+            st.metric("Saldo Líquido", m_fmt(saldo))
+
+        st.subheader("Visualização de Gastos por Categoria")
+        if 'Categoria' in df_base.columns and not df_base[df_base['Tipo'] == 'Despesa'].empty:
+            fig = px.pie(df_base[df_base['Tipo'] == 'Despesa'], names='Categoria', values='V_Num', title="Despesas por Categoria")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Dados de categorias não encontrados para gerar o gráfico.")
+
+    with aba_lancamentos:
+        st.subheader("Adicionar Novo Lançamento")
+        with st.form("form_lancamento"):
+            c1, c2 = st.columns(2)
+            with c1:
+                descricao = st.text_input("Descrição")
+                valor = st.number_input("Valor (R$)", value=0.00, step=0.01)
+            with c2:
+                tipo = st.selectbox("Tipo", ["Despesa", "Receita"])
+                categoria = st.selectbox("Categoria", ["Alimentação", "Transporte", "Moradia", "Saúde", "Outros"])
+                banco_sel = st.selectbox("Conta/Banco", bancos)
+            
+            submit = st.form_submit_button("Salvar")
+            if submit:
+                # Salva no Google Sheets
+                nova_linha = [datetime.now().strftime('%d/%m/%Y'), descricao, tipo, f"R$ {valor:.2f}".replace(".", ","), banco_sel, "Pendente", categoria]
+                ws_base.append_row(nova_linha)
+                atualizar_sessao()
+                st.success("Lançamento salvo com sucesso!")
+                st.rerun()
+
+        st.dataframe(df_base[['Data', 'Descrição', 'Tipo', 'Valor', 'Banco', 'Status']], use_container_width=True)
+
+    with aba_relatorios:
+        st.subheader("Exportar Relatório PDF")
+        if st.button("Gerar PDF"):
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", size=12)
+            pdf.cell(200, 10, txt="Relatorio de Financas", ln=1, align="C")
+            pdf.cell(200, 10, txt="FinancasPro - Wilson", ln=1, align="C")
+            pdf.ln(10)
+            
+            for index, row in df_base.iterrows():
+                desc = remover_acentos(str(row['Descrição']))
+                val = str(row['Valor'])
+                pdf.cell(200, 10, txt=f"{row['Data']} - {desc} : {val}", ln=1)
+                
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmpfile:
+                pdf.output(tmpfile.name)
+                with open(tmpfile.name, "rb") as f:
+                    st.download_button(
+                        label="Baixar PDF",
+                        data=f,
+                        file_name="relatorio_financas.pdf",
+                        mime="application/pdf"
+                    )
+
+    with aba_bancos:
+        st.subheader("Controle de Bancos")
+        if not df_bancos_info.empty:
+            st.dataframe(df_bancos_info, use_container_width=True)
+        else:
+            st.info("Nenhuma informação detalhada de bancos encontrada na planilha.")
