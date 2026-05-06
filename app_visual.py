@@ -716,42 +716,65 @@ elif "📋" in aba:
                     pdf.cell(200, 10, txt=texto_filtros, ln=1, align="L")
                     pdf.ln(2)
                     
-                    # Ordenar e calcular o saldo acumulado
-                    df_v = df_v.sort_values(by='DT')
+                    # Garantir que a coluna Vencimento existe para usar no agrupamento
+                    if 'Vencimento' not in df_v.columns:
+                        if 'vencimento' in df_v.columns:
+                            df_v['Vencimento'] = df_v['vencimento']
+                        else:
+                            df_v['Vencimento'] = df_v['Data'] # Fallback
+                    
+                    # Ordenando por Vencimento
+                    df_v = df_v.sort_values(by='Vencimento')
                     df_v['Saldo'] = df_v['V_Num'].cumsum()
                     
-                    # Cabeçalho da tabela (ajustado para caber na largura da página sem quebras)
-                    pdf.cell(20, 8, "Data", 1)
-                    pdf.cell(25, 8, "Tipo", 1)
-                    pdf.cell(25, 8, "Valor", 1)
-                    pdf.cell(25, 8, "Saldo Acum.", 1)
-                    pdf.cell(75, 8, "Descricao", 1)
+                    # Cabeçalho da tabela (Largura total = 190 mm)
+                    pdf.cell(18, 8, "Data", 1)
+                    pdf.cell(18, 8, "Vencimento", 1)
+                    pdf.cell(22, 8, "Tipo", 1)
+                    pdf.cell(22, 8, "Valor", 1)
+                    pdf.cell(22, 8, "Saldo Acum.", 1)
+                    pdf.cell(68, 8, "Descrição", 1)
                     pdf.cell(20, 8, "Status", 1)
                     pdf.ln()
                     
                     # Linhas da tabela
                     total_valor = 0.0
-                    for index, row in df_v.iterrows():
-                        pdf.cell(20, 6, str(row['Data']), 1)
-                        pdf.cell(25, 6, str(row['Tipo']), 1)
-                        pdf.cell(25, 6, f"R$ {row['V_Num']:.2f}".replace('.', ','), 1)
-                        
-                        # Imprime o saldo apenas na última movimentação do dia
-                        if index == df_v[df_v['Data'] == row['Data']].index[-1]:
-                            pdf.cell(25, 6, f"R$ {row['Saldo']:.2f}".replace('.', ','), 1)
-                        else:
-                            pdf.cell(25, 6, "", 1)
+                    vencimentos = df_v['Vencimento'].unique()
+                    
+                    for v in vencimentos:
+                        df_venc = df_v[df_v['Vencimento'] == v]
+                        for index, row in df_venc.iterrows():
+                            pdf.cell(18, 6, str(row['Data']), 1)
                             
-                        pdf.cell(75, 6, str(row['Descrição']), 1)
-                        pdf.cell(20, 6, str(row['Status']), 1)
-                        pdf.ln()
-                        total_valor += float(row['V_Num'])
-                        
+                            venc_val = row['Vencimento']
+                            if pd.notna(venc_val):
+                                if hasattr(venc_val, 'strftime'):
+                                    venc_str = venc_val.strftime('%d/%m/%Y')
+                                else:
+                                    venc_str = str(venc_val)
+                            else:
+                                venc_str = ""
+                                
+                            pdf.cell(18, 6, venc_str, 1)
+                            pdf.cell(22, 6, str(row['Tipo']), 1)
+                            pdf.cell(22, 6, f"R$ {row['V_Num']:.2f}".replace('.', ','), 1)
+                            
+                            # Imprime o saldo apenas na última movimentação do dia/linha
+                            if index == df_v[df_v['Data'] == row['Data']].index[-1]:
+                                pdf.cell(22, 6, f"R$ {row['Saldo']:.2f}".replace('.', ','), 1)
+                            else:
+                                pdf.cell(22, 6, "", 1)
+                                
+                            pdf.cell(68, 6, str(row['Descrição']), 1)
+                            pdf.cell(20, 6, str(row['Status']), 1)
+                            pdf.ln()
+                            total_valor += float(row['V_Num'])
+                    
                     # Total da página
                     pdf.ln(2)
-                    pdf.cell(20 + 25, 8, "Total", 1, 0, 'L')
-                    pdf.cell(25, 8, f"R$ {total_valor:.2f}".replace('.', ','), 1, 0, 'R')
-                    pdf.cell(25 + 75 + 20, 8, "", 1, 0, 'L')
+                    pdf.cell(18 + 18 + 22, 8, "Total", 1, 0, 'L')
+                    pdf.cell(22, 8, f"R$ {total_valor:.2f}".replace('.', ','), 1, 0, 'R')
+                    pdf.cell(22 + 68 + 20, 8, "", 1, 0, 'L')
                     
                     pdf_output = pdf.output(dest='S')
                     if isinstance(pdf_output, str):
