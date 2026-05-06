@@ -148,15 +148,23 @@ def get_valor_pendente(df):
     return df_p['V_Num'].sum()
 
 # 4. SIDEBAR - NAVEGAÇÃO
+if "aba" not in st.session_state:
+    st.session_state["aba"] = "💰 Finanças & Bancos"
+
 st.sidebar.write("---")
-st.sidebar.write(f"DEBUG - Aba selecionada: {aba}")
 st.sidebar.title("🎮 Painel Wilson")
 
 if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     atualizar_sessao()
     st.rerun()
 
-aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF"])
+# Sincroniza o valor da aba com o session_state para evitar o NameError
+aba = st.sidebar.radio(
+    "Navegação:", 
+    ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF"],
+    index=["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF"].index(st.session_state["aba"])
+)
+st.session_state["aba"] = aba
 
 st.sidebar.divider()
 
@@ -172,7 +180,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         
-        # Campo de Vencimento do Cartão
         f_venc_cartao = st.date_input("Vencimento do Cartão (Opcional)", value=None, format="DD/MM/YYYY")
         
         if st.form_submit_button("SALVAR"):
@@ -195,7 +202,8 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
         t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
         t_desc = st.text_input("Nota")
         if st.form_submit_button("TRANSFERIR"):
-            if t_orig == t_dest: st.error("Escolha bancos diferentes!")
+            if t_orig == t_dest: 
+                st.error("Escolha bancos diferentes!")
             else:
                 v_str = f"{t_val:.2f}".replace('.', ',')
                 d_str = t_dat.strftime("%d/%m/%Y")
@@ -488,7 +496,7 @@ elif "🚗" in aba:
         if km_rodados >= limite_oleo:
             st.error(f"🚨 ALERTA: Passou do limite para trocar o óleo! Rodou {km_rodados:,} km desde a última troca.")
         else:
-            st.info(f"👍 Óleo em dia! Você rodou {km_rodados:,} km. Faltam {limite_oleo - km_rodados:,} km para a próxima troca.")
+            st.info(f"👍 Óleo em dia! Você rodou {km_rodados:,} km. Faltam {limite_oleo - km_rodados:,} km para la próxima troca.")
             
     st.divider()
     
@@ -583,7 +591,7 @@ elif "📄" in aba:
                                     limite = float(lim_str)
                             except:
                                 limite = 0.0
-                    break
+                        break
                 
         utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
         
@@ -625,188 +633,47 @@ elif "📄" in aba:
     st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
 
 elif "📋" in aba:
-        st.title("📋 Gerador de Relatório PDF")
+    st.title("📋 Gerador de Relatório PDF")
+    
+    c1, c2, c3 = st.columns(3)
+    b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+    b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY")
+    
+    st.divider()
+    
+    if st.button("📄 Gerar e Baixar PDF"):
+        df_per = df_base[(df_base['DT'].dt.date >= b_ini) & (df_base['DT'].dt.date <= b_fim)].copy()
         
-        c1, c2, c3 = st.columns(3)
-        b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-        b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY")
-        
-        st.divider()
-        
-        c_b1, c_b2, c_b3 = st.columns(3)
-        s_bnc_rel = c_b1.multiselect("Filtrar por Banco:", sorted(bancos_disponiveis))
-        s_sta_rel = c_b2.multiselect("Filtrar por Status:", ["Pago", "Pendente"])
-        b_desc_rel = c_b3.text_input("Buscar por Descrição:")
-        
-        st.divider()
-        
-        df_v = df_base.copy()
-        df_v = df_v[df_v['DT'].notna()]
-        df_v = df_v[(df_v['DT'].dt.date >= b_ini) & (df_v['DT'].dt.date <= b_fim)]
-        
-        if s_bnc_rel:
-            df_v = df_v[df_v['Banco'].isin(s_bnc_rel)]
-        if s_sta_rel:
-            df_v = df_v[df_v['Status'].isin(s_sta_rel)]
-        if b_desc_rel:
-            df_v = df_v[df_v['Descrição'].str.contains(b_desc_rel, case=False, na=False)]
+        if not df_per.empty:
+            df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
+            r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+            d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+            rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+            pend_v = get_valor_pendente(df_base)
+        else:
+            r_v = 0
+            d_v = 0
+            rend_v = 0
+            pend_v = 0
             
-        st.subheader("Lançamentos Filtrados")
-        df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
-        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+        pdf.cell(200, 10, txt="RELATORIO DE FINANCAS - FINANCASPRO", ln=1, align="C")
+        pdf.cell(200, 10, txt=f"Periodo: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", ln=1, align="C")
+        pdf.cell(200, 10, txt="", ln=1)
+        pdf.cell(200, 10, txt=f"Receitas: {m_fmt(r_v)}", ln=1)
+        pdf.cell(200, 10, txt=f"Despesas: {m_fmt(d_v)}", ln=1)
+        pdf.cell(200, 10, txt=f"Rendimentos: {m_fmt(rend_v)}", ln=1)
+        pdf.cell(200, 10, txt=f"Pendentes: {m_fmt(pend_v)}", ln=1)
+        pdf.cell(200, 10, txt=f"Sobra: {m_fmt((r_v+rend_v)-d_v)}", ln=1)
         
-        st.divider()
+        pdf_bytes = pdf.output(dest='S').encode('latin-1')
         
-elif "📋" in aba:
-        st.title("📋 Gerador de Relatório PDF")
-        
-        st.write("### Teste de Visibilidade do Botão")
-        
-        # Botão mais simples possível do Streamlit
-        if st.button("Clique aqui para testar o botão", type="primary"):
-            st.success("O botão está funcionando e visível na tela!")
-        
-        hoje = datetime.now()
-        primeiro_dia_mes = hoje.replace(day=1)
-        ultimo_dia_mes = primeiro_dia_mes + relativedelta(months=1) - relativedelta(days=1)
-        
-        c1, c2, c3 = st.columns(3)
-        b_ini = c1.date_input("Data Inicial", primeiro_dia_mes, format="DD/MM/YYYY")
-        b_fim = c2.date_input("Data Final", ultimo_dia_mes, format="DD/MM/YYYY")
-        
-        st.divider()
-        
-        c_b1, c_b2, c_b3 = st.columns(3)
-        s_bnc_rel = c_b1.multiselect("Filtrar por Banco:", sorted(bancos_disponiveis))
-        s_sta_rel = c_b2.multiselect("Filtrar por Status:", ["Pago", "Pendente"])
-        b_desc_rel = c_b3.text_input("Buscar por Descrição:")
-        
-        st.divider()
-        
-        # Botão único que processa e já oferece o download
-        if st.button("📄 Gerar e Baixar PDF", type="primary", use_container_width=True):
-            df_v = df_base.copy()
-            df_v = df_v[df_v['DT'].notna()]
-            
-            # Filtro direto pelo período selecionado na tela
-            df_v = df_v[(df_v['DT'].dt.date >= b_ini) & (df_v['DT'].dt.date <= b_fim)]
-            
-            if s_bnc_rel:
-                df_v = df_v[df_v['Banco'].isin(s_bnc_rel)]
-            if s_sta_rel:
-                df_v = df_v[df_v['Status'].isin(s_sta_rel)]
-            if b_desc_rel:
-                df_v = df_v[df_v['Descrição'].str.contains(b_desc_rel, case=False, na=False)]
-                
-            if df_v.empty:
-                st.warning("Nenhum lançamento selecionado para gerar o PDF.")
-            else:
-                try:
-                    pdf = FPDF()
-                    pdf.add_page()
-                    pdf.set_font("Arial", size=10)
-                    
-                    # Cabeçalho do PDF
-                    pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
-                    pdf.ln(2)
-                    pdf.cell(200, 10, txt=f"Periodo: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", ln=1, align="L")
-                    
-                    filtros_texto = []
-                    if s_bnc_rel:
-                        filtros_texto.append(f"Bancos: {', '.join(s_bnc_rel)}")
-                    if s_sta_rel:
-                        filtros_texto.append(f"Status: {', '.join(s_sta_rel)}")
-                    if b_desc_rel:
-                        filtros_texto.append(f"Descrição: {b_desc_rel}")
-                    
-                    texto_filtros = "Filtros: " + (" | ".join(filtros_texto) if filtros_texto else "Nenhum")
-                    pdf.cell(200, 10, txt=texto_filtros, ln=1, align="L")
-                    pdf.ln(2)
-                    
-                    if 'Vencimento' not in df_v.columns:
-                        if 'vencimento' in df_v.columns:
-                            df_v['Vencimento'] = df_v['vencimento']
-                        else:
-                            df_v['Vencimento'] = df_v['Data']
-                    
-                    df_v = df_v.sort_values(by='Vencimento')
-                    df_v['Saldo'] = df_v['V_Num'].cumsum()
-                    
-                    pdf.cell(18, 8, "Data", 1)
-                    pdf.cell(18, 8, "Vencimento", 1)
-                    pdf.cell(22, 8, "Tipo", 1)
-                    pdf.cell(22, 8, "Valor", 1)
-                    pdf.cell(22, 8, "Saldo Acum.", 1)
-                    pdf.cell(68, 8, "Descrição", 1)
-                    pdf.cell(20, 8, "Status", 1)
-                    pdf.ln()
-                    
-                    total_valor = 0.0
-                    vencimentos = df_v['Vencimento'].unique()
-                    
-                    for v in vencimentos:
-                        df_venc = df_v[df_v['Vencimento'] == v]
-                        for index, row in df_venc.iterrows():
-                            pdf.cell(18, 6, str(row['Data']), 1)
-                            
-                            venc_val = row['Vencimento']
-                            if pd.notna(venc_val):
-                                if hasattr(venc_val, 'strftime'):
-                                    venc_str = venc_val.strftime('%d/%m/%Y')
-                                else:
-                                    venc_str = str(venc_val)
-                            else:
-                                venc_str = ""
-                                
-                            pdf.cell(18, 6, venc_str, 1)
-                            pdf.cell(22, 6, str(row['Tipo']), 1)
-                            pdf.cell(22, 6, f"R$ {row['V_Num']:.2f}".replace('.', ','), 1)
-                            
-                            if index == df_v[df_v['Data'] == row['Data']].index[-1]:
-                                pdf.cell(22, 6, f"R$ {row['Saldo']:.2f}".replace('.', ','), 1)
-                            else:
-                                pdf.cell(22, 6, "", 1)
-                                
-                            pdf.cell(68, 6, str(row['Descrição']), 1)
-                            pdf.cell(20, 6, str(row['Status']), 1)
-                            pdf.ln()
-                            total_valor += float(row['V_Num'])
-                    
-                    pdf.ln(2)
-                    pdf.cell(18 + 18 + 22, 8, "Total", 1, 0, 'L')
-                    pdf.cell(22, 8, f"R$ {total_valor:.2f}".replace('.', ','), 1, 0, 'R')
-                    pdf.cell(22 + 68 + 20, 8, "", 1, 0, 'L')
-                    
-                    pdf_output = pdf.output(dest='S')
-                    if isinstance(pdf_output, str):
-                        pdf_output = pdf_output.encode('latin-1')
-                        
-                    st.download_button(
-                        label="📥 Baixar PDF do Relatório",
-                        data=pdf_output,
-                        file_name="relatorio.pdf",
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
-                    st.success("PDF gerado com sucesso! Clique no botão de download acima para salvar.")
-                except Exception as e:
-                    st.error(f"Erro ao gerar o PDF: {e}")
-        
-        st.divider()
-        st.subheader("Lançamentos Filtrados")
-        
-        df_display_all = df_base.copy()
-        df_display_all = df_display_all[df_display_all['DT'].notna()]
-        df_display_all = df_display_all[(df_display_all['DT'].dt.date >= b_ini) & (df_display_all['DT'].dt.date <= b_fim)]
-        
-        if s_bnc_rel:
-            df_display_all = df_display_all[df_display_all['Banco'].isin(s_bnc_rel)]
-        if s_sta_rel:
-            df_display_all = df_display_all[df_display_all['Status'].isin(s_sta_rel)]
-        if b_desc_rel:
-            df_display_all = df_display_all[df_display_all['Descrição'].str.contains(b_desc_rel, case=False, na=False)]
-            
-        df_v_display = df_display_all[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
-        df_v_display['Valor'] = df_display_all['V_Num'].apply(m_fmt)
-        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+        st.download_button(
+            label="📥 Baixar Relatório",
+            data=pdf_bytes,
+            file_name=f"relatorio_financas_{b_ini.strftime('%d%m%Y')}_{b_fim.strftime('%d%m%Y')}.pdf",
+            mime="application/pdf"
+        )
+        st.success("PDF gerado com sucesso!")
