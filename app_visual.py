@@ -166,9 +166,35 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet", "Vestuário", "Moradia", "Saúde", "Previdência", "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção", "Salário", "Rendimentos", "Reembolsos", "Transferência", "Seguro", "Imposto", "Salão Beleza", "Assinatura", "Celular"])
         
-        # Adicionado o campo para digitar subcategoria
+        # Categoria com Transferência de volta ao topo e visível
+        f_cat = st.selectbox("Categoria", [
+            "Transferência", 
+            "Mercado", 
+            "Aluguel", 
+            "Luz/Água", 
+            "Internet", 
+            "Vestuário", 
+            "Moradia", 
+            "Saúde", 
+            "Previdência", 
+            "Outros", 
+            "Pet: Milo", 
+            "Pet: Bolt", 
+            "Veículo", 
+            "Combustível", 
+            "Manutenção", 
+            "Salário", 
+            "Rendimentos", 
+            "Reembolsos", 
+            "Seguro", 
+            "Imposto", 
+            "Salão Beleza", 
+            "Assinatura", 
+            "Celular"
+        ])
+        
+        # Campo para preencher a subcategoria
         f_sub = st.text_input("Subcategoria (Opcional)")
         
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
@@ -181,7 +207,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
             v_str = f"{f_val:.2f}".replace('.', ',')
             venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
             
-            # Formata a categoria combinando com a subcategoria (se preenchida)
+            # Combina categoria e subcategoria 
             cat_final = f"{f_cat} - {f_sub}" if f_sub.strip() else f_cat
             
             for i in range(f_par):
