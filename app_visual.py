@@ -658,9 +658,14 @@ elif "📄" in aba:
 elif "📋" in aba:
         st.title("📋 Gerador de Relatório PDF")
         
+        # Define automaticamente o primeiro e o último dia do mês atual
+        hoje = datetime.now()
+        primeiro_dia_mes = hoje.replace(day=1)
+        ultimo_dia_mes = primeiro_dia_mes + relativedelta(months=1) - relativedelta(days=1)
+        
         c1, c2, c3 = st.columns(3)
-        b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-        b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY")
+        b_ini = c1.date_input("Data Inicial", primeiro_dia_mes, format="DD/MM/YYYY")
+        b_fim = c2.date_input("Data Final", ultimo_dia_mes, format="DD/MM/YYYY")
         
         st.divider()
         
