@@ -657,9 +657,13 @@ elif "📋" in aba:
         st.divider()
         
 elif "📋" in aba:
-        st.write("DEBUG: A aba do relatório foi acessada com sucesso.") # <- Adicione esta linha
         st.title("📋 Gerador de Relatório PDF")
         
+        st.write("### Teste de Visibilidade do Botão")
+        
+        # Botão mais simples possível do Streamlit
+        if st.button("Clique aqui para testar o botão", type="primary"):
+            st.success("O botão está funcionando e visível na tela!")
         # Define automaticamente o primeiro e o último dia do mês atual
         ...
               
