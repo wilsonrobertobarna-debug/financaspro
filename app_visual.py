@@ -690,13 +690,7 @@ elif "📋" in aba:
         if b_desc_rel:
             df_v = df_v[df_v['Descrição'].str.contains(b_desc_rel, case=False, na=False)]
             
-        st.subheader("Lançamentos Filtrados")
-        df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
-        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
-        
-        st.divider()
-        
+        # Botão posicionado na parte superior da tela para evitar que suma de vista
         if st.button("📄 Gerar PDF"):
             if df_v.empty:
                 st.warning("Nenhum lançamento selecionado para gerar o PDF.")
@@ -797,3 +791,9 @@ elif "📋" in aba:
                     st.success("PDF gerado com sucesso!")
                 except Exception as e:
                     st.error(f"Erro ao gerar o PDF: {e}")
+        
+        st.divider()
+        st.subheader("Lançamentos Filtrados")
+        df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
