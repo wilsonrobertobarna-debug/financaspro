@@ -8,13 +8,12 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import urllib.parse
 from fpdf import FPDF
-import base64
-
-# 1. CONFIGURAÇÃO
-st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
 # 0. VERSÃO NO TOPO
 st.caption("Versão 2.0.3")
+
+# 1. CONFIGURAÇÃO
+st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
 # ESTILO PARA VALORES E RÓTULOS DOS METRICS
 st.markdown("""
@@ -159,17 +158,6 @@ aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências"
 
 st.sidebar.divider()
 
-# CATEGORIAS COM SUBCATEGORIAS
-categorias_com_sub = {
-    "Alimentação": ["Mercado", "Restaurante", "Padaria", "Lanches", "Outros"],
-    "Moradia": ["Aluguel", "Água e Luz", "Energia e Água", "Internet", "Celular", "Vestuário", "Condomínio", "Outros"],
-    "Transporte": ["Veículo", "Combustível", "Manutenção", "Transporte Público", "Outros"],
-    "Saúde": ["Farmácia", "Plano de Saúde", "Consultas", "Exames", "Outros"],
-    "Pet": ["Pet: Milo", "Pet: Bolt", "Ração", "Veterinário", "Outros"],
-    "Finanças/Investimentos": ["Tarifas", "Assinatura", "Previdência", "Outros"],
-    "Outros": ["Outros"]
-}
-
 # BARRINHA 1: NOVO LANÇAMENTO
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
     with st.form("f_novo", clear_on_submit=True):
@@ -178,18 +166,11 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-        
-        col_cat1, col_cat2 = st.columns(2)
-        with col_cat1:
-            f_cat_princ = st.selectbox("Categoria", list(categorias_com_sub.keys()))
-        with col_cat2:
-            f_cat_sub = st.selectbox("Subcategoria", categorias_com_sub[f_cat_princ])
-        
-        f_cat = f"{f_cat_princ} / {f_cat_sub}"
-        
+        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Internet","Vestuário","Moradia", "Saúde","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         
+        # Campo de Vencimento do Cartão
         f_venc_cartao = st.date_input("Vencimento do Cartão (Opcional)", value=None, format="DD/MM/YYYY")
         
         if st.form_submit_button("SALVAR"):
@@ -455,7 +436,6 @@ elif "🐾" in aba:
         c_p3.metric("🐱 Com o Bolt (Mês)", m_fmt(m_bolt))
         
         st.divider()
-        
         st.subheader("📋 Controle de Saúde e Ração")
         c_v1, c_v2 = st.columns(2)
         with c_v1:
@@ -463,7 +443,7 @@ elif "🐾" in aba:
             st.info("💡 *Dica: Ao lançar na descrição, coloque o nome do pet (ex: Vacina V10 Milo).*")
         with c_v2:
             st.markdown("**🛍️ Controle de Ração e PetShop**")
-            st.info("💡 *Dica: Use a categoria 'Pet / Pet: Milo' ou 'Pet: Bolt' para facilitar a separação!*")
+            st.info("💡 *Dica: Use a categoria 'Pet: Milo' ou 'Pet: Bolt' para facilitar a separação!*")
             
         st.divider()
         st.subheader("🔍 Lançamentos dos Meninos")
@@ -602,7 +582,7 @@ elif "📄" in aba:
                             except:
                                 limite = 0.0
                     break
-        
+                
         utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
         
         if "cartão" not in b.lower():
@@ -636,94 +616,88 @@ elif "📄" in aba:
         rend_v = 0
         pend_v = 0
         
-    relat = (
-        f"RELATÓRIO WILSON\n"
-        f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
-        f"========================================\n"
-        f"Receitas: {m_fmt(r_v)}\n"
-        f"Despesas: {m_fmt(d_v)}\n"
-        f"Rendimentos: {m_fmt(rend_v)}\n"
-        f"Pendentes: {m_fmt(pend_v)}\n"
-        f"----------------------------------------\n"
-        f"Saldos dos Bancos:\n{saldos_txt}"
-    )
-    st.text_area("Texto do Relatório:", relat, height=250)
+    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nPEND: {m_fmt(pend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
+    
+    st.text_area("Copiar para Zap/E-mail", relat, height=400)
+    zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
+    st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
 
-elif "📋 Relatório PDF" in aba:
-    st.title("📋 Relatório PDF")
+elif "📋" in aba:
+    st.title("📋 Gerador de Relatório PDF")
     
-    st.subheader("📄 Gerar Relatório em PDF")
-    c1, c2 = st.columns(2)
-    p_ini = c1.date_input("Início do Período", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-    p_fim = c2.date_input("Fim do Período", datetime.now(), format="DD/MM/YYYY")
+    c1, c2, c3 = st.columns(3)
+    b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+    b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY")
     
-    c_pdf1, c_pdf2, c_pdf3 = st.columns(3)
-    p_bnc = c_pdf1.multiselect("Filtrar Banco (PDF):", sorted(bancos_disponiveis))
-    p_sta = c_pdf2.multiselect("Filtrar Status (PDF):", ["Pago", "Pendente"])
-    p_desc = c_pdf3.text_input("Buscar Descrição (PDF):")
+    st.divider()
     
-    if st.button("📥 Gerar PDF do Período"):
-        df_per = df_base[(df_base['DT'].dt.date >= p_ini) & (df_base['DT'].dt.date <= p_fim)].copy()
+    c_b1, c_b2, c_b3 = st.columns(3)
+    s_bnc_rel = c_b1.multiselect("Filtrar por Banco:", sorted(bancos_disponiveis))
+    s_sta_rel = c_b2.multiselect("Filtrar por Status:", ["Pago", "Pendente"])
+    b_desc_rel = c_b3.text_input("Buscar por Descrição:")
+    
+    st.divider()
+    
+    df_v = df_base.copy()
+    df_v = df_v[df_v['DT'].notna()]
+    df_v = df_v[(df_v['DT'].dt.date >= b_ini) & (df_v['DT'].dt.date <= b_fim)]
+    
+    if s_bnc_rel:
+        df_v = df_v[df_v['Banco'].isin(s_bnc_rel)]
+    if s_sta_rel:
+        df_v = df_v[df_v['Status'].isin(s_sta_rel)]
+    if b_desc_rel:
+        df_v = df_v[df_v['Descrição'].str.contains(b_desc_rel, case=False, na=False)]
         
-        if p_bnc:
-            df_per = df_per[df_per['Banco'].isin(p_bnc)]
-        if p_sta:
-            df_per = df_per[df_per['Status'].isin(p_sta)]
-        if p_desc:
-            df_per = df_per[df_per['Descrição'].str.contains(p_desc, case=False, na=False)]
-            
-        if not df_per.empty:
-            df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
-            r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-            d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-            rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-            pend_v = get_valor_pendente(df_base)
+    st.subheader("Lançamentos Filtrados")
+    df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+    df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+    
+    st.divider()
+    
+    if st.button("📄 Gerar PDF"):
+        if df_v.empty:
+            st.warning("Nenhum lançamento selecionado para gerar o PDF.")
         else:
-            r_v = 0.0
-            d_v = 0.0
-            rend_v = 0.0
-            pend_v = 0.0
-            
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, txt="RELATORIO FINANCEIRO - FINANCASPRO", ln=1, align="C")
-        pdf.ln(10)
-        pdf.cell(200, 10, txt=f"Periodo: {p_ini.strftime('%d/%m/%Y')} a {p_fim.strftime('%d/%m/%Y')}", ln=1)
-        pdf.ln(5)
-        pdf.cell(200, 10, txt=f"Receitas: {m_fmt(r_v)}", ln=1)
-        pdf.cell(200, 10, txt=f"Despesas: {m_fmt(d_v)}", ln=1)
-        pdf.cell(200, 10, txt=f"Rendimentos: {m_fmt(rend_v)}", ln=1)
-        pdf.cell(200, 10, txt=f"Pendentes: {m_fmt(pend_v)}", ln=1)
-        pdf.ln(10)
-
-        pdf.cell(200, 10, txt="Lancamentos do Periodo:", ln=1)
-        pdf.set_font("Arial", size=8)
-        
-        pdf.cell(18, 6, txt="Data", border=1)
-        pdf.cell(20, 6, txt="Tipo", border=1)
-        pdf.cell(22, 6, txt="Valor", border=1)
-        pdf.cell(60, 6, txt="Descricao", border=1)
-        pdf.cell(38, 6, txt="Categoria", border=1)
-        pdf.cell(22, 6, txt="Banco", border=1)
-        pdf.ln(6)
-        
-        for _, row in df_per.iterrows():
-            desc = str(row['Descrição'])[:34].encode('latin-1', 'replace').decode('latin-1')
-            cat = str(row['Categoria'])[:22].encode('latin-1', 'replace').decode('latin-1')
-            banco = str(row['Banco'])[:14].encode('latin-1', 'replace').decode('latin-1')
-            
-            pdf.cell(18, 6, txt=str(row['Data']), border=1)
-            pdf.cell(20, 6, txt=str(row['Tipo']), border=1)
-            pdf.cell(22, 6, txt=m_fmt(row['V_Num']), border=1)
-            pdf.cell(60, 6, txt=desc, border=1)
-            pdf.cell(38, 6, txt=cat, border=1)
-            pdf.cell(22, 6, txt=banco, border=1)
-            pdf.ln(6)
-            
-        st.download_button(
-            label="📥 Baixar Relatório PDF",
-            data=pdf.output(dest='S').encode('latin-1'),
-            file_name=f"relatorio_{p_ini.strftime('%m%y')}_{p_fim.strftime('%m%y')}.pdf",
-            mime="application/pdf"
-        )
+            try:
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial", size=11)
+                
+                # Cabeçalho do PDF
+                pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
+                pdf.ln(5)
+                pdf.cell(200, 10, txt=f"Periodo: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", ln=1, align="L")
+                pdf.ln(5)
+                
+                # Cabeçalho da tabela
+                pdf.cell(25, 8, "Data", 1)
+                pdf.cell(30, 8, "Tipo", 1)
+                pdf.cell(30, 8, "Valor", 1)
+                pdf.cell(85, 8, "Descricao", 1)
+                pdf.cell(20, 8, "Status", 1)
+                pdf.ln()
+                
+                # Linhas da tabela
+                for index, row in df_v.iterrows():
+                    pdf.cell(25, 6, str(row['Data']), 1)
+                    pdf.cell(30, 6, str(row['Tipo']), 1)
+                    pdf.cell(30, 6, f"R$ {row['V_Num']:.2f}".replace('.', ','), 1)
+                    pdf.cell(85, 6, str(row['Descrição']), 1)
+                    pdf.cell(20, 6, str(row['Status']), 1)
+                    pdf.ln()
+                    
+                pdf_output = pdf.output(dest='S')
+                if isinstance(pdf_output, str):
+                    pdf_output = pdf_output.encode('latin-1')
+                    
+                st.download_button(
+                    label="📥 Baixar PDF",
+                    data=pdf_output,
+                    file_name="relatorio.pdf",
+                    mime="application/pdf"
+                )
+                st.success("PDF gerado com sucesso!")
+            except Exception as e:
+                st.error(f"Erro ao gerar o PDF: {e}")
