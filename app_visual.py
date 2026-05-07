@@ -509,83 +509,101 @@ elif "🚗" in aba:
         st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "📄" in aba:
-    st.title("📄 WhatsApp")
+    st.title("📄 Relatório WhatsApp")
     
-    # 1. TRATAMENTO DA BASE DE LANÇAMENTOS
+    # 1. TRATAMENTO DA BASE PRINCIPAL
     df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0.0)
     df_base['Banco_Busca'] = df_base['Banco'].astype(str).str.upper().str.strip()
     
     st.divider()
 
-    c1, c2 = st.columns(2)
-    d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-    d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
+    col1, col2 = st.columns(2)
+    d_ini = col1.date_input("Data Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+    d_fim = col2.date_input("Data Fim", datetime.now(), format="DD/MM/YYYY")
     
-    saldos_txt = ""
-    total_patrimonio = 0.0
-    
-    def converter_moeda(v):
+    # Função auxiliar para limpar qualquer valor vindo da planilha
+    def formatar_valor(v):
         if pd.isna(v) or str(v).strip() == "": return 0.0
         try:
-            s = str(v).replace('R$', '').strip()
-            if ',' in s and '.' in s: s = s.replace('.', '')
-            s = s.replace(',', '.')
+            txt = str(v).replace('R$', '').strip()
+            if ',' in txt and '.' in txt: txt = txt.replace('.', '')
+            txt = txt.replace(',', '.')
             import re
-            s = re.sub(r'[^\d.]', '', s)
-            return float(s) if s else 0.0
+            num = re.sub(r'[^\d.]', '', txt)
+            return float(num) if num else 0.0
         except: return 0.0
 
-    # 2. PROCESSAMENTO RÍGIDO (BANCOS vs CARTÕES)
+    # 2. MAPEAMENTO DAS COLUNAS DA ABA BANCOS
+    # Identifica em qual coluna está cada coisa (Nome, Saldo Inicial e Limite)
+    cols_bancos = [str(c).upper().strip() for c in df_bancos_info.columns]
+    idx_nome = 0
+    idx_saldo_ini = 1
+    idx_limite = 2
+    
+    for i, nome_col in enumerate(cols_bancos):
+        if "LIMITE" in nome_col: idx_limite = i
+        if "SALDO" in nome_col or "INICIAL" in nome_col: idx_saldo_ini = i
+
+    # 3. PROCESSAMENTO DOS DADOS
+    txt_cartoes = ""
+    txt_bancos = ""
+    total_patrimonio = 0.0
+    
     if not df_bancos_info.empty:
-        for i in range(len(df_bancos_info)):
-            linha = df_bancos_info.iloc[i]
-            nome_original = str(linha.iloc[0]).strip()
+        for _, row in df_bancos_info.iterrows():
+            nome_banco = str(row.iloc[idx_nome]).strip()
+            if nome_banco.lower() in ['nan', '', 'none']: continue
             
-            if nome_original.lower() in ['nan', '', 'none']: continue
+            # Valores configurados na planilha
+            val_saldo_ini = formatar_valor(row.iloc[idx_saldo_ini])
+            val_limite = formatar_valor(row.iloc[idx_limite])
             
-            # --- LEITURA DIRETA POR COLUNA ---
-            # Saldo Inicial = Coluna B (Índice 1) | Limite = Coluna C (Índice 2)
-            val_saldo_ini = converter_moeda(linha.iloc[1])
-            val_limite_fixo = converter_moeda(linha.iloc[2]) if len(linha) > 2 else 0.0
+            # Busca de movimentação na base (Utiliza busca flexível)
+            chave_busca = nome_banco.upper().replace("CARTÃO", "").replace("CARTAO", "").replace("-", "").strip()
+            # Pega só a primeira palavra se for muito longo (ex: 'INTER' de 'INTER MASTER')
+            chave_busca = chave_busca.split()[0] if chave_busca else ""
             
-            # --- BUSCA DE GASTOS (UTILIZADO) ---
-            chave = nome_original.upper().replace("CARTÃO", "").replace("CARTAO", "").replace("MASTERCARD", "").replace("VISA", "").replace("-", "").strip()
-            mov_paga = df_base[(df_base['Banco_Busca'].str.contains(chave, na=False)) & (df_base['Status'] == 'Pago')]
+            mov_paga = df_base[(df_base['Banco_Busca'].str.contains(chave_busca, na=False)) & (df_base['Status'] == 'Pago')]
             
-            ent_b = mov_paga[mov_paga['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            sai_b = mov_paga[mov_paga['Tipo'] == 'Despesa']['V_Num'].sum()
+            receitas_b = mov_paga[mov_paga['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            despesas_b = mov_paga[mov_paga['Tipo'] == 'Despesa']['V_Num'].sum()
 
-            if "CART" in nome_original.upper():
-                # Lógica de Cartão: Limite vem da Coluna C
-                utilizado = sai_b
-                a_utilizar = val_limite_fixo - utilizado
-                saldos_txt += f"💳 *{nome_original}*:\n   Limite: {m_fmt(val_limite_fixo)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(a_utilizar)}*\n\n"
+            if "CART" in nome_banco.upper():
+                # Lógica para Cartão de Crédito
+                utilizado = despesas_b
+                disponivel = val_limite - utilizado
+                txt_cartoes += f"💳 *{nome_banco}*:\n   Limite: {m_fmt(val_limite)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(disponivel)}*\n\n"
             else:
-                # Lógica de Banco: Saldo Atualizado
-                saldo_atual = val_saldo_ini + ent_b - sai_b
-                saldos_txt += f"🏦 *{nome_original}*: {m_fmt(saldo_atual)}\n\n"
-                total_patrimonio += saldo_atual
+                # Lógica para Conta Corrente / Poupança
+                saldo_final = val_saldo_ini + receitas_b - despesas_b
+                txt_bancos += f"🏦 *{nome_banco}*: {m_fmt(saldo_final)}\n\n"
+                total_patrimonio += saldo_final
 
-    # 3. RESUMO DO PERÍODO CORRIGIDO
-    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
-    df_pago = df_per[(df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]
+    # 4. RESUMO DO PERÍODO (FILTRADO POR DATA)
+    df_periodo = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim) & (df_base['Status'] == 'Pago') & (df_base['Categoria'] != 'Transferência')]
     
-    v_rec = df_pago[df_pago['Tipo'] == 'Receita']['V_Num'].sum()
-    v_rend = df_pago[df_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
-    v_des = df_pago[df_pago['Tipo'] == 'Despesa']['V_Num'].sum()
-    v_sobra = (v_rec + v_rend) - v_des
+    total_rec = df_periodo[df_periodo['Tipo'] == 'Receita']['V_Num'].sum()
+    total_rend = df_periodo[df_periodo['Tipo'] == 'Rendimento']['V_Num'].sum()
+    total_des = df_periodo[df_periodo['Tipo'] == 'Despesa']['V_Num'].sum()
+    total_sobra = (total_rec + total_rend) - total_des
 
-    relat = f"*RELATÓRIO WILSON*\n"
-    relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
-    relat += f"================================\n"
-    relat += f"REC: {m_fmt(v_rec)} | REND: {m_fmt(v_rend)}\n"
-    relat += f"DES: {m_fmt(v_des)} | *SOBRA: {m_fmt(v_sobra)}*\n"
-    relat += f"================================\n\n"
-    relat += f"*SALDOS E CARTÕES:*\n{saldos_txt}"
-    relat += f"*TOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}*"
+    # 5. MONTAGEM DO RELATÓRIO FINAL
+    relatorio = f"*RELATÓRIO FINANCEIRO - WILSON*\n"
+    relatorio += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
+    relatorio += f"================================\n"
+    relatorio += f"RECEITAS: {m_fmt(total_rec)}\n"
+    relatorio += f"RENDIMENTOS: {m_fmt(total_rend)}\n"
+    relatorio += f"DESPESAS: {m_fmt(total_des)}\n"
+    relatorio += f"*SOBRA LÍQUIDA: {m_fmt(total_sobra)}*\n"
+    relatorio += f"================================\n\n"
+    relatorio += f"*SALDOS EM CONTA:*\n{txt_bancos}"
+    relatorio += f"*CARTÕES DE CRÉDITO:*\n{txt_cartoes}"
+    relatorio += f"*PATRIMÔNIO TOTAL: {m_fmt(total_patrimonio)}*"
     
-    st.text_area("Relatório Wilson", relat, height=500)
-    st.markdown(f'[📲 Enviar WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
+    st.text_area("Texto para copiar", relatorio, height=500)
+    
+    link_whatsapp = f"https://wa.me/?text={urllib.parse.quote(relatorio)}"
+    st.markdown(f'[📲 Enviar para o WhatsApp]({link_whatsapp})')
 elif "📋" in aba:
         st.title("📋 Gerador de Relatório PDF")
         
