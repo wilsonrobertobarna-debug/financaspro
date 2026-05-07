@@ -511,40 +511,11 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
-    st.subheader("📲 Notificações Automáticas e Manuais")
-    if st.button("📲 Enviar mensagens de pendências agora via WhatsApp"):
-        twilio_secrets = st.secrets.get("twilio", {})
-        sid = twilio_secrets.get("account_sid")
-        token = twilio_secrets.get("auth_token")
-        w_from = twilio_secrets.get("whatsapp_from")
-        w_to = twilio_secrets.get("whatsapp_to")
-        
-        if sid and token and w_from and w_to:
-            try:
-                from twilio.rest import Client
-                client_tw = Client(sid, token)
-                now = datetime.now()
-                df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
-                if not df_aviso.empty:
-                    df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(now)).dt.days
-                    df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)].copy()
-                    if not df_venc.empty:
-                        mensagem = "🔔 *Aviso de Pendências - FinançasPro*\n\n"
-                        for _, row in df_venc.iterrows():
-                            if row['Dias'] < 0:
-                                mensagem += f"⚠️ Lançamento Atrasado: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
-                            elif row['Dias'] == 0:
-                                mensagem += f"⚠️ Vence Hoje: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
-                            elif row['Dias'] == 1:
-                                mensagem += f"🚨 Vence Amanhã: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
-                            elif row['Dias'] == 3:
-                                mensagem += f"⚠️ Vence em 3 dias: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
-                        
-                        client_tw.messages.create(body=mensagem, from_=w_from, to=w_to)
-                        st.success("Mensagem enviada com sucesso!")
-            except Exception as e:
-                st.error(f"Erro no envio: {e}")
-            
+    # --- BOTÃO DE DEPURAÇÃO (APENAS PARA VOCÊ VER SE O LIMITE ESTÁ CHEGANDO) ---
+    if st.checkbox("Debug: Ver dados da planilha de Bancos"):
+        st.write("Colunas encontradas:", df_bancos_info.columns.tolist())
+        st.write(df_bancos_info)
+    
     st.divider()
 
     c1, c2 = st.columns(2)
@@ -554,49 +525,54 @@ elif "📄" in aba:
     saldos_txt = ""
     total_patrimonio = 0.0
     
-    # Função de limpeza ultra-robusta para capturar o limite da planilha
     def limpar_v(v):
-        if v is None or str(v).strip() == "": return 0.0
+        if v is None or str(v).strip() == "" or str(v).lower() == 'nan': return 0.0
         try:
-            # Remove TUDO que não for número ou vírgula/ponto
             import re
-            s = str(v).replace('.', '') # tira ponto de milhar
-            s = s.replace(',', '.')    # troca vírgula decimal por ponto
-            s = re.sub(r'[^\d.]', '', s) # remove R$, espaços, etc
+            # Remove pontos de milhar, troca vírgula por ponto e remove símbolos
+            s = str(v).replace('.', '').replace(',', '.')
+            s = re.sub(r'[^\d.]', '', s)
             return float(s) if s else 0.0
         except: return 0.0
 
     # 1. PROCESSAMENTO DOS BANCOS E CARTÕES
     if not df_bancos_info.empty:
+        # Tentamos identificar as colunas pelo nome ou pela posição
+        col_nome = df_bancos_info.columns[0]
+        col_saldo = df_bancos_info.columns[1]
+        # Se houver uma 3ª coluna, é o limite. Se não, assume 0.
+        col_limite = df_bancos_info.columns[2] if len(df_bancos_info.columns) >= 3 else None
+
         for _, row in df_bancos_info.iterrows():
-            nome_banco_planilha = str(row.iloc[0]).strip()
+            nome_banco_planilha = str(row[col_nome]).strip()
             if not nome_banco_planilha or nome_banco_planilha.lower() == 'nan': continue
             
-            # Pega valores da aba "Bancos" (Coluna B e C)
-            saldo_inicial_planilha = limpar_v(row.iloc[1])
-            limite_total_planilha = limpar_v(row.iloc[2]) if len(row) >= 3 else 0.0
+            # LEITURA DOS VALORES
+            saldo_inicial_planilha = limpar_v(row[col_saldo])
+            limite_total_planilha = limpar_v(row[col_limite]) if col_limite else 0.0
             
-            # Identificador para cruzar com a base de lançamentos
+            # Identificador para busca nos lançamentos (ex: "Inter")
             identificador = nome_banco_planilha.split('-')[-1].strip() if '-' in nome_banco_planilha else nome_banco_planilha
             
-            # Movimentações na base principal
+            # Pega TODO o histórico para o saldo/fatura atual
             mov_b = df_base[(df_base['Banco'].str.contains(identificador, case=False, na=False)) & (df_base['Status'] == 'Pago')]
             entradas = mov_b[mov_b['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
             saidas = mov_b[mov_b['Tipo'] == 'Despesa']['V_Num'].sum()
             
-            # Lógica para CARTÃO
-            if limite_total_planilha > 0 or "CART" in nome_banco_planilha.upper():
-                fatura_atual = saidas 
-                # LÓGICA SOLICITADA: Limite Total (Planilha) - Utilizado (Fatura) = Disponível
+            # DETERMINA SE É CARTÃO OU CONTA
+            is_cartao = "CART" in nome_banco_planilha.upper() or limite_total_planilha > 0
+            
+            if is_cartao:
+                fatura_atual = saidas
+                # CÁLCULO: Limite cadastrado menos o que já foi gasto (pago)
                 disp = limite_total_planilha - fatura_atual
                 saldos_txt += f"💳 {nome_banco_planilha}: Fatura: {m_fmt(fatura_atual)} | Limite Disp: {m_fmt(disp)}\n"
             else:
-                # Lógica para CONTA CORRENTE
                 saldo_final = saldo_inicial_planilha + entradas - saidas
                 saldos_txt += f"🏦 {nome_banco_planilha}: Saldo: {m_fmt(saldo_final)}\n"
                 total_patrimonio += saldo_final
 
-    # 2. RESUMO DO PERÍODO
+    # 2. RESUMO DO PERÍODO SELECIONADO
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     r_v = d_v = rend_v = 0.0
     if not df_per.empty:
