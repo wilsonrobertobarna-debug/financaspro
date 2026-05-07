@@ -511,9 +511,8 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
-    # 1. PREPARAÇÃO DA BASE (Limpeza de nomes e valores)
+    # 1. TRATAMENTO DA BASE DE LANÇAMENTOS
     df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0.0)
-    # Criamos uma coluna temporária em maiúsculas e sem espaços para busca fácil
     df_base['Banco_Busca'] = df_base['Banco'].astype(str).str.upper().str.strip()
     
     st.divider()
@@ -525,16 +524,16 @@ elif "📄" in aba:
     saldos_txt = ""
     total_patrimonio = 0.0
     
-    def extrair_numero(v):
+    def limpar_valor_fixo(v):
         if pd.isna(v) or str(v).strip() == "": return 0.0
         try:
-            s = "".join(c for c in str(v) if c.isdigit() or c in ',.')
-            if ',' in s and '.' in s: s = s.replace('.', '')
-            s = s.replace(',', '.')
-            return float(s)
+            s = str(v).replace('R$', '').replace('.', '').replace(',', '.').strip()
+            import re
+            s = re.sub(r'[^\d.]', '', s)
+            return float(s) if s else 0.0
         except: return 0.0
 
-    # 2. PROCESSAMENTO COM BUSCA FLEXÍVEL
+    # 2. PROCESSAMENTO ORGANIZADO
     if not df_bancos_info.empty:
         for i in range(len(df_bancos_info)):
             linha = df_bancos_info.iloc[i]
@@ -542,31 +541,32 @@ elif "📄" in aba:
             
             if nome_original.lower() in ['nan', '', 'none']: continue
             
-            # Puxa o Limite (Maior número da linha) e Saldo Inicial (Primeiro número encontrado)
-            nums = [extrair_numero(c) for c in linha.iloc[1:] if extrair_numero(c) > 0]
-            limite_f = max(nums) if nums else 0.0
-            saldo_ini_f = nums[0] if nums else 0.0
+            # --- LEITURA RÍGIDA POR COLUNA ---
+            # Saldo Inicial sempre na Coluna B (1) | Limite sempre na Coluna C (2)
+            saldo_ini_f = limpar_valor_fixo(linha.iloc[1])
+            limite_f = limpar_valor_fixo(linha.iloc[2]) if len(linha) > 2 else 0.0
             
-            # --- LÓGICA DE BUSCA DO UTILIZADO (FLEXÍVEL) ---
-            # Pegamos o nome do banco e removemos palavras genéricas para achar a "chave" (ex: Inter, 8112)
+            # --- BUSCA DE MOVIMENTAÇÃO (Utilizado/Extrato) ---
+            # Pega o termo principal (ex: 'INTER' ou '8112')
             chave = nome_original.upper().replace("CARTÃO", "").replace("CARTAO", "").replace("MASTERCARD", "").replace("VISA", "").replace("-", "").strip()
             
-            # Filtra na base: Se a 'chave' estiver contida no nome do banco lançado
             mov_paga = df_base[(df_base['Banco_Busca'].str.contains(chave, na=False)) & (df_base['Status'] == 'Pago')]
             
             ent = mov_paga[mov_paga['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
             sai = mov_paga[mov_paga['Tipo'] == 'Despesa']['V_Num'].sum()
 
             if "CART" in nome_original.upper():
+                # Lógica exclusiva de CARTÃO
                 utilizado = sai
                 a_utilizar = limite_f - utilizado
                 saldos_txt += f"💳 *{nome_original}*:\n   Limite: {m_fmt(limite_f)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(a_utilizar)}*\n\n"
             else:
+                # Lógica exclusiva de BANCO
                 saldo_atual = saldo_ini_f + ent - sai
                 saldos_txt += f"🏦 *{nome_original}*: {m_fmt(saldo_atual)}\n\n"
                 total_patrimonio += saldo_atual
 
-    # 3. RESUMO FINANCEIRO CORRIGIDO
+    # 3. RESUMO FINANCEIRO (REC + REND - DES)
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     df_pago = df_per[(df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]
     
