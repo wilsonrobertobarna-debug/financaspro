@@ -511,9 +511,9 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
-    # Debug para você conferir se o Python está lendo a coluna C
-    if st.checkbox("🔍 Debug: Conferir se os Limites estão sendo lidos"):
-        st.write("Dados brutos da planilha de Bancos:")
+    # Debug para conferência imediata
+    if st.checkbox("🔍 Debug: Conferir se os Limites aparecem na Coluna 3"):
+        st.write("Dados brutos da aba Bancos (A coluna de limite deve ser a terceira):")
         st.dataframe(df_bancos_info)
 
     st.divider()
@@ -525,13 +525,14 @@ elif "📄" in aba:
     saldos_txt = ""
     total_patrimonio = 0.0
     
-    # Força V_Num como numérico
+    # Força V_Num como numérico na base
     df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0.0)
     
     def limpar_v(v):
         if v is None or str(v).strip() == "" or str(v).lower() == 'nan': return 0.0
         try:
             import re
+            # Remove pontos de milhar, troca vírgula por ponto e limpa símbolos
             s = str(v).replace('.', '').replace(',', '.')
             s = re.sub(r'[^\d.]', '', s)
             return float(s) if s else 0.0
@@ -539,51 +540,43 @@ elif "📄" in aba:
 
     # 1. PROCESSAMENTO DOS BANCOS E CARTÕES
     if not df_bancos_info.empty:
-        # Identifica a coluna de limite (procura por nome ou usa a 3ª coluna - índice 2)
-        idx_lim = 2 
-        for i, col in enumerate(df_bancos_info.columns):
-            if "LIMITE" in str(col).upper():
-                idx_lim = i
-                break
-
         for _, row in df_bancos_info.iterrows():
-            n_planilha = str(row.iloc[0]).strip()
-            if not n_planilha or n_planilha.lower() == 'nan': continue
+            nome_banco_ref = str(row.iloc[0]).strip()
+            if not nome_banco_ref or nome_banco_ref.lower() == 'nan': continue
             
-            # Pega o limite diretamente da coluna detectada
-            limite_cfg = limpar_v(row.iloc[idx_lim]) if len(row) > idx_lim else 0.0
-            saldo_ini_cfg = limpar_v(row.iloc[1])
+            # --- PEGA O LIMITE DIRETAMENTE DA COLUNA C (Índice 2) ---
+            limite_da_planilha = limpar_v(row.iloc[2]) if len(row) > 2 else 0.0
+            saldo_ini_planilha = limpar_v(row.iloc[1])
             
-            # Filtro exato na base de lançamentos
-            df_mov = df_base[(df_base['Banco'].str.strip() == n_planilha) & (df_base['Status'] == 'Pago')]
+            # Busca gastos na base (NOME EXATO e STATUS PAGO)
+            df_mov = df_base[(df_base['Banco'].str.strip() == nome_banco_ref) & (df_base['Status'] == 'Pago')]
             entradas = df_mov[df_mov['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
             saidas = df_mov[df_mov['Tipo'] == 'Despesa']['V_Num'].sum()
             
-            # Se tiver 'CART' no nome ou limite > 0, trata como cartão
-            if "CART" in n_planilha.upper() or limite_cfg > 0:
+            # Lógica: Se o nome tiver "CART" ou o limite for maior que zero
+            if "CART" in nome_banco_ref.upper() or limite_da_planilha > 0:
                 utilizado = saidas
-                a_utilizar = limite_cfg - utilizado
-                saldos_txt += f"💳 *{n_planilha}*:\n   Utilizado: {m_fmt(utilizado)} | A Utilizar: {m_fmt(a_utilizar)}\n\n"
+                a_utilizar = limite_da_planilha - utilizado
+                saldos_txt += f"💳 *{nome_banco_ref}*:\n   Utilizado: {m_fmt(utilizado)} | A Utilizar: {m_fmt(a_utilizar)}\n\n"
             else:
                 # Conta bancária normal
-                saldo_final = saldo_ini_cfg + entradas - saidas
-                saldos_txt += f"🏦 *{n_planilha}*: {m_fmt(saldo_final)}\n\n"
+                saldo_final = saldo_ini_planilha + entradas - saidas
+                saldos_txt += f"🏦 *{nome_banco_ref}*: {m_fmt(saldo_final)}\n\n"
                 total_patrimonio += saldo_final
 
     # 2. RESUMO DO PERÍODO
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
-    r_v = d_v = rend_v = 0.0
+    r_v = d_v = 0.0
     if not df_per.empty:
-        df_per_l = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
-        r_v = df_per_l[df_per_l['Tipo'] == 'Receita']['V_Num'].sum()
-        d_v = df_per_l[df_per_l['Tipo'] == 'Despesa']['V_Num'].sum()
-        rend_v = df_per_l[df_per_l['Tipo'] == 'Rendimento']['V_Num'].sum()
+        df_l = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
+        r_v = df_l[df_l['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        d_v = df_l[df_l['Tipo'] == 'Despesa']['V_Num'].sum()
 
     relat = f"*RELATÓRIO WILSON*\n"
     relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"================================\n"
     relat += f"REC: {m_fmt(r_v)} | DES: {m_fmt(d_v)}\n"
-    relat += f"SOBRA: {m_fmt((r_v+rend_v)-d_v)}\n"
+    relat += f"SOBRA: {m_fmt(r_v - d_v)}\n"
     relat += f"================================\n\n"
     relat += f"*SALDOS E CARTÕES:*\n{saldos_txt}"
     relat += f"*TOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}*"
