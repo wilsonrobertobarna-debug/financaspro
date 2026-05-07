@@ -511,11 +511,10 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
-    # Debug para conferência de tipos de dados
-    if st.checkbox("🔍 Debug: Verificar Formatação dos Valores"):
-        st.write("Tipos de dados detectados nas colunas:")
-        st.write(df_bancos_info.dtypes)
-        st.write("Amostra dos dados brutos:", df_bancos_info.head())
+    # Debug para termos certeza de que o Python está lendo a coluna certa
+    if st.checkbox("🔍 Debug: Ver valores brutos da aba Bancos"):
+        st.write("Verifique se o seu limite aparece em uma dessas colunas abaixo:")
+        st.dataframe(df_bancos_info)
 
     st.divider()
 
@@ -526,68 +525,57 @@ elif "📄" in aba:
     saldos_txt = ""
     total_patrimonio = 0.0
     
-    # FUNÇÃO DE LIMPEZA REFORÇADA
     def limpar_v(v):
-        if v is None: return 0.0
-        s = str(v).strip()
-        if s == "" or s.lower() == 'nan': return 0.0
+        if v is None or str(v).strip() == "" or str(v).lower() == 'nan': return 0.0
         try:
             import re
-            # 1. Se houver vírgula e ponto, removemos o ponto (milhar) e trocamos a vírgula por ponto (decimal)
-            if ',' in s and '.' in s:
-                s = s.replace('.', '')
-            s = s.replace(',', '.')
-            # 2. Remove TUDO que não for número ou o ponto decimal
+            s = str(v).replace('.', '').replace(',', '.')
             s = re.sub(r'[^\d.]', '', s)
-            # 3. Garante que se houver mais de um ponto (erro de digitação), pegamos apenas o primeiro
-            partes = s.split('.')
-            if len(partes) > 2:
-                s = partes[0] + "." + "".join(partes[1:])
             return float(s) if s else 0.0
-        except:
-            return 0.0
+        except: return 0.0
 
     # 1. PROCESSAMENTO DOS BANCOS E CARTÕES
     if not df_bancos_info.empty:
-        # Tenta identificar a coluna de limite
-        idx_limite = 2 # Padrão: 3ª coluna
-        for i, c in enumerate(df_bancos_info.columns):
-            if "LIMITE" in str(c).upper():
-                idx_limite = i
+        # Tenta identificar qual coluna é o limite (procura por 'limite' ou usa a 3ª coluna)
+        col_lim_idx = 2
+        for i, col_nome in enumerate(df_bancos_info.columns):
+            if "LIMITE" in str(col_nome).upper():
+                col_lim_idx = i
                 break
 
         for _, row in df_bancos_info.iterrows():
-            nome_banco_ref = str(row.iloc[0]).strip()
-            if not nome_banco_ref or nome_banco_ref.lower() == 'nan': continue
+            nome_banco = str(row.iloc[0]).strip()
+            if not nome_banco or nome_banco.lower() == 'nan': continue
             
-            # Limpeza forçada dos valores da planilha
-            val_saldo_ini = limpar_v(row.iloc[1])
-            val_limite_total = limpar_v(row.iloc[idx_limite]) if len(row) > idx_limite else 0.0
+            # Pega o Limite Total diretamente da planilha (Coluna C ou coluna 'Limite')
+            limite_da_planilha = limpar_v(row.iloc[col_lim_idx]) if len(row) > col_lim_idx else 0.0
+            saldo_ini_planilha = limpar_v(row.iloc[1])
             
-            # Normalização para comparação de nomes
+            # Normalização de nomes para não errar por causa de acento ou espaço
             import unicodedata
-            def norm(txt):
-                return unicodedata.normalize('NFKD', str(txt)).encode('ASCII', 'ignore').decode('ASCII').upper().strip()
-
-            nome_norm = norm(nome_banco_ref)
-            df_base['Banco_Norm'] = df_base['Banco'].apply(norm)
+            def n(t): return unicodedata.normalize('NFKD', str(t)).encode('ASCII', 'ignore').decode('ASCII').upper().strip()
             
-            # Filtra apenas o que é PAGO para este banco
-            df_mov = df_base[(df_base['Banco_Norm'] == nome_norm) & (df_base['Status'] == 'Pago')]
+            nome_n = n(nome_banco)
+            df_base['B_Norm'] = df_base['Banco'].apply(n)
+            
+            # Busca gastos na base de lançamentos
+            df_mov = df_base[(df_base['B_Norm'] == nome_n) & (df_base['Status'] == 'Pago')]
             entradas = df_mov[df_mov['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
             saidas = df_mov[df_mov['Tipo'] == 'Despesa']['V_Num'].sum()
             
-            # Se for Cartão
-            if "CARTA" in nome_norm or val_limite_total > 0:
-                utilizado = saidas
-                a_utilizar = val_limite_total - utilizado
-                saldos_txt += f"💳 *{nome_banco_ref}*:\n   Utilizado: {m_fmt(utilizado)} | A Utilizar: {m_fmt(a_utilizar)}\n\n"
+            # SE FOR CARTÃO (Nome contém 'CARTA' ou o limite na planilha é > 0)
+            if "CARTA" in nome_n or limite_da_planilha > 0:
+                utilizado = saidas # Soma das despesas pagas
+                # O segredo está aqui: Limite Total da Planilha - Gastos
+                a_utilizar = limite_da_planilha - utilizado
+                saldos_txt += f"💳 *{nome_banco}*:\n   Utilizado: {m_fmt(utilizado)} | A Utilizar: {m_fmt(a_utilizar)}\n\n"
             else:
-                saldo_final = val_saldo_ini + entradas - saidas
-                saldos_txt += f"🏦 *{nome_banco_ref}*: {m_fmt(saldo_final)}\n\n"
-                total_patrimonio += saldo_final
+                # SE FOR CONTA CORRENTE
+                saldo_atual = saldo_ini_planilha + entradas - saidas
+                saldos_txt += f"🏦 *{nome_banco}*: {m_fmt(saldo_atual)}\n\n"
+                total_patrimonio += saldo_atual
 
-    # 2. RESUMO DO PERÍODO
+    # 2. RESUMO FINANCEIRO
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     r_v = d_v = rend_v = 0.0
     if not df_per.empty:
@@ -596,13 +584,11 @@ elif "📄" in aba:
         d_v = df_l[df_l['Tipo'] == 'Despesa']['V_Num'].sum()
         rend_v = df_l[df_l['Tipo'] == 'Rendimento']['V_Num'].sum()
 
-    sobra = (r_v + rend_v) - d_v
-    
     relat = f"*RELATÓRIO WILSON*\n"
     relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"================================\n"
-    relat += f"REC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\n"
-    relat += f"SOBRA: {m_fmt(sobra)}\n"
+    relat += f"REC: {m_fmt(r_v)} | DES: {m_fmt(d_v)}\n"
+    relat += f"SOBRA: {m_fmt((r_v+rend_v)-d_v)}\n"
     relat += f"================================\n\n"
     relat += f"*SALDOS E CARTÕES:*\n{saldos_txt}"
     relat += f"*TOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}*"
