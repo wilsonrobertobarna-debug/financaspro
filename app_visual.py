@@ -562,40 +562,42 @@ elif "📄" in aba:
             saldos_txt += f"🏦 {b}: Saldo: {m_fmt(s_final)}\n"
             total_patrimonio += s_final # <--- SOMA O VALOR AQUI
 
-  # 3. CÁLCULO DO RESUMO (FILTRANDO FORA AS TRANSFERÊNCIAS)
+  # 3. CÁLCULO DO RESUMO (RESOLVENDO O SUMIÇO DO RENDIMENTO)
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
 
     if not df_per.empty:
-        # Padronização
+        # Padroniza para não ter erro de maiúsculas
         df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
+        df_per['C_UP'] = df_per['Categoria'].astype(str).str.upper().str.strip()
         
-        # --- O PULO DO GATO ---
-        # Filtramos apenas o que é Receita/Despesa real, ignorando Transferência
-        # Se na sua planilha estiver 'Transferência', 'Transf' ou algo assim, o código abaixo limpa.
+        # --- FILTROS ---
         
-        # REC: É Receita, está Pago e NÃO é Transferência
+        # 1. RENDIMENTO: Busca direta (Tipo ou Categoria)
+        # Ele precisa ser calculado primeiro para o Python "saber" quem ele é
+        mask_rend = (df_per['T_UP'] == 'RENDIMENTO') | (df_per['C_UP'] == 'RENDIMENTO')
+        rend_v = df_per[mask_rend]['V_Num'].sum()
+        
+        # 2. RECEITA: Tudo que é Receita, Pago e NÃO é Transferência
         rec_v = df_per[
             (df_per['T_UP'] == 'RECEITA') & 
             (df_per['Status'] == 'Pago') & 
-            (~df_per['Categoria'].astype(str).str.upper().str.contains('TRANSF', na=False))
+            (~df_per['C_UP'].str.contains('TRANSF', na=False))
         ]['V_Num'].sum()
         
-        # DES: É Despesa, está Pago e NÃO é Transferência
+        # 3. DESPESA: Tudo que é Despesa, Pago e NÃO é Transferência
         des_v = df_per[
             (df_per['T_UP'] == 'DESPESA') & 
             (df_per['Status'] == 'Pago') & 
-            (~df_per['Categoria'].astype(str).str.upper().str.contains('TRANSF', na=False))
+            (~df_per['C_UP'].str.contains('TRANSF', na=False))
         ]['V_Num'].sum()
         
-        # RENDIMENTO: (Já está funcionando, mantemos a busca)
-        rend_v = df_per[df_per['T_UP'] == 'RENDIMENTO']['V_Num'].sum()
-        
-        # A CONTA REAL
+        # --- A CONTA ---
+        # Se o seu rendimento JÁ ESTÁ dentro da Receita na planilha, a conta é:
         sobra = rec_v - des_v
+        
     else:
         rec_v = des_v = rend_v = sobra = 0.0
-
     # 4. MONTAGEM DO TEXTO FINAL
     relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"========================================\n"
