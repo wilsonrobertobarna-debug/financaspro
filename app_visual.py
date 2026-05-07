@@ -512,7 +512,7 @@ elif "📄" in aba:
     st.title("📄 WhatsApp")
     
     st.subheader("📲 Notificações Automáticas e Manuais")
-    # ... (Seu código do Twilio permanece aqui sem alterações) ...
+    # ... (Seu código do Twilio permanece aqui) ...
             
     st.divider()
 
@@ -522,34 +522,38 @@ elif "📄" in aba:
     
     bancos = sorted(bancos_disponiveis)
     saldos_txt = ""
-    total_patrimonio = 0
+    total_patrimonio = 0.0
     
+    # Função para garantir que o número seja lido corretamente da planilha
+    def converter_v(v):
+        if pd.isna(v) or str(v).strip() == "": return 0.0
+        try:
+            s = str(v).replace('R$', '').replace('.', '').replace(',', '.').strip()
+            import re
+            s = re.sub(r'[^\d.]', '', s)
+            return float(s) if s else 0.0
+        except: return 0.0
+
     for b in bancos:
         saldo_ini = 0.0
         limite = 0.0
         
-        # 1. BUSCA SALDO INICIAL E LIMITE NA ABA BANCOS
+        # 1. BUSCA SALDO E LIMITE (Posições fixas: B=1, C=2)
         if not df_bancos_info.empty:
             for _, row in df_bancos_info.iterrows():
                 if str(row.iloc[0]).strip() == b:
-                    try:
-                        s_str = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                        saldo_ini = float(s_str) if s_str else 0.0
-                    except: saldo_ini = 0.0
-                            
-                    try:
-                        l_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                        limite = float(l_str) if l_str else 0.0
-                    except: limite = 0.0
+                    saldo_ini = converter_v(row.iloc[1])
+                    if len(row) > 2:
+                        limite = converter_v(row.iloc[2])
                     break
         
-        # 2. CALCULA MOVIMENTAÇÃO DO BANCO (Tudo o que foi Pago/Recebido na história)
-        # Para saldo de conta, precisamos do acumulado total para bater com o extrato
-        receitas_acum = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento'])) & (df_base['Status'] == 'Pago')]['V_Num'].sum()
-        despesas_acum = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
+        # 2. MOVIMENTAÇÃO ACUMULADA (Para Saldo Real do Banco)
+        mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'].isin(['Pago', 'Recebido']))]
+        receitas_acum = mov_paga[mov_paga['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        despesas_acum = mov_paga[mov_paga['Tipo'] == 'Despesa']['V_Num'].sum()
         
-        # 3. CALCULA UTILIZADO DO CARTÃO (Apenas no período selecionado)
-        utilizado_periodo = df_base[
+        # 3. UTILIZADO DO CARTÃO (Somente no período do filtro)
+        utilizado_mes = df_base[
             (df_base['Banco'] == b) & 
             (df_base['Tipo'] == 'Despesa') & 
             (df_base['DT'].dt.date >= d_ini) & 
@@ -557,45 +561,42 @@ elif "📄" in aba:
         ]['V_Num'].sum()
         
         if "cartão" in b.lower():
-            disponivel = limite - utilizado_periodo
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite)} | Utilizado: {m_fmt(utilizado_periodo)} | A utilizar: {m_fmt(disponivel)}\n"
+            disponivel = limite - utilizado_mes
+            saldos_txt += f"💳 *{b}*:\n   Limite: {m_fmt(limite)} | Utilizado: {m_fmt(utilizado_mes)}\n   *A Utilizar: {m_fmt(disponivel)}*\n\n"
         else:
             saldo_atual = saldo_ini + receitas_acum - despesas_acum
-            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo_atual)}\n"
+            saldos_txt += f"🏦 *{b}*: {m_fmt(saldo_atual)}\n\n"
             total_patrimonio += saldo_atual
             
-    # 4. RESUMO FINANCEIRO DO PERÍODO (Filtro rigoroso por data)
+    # 4. RESUMO FINANCEIRO (Filtro por data para REC, DES e REND)
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_f)].copy()
     
     if not df_per.empty:
-        # Filtramos apenas o que não é transferência e está Pago ou Recebido
-        df_pago = df_per[((df_per['Status'] == 'Pago') | (df_per['Status'] == 'Recebido')) & (df_per['Categoria'] != 'Transferência')]
+        # Pega tudo que não é transferência
+        df_f = df_per[df_per['Categoria'] != 'Transferência']
         
-        r_v = df_pago[df_pago['Tipo'] == 'Receita']['V_Num'].sum()
-        d_v = df_pago[df_pago['Tipo'] == 'Despesa']['V_Num'].sum()
-        rend_v = df_pago[df_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
+        r_v = df_f[df_f['Tipo'] == 'Receita']['V_Num'].sum()
+        d_v = df_f[df_f['Tipo'] == 'Despesa']['V_Num'].sum()
+        # RENDIMENTO: Busca independente do status para garantir que apareça
+        rend_v = df_f[df_f['Tipo'] == 'Rendimento']['V_Num'].sum()
         pend_v = get_valor_pendente(df_base)
     else:
         r_v = d_v = rend_v = pend_v = 0
         
-    # Cálculo da Sobra: Receita + Rendimento - Despesa
     sobra_final = (r_v + rend_v) - d_v
     
     relat = (
-        f"RELATÓRIO WILSON\n"
+        f"*RELATÓRIO WILSON*\n"
         f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_f.strftime('%d/%m/%Y')}\n"
-        f"========================================\n"
-        f"REC: {m_fmt(r_v)}\n"
-        f"DES: {m_fmt(d_v)}\n"
-        f"REND: {m_fmt(rend_v)}\n"
-        f"PEND: {m_fmt(pend_v)}\n"
-        f"*SOBRA: {m_fmt(sobra_final)}*\n"
-        f"========================================\n\n"
-        f"SALDOS:\n{saldos_txt}\n"
-        f"TOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}"
+        f"================================\n"
+        f"REC: {m_fmt(r_v)} | REND: {m_fmt(rend_v)}\n"
+        f"DES: {m_fmt(d_v)} | *SOBRA: {m_fmt(sobra_final)}*\n"
+        f"================================\n\n"
+        f"*SALDOS E CARTÕES:*\n{saldos_txt}"
+        f"*TOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}*"
     )
     
-    st.text_area("Copiar para Zap/E-mail", relat, height=400)
+    st.text_area("Copiar Relatório", relat, height=500)
     zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
     st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
 elif "📋" in aba:
