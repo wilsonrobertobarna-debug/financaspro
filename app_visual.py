@@ -509,83 +509,119 @@ elif "🚗" in aba:
         st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "📄" in aba:
-    st.title("📄 Relatório WhatsApp (Versão Final)")
+    st.title("📄 WhatsApp")
     
-    # 1. LIMPEZA DA BASE DE LANÇAMENTOS
-    df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0.0)
-    # Criamos uma busca que ignora espaços e acentos
-    df_base['Banco_Busca'] = df_base['Banco'].astype(str).str.upper().str.strip()
-    
+    st.subheader("📲 Notificações Automáticas e Manuais")
+    if st.button("📲 Enviar mensagens de pendências agora via WhatsApp"):
+        twilio_secrets = st.secrets.get("twilio", {})
+        sid = twilio_secrets.get("account_sid")
+        token = twilio_secrets.get("auth_token")
+        w_from = twilio_secrets.get("whatsapp_from")
+        w_to = twilio_secrets.get("whatsapp_to")
+        
+        if sid and token and w_from and w_to:
+            try:
+                from twilio.rest import Client
+                client_tw = Client(sid, token)
+                now = datetime.now()
+                df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
+                if not df_aviso.empty:
+                    df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(now)).dt.days
+                    df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)].copy()
+                    if not df_venc.empty:
+                        mensagem = "🔔 *Aviso de Pendências - FinançasPro*\n\n"
+                        for _, row in df_venc.iterrows():
+                            if row['Dias'] < 0:
+                                mensagem += f"⚠️ Lançamento Atrasado: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                            elif row['Dias'] == 0:
+                                mensagem += f"⚠️ Vence Hoje: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                            elif row['Dias'] == 1:
+                                mensagem += f"🚨 Vence Amanhã: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                            elif row['Dias'] == 3:
+                                mensagem += f"⚠️ Vence em 3 dias: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                        
+                        client_tw.messages.create(body=mensagem, from_=w_from, to=w_to)
+                        st.success("Mensagem enviada com sucesso pelo WhatsApp!")
+                    else:
+                        st.info("Nenhum lançamento a vencer hoje, amanhã ou em 3 dias.")
+            except Exception as e:
+                st.error(f"Erro ao enviar pelo Twilio: {e}")
+        else:
+            st.error("⚠️ Wilson, configure as credenciais do Twilio nos seus Secrets (twilio)!")
+            
     st.divider()
+
     c1, c2 = st.columns(2)
     d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
     d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
     
-    def converter_valor_planilha(v):
-        if pd.isna(v) or str(v).strip() == "": return 0.0
-        try:
-            # Remove R$, pontos de milhar e troca vírgula por ponto decimal
-            s = str(v).replace('R$', '').replace('.', '').replace(',', '.').strip()
-            import re
-            s = re.sub(r'[^\d.]', '', s)
-            return float(s) if s else 0.0
-        except: return 0.0
-
-    txt_cartoes = ""
-    txt_bancos = ""
-    patrimonio_real = 0.0
-
-    # 2. PROCESSAMENTO DIRETO (SEM ADIVINHAÇÃO)
-    if not df_bancos_info.empty:
-        for i in range(len(df_bancos_info)):
-            linha = df_bancos_info.iloc[i]
-            nome_banco = str(linha.iloc[0]).strip()
-            
-            if nome_banco.lower() in ['nan', '', 'none', 'banco']: continue
-            
-            # LER DIRETAMENTE DAS COLUNAS: B(1) e C(2)
-            saldo_inicial_planilha = converter_valor_planilha(linha.iloc[1])
-            limite_planilha = converter_valor_planilha(linha.iloc[2]) if len(linha) > 2 else 0.0
-            
-            # BUSCA MOVIMENTAÇÃO NA BASE
-            # Pega a palavra principal (ex: 'INTER') para bater o nome
-            chave = nome_banco.upper().replace("CARTÃO", "").replace("CARTAO", "").replace("-", "").strip().split()[0]
-            mov_banco = df_base[(df_base['Banco_Busca'].str.contains(chave, na=False)) & (df_base['Status'] == 'Pago')]
-            
-            soma_receitas = mov_banco[mov_banco['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            soma_despesas = mov_banco[mov_banco['Tipo'] == 'Despesa']['V_Num'].sum()
-
-            if "CART" in nome_banco.upper():
-                # LÓGICA DE CARTÃO
-                utilizado = soma_despesas
-                disponivel = limite_planilha - utilizado
-                txt_cartoes += f"💳 *{nome_banco}*:\n   Limite: {m_fmt(limite_planilha)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(disponivel)}*\n\n"
-            else:
-                # LÓGICA DE BANCO (Saldo inicial + o que entrou - o que saiu)
-                saldo_calculado = saldo_inicial_planilha + soma_receitas - soma_despesas
-                txt_bancos += f"🏦 *{nome_banco}*: {m_fmt(saldo_calculado)}\n\n"
-                patrimonio_real += saldo_calculado
-
-    # 3. RESUMO DO PERÍODO (REC + REND - DES)
-    df_p = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim) & (df_base['Status'] == 'Pago') & (df_base['Categoria'] != 'Transferência')]
-    v_rec = df_p[df_p['Tipo'] == 'Receita']['V_Num'].sum()
-    v_rend = df_p[df_p['Tipo'] == 'Rendimento']['V_Num'].sum()
-    v_des = df_p[df_p['Tipo'] == 'Despesa']['V_Num'].sum()
-    v_sobra = (v_rec + v_rend) - v_des
-
-    # 4. MONTAGEM FINAL
-    relat = f"*RELATÓRIO FINANCEIRO*\n"
-    relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
-    relat += f"================================\n"
-    relat += f"REC: {m_fmt(v_rec)} | REND: {m_fmt(v_rend)}\n"
-    relat += f"DES: {m_fmt(v_des)} | *SOBRA: {m_fmt(v_sobra)}*\n"
-    relat += f"================================\n\n"
-    relat += f"*SALDOS EM CONTA:*\n{txt_bancos}"
-    relat += f"*CARTÕES DE CRÉDITO:*\n{txt_cartoes}"
-    relat += f"*TOTAL PATRIMÔNIO: {m_fmt(patrimonio_real)}*"
+    bancos = sorted(bancos_disponiveis)
+    saldos_txt = ""
+    total_b = 0
     
-    st.text_area("Copiar para WhatsApp", relat, height=500)
-    st.markdown(f'[📲 Enviar WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
+    for b in bancos:
+        saldo = 0.0
+        limite = 0.0
+        
+        if not df_bancos_info.empty:
+            for _, row in df_bancos_info.iterrows():
+                if str(row.iloc[0]).strip() == b:
+                    if len(row) > 1:
+                        try:
+                            val_str = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                            if val_str:
+                                saldo = float(val_str)
+                        except:
+                            saldo = 0.0
+                            
+                        if len(row) >= 3:
+                            try:
+                                lim_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                                if lim_str:
+                                    limite = float(lim_str)
+                            except:
+                                limite = 0.0
+                    break
+                
+        utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
+        
+        if "cartão" not in b.lower():
+            receitas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] != 'Pendente')]['V_Num'].sum()
+            despesas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] != 'Pendente')]['V_Num'].sum()
+            saldo = saldo + receitas_b - despesas_b
+        
+        if "cartão" in b.lower():
+            if limite > 0:
+                disponivel = limite - utilizado
+            else:
+                disponivel = saldo - utilizado
+            saldos_txt += f"💳 {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
+        else:
+            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo)}\n"
+            
+        if "cartão" not in b.lower():
+            total_b += saldo
+            
+    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
+    
+    if not df_per.empty:
+        df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
+        r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+        d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        pend_v = get_valor_pendente(df_base)
+    else:
+        r_v = 0
+        d_v = 0
+        rend_v = 0
+        pend_v = 0
+        
+    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nPEND: {m_fmt(pend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
+    
+    st.text_area("Copiar para Zap/E-mail", relat, height=400)
+    zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
+    st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
+
 elif "📋" in aba:
         st.title("📋 Gerador de Relatório PDF")
         
