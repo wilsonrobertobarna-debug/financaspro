@@ -541,9 +541,9 @@ elif "📄" in aba:
                                 mensagem += f"⚠️ Vence em 3 dias: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
                         
                         client_tw.messages.create(body=mensagem, from_=w_from, to=w_to)
-                        st.success("Mensagem enviada com sucesso pelo WhatsApp!")
+                        st.success("Mensagem enviada com sucesso!")
             except Exception as e:
-                st.error(f"Erro ao enviar: {e}")
+                st.error(f"Erro no envio: {e}")
             
     st.divider()
 
@@ -551,67 +551,48 @@ elif "📄" in aba:
     d_ini = c1.date_input("Início Relatório", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
     d_fim = c2.date_input("Fim Relatório", datetime.now(), format="DD/MM/YYYY")
     
-    bancos = sorted(bancos_disponiveis)
     saldos_txt = ""
     total_patrimonio = 0.0
     
-    # Função interna para converter valores da planilha com segurança
-    def limpar_valor(v):
+    def limpar_v(v):
         try:
-            if not v: return 0.0
             return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
         except: return 0.0
 
-    for b in bancos:
-        saldo_inicial_banco = 0.0
-        limite_cartao = 0.0
-        e_cartao = False
-        
-        # 1. Busca dados na aba "Bancos"
-        if not df_bancos_info.empty:
-            # Filtro ignorando maiúsculas/minúsculas
-            match = df_bancos_info[df_bancos_info.iloc[:, 0].str.strip().str.upper() == b.strip().upper()]
-            if not match.empty:
-                saldo_inicial_banco = limpar_valor(match.iloc[0, 1])
-                if len(match.columns) >= 3:
-                    limite_cartao = limpar_valor(match.iloc[0, 2])
-                
-                # Se houver limite preenchido ou a palavra "cartão" no nome, tratamos como cartão
-                if limite_cartao > 0 or "CARTÃO" in b.upper() or "CARTAO" in b.upper():
-                    e_cartao = True
-        
-        # 2. Movimentações (Sempre olha o histórico TODO para o Saldo Atual)
-        mov_b = df_base[(df_base['Banco'].str.strip().str.upper() == b.strip().upper()) & (df_base['Status'] == 'Pago')]
-        entradas_b = mov_b[mov_b['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        saidas_b = mov_b[mov_b['Tipo'] == 'Despesa']['V_Num'].sum()
-        
-        saldo_final = saldo_inicial_banco + entradas_b - saidas_b
-        
-        # 3. Formatação da mensagem
-        if e_cartao:
-            # Para cartões: Fatura (saídas) e Limite que sobra
-            utilizado = saidas_b 
-            disponivel = limite_cartao - utilizado
-            saldos_txt += f"💳 {b}: Fatura Atual: {m_fmt(utilizado)} | Limite Disp: {m_fmt(disponivel)}\n"
-        else:
-            # Para bancos: Saldo real em conta
-            saldos_txt += f"🏦 {b}: Saldo Atual: {m_fmt(saldo_final)}\n"
-            total_patrimonio += saldo_final
+    # Percorre os bancos cadastrados na aba "Bancos"
+    if not df_bancos_info.empty:
+        for _, row in df_bancos_info.iterrows():
+            nome_banco = str(row.iloc[0]).strip()
+            saldo_inicial = limpar_v(row.iloc[1])
+            limite_total = limpar_v(row.iloc[2]) if len(row) >= 3 else 0.0
             
-    # Resumo do Período (Apenas entre as datas d_ini e d_fim)
+            # Filtra movimentações que CONTÉM o nome do banco (mais flexível)
+            mov_b = df_base[(df_base['Banco'].str.contains(nome_banco, case=False, na=False)) & (df_base['Status'] == 'Pago')]
+            
+            entradas = mov_b[mov_b['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            saidas = mov_b[mov_b['Tipo'] == 'Despesa']['V_Num'].sum()
+            
+            if limite_total > 0 or "CART" in nome_banco.upper():
+                # Lógica de Cartão: Fatura é a soma das despesas
+                fatura_atual = saidas
+                disp = limite_total - fatura_atual
+                saldos_txt += f"💳 {nome_banco}: Fatura: {m_fmt(fatura_atual)} | Limite Disp: {m_fmt(disp)}\n"
+            else:
+                # Lógica de Conta: Saldo inicial + entradas - saídas
+                saldo_final = saldo_inicial + entradas - saidas
+                saldos_txt += f"🏦 {nome_banco}: Saldo: {m_fmt(saldo_final)}\n"
+                total_patrimonio += saldo_final
+
+    # Resumo do Período
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
-    
     r_v = d_v = rend_v = 0.0
     if not df_per.empty:
-        df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
-        r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-        d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        df_per_l = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
+        r_v = df_per_l[df_per_l['Tipo'] == 'Receita']['V_Num'].sum()
+        d_v = df_per_l[df_per_l['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend_v = df_per_l[df_per_l['Tipo'] == 'Rendimento']['V_Num'].sum()
 
-    pend_v = get_valor_pendente(df_base)
-    sobra = (r_v + rend_v) - d_v
-        
-    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nPEND: {m_fmt(pend_v)}\nSOBRA: {m_fmt(sobra)}\n========================================\n\nSALDOS ATUAIS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}"
+    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSTATUS DOS BANCOS/CARTÕES:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}"
     
     st.text_area("Copiar Relatório", relat, height=400)
     zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
