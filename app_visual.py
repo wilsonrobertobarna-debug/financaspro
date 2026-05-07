@@ -259,15 +259,18 @@ if "💰" in aba:
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
+       # Ajuste na Tela Principal (💰)
+        df_m_limpo['T_UP'] = df_m_limpo['Tipo'].astype(str).str.upper().str.strip()
         
-        st.divider()
+        rec_total = df_m_limpo[df_m_limpo['T_UP'] == 'RECEITA']['V_Num'].sum()
+        desp_total = df_m_limpo[df_m_limpo['T_UP'] == 'DESPESA']['V_Num'].sum()
+        # RENDIMENTO: Pega tudo do mês atual, sem filtrar por "Pago"
+        rend_total = df_m[df_m['Tipo'].astype(str).str.upper().str.strip() == 'RENDIMENTO']['V_Num'].sum()
         
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+        m1.metric("📈 Receita", m_fmt(rec_total))
+        m2.metric("📉 Gasto", m_fmt(desp_total))
+        m3.metric("💰 Rendimento", m_fmt(rend_total))
         m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
         
         st.divider()
