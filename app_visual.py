@@ -511,7 +511,7 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
-    # 1. LIMPEZA DA BASE DE LANÇAMENTOS
+    # --- LIMPEZA DE DADOS DA BASE ---
     df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0.0)
     
     st.divider()
@@ -523,66 +523,67 @@ elif "📄" in aba:
     saldos_txt = ""
     total_patrimonio = 0.0
     
-    # Função reforçada para ler qualquer formato de moeda
-    def converter_valor(v):
+    def extrair_numero(v):
         if pd.isna(v) or str(v).strip() == "": return 0.0
         try:
-            s = str(v).replace('R$', '').replace('.', '').replace(',', '.').strip()
-            import re
-            s = re.sub(r'[^\d.]', '', s)
+            # Remove tudo que não é dígito ou vírgula/ponto
+            s = "".join(c for c in str(v) if c.isdigit() or c in ',.')
+            if ',' in s and '.' in s: s = s.replace('.', '')
+            s = s.replace(',', '.')
             return float(s)
         except: return 0.0
 
-    # 2. PROCESSAMENTO LINHA POR LINHA
+    # --- PROCESSAMENTO COM REDE DE ARRASTÃO ---
     if not df_bancos_info.empty:
         for i in range(len(df_bancos_info)):
             linha = df_bancos_info.iloc[i]
             nome_banco = str(linha.iloc[0]).strip()
             
-            if nome_banco.lower() in ['nan', 'None', '']: continue
+            if nome_banco.lower() in ['nan', '', 'none']: continue
             
-            # Pega valores por posição: Saldo na Coluna B (1), Limite na Coluna C (2)
-            saldo_planilha = converter_valor(linha.iloc[1])
-            limite_planilha = converter_valor(linha.iloc[2]) if len(linha) > 2 else 0.0
+            # REDE DE ARRASTÃO: Pega todos os números da linha (menos o nome)
+            numeros_da_linha = []
+            for celula in linha.iloc[1:]:
+                num = extrair_numero(celula)
+                if num > 0: numeros_da_linha.append(num)
             
-            # Busca movimentações na base
+            # Lógica: O maior número da linha costuma ser o Limite. O menor (ou o primeiro) o Saldo.
+            limite_final = max(numeros_da_linha) if numeros_da_linha else 0.0
+            saldo_inicial = numeros_da_linha[0] if numeros_da_linha else 0.0
+            
+            # Busca movimentações
             mov_banco = df_base[(df_base['Banco'].str.strip() == nome_banco) & (df_base['Status'] == 'Pago')]
-            
-            entradas_banco = mov_banco[mov_banco['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            saidas_banco = mov_banco[mov_banco['Tipo'] == 'Despesa']['V_Num'].sum()
+            v_entradas = mov_banco[mov_banco['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            v_saidas = mov_banco[mov_banco['Tipo'] == 'Despesa']['V_Num'].sum()
 
             if "CART" in nome_banco.upper():
-                # Lógica de Cartão
-                utilizado = saidas_banco
-                a_utilizar = limite_planilha - utilizado
-                saldos_txt += f"💳 *{nome_banco}*:\n   Limite: {m_fmt(limite_planilha)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(a_utilizar)}*\n\n"
+                utilizado = v_saidas
+                a_utilizar = limite_final - utilizado
+                saldos_txt += f"💳 *{nome_banco}*:\n   Limite: {m_fmt(limite_final)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(a_utilizar)}*\n\n"
             else:
-                # Lógica de Conta
-                saldo_atual = saldo_planilha + entradas_banco - saidas_banco
+                saldo_atual = saldo_inicial + v_entradas - v_saidas
                 saldos_txt += f"🏦 *{nome_banco}*: {m_fmt(saldo_atual)}\n\n"
                 total_patrimonio += saldo_atual
 
-    # 3. RESUMO FINANCEIRO (REC + REND - DES)
+    # --- RESUMO FINANCEIRO CORRIGIDO ---
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
-    df_per_pago = df_per[(df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]
+    df_pago = df_per[(df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]
     
-    v_rec = df_per_pago[df_per_pago['Tipo'] == 'Receita']['V_Num'].sum()
-    v_rend = df_per_pago[df_per_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
-    v_des = df_per_pago[df_per_pago['Tipo'] == 'Despesa']['V_Num'].sum()
+    v_rec = df_pago[df_pago['Tipo'] == 'Receita']['V_Num'].sum()
+    v_rend = df_pago[df_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
+    v_des = df_pago[df_pago['Tipo'] == 'Despesa']['V_Num'].sum()
     v_sobra = (v_rec + v_rend) - v_des
 
     relat = f"*RELATÓRIO WILSON*\n"
     relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"================================\n"
-    relat += f"REC: {m_fmt(v_rec)}\n"
-    relat += f"REND: {m_fmt(v_rend)}\n"
-    relat += f"DES: {m_fmt(v_des)}\n"
-    relat += f"*SOBRA: {m_fmt(v_sobra)}*\n"
+    relat += f"REC: {m_fmt(v_rec)} | REND: {m_fmt(v_rend)}\n"
+    relat += f"DES: {m_fmt(v_des)} | *SOBRA: {m_fmt(v_sobra)}*\n"
     relat += f"================================\n\n"
     relat += f"*SALDOS E CARTÕES:*\n{saldos_txt}"
     relat += f"*TOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}*"
     
-    st.text_area("Copiar Relatório", relat, height=500)
+    st.text_area("Relatório Wilson", relat, height=500)
     st.markdown(f'[📲 Enviar WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
 elif "📋" in aba:
         st.title("📋 Gerador de Relatório PDF")
