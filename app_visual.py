@@ -511,9 +511,10 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
-    # Debug para conferência de colunas
-    if st.checkbox("🔍 Debug: Validar leitura da planilha de Bancos"):
-        st.write("Colunas detectadas:", df_bancos_info.columns.tolist())
+    # Checkbox de socorro para conferirmos a estrutura da planilha
+    if st.checkbox("🔍 Socorro: Onde estão meus limites?"):
+        st.write("Abaixo está exatamente o que o Python vê na aba Bancos:")
+        st.write("As colunas são:", list(df_bancos_info.columns))
         st.dataframe(df_bancos_info)
 
     st.divider()
@@ -525,14 +526,14 @@ elif "📄" in aba:
     saldos_txt = ""
     total_patrimonio = 0.0
     
-    # Garante que os números da base sejam reconhecidos
+    # Garante que os números da base sejam reconhecidos como decimais
     df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0.0)
     
     def limpar_v(v):
         if v is None or str(v).strip() == "" or str(v).lower() == 'nan': return 0.0
         try:
             import re
-            # Limpeza ultra-agressiva para converter formatos de moeda brasileira
+            # Remove pontos de milhar e ajusta vírgula decimal
             s = str(v).replace('.', '').replace(',', '.')
             s = re.sub(r'[^\d.]', '', s)
             return float(s) if s else 0.0
@@ -544,28 +545,34 @@ elif "📄" in aba:
             nome_banco_ref = str(row.iloc[0]).strip()
             if not nome_banco_ref or nome_banco_ref.lower() == 'nan': continue
             
-            # Pega valores da aba Bancos (B=1, C=2)
-            saldo_ini_cfg = limpar_v(row.iloc[1])
-            limite_cfg = limpar_v(row.iloc[2]) if len(row) > 2 else 0.0
+            # --- LÓGICA DE BUSCA AUTOMÁTICA DE LIMITE ---
+            # O código vai olhar da Coluna C em diante (índice 2, 3, 4...) 
+            # e pegar o primeiro número que encontrar que seja maior que zero.
+            limite_cfg = 0.0
+            for i in range(2, len(row)):
+                valor_teste = limpar_v(row.iloc[i])
+                if valor_teste > 0:
+                    limite_cfg = valor_teste
+                    break
             
-            # Filtra movimentações PAGAS para este nome exato
+            saldo_ini_cfg = limpar_v(row.iloc[1])
+            
+            # Busca movimentações PAGAS com este nome exato
             df_mov = df_base[(df_base['Banco'].str.strip() == nome_banco_ref) & (df_base['Status'] == 'Pago')]
             entradas = df_mov[df_mov['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
             saidas = df_mov[df_mov['Tipo'] == 'Despesa']['V_Num'].sum()
             
-            # Lógica de exibição do Cartão
+            # Se for Cartão (contém 'CART' no nome ou achou limite > 0)
             if "CART" in nome_banco_ref.upper() or limite_cfg > 0:
                 utilizado = saidas
                 a_utilizar = limite_cfg - utilizado
-                # Adicionei o "Limite Total" na mensagem para você conferir se o Python leu certo
                 saldos_txt += f"💳 *{nome_banco_ref}*:\n   Limite: {m_fmt(limite_cfg)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(a_utilizar)}*\n\n"
             else:
-                # Lógica de Conta Corrente
                 saldo_final = saldo_ini_cfg + entradas - saidas
                 saldos_txt += f"🏦 *{nome_banco_ref}*: {m_fmt(saldo_final)}\n\n"
                 total_patrimonio += saldo_final
 
-    # 2. RESUMO DO PERÍODO
+    # 2. RESUMO FINANCEIRO
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     r_v = d_v = 0.0
     if not df_per.empty:
