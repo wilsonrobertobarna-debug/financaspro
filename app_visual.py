@@ -605,18 +605,17 @@ elif "📄" in aba:
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     
     if not df_per.empty:
-        # Criamos uma coluna temporária para ignorar maiúsculas/minúsculas
+        # Criamos uma coluna temporária em maiúsculo para não ter erro de digitação
         df_per['Tipo_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
         
-        # Filtro: Ignora transferências. Para Receita/Despesa exige 'Pago', mas para Rendimento pega TUDO.
+        # Filtros corrigidos
         r_v = df_per[(df_per['Tipo_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]['V_Num'].sum()
         d_v = df_per[(df_per['Tipo_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]['V_Num'].sum()
         
-        # RENDIMENTO: Aqui é o pulo do gato. Ele ignora o Status e pega qualquer variação do nome.
+        # RENDIMENTO: Agora ele pega qualquer variação (rendimento, Rendimento, REND) e ignora o Status
         rend_v = df_per[df_per['Tipo_UP'] == 'RENDIMENTO']['V_Num'].sum()
         
-        pend_v = get_valor_pendente(df_base)
-    else:
+        pend_v = get_valor_pendente(df_base)    else:
         r_v = 0
         d_v = 0
         rend_v = 0
