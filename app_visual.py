@@ -592,7 +592,10 @@ elif "📄" in aba:
             saldos_txt += f"🏦 {b}: Saldo Atual: {m_fmt(saldo_final)}\n"
             total_b += saldo_final
             
-    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_per['DT'].dt.date <= d_fim)].copy()
+   # ... (código anterior da aba WhatsApp)
+
+    # CORREÇÃO DA LINHA 595:
+    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     
     if not df_per.empty:
         df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
