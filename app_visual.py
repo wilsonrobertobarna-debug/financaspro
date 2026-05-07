@@ -511,9 +511,11 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
-    # Conferência rápida para você ver o que o Python está lendo
-    with st.expander("🔍 Conferir Dados da Planilha (Bancos)"):
-        st.dataframe(df_bancos_info)
+    # Debug para conferência de tipos de dados
+    if st.checkbox("🔍 Debug: Verificar Formatação dos Valores"):
+        st.write("Tipos de dados detectados nas colunas:")
+        st.write(df_bancos_info.dtypes)
+        st.write("Amostra dos dados brutos:", df_bancos_info.head())
 
     st.divider()
 
@@ -524,66 +526,82 @@ elif "📄" in aba:
     saldos_txt = ""
     total_patrimonio = 0.0
     
+    # FUNÇÃO DE LIMPEZA REFORÇADA
     def limpar_v(v):
-        if v is None or str(v).strip() == "" or str(v).lower() == 'nan': return 0.0
+        if v is None: return 0.0
+        s = str(v).strip()
+        if s == "" or s.lower() == 'nan': return 0.0
         try:
             import re
-            # Remove pontos de milhar e trata a vírgula decimal
-            s = str(v).replace('.', '').replace(',', '.')
+            # 1. Se houver vírgula e ponto, removemos o ponto (milhar) e trocamos a vírgula por ponto (decimal)
+            if ',' in s and '.' in s:
+                s = s.replace('.', '')
+            s = s.replace(',', '.')
+            # 2. Remove TUDO que não for número ou o ponto decimal
             s = re.sub(r'[^\d.]', '', s)
+            # 3. Garante que se houver mais de um ponto (erro de digitação), pegamos apenas o primeiro
+            partes = s.split('.')
+            if len(partes) > 2:
+                s = partes[0] + "." + "".join(partes[1:])
             return float(s) if s else 0.0
-        except: return 0.0
+        except:
+            return 0.0
 
     # 1. PROCESSAMENTO DOS BANCOS E CARTÕES
     if not df_bancos_info.empty:
+        # Tenta identificar a coluna de limite
+        idx_limite = 2 # Padrão: 3ª coluna
+        for i, c in enumerate(df_bancos_info.columns):
+            if "LIMITE" in str(c).upper():
+                idx_limite = i
+                break
+
         for _, row in df_bancos_info.iterrows():
-            # Nome exato como está na aba 'Bancos'
             nome_banco_ref = str(row.iloc[0]).strip()
             if not nome_banco_ref or nome_banco_ref.lower() == 'nan': continue
             
-            # Valores configurados na aba 'Bancos'
-            saldo_inicial_cfg = limpar_v(row.iloc[1])
-            limite_total_cfg = limpar_v(row.iloc[2]) if len(row) >= 3 else 0.0
+            # Limpeza forçada dos valores da planilha
+            val_saldo_ini = limpar_v(row.iloc[1])
+            val_limite_total = limpar_v(row.iloc[idx_limite]) if len(row) > idx_limite else 0.0
             
-            # BUSCA NA BASE: Vamos normalizar os nomes para evitar erro de espaço/maiúscula
-            # Filtra tudo o que foi PAGO para este banco específico em TODO o histórico
-            mask_banco = (df_base['Banco'].str.strip().str.upper() == nome_banco_ref.upper()) & (df_base['Status'] == 'Pago')
-            df_mov = df_base[mask_banco]
+            # Normalização para comparação de nomes
+            import unicodedata
+            def norm(txt):
+                return unicodedata.normalize('NFKD', str(txt)).encode('ASCII', 'ignore').decode('ASCII').upper().strip()
+
+            nome_norm = norm(nome_banco_ref)
+            df_base['Banco_Norm'] = df_base['Banco'].apply(norm)
             
-            entradas_total = df_mov[df_mov['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            saidas_total = df_mov[df_mov['Tipo'] == 'Despesa']['V_Num'].sum()
+            # Filtra apenas o que é PAGO para este banco
+            df_mov = df_base[(df_base['Banco_Norm'] == nome_norm) & (df_base['Status'] == 'Pago')]
+            entradas = df_mov[df_mov['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            saidas = df_mov[df_mov['Tipo'] == 'Despesa']['V_Num'].sum()
             
-            # Identifica se é cartão (pelo nome ou se houver limite cadastrado)
-            if "CART" in nome_banco_ref.upper() or limite_total_cfg > 0:
-                utilizado = saidas_total
-                a_utilizar = limite_total_cfg - utilizado
+            # Se for Cartão
+            if "CARTA" in nome_norm or val_limite_total > 0:
+                utilizado = saidas
+                a_utilizar = val_limite_total - utilizado
                 saldos_txt += f"💳 *{nome_banco_ref}*:\n   Utilizado: {m_fmt(utilizado)} | A Utilizar: {m_fmt(a_utilizar)}\n\n"
             else:
-                saldo_atual = saldo_inicial_cfg + entradas_total - saidas_total
-                saldos_txt += f"🏦 *{nome_banco_ref}*: {m_fmt(saldo_atual)}\n\n"
-                total_patrimonio += saldo_atual
+                saldo_final = val_saldo_ini + entradas - saidas
+                saldos_txt += f"🏦 *{nome_banco_ref}*: {m_fmt(saldo_final)}\n\n"
+                total_patrimonio += saldo_final
 
-    # 2. RESUMO FINANCEIRO DO PERÍODO SELECIONADO (FILTRADO POR DATA)
+    # 2. RESUMO DO PERÍODO
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     r_v = d_v = rend_v = 0.0
-    
     if not df_per.empty:
-        df_per_l = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
-        r_v = df_per_l[df_per_l['Tipo'] == 'Receita']['V_Num'].sum()
-        d_v = df_per_l[df_per_l['Tipo'] == 'Despesa']['V_Num'].sum()
-        rend_v = df_per_l[df_per_l['Tipo'] == 'Rendimento']['V_Num'].sum()
+        df_l = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
+        r_v = df_l[df_l['Tipo'] == 'Receita']['V_Num'].sum()
+        d_v = df_l[df_l['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend_v = df_l[df_l['Tipo'] == 'Rendimento']['V_Num'].sum()
 
-    pend_v = get_valor_pendente(df_base)
     sobra = (r_v + rend_v) - d_v
     
-    # Montagem do Relatório
     relat = f"*RELATÓRIO WILSON*\n"
     relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"================================\n"
-    relat += f"REC: {m_fmt(r_v)}\n"
-    relat += f"DES: {m_fmt(d_v)}\n"
-    relat += f"REND: {m_fmt(rend_v)}\n"
-    relat += f"PEND: {m_fmt(pend_v)}\n"
+    relat += f"REC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\n"
     relat += f"SOBRA: {m_fmt(sobra)}\n"
     relat += f"================================\n\n"
     relat += f"*SALDOS E CARTÕES:*\n{saldos_txt}"
