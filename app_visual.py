@@ -512,7 +512,6 @@ elif "📄" in aba:
     st.title("📄 WhatsApp")
     
     # 1. TRATAMENTO DA BASE DE LANÇAMENTOS
-    # Forçamos a conversão para número e limpamos nomes para busca
     df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0.0)
     df_base['Banco_Busca'] = df_base['Banco'].astype(str).str.upper().str.strip()
     
@@ -525,12 +524,10 @@ elif "📄" in aba:
     saldos_txt = ""
     total_patrimonio = 0.0
     
-    # Função Sniper: Só extrai números, ignora R$, pontos e espaços
-    def extrair_valor_celula(v):
+    def converter_moeda(v):
         if pd.isna(v) or str(v).strip() == "": return 0.0
         try:
             s = str(v).replace('R$', '').strip()
-            # Se tiver ponto e vírgula (Ex: 1.200,00), remove o ponto e troca vírgula por ponto
             if ',' in s and '.' in s: s = s.replace('.', '')
             s = s.replace(',', '.')
             import re
@@ -538,43 +535,38 @@ elif "📄" in aba:
             return float(s) if s else 0.0
         except: return 0.0
 
-    # 2. PROCESSAMENTO BLINDADO
+    # 2. PROCESSAMENTO RÍGIDO (BANCOS vs CARTÕES)
     if not df_bancos_info.empty:
         for i in range(len(df_bancos_info)):
             linha = df_bancos_info.iloc[i]
             nome_original = str(linha.iloc[0]).strip()
             
-            # Pula linhas vazias
             if nome_original.lower() in ['nan', '', 'none']: continue
             
-            # --- LEITURA ABSOLUTA POR POSIÇÃO ---
-            # Coluna B (Índice 1) = Saldo Inicial
-            # Coluna C (Índice 2) = Limite do Cartão
-            val_saldo_ini = extrair_valor_celula(linha.iloc[1])
-            val_limite_cartao = extrair_valor_celula(linha.iloc[2]) if len(linha) > 2 else 0.0
+            # --- LEITURA DIRETA POR COLUNA ---
+            # Saldo Inicial = Coluna B (Índice 1) | Limite = Coluna C (Índice 2)
+            val_saldo_ini = converter_moeda(linha.iloc[1])
+            val_limite_fixo = converter_moeda(linha.iloc[2]) if len(linha) > 2 else 0.0
             
-            # --- BUSCA DE UTILIZADO POR CHAVE ---
-            # Pegamos o nome essencial (ex: 'INTER', '8112')
+            # --- BUSCA DE GASTOS (UTILIZADO) ---
             chave = nome_original.upper().replace("CARTÃO", "").replace("CARTAO", "").replace("MASTERCARD", "").replace("VISA", "").replace("-", "").strip()
+            mov_paga = df_base[(df_base['Banco_Busca'].str.contains(chave, na=False)) & (df_base['Status'] == 'Pago')]
             
-            # Filtra na base o que foi PAGO para este banco/cartão
-            mov_filtrada = df_base[(df_base['Banco_Busca'].str.contains(chave, na=False)) & (df_base['Status'] == 'Pago')]
-            
-            entradas_b = mov_filtrada[mov_filtrada['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            saidas_b = mov_filtrada[mov_filtrada['Tipo'] == 'Despesa']['V_Num'].sum()
+            ent_b = mov_paga[mov_paga['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            sai_b = mov_paga[mov_paga['Tipo'] == 'Despesa']['V_Num'].sum()
 
             if "CART" in nome_original.upper():
-                # Lógica: O Utilizado são as despesas acumuladas
-                utilizado = saidas_b
-                a_utilizar = val_limite_cartao - utilizado
-                saldos_txt += f"💳 *{nome_original}*:\n   Limite: {m_fmt(val_limite_cartao)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(a_utilizar)}*\n\n"
+                # Lógica de Cartão: Limite vem da Coluna C
+                utilizado = sai_b
+                a_utilizar = val_limite_fixo - utilizado
+                saldos_txt += f"💳 *{nome_original}*:\n   Limite: {m_fmt(val_limite_fixo)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(a_utilizar)}*\n\n"
             else:
-                # Lógica: Saldo Inicial + Entradas - Saídas
-                saldo_final = val_saldo_ini + entradas_b - saidas_b
-                saldos_txt += f"🏦 *{nome_original}*: {m_fmt(saldo_final)}\n\n"
-                total_patrimonio += saldo_final
+                # Lógica de Banco: Saldo Atualizado
+                saldo_atual = val_saldo_ini + ent_b - sai_b
+                saldos_txt += f"🏦 *{nome_original}*: {m_fmt(saldo_atual)}\n\n"
+                total_patrimonio += saldo_atual
 
-    # 3. RESUMO GERAL (REC + REND - DES)
+    # 3. RESUMO DO PERÍODO CORRIGIDO
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     df_pago = df_per[(df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]
     
@@ -592,8 +584,8 @@ elif "📄" in aba:
     relat += f"*SALDOS E CARTÕES:*\n{saldos_txt}"
     relat += f"*TOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}*"
     
-    st.text_area("Relatório Atualizado", relat, height=500)
-    st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
+    st.text_area("Relatório Wilson", relat, height=500)
+    st.markdown(f'[📲 Enviar WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
 elif "📋" in aba:
         st.title("📋 Gerador de Relatório PDF")
         
