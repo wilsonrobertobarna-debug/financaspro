@@ -522,43 +522,68 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
-    # 1. Ajuste das datas (Certifique-se de selecionar Maio no calendário da tela)
     c1, c2 = st.columns(2)
+    # 1. Ajuste das datas usando o fuso horário que calculamos antes
     d_ini = c1.date_input("Início", hoje_br - timedelta(days=30), format="DD/MM/YYYY", key="zap_d1")
     d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY", key="zap_d2")
     
-    # ... (Mantenha seu loop de bancos/cartões que calcula o saldos_txt e total_patrimonio) ...
+    saldos_txt = ""
+    total_patrimonio = 0.0 # <--- AQUI ELA É CRIADA PARA NÃO DAR MAIS NAMEERROR
+    
+    # 2. LOOP PELOS BANCOS (Para montar o texto dos saldos)
+    for b in sorted(bancos_disponiveis):
+        saldo_ini = 0.0
+        limite_cartao = 0.0
+        
+        if not df_bancos_info.empty:
+            for _, row in df_bancos_info.iterrows():
+                if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
+                    try:
+                        s_raw = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                        saldo_ini = float(s_raw) if s_raw else 0.0
+                        if len(row) > 2:
+                            l_raw = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                            limite_cartao = float(l_raw) if l_raw else 0.0
+                    except: pass
+                    break
+        
+        if "CART" in b.upper():
+            # Filtro para gastos do cartão no mês
+            df_cart = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]
+            df_cart['D_ONLY'] = pd.to_datetime(df_cart['DT']).dt.date
+            usado = df_cart[(df_cart['D_ONLY'] >= d_ini) & (df_cart['D_ONLY'] <= d_fim)]['V_Num'].sum()
+            dispo = limite_cartao - usado
+            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)}\n"
+        else:
+            mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
+            receitas_b = mov_paga[mov_paga['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            despesas_b = mov_paga[mov_paga['Tipo'] == 'Despesa']['V_Num'].sum()
+            s_final = saldo_ini + receitas_b - despesas_b
+            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(s_final)}\n"
+            total_patrimonio += s_final # <--- SOMA O VALOR AQUI
 
-    # 2. CÁLCULO DO RELATÓRIO (CORRIGINDO O NAMEERROR E O FILTRO DE DATAS)
-    # Criamos uma coluna de data limpa para o filtro de Maio não falhar
+    # 3. CÁLCULO DO RESUMO (MAIO)
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
 
     if not df_per.empty:
-        # Padroniza para maiúsculo para não "pular" nenhum lançamento por erro de digitação
         df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
-        
-        # DEFINIÇÃO DAS VARIÁVEIS (Nomes exatos para não dar NameError)
         rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
         des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
         
-        # RENDIMENTO (Buscando como informação extra)
         mask_rend = (df_per['T_UP'] == 'RENDIMENTO') | (df_per['Categoria'].astype(str).str.upper() == 'RENDIMENTO')
         rend_v = df_per[mask_rend]['V_Num'].sum()
-        
-        # A CONTA: Receita - Despesa = Sobra
         sobra = rec_v - des_v
     else:
-        # Se não houver dados, zeramos as variáveis para o relatório não quebrar
         rec_v = des_v = rend_v = sobra = 0.0
 
-    # 3. MONTAGEM DO TEXTO (Variáveis rec_v e rend_v agora existem!)
+    # 4. MONTAGEM DO TEXTO FINAL
     relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"========================================\n"
     relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
     relat += f"DES: {m_fmt(des_v)} | SOBRA: {m_fmt(sobra)}\n"
     relat += f"========================================\n\n"
-    relat += f"SALDOS:\n{saldos_txt}\nTOTAL: {m_fmt(total_patrimonio)}"
+    relat += f"SALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}" # <--- AGORA VAI ACHAR A VARIÁVEL
     
     st.text_area("Copiar Relatório", relat, height=300)
     st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
