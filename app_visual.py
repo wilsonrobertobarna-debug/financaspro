@@ -511,9 +511,9 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
-    # Debug para conferência imediata
-    if st.checkbox("🔍 Debug: Conferir se os Limites aparecem na Coluna 3"):
-        st.write("Dados brutos da aba Bancos (A coluna de limite deve ser a terceira):")
+    # Debug para conferência de colunas
+    if st.checkbox("🔍 Debug: Validar leitura da planilha de Bancos"):
+        st.write("Colunas detectadas:", df_bancos_info.columns.tolist())
         st.dataframe(df_bancos_info)
 
     st.divider()
@@ -525,14 +525,14 @@ elif "📄" in aba:
     saldos_txt = ""
     total_patrimonio = 0.0
     
-    # Força V_Num como numérico na base
+    # Garante que os números da base sejam reconhecidos
     df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0.0)
     
     def limpar_v(v):
         if v is None or str(v).strip() == "" or str(v).lower() == 'nan': return 0.0
         try:
             import re
-            # Remove pontos de milhar, troca vírgula por ponto e limpa símbolos
+            # Limpeza ultra-agressiva para converter formatos de moeda brasileira
             s = str(v).replace('.', '').replace(',', '.')
             s = re.sub(r'[^\d.]', '', s)
             return float(s) if s else 0.0
@@ -544,23 +544,24 @@ elif "📄" in aba:
             nome_banco_ref = str(row.iloc[0]).strip()
             if not nome_banco_ref or nome_banco_ref.lower() == 'nan': continue
             
-            # --- PEGA O LIMITE DIRETAMENTE DA COLUNA C (Índice 2) ---
-            limite_da_planilha = limpar_v(row.iloc[2]) if len(row) > 2 else 0.0
-            saldo_ini_planilha = limpar_v(row.iloc[1])
+            # Pega valores da aba Bancos (B=1, C=2)
+            saldo_ini_cfg = limpar_v(row.iloc[1])
+            limite_cfg = limpar_v(row.iloc[2]) if len(row) > 2 else 0.0
             
-            # Busca gastos na base (NOME EXATO e STATUS PAGO)
+            # Filtra movimentações PAGAS para este nome exato
             df_mov = df_base[(df_base['Banco'].str.strip() == nome_banco_ref) & (df_base['Status'] == 'Pago')]
             entradas = df_mov[df_mov['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
             saidas = df_mov[df_mov['Tipo'] == 'Despesa']['V_Num'].sum()
             
-            # Lógica: Se o nome tiver "CART" ou o limite for maior que zero
-            if "CART" in nome_banco_ref.upper() or limite_da_planilha > 0:
+            # Lógica de exibição do Cartão
+            if "CART" in nome_banco_ref.upper() or limite_cfg > 0:
                 utilizado = saidas
-                a_utilizar = limite_da_planilha - utilizado
-                saldos_txt += f"💳 *{nome_banco_ref}*:\n   Utilizado: {m_fmt(utilizado)} | A Utilizar: {m_fmt(a_utilizar)}\n\n"
+                a_utilizar = limite_cfg - utilizado
+                # Adicionei o "Limite Total" na mensagem para você conferir se o Python leu certo
+                saldos_txt += f"💳 *{nome_banco_ref}*:\n   Limite: {m_fmt(limite_cfg)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(a_utilizar)}*\n\n"
             else:
-                # Conta bancária normal
-                saldo_final = saldo_ini_planilha + entradas - saidas
+                # Lógica de Conta Corrente
+                saldo_final = saldo_ini_cfg + entradas - saidas
                 saldos_txt += f"🏦 *{nome_banco_ref}*: {m_fmt(saldo_final)}\n\n"
                 total_patrimonio += saldo_final
 
@@ -581,7 +582,7 @@ elif "📄" in aba:
     relat += f"*SALDOS E CARTÕES:*\n{saldos_txt}"
     relat += f"*TOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}*"
     
-    st.text_area("Copiar para WhatsApp", relat, height=450)
+    st.text_area("Copiar para WhatsApp", relat, height=500)
     zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
     st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
 elif "📋" in aba:
