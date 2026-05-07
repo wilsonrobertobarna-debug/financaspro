@@ -511,10 +511,9 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
-    # Checkbox para você conferir os dados brutos se algo der errado
-    if st.checkbox("🔍 Conferir Limites e Saldos Iniciais (Debug)"):
-        st.write("Dados lidos da aba Bancos:")
-        st.dataframe(df_bancos_info)
+    # Debug para conferência
+    if st.checkbox("🔍 Debug: Ver nomes cadastrados na aba Bancos"):
+        st.write(df_bancos_info)
 
     st.divider()
 
@@ -529,43 +528,44 @@ elif "📄" in aba:
         if v is None or str(v).strip() == "" or str(v).lower() == 'nan': return 0.0
         try:
             import re
-            # Remove pontos de milhar, troca vírgula por ponto e remove tudo que não é número
             s = str(v).replace('.', '').replace(',', '.')
             s = re.sub(r'[^\d.]', '', s)
             return float(s) if s else 0.0
         except: return 0.0
 
-    # 1. PROCESSAMENTO DOS BANCOS E CARTÕES (USANDO BUSCA EXATA)
+    # 1. PROCESSAMENTO DOS BANCOS E CARTÕES
     if not df_bancos_info.empty:
         for _, row in df_bancos_info.iterrows():
-            nome_banco_planilha = str(row.iloc[0]).strip()
-            if not nome_banco_planilha or nome_banco_planilha.lower() == 'nan': continue
+            nome_original = str(row.iloc[0]).strip()
+            if not nome_original or nome_original.lower() == 'nan': continue
             
-            # Pega valores das colunas B e C da aba Bancos
+            # Valores da planilha (Saldos e Limites)
             saldo_inicial = limpar_v(row.iloc[1])
             limite_total = limpar_v(row.iloc[2]) if len(row) >= 3 else 0.0
             
-            # Filtra na base de dados APENAS o que for EXATAMENTE esse banco e estiver PAGO
-            # Olhamos todo o histórico para o saldo ser o real de hoje
-            mov_pago = df_base[(df_base['Banco'] == nome_banco_planilha) & (df_base['Status'] == 'Pago')]
+            # FILTRO FLEXÍVEL: Ignora espaços e maiúsculas na comparação
+            # Comparamos o nome da aba Bancos com a coluna 'Banco' da Base de lançamentos
+            mask_pago = (df_base['Status'] == 'Pago') & \
+                        (df_base['Banco'].str.strip().str.upper() == nome_original.upper())
             
-            entradas = mov_pago[mov_pago['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            saidas = mov_pago[mov_pago['Tipo'] == 'Despesa']['V_Num'].sum()
+            df_mov = df_base[mask_pago]
             
-            # Se for Cartão (tem limite > 0 ou a palavra Cartão no nome)
-            if limite_total > 0 or "CART" in nome_banco_planilha.upper():
-                fatura_atual = saidas # Soma das despesas pagas nesse cartão
-                utilizado = fatura_atual
-                disponivel = limite_total - utilizado
-                
-                saldos_txt += f"💳 {nome_banco_planilha}:\n   Utilizado: {m_fmt(utilizado)} | A Utilizar: {m_fmt(disponivel)}\n\n"
+            entradas = df_mov[df_mov['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            saidas = df_mov[df_mov['Tipo'] == 'Despesa']['V_Num'].sum()
+            
+            # Lógica de exibição
+            if limite_total > 0 or "CART" in nome_original.upper():
+                # Para cartões: Utilizado são as despesas, A Utilizar é Limite - Utilizado
+                utilizado = saidas
+                a_utilizar = limite_total - utilizado
+                saldos_txt += f"💳 {nome_original}:\n   Utilizado: {m_fmt(utilizado)} | A Utilizar: {m_fmt(a_utilizar)}\n\n"
             else:
-                # Se for Conta Corrente
+                # Para bancos: Saldo inicial + entradas - saídas
                 saldo_atual = saldo_inicial + entradas - saidas
-                saldos_txt += f"🏦 {nome_banco_planilha}: {m_fmt(saldo_atual)}\n\n"
+                saldos_txt += f"🏦 {nome_original}: {m_fmt(saldo_atual)}\n\n"
                 total_patrimonio += saldo_atual
 
-    # 2. RESUMO FINANCEIRO DO PERÍODO SELECIONADO
+    # 2. RESUMO DO PERÍODO
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     r_v = d_v = rend_v = 0.0
     if not df_per.empty:
