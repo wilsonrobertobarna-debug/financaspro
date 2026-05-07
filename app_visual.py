@@ -523,81 +523,59 @@ elif "📄" in aba:
     st.title("📄 WhatsApp")
     
     c1, c2 = st.columns(2)
-    # 1. Ajuste das datas usando o fuso horário (agora_br/hoje_br)
+    # Datas ajustadas (Início e Fim)
     d_ini = c1.date_input("Início", hoje_br - timedelta(days=30), format="DD/MM/YYYY", key="zap_d1")
     d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY", key="zap_d2")
     
     saldos_txt = ""
     total_patrimonio = 0.0 
     
-    # 2. LOOP PELOS BANCOS (Saldos Reais)
+    # 1. LOOP PELOS BANCOS (Cálculo de Saldo Real)
     for b in sorted(bancos_disponiveis):
         saldo_ini = 0.0
-        limite_cartao = 0.0
-        
         if not df_bancos_info.empty:
             for _, row in df_bancos_info.iterrows():
                 if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
                     try:
                         s_raw = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
                         saldo_ini = float(s_raw) if s_raw else 0.0
-                        if len(row) > 2:
-                            l_raw = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                            limite_cartao = float(l_raw) if l_raw else 0.0
                     except: pass
                     break
         
-        if "CART" in b.upper():
-            # Filtro para gastos do cartão no período selecionado
-            df_cart = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')].copy()
-            df_cart['D_ONLY'] = pd.to_datetime(df_cart['DT']).dt.date
-            usado = df_cart[(df_cart['D_ONLY'] >= d_ini) & (df_cart['D_ONLY'] <= d_fim)]['V_Num'].sum()
-            dispo = limite_cartao - usado
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)}\n"
-        else:
-            mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
-            # Soma Receita e Rendimento para o saldo do banco
-            receitas_b = mov_paga[mov_paga['Tipo'].astype(str).str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
-            despesas_b = mov_paga[mov_paga['Tipo'] == 'Despesa']['V_Num'].sum()
-            s_final = saldo_ini + receitas_b - despesas_b
-            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(s_final)}\n"
-            total_patrimonio += s_final
+        mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
+        # Soma tudo que você marcou como RECEITA no Tipo
+        receitas_b = mov_paga[mov_paga['Tipo'].str.upper() == 'RECEITA']['V_Num'].sum()
+        despesas_b = mov_paga[mov_paga['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
+        
+        s_final = saldo_ini + receitas_b - despesas_b
+        saldos_txt += f"🏦 {b}: Saldo: {m_fmt(s_final)}\n"
+        total_patrimonio += s_final
 
-    # 3. CÁLCULO DO RESUMO (MAIO)
+    # 2. RESUMO DO RELATÓRIO (Filtro por período de MAIO)
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
-    df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
+    df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_per['DT_ONLY'] <= d_fim)].copy()
 
     if not df_per.empty:
-        # Padroniza para buscas seguras
-        df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
+        # Padroniza Categoria para achar o Rendimento dentro das receitas
         df_per['C_UP'] = df_per['Categoria'].astype(str).str.upper().str.strip()
+        df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
         
-        # RENDIMENTO: Busca "coringa" (Qualquer campo que contenha REND)
-    # Busca a palavra REND em qualquer lugar da linha (Linha 53 do código anterior)
-        rend_v = df_per[df_per.apply(lambda x: x.astype(str).str.contains('REND', case=False).any(), axis=1)]['V_Num'].sum()
-        rend_v = df_per[mask_rend]['V_Num'].sum()
+        # REC: Soma Receitas Reais (Exclui Transferências)
+        # O seu rendimento entra aqui automaticamente se o tipo dele for 'Receita'
+        rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
         
-        # RECEITA: Receita real, Pago, excluindo Transferências
-        rec_v = df_per[
-            (df_per['T_UP'] == 'RECEITA') & 
-            (df_per['Status'] == 'Pago') & 
-            (~df_per['C_UP'].str.contains('TRANS', na=False))
-        ]['V_Num'].sum()
+        # DES: Soma Despesas Reais (Exclui Transferências)
+        des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
         
-        # DESPESA: Despesa real, Pago, excluindo Transferências
-        des_v = df_per[
-            (df_per['T_UP'] == 'DESPESA') & 
-            (df_per['Status'] == 'Pago') & 
-            (~df_per['C_UP'].str.contains('TRANS', na=False))
-        ]['V_Num'].sum()
+        # REND: APENAS INFO (Pega o que é 'Rendimento' na categoria para te mostrar quanto foi)
+        rend_v = df_per[(df_per['C_UP'].str.contains('REND', na=False)) & (df_per['Status'] == 'Pago')]['V_Num'].sum()
         
-        # CONTA FINAL: Receita - Despesa
+        # SOBRA: A conta que você quer
         sobra = rec_v - des_v
-        
     else:
         rec_v = des_v = rend_v = sobra = 0.0
 
-    # 4. MONTAGEM DO TEXTO FINAL
+    # 3. TEXTO FINAL
     relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"========================================\n"
     relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
@@ -607,7 +585,6 @@ elif "📄" in aba:
     
     st.text_area("Copiar Relatório", relat, height=300)
     st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
-
 elif "📋" in aba:
     st.title("📋 Gerador de Relatório PDF")
     
