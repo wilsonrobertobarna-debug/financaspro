@@ -523,67 +523,36 @@ elif "📄" in aba:
     st.title("📄 WhatsApp")
     
     c1, c2 = st.columns(2)
-    # Usa a data corrigida para o calendário já abrir no dia certo
-    d_ini = c1.date_input("Início", hoje_br - timedelta(days=30), format="DD/MM/YYYY")
-    d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY")
+    # 1. Ajuste das datas (Certifique-se de selecionar Maio no calendário da tela)
+    d_ini = c1.date_input("Início", hoje_br - timedelta(days=30), format="DD/MM/YYYY", key="zap_d1")
+    d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY", key="zap_d2")
     
-    saldos_txt = ""
-    total_patrimonio = 0.0
-    
-    for b in sorted(bancos_disponiveis):
-        saldo_ini = 0.0
-        limite_cartao = 0.0
-        
-        # BUSCA INFO DO BANCO/CARTÃO (Tratamento de erro para não travar)
-        if not df_bancos_info.empty:
-            for _, row in df_bancos_info.iterrows():
-                if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
-                    try:
-                        s_raw = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                        saldo_ini = float(s_raw) if s_raw else 0.0
-                        # Coluna C (índice 2) é o Limite do Cartão
-                        if len(row) > 2:
-                            l_raw = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                            limite_cartao = float(l_raw) if l_raw else 0.0
-                    except: pass
-                    break
-        
-        # LÓGICA DE EXIBIÇÃO
-        if "CART" in b.upper():
-            usado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)]['V_Num'].sum()
-            dispo = limite_cartao - usado
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)}\n"
-        else:
-            mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
-            receitas_b = mov_paga[mov_paga['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            despesas_b = mov_paga[mov_paga['Tipo'] == 'Despesa']['V_Num'].sum()
-            s_final = saldo_ini + receitas_b - despesas_b
-            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(s_final)}\n"
-            total_patrimonio += s_final
+    # ... (Seu loop de bancos/cartões aqui, mantenha-o) ...
 
-   # 3. CÁLCULO DO RELATÓRIO (FILTRANDO POR MAIO OU DATA ESCOLHIDA)
-    # Garante que a coluna DT seja data e remove horas/minutos para comparar certo
+    # 2. CÁLCULO DO RELATÓRIO (CORRIGINDO O NAMEERROR E O FILTRO DE MAIO)
+    # Criamos uma cópia segura para não dar erro de data
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
-    
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
 
     if not df_per.empty:
-        # CONTA PRINCIPAL: Forçamos o filtro de Tipo e Status 'Pago'
-        # Usamos .str.upper() para evitar erro se estiver 'receita' ou 'RECEITA'
-        r_v = df_per[(df_per['Tipo'].astype(str).str.upper() == 'RECEITA') & 
-                     (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        # Padroniza para maiúsculo para o Python não "pular" nenhum lançamento
+        df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
         
-        d_v = df_per[(df_per['Tipo'].astype(str).str.upper() == 'DESPESA') & 
-                     (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        # DEFINIÇÃO DAS VARIÁVEIS (Para sumir o NameError)
+        rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
         
-        # RENDIMENTO: Como você disse que já está normal, mantemos a busca por nome
-        rend_v = df_per[df_per['Tipo'].astype(str).str.upper() == 'RENDIMENTO']['V_Num'].sum()
+        # RENDIMENTO (Buscando em Tipo ou Categoria)
+        mask_rend = (df_per['T_UP'] == 'RENDIMENTO') | (df_per['Categoria'].astype(str).str.upper() == 'RENDIMENTO')
+        rend_v = df_per[mask_rend]['V_Num'].sum()
         
-        # A CONTA: Receita - Despesa (Rendimento já está na receita)
-        sobra = r_v - d_v
+        # A CONTA: Receita - Despesa = Sobra (Rendimento já está na receita)
+        sobra = rec_v - des_v
     else:
-        r_v = d_v = rend_v = sobra = 0.0
-        
+        # Se não houver dados no período, zeramos tudo para não dar erro
+        rec_v = des_v = rend_v = sobra = 0.0
+
+    # 3. MONTAGEM DO TEXTO (Usando os nomes exatos das variáveis acima)
     relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"========================================\n"
     relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
