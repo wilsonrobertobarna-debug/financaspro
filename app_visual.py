@@ -567,12 +567,18 @@ elif "📄" in aba:
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
 
     if not df_per.empty:
-        df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
-        rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
-        des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        # Criamos uma versão em maiúsculo de TUDO para busca cega
+        df_per['TEXTO_GERAL'] = df_per.astype(str).apply(lambda x: ' '.join(x).upper(), axis=1)
         
-        mask_rend = (df_per['T_UP'] == 'RENDIMENTO') | (df_per['Categoria'].astype(str).str.upper() == 'RENDIMENTO')
-        rend_v = df_per[mask_rend]['V_Num'].sum()
+        # REC e DES: Mantemos o padrão de Tipo e Status Pago
+        rec_v = df_per[(df_per['Tipo'].str.upper().str.strip() == 'RECEITA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        des_v = df_per[(df_per['Tipo'].str.upper().str.strip() == 'DESPESA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        
+        # RENDIMENTO: Agora ele busca a palavra "REND" em qualquer lugar da linha
+        # Isso garante que se estiver "Rendimentos", "Rendimento", ou "Rend", ele pega.
+        rend_v = df_per[df_per['TEXTO_GERAL'].str.contains('REND', na=False)]['V_Num'].sum()
+        
+        # SOBRA: Receita - Despesa (Como o rendimento já está na receita, não somamos)
         sobra = rec_v - des_v
     else:
         rec_v = des_v = rend_v = sobra = 0.0
