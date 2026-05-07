@@ -573,7 +573,8 @@ elif "📄" in aba:
         df_per['C_UP'] = df_per['Categoria'].astype(str).str.upper().str.strip()
         
         # RENDIMENTO: Busca "coringa" (Qualquer campo que contenha REND)
-        mask_rend = (df_per['T_UP'].str.contains('REND', na=False)) | (df_per['C_UP'].str.contains('REND', na=False))
+    # Busca a palavra REND em qualquer lugar da linha (Linha 53 do código anterior)
+        rend_v = df_per[df_per.apply(lambda x: x.astype(str).str.contains('REND', case=False).any(), axis=1)]['V_Num'].sum()
         rend_v = df_per[mask_rend]['V_Num'].sum()
         
         # RECEITA: Receita real, Pago, excluindo Transferências
