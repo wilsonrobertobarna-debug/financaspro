@@ -509,74 +509,83 @@ elif "🚗" in aba:
         st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "📄" in aba:
-    st.title("📄 WhatsApp")
-    st.divider()
-
-    c1, c2 = st.columns(2)
-    d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-    d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
-    
-    bancos = sorted(bancos_disponiveis)
-    saldos_txt = ""
-    total_b = 0
-    
-    for b in bancos:
-        saldo = 0.0
-        limite = 0.0
+        st.title("📄 WhatsApp")
         
-        # 1. BUSCA EXATA DO LIMITE (Coluna C da aba Bancos)
-        if not df_bancos_info.empty:
-            for _, row in df_bancos_info.iterrows():
-                if str(row.iloc[0]).strip() == b:
-                    try:
-                        # Saldo (Coluna B)
-                        s_str = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                        saldo = float(s_str) if s_str else 0.0
-                        # Limite (Coluna C) - Aqui é onde ele não pode zerar!
-                        if len(row) >= 3:
-                            l_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                            limite = float(l_str) if l_str else 0.0
-                    except: pass
-                    break
+        st.subheader("📲 Notificações e Relatório")
         
-        # 2. CALCULA UTILIZADO DO MÊS (Respeitando as datas que você escolheu)
-        utilizado = df_base[
-            (df_base['Banco'] == b) & 
-            (df_base['Tipo'] == 'Despesa') & 
-            (df_base['DT'].dt.date >= d_ini) & 
-            (df_base['DT'].dt.date <= d_fim)
-        ]['V_Num'].sum()
+        # 1. DATAS DO RELATÓRIO
+        c1, c2 = st.columns(2)
+        d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+        d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
         
-        # 3. MONTAGEM DO TEXTO (Separando Banco de Cartão)
-        if "cartão" in b.lower() or "cartao" in b.lower():
-            disponivel = limite - utilizado
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
-        else:
-            # Para Bancos, soma o saldo inicial + movimentação do período
-            rec_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento'])) & (df_base['Status'] == 'Pago')]['V_Num'].sum()
-            des_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
-            saldo_final = saldo + rec_b - des_b
-            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo_final)}\n"
-            total_b += saldo_final
+        bancos = sorted(bancos_disponiveis)
+        saldos_txt = ""
+        total_b = 0
+        
+        # 2. LOOP PELOS BANCOS E CARTÕES
+        for b in bancos:
+            saldo = 0.0
+            limite = 0.0
             
-    # 4. RESUMO GERAL (REC, REND, DES)
-    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
-    if not df_per.empty:
-        # Forçamos o Tipo para maiúsculo para o Rendimento não sumir
-        df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
+            # Busca Saldo (Col B) e Limite (Col C) na aba Bancos
+            if not df_bancos_info.empty:
+                for _, row in df_bancos_info.iterrows():
+                    if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
+                        try:
+                            # Converte Saldo
+                            s_limpo = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                            saldo = float(s_limpo) if s_limpo else 0.0
+                            # Converte Limite (Coluna C / Índice 2)
+                            if len(row) > 2:
+                                l_limpo = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                                limite = float(l_limpo) if l_limpo else 0.0
+                        except:
+                            pass
+                        break
+            
+            # Calcula o Utilizado no Mês selecionado
+            utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)]['V_Num'].sum()
+            
+            # Se for Cartão
+            if "CART" in b.upper():
+                disponivel = limite - utilizado
+                saldos_txt += f"💳 {b}: Limite: {m_fmt(limite)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
+            else:
+                # Se for Banco, calcula saldo real (Saldo Inicial + Entradas - Saídas)
+                mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
+                receitas_b = mov_paga[mov_paga['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+                despesas_b = mov_paga[mov_paga['Tipo'] == 'Despesa']['V_Num'].sum()
+                saldo_final = saldo + receitas_b - despesas_b
+                saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo_final)}\n"
+                total_b += saldo_final
         
-        r_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
-        d_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
-        # RENDIMENTO: Pega qualquer coisa escrita Rendimento no período!
-        rend_v = df_per[df_per['T_UP'] == 'RENDIMENTO']['V_Num'].sum()
-        pend_v = get_valor_pendente(df_base)
-    else:
-        r_v = d_v = rend_v = pend_v = 0
+        # 3. RESUMO FINANCEIRO (RENDIMENTOS, RECEITAS E DESPESAS)
+        df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
         
-    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nPEND: {m_fmt(pend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
-    
-    st.text_area("Copiar para Zap", relat, height=400)
-    st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
+        if not df_per.empty:
+            # Cria coluna temporária para não errar maiúsculas/minúsculas
+            df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
+            
+            r_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+            d_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+            
+            # RENDIMENTO: Aqui ele pega qualquer variação do nome e ignora o status
+            rend_v = df_per[df_per['T_UP'] == 'RENDIMENTO']['V_Num'].sum()
+            pend_v = get_valor_pendente(df_base)
+        else:
+            r_v = d_v = rend_v = pend_v = 0
+            
+        # 4. MONTAGEM DO RELATÓRIO FINAL
+        sobra = (r_v + rend_v) - d_v
+        relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
+        relat += f"========================================\n"
+        relat += f"REC: {m_fmt(r_v)} | REND: {m_fmt(rend_v)}\n"
+        relat += f"DES: {m_fmt(d_v)} | SOBRA: {m_fmt(sobra)}\n"
+        relat += f"========================================\n\n"
+        relat += f"SALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
+        
+        st.text_area("Copiar para Zap", relat, height=400)
+        st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
 
 elif "📋" in aba:
         st.title("📋 Gerador de Relatório PDF")
