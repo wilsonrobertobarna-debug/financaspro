@@ -615,7 +615,9 @@ elif "📄" in aba:
         # RENDIMENTO: Agora ele pega qualquer variação (rendimento, Rendimento, REND) e ignora o Status
         rend_v = df_per[df_per['Tipo_UP'] == 'RENDIMENTO']['V_Num'].sum()
         
-        pend_v = get_valor_pendente(df_base)    else:
+        pend_v = get_valor_pendente(df_base
+                                    
+        else:        
         r_v = 0
         d_v = 0
         rend_v = 0
