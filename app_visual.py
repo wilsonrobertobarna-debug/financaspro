@@ -551,18 +551,18 @@ elif "📄" in aba:
                     except: pass
                     break
         
-       # 1. LOOP PELOS BANCOS (Mapeamento Completo: A, B, C, D, E)
+# 1. LOOP PELOS BANCOS (Ajustado para buscar PENDENTE no Cartão)
     for b in sorted(bancos_disponiveis):
         valor_b = 0.0      
         tipo_c = ""
         dia_fech_d = 1    
-        dia_venc_e = 10   # Lendo a nova coluna E
+        dia_venc_e = 10   
         
         if not df_bancos_info.empty:
             for _, row in df_bancos_info.iterrows():
                 if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
                     try:
-                        # B (1): Valor
+                        # B (1): Valor (Limite)
                         v_raw = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
                         valor_b = float(v_raw) if v_raw and v_raw != 'nan' else 0.0
                         
@@ -586,7 +586,7 @@ elif "📄" in aba:
             limite_cartao = valor_b
             
             try:
-                # Se hoje for antes do dia de fechamento (D), a fatura começou no mês anterior
+                # Lógica de virada de fatura
                 if d_fim.day < dia_fech_d:
                     data_corte = (d_fim - relativedelta(months=1)).replace(day=dia_fech_d)
                 else:
@@ -594,18 +594,24 @@ elif "📄" in aba:
             except:
                 data_corte = d_ini 
             
-            df_cart = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].str.upper() == 'DESPESA') & (df_base['Status'] == 'Pago')].copy()
+            # 🔥 MUDANÇA AQUI: Agora buscamos o que está 'Pendente' (Coluna G)
+            df_cart = df_base[(df_base['Banco'] == b) & 
+                              (df_base['Tipo'].str.upper() == 'DESPESA') & 
+                              (df_base['Status'].str.upper() == 'PENDENTE')].copy()
+            
             df_cart['D_ONLY'] = pd.to_datetime(df_cart['DT']).dt.date
+            
+            # Soma o que foi gasto no ciclo da fatura
             usado = df_cart[(df_cart['D_ONLY'] >= data_corte) & (df_cart['D_ONLY'] <= d_fim)]['V_Num'].sum()
             dispo = limite_cartao - usado
             
-            # Adicionei o dia de vencimento (E) no texto do relatório
             saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Vence dia {dia_venc_e})\n"
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
         else:
             saldo_inicial = valor_b
-            mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
+            # Para contas normais, mantemos apenas o que já foi 'Pago'
+            mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
             rec_b = mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
             des_b = mov_paga[mov_paga['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
             s_final = saldo_inicial + rec_b - des_b
