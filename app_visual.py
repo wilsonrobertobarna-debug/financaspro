@@ -560,49 +560,39 @@ elif "📄" in aba:
     total_b = 0
     
     for b in bancos:
-        saldo = 0.0
+        saldo_base = 0.0
         limite = 0.0
         
+        # 1. Pega o valor inicial da aba "Bancos"
         if not df_bancos_info.empty:
             for _, row in df_bancos_info.iterrows():
                 if str(row.iloc[0]).strip() == b:
-                    if len(row) > 1:
-                        try:
-                            val_str = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                            if val_str:
-                                saldo = float(val_str)
-                        except:
-                            saldo = 0.0
-                            
+                    try:
+                        val_s = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                        saldo_base = float(val_s) if val_s else 0.0
                         if len(row) >= 3:
-                            try:
-                                lim_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                                if lim_str:
-                                    limite = float(lim_str)
-                            except:
-                                limite = 0.0
+                            lim_s = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                            limite = float(lim_s) if lim_s else 0.0
+                    except: pass
                     break
-                
-        utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
         
-        if "cartão" not in b.lower():
-            receitas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] != 'Pendente')]['V_Num'].sum()
-            despesas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] != 'Pendente')]['V_Num'].sum()
-            saldo = saldo + receitas_b - despesas_b
+        # 2. Calcula movimentações (entradas e saídas PAGAS)
+        mov_b = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')].copy()
+        entradas = mov_b[mov_b['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        saidas = mov_b[mov_b['Tipo'] == 'Despesa']['V_Num'].sum()
         
+        saldo_final = saldo_base + entradas - saidas
+        
+        # 3. Formata texto por tipo de conta
         if "cartão" in b.lower():
-            if limite > 0:
-                disponivel = limite - utilizado
-            else:
-                disponivel = saldo - utilizado
-            saldos_txt += f"💳 {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
+            utilizado = saidas # No cartão, o que importa é o gasto
+            disponivel = limite - utilizado if limite > 0 else 0.0
+            saldos_txt += f"💳 {b}: Saldo: {m_fmt(saldo_base)} | Gasto: {m_fmt(utilizado)} | Limite Disp: {m_fmt(disponivel)}\n"
         else:
-            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo)}\n"
+            saldos_txt += f"🏦 {b}: Saldo Atual: {m_fmt(saldo_final)}\n"
+            total_b += saldo_final
             
-        if "cartão" not in b.lower():
-            total_b += saldo
-            
-    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
+    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_per['DT'].dt.date <= d_fim)].copy()
     
     if not df_per.empty:
         df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
@@ -611,17 +601,13 @@ elif "📄" in aba:
         rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
         pend_v = get_valor_pendente(df_base)
     else:
-        r_v = 0
-        d_v = 0
-        rend_v = 0
-        pend_v = 0
+        r_v = d_v = rend_v = pend_v = 0
         
     relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nPEND: {m_fmt(pend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
     
     st.text_area("Copiar para Zap/E-mail", relat, height=400)
     zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
     st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
-
 elif "📋" in aba:
         st.title("📋 Gerador de Relatório PDF")
         
