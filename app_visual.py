@@ -552,49 +552,47 @@ elif "📄" in aba:
     st.divider()
 
     c1, c2 = st.columns(2)
-    d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-    d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
+    d_ini = c1.date_input("Início Relatório", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+    d_fim = c2.date_input("Fim Relatório", datetime.now(), format="DD/MM/YYYY")
     
     bancos = sorted(bancos_disponiveis)
     saldos_txt = ""
-    total_b = 0
+    total_patrimonio = 0.0
     
+    # CÁLCULO DE SALDOS (CONSIDERANDO TODO O HISTÓRICO PARA O SALDO ATUAL)
     for b in bancos:
-        saldo_base = 0.0
-        limite = 0.0
+        saldo_inicial_banco = 0.0
+        limite_cartao = 0.0
         
-        # 1. Pega o valor inicial da aba "Bancos"
+        # Busca saldo inicial e limite na aba Bancos
         if not df_bancos_info.empty:
-            for _, row in df_bancos_info.iterrows():
-                if str(row.iloc[0]).strip() == b:
-                    try:
-                        val_s = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                        saldo_base = float(val_s) if val_s else 0.0
-                        if len(row) >= 3:
-                            lim_s = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                            limite = float(lim_s) if lim_s else 0.0
-                    except: pass
-                    break
+            match = df_bancos_info[df_bancos_info.iloc[:, 0] == b]
+            if not match.empty:
+                def p_f(v):
+                    try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
+                    except: return 0.0
+                saldo_inicial_banco = p_f(match.iloc[0, 1])
+                if len(match.columns) >= 3:
+                    limite_cartao = p_f(match.iloc[0, 2])
         
-        # 2. Calcula movimentações (entradas e saídas PAGAS)
-        mov_b = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')].copy()
-        entradas = mov_b[mov_b['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        saidas = mov_b[mov_b['Tipo'] == 'Despesa']['V_Num'].sum()
+        # Movimentações REAIS (Pagas) de todo o histórico para este banco
+        mov_b = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
+        entradas_b = mov_b[mov_b['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        saidas_b = mov_b[mov_b['Tipo'] == 'Despesa']['V_Num'].sum()
         
-        saldo_final = saldo_base + entradas - saidas
+        saldo_atual_calculado = saldo_inicial_banco + entradas_b - saidas_b
         
-        # 3. Formata texto por tipo de conta
-        if "cartão" in b.lower():
-            utilizado = saidas # No cartão, o que importa é o gasto
-            disponivel = limite - utilizado if limite > 0 else 0.0
-            saldos_txt += f"💳 {b}: Saldo: {m_fmt(saldo_base)} | Gasto: {m_fmt(utilizado)} | Limite Disp: {m_fmt(disponivel)}\n"
+        if "cartão" in b.lower() or "nubank" in b.lower() or "inter" in b.lower():
+            # Para cartões, mostramos o gasto e o limite disponível
+            utilizado = saidas_b # Simplificação: despesas são o uso do cartão
+            disponivel = limite_cartao - utilizado
+            saldos_txt += f"💳 {b}: Utilizado: {m_fmt(utilizado)} | Limite Disp: {m_fmt(disponivel)}\n"
         else:
-            saldos_txt += f"🏦 {b}: Saldo Atual: {m_fmt(saldo_final)}\n"
-            total_b += saldo_final
+            # Para contas correntes/investimentos
+            saldos_txt += f"🏦 {b}: Saldo Atual: {m_fmt(saldo_atual_calculado)}\n"
+            total_patrimonio += saldo_atual_calculado
             
-   # ... (código anterior da aba WhatsApp)
-
-    # CORREÇÃO DA LINHA 595:
+    # CÁLCULO DO RESUMO DO PERÍODO SELECIONADO
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     
     if not df_per.empty:
@@ -604,9 +602,10 @@ elif "📄" in aba:
         rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
         pend_v = get_valor_pendente(df_base)
     else:
-        r_v = d_v = rend_v = pend_v = 0
+        r_v = d_v = rend_v = 0
+        pend_v = get_valor_pendente(df_base)
         
-    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nPEND: {m_fmt(pend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
+    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nPEND: {m_fmt(pend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS ATUAIS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}"
     
     st.text_area("Copiar para Zap/E-mail", relat, height=400)
     zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
