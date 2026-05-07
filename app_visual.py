@@ -562,23 +562,36 @@ elif "📄" in aba:
             saldos_txt += f"🏦 {b}: Saldo: {m_fmt(s_final)}\n"
             total_patrimonio += s_final # <--- SOMA O VALOR AQUI
 
-    # 3. CÁLCULO DO RESUMO (MAIO)
+  # 3. CÁLCULO DO RESUMO (FILTRANDO FORA AS TRANSFERÊNCIAS)
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
 
     if not df_per.empty:
-        # Criamos uma versão em maiúsculo de TUDO para busca cega
-        df_per['TEXTO_GERAL'] = df_per.astype(str).apply(lambda x: ' '.join(x).upper(), axis=1)
+        # Padronização
+        df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
         
-        # REC e DES: Mantemos o padrão de Tipo e Status Pago
-        rec_v = df_per[(df_per['Tipo'].str.upper().str.strip() == 'RECEITA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
-        des_v = df_per[(df_per['Tipo'].str.upper().str.strip() == 'DESPESA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        # --- O PULO DO GATO ---
+        # Filtramos apenas o que é Receita/Despesa real, ignorando Transferência
+        # Se na sua planilha estiver 'Transferência', 'Transf' ou algo assim, o código abaixo limpa.
         
-        # RENDIMENTO: Agora ele busca a palavra "REND" em qualquer lugar da linha
-        # Isso garante que se estiver "Rendimentos", "Rendimento", ou "Rend", ele pega.
-        rend_v = df_per[df_per['TEXTO_GERAL'].str.contains('REND', na=False)]['V_Num'].sum()
+        # REC: É Receita, está Pago e NÃO é Transferência
+        rec_v = df_per[
+            (df_per['T_UP'] == 'RECEITA') & 
+            (df_per['Status'] == 'Pago') & 
+            (~df_per['Categoria'].astype(str).str.upper().str.contains('TRANSF', na=False))
+        ]['V_Num'].sum()
         
-        # SOBRA: Receita - Despesa (Como o rendimento já está na receita, não somamos)
+        # DES: É Despesa, está Pago e NÃO é Transferência
+        des_v = df_per[
+            (df_per['T_UP'] == 'DESPESA') & 
+            (df_per['Status'] == 'Pago') & 
+            (~df_per['Categoria'].astype(str).str.upper().str.contains('TRANSF', na=False))
+        ]['V_Num'].sum()
+        
+        # RENDIMENTO: (Já está funcionando, mantemos a busca)
+        rend_v = df_per[df_per['T_UP'] == 'RENDIMENTO']['V_Num'].sum()
+        
+        # A CONTA REAL
         sobra = rec_v - des_v
     else:
         rec_v = des_v = rend_v = sobra = 0.0
