@@ -617,7 +617,7 @@ elif "📄" in aba:
         
         pend_v = get_valor_pendente(df_base
                                     
-        else:        
+  else:        
         r_v = 0
         d_v = 0
         rend_v = 0
