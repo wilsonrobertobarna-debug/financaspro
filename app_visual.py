@@ -529,29 +529,28 @@ elif "📄" in aba:
     
     # ... (Seu loop de bancos/cartões aqui, mantenha-o) ...
 
-    # 2. CÁLCULO DO RELATÓRIO (CORRIGINDO O NAMEERROR E O FILTRO DE MAIO)
-    # Criamos uma cópia segura para não dar erro de data
+   # 3. CÁLCULO DO RELATÓRIO (FILTRANDO POR MAIO OU DATA ESCOLHIDA)
+    # Garante que a coluna DT seja data e remove horas/minutos para comparar certo
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
+    
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
 
     if not df_per.empty:
-        # Padroniza para maiúsculo para o Python não "pular" nenhum lançamento
-        df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
+        # CONTA PRINCIPAL: Forçamos o filtro de Tipo e Status 'Pago'
+        # Usamos .str.upper() para evitar erro se estiver 'receita' ou 'RECEITA'
+        r_v = df_per[(df_per['Tipo'].astype(str).str.upper() == 'RECEITA') & 
+                     (df_per['Status'] == 'Pago')]['V_Num'].sum()
         
-        # DEFINIÇÃO DAS VARIÁVEIS (Para sumir o NameError)
-        rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
-        des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        d_v = df_per[(df_per['Tipo'].astype(str).str.upper() == 'DESPESA') & 
+                     (df_per['Status'] == 'Pago')]['V_Num'].sum()
         
-        # RENDIMENTO (Buscando em Tipo ou Categoria)
-        mask_rend = (df_per['T_UP'] == 'RENDIMENTO') | (df_per['Categoria'].astype(str).str.upper() == 'RENDIMENTO')
-        rend_v = df_per[mask_rend]['V_Num'].sum()
+        # RENDIMENTO: Como você disse que já está normal, mantemos a busca por nome
+        rend_v = df_per[df_per['Tipo'].astype(str).str.upper() == 'RENDIMENTO']['V_Num'].sum()
         
-        # A CONTA: Receita - Despesa = Sobra (Rendimento já está na receita)
-        sobra = rec_v - des_v
+        # A CONTA: Receita - Despesa (Rendimento já está na receita)
+        sobra = r_v - d_v
     else:
-        # Se não houver dados no período, zeramos tudo para não dar erro
-        rec_v = des_v = rend_v = sobra = 0.0
-
+        r_v = d_v = rend_v = sobra = 0.0
     # 3. MONTAGEM DO TEXTO (Usando os nomes exatos das variáveis acima)
     relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"========================================\n"
