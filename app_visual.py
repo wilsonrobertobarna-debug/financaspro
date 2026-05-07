@@ -4,7 +4,11 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime
+from datetime import datetime, timedelta
+import pytz # se não tiver, o comando é: pip install pyt
+# Força o sistema a usar o horário de Brasília
+fuso = pytz.timezone('America/Sao_Paulo')
+hoje = datetime.now(fuso)
 from dateutil.relativedelta import relativedelta
 import urllib.parse
 from fpdf import FPDF
