@@ -511,8 +511,10 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
-    # --- LIMPEZA DE DADOS DA BASE ---
+    # 1. PREPARAÇÃO DA BASE (Limpeza de nomes e valores)
     df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0.0)
+    # Criamos uma coluna temporária em maiúsculas e sem espaços para busca fácil
+    df_base['Banco_Busca'] = df_base['Banco'].astype(str).str.upper().str.strip()
     
     st.divider()
 
@@ -526,46 +528,45 @@ elif "📄" in aba:
     def extrair_numero(v):
         if pd.isna(v) or str(v).strip() == "": return 0.0
         try:
-            # Remove tudo que não é dígito ou vírgula/ponto
             s = "".join(c for c in str(v) if c.isdigit() or c in ',.')
             if ',' in s and '.' in s: s = s.replace('.', '')
             s = s.replace(',', '.')
             return float(s)
         except: return 0.0
 
-    # --- PROCESSAMENTO COM REDE DE ARRASTÃO ---
+    # 2. PROCESSAMENTO COM BUSCA FLEXÍVEL
     if not df_bancos_info.empty:
         for i in range(len(df_bancos_info)):
             linha = df_bancos_info.iloc[i]
-            nome_banco = str(linha.iloc[0]).strip()
+            nome_original = str(linha.iloc[0]).strip()
             
-            if nome_banco.lower() in ['nan', '', 'none']: continue
+            if nome_original.lower() in ['nan', '', 'none']: continue
             
-            # REDE DE ARRASTÃO: Pega todos os números da linha (menos o nome)
-            numeros_da_linha = []
-            for celula in linha.iloc[1:]:
-                num = extrair_numero(celula)
-                if num > 0: numeros_da_linha.append(num)
+            # Puxa o Limite (Maior número da linha) e Saldo Inicial (Primeiro número encontrado)
+            nums = [extrair_numero(c) for c in linha.iloc[1:] if extrair_numero(c) > 0]
+            limite_f = max(nums) if nums else 0.0
+            saldo_ini_f = nums[0] if nums else 0.0
             
-            # Lógica: O maior número da linha costuma ser o Limite. O menor (ou o primeiro) o Saldo.
-            limite_final = max(numeros_da_linha) if numeros_da_linha else 0.0
-            saldo_inicial = numeros_da_linha[0] if numeros_da_linha else 0.0
+            # --- LÓGICA DE BUSCA DO UTILIZADO (FLEXÍVEL) ---
+            # Pegamos o nome do banco e removemos palavras genéricas para achar a "chave" (ex: Inter, 8112)
+            chave = nome_original.upper().replace("CARTÃO", "").replace("CARTAO", "").replace("MASTERCARD", "").replace("VISA", "").replace("-", "").strip()
             
-            # Busca movimentações
-            mov_banco = df_base[(df_base['Banco'].str.strip() == nome_banco) & (df_base['Status'] == 'Pago')]
-            v_entradas = mov_banco[mov_banco['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            v_saidas = mov_banco[mov_banco['Tipo'] == 'Despesa']['V_Num'].sum()
+            # Filtra na base: Se a 'chave' estiver contida no nome do banco lançado
+            mov_paga = df_base[(df_base['Banco_Busca'].str.contains(chave, na=False)) & (df_base['Status'] == 'Pago')]
+            
+            ent = mov_paga[mov_paga['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            sai = mov_paga[mov_paga['Tipo'] == 'Despesa']['V_Num'].sum()
 
-            if "CART" in nome_banco.upper():
-                utilizado = v_saidas
-                a_utilizar = limite_final - utilizado
-                saldos_txt += f"💳 *{nome_banco}*:\n   Limite: {m_fmt(limite_final)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(a_utilizar)}*\n\n"
+            if "CART" in nome_original.upper():
+                utilizado = sai
+                a_utilizar = limite_f - utilizado
+                saldos_txt += f"💳 *{nome_original}*:\n   Limite: {m_fmt(limite_f)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(a_utilizar)}*\n\n"
             else:
-                saldo_atual = saldo_inicial + v_entradas - v_saidas
-                saldos_txt += f"🏦 *{nome_banco}*: {m_fmt(saldo_atual)}\n\n"
+                saldo_atual = saldo_ini_f + ent - sai
+                saldos_txt += f"🏦 *{nome_original}*: {m_fmt(saldo_atual)}\n\n"
                 total_patrimonio += saldo_atual
 
-    # --- RESUMO FINANCEIRO CORRIGIDO ---
+    # 3. RESUMO FINANCEIRO CORRIGIDO
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     df_pago = df_per[(df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]
     
