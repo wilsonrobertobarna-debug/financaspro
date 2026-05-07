@@ -511,6 +511,10 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
+    # 1. PEQUENO AJUSTE DE SEGURANÇA NA BASE
+    # Forçamos a conversão de valores para número logo de cara
+    df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0.0)
+    
     st.divider()
 
     c1, c2 = st.columns(2)
@@ -520,12 +524,11 @@ elif "📄" in aba:
     saldos_txt = ""
     total_patrimonio = 0.0
     
-    # Função de limpeza ultra-resistente
     def limpar_v(v):
         if v is None or str(v).strip() == "" or str(v).lower() == 'nan': return 0.0
         try:
             import re
-            # Remove R$, espaços e pontos de milhar, ajusta a vírgula
+            # Limpeza total: remove R$, pontos de milhar e acerta a vírgula
             s = str(v).replace('R$', '').strip()
             if ',' in s and '.' in s: s = s.replace('.', '')
             s = s.replace(',', '.')
@@ -533,52 +536,60 @@ elif "📄" in aba:
             return float(s) if s else 0.0
         except: return 0.0
 
+    # 2. IDENTIFICAÇÃO DINÂMICA DE COLUNAS
+    # Isso impede que o limite zere se você adicionar uma coluna nova na planilha
+    colunas_bancos = [str(c).upper().strip() for c in df_bancos_info.columns]
+    
+    idx_saldo = 1 # Padrão coluna B
+    idx_limite = 2 # Padrão coluna C
+
+    for i, nome_col in enumerate(colunas_bancos):
+        if "LIMITE" in nome_col: idx_limite = i
+        if "SALDO" in nome_col or "INICIAL" in nome_col: idx_saldo = i
+
+    # 3. PROCESSAMENTO
     if not df_bancos_info.empty:
         for _, row in df_bancos_info.iterrows():
             nome_banco_planilha = str(row.iloc[0]).strip()
             if not nome_banco_planilha or nome_banco_planilha.lower() == 'nan': continue
             
-            # --- LEITURA DIRETA POR POSIÇÃO (A=0, B=1, C=2) ---
-            saldo_inicial_planilha = limpar_v(row.iloc[1])
-            limite_planilha = limpar_v(row.iloc[2]) if len(row) > 2 else 0.0
+            # Busca os valores usando os índices que encontramos
+            val_limite = limpar_v(row.iloc[idx_limite])
+            val_saldo_ini = limpar_v(row.iloc[idx_saldo])
             
-            # Normalização para comparação de nomes (ignora maiúsculas e espaços)
-            nome_busca = nome_banco_planilha.upper().strip()
-            
-            # Filtra movimentações na base de lançamentos
-            mask_banco = (df_base['Banco'].str.upper().str.strip() == nome_busca) & (df_base['Status'] == 'Pago')
-            df_mov = df_base[mask_banco]
+            # Busca gastos PAGOS (Compara nomes sem espaços extras e em maiúsculo)
+            nome_clean = nome_banco_planilha.upper().strip()
+            df_mov = df_base[(df_base['Banco'].str.upper().str.strip() == nome_clean) & (df_base['Status'] == 'Pago')]
             
             entradas = df_mov[df_mov['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
             saidas = df_mov[df_mov['Tipo'] == 'Despesa']['V_Num'].sum()
             
-            # --- DISTINÇÃO CLARA: CARTÃO VS BANCO ---
-            if "CART" in nome_busca:
-                # Para Cartões: O utilizado são as despesas. O "A Utilizar" é Limite - Despesas.
+            if "CART" in nome_clean:
+                # É CARTÃO
                 utilizado = saidas
-                a_utilizar = limite_planilha - utilizado
-                saldos_txt += f"💳 *{nome_banco_planilha}*:\n   Limite: {m_fmt(limite_planilha)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(a_utilizar)}*\n\n"
+                a_utilizar = val_limite - utilizado
+                saldos_txt += f"💳 *{nome_banco_planilha}*:\n   Limite: {m_fmt(val_limite)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(a_utilizar)}*\n\n"
             else:
-                # Para Bancos: Saldo Inicial + Entradas - Saídas
-                saldo_atual = saldo_inicial_planilha + entradas - saidas
+                # É CONTA CORRENTE
+                saldo_atual = val_saldo_ini + entradas - saidas
                 saldos_txt += f"🏦 *{nome_banco_planilha}*: {m_fmt(saldo_atual)}\n\n"
                 total_patrimonio += saldo_atual
 
-    # RESUMO DO PERÍODO (Geral)
+    # 4. RESUMO FINAL
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
-    rec_p = df_per[(df_per['Tipo'].isin(['Receita', 'Rendimento'])) & (df_per['Status'] == 'Pago')]['V_Num'].sum()
-    des_p = df_per[(df_per['Tipo'] == 'Despesa') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+    receitas_totais = df_per[(df_per['Tipo'].isin(['Receita', 'Rendimento'])) & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+    despesas_totais = df_per[(df_per['Tipo'] == 'Despesa') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
 
     relat = f"*RELATÓRIO WILSON*\n"
     relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"================================\n"
-    relat += f"REC: {m_fmt(rec_p)} | DES: {m_fmt(des_p)}\n"
-    relat += f"SOBRA: {m_fmt(rec_p - des_p)}\n"
+    relat += f"REC: {m_fmt(receitas_totais)} | DES: {m_fmt(despesas_totais)}\n"
+    relat += f"SOBRA: {m_fmt(receitas_totais - despesas_totais)}\n"
     relat += f"================================\n\n"
     relat += f"*SALDOS E CARTÕES:*\n{saldos_txt}"
     relat += f"*TOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}*"
     
-    st.text_area("Relatório", relat, height=500)
+    st.text_area("Relatório Wilson", relat, height=500)
     st.markdown(f'[📲 Enviar WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
 elif "📋" in aba:
         st.title("📋 Gerador de Relatório PDF")
