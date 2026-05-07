@@ -510,22 +510,6 @@ elif "🚗" in aba:
 
 elif "📄" in aba:
     st.title("📄 WhatsApp")
-    
-    st.subheader("📲 Notificações Automáticas e Manuais")
-    # Bloco do Twilio (Mantenha se já estiver funcionando, ou use este alinhado)
-    if st.button("📲 Enviar mensagens de pendências agora via WhatsApp"):
-        twilio_secrets = st.secrets.get("twilio", {})
-        if twilio_secrets:
-            try:
-                from twilio.rest import Client
-                client_tw = Client(twilio_secrets.get("account_sid"), twilio_secrets.get("auth_token"))
-                df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
-                if not df_aviso.empty:
-                    # (Lógica simplificada para evitar erro de identação)
-                    st.info("Processando envios...")
-            except Exception as e:
-                st.error(f"Erro: {e}")
-            
     st.divider()
 
     c1, c2 = st.columns(2)
@@ -540,43 +524,51 @@ elif "📄" in aba:
         saldo = 0.0
         limite = 0.0
         
+        # 1. BUSCA EXATA DO LIMITE (Coluna C da aba Bancos)
         if not df_bancos_info.empty:
             for _, row in df_bancos_info.iterrows():
                 if str(row.iloc[0]).strip() == b:
                     try:
-                        val_str = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                        saldo = float(val_str) if val_str else 0.0
+                        # Saldo (Coluna B)
+                        s_str = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                        saldo = float(s_str) if s_str else 0.0
+                        # Limite (Coluna C) - Aqui é onde ele não pode zerar!
                         if len(row) >= 3:
-                            lim_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                            limite = float(lim_str) if lim_str else 0.0
-                    except:
-                        pass
+                            l_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                            limite = float(l_str) if l_str else 0.0
+                    except: pass
                     break
-                
-        utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)]['V_Num'].sum()
         
-        if "cartão" not in b.lower() and "cartao" not in b.lower():
-            receitas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento'])) & (df_base['Status'] == 'Pago')]['V_Num'].sum()
-            despesas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
-            saldo = saldo + receitas_b - despesas_b
-            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo)}\n"
-            total_b += saldo
-        else:
+        # 2. CALCULA UTILIZADO DO MÊS (Respeitando as datas que você escolheu)
+        utilizado = df_base[
+            (df_base['Banco'] == b) & 
+            (df_base['Tipo'] == 'Despesa') & 
+            (df_base['DT'].dt.date >= d_ini) & 
+            (df_base['DT'].dt.date <= d_fim)
+        ]['V_Num'].sum()
+        
+        # 3. MONTAGEM DO TEXTO (Separando Banco de Cartão)
+        if "cartão" in b.lower() or "cartao" in b.lower():
             disponivel = limite - utilizado
             saldos_txt += f"💳 {b}: Limite: {m_fmt(limite)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
+        else:
+            # Para Bancos, soma o saldo inicial + movimentação do período
+            rec_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento'])) & (df_base['Status'] == 'Pago')]['V_Num'].sum()
+            des_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
+            saldo_final = saldo + rec_b - des_b
+            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo_final)}\n"
+            total_b += saldo_final
             
-    # --- AQUI É ONDE O RENDIMENTO É CALCULADO ---
+    # 4. RESUMO GERAL (REC, REND, DES)
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
-    
     if not df_per.empty:
-        # Criamos o Tipo_UP para não errar maiúsculas/minúsculas
-        df_per['Tipo_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
+        # Forçamos o Tipo para maiúsculo para o Rendimento não sumir
+        df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
         
-        r_v = df_per[(df_per['Tipo_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
-        d_v = df_per[(df_per['Tipo_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
-        
-        # RENDIMENTO: Pega qualquer coisa escrita RENDIMENTO, ignorando o Status
-        rend_v = df_per[df_per['Tipo_UP'] == 'RENDIMENTO']['V_Num'].sum()
+        r_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        d_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        # RENDIMENTO: Pega qualquer coisa escrita Rendimento no período!
+        rend_v = df_per[df_per['T_UP'] == 'RENDIMENTO']['V_Num'].sum()
         pend_v = get_valor_pendente(df_base)
     else:
         r_v = d_v = rend_v = pend_v = 0
@@ -584,7 +576,7 @@ elif "📄" in aba:
     relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nPEND: {m_fmt(pend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
     
     st.text_area("Copiar para Zap", relat, height=400)
-    st.markdown(f'[📲 Enviar WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
+    st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
 
 elif "📋" in aba:
         st.title("📋 Gerador de Relatório PDF")
