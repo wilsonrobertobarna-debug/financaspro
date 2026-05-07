@@ -511,8 +511,8 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
-    # 1. TRATAMENTO INICIAL DA BASE
-    # Garante que valores sejam números e remove espaços dos nomes dos bancos
+    # 1. PREPARAÇÃO DA BASE
+    # Garante que valores sejam números e remove espaços extras dos nomes
     df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0.0)
     df_base['Banco'] = df_base['Banco'].astype(str).str.strip()
     
@@ -530,15 +530,14 @@ elif "📄" in aba:
         try:
             import re
             s = str(v).replace('R$', '').strip()
-            # Trata formato 1.234,56 -> 1234.56
+            # Trata formato brasileiro: 1.234,56 -> 1234.56
             if ',' in s and '.' in s: s = s.replace('.', '')
             s = s.replace(',', '.')
             s = re.sub(r'[^\d.]', '', s)
             return float(s) if s else 0.0
         except: return 0.0
 
-    # 2. LOCALIZAÇÃO DINÂMICA DE COLUNAS NA ABA BANCOS
-    # Procura as colunas independente de onde o Google Sheets as colocou
+    # 2. MAPEAMENTO DE COLUNAS (Busca automática por nome)
     colunas_bancos = [str(c).upper().strip() for c in df_bancos_info.columns]
     idx_saldo = 1
     idx_limite = 2
@@ -556,44 +555,39 @@ elif "📄" in aba:
             val_limite = limpar_v(row.iloc[idx_limite])
             val_saldo_ini = limpar_v(row.iloc[idx_saldo])
             
-            # Filtra movimentações na base (Busca exata para evitar duplicar Inter com Cartão Inter)
+            # Filtro de movimentações PAGAS
             df_mov = df_base[(df_base['Banco'].str.upper() == nome_banco_planilha.upper()) & (df_base['Status'] == 'Pago')]
             
             entradas = df_mov[df_mov['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
             saidas = df_mov[df_mov['Tipo'] == 'Despesa']['V_Num'].sum()
             
             if "CART" in nome_banco_planilha.upper():
-                # LÓGICA DE CARTÃO
                 utilizado = saidas
                 a_utilizar = val_limite - utilizado
                 saldos_txt += f"💳 *{nome_banco_planilha}*:\n   Limite: {m_fmt(val_limite)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(a_utilizar)}*\n\n"
             else:
-                # LÓGICA DE CONTA
                 saldo_atual = val_saldo_ini + entradas - saidas
                 saldos_txt += f"🏦 *{nome_banco_planilha}*: {m_fmt(saldo_atual)}\n\n"
                 total_patrimonio += saldo_atual
 
-    # 4. RESUMO FINANCEIRO (COM RENDIMENTOS CORRIGIDOS)
+    # 4. RESUMO FINANCEIRO CORRIGIDO (Com Rendimentos)
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
-    
-    # Filtra apenas o que não é transferência e está pago
     df_per_pago = df_per[(df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]
     
-    receitas_v = df_per_pago[df_per_pago['Tipo'] == 'Receita']['V_Num'].sum()
-    rendimentos_v = df_per_pago[df_per_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
-    despesas_v = df_per_pago[df_per_pago['Tipo'] == 'Despesa']['V_Num'].sum()
+    v_receita = df_per_pago[df_per_pago['Tipo'] == 'Receita']['V_Num'].sum()
+    v_rendimento = df_per_pago[df_per_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
+    v_despesa = df_per_pago[df_per_pago['Tipo'] == 'Despesa']['V_Num'].sum()
     
-    # A Sobra agora considera Receitas + Rendimentos
-    total_entradas = receitas_v + rendimentos_v
-    sobra_v = total_entradas - despesas_v
+    # Cálculo da Sobra incluindo Rendimentos
+    v_sobra = (v_receita + v_rendimento) - v_despesa
 
     relat = f"*RELATÓRIO WILSON*\n"
     relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"================================\n"
-    relat += f"REC: {m_fmt(receitas_v)}\n"
-    relat += f"REND: {m_fmt(rendimentos_v)}\n"
-    relat += f"DES: {m_fmt(despesas_v)}\n"
-    relat += f"*SOBRA: {m_fmt(sobra_v)}*\n"
+    relat += f"REC: {m_fmt(v_receita)}\n"
+    relat += f"REND: {m_fmt(v_rendimento)}\n"
+    relat += f"DES: {m_fmt(v_despesa)}\n"
+    relat += f"*SOBRA: {m_fmt(v_sobra)}*\n"
     relat += f"================================\n\n"
     relat += f"*SALDOS E CARTÕES:*\n{saldos_txt}"
     relat += f"*TOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}*"
