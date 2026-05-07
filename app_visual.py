@@ -522,36 +522,37 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
-    c1, c2 = st.columns(2)
     # 1. Ajuste das datas (Certifique-se de selecionar Maio no calendário da tela)
+    c1, c2 = st.columns(2)
     d_ini = c1.date_input("Início", hoje_br - timedelta(days=30), format="DD/MM/YYYY", key="zap_d1")
     d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY", key="zap_d2")
     
-    # ... (Seu loop de bancos/cartões aqui, mantenha-o) ...
+    # ... (Mantenha seu loop de bancos/cartões que calcula o saldos_txt e total_patrimonio) ...
 
-   # 3. CÁLCULO DO RELATÓRIO (FILTRANDO POR MAIO OU DATA ESCOLHIDA)
-    # Garante que a coluna DT seja data e remove horas/minutos para comparar certo
+    # 2. CÁLCULO DO RELATÓRIO (CORRIGINDO O NAMEERROR E O FILTRO DE DATAS)
+    # Criamos uma coluna de data limpa para o filtro de Maio não falhar
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
-    
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
 
     if not df_per.empty:
-        # CONTA PRINCIPAL: Forçamos o filtro de Tipo e Status 'Pago'
-        # Usamos .str.upper() para evitar erro se estiver 'receita' ou 'RECEITA'
-        r_v = df_per[(df_per['Tipo'].astype(str).str.upper() == 'RECEITA') & 
-                     (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        # Padroniza para maiúsculo para não "pular" nenhum lançamento por erro de digitação
+        df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
         
-        d_v = df_per[(df_per['Tipo'].astype(str).str.upper() == 'DESPESA') & 
-                     (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        # DEFINIÇÃO DAS VARIÁVEIS (Nomes exatos para não dar NameError)
+        rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
         
-        # RENDIMENTO: Como você disse que já está normal, mantemos a busca por nome
-        rend_v = df_per[df_per['Tipo'].astype(str).str.upper() == 'RENDIMENTO']['V_Num'].sum()
+        # RENDIMENTO (Buscando como informação extra)
+        mask_rend = (df_per['T_UP'] == 'RENDIMENTO') | (df_per['Categoria'].astype(str).str.upper() == 'RENDIMENTO')
+        rend_v = df_per[mask_rend]['V_Num'].sum()
         
-        # A CONTA: Receita - Despesa (Rendimento já está na receita)
-        sobra = r_v - d_v
+        # A CONTA: Receita - Despesa = Sobra
+        sobra = rec_v - des_v
     else:
-        r_v = d_v = rend_v = sobra = 0.0
-    # 3. MONTAGEM DO TEXTO (Usando os nomes exatos das variáveis acima)
+        # Se não houver dados, zeramos as variáveis para o relatório não quebrar
+        rec_v = des_v = rend_v = sobra = 0.0
+
+    # 3. MONTAGEM DO TEXTO (Variáveis rec_v e rend_v agora existem!)
     relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"========================================\n"
     relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
