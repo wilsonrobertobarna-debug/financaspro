@@ -551,40 +551,67 @@ elif "📄" in aba:
                     except: pass
                     break
         
-        # --- LÓGICA DO CARTÃO ---
-        if "CART" in b.upper():
-            limite_cartao = valor_base_planilha
+       # 1. LOOP PELOS BANCOS (Mapeamento Completo: A, B, C, D, E)
+    for b in sorted(bancos_disponiveis):
+        valor_b = 0.0      
+        tipo_c = ""
+        dia_fech_d = 1    
+        dia_venc_e = 10   # Lendo a nova coluna E
+        
+        if not df_bancos_info.empty:
+            for _, row in df_bancos_info.iterrows():
+                if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
+                    try:
+                        # B (1): Valor
+                        v_raw = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                        valor_b = float(v_raw) if v_raw and v_raw != 'nan' else 0.0
+                        
+                        # C (2): Tipo
+                        tipo_c = str(row.iloc[2]).strip().upper()
+                        
+                        # D (3): Fechamento
+                        if len(row) >= 4:
+                            f_raw = str(row.iloc[3]).replace('R$', '').strip()
+                            dia_fech_d = int(float(f_raw)) if f_raw and f_raw != 'nan' else 1
+                            
+                        # E (4): Vencimento
+                        if len(row) >= 5:
+                            ven_raw = str(row.iloc[4]).replace('R$', '').strip()
+                            dia_venc_e = int(float(ven_raw)) if ven_raw and ven_raw != 'nan' else 10
+                    except: pass
+                    break
+        
+        # --- LÓGICA DE CARTÃO ---
+        if "CARTA" in tipo_c or "CART" in b.upper():
+            limite_cartao = valor_b
             
-            # Define o início da fatura: dia de fechamento do mês inicial selecionado
             try:
-                data_corte = d_ini.replace(day=dia_fechamento)
-                # Se a data de hoje for menor que o dia de fechamento, a fatura começou no mês anterior
-                if d_ini.day < dia_fechamento:
-                    data_corte = (d_ini - relativedelta(months=1)).replace(day=dia_fechamento)
+                # Se hoje for antes do dia de fechamento (D), a fatura começou no mês anterior
+                if d_fim.day < dia_fech_d:
+                    data_corte = (d_fim - relativedelta(months=1)).replace(day=dia_fech_d)
+                else:
+                    data_corte = d_fim.replace(day=dia_fech_d)
             except:
-                data_corte = d_ini.replace(day=1) # Fallback para segurança
+                data_corte = d_ini 
             
-            df_cart = df_base[(df_base['Banco'] == b) & 
-                              (df_base['Tipo'].str.upper() == 'DESPESA') & 
-                              (df_base['Status'] == 'Pago')].copy()
-            
+            df_cart = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].str.upper() == 'DESPESA') & (df_base['Status'] == 'Pago')].copy()
             df_cart['D_ONLY'] = pd.to_datetime(df_cart['DT']).dt.date
-            
-            # Soma apenas o que foi gasto da data de fechamento até o fim do período
             usado = df_cart[(df_cart['D_ONLY'] >= data_corte) & (df_cart['D_ONLY'] <= d_fim)]['V_Num'].sum()
             dispo = limite_cartao - usado
             
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Fatura: {m_fmt(usado)} | Disp: {m_fmt(dispo)}\n"
+            # Adicionei o dia de vencimento (E) no texto do relatório
+            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Vence dia {dia_venc_e})\n"
         
-        # --- LÓGICA DO BANCO ---
+        # --- LÓGICA DE CONTA / INVESTIMENTO ---
         else:
-            saldo_inicial = valor_base_planilha
+            saldo_inicial = valor_b
             mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
-            receitas_b = mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
-            despesas_b = mov_paga[mov_paga['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
+            rec_b = mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
+            des_b = mov_paga[mov_paga['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
+            s_final = saldo_inicial + rec_b - des_b
             
-            s_final = saldo_inicial + receitas_b - despesas_b
-            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(s_final)}\n"
+            icone = "💰" if "INVEST" in tipo_c else "🏦"
+            saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
             total_patrimonio += s_final
 
     # 2. RESUMO DO RELATÓRIO (Rendimento e Sobra)
