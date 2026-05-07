@@ -605,10 +605,16 @@ elif "📄" in aba:
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     
     if not df_per.empty:
-        df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
-        r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-        d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        # Criamos uma coluna temporária para ignorar maiúsculas/minúsculas
+        df_per['Tipo_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
+        
+        # Filtro: Ignora transferências. Para Receita/Despesa exige 'Pago', mas para Rendimento pega TUDO.
+        r_v = df_per[(df_per['Tipo_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]['V_Num'].sum()
+        d_v = df_per[(df_per['Tipo_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]['V_Num'].sum()
+        
+        # RENDIMENTO: Aqui é o pulo do gato. Ele ignora o Status e pega qualquer variação do nome.
+        rend_v = df_per[df_per['Tipo_UP'] == 'RENDIMENTO']['V_Num'].sum()
+        
         pend_v = get_valor_pendente(df_base)
     else:
         r_v = 0
