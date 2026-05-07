@@ -5,7 +5,15 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-import pytz
+import streamlit as st
+import pandas as pd
+from datetime import datetime, timedelta
+import urllib.parse
+
+# RESOLUÇÃO DO FUSO HORÁRIO (Sem precisar de biblioteca extra)
+# O servidor do Streamlit é 3 horas adiantado. Tiramos 3 horas para ser Brasília.
+agora_br = datetime.now() - timedelta(hours=3)
+hoje_br = agora_br.date()
 agora = datetime.now() - timedelta(hours=3)
 hoje = agora.date()
 from dateutil.relativedelta import relativedelta
