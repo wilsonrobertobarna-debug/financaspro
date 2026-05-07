@@ -529,35 +529,60 @@ elif "📄" in aba:
     saldos_txt = ""
     total_patrimonio = 0.0 
     
-    # 1. LOOP PELOS BANCOS (Lógica Unificada para Coluna B)
+   # 1. LOOP PELOS BANCOS
     for b in sorted(bancos_disponiveis):
         valor_base_planilha = 0.0
+        dia_fechamento = 1 # Valor padrão caso esteja vazio
         
-        # Busca o valor na Coluna B da aba de Bancos
+        # Busca as informações na aba de Bancos
         if not df_bancos_info.empty:
             for _, row in df_bancos_info.iterrows():
                 if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
                     try:
+                        # Coluna B: Valor (Saldo ou Limite)
                         v_raw = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
                         valor_base_planilha = float(v_raw) if v_raw and v_raw != 'nan' else 0.0
+                        
+                        # Coluna C: Dia de Fechamento (se existir)
+                        if len(row) >= 3:
+                            f_raw = str(row.iloc[2]).strip()
+                            if f_raw and f_raw != 'nan':
+                                dia_fechamento = int(float(f_raw))
                     except: pass
                     break
         
-        # Se o nome do banco contiver "CART", tratamos como Cartão de Crédito
+        # --- LÓGICA DO CARTÃO ---
         if "CART" in b.upper():
             limite_cartao = valor_base_planilha
-            df_cart = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].str.upper() == 'DESPESA') & (df_base['Status'] == 'Pago')].copy()
+            
+            # Define o início da fatura: dia de fechamento do mês inicial selecionado
+            try:
+                data_corte = d_ini.replace(day=dia_fechamento)
+                # Se a data de hoje for menor que o dia de fechamento, a fatura começou no mês anterior
+                if d_ini.day < dia_fechamento:
+                    data_corte = (d_ini - relativedelta(months=1)).replace(day=dia_fechamento)
+            except:
+                data_corte = d_ini.replace(day=1) # Fallback para segurança
+            
+            df_cart = df_base[(df_base['Banco'] == b) & 
+                              (df_base['Tipo'].str.upper() == 'DESPESA') & 
+                              (df_base['Status'] == 'Pago')].copy()
+            
             df_cart['D_ONLY'] = pd.to_datetime(df_cart['DT']).dt.date
-            usado = df_cart[(df_cart['D_ONLY'] >= d_ini) & (df_cart['D_ONLY'] <= d_fim)]['V_Num'].sum()
+            
+            # Soma apenas o que foi gasto da data de fechamento até o fim do período
+            usado = df_cart[(df_cart['D_ONLY'] >= data_corte) & (df_cart['D_ONLY'] <= d_fim)]['V_Num'].sum()
             dispo = limite_cartao - usado
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)}\n"
+            
+            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Fatura: {m_fmt(usado)} | Disp: {m_fmt(dispo)}\n"
         
-        # Caso contrário, tratamos como Conta Corrente/Saldo
+        # --- LÓGICA DO BANCO ---
         else:
             saldo_inicial = valor_base_planilha
             mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
             receitas_b = mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
             despesas_b = mov_paga[mov_paga['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
+            
             s_final = saldo_inicial + receitas_b - despesas_b
             saldos_txt += f"🏦 {b}: Saldo: {m_fmt(s_final)}\n"
             total_patrimonio += s_final
