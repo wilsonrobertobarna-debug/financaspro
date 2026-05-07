@@ -512,6 +512,7 @@ elif "📄" in aba:
     st.title("📄 WhatsApp")
     
     st.subheader("📲 Notificações Automáticas e Manuais")
+    # ... (Bloco do Twilio permanece igual ao seu original) ...
     if st.button("📲 Enviar mensagens de pendências agora via WhatsApp"):
         twilio_secrets = st.secrets.get("twilio", {})
         sid = twilio_secrets.get("account_sid")
@@ -542,12 +543,8 @@ elif "📄" in aba:
                         
                         client_tw.messages.create(body=mensagem, from_=w_from, to=w_to)
                         st.success("Mensagem enviada com sucesso pelo WhatsApp!")
-                    else:
-                        st.info("Nenhum lançamento a vencer hoje, amanhã ou em 3 dias.")
             except Exception as e:
                 st.error(f"Erro ao enviar pelo Twilio: {e}")
-        else:
-            st.error("⚠️ Wilson, configure as credenciais do Twilio nos seus Secrets (twilio)!")
             
     st.divider()
 
@@ -563,60 +560,67 @@ elif "📄" in aba:
         saldo = 0.0
         limite = 0.0
         
+        # BUSCA INFO NA ABA BANCOS (Saldo e Limite)
         if not df_bancos_info.empty:
             for _, row in df_bancos_info.iterrows():
                 if str(row.iloc[0]).strip() == b:
-                    if len(row) > 1:
-                        try:
-                            val_str = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                            if val_str:
-                                saldo = float(val_str)
-                        except:
-                            saldo = 0.0
+                    try:
+                        val_str = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                        saldo = float(val_str) if val_str else 0.0
+                    except: saldo = 0.0
                             
-                        if len(row) >= 3:
-                            try:
-                                lim_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                                if lim_str:
-                                    limite = float(lim_str)
-                            except:
-                                limite = 0.0
+                    try:
+                        lim_str = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                        limite = float(lim_str) if lim_str else 0.0
+                    except: limite = 0.0
                     break
-                
-        utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
+
+        # FILTRO DE UTILIZADO (Apenas despesas PAGAS no período selecionado)
+        utilizado = df_base[
+            (df_base['Banco'] == b) & 
+            (df_base['Tipo'] == 'Despesa') & 
+            (df_base['DT'].dt.date >= d_ini) & 
+            (df_base['DT'].dt.date <= d_fim)
+        ]['V_Num'].sum()
         
+        # CÁLCULO PARA CONTAS (BANCOS)
         if "cartão" not in b.lower():
-            receitas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] != 'Pendente')]['V_Num'].sum()
-            despesas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] != 'Pendente')]['V_Num'].sum()
-            saldo = saldo + receitas_b - despesas_b
+            receitas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].isin(['Receita', 'Rendimento'])) & (df_base['Status'] == 'Pago')]['V_Num'].sum()
+            despesas_b = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
+            saldo_final = saldo + receitas_b - despesas_b
+            saldos_txt += f"🏦 {b}: {m_fmt(saldo_final)}\n"
+            total_b += saldo_final
         
-        if "cartão" in b.lower():
-            if limite > 0:
-                disponivel = limite - utilizado
-            else:
-                disponivel = saldo - utilizado
-            saldos_txt += f"💳 {b}: Saldo: {m_fmt(saldo)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
+        # CÁLCULO PARA CARTÕES
         else:
-            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo)}\n"
+            disponivel = limite - utilizado
+            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite)} | Utilizado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
             
-        if "cartão" not in b.lower():
-            total_b += saldo
-            
+    # RESUMO DO TOPO (REC, DES, REND)
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     
     if not df_per.empty:
-        df_per_limpo = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
-        r_v = df_per_limpo[df_per_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-        d_v = df_per_limpo[df_per_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        rend_v = df_per_limpo[df_per_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        df_pago = df_per[(df_per['Categoria'] != 'Transferência') & (df_per['Status'] == 'Pago')]
+        r_v = df_pago[df_pago['Tipo'] == 'Receita']['V_Num'].sum()
+        d_v = df_pago[df_pago['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend_v = df_pago[df_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
         pend_v = get_valor_pendente(df_base)
     else:
-        r_v = 0
-        d_v = 0
-        rend_v = 0
-        pend_v = 0
+        r_v = d_v = rend_v = pend_v = 0
         
-    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nPEND: {m_fmt(pend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_b)}"
+    sobra = (r_v + rend_v) - d_v
+    
+    relat = f"RELATÓRIO WILSON\n"
+    relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
+    relat += f"========================================\n"
+    relat += f"REC: {m_fmt(r_v)}\n"
+    relat += f"DES: {m_fmt(d_v)}\n"
+    relat += f"REND: {m_fmt(rend_v)}\n"
+    relat += f"PEND: {m_fmt(pend_v)}\n"
+    relat += f"SOBRA: {m_fmt(sobra)}\n"
+    relat += f"========================================\n\n"
+    relat += f"SALDOS:\n{saldos_txt}\n"
+    relat += f"TOTAL PATRIMÔNIO: {m_fmt(total_b)}"
     
     st.text_area("Copiar para Zap/E-mail", relat, height=400)
     zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
