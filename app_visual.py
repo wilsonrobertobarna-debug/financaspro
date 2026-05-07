@@ -612,12 +612,11 @@ elif "📄" in aba:
         r_v = df_per[(df_per['Tipo_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]['V_Num'].sum()
         d_v = df_per[(df_per['Tipo_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]['V_Num'].sum()
         
-        # RENDIMENTO: Agora ele pega qualquer variação (rendimento, Rendimento, REND) e ignora o Status
+         # RENDIMENTO: Agora ele pega qualquer variação e ignora o Status
         rend_v = df_per[df_per['Tipo_UP'] == 'RENDIMENTO']['V_Num'].sum()
         
-        pend_v = get_valor_pendente(df_base
-                                    
-  else:        
+        pend_v = get_valor_pendente(df_base)
+    else:
         r_v = 0
         d_v = 0
         rend_v = 0
