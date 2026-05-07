@@ -581,31 +581,29 @@ elif "📄" in aba:
                     except: pass
                     break
         
-        # --- LÓGICA DE CARTÃO ---
+     # --- LÓGICA DE CARTÃO (Soma Pendentes até a data Limite) ---
         if "CARTA" in tipo_c or "CART" in b.upper():
             limite_cartao = valor_b
             
-            try:
-                # Lógica de virada de fatura
-                if d_fim.day < dia_fech_d:
-                    data_corte = (d_fim - relativedelta(months=1)).replace(day=dia_fech_d)
-                else:
-                    data_corte = d_fim.replace(day=dia_fech_d)
-            except:
-                data_corte = d_ini 
+            # Filtra a base: 
+            # 1. Do banco específico
+            # 2. Que seja Despesa
+            # 3. Que esteja Pendente
+            df_cart_base = df_base[(df_base['Banco'] == b) & 
+                                   (df_base['Tipo'].str.upper() == 'DESPESA') & 
+                                   (df_base['Status'].str.upper() == 'PENDENTE')].copy()
             
-            # 🔥 MUDANÇA AQUI: Agora buscamos o que está 'Pendente' (Coluna G)
-            df_cart = df_base[(df_base['Banco'] == b) & 
-                              (df_base['Tipo'].str.upper() == 'DESPESA') & 
-                              (df_base['Status'].str.upper() == 'PENDENTE')].copy()
+            # Garante que a coluna de data está em formato de data
+            df_cart_base['DT_ONLY'] = pd.to_datetime(df_cart_base['DT']).dt.date
             
-            df_cart['D_ONLY'] = pd.to_datetime(df_cart['DT']).dt.date
+            # 🔥 O PULO DO GATO:
+            # Soma tudo o que está pendente DESDE SEMPRE até a DATA FINAL (d_fim) selecionada.
+            # Isso pega contas atrasadas e compras do mês, mas IGNORA parcelas futuras.
+            usado = df_cart_base[df_cart_base['DT_ONLY'] <= d_fim]['V_Num'].sum()
             
-            # Soma o que foi gasto no ciclo da fatura
-            usado = df_cart[(df_cart['D_ONLY'] >= data_corte) & (df_cart['D_ONLY'] <= d_fim)]['V_Num'].sum()
             dispo = limite_cartao - usado
             
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Vence dia {dia_venc_e})\n"
+            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
         else:
