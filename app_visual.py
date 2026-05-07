@@ -523,14 +523,14 @@ elif "📄" in aba:
     st.title("📄 WhatsApp")
     
     c1, c2 = st.columns(2)
-    # Datas ajustadas (Início e Fim)
+    # Datas ajustadas
     d_ini = c1.date_input("Início", hoje_br - timedelta(days=30), format="DD/MM/YYYY", key="zap_d1")
     d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY", key="zap_d2")
     
     saldos_txt = ""
     total_patrimonio = 0.0 
     
-    # 1. LOOP PELOS BANCOS (Cálculo de Saldo Real)
+    # 1. LOOP PELOS BANCOS
     for b in sorted(bancos_disponiveis):
         saldo_ini = 0.0
         if not df_bancos_info.empty:
@@ -543,7 +543,6 @@ elif "📄" in aba:
                     break
         
         mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
-        # Soma tudo que você marcou como RECEITA no Tipo
         receitas_b = mov_paga[mov_paga['Tipo'].str.upper() == 'RECEITA']['V_Num'].sum()
         despesas_b = mov_paga[mov_paga['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
         
@@ -551,26 +550,24 @@ elif "📄" in aba:
         saldos_txt += f"🏦 {b}: Saldo: {m_fmt(s_final)}\n"
         total_patrimonio += s_final
 
-    # 2. RESUMO DO RELATÓRIO (Filtro por período de MAIO)
+    # 2. RESUMO DO RELATÓRIO (CORREÇÃO DO NAMEERROR AQUI)
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
-    df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_per['DT_ONLY'] <= d_fim)].copy()
+    # Aqui estava o erro: usei df_per antes da hora. Agora está corrigido usando df_base:
+    df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
 
     if not df_per.empty:
-        # Padroniza Categoria para achar o Rendimento dentro das receitas
         df_per['C_UP'] = df_per['Categoria'].astype(str).str.upper().str.strip()
         df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
         
-        # REC: Soma Receitas Reais (Exclui Transferências)
-        # O seu rendimento entra aqui automaticamente se o tipo dele for 'Receita'
+        # REC: Tudo que é Receita (Rendimento incluso se for Tipo=Receita)
         rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
         
-        # DES: Soma Despesas Reais (Exclui Transferências)
+        # DES: Tudo que é Despesa
         des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
         
-        # REND: APENAS INFO (Pega o que é 'Rendimento' na categoria para te mostrar quanto foi)
+        # REND: Apenas para informar (dedo-duro)
         rend_v = df_per[(df_per['C_UP'].str.contains('REND', na=False)) & (df_per['Status'] == 'Pago')]['V_Num'].sum()
         
-        # SOBRA: A conta que você quer
         sobra = rec_v - des_v
     else:
         rec_v = des_v = rend_v = sobra = 0.0
