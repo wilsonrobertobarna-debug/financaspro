@@ -561,20 +561,28 @@ elif "📄" in aba:
             saldos_txt += f"🏦 {b}: Saldo: {m_fmt(s_final)}\n"
             total_patrimonio += s_final
 
-    # CÁLCULO DO RELATÓRIO (RENDIMENTO COMO INFO)
-    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
+   # 3. CÁLCULO DO RELATÓRIO (FILTRANDO POR MAIO OU DATA ESCOLHIDA)
+    # Garante que a coluna DT seja data e remove horas/minutos para comparar certo
+    df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
+    
+    df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
+
     if not df_per.empty:
-        # CONTA PRINCIPAL
-        rec_v = df_per[(df_per['Tipo'] == 'Receita') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
-        des_v = df_per[(df_per['Tipo'] == 'Despesa') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        # CONTA PRINCIPAL: Forçamos o filtro de Tipo e Status 'Pago'
+        # Usamos .str.upper() para evitar erro se estiver 'receita' ou 'RECEITA'
+        r_v = df_per[(df_per['Tipo'].astype(str).str.upper() == 'RECEITA') & 
+                     (df_per['Status'] == 'Pago')]['V_Num'].sum()
         
-        # RENDIMENTO (Busca a palavra 'Rendimento' em qualquer coluna para garantir que ache)
-        mask = df_per.astype(str).apply(lambda x: x.str.contains('Rendimento', case=False)).any(axis=1)
-        rend_v = df_per[mask]['V_Num'].sum()
+        d_v = df_per[(df_per['Tipo'].astype(str).str.upper() == 'DESPESA') & 
+                     (df_per['Status'] == 'Pago')]['V_Num'].sum()
         
-        sobra = rec_v - des_v
+        # RENDIMENTO: Como você disse que já está normal, mantemos a busca por nome
+        rend_v = df_per[df_per['Tipo'].astype(str).str.upper() == 'RENDIMENTO']['V_Num'].sum()
+        
+        # A CONTA: Receita - Despesa (Rendimento já está na receita)
+        sobra = r_v - d_v
     else:
-        rec_v = des_v = rend_v = sobra = 0.0
+        r_v = d_v = rend_v = sobra = 0.0
         
     relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"========================================\n"
