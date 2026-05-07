@@ -530,7 +530,7 @@ elif "📄" in aba:
     saldos_txt = ""
     total_patrimonio = 0.0 
     
-    # 1. LOOP PELOS BANCOS
+    # 1. LOOP PELOS BANCOS (Cálculo do Saldo que você já conferiu)
     for b in sorted(bancos_disponiveis):
         saldo_ini = 0.0
         if not df_bancos_info.empty:
@@ -543,38 +543,54 @@ elif "📄" in aba:
                     break
         
         mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
-        receitas_b = mov_paga[mov_paga['Tipo'].str.upper() == 'RECEITA']['V_Num'].sum()
+        # Soma Receita e também Rendimento (caso você mude o Tipo algum dia)
+        receitas_b = mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
         despesas_b = mov_paga[mov_paga['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
         
         s_final = saldo_ini + receitas_b - despesas_b
         saldos_txt += f"🏦 {b}: Saldo: {m_fmt(s_final)}\n"
         total_patrimonio += s_final
 
-    # 2. RESUMO DO RELATÓRIO (CORREÇÃO DO NAMEERROR AQUI)
+    # 2. RESUMO DO RELATÓRIO (Onde o Rendimento "sumia")
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
-    # Aqui estava o erro: usei df_per antes da hora. Agora está corrigido usando df_base:
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
 
     if not df_per.empty:
-        df_per['C_UP'] = df_per['Categoria'].astype(str).str.upper().str.strip()
+        # Padronização para busca
         df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
+        df_per['C_UP'] = df_per['Categoria'].astype(str).str.upper().str.strip()
         
-        # REC: Tudo que é Receita (Rendimento incluso se for Tipo=Receita)
-        rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
+        # --- RENDIMENTO (A BUSCA "AGULHA NO PALHEIRO") ---
+        # Procura a palavra REND em qualquer lugar (Tipo ou Categoria)
+        mask_rend = (df_per['T_UP'].str.contains('REND', na=False)) | (df_per['C_UP'].str.contains('REND', na=False))
+        rend_v = df_per[mask_rend & (df_per['Status'] == 'Pago')]['V_Num'].sum()
         
-        # DES: Tudo que é Despesa
-        des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
+        # --- RECEITA ---
+        # Soma tudo que é Receita e NÃO é transferência. 
+        # Como o seu rendimento é lançado como Receita, ele já vai estar aqui dentro.
+        rec_v = df_per[
+            (df_per['T_UP'] == 'RECEITA') & 
+            (df_per['Status'] == 'Pago') & 
+            (~df_per['C_UP'].str.contains('TRANS', na=False))
+        ]['V_Num'].sum()
         
-        # REND: Apenas para informar (dedo-duro)
-        rend_v = df_per[(df_per['C_UP'].str.contains('REND', na=False)) & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        # --- DESPESA ---
+        des_v = df_per[
+            (df_per['T_UP'] == 'DESPESA') & 
+            (df_per['Status'] == 'Pago') & 
+            (~df_per['C_UP'].str.contains('TRANS', na=False))
+        ]['V_Num'].sum()
         
+        # SOBRA: Receita - Despesa (Simples e direto)
         sobra = rec_v - des_v
+        
     else:
         rec_v = des_v = rend_v = sobra = 0.0
 
-    # 3. TEXTO FINAL
+    # 3. TEXTO FINAL PARA WHATSAPP
     relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"========================================\n"
+    # Exibe o Rendimento apenas como informação, ele já faz parte da REC
     relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
     relat += f"DES: {m_fmt(des_v)} | SOBRA: {m_fmt(sobra)}\n"
     relat += f"========================================\n\n"
@@ -582,12 +598,13 @@ elif "📄" in aba:
     
     st.text_area("Copiar Relatório", relat, height=300)
     st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
+
 elif "📋" in aba:
     st.title("📋 Gerador de Relatório PDF")
     
     c1, c2, c3 = st.columns(3)
-    b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-    b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY")
+    b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY", key="pdf_d1")
+    b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY", key="pdf_d2")
     
     st.divider()
     
@@ -625,7 +642,6 @@ elif "📋" in aba:
                 pdf.add_page()
                 pdf.set_font("Arial", size=10)
                 
-                # Cabeçalho do PDF
                 pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
                 pdf.ln(2)
                 pdf.cell(200, 10, txt=f"Periodo: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", ln=1, align="L")
@@ -642,7 +658,6 @@ elif "📋" in aba:
                 df_v = df_v.sort_values(by='DT')
                 df_v['Saldo_Acum'] = df_v['V_Num'].cumsum()
                 
-                # Cabeçalho da tabela
                 pdf.cell(20, 8, "Data", 1)
                 pdf.cell(25, 8, "Tipo", 1)
                 pdf.cell(25, 8, "Valor", 1)
