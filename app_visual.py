@@ -5,6 +5,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+import pytz
 Pega a hora do servidor e tira 3 horas manualmente (Horário de Brasília)
 agora = datetime.now() - timedelta(hours=3)
 hoje = agora.date()
