@@ -509,36 +509,37 @@ elif "🚗" in aba:
         st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "📄" in aba:
-    st.title("📄 Relatório WhatsApp - Versão Final")
+    st.title("📄 Relatório WhatsApp (Versão Estável)")
     
-    # 1. AJUSTE MANUAL DE COLUNAS (Caso a planilha mude)
-    with st.expander("⚙️ Ajuste de Colunas (Clique aqui se os valores zerarem)"):
-        st.info("A contagem começa em 0 (A=0, B=1, C=2, D=3...)")
-        col_saldo = st.number_input("Coluna do Saldo Inicial (Geralmente 1)", value=1)
-        col_limite = st.number_input("Coluna do Limite do Cartão (Geralmente 2)", value=2)
+    # 1. CONTROLE DE COLUNAS - Segurança para não zerar
+    with st.expander("🛠️ Configuração de Leitura da Planilha"):
+        st.write("Se os valores aparecerem zerados, verifique se estas posições estão corretas:")
+        col_s = st.number_input("Posição do Saldo (Coluna B = 1)", value=1)
+        col_l = st.number_input("Posição do Limite (Coluna C = 2)", value=2)
 
-    # 2. LIMPEZA DA BASE
+    # 2. LIMPEZA DOS DADOS DE LANÇAMENTOS
     df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0.0)
+    df_base['Banco_Busca'] = df_base['Banco'].astype(str).str.upper().str.strip()
     
     st.divider()
     c1, c2 = st.columns(2)
     d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
     d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
     
-    def limpar(v):
+    def formatar_moeda_planilha(v):
         if pd.isna(v) or str(v).strip() == "": return 0.0
         try:
             s = str(v).replace('R$', '').replace('.', '').replace(',', '.').strip()
             import re
             s = re.sub(r'[^\d.]', '', s)
-            return float(s)
+            return float(s) if s else 0.0
         except: return 0.0
 
     txt_cartoes = ""
     txt_bancos = ""
-    total_patrimonio = 0.0
+    patrimonio_real = 0.0
 
-    # 3. PROCESSAMENTO RÍGIDO
+    # 3. PROCESSAMENTO INDIVIDUAL
     if not df_bancos_info.empty:
         for i in range(len(df_bancos_info)):
             linha = df_bancos_info.iloc[i]
@@ -546,46 +547,49 @@ elif "📄" in aba:
             
             if nome_banco.lower() in ['nan', '', 'none']: continue
             
-            # Pegamos os valores EXATAMENTE das colunas que você definiu no ajuste manual
-            val_saldo_ini = limpar(linha.iloc[col_saldo])
-            val_limite = limpar(linha.iloc[col_limite])
+            # Leitura forçada das colunas
+            saldo_inicial = formatar_moeda_planilha(linha.iloc[col_s])
+            limite_configurado = formatar_moeda_planilha(linha.iloc[col_l])
             
-            # Busca movimentação pelo nome (Busca simples)
-            nome_clean = nome_banco.upper().strip()
-            mov_banco = df_base[(df_base['Banco'].str.upper().str.strip() == nome_clean) & (df_base['Status'] == 'Pago')]
+            # Busca de gastos/receitas na base
+            # Estratégia: Pegar a primeira palavra do banco (ex: 'INTER')
+            chave = nome_banco.upper().replace("CARTÃO", "").replace("CARTAO", "").replace("-", "").strip().split()[0]
             
-            ent = mov_banco[mov_banco['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            sai = mov_banco[mov_banco['Tipo'] == 'Despesa']['V_Num'].sum()
+            mov_paga = df_base[(df_base['Banco_Busca'].str.contains(chave, na=False)) & (df_base['Status'] == 'Pago')]
+            
+            soma_entradas = mov_paga[mov_paga['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            soma_saidas = mov_paga[mov_paga['Tipo'] == 'Despesa']['V_Num'].sum()
 
-            if "CART" in nome_clean:
-                # Lógica Cartão: Limite - Gastos
-                utilizado = sai
-                txt_cartoes += f"💳 *{nome_banco}*:\n   Limite: {m_fmt(val_limite)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(val_limite - utilizado)}*\n\n"
+            if "CART" in nome_banco.upper():
+                # É CARTÃO: Mostra Limite e Utilizado (Não entra no patrimônio)
+                utilizado = soma_saidas
+                txt_cartoes += f"💳 *{nome_banco}*:\n   Limite: {m_fmt(limite_configurado)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(limite_configurado - utilizado)}*\n\n"
             else:
-                # Lógica Banco: Saldo Inicial + Entradas - Saídas
-                saldo_atual = val_saldo_ini + ent - sai
+                # É BANCO: Soma saldo inicial + movimentação (Entra no patrimônio)
+                saldo_atual = saldo_inicial + soma_entradas - soma_saidas
                 txt_bancos += f"🏦 *{nome_banco}*: {m_fmt(saldo_atual)}\n\n"
-                total_patrimonio += saldo_atual
+                patrimonio_real += saldo_atual
 
-    # 4. RESUMO FINANCEIRO
-    df_periodo = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim) & (df_base['Status'] == 'Pago') & (df_base['Categoria'] != 'Transferência')]
+    # 4. CÁLCULO DA SOBRA (RESUMO DO TOPO)
+    df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim) & (df_base['Status'] == 'Pago') & (df_base['Categoria'] != 'Transferência')]
     
-    r = df_periodo[df_periodo['Tipo'] == 'Receita']['V_Num'].sum()
-    rend = df_periodo[df_periodo['Tipo'] == 'Rendimento']['V_Num'].sum()
-    d = df_periodo[df_periodo['Tipo'] == 'Despesa']['V_Num'].sum()
+    val_rec = df_per[df_per['Tipo'] == 'Receita']['V_Num'].sum()
+    val_rend = df_per[df_per['Tipo'] == 'Rendimento']['V_Num'].sum()
+    val_des = df_per[df_per['Tipo'] == 'Despesa']['V_Num'].sum()
 
-    relat = f"*RELATÓRIO WILSON*\n"
-    relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
-    relat += f"================================\n"
-    relat += f"REC: {m_fmt(r)} | REND: {m_fmt(rend)}\n"
-    relat += f"DES: {m_fmt(d)} | *SOBRA: {m_fmt(r + rend - d)}*\n"
-    relat += f"================================\n\n"
-    relat += f"*SALDOS EM CONTA:*\n{txt_bancos}"
-    relat += f"*CARTÕES DE CRÉDITO:*\n{txt_cartoes}"
-    relat += f"*PATRIMÔNIO TOTAL: {m_fmt(total_patrimonio)}*"
+    # 5. RESULTADO FINAL
+    relatorio = f"*RELATÓRIO WILSON*\n"
+    relatorio += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
+    relatorio += f"================================\n"
+    relatorio += f"REC: {m_fmt(val_rec)} | REND: {m_fmt(val_rend)}\n"
+    relatorio += f"DES: {m_fmt(val_des)} | *SOBRA: {m_fmt(val_rec + val_rend - val_des)}*\n"
+    relatorio += f"================================\n\n"
+    relatorio += f"*SALDOS EM CONTA:*\n{txt_bancos}"
+    relatorio += f"*CARTÕES DE CRÉDITO:*\n{txt_cartoes}"
+    relatorio += f"*TOTAL PATRIMÔNIO: {m_fmt(patrimonio_real)}*"
     
-    st.text_area("Copiar Relatório", relat, height=500)
-    st.markdown(f'[📲 Enviar WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
+    st.text_area("Relatório Wilson", relatorio, height=500)
+    st.markdown(f'[📲 Enviar WhatsApp](https://wa.me/?text={urllib.parse.quote(relatorio)})')
 elif "📋" in aba:
         st.title("📋 Gerador de Relatório PDF")
         
