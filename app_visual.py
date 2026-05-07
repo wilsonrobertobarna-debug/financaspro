@@ -604,15 +604,15 @@ elif "📄" in aba:
             
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     
-    if not df_per.empty:
-        # Criamos uma coluna temporária em maiúsculo para não ter erro de digitação
+  if not df_per.empty:
+        # Criamos uma coluna temporária para não ter erro de maiúsculas/minúsculas
         df_per['Tipo_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
         
-        # Filtros corrigidos
+        # Filtros: Receita e Despesa (precisam estar 'Pago')
         r_v = df_per[(df_per['Tipo_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]['V_Num'].sum()
         d_v = df_per[(df_per['Tipo_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]['V_Num'].sum()
         
-         # RENDIMENTO: Agora ele pega qualquer variação e ignora o Status
+        # RENDIMENTO: Agora ele ignora o Status e pega qualquer centavo que você lançar
         rend_v = df_per[df_per['Tipo_UP'] == 'RENDIMENTO']['V_Num'].sum()
         
         pend_v = get_valor_pendente(df_base)
