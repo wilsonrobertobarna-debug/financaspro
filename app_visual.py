@@ -511,76 +511,73 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
-    # --- AJUSTE DE SEGURANÇA NA BASE DE DADOS ---
+    # 1. LIMPEZA DA BASE DE LANÇAMENTOS
     df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0.0)
-    df_base['Banco'] = df_base['Banco'].astype(str).str.strip()
     
     st.divider()
 
     c1, c2 = st.columns(2)
-    d_ini = c1.date_input("Início Relatório", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-    d_fim = c2.date_input("Fim Relatório", datetime.now(), format="DD/MM/YYYY")
+    d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+    d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
     
     saldos_txt = ""
     total_patrimonio = 0.0
     
-    def limpar_v(v):
-        if v is None or str(v).strip() == "" or str(v).lower() == 'nan': return 0.0
+    # Função reforçada para ler qualquer formato de moeda
+    def converter_valor(v):
+        if pd.isna(v) or str(v).strip() == "": return 0.0
         try:
+            s = str(v).replace('R$', '').replace('.', '').replace(',', '.').strip()
             import re
-            s = str(v).replace('R$', '').strip()
-            # Resolve formatos: 1.234,56 ou 1,234.56
-            if ',' in s and '.' in s: s = s.replace('.', '')
-            s = s.replace(',', '.')
             s = re.sub(r'[^\d.]', '', s)
-            return float(s) if s else 0.0
+            return float(s)
         except: return 0.0
 
-    # --- PROCESSAMENTO DOS CARTÕES E BANCOS ---
+    # 2. PROCESSAMENTO LINHA POR LINHA
     if not df_bancos_info.empty:
-        for _, row in df_bancos_info.iterrows():
-            nome_banco_ref = str(row.iloc[0]).strip()
-            if not nome_banco_ref or nome_banco_ref.lower() == 'nan': continue
+        for i in range(len(df_bancos_info)):
+            linha = df_bancos_info.iloc[i]
+            nome_banco = str(linha.iloc[0]).strip()
             
-            # Pega valores por posição física (B=1, C=2) para evitar erro de nome de coluna
-            val_saldo_ini = limpar_v(row.iloc[1])
-            val_limite_total = limpar_v(row.iloc[2]) if len(row) > 2 else 0.0
+            if nome_banco.lower() in ['nan', 'None', '']: continue
             
-            # Busca gastos PAGOS com nome exato
-            nome_busca = nome_banco_ref.upper()
-            df_mov = df_base[(df_base['Banco'].str.upper() == nome_busca) & (df_base['Status'] == 'Pago')]
+            # Pega valores por posição: Saldo na Coluna B (1), Limite na Coluna C (2)
+            saldo_planilha = converter_valor(linha.iloc[1])
+            limite_planilha = converter_valor(linha.iloc[2]) if len(linha) > 2 else 0.0
             
-            v_entradas = df_mov[df_mov['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            v_saidas = df_mov[df_mov['Tipo'] == 'Despesa']['V_Num'].sum()
+            # Busca movimentações na base
+            mov_banco = df_base[(df_base['Banco'].str.strip() == nome_banco) & (df_base['Status'] == 'Pago')]
             
-            if "CART" in nome_busca:
-                # É CARTÃO: Limite (Planilha) - Despesas (Base)
-                utilizado = v_saidas
-                a_utilizar = val_limite_total - utilizado
-                saldos_txt += f"💳 *{nome_banco_ref}*:\n   Limite: {m_fmt(val_limite_total)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(a_utilizar)}*\n\n"
+            entradas_banco = mov_banco[mov_banco['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            saidas_banco = mov_banco[mov_banco['Tipo'] == 'Despesa']['V_Num'].sum()
+
+            if "CART" in nome_banco.upper():
+                # Lógica de Cartão
+                utilizado = saidas_banco
+                a_utilizar = limite_planilha - utilizado
+                saldos_txt += f"💳 *{nome_banco}*:\n   Limite: {m_fmt(limite_planilha)} | Utilizado: {m_fmt(utilizado)}\n   *A Utilizar: {m_fmt(a_utilizar)}*\n\n"
             else:
-                # É BANCO: Saldo Inicial (Planilha) + Entradas - Saídas
-                saldo_atual = val_saldo_ini + v_entradas - v_saidas
-                saldos_txt += f"🏦 *{nome_banco_ref}*: {m_fmt(saldo_atual)}\n\n"
+                # Lógica de Conta
+                saldo_atual = saldo_planilha + entradas_banco - saidas_banco
+                saldos_txt += f"🏦 *{nome_banco}*: {m_fmt(saldo_atual)}\n\n"
                 total_patrimonio += saldo_atual
 
-    # --- RESUMO FINANCEIRO (COM RENDIMENTOS) ---
+    # 3. RESUMO FINANCEIRO (REC + REND - DES)
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
-    df_pago = df_per[(df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]
+    df_per_pago = df_per[(df_per['Status'] == 'Pago') & (df_per['Categoria'] != 'Transferência')]
     
-    r_v = df_pago[df_pago['Tipo'] == 'Receita']['V_Num'].sum()
-    rend_v = df_pago[df_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
-    d_v = df_pago[df_pago['Tipo'] == 'Despesa']['V_Num'].sum()
-    
-    sobra_v = (r_v + rend_v) - d_v
+    v_rec = df_per_pago[df_per_pago['Tipo'] == 'Receita']['V_Num'].sum()
+    v_rend = df_per_pago[df_per_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
+    v_des = df_per_pago[df_per_pago['Tipo'] == 'Despesa']['V_Num'].sum()
+    v_sobra = (v_rec + v_rend) - v_des
 
     relat = f"*RELATÓRIO WILSON*\n"
     relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"================================\n"
-    relat += f"REC: {m_fmt(r_v)}\n"
-    relat += f"REND: {m_fmt(rend_v)}\n"
-    relat += f"DES: {m_fmt(d_v)}\n"
-    relat += f"*SOBRA: {m_fmt(sobra_v)}*\n"
+    relat += f"REC: {m_fmt(v_rec)}\n"
+    relat += f"REND: {m_fmt(v_rend)}\n"
+    relat += f"DES: {m_fmt(v_des)}\n"
+    relat += f"*SOBRA: {m_fmt(v_sobra)}*\n"
     relat += f"================================\n\n"
     relat += f"*SALDOS E CARTÕES:*\n{saldos_txt}"
     relat += f"*TOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}*"
