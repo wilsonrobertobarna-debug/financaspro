@@ -511,11 +511,11 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
-    # --- BOTÃO DE DEPURAÇÃO (APENAS PARA VOCÊ VER SE O LIMITE ESTÁ CHEGANDO) ---
-    if st.checkbox("Debug: Ver dados da planilha de Bancos"):
-        st.write("Colunas encontradas:", df_bancos_info.columns.tolist())
-        st.write(df_bancos_info)
-    
+    # Checkbox para você conferir os dados brutos se algo der errado
+    if st.checkbox("🔍 Conferir Limites e Saldos Iniciais (Debug)"):
+        st.write("Dados lidos da aba Bancos:")
+        st.dataframe(df_bancos_info)
+
     st.divider()
 
     c1, c2 = st.columns(2)
@@ -529,50 +529,43 @@ elif "📄" in aba:
         if v is None or str(v).strip() == "" or str(v).lower() == 'nan': return 0.0
         try:
             import re
-            # Remove pontos de milhar, troca vírgula por ponto e remove símbolos
+            # Remove pontos de milhar, troca vírgula por ponto e remove tudo que não é número
             s = str(v).replace('.', '').replace(',', '.')
             s = re.sub(r'[^\d.]', '', s)
             return float(s) if s else 0.0
         except: return 0.0
 
-    # 1. PROCESSAMENTO DOS BANCOS E CARTÕES
+    # 1. PROCESSAMENTO DOS BANCOS E CARTÕES (USANDO BUSCA EXATA)
     if not df_bancos_info.empty:
-        # Tentamos identificar as colunas pelo nome ou pela posição
-        col_nome = df_bancos_info.columns[0]
-        col_saldo = df_bancos_info.columns[1]
-        # Se houver uma 3ª coluna, é o limite. Se não, assume 0.
-        col_limite = df_bancos_info.columns[2] if len(df_bancos_info.columns) >= 3 else None
-
         for _, row in df_bancos_info.iterrows():
-            nome_banco_planilha = str(row[col_nome]).strip()
+            nome_banco_planilha = str(row.iloc[0]).strip()
             if not nome_banco_planilha or nome_banco_planilha.lower() == 'nan': continue
             
-            # LEITURA DOS VALORES
-            saldo_inicial_planilha = limpar_v(row[col_saldo])
-            limite_total_planilha = limpar_v(row[col_limite]) if col_limite else 0.0
+            # Pega valores das colunas B e C da aba Bancos
+            saldo_inicial = limpar_v(row.iloc[1])
+            limite_total = limpar_v(row.iloc[2]) if len(row) >= 3 else 0.0
             
-            # Identificador para busca nos lançamentos (ex: "Inter")
-            identificador = nome_banco_planilha.split('-')[-1].strip() if '-' in nome_banco_planilha else nome_banco_planilha
+            # Filtra na base de dados APENAS o que for EXATAMENTE esse banco e estiver PAGO
+            # Olhamos todo o histórico para o saldo ser o real de hoje
+            mov_pago = df_base[(df_base['Banco'] == nome_banco_planilha) & (df_base['Status'] == 'Pago')]
             
-            # Pega TODO o histórico para o saldo/fatura atual
-            mov_b = df_base[(df_base['Banco'].str.contains(identificador, case=False, na=False)) & (df_base['Status'] == 'Pago')]
-            entradas = mov_b[mov_b['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            saidas = mov_b[mov_b['Tipo'] == 'Despesa']['V_Num'].sum()
+            entradas = mov_pago[mov_pago['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            saidas = mov_pago[mov_pago['Tipo'] == 'Despesa']['V_Num'].sum()
             
-            # DETERMINA SE É CARTÃO OU CONTA
-            is_cartao = "CART" in nome_banco_planilha.upper() or limite_total_planilha > 0
-            
-            if is_cartao:
-                fatura_atual = saidas
-                # CÁLCULO: Limite cadastrado menos o que já foi gasto (pago)
-                disp = limite_total_planilha - fatura_atual
-                saldos_txt += f"💳 {nome_banco_planilha}: Fatura: {m_fmt(fatura_atual)} | Limite Disp: {m_fmt(disp)}\n"
+            # Se for Cartão (tem limite > 0 ou a palavra Cartão no nome)
+            if limite_total > 0 or "CART" in nome_banco_planilha.upper():
+                fatura_atual = saidas # Soma das despesas pagas nesse cartão
+                utilizado = fatura_atual
+                disponivel = limite_total - utilizado
+                
+                saldos_txt += f"💳 {nome_banco_planilha}:\n   Utilizado: {m_fmt(utilizado)} | A Utilizar: {m_fmt(disponivel)}\n\n"
             else:
-                saldo_final = saldo_inicial_planilha + entradas - saidas
-                saldos_txt += f"🏦 {nome_banco_planilha}: Saldo: {m_fmt(saldo_final)}\n"
-                total_patrimonio += saldo_final
+                # Se for Conta Corrente
+                saldo_atual = saldo_inicial + entradas - saidas
+                saldos_txt += f"🏦 {nome_banco_planilha}: {m_fmt(saldo_atual)}\n\n"
+                total_patrimonio += saldo_atual
 
-    # 2. RESUMO DO PERÍODO SELECIONADO
+    # 2. RESUMO FINANCEIRO DO PERÍODO SELECIONADO
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     r_v = d_v = rend_v = 0.0
     if not df_per.empty:
@@ -581,9 +574,18 @@ elif "📄" in aba:
         d_v = df_per_l[df_per_l['Tipo'] == 'Despesa']['V_Num'].sum()
         rend_v = df_per_l[df_per_l['Tipo'] == 'Rendimento']['V_Num'].sum()
 
-    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n========================================\nREC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nSOBRA: {m_fmt((r_v+rend_v)-d_v)}\n========================================\n\nSTATUS DOS BANCOS/CARTÕES:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}"
+    pend_v = get_valor_pendente(df_base)
+    sobra = (r_v + rend_v) - d_v
     
-    st.text_area("Copiar Relatório", relat, height=400)
+    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
+    relat += f"========================================\n"
+    relat += f"REC: {m_fmt(r_v)}\nDES: {m_fmt(d_v)}\nREND: {m_fmt(rend_v)}\nPEND: {m_fmt(pend_v)}\n"
+    relat += f"SOBRA: {m_fmt(sobra)}\n"
+    relat += f"========================================\n\n"
+    relat += f"SALDOS E CARTÕES:\n{saldos_txt}"
+    relat += f"TOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}"
+    
+    st.text_area("Copiar para WhatsApp", relat, height=450)
     zap_link = f"https://wa.me/?text={urllib.parse.quote(relat)}"
     st.markdown(f'[📲 Enviar para o WhatsApp]({zap_link})')
 elif "📋" in aba:
