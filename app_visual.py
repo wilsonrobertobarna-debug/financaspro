@@ -487,15 +487,12 @@ elif "🚗" in aba:
     if km_atual > 0 and km_oleo > 0:
         km_rodados = km_atual - km_oleo
         if km_rodados >= limite_oleo:
-            st.error(f"🚨 ALERTA: Passou do limite para trocar o óleo! Rodou {km_rodados:,} km desde a última troca.")
+            st.error(f"🚨 ALERTA: Passou do limite para trocar o óleo! Rodou {km_rodados:,} km.")
         else:
-            st.info(f"👍 Óleo em dia! Você rodou {km_rodados:,} km. Faltam {limite_oleo - km_rodados:,} km para a próxima troca.")
+            st.info(f"👍 Óleo em dia! Você rodou {km_rodados:,} km. Faltam {limite_oleo - km_rodados:,} km.")
             
     st.divider()
-    
     st.subheader("⛽ Cálculo de Consumo (Km/L)")
-    st.info("💡 **Atenção:** Digite a quantidade de combustível em **Litros** (ex: 50.0) e a distância em **Quilômetros** (ex: 600.0), e não o valor monetário em R$.")
-    
     c_cons1, c_cons2, c_cons3 = st.columns(3)
     litros = c_cons1.number_input("Litros Abastecidos", value=0.0, step=0.5)
     distancia = c_cons2.number_input("Distância Percorrida (km)", value=0.0, step=10.0)
@@ -515,7 +512,6 @@ elif "📄" in aba:
     st.title("📄 WhatsApp")
     st.subheader("📲 Notificações e Relatório")
     
-    # 1. DATAS DO RELATÓRIO
     c1, c2 = st.columns(2)
     d_ini = c1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY", key="zap_ini")
     d_fim = c2.date_input("Fim", datetime.now(), format="DD/MM/YYYY", key="zap_fim")
@@ -524,57 +520,44 @@ elif "📄" in aba:
     saldos_txt = ""
     total_b = 0.0
     
-    # 2. LOOP PELOS BANCOS E CARTÕES
     for b in bancos:
-        saldo_inicial = 0.0
+        saldo_ini = 0.0
         limite = 0.0
         
         if not df_bancos_info.empty:
             for _, row in df_bancos_info.iterrows():
                 if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
                     try:
-                        # Saldo (Coluna B)
                         s_limpo = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                        saldo_inicial = float(s_limpo) if s_limpo else 0.0
-                        # Limite (Coluna C)
+                        saldo_ini = float(s_limpo) if s_limpo else 0.0
                         if len(row) > 2:
                             l_limpo = str(row.iloc[2]).replace('R$', '').replace('.', '').replace(',', '.').strip()
                             limite = float(l_limpo) if l_limpo else 0.0
                     except: pass
                     break
         
-        # Filtros de movimentação
-        mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
-        # Rendimentos entram aqui mesmo sem estar "Pago" se você preferir, 
-        # mas por padrão vamos manter a lógica de soma de saldo real:
-        receitas_b = mov_paga[mov_paga['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        despesas_b = mov_paga[mov_paga['Tipo'] == 'Despesa']['V_Num'].sum()
+        utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)]['V_Num'].sum()
         
         if "CART" in b.upper():
-            utilizado = df_base[(df_base['Banco'] == b) & (df_base['Tipo'] == 'Despesa') & (df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)]['V_Num'].sum()
             disponivel = limite - utilizado
             saldos_txt += f"💳 {b}: Limite: {m_fmt(limite)} | Usado: {m_fmt(utilizado)} | A utilizar: {m_fmt(disponivel)}\n"
         else:
-            saldo_final = saldo_inicial + receitas_b - despesas_b
+            mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
+            receitas_b = mov_paga[mov_paga['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            despesas_b = mov_paga[mov_paga['Tipo'] == 'Despesa']['V_Num'].sum()
+            saldo_final = saldo_ini + receitas_b - despesas_b
             saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo_final)}\n"
             total_b += saldo_final
 
-    # 3. RESUMO FINANCEIRO (RENDIMENTOS CORRIGIDOS)
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
-    
     if not df_per.empty:
         df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
-        
-        # Receitas e Despesas (Apenas Pagas)
         r_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
         d_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
-        
-        # RENDIMENTO: Soma tudo que for rendimento no mês, INDEPENDENTE de status
         rend_v = df_per[df_per['T_UP'] == 'RENDIMENTO']['V_Num'].sum()
     else:
         r_v = d_v = rend_v = 0.0
-
-    # 4. MONTAGEM DO RELATÓRIO
+        
     sobra = (r_v + rend_v) - d_v
     relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"========================================\n"
@@ -585,114 +568,61 @@ elif "📄" in aba:
     
     st.text_area("Copiar para Zap", relat, height=400)
     st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
+
 elif "📋" in aba:
-        st.title("📋 Gerador de Relatório PDF")
+    st.title("📋 Gerador de Relatório PDF")
+    c1, c2, c3 = st.columns(3)
+    b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+    b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY")
+    
+    st.divider()
+    c_b1, c_b2, c_b3 = st.columns(3)
+    s_bnc_rel = c_b1.multiselect("Filtrar por Banco:", sorted(bancos_disponiveis))
+    s_sta_rel = c_b2.multiselect("Filtrar por Status:", ["Pago", "Pendente"])
+    b_desc_rel = c_b3.text_input("Buscar por Descrição:")
+    
+    df_v = df_base.copy()
+    df_v = df_v[df_v['DT'].notna()]
+    df_v = df_v[(df_v['DT'].dt.date >= b_ini) & (df_v['DT'].dt.date <= b_fim)]
+    
+    if s_bnc_rel: df_v = df_v[df_v['Banco'].isin(s_bnc_rel)]
+    if s_sta_rel: df_v = df_v[df_v['Status'].isin(s_sta_rel)]
+    if b_desc_rel: df_v = df_v[df_v['Descrição'].str.contains(b_desc_rel, case=False, na=False)]
         
-        c1, c2, c3 = st.columns(3)
-        b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-        b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY")
-        
-        st.divider()
-        
-        c_b1, c_b2, c_b3 = st.columns(3)
-        s_bnc_rel = c_b1.multiselect("Filtrar por Banco:", sorted(bancos_disponiveis))
-        s_sta_rel = c_b2.multiselect("Filtrar por Status:", ["Pago", "Pendente"])
-        b_desc_rel = c_b3.text_input("Buscar por Descrição:")
-        
-        st.divider()
-        
-        df_v = df_base.copy()
-        df_v = df_v[df_v['DT'].notna()]
-        df_v = df_v[(df_v['DT'].dt.date >= b_ini) & (df_v['DT'].dt.date <= b_fim)]
-        
-        if s_bnc_rel:
-            df_v = df_v[df_v['Banco'].isin(s_bnc_rel)]
-        if s_sta_rel:
-            df_v = df_v[df_v['Status'].isin(s_sta_rel)]
-        if b_desc_rel:
-            df_v = df_v[df_v['Descrição'].str.contains(b_desc_rel, case=False, na=False)]
-            
-        st.subheader("Lançamentos Filtrados")
-        df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
-        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
-        
-        st.divider()
-        
-        if st.button("📄 Gerar PDF"):
-            if df_v.empty:
-                st.warning("Nenhum lançamento selecionado para gerar o PDF.")
-            else:
-                try:
-                    pdf = FPDF()
-                    pdf.add_page()
-                    pdf.set_font("Arial", size=10)
-                    
-                    # Cabeçalho do PDF
-                    pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
-                    pdf.ln(2)
-                    pdf.cell(200, 10, txt=f"Periodo: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", ln=1, align="L")
-                    
-                    # Exibindo os filtros selecionados logo abaixo do período
-                    filtros_texto = []
-                    if s_bnc_rel:
-                        filtros_texto.append(f"Bancos: {', '.join(s_bnc_rel)}")
-                    if s_sta_rel:
-                        filtros_texto.append(f"Status: {', '.join(s_sta_rel)}")
-                    if b_desc_rel:
-                        filtros_texto.append(f"Descrição: {b_desc_rel}")
-                    
-                    texto_filtros = "Filtros: " + (" | ".join(filtros_texto) if filtros_texto else "Nenhum")
-                    pdf.cell(200, 10, txt=texto_filtros, ln=1, align="L")
-                    pdf.ln(2)
-                    
-                    # Ordenar e calcular o saldo acumulado
-                    df_v = df_v.sort_values(by='DT')
-                    df_v['Saldo'] = df_v['V_Num'].cumsum()
-                    
-                    # Cabeçalho da tabela (ajustado para caber na largura da página sem quebras)
-                    pdf.cell(20, 8, "Data", 1)
-                    pdf.cell(25, 8, "Tipo", 1)
-                    pdf.cell(25, 8, "Valor", 1)
-                    pdf.cell(25, 8, "Saldo Acum.", 1)
-                    pdf.cell(75, 8, "Descricao", 1)
-                    pdf.cell(20, 8, "Status", 1)
+    st.subheader("Lançamentos Filtrados")
+    df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+    df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+    
+    if st.button("📄 Gerar PDF"):
+        if df_v.empty:
+            st.warning("Nenhum lançamento selecionado.")
+        else:
+            try:
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial", size=10)
+                pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
+                pdf.ln(2)
+                
+                df_v = df_v.sort_values(by='DT')
+                df_v['Saldo'] = df_v['V_Num'].cumsum()
+                
+                pdf.cell(20, 8, "Data", 1); pdf.cell(25, 8, "Tipo", 1); pdf.cell(25, 8, "Valor", 1)
+                pdf.cell(25, 8, "Saldo Ac.", 1); pdf.cell(75, 8, "Descricao", 1); pdf.cell(20, 8, "Status", 1)
+                pdf.ln()
+                
+                for _, row in df_v.iterrows():
+                    pdf.cell(20, 6, str(row['Data']), 1)
+                    pdf.cell(25, 6, str(row['Tipo']), 1)
+                    pdf.cell(25, 6, f"{row['V_Num']:.2f}", 1)
+                    pdf.cell(25, 6, f"{row['Saldo']:.2f}", 1)
+                    pdf.cell(75, 6, str(row['Descrição'])[:35], 1)
+                    pdf.cell(20, 6, str(row['Status']), 1)
                     pdf.ln()
-                    
-                    # Linhas da tabela
-                    total_valor = 0.0
-                    for index, row in df_v.iterrows():
-                        pdf.cell(20, 6, str(row['Data']), 1)
-                        pdf.cell(25, 6, str(row['Tipo']), 1)
-                        pdf.cell(25, 6, f"R$ {row['V_Num']:.2f}".replace('.', ','), 1)
-                        
-                        # Imprime o saldo apenas na última movimentação do dia
-                        if index == df_v[df_v['Data'] == row['Data']].index[-1]:
-                            pdf.cell(25, 6, f"R$ {row['Saldo']:.2f}".replace('.', ','), 1)
-                        else:
-                            pdf.cell(25, 6, "", 1)
-                            
-                        pdf.cell(75, 6, str(row['Descrição']), 1)
-                        pdf.cell(20, 6, str(row['Status']), 1)
-                        pdf.ln()
-                        total_valor += float(row['V_Num'])
-                        
-                    # Total da página
-                    pdf.ln(2)
-                    pdf.cell(20 + 25, 8, "Total", 1, 0, 'L')
-                    pdf.cell(25, 8, f"R$ {total_valor:.2f}".replace('.', ','), 1, 0, 'R')
-                    pdf.cell(25 + 75 + 20, 8, "", 1, 0, 'L')
-                    
-                    pdf_output = pdf.output(dest='S')
-                    if isinstance(pdf_output, str):
-                        pdf_output = pdf_output.encode('latin-1')
-                        
-                    st.download_button(
-                        label="📥 Baixar PDF",
-                        data=pdf_output,
-                        file_name="relatorio.pdf",
-                        mime="application/pdf"
-                    )
-                    st.success("PDF gerado com sucesso!")
-                except Exception as e:
-                    st.error(f"Erro ao gerar o PDF: {e}")
+                
+                pdf_output = pdf.output(dest='S').encode('latin-1')
+                st.download_button(label="📥 Baixar PDF", data=pdf_output, file_name="relatorio.pdf", mime="application/pdf")
+                st.success("PDF pronto!")
+            except Exception as e:
+                st.error(f"Erro no PDF: {e}")
