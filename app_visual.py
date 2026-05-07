@@ -5,8 +5,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-import pytz # se não tiver, o comando é: pip install pyt
-# Força o sistema a usar o horário de Brasília
+import pytz 
 fuso = pytz.timezone('America/Sao_Paulo')
 hoje = datetime.now(fuso)
 from dateutil.relativedelta import relativedelta
