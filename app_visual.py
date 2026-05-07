@@ -511,11 +511,11 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
-    # Checkbox de socorro para conferirmos a estrutura da planilha
-    if st.checkbox("🔍 Socorro: Onde estão meus limites?"):
-        st.write("Abaixo está exatamente o que o Python vê na aba Bancos:")
-        st.write("As colunas são:", list(df_bancos_info.columns))
+    # Este botão vai te mostrar EXATAMENTE o que tem em cada coluna
+    if st.checkbox("🔍 Verificar Colunas da Planilha (Clique aqui para conferir)"):
+        st.write("Estrutura da aba Bancos:")
         st.dataframe(df_bancos_info)
+        st.write("Nota: O Limite deve estar na terceira coluna (índice 2).")
 
     st.divider()
 
@@ -526,14 +526,13 @@ elif "📄" in aba:
     saldos_txt = ""
     total_patrimonio = 0.0
     
-    # Garante que os números da base sejam reconhecidos como decimais
+    # Força V_Num como numérico
     df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0.0)
     
     def limpar_v(v):
         if v is None or str(v).strip() == "" or str(v).lower() == 'nan': return 0.0
         try:
             import re
-            # Remove pontos de milhar e ajusta vírgula decimal
             s = str(v).replace('.', '').replace(',', '.')
             s = re.sub(r'[^\d.]', '', s)
             return float(s) if s else 0.0
@@ -545,24 +544,17 @@ elif "📄" in aba:
             nome_banco_ref = str(row.iloc[0]).strip()
             if not nome_banco_ref or nome_banco_ref.lower() == 'nan': continue
             
-            # --- LÓGICA DE BUSCA AUTOMÁTICA DE LIMITE ---
-            # O código vai olhar da Coluna C em diante (índice 2, 3, 4...) 
-            # e pegar o primeiro número que encontrar que seja maior que zero.
-            limite_cfg = 0.0
-            for i in range(2, len(row)):
-                valor_teste = limpar_v(row.iloc[i])
-                if valor_teste > 0:
-                    limite_cfg = valor_teste
-                    break
-            
+            # --- AGORA FORÇADO NA COLUNA C (Índice 2) ---
+            # Se o limite estiver na Coluna D, mude o número 2 para 3 abaixo
+            limite_cfg = limpar_v(row.iloc[2]) if len(row) > 2 else 0.0
             saldo_ini_cfg = limpar_v(row.iloc[1])
             
-            # Busca movimentações PAGAS com este nome exato
+            # Busca gastos PAGOS com este nome exato
             df_mov = df_base[(df_base['Banco'].str.strip() == nome_banco_ref) & (df_base['Status'] == 'Pago')]
             entradas = df_mov[df_mov['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
             saidas = df_mov[df_mov['Tipo'] == 'Despesa']['V_Num'].sum()
             
-            # Se for Cartão (contém 'CART' no nome ou achou limite > 0)
+            # Lógica de Cartão
             if "CART" in nome_banco_ref.upper() or limite_cfg > 0:
                 utilizado = saidas
                 a_utilizar = limite_cfg - utilizado
