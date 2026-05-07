@@ -554,11 +554,15 @@ elif "📄" in aba:
     saldos_txt = ""
     total_patrimonio = 0.0
     
+    # Função de limpeza ultra-robusta para capturar o limite da planilha
     def limpar_v(v):
-        if v is None: return 0.0
+        if v is None or str(v).strip() == "": return 0.0
         try:
-            # Remove R$, espaços, pontos de milhar e troca vírgula por ponto
-            s = str(v).replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.').strip()
+            # Remove TUDO que não for número ou vírgula/ponto
+            import re
+            s = str(v).replace('.', '') # tira ponto de milhar
+            s = s.replace(',', '.')    # troca vírgula decimal por ponto
+            s = re.sub(r'[^\d.]', '', s) # remove R$, espaços, etc
             return float(s) if s else 0.0
         except: return 0.0
 
@@ -568,29 +572,31 @@ elif "📄" in aba:
             nome_banco_planilha = str(row.iloc[0]).strip()
             if not nome_banco_planilha or nome_banco_planilha.lower() == 'nan': continue
             
-            saldo_inicial = limpar_v(row.iloc[1])
-            limite_total = limpar_v(row.iloc[2]) if len(row) >= 3 else 0.0
+            # Pega valores da aba "Bancos" (Coluna B e C)
+            saldo_inicial_planilha = limpar_v(row.iloc[1])
+            limite_total_planilha = limpar_v(row.iloc[2]) if len(row) >= 3 else 0.0
             
-            # Lógica de busca: Procuramos na base por qualquer nome que se relacione
-            # Ex: Se na planilha de bancos é "Cartão Inter" e no lançamento é "Inter", ele deve somar.
+            # Identificador para cruzar com a base de lançamentos
             identificador = nome_banco_planilha.split('-')[-1].strip() if '-' in nome_banco_planilha else nome_banco_planilha
             
+            # Movimentações na base principal
             mov_b = df_base[(df_base['Banco'].str.contains(identificador, case=False, na=False)) & (df_base['Status'] == 'Pago')]
-            
             entradas = mov_b[mov_b['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
             saidas = mov_b[mov_b['Tipo'] == 'Despesa']['V_Num'].sum()
             
-            # Se tiver limite cadastrado ou "Cartão" no nome, tratamos como cartão
-            if limite_total > 0 or "CART" in nome_banco_planilha.upper():
-                fatura_atual = saidas # Fatura é o que foi gasto e marcado como Pago
-                disp = limite_total - fatura_atual
+            # Lógica para CARTÃO
+            if limite_total_planilha > 0 or "CART" in nome_banco_planilha.upper():
+                fatura_atual = saidas 
+                # LÓGICA SOLICITADA: Limite Total (Planilha) - Utilizado (Fatura) = Disponível
+                disp = limite_total_planilha - fatura_atual
                 saldos_txt += f"💳 {nome_banco_planilha}: Fatura: {m_fmt(fatura_atual)} | Limite Disp: {m_fmt(disp)}\n"
             else:
-                saldo_final = saldo_inicial + entradas - saidas
+                # Lógica para CONTA CORRENTE
+                saldo_final = saldo_inicial_planilha + entradas - saidas
                 saldos_txt += f"🏦 {nome_banco_planilha}: Saldo: {m_fmt(saldo_final)}\n"
                 total_patrimonio += saldo_final
 
-    # 2. RESUMO DO PERÍODO SELECIONADO
+    # 2. RESUMO DO PERÍODO
     df_per = df_base[(df_base['DT'].dt.date >= d_ini) & (df_base['DT'].dt.date <= d_fim)].copy()
     r_v = d_v = rend_v = 0.0
     if not df_per.empty:
