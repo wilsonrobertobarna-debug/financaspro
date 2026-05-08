@@ -79,19 +79,30 @@ def enviar_alerta_whatsapp(mensagem):
 if aba == "🏠 Dashboard":
     st.title("🏠 Dashboard Financeiro")
     
-    # 1. Primeiro, garantimos que todos os nomes de colunas sejam TEXTO (evita o AttributeError)
+    # 1. Ajuste de colunas e datas (conforme fizemos antes)
     df_base.columns = [str(col).strip() for col in df_base.columns]
+    coluna_data = [c for c in df_base.columns if 'Data' in c]
     
-    # 2. Agora o código encontrará 'Data' sem problemas
-    df_base['Data'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
-    df_base['Mes_Ano'] = df_base['Data'].dt.strftime('%m/%Y')
+    if coluna_data:
+        nome_real_coluna = coluna_data[0]
+        df_base['Data_Ref'] = pd.to_datetime(df_base[nome_real_coluna], dayfirst=True, errors='coerce')
+        df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
     
-    # KPIs Superiores
+    # 2. KPIs Superiores (CERTIFIQUE-SE DE QUE ESTÃO ALINHADOS AQUI)
     c1, c2, c3, c4 = st.columns(4)
-    # ... segue o código de cálculo
-    # --- DIAGNÓSTICO TEMPORÁRIO ---
-st.write("Colunas encontradas na planilha:", df_base.columns.tolist())
-st.write("Prévia dos dados:", df_base.head(2))
+
+    # ESTAS LINHAS ABAIXO NÃO PODEM TER ESPAÇOS EXTRAS NO INÍCIO:
+    rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
+    des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
+    sobra = rec_mes - des_mes
+    
+    c1.metric("Receitas (Mês)", m_fmt(rec_mes))
+    c2.metric("Despesas (Mês)", m_fmt(des_mes), delta_color="inverse")
+    c3.metric("Sobra", m_fmt(sobra))
+    
+    # Status do Milo
+    status_milo = "🐾 Em dia" if df_base['Descrição'].str.contains('Milo', case=False).any() else "Sem dados"
+    c4.metric("Status Milo", status_milo)
     
     # Agora os cálculos abaixo vão encontrar a coluna 'Mes_Ano' criada acima
     rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
