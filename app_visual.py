@@ -44,37 +44,35 @@ aba = st.sidebar.radio("Selecione a funcionalidade:",
 if aba == "🏠 Dashboard":
     st.title("🏠 Dashboard Financeiro")
     
-    # 1. Proteção: Só executa se o DataFrame foi carregado com sucesso
+    # Verificação de segurança: a planilha precisa ter dados
     if not df_base.empty:
-        # Verificamos se a coluna Data existe
+        # 1. Tratamento de Datas para o visual e cálculos
         if 'Data' in df_base.columns:
-            # Tratamento de datas interno
             df_base['Data_Ref'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
             df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
             
-            # Cálculos em Real (R$) - Usando a coluna V_Num que criamos no início
+            # 2. Cálculos dos KPIs em Real (R$)
             rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
             des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
             sobra = rec_mes - des_mes
             
-            # Exibição dos KPIs em colunas
+            # 3. Exibição das métricas
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Receitas (Mês)", m_fmt(rec_mes))
             c2.metric("Despesas (Mês)", m_fmt(des_mes), delta_color="inverse")
             c3.metric("Sobra", m_fmt(sobra))
             
-            # Status do Milo - Buscando na descrição
+            # Status do Milo
             tem_milo = df_base['Descrição'].str.contains('Milo', case=False, na=False).any()
             c4.metric("Status Milo", "🐾 Em dia" if tem_milo else "Sem dados")
             
             st.divider()
         else:
-            # Este else está alinhado com o 'if Data'
+            # Este 'else' está na linha 78 ou perto dela, agora alinhado com 'if Data'
             st.error("⚠️ Coluna 'Data' não encontrada na planilha.")
     else:
-        # Este else está alinhado com o 'if not df_base.empty'
-        st.error("⚠️ Planilha vazia ou erro na conexão com o Google Sheets.")
-
+        # Este 'else' está alinhado com o 'if not df_base.empty'
+        st.error("⚠️ Planilha vazia ou erro na conexão.")
     else:
         st.error("⚠️ Dados insuficientes para gerar o Dashboard.")
         if not df_base.empty:
