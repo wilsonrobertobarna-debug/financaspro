@@ -94,7 +94,6 @@ if conexao_ok:
 
     elif aba == "💳 Cartões":
         st.title("💳 Gestão de Cartões")
-
 else:
     st.warning("Verifique se você compartilhou a planilha com o e-mail do Service Account.")
 
