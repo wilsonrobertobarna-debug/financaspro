@@ -79,20 +79,20 @@ def enviar_alerta_whatsapp(mensagem):
 if aba == "🏠 Dashboard":
     st.title("🏠 Dashboard Financeiro")
     
-    # 1. Limpeza e Identificação da Coluna de Data
+    # 1. Limpeza rigorosa de colunas
     df_base.columns = [str(col).strip() for col in df_base.columns]
     coluna_data = [c for c in df_base.columns if 'Data' in c]
     
     if coluna_data:
-        # Criamos a coluna necessária
+        # Criamos a coluna necessária internamente
         nome_real_coluna = coluna_data[0]
         df_base['Data_Ref'] = pd.to_datetime(df_base[nome_real_coluna], dayfirst=True, errors='coerce')
         df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
         
-        # --- OS CÁLCULOS DEVEM FICAR AQUI DENTRO (Recuados) ---
+        # --- TUDO O QUE DEPENDE DE 'Mes_Ano' FICA AQUI DENTRO ---
         c1, c2, c3, c4 = st.columns(4)
         
-        # Filtros usando a coluna recém-criada
+        # Filtros (usando a coluna que acabamos de criar)
         rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
         des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
         sobra = rec_mes - des_mes
@@ -101,13 +101,16 @@ if aba == "🏠 Dashboard":
         c2.metric("Despesas (Mês)", m_fmt(des_mes), delta_color="inverse")
         c3.metric("Sobra", m_fmt(sobra))
         
-        # Status do Milo (buscando na Descrição ou Categoria)
+        # Status do Milo
         status_milo = "🐾 Em dia" if df_base['Descrição'].str.contains('Milo', case=False).any() else "Sem dados"
         c4.metric("Status Milo", status_milo)
         
         st.divider()
+        # --- FIM DO BLOCO DE CÁLCULOS ---
+
     else:
-        st.error("Coluna de 'Data' não encontrada na planilha. Verifique o cabeçalho.")
+        st.error("⚠️ Coluna de 'Data' não encontrada. Verifique se a primeira linha da sua planilha tem o título 'Data'.")
+        st.info("Colunas que eu li na sua planilha: " + ", ".join(df_base.columns.tolist()))
     
     # Agora os cálculos abaixo vão encontrar a coluna 'Mes_Ano' criada acima
     rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
