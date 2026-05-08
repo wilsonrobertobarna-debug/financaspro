@@ -1,5 +1,7 @@
 streamlit
 pandas
-plotly
+gspread-pandas
+python-dateutil
 fpdf
-st-gsheets-connection
+twilio
+pytz
