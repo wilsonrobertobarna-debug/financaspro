@@ -89,6 +89,9 @@ if aba == "🏠 Dashboard":
     # KPIs Superiores
     c1, c2, c3, c4 = st.columns(4)
     # ... segue o código de cálculo
+    # --- DIAGNÓSTICO TEMPORÁRIO ---
+st.write("Colunas encontradas na planilha:", df_base.columns.tolist())
+st.write("Prévia dos dados:", df_base.head(2))
     
     # Agora os cálculos abaixo vão encontrar a coluna 'Mes_Ano' criada acima
     rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
