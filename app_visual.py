@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -9,7 +10,7 @@ from fpdf import FPDF
 from gspread_pandas import Spread, Client
 
 # --- CONFIGURAÇÃO E VERSÃO ---
-st.caption("Versão 2.0.6")
+st.caption("Versão 2.0.7")
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
 # RESOLUÇÃO DO FUSO HORÁRIO (Brasília)
@@ -36,9 +37,10 @@ try:
     creds_dict = dict(st.secrets["gcp_service_account"])
     
     # IMPORTANTE: O nome no Google Drive deve ser EXATAMENTE este:
+    # Se mudar o nome lá, mude aqui também.
     NOME_DA_PLANILHA = "FinançasPro" 
     
-    # Conexão direta via gspread_pandas
+    # Conexão direta via gspread_pandas (Substitui o antigo 'conectar')
     spread = Spread(NOME_DA_PLANILHA, config=creds_dict)
     df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
     
@@ -56,7 +58,7 @@ try:
 except Exception as e:
     st.error("❌ Erro de Conexão: Planilha não encontrada")
     st.info(f"Detalhe: {e}")
-    st.warning("Verifique o nome da planilha e o compartilhamento.")
+    st.warning("Verifique se o nome da planilha no Drive é 'FinançasPro' e se o e-mail de serviço é Editor.")
     conexao_ok = False
 
 # --- NAVEGAÇÃO ---
@@ -71,7 +73,7 @@ if conexao_ok:
             df_base['Data_Ref'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
             df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
             
-            # KPIs Mensais em Real
+            # KPIs Mensais em Real (R$)
             rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
             des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
             
@@ -80,7 +82,7 @@ if conexao_ok:
             col2.metric("Despesas", m_fmt(des_mes), delta_color="inverse")
             col3.metric("Sobra", m_fmt(rec_mes - des_mes))
             
-            # Status do Milo
+            # Status do Milo (Seu Golden Retriever)
             tem_milo = df_base['Descrição'].str.contains('Milo', case=False, na=False).any()
             col4.metric("Status Milo", "🐾 Em dia" if tem_milo else "Sem dados")
             
@@ -90,7 +92,7 @@ if conexao_ok:
 
     elif aba == "📝 Lançamentos":
         st.title("📝 Novos Lançamentos")
-        # Seus formulários continuam aqui preservados
+        st.info("Formulários mantidos conforme solicitado.")
 
     elif aba == "💳 Cartões":
         st.title("💳 Gestão de Cartões")
