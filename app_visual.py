@@ -16,7 +16,7 @@ st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 agora = datetime.now() - timedelta(hours=3)
 mes_atual = agora.strftime('%m/%Y')
 
-# ESTILO VISUAL LIMPO (Solicitado pelo usuário)
+# ESTILO VISUAL LIMPO
 st.markdown("""
     <style>
     [data-testid='stMetricLabel'], [data-testid='stMetricValue'] {
@@ -27,16 +27,15 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def m_fmt(valor):
+    """Formata valores para Real (R$)"""
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 # --- CONEXÃO SEGURA ---
 try:
     creds_dict = dict(st.secrets["gcp_service_account"])
-    
-    # O nome abaixo deve ser IGUAL ao que está no seu Google Drive
     NOME_DA_PLANILHA = "FinançasPro" 
     
-    # Sistema de conexão simplificado (SEM a função conectar() que dava erro)
+    # Conexão via gspread_pandas (Substitui o antigo 'conectar')
     spread = Spread(NOME_DA_PLANILHA, config=creds_dict)
     df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
     
@@ -53,7 +52,6 @@ try:
 except Exception as e:
     st.error("❌ Erro de Conexão")
     st.info(f"Detalhe: {e}")
-    st.warning("Verifique se o nome da planilha no Drive é exatamente 'FinançasPro'.")
     conexao_ok = False
 
 # --- NAVEGAÇÃO ---
@@ -68,29 +66,32 @@ if conexao_ok:
             df_base['Data_Ref'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
             df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
             
-            # Cálculos em Real (R$)
+            # KPIs em Real (R$)
             rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
             des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
             
-            col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Receitas", m_fmt(rec_mes))
-            col2.metric("Despesas", m_fmt(des_mes), delta_color="inverse")
-            col3.metric("Sobra", m_fmt(rec_mes - des_mes))
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Receitas", m_fmt(rec_mes))
+            c2.metric("Despesas", m_fmt(des_mes), delta_color="inverse")
+            c3.metric("Sobra", m_fmt(rec_mes - des_mes))
             
-            # Status do seu Golden Retriever (Milo)
+            # Status do Milo
             tem_milo = df_base['Descrição'].str.contains('Milo', case=False, na=False).any()
-            col4.metric("Status Milo", "🐾 Em dia" if tem_milo else "Sem dados")
+            c4.metric("Status Milo", "🐾 Em dia" if tem_milo else "Sem dados")
             
             st.divider()
             fig = px.pie(df_base[df_base['Mes_Ano'] == mes_atual], values='V_Num', names='Tipo', hole=0.4)
             st.plotly_chart(fig, use_container_width=True)
-    
-    # As outras abas permanecem com seus formulários preservados
+
     elif aba == "📝 Lançamentos":
         st.title("📝 Novos Lançamentos")
+        st.info("Formulários preservados.")
+
     elif aba == "💳 Cartões":
-        st.title("💳 Gestão de Cartões")else:
-    st.warning("Verifique se você compartilhou a planilha com o e-mail do Service Account.")
+        st.title("💳 Gestão de Cartões")
+        st.info("Informações de crédito.")
+else:
+    st.warning("⚠️ Verifique o compartilhamento da planilha com o e-mail do Service Account.")
 
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
