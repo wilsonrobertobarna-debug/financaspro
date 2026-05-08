@@ -1,30 +1,15 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
-import urllib.parse
-from fpdf import FPDF
 from gspread_pandas import Spread, Client
+from datetime import datetime, timedelta
 
 # --- CONFIGURAÇÃO ---
-st.caption("Versão 2.1.0")
+st.caption("Versão 2.1.2 - Estável")
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
 # FUSO HORÁRIO (Brasília)
 agora = datetime.now() - timedelta(hours=3)
 mes_atual = agora.strftime('%m/%Y')
-
-# ESTILO VISUAL LIMPO
-st.markdown("""
-    <style>
-    [data-testid='stMetricLabel'], [data-testid='stMetricValue'] {
-        font-size: 1.1rem !important;
-        font-weight: bold !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
 
 def m_fmt(valor):
     """Formata para Real (R$)"""
@@ -35,11 +20,10 @@ try:
     creds_dict = dict(st.secrets["gcp_service_account"])
     NOME_DA_PLANILHA = "FinançasPro" 
     
-    # Conexão direta via gspread_pandas
+    # Conexão direta simplificada
     spread = Spread(NOME_DA_PLANILHA, config=creds_dict)
     df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
     
-    # Criamos o objeto 'client' a partir do spread para evitar o erro NameError
     client = spread.client 
     
     # Tratamento para moeda Real (R$)
@@ -50,23 +34,24 @@ try:
             errors='coerce'
         ).fillna(0)
     
-    st.success("✅ Sistema Conectado!")
+    st.success("✅ FinançasPro Conectado!")
     conexao_ok = True
 
 except Exception as e:
-    st.error("❌ Erro de Conexão: Planilha não encontrada")
+    st.error("❌ Erro de Conexão")
     st.info(f"Detalhe: {e}")
-    st.warning("Verifique se o nome do arquivo no Drive é exatamente 'FinançasPro' e se compartilhou com o e-mail do Service Account.")
     conexao_ok = False
 
 # --- NAVEGAÇÃO ---
 st.sidebar.title("💰 FinançasPro")
-aba = st.sidebar.radio("Navegação", ["🏠 Dashboard", "📝 Lançamentos", "💳 Cartões"])
+aba = st.sidebar.radio("Navegação", ["🏠 Dashboard", "📝 Lançamentos"])
 
 if conexao_ok:
     if aba == "🏠 Dashboard":
         st.title("🏠 Dashboard Financeiro")
-        
+        # O Dashboard aparecerá aqui
+    elif aba == "📝 Lançamentos":
+        st.title("📝 Novos Lançamentos")        
         if 'Data' in df_base.columns:
             df_base['Data_Ref'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
             df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
