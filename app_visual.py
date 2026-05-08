@@ -9,7 +9,7 @@ from fpdf import FPDF
 from gspread_pandas import Spread, Client
 
 # --- CONFIGURAÇÃO ---
-st.caption("Versão 2.0.9")
+st.caption("Versão 2.1.0")
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
 # FUSO HORÁRIO (Brasília)
@@ -31,16 +31,16 @@ def m_fmt(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 # --- CONEXÃO SEGURA ---
-# Wilson, este bloco substitui totalmente a função 'conectar()'
 try:
     creds_dict = dict(st.secrets["gcp_service_account"])
-    
-    # O nome abaixo deve ser IDÊNTICO ao nome do arquivo no Google Drive
     NOME_DA_PLANILHA = "FinançasPro" 
     
-    # Conexão direta
+    # Conexão direta via gspread_pandas
     spread = Spread(NOME_DA_PLANILHA, config=creds_dict)
     df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
+    
+    # Criamos o objeto 'client' a partir do spread para evitar o erro NameError
+    client = spread.client 
     
     # Tratamento para moeda Real (R$)
     df_base.columns = [str(col).strip() for col in df_base.columns]
@@ -56,7 +56,7 @@ try:
 except Exception as e:
     st.error("❌ Erro de Conexão: Planilha não encontrada")
     st.info(f"Detalhe: {e}")
-    st.warning("Verifique o nome do arquivo no Drive e o compartilhamento.")
+    st.warning("Verifique se o nome do arquivo no Drive é exatamente 'FinançasPro' e se compartilhou com o e-mail do Service Account.")
     conexao_ok = False
 
 # --- NAVEGAÇÃO ---
@@ -90,10 +90,11 @@ if conexao_ok:
 
     elif aba == "📝 Lançamentos":
         st.title("📝 Novos Lançamentos")
-        st.info("Layout de formulários preservado conforme solicitado.")
+        st.info("Layout de formulários preservado.")
 
     elif aba == "💳 Cartões":
         st.title("💳 Gestão de Cartões")
+        # Campos de fechamento e vencimento serão tratados aqui
 else:
     st.warning("⚠️ Verifique o compartilhamento da planilha com o e-mail do Service Account.")
 
