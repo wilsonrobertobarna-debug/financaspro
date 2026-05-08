@@ -9,7 +9,7 @@ from fpdf import FPDF
 from gspread_pandas import Spread, Client
 
 # --- CONFIGURAÇÃO E VERSÃO ---
-st.caption("Versão 2.0.5")
+st.caption("Versão 2.0.6")
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
 # RESOLUÇÃO DO FUSO HORÁRIO (Brasília)
@@ -35,10 +35,10 @@ try:
     # Usa os segredos configurados no Streamlit Cloud
     creds_dict = dict(st.secrets["gcp_service_account"])
     
-    # NOME DA PLANILHA: Verifique se no Google Drive o nome é exatamente este:
+    # IMPORTANTE: O nome no Google Drive deve ser EXATAMENTE este:
     NOME_DA_PLANILHA = "FinançasPro" 
     
-    # Conexão direta (Sem usar o comando 'conectar' que estava dando erro)
+    # Conexão direta via gspread_pandas
     spread = Spread(NOME_DA_PLANILHA, config=creds_dict)
     df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
     
@@ -56,7 +56,7 @@ try:
 except Exception as e:
     st.error("❌ Erro de Conexão: Planilha não encontrada")
     st.info(f"Detalhe: {e}")
-    st.warning("Verifique se o nome da planilha no Google Drive é 'FinançasPro' e se você a compartilhou com o e-mail do Service Account.")
+    st.warning("Verifique o nome da planilha e o compartilhamento.")
     conexao_ok = False
 
 # --- NAVEGAÇÃO ---
@@ -71,7 +71,7 @@ if conexao_ok:
             df_base['Data_Ref'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
             df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
             
-            # Cálculos em Real
+            # KPIs Mensais em Real
             rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
             des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
             
@@ -80,17 +80,17 @@ if conexao_ok:
             col2.metric("Despesas", m_fmt(des_mes), delta_color="inverse")
             col3.metric("Sobra", m_fmt(rec_mes - des_mes))
             
-            # Status do Milo (Seu Golden Retriever)
+            # Status do Milo
             tem_milo = df_base['Descrição'].str.contains('Milo', case=False, na=False).any()
             col4.metric("Status Milo", "🐾 Em dia" if tem_milo else "Sem dados")
             
             st.divider()
-            fig = px.pie(df_base[df_base['Mes_Ano'] == mes_atual], values='V_Num', names='Tipo', hole=0.4, title="Resumo Mensal")
+            fig = px.pie(df_base[df_base['Mes_Ano'] == mes_atual], values='V_Num', names='Tipo', hole=0.4)
             st.plotly_chart(fig, use_container_width=True)
 
     elif aba == "📝 Lançamentos":
         st.title("📝 Novos Lançamentos")
-        st.info("Formulários mantidos no padrão visual limpo.")
+        # Seus formulários continuam aqui preservados
 
     elif aba == "💳 Cartões":
         st.title("💳 Gestão de Cartões")
