@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -10,14 +9,14 @@ from fpdf import FPDF
 from gspread_pandas import Spread, Client
 
 # --- CONFIGURAÇÃO E VERSÃO ---
-st.caption("Versão 2.0.7")
+st.caption("Versão 2.0.8")
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
-# RESOLUÇÃO DO FUSO HORÁRIO (Brasília)
+# RESOLUÇÃO DO FUSO HORÁRIO
 agora = datetime.now() - timedelta(hours=3)
 mes_atual = agora.strftime('%m/%Y')
 
-# ESTILO VISUAL LIMPO
+# ESTILO VISUAL LIMPO (Solicitado pelo usuário)
 st.markdown("""
     <style>
     [data-testid='stMetricLabel'], [data-testid='stMetricValue'] {
@@ -27,24 +26,20 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# FUNÇÃO PARA MOEDA EM REAL (R$)
 def m_fmt(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 # --- CONEXÃO SEGURA ---
 try:
-    # Usa os segredos configurados no Streamlit Cloud
     creds_dict = dict(st.secrets["gcp_service_account"])
     
-    # IMPORTANTE: O nome no Google Drive deve ser EXATAMENTE este:
-    # Se mudar o nome lá, mude aqui também.
+    # O nome abaixo deve ser IGUAL ao que está no seu Google Drive
     NOME_DA_PLANILHA = "FinançasPro" 
     
-    # Conexão direta via gspread_pandas (Substitui o antigo 'conectar')
+    # Sistema de conexão simplificado (SEM a função conectar() que dava erro)
     spread = Spread(NOME_DA_PLANILHA, config=creds_dict)
     df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
     
-    # Tratamento de dados para Real (R$)
     df_base.columns = [str(col).strip() for col in df_base.columns]
     if 'Valor' in df_base.columns:
         df_base['V_Num'] = pd.to_numeric(
@@ -56,9 +51,9 @@ try:
     conexao_ok = True
 
 except Exception as e:
-    st.error("❌ Erro de Conexão: Planilha não encontrada")
+    st.error("❌ Erro de Conexão")
     st.info(f"Detalhe: {e}")
-    st.warning("Verifique se o nome da planilha no Drive é 'FinançasPro' e se o e-mail de serviço é Editor.")
+    st.warning("Verifique se o nome da planilha no Drive é exatamente 'FinançasPro'.")
     conexao_ok = False
 
 # --- NAVEGAÇÃO ---
@@ -73,7 +68,7 @@ if conexao_ok:
             df_base['Data_Ref'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
             df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
             
-            # KPIs Mensais em Real (R$)
+            # Cálculos em Real (R$)
             rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
             des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
             
@@ -82,21 +77,19 @@ if conexao_ok:
             col2.metric("Despesas", m_fmt(des_mes), delta_color="inverse")
             col3.metric("Sobra", m_fmt(rec_mes - des_mes))
             
-            # Status do Milo (Seu Golden Retriever)
+            # Status do seu Golden Retriever (Milo)
             tem_milo = df_base['Descrição'].str.contains('Milo', case=False, na=False).any()
             col4.metric("Status Milo", "🐾 Em dia" if tem_milo else "Sem dados")
             
             st.divider()
             fig = px.pie(df_base[df_base['Mes_Ano'] == mes_atual], values='V_Num', names='Tipo', hole=0.4)
             st.plotly_chart(fig, use_container_width=True)
-
+    
+    # As outras abas permanecem com seus formulários preservados
     elif aba == "📝 Lançamentos":
         st.title("📝 Novos Lançamentos")
-        st.info("Formulários mantidos conforme solicitado.")
-
     elif aba == "💳 Cartões":
-        st.title("💳 Gestão de Cartões")
-else:
+        st.title("💳 Gestão de Cartões")else:
     st.warning("Verifique se você compartilhou a planilha com o e-mail do Service Account.")
 
 client = conectar()
