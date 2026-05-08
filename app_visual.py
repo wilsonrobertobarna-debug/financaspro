@@ -44,32 +44,34 @@ aba = st.sidebar.radio("Selecione a funcionalidade:",
 if aba == "🏠 Dashboard":
     st.title("🏠 Dashboard Financeiro")
     
-    # Verificação de segurança: a coluna 'Data' e 'Tipo' precisam existir
-    if not df_base.empty and 'Data' in df_base.columns and 'Tipo' in df_base.columns:
-        
-        # 1. Tratamento de Datas
+    # 1. Verificamos se a planilha tem dados antes de calcular
+    if not df_base.empty and 'Data' in df_base.columns:
+        # Tratamento interno para o gráfico e KPIs
         df_base['Data_Ref'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
         df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
         
-        # 2. Cálculos dos KPIs (Somente o que é Pago)
-        # Filtramos por Mês Atual, Tipo e Status
+        # Cálculos de Receita e Despesa (usando a moeda Real)
         rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
         des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
         sobra = rec_mes - des_mes
         
-        # 3. Exibição Visual (KPIs)
+        # Exibição dos KPIs
         c1, c2, c3, c4 = st.columns(4)
-        
         c1.metric("Receitas (Mês)", m_fmt(rec_mes))
         c2.metric("Despesas (Mês)", m_fmt(des_mes), delta_color="inverse")
         c3.metric("Sobra", m_fmt(sobra))
         
-        # Verificação do Milo (Filtrando se existe algo para ele nos lançamentos)
+        # Status do Milo
         tem_milo = df_base['Descrição'].str.contains('Milo', case=False, na=False).any()
-        status_milo = "🐾 Em dia" if tem_milo else "Sem dados"
-        c4.metric("Status Milo", status_milo)
+        c4.metric("Status Milo", "🐾 Em dia" if tem_milo else "Sem dados")
         
         st.divider()
+        
+    else:
+        # O 'else' deve estar exatamente abaixo do 'if not df_base.empty...'
+        st.error("⚠️ Planilha conectada, mas não encontrei dados ou a coluna 'Data'.")
+        if not df_base.empty:
+            st.info(f"Colunas lidas: {', '.join(df_base.columns.tolist())}")
         
         # Aqui você pode inserir seus Gráficos abaixo do divider
         st.subheader("📈 Evolução Mensal")
