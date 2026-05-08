@@ -43,14 +43,16 @@ st.markdown("""
 # 2. CONEXÃO
 @st.cache_resource
 def conectar():
-   try:
-        # ... (todo o seu código de conexão que já está aí)
+    try:
+        # 4 espaços de recuo para tudo aqui dentro
         creds_dict = st.secrets["gcp_service_account"]
-        # ...
-        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=[...]))
+        final_creds = dict(creds_dict)
+        final_creds["private_key"] = final_creds["private_key"].replace("\\n", "\n")
+        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
         
     except Exception as e:
-        st.error(f"Erro ao conectar: {e}")
+        # O 'except' deve estar na MESMA COLUNA do 'try'
+        st.error(f"Erro: {e}")
         st.stop()
 
         # Continua com 4 espaços de recuo
