@@ -43,14 +43,15 @@ st.markdown("""
 # 2. CONEXÃO
 @st.cache_resource
 def conectar():
-    try:
-        # Tudo aqui dentro tem o mesmo recuo (4 espaços)
+   try:
+        # ... (todo o seu código de conexão que já está aí)
         creds_dict = st.secrets["gcp_service_account"]
+        # ...
+        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=[...]))
         
-        if not creds_dict:
-            # Se houver um comando aqui, ele tem 8 espaços de recuo
-            st.error("Wilson, os Secrets estão vazios!")
-            st.stop()
+    except Exception as e:
+        st.error(f"Erro ao conectar: {e}")
+        st.stop()
 
         # Continua com 4 espaços de recuo
         final_creds = dict(creds_dict)
