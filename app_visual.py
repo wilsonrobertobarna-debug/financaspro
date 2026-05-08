@@ -1,91 +1,86 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
-from gspread_pandas import Spread, Client
-import urllib.parse
-from fpdf import FPDF
+from datetime import datetime
+from gspread_pandas import Spread
 from twilio.rest import Client as TwilioClient
-import pytz
 
-# ... outras configurações iniciais ...
+# --- CONFIGURAÇÕES INICIAIS ---
+st.set_page_config(page_title="FinançasPro", layout="wide")
 
-# 1. Primeiro você conecta (isso já deve estar no seu código)
-creds_dict = dict(st.secrets["gcp_service_account"])
-# Certifique-se de usar a URL correta da sua planilha aqui
-spread = Spread('Nome_Real_Da_Sua_Planilha', config=creds_dict) 
+# Função para formatar moeda em Real (R$)
+def m_fmt(valor):
+    return f"R$ {valor:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
 
-# --- AQUI É O LUGAR CORRETO PARA COLAR O BLOCO ---
+# Definição do mês atual para os filtros
+mes_atual = datetime.now().strftime('%m/%Y')
+
+# --- CONEXÃO GOOGLE SHEETS ---
 try:
-    # Carrega a aba garantindo que trate a primeira linha como cabeçalho
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    # IMPORTANTE: Troque 'Nome_Real_Da_Sua_Planilha' pelo nome que está no topo do seu Google Sheets
+    spread = Spread('Nome_Real_Da_Sua_Planilha', config=creds_dict)
     df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
     
     if df_base.empty:
         st.warning("⚠️ A aba 'Lançamentos' parece estar vazia.")
     else:
-        # Limpa nomes de colunas de caracteres invisíveis
+        # Limpeza de colunas
         df_base.columns = [str(col).strip() for col in df_base.columns]
         
-        # Opcional: converte a coluna de valor para número para o cálculo em Real
+        # Converte Valor para Número
         if 'Valor' in df_base.columns:
-            df_base['V_Num'] = pd.to_numeric(df_base['Valor'].replace('[R$,]', '', regex=True), errors='coerce')
+            df_base['V_Num'] = pd.to_numeric(df_base['Valor'].replace('[R$,]', '', regex=True), errors='coerce').fillna(0)
 
 except Exception as e:
-    st.error(f"Erro ao ler aba: {e}")
+    st.error(f"Erro na conexão: {e}")
+    df_base = pd.DataFrame() # Cria um DF vazio para não travar o resto
 
 # --- SIDEBAR E NAVEGAÇÃO ---
 st.sidebar.header("📂 Menu FinançasPro")
 aba = st.sidebar.radio("Selecione a funcionalidade:", 
     ["🏠 Dashboard", "➕ Novo Lançamento", "📋 Lançamentos Pendentes", "🐾 Gestão Milo & Bolt", "🚗 Gestão do Veículo", "📄 WhatsApp", "📋 Gerador de Relatórios"])
 
-# --- TWILIO: AVISOS AUTOMÁTICOS ---
-def enviar_alerta_whatsapp(mensagem):
-    # Suas credenciais integradas
-    account_sid = 'SEU_TWILIO_SID'
-    auth_token = 'SEU_TWILIO_TOKEN'
-    client = TwilioClient(account_sid, auth_token)
-    
-    try:
-        client.messages.create(
-            from_='whatsapp:+14155238886', # Número Twilio Sandbox
-            body=mensagem,
-            to='whatsapp:+55XXXXXXXXXXX' # Seu número
-        )
-    except Exception as e:
-        pass
-
 # --- CONTEÚDO: DASHBOARD ---
 if aba == "🏠 Dashboard":
     st.title("🏠 Dashboard Financeiro")
     
-    # Só faz o cálculo se a planilha for encontrada e lida
-    if not df_base.empty and 'Data' in df_base.columns:
-        # Criação interna da data para o visual limpo
-        df_base['Data'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
-        df_base['Mes_Ano'] = df_base['Data'].dt.strftime('%m/%Y')
+    # Verificação de segurança: a coluna 'Data' e 'Tipo' precisam existir
+    if not df_base.empty and 'Data' in df_base.columns and 'Tipo' in df_base.columns:
         
-        # Cálculos em Real (R$)
-        # ... seu código de rec_mes e des_mes aqui ...
+        # 1. Tratamento de Datas
+        df_base['Data_Ref'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
+        df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
         
-        st.success("Dados carregados com sucesso!")
-    else:
-        st.error("Planilha conectada, mas não encontrei os dados na aba 'Lançamentos'.")
-        
-        # Filtros (usando a coluna que acabamos de criar)
+        # 2. Cálculos dos KPIs (Somente o que é Pago)
+        # Filtramos por Mês Atual, Tipo e Status
         rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
         des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
         sobra = rec_mes - des_mes
+        
+        # 3. Exibição Visual (KPIs)
+        c1, c2, c3, c4 = st.columns(4)
         
         c1.metric("Receitas (Mês)", m_fmt(rec_mes))
         c2.metric("Despesas (Mês)", m_fmt(des_mes), delta_color="inverse")
         c3.metric("Sobra", m_fmt(sobra))
         
-        # Status do Milo
-        status_milo = "🐾 Em dia" if df_base['Descrição'].str.contains('Milo', case=False).any() else "Sem dados"
+        # Verificação do Milo (Filtrando se existe algo para ele nos lançamentos)
+        tem_milo = df_base['Descrição'].str.contains('Milo', case=False, na=False).any()
+        status_milo = "🐾 Em dia" if tem_milo else "Sem dados"
         c4.metric("Status Milo", status_milo)
         
         st.divider()
-        # --- FIM DO BLOCO DE CÁLCULOS ---
+        
+        # Aqui você pode inserir seus Gráficos abaixo do divider
+        st.subheader("📈 Evolução Mensal")
+        # [Seu código de gráficos entra aqui]
+
+    else:
+        st.error("⚠️ Dados insuficientes para gerar o Dashboard.")
+        if not df_base.empty:
+            st.info(f"Colunas encontradas: {', '.join(df_base.columns.tolist())}")
+
+# --- FIM DO CÓDIGO ---
 
     else:
         st.error("⚠️ Coluna de 'Data' não encontrada. Verifique se a primeira linha da sua planilha tem o título 'Data'.")
