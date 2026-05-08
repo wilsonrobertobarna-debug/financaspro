@@ -79,17 +79,16 @@ def enviar_alerta_whatsapp(mensagem):
 if aba == "🏠 Dashboard":
     st.title("🏠 Dashboard Financeiro")
     
-    # --- LIMPEZA DE COLUNAS (Adicione estas duas linhas) ---
-    # Isso remove espaços extras como "Data " -> "Data"
-    df_base.columns = df_base.columns.str.strip()
+    # 1. Primeiro, garantimos que todos os nomes de colunas sejam TEXTO (evita o AttributeError)
+    df_base.columns = [str(col).strip() for col in df_base.columns]
     
-    # Agora o código vai encontrar 'Data' sem erro
+    # 2. Agora o código encontrará 'Data' sem problemas
     df_base['Data'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
     df_base['Mes_Ano'] = df_base['Data'].dt.strftime('%m/%Y')
     
     # KPIs Superiores
     c1, c2, c3, c4 = st.columns(4)
-    # ... restante do código
+    # ... segue o código de cálculo
     
     # Agora os cálculos abaixo vão encontrar a coluna 'Mes_Ano' criada acima
     rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
