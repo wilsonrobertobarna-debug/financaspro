@@ -83,8 +83,21 @@ if conexao_ok:
 else:
     st.warning("⚠️ Verifique o compartilhamento da planilha com o e-mail do Service Account.")
 
-client = conectar()
-sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+# Substitua o seu bloco de conexão antigo por este:
+try:
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    NOME_DA_PLANILHA = "FinançasPro" 
+    
+    # Conexão direta usando gspread_pandas
+    spread = Spread(NOME_DA_PLANILHA, config=creds_dict)
+    df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
+    
+    # Esta linha abaixo é crucial: ela define o 'client' que o seu código enorme usa
+    client = spread.client 
+    
+    st.success("✅ Conectado com Sucesso!")
+except Exception as e:
+    st.error(f"Erro na conexão: {e}")
 
 # IDENTIFICAÇÃO DAS ABAS
 ws_base = sh.get_worksheet(0)
