@@ -44,35 +44,35 @@ aba = st.sidebar.radio("Selecione a funcionalidade:",
 if aba == "🏠 Dashboard":
     st.title("🏠 Dashboard Financeiro")
     
-    # 1. Verificamos se a planilha tem dados antes de calcular
-    if not df_base.empty and 'Data' in df_base.columns:
-        # Tratamento interno para o gráfico e KPIs
-        df_base['Data_Ref'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
-        df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
-        
-        # Cálculos de Receita e Despesa (usando a moeda Real)
-        rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
-        des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
-        sobra = rec_mes - des_mes
-        
-        # Exibição dos KPIs
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Receitas (Mês)", m_fmt(rec_mes))
-        c2.metric("Despesas (Mês)", m_fmt(des_mes), delta_color="inverse")
-        c3.metric("Sobra", m_fmt(sobra))
-        
-        # Status do Milo
-        tem_milo = df_base['Descrição'].str.contains('Milo', case=False, na=False).any()
-        c4.metric("Status Milo", "🐾 Em dia" if tem_milo else "Sem dados")
-        
-        st.divider()
-        
+    # 1. Proteção: Só executa se o DataFrame não estiver vazio
+    if not df_base.empty:
+        # Criamos as colunas de data internamente para o cálculo
+        if 'Data' in df_base.columns:
+            df_base['Data_Ref'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
+            df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
+            
+            # Cálculos em Real (R$)
+            rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
+            des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
+            sobra = rec_mes - des_mes
+            
+            # Exibição dos KPIs
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Receitas (Mês)", m_fmt(rec_mes))
+            c2.metric("Despesas (Mês)", m_fmt(des_mes), delta_color="inverse")
+            c3.metric("Sobra", m_fmt(sobra))
+            
+            # Status do Milo - busca na descrição
+            tem_milo = df_base['Descrição'].str.contains('Milo', case=False, na=False).any()
+            c4.metric("Status Milo", "🐾 Em dia" if tem_milo else "Sem dados")
+            
+            st.divider()
+        else:
+            # Este ELSE está alinhado com o 'if Data in df_base.columns'
+            st.error("⚠️ Coluna 'Data' não encontrada na planilha.")
     else:
-        # O 'else' deve estar exatamente abaixo do 'if not df_base.empty...'
-        st.error("⚠️ Planilha conectada, mas não encontrei dados ou a coluna 'Data'.")
-        if not df_base.empty:
-            st.info(f"Colunas lidas: {', '.join(df_base.columns.tolist())}")
-        
+        # Este ELSE está alinhado com o 'if not df_base.empty'
+        st.error("⚠️ A planilha está vazia ou não foi carregada.")        
         # Aqui você pode inserir seus Gráficos abaixo do divider
         st.subheader("📈 Evolução Mensal")
         # [Seu código de gráficos entra aqui]
