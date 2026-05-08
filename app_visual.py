@@ -13,7 +13,7 @@ import pytz
 # 1. Primeiro você conecta (isso já deve estar no seu código)
 creds_dict = dict(st.secrets["gcp_service_account"])
 # Certifique-se de usar a URL correta da sua planilha aqui
-spread = Spread('Sua_Planilha_Finanças', config=creds_dict) 
+spread = Spread('Nome_Real_Da_Sua_Planilha', config=creds_dict) 
 
 # --- AQUI É O LUGAR CORRETO PARA COLAR O BLOCO ---
 try:
