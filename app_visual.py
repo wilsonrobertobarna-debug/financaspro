@@ -79,30 +79,35 @@ def enviar_alerta_whatsapp(mensagem):
 if aba == "🏠 Dashboard":
     st.title("🏠 Dashboard Financeiro")
     
-    # 1. Ajuste de colunas e datas (conforme fizemos antes)
+    # 1. Limpeza e Identificação da Coluna de Data
     df_base.columns = [str(col).strip() for col in df_base.columns]
     coluna_data = [c for c in df_base.columns if 'Data' in c]
     
     if coluna_data:
+        # Criamos a coluna necessária
         nome_real_coluna = coluna_data[0]
         df_base['Data_Ref'] = pd.to_datetime(df_base[nome_real_coluna], dayfirst=True, errors='coerce')
         df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
-    
-    # 2. KPIs Superiores (CERTIFIQUE-SE DE QUE ESTÃO ALINHADOS AQUI)
-    c1, c2, c3, c4 = st.columns(4)
-
-    # ESTAS LINHAS ABAIXO NÃO PODEM TER ESPAÇOS EXTRAS NO INÍCIO:
-    rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
-    des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
-    sobra = rec_mes - des_mes
-    
-    c1.metric("Receitas (Mês)", m_fmt(rec_mes))
-    c2.metric("Despesas (Mês)", m_fmt(des_mes), delta_color="inverse")
-    c3.metric("Sobra", m_fmt(sobra))
-    
-    # Status do Milo
-    status_milo = "🐾 Em dia" if df_base['Descrição'].str.contains('Milo', case=False).any() else "Sem dados"
-    c4.metric("Status Milo", status_milo)
+        
+        # --- OS CÁLCULOS DEVEM FICAR AQUI DENTRO (Recuados) ---
+        c1, c2, c3, c4 = st.columns(4)
+        
+        # Filtros usando a coluna recém-criada
+        rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
+        des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
+        sobra = rec_mes - des_mes
+        
+        c1.metric("Receitas (Mês)", m_fmt(rec_mes))
+        c2.metric("Despesas (Mês)", m_fmt(des_mes), delta_color="inverse")
+        c3.metric("Sobra", m_fmt(sobra))
+        
+        # Status do Milo (buscando na Descrição ou Categoria)
+        status_milo = "🐾 Em dia" if df_base['Descrição'].str.contains('Milo', case=False).any() else "Sem dados"
+        c4.metric("Status Milo", status_milo)
+        
+        st.divider()
+    else:
+        st.error("Coluna de 'Data' não encontrada na planilha. Verifique o cabeçalho.")
     
     # Agora os cálculos abaixo vão encontrar a coluna 'Mes_Ano' criada acima
     rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
