@@ -8,51 +8,30 @@ from fpdf import FPDF
 from twilio.rest import Client as TwilioClient
 import pytz
 
-# --- CONFIGURAÇÕES INICIAIS ---
-st.set_page_config(page_title="FinançasPro v2.0.3", layout="wide", page_icon="💰")
+# ... outras configurações iniciais ...
 
-# Fuso Horário e Moeda
-fuso = pytz.timezone('America/Sao_Paulo')
-hoje_br = datetime.now(fuso).date()
-mes_atual = hoje_br.strftime('%m/%Y')
+# 1. Primeiro você conecta (isso já deve estar no seu código)
+creds_dict = dict(st.secrets["gcp_service_account"])
+# Certifique-se de usar a URL correta da sua planilha aqui
+spread = Spread('Sua_Planilha_Finanças', creds=creds_dict) 
 
-def m_fmt(valor):
-    """Formata para Real Brasileiro"""
-    return f"R$ {valor:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-
-# --- CONEXÃO GOOGLE SHEETS (VERSÃO CLOUD) ---
-# --- CONEXÃO GOOGLE SHEETS (CORREÇÃO DE INDENTAÇÃO) ---
+# --- AQUI É O LUGAR CORRETO PARA COLAR O BLOCO ---
 try:
-    # Estas linhas PRECISAM estar recuadas para a direita:
-    creds_dict = dict(st.secrets["gcp_service_account"])
-    
-    spreadsheet_id = '147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4'
-    
-    spread = Spread(spreadsheet_id, config=creds_dict)
-    
-    # Carregamento das abas (Lançamentos e Bancos)
+    # Carrega a aba garantindo que trate a primeira linha como cabeçalho
     df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
-    df_bancos_info = spread.sheet_to_df(index=None, sheet='Bancos')
     
-    st.success("Conexão estabelecida com sucesso!")
+    if df_base.empty:
+        st.warning("⚠️ A aba 'Lançamentos' parece estar vazia.")
+    else:
+        # Limpa nomes de colunas de caracteres invisíveis
+        df_base.columns = [str(col).strip() for col in df_base.columns]
+        
+        # Opcional: converte a coluna de valor para número para o cálculo em Real
+        if 'Valor' in df_base.columns:
+            df_base['V_Num'] = pd.to_numeric(df_base['Valor'].replace('[R$,]', '', regex=True), errors='coerce')
 
 except Exception as e:
-    st.error(f"Erro ao conectar: {e}")
-    st.stop()
-    
-    # 4. Leitura das abas
-    df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
-    df_bancos_info = spread.sheet_to_df(index=None, sheet='Bancos')
-    
-    # Tratamento de Dados (Mantendo Real R$ e visual limpo)
-    df_base['V_Num'] = pd.to_numeric(df_base['Valor'].str.replace('R$', '').str.replace('.', '').str.replace(',', '.').strip(), errors='coerce').fillna(0.0)
-    df_base['DT'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
-    df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%Y')
-    bancos_disponiveis = df_base['Banco'].unique().tolist()
-
-except Exception as e:
-    st.error(f"Erro ao conectar: {e}")
-    st.stop()
+    st.error(f"Erro ao ler aba: {e}")
 
 # --- SIDEBAR E NAVEGAÇÃO ---
 st.sidebar.header("📂 Menu FinançasPro")
