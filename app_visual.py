@@ -8,13 +8,12 @@ import urllib.parse
 from fpdf import FPDF
 from gspread_pandas import Spread, Client
 
-# --- VERSÃO E CONFIGURAÇÃO ---
-st.caption("Versão 2.0.4")
+# --- CONFIGURAÇÃO E VERSÃO ---
+st.caption("Versão 2.0.5")
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
-# RESOLUÇÃO DO FUSO HORÁRIO
+# RESOLUÇÃO DO FUSO HORÁRIO (Brasília)
 agora = datetime.now() - timedelta(hours=3)
-hoje = agora.date()
 mes_atual = agora.strftime('%m/%Y')
 
 # ESTILO VISUAL LIMPO
@@ -27,26 +26,25 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- FUNÇÃO DE FORMATAÇÃO REAL (R$) ---
+# FUNÇÃO PARA MOEDA EM REAL (R$)
 def m_fmt(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-# --- CONEXÃO SEGURA COM GOOGLE SHEETS ---
+# --- CONEXÃO SEGURA ---
 try:
-    # Puxa os segredos do painel do Streamlit
+    # Usa os segredos configurados no Streamlit Cloud
     creds_dict = dict(st.secrets["gcp_service_account"])
     
-    # Nome da sua planilha (deve ser idêntico ao do Google Drive)
+    # NOME DA PLANILHA: Verifique se no Google Drive o nome é exatamente este:
     NOME_DA_PLANILHA = "FinançasPro" 
     
-    # Conecta usando a biblioteca correta
+    # Conexão direta (Sem usar o comando 'conectar' que estava dando erro)
     spread = Spread(NOME_DA_PLANILHA, config=creds_dict)
     df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
     
-    # Limpeza e conversão para Moeda Real
+    # Tratamento de dados para Real (R$)
     df_base.columns = [str(col).strip() for col in df_base.columns]
     if 'Valor' in df_base.columns:
-        # Remove símbolos e converte para número
         df_base['V_Num'] = pd.to_numeric(
             df_base['Valor'].astype(str).str.replace('R$', '').str.replace('.', '').str.replace(',', '.'), 
             errors='coerce'
@@ -56,11 +54,12 @@ try:
     conexao_ok = True
 
 except Exception as e:
-    st.error("❌ Erro de Conexão")
-    st.info(f"Detalhe técnico: {e}")
+    st.error("❌ Erro de Conexão: Planilha não encontrada")
+    st.info(f"Detalhe: {e}")
+    st.warning("Verifique se o nome da planilha no Google Drive é 'FinançasPro' e se você a compartilhou com o e-mail do Service Account.")
     conexao_ok = False
 
-# --- INTERFACE E NAVEGAÇÃO ---
+# --- NAVEGAÇÃO ---
 st.sidebar.title("💰 FinançasPro")
 aba = st.sidebar.radio("Navegação", ["🏠 Dashboard", "📝 Lançamentos", "💳 Cartões"])
 
@@ -72,33 +71,29 @@ if conexao_ok:
             df_base['Data_Ref'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
             df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
             
-            # Cálculos em Real (R$)
+            # Cálculos em Real
             rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
             des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
             
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Receitas (Mês)", m_fmt(rec_mes))
-            c2.metric("Despesas (Mês)", m_fmt(des_mes), delta_color="inverse")
-            c3.metric("Sobra", m_fmt(rec_mes - des_mes))
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Receitas", m_fmt(rec_mes))
+            col2.metric("Despesas", m_fmt(des_mes), delta_color="inverse")
+            col3.metric("Sobra", m_fmt(rec_mes - des_mes))
             
-            # Status do Milo
+            # Status do Milo (Seu Golden Retriever)
             tem_milo = df_base['Descrição'].str.contains('Milo', case=False, na=False).any()
-            c4.metric("Status Milo", "🐾 Em dia" if tem_milo else "Sem dados")
+            col4.metric("Status Milo", "🐾 Em dia" if tem_milo else "Sem dados")
             
             st.divider()
-            
-            # Gráfico de Rosca
-            fig = px.pie(df_base[df_base['Mes_Ano'] == mes_atual], values='V_Num', names='Tipo', 
-                         title=f"Resumo de {mes_atual}", hole=0.4)
+            fig = px.pie(df_base[df_base['Mes_Ano'] == mes_atual], values='V_Num', names='Tipo', hole=0.4, title="Resumo Mensal")
             st.plotly_chart(fig, use_container_width=True)
 
     elif aba == "📝 Lançamentos":
         st.title("📝 Novos Lançamentos")
-        st.write("Formulários preservados conforme solicitado.")
+        st.info("Formulários mantidos no padrão visual limpo.")
 
     elif aba == "💳 Cartões":
         st.title("💳 Gestão de Cartões")
-        st.write("Controle de faturas e limites.")
 
 else:
     st.warning("Verifique se você compartilhou a planilha com o e-mail do Service Account.")
