@@ -58,18 +58,18 @@ def enviar_alerta_whatsapp(mensagem):
 if aba == "🏠 Dashboard":
     st.title("🏠 Dashboard Financeiro")
     
-    # 1. Limpeza rigorosa de colunas
-    df_base.columns = [str(col).strip() for col in df_base.columns]
-    coluna_data = [c for c in df_base.columns if 'Data' in c]
-    
-    if coluna_data:
-        # Criamos a coluna necessária internamente
-        nome_real_coluna = coluna_data[0]
-        df_base['Data_Ref'] = pd.to_datetime(df_base[nome_real_coluna], dayfirst=True, errors='coerce')
-        df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
+    # Só faz o cálculo se a planilha for encontrada e lida
+    if not df_base.empty and 'Data' in df_base.columns:
+        # Criação interna da data para o visual limpo
+        df_base['Data'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
+        df_base['Mes_Ano'] = df_base['Data'].dt.strftime('%m/%Y')
         
-        # --- TUDO O QUE DEPENDE DE 'Mes_Ano' FICA AQUI DENTRO ---
-        c1, c2, c3, c4 = st.columns(4)
+        # Cálculos em Real (R$)
+        # ... seu código de rec_mes e des_mes aqui ...
+        
+        st.success("Dados carregados com sucesso!")
+    else:
+        st.error("Planilha conectada, mas não encontrei os dados na aba 'Lançamentos'.")
         
         # Filtros (usando a coluna que acabamos de criar)
         rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
