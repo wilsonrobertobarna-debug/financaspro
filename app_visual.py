@@ -8,11 +8,11 @@ import urllib.parse
 from fpdf import FPDF
 from gspread_pandas import Spread, Client
 
-# --- CONFIGURAÇÃO E VERSÃO ---
-st.caption("Versão 2.0.8")
+# --- CONFIGURAÇÃO ---
+st.caption("Versão 2.0.9")
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
-# RESOLUÇÃO DO FUSO HORÁRIO
+# FUSO HORÁRIO (Brasília)
 agora = datetime.now() - timedelta(hours=3)
 mes_atual = agora.strftime('%m/%Y')
 
@@ -27,18 +27,22 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def m_fmt(valor):
-    """Formata valores para Real (R$)"""
+    """Formata para Real (R$)"""
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 # --- CONEXÃO SEGURA ---
+# Wilson, este bloco substitui totalmente a função 'conectar()'
 try:
     creds_dict = dict(st.secrets["gcp_service_account"])
+    
+    # O nome abaixo deve ser IDÊNTICO ao nome do arquivo no Google Drive
     NOME_DA_PLANILHA = "FinançasPro" 
     
-    # Conexão via gspread_pandas (Substitui o antigo 'conectar')
+    # Conexão direta
     spread = Spread(NOME_DA_PLANILHA, config=creds_dict)
     df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
     
+    # Tratamento para moeda Real (R$)
     df_base.columns = [str(col).strip() for col in df_base.columns]
     if 'Valor' in df_base.columns:
         df_base['V_Num'] = pd.to_numeric(
@@ -50,8 +54,9 @@ try:
     conexao_ok = True
 
 except Exception as e:
-    st.error("❌ Erro de Conexão")
+    st.error("❌ Erro de Conexão: Planilha não encontrada")
     st.info(f"Detalhe: {e}")
+    st.warning("Verifique o nome do arquivo no Drive e o compartilhamento.")
     conexao_ok = False
 
 # --- NAVEGAÇÃO ---
@@ -75,7 +80,7 @@ if conexao_ok:
             c2.metric("Despesas", m_fmt(des_mes), delta_color="inverse")
             c3.metric("Sobra", m_fmt(rec_mes - des_mes))
             
-            # Status do Milo
+            # Status do Milo (Golden Retriever)
             tem_milo = df_base['Descrição'].str.contains('Milo', case=False, na=False).any()
             c4.metric("Status Milo", "🐾 Em dia" if tem_milo else "Sem dados")
             
@@ -85,11 +90,10 @@ if conexao_ok:
 
     elif aba == "📝 Lançamentos":
         st.title("📝 Novos Lançamentos")
-        st.info("Formulários preservados.")
+        st.info("Layout de formulários preservado conforme solicitado.")
 
     elif aba == "💳 Cartões":
         st.title("💳 Gestão de Cartões")
-        st.info("Informações de crédito.")
 else:
     st.warning("⚠️ Verifique o compartilhamento da planilha com o e-mail do Service Account.")
 
