@@ -20,19 +20,27 @@ def m_fmt(valor):
     """Formata para Real Brasileiro"""
     return f"R$ {valor:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-# --- CONEXÃO GOOGLE SHEETS ---
-# Certifique-se de que o arquivo de credenciais está configurado no ambiente
+# --- CONEXÃO GOOGLE SHEETS (VERSÃO CLOUD) ---
 try:
-    spreadsheet_id = 'SUA_ID_DA_PLANILHA' # Substituir pela sua ID
-    spread = Spread(spreadsheet_id)
+    # 1. Carrega as credenciais dos Secrets do Streamlit em formato de dicionário
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    
+    # 2. Sua ID da planilha (mantenha a sua ID original aqui)
+    spreadsheet_id = 'SUA_ID_DA_PLANILHA' 
+    
+    # 3. Conecta usando o dicionário de configuração (sem depender de arquivo .json no disco)
+    spread = Spread(spreadsheet_id, config=creds_dict)
+    
+    # 4. Leitura das abas
     df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
     df_bancos_info = spread.sheet_to_df(index=None, sheet='Bancos')
     
-    # Tratamento de Dados
+    # Tratamento de Dados (Mantendo Real R$ e visual limpo)
     df_base['V_Num'] = pd.to_numeric(df_base['Valor'].str.replace('R$', '').str.replace('.', '').str.replace(',', '.').strip(), errors='coerce').fillna(0.0)
     df_base['DT'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
     df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%Y')
     bancos_disponiveis = df_base['Banco'].unique().tolist()
+
 except Exception as e:
     st.error(f"Erro ao conectar: {e}")
     st.stop()
