@@ -44,35 +44,29 @@ aba = st.sidebar.radio("Selecione a funcionalidade:",
 if aba == "🏠 Dashboard":
     st.title("🏠 Dashboard Financeiro")
     
-    # Verificação de segurança: a planilha precisa ter dados
+    # Voltando ao simples: se o DF existir, ele tenta mostrar
     if not df_base.empty:
-        # 1. Tratamento de Datas para o visual e cálculos
+        # Criamos as colunas apenas se necessário
         if 'Data' in df_base.columns:
             df_base['Data_Ref'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
             df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
-            
-            # 2. Cálculos dos KPIs em Real (R$)
-            rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
-            des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
-            sobra = rec_mes - des_mes
-            
-            # 3. Exibição das métricas
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Receitas (Mês)", m_fmt(rec_mes))
-            c2.metric("Despesas (Mês)", m_fmt(des_mes), delta_color="inverse")
-            c3.metric("Sobra", m_fmt(sobra))
-            
-            # Status do Milo
-            tem_milo = df_base['Descrição'].str.contains('Milo', case=False, na=False).any()
-            c4.metric("Status Milo", "🐾 Em dia" if tem_milo else "Sem dados")
-            
-            st.divider()
-        else:
-            # Este 'else' está na linha 78 ou perto dela, agora alinhado com 'if Data'
-            st.error("⚠️ Coluna 'Data' não encontrada na planilha.")
-    else:
-        # Este 'else' está alinhado com o 'if not df_base.empty'
-        st.error("⚠️ Planilha vazia ou erro na conexão.")
+        
+        # KPIs direto (sem o else que estava quebrando)
+        c1, c2, c3, c4 = st.columns(4)
+        
+        # Cálculos usando a moeda em Real (R$)
+        rec_mes = df_base[(df_base.get('Mes_Ano') == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
+        des_mes = df_base[(df_base.get('Mes_Ano') == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
+        
+        c1.metric("Receitas (Mês)", m_fmt(rec_mes))
+        c2.metric("Despesas (Mês)", m_fmt(des_mes), delta_color="inverse")
+        c3.metric("Sobra", m_fmt(rec_mes - des_mes))
+        
+        # Status do Milo
+        tem_milo = df_base['Descrição'].str.contains('Milo', case=False, na=False).any()
+        c4.metric("Status Milo", "🐾 Em dia" if tem_milo else "Sem dados")
+        
+        st.divider()
     else:
         st.error("⚠️ Dados insuficientes para gerar o Dashboard.")
         if not df_base.empty:
