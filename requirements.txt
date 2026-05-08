@@ -1,7 +1,6 @@
 streamlit
 pandas
 gspread-pandas
-python-dateutil
-fpdf
+plotly
 twilio
-pytz
+fpdf
