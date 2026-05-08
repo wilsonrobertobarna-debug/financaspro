@@ -1,103 +1,65 @@
 import streamlit as st
+import gspread
+from google.oauth2.service_account import Credentials
 import pandas as pd
-from gspread_pandas import Spread, Client
+import plotly.express as px
+import plotly.graph_objects as go
 from datetime import datetime, timedelta
+import streamlit as st
+import pandas as pd
+from datetime import datetime, timedelta
+import urllib.parse
 
-# --- CONFIGURAÇÃO ---
-st.caption("Versão 2.1.2 - Estável")
+# RESOLUÇÃO DO FUSO HORÁRIO (Sem precisar de biblioteca extra)
+# O servidor do Streamlit é 3 horas adiantado. Tiramos 3 horas para ser Brasília.
+agora_br = datetime.now() - timedelta(hours=3)
+hoje_br = agora_br.date()
+agora = datetime.now() - timedelta(hours=3)
+hoje = agora.date()
+from dateutil.relativedelta import relativedelta
+import urllib.parse
+from fpdf import FPDF
+
+# 0. VERSÃO NO TOPO
+st.caption("Versão 2.0.3")
+
+# 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
-# FUSO HORÁRIO (Brasília)
-agora = datetime.now() - timedelta(hours=3)
-mes_atual = agora.strftime('%m/%Y')
+# ESTILO PARA VALORES E RÓTULOS DOS METRICS
+st.markdown("""
+    <style>
+    [data-testid='stMetricLabel'] {
+        font-size: 1.1rem !important;
+        font-weight: bold !important;
+    }
+    [data-testid='stMetricValue'] {
+        font-size: 1.1rem !important;
+        font-weight: bold !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-def m_fmt(valor):
-    """Formata para Real (R$)"""
-    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+# 2. CONEXÃO
+@st.cache_resource
+def conectar():
+    creds_dict = st.secrets.get("connections", {}).get("gsheets")
+    if not creds_dict:
+        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
+    try:
+        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
+        if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
+        final_creds = {
+            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
+            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
+            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
+        }
+        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
+    except Exception as e:
+        st.error(f"Erro: {e}"); st.stop()
 
-# --- CONEXÃO SEGURA ---
-try:
-    creds_dict = dict(st.secrets["gcp_service_account"])
-    NOME_DA_PLANILHA = "FinançasPro" 
-    
-    # Conexão direta simplificada
-    spread = Spread(NOME_DA_PLANILHA, config=creds_dict)
-    df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
-    
-    client = spread.client 
-    
-    # Tratamento para moeda Real (R$)
-    df_base.columns = [str(col).strip() for col in df_base.columns]
-    if 'Valor' in df_base.columns:
-        df_base['V_Num'] = pd.to_numeric(
-            df_base['Valor'].astype(str).str.replace('R$', '').str.replace('.', '').str.replace(',', '.'), 
-            errors='coerce'
-        ).fillna(0)
-    
-    st.success("✅ FinançasPro Conectado!")
-    conexao_ok = True
-
-except Exception as e:
-    st.error("❌ Erro de Conexão")
-    st.info(f"Detalhe: {e}")
-    conexao_ok = False
-
-# --- NAVEGAÇÃO ---
-st.sidebar.title("💰 FinançasPro")
-aba = st.sidebar.radio("Navegação", ["🏠 Dashboard", "📝 Lançamentos"])
-
-if conexao_ok:
-    if aba == "🏠 Dashboard":
-        st.title("🏠 Dashboard Financeiro")
-        # O Dashboard aparecerá aqui
-    elif aba == "📝 Lançamentos":
-        st.title("📝 Novos Lançamentos")        
-        if 'Data' in df_base.columns:
-            df_base['Data_Ref'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
-            df_base['Mes_Ano'] = df_base['Data_Ref'].dt.strftime('%m/%Y')
-            
-            # KPIs em Real (R$)
-            rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
-            des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
-            
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Receitas", m_fmt(rec_mes))
-            c2.metric("Despesas", m_fmt(des_mes), delta_color="inverse")
-            c3.metric("Sobra", m_fmt(rec_mes - des_mes))
-            
-            # Status do Milo (Golden Retriever)
-            tem_milo = df_base['Descrição'].str.contains('Milo', case=False, na=False).any()
-            c4.metric("Status Milo", "🐾 Em dia" if tem_milo else "Sem dados")
-            
-            st.divider()
-            fig = px.pie(df_base[df_base['Mes_Ano'] == mes_atual], values='V_Num', names='Tipo', hole=0.4)
-            st.plotly_chart(fig, use_container_width=True)
-
-    elif aba == "📝 Lançamentos":
-        st.title("📝 Novos Lançamentos")
-        st.info("Layout de formulários preservado.")
-
-    elif aba == "💳 Cartões":
-        st.title("💳 Gestão de Cartões")
-        # Campos de fechamento e vencimento serão tratados aqui
-else:
-    st.warning("⚠️ Verifique o compartilhamento da planilha com o e-mail do Service Account.")
-
-# Substitua o seu bloco de conexão antigo por este:
-try:
-    creds_dict = dict(st.secrets["gcp_service_account"])
-    NOME_DA_PLANILHA = "FinançasPro" 
-    
-    # Conexão direta usando gspread_pandas
-    spread = Spread(NOME_DA_PLANILHA, config=creds_dict)
-    df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
-    
-    # Esta linha abaixo é crucial: ela define o 'client' que o seu código enorme usa
-    client = spread.client 
-    
-    st.success("✅ Conectado com Sucesso!")
-except Exception as e:
-    st.error(f"Erro na conexão: {e}")
+client = conectar()
+sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # IDENTIFICAÇÃO DAS ABAS
 ws_base = sh.get_worksheet(0)
