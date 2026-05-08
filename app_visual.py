@@ -22,14 +22,13 @@ def m_fmt(valor):
 
 # --- CONEXÃO GOOGLE SHEETS (VERSÃO CLOUD) ---
 try:
-    # 1. Carrega as credenciais dos Secrets do Streamlit em formato de dicionário
+    try:
     creds_dict = dict(st.secrets["gcp_service_account"])
-    
-    # 2. Sua ID da planilha (mantenha a sua ID original aqui)
-    spreadsheet_id = 'SUA_ID_DA_PLANILHA' 
-    
-    # 3. Conecta usando o dicionário de configuração (sem depender de arquivo .json no disco)
-    spread = Spread(spreadsheet_id, config=creds_dict)
+    # Digite a ID manualmente aqui, garantindo que não há espaços
+    spread = Spread('147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4', config=creds_dict)
+    st.success("Conectado com sucesso!")
+except Exception as e:
+    st.error(f"Erro detalhado: {e}")
     
     # 4. Leitura das abas
     df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
