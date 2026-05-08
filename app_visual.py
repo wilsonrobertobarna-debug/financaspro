@@ -21,14 +21,24 @@ def m_fmt(valor):
     return f"R$ {valor:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
 # --- CONEXÃO GOOGLE SHEETS (VERSÃO CLOUD) ---
+# --- CONEXÃO GOOGLE SHEETS (CORREÇÃO DE INDENTAÇÃO) ---
 try:
-    try:
+    # Estas linhas PRECISAM estar recuadas para a direita:
     creds_dict = dict(st.secrets["gcp_service_account"])
-    # Digite a ID manualmente aqui, garantindo que não há espaços
-    spread = Spread('147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4', config=creds_dict)
-    st.success("Conectado com sucesso!")
+    
+    spreadsheet_id = '147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4'
+    
+    spread = Spread(spreadsheet_id, config=creds_dict)
+    
+    # Carregamento das abas (Lançamentos e Bancos)
+    df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
+    df_bancos_info = spread.sheet_to_df(index=None, sheet='Bancos')
+    
+    st.success("Conexão estabelecida com sucesso!")
+
 except Exception as e:
-    st.error(f"Erro detalhado: {e}")
+    st.error(f"Erro ao conectar: {e}")
+    st.stop()
     
     # 4. Leitura das abas
     df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
