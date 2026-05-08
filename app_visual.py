@@ -40,23 +40,30 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 2. CONEXÃO
-@st.cache_resource
-def conectar():
-    creds_dict = st.secrets.get("connections", {}).get("gsheets")
-    if not creds_dict:
-        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
-    try:
-        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
-        if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
-        final_creds = {
-            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
-            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
-            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
-        }
-        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
-    except Exception as e:
-        st.error(f"Erro: {e}"); st.stop()
+# --- CONEXÃO SEGURA ---
+try:
+    # Puxa os segredos do painel do Streamlit
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    
+    # IMPORTANTE: O nome abaixo tem que ser IDENTICO ao da sua planilha no Google Drive
+    # Se sua planilha chama 'Finanças 2026', escreva exatamente assim.
+    NOME_DA_PLANILHA = "FinançasPro" 
+    
+    spread = Spread(NOME_DA_PLANILHA, config=creds_dict)
+    df_base = spread.sheet_to_df(index=None, sheet='Lançamentos')
+    
+    # Limpeza básica e conversão para Real (R$)
+    df_base.columns = [str(col).strip() for col in df_base.columns]
+    if 'Valor' in df_base.columns:
+        df_base['V_Num'] = pd.to_numeric(df_base['Valor'].replace('[R$,]', '', regex=True), errors='coerce').fillna(0)
+    
+    st.success("✅ Sistema Conectado!") # Se isso aparecer, o problema acabou!
+
+except Exception as e:
+    st.error("❌ Erro de Conexão")
+    st.info(f"Detalhe técnico: {e}")
+    # Se aparecer 'SpreadsheetNotFound', o nome da planilha lá em cima está errado.
+    # Se aparecer 'PermissionDenied', você esqueceu de compartilhar a planilha com o e-mail do Secret.
 
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
