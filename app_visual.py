@@ -79,8 +79,15 @@ def enviar_alerta_whatsapp(mensagem):
 if aba == "🏠 Dashboard":
     st.title("🏠 Dashboard Financeiro")
     
+    # --- AJUSTE DE DATA (Para evitar o KeyError) ---
+    # Convertemos sua coluna 'Data' e criamos a 'Mes_Ano' que o código precisa
+    df_base['Data'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
+    df_base['Mes_Ano'] = df_base['Data'].dt.strftime('%m/%Y')
+    
     # KPIs Superiores
     c1, c2, c3, c4 = st.columns(4)
+    
+    # Agora os cálculos abaixo vão encontrar a coluna 'Mes_Ano' criada acima
     rec_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Receita') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
     des_mes = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Tipo'] == 'Despesa') & (df_base['Status'] == 'Pago')]['V_Num'].sum()
     sobra = rec_mes - des_mes
@@ -88,7 +95,10 @@ if aba == "🏠 Dashboard":
     c1.metric("Receitas (Mês)", m_fmt(rec_mes))
     c2.metric("Despesas (Mês)", m_fmt(des_mes), delta_color="inverse")
     c3.metric("Sobra", m_fmt(sobra))
-    c4.metric("Status Milo", "🐾 Em dia" if "Milo" in df_base['Categoria'].values else "Sem dados") #
+    
+    # Aqui ajustei para verificar o Milo na descrição ou categoria
+    status_milo = "🐾 Em dia" if df_base['Descrição'].str.contains('Milo', case=False).any() else "Sem dados"
+    c4.metric("Status Milo", status_milo)
 
     st.divider()
     
