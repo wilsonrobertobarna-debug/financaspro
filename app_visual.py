@@ -43,9 +43,12 @@ st.markdown("""
 # 2. CONEXÃO
 @st.cache_resource
 def conectar():
-    creds_dict = st.secrets.get("connections", {}).get("gsheets")
+        creds_dict = st.secrets["gcp_service_account"]
     if not creds_dict:
-        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
+        creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+    
+    return gspread.authorize(Credentials.from_service_account_info(creds_dict, scopes=[...]))
+       
     try:
         pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
         if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
