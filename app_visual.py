@@ -254,8 +254,12 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 ws_base.update_cell(int(item['ID']), 3, ed_desc)
                 ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
+                
+                # Limpa o cache para atualizar as barrinhas de saldo e gráficos instantaneamente
+                st.cache_data.clear() 
                 atualizar_sessao()
                 st.rerun()
+
             if col_ed2.button("🚨 EXCLUIR"):
                 if item['Categoria'] == 'Transferência':
                     desc = item['Descrição']
@@ -273,10 +277,11 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                         ws_base.delete_rows(id_linha)
                 else:
                     ws_base.delete_rows(int(item['ID']))
+                
+                # Limpa o cache para que o valor excluído saia dos totais imediatamente
+                st.cache_data.clear()
                 atualizar_sessao()
-                st.rerun()
-
-# 5. TELAS PRINCIPAIS
+                st.rerun()# 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
