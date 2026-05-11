@@ -429,7 +429,8 @@ elif "Pendências" in aba:
                 elif d_aviso == 1:
                     st.warning(f"🚨 **Vence amanhã:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
                 elif d_aviso == 3:
-                    st.warning(f"⚠️ **Vence em 3 dias:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    # MUDANÇA: Trocamos 'Data' por 'Vencimento' para o alerta de 3 dias
+            st.warning(f"⚠️ **Vence em 3 dias:** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
         else:
             st.info("Nenhum lançamento a vencer hoje, amanhã ou em atraso.")
     else:
