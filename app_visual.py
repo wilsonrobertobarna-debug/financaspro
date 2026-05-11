@@ -372,7 +372,8 @@ if "💰" in aba:
             df_saldo_dia = df_saldo_dia.groupby('Vencimento')['Valor_Com_Sinal'].sum().reset_index()
             df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
             
-            fig_acum = px.line(df_saldo_dia, x='Data', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
+            # MUDANÇA: Trocamos x='Data' por x='Vencimento' para o gráfico Plotly
+            fig_acum = px.line(df_saldo_dia, x='Vencimento', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
             fig_acum.update_layout(height=350)
             st.plotly_chart(fig_acum, use_container_width=True, config={'staticPlot': True})
         
