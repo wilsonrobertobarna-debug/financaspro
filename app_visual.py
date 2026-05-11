@@ -172,7 +172,12 @@ st.sidebar.divider()
 # BARRINHA 1: NOVO LANÇAMENTO
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
     with st.form("f_novo", clear_on_submit=True):
-        f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+        # Trazendo a Data da Compra (Coluna H) para o topo
+        f_dat_compra = st.date_input("Data da Compra", datetime.now(), format="DD/MM/YYYY")
+        
+        # O campo 'Data' agora é tratado como 'Vencimento' (Coluna A)
+        f_venc = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
+        
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         f_des = st.text_input("Descrição / Beneficiário")
@@ -181,16 +186,18 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         
-        # Campo de Vencimento do Cartão
-        f_venc_cartao = st.date_input("Vencimento do Cartão (Opcional)", value=None, format="DD/MM/YYYY")
-        
         if st.form_submit_button("SALVAR"):
             v_str = f"{f_val:.2f}".replace('.', ',')
-            venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
+            # Formatando as datas para o padrão brasileiro
+            compra_str = f_dat_compra.strftime("%d/%m/%Y")
             
             for i in range(f_par):
-                nova_data = f_dat + relativedelta(months=i)
-                ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta, venc_str])
+                # O vencimento avança conforme as parcelas
+                venc_parcela = f_venc + relativedelta(months=i)
+                venc_str = venc_parcela.strftime("%d/%m/%Y")
+                
+                # Ordem das colunas: A:Vencimento, B:Valor, C:Descrição, D:Categoria, E:Tipo, F:Banco, G:Status, H:Data Compra
+                ws_base.append_row([venc_str, v_str, f_des, f_cat, f_tip, f_bnc, f_sta, compra_str])
             
             atualizar_sessao()
             st.rerun()
@@ -208,8 +215,9 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
             else:
                 v_str = f"{t_val:.2f}".replace('.', ',')
                 d_str = t_dat.strftime("%d/%m/%Y")
-                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", ""])
-                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", ""])
+                # Mantendo o padrão de 8 colunas para não deslocar a planilha
+                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", d_str])
+                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", d_str])
                 atualizar_sessao()
                 st.rerun()
 
@@ -220,8 +228,20 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         if escolha:
             item = lista_edit[escolha]
+            
+            # Ajuste de Vencimento (Coluna A)
             data_atual_dt = datetime.strptime(item['Data'], "%d/%m/%Y")
-            ed_dat = st.date_input("Alterar Data:", value=data_atual_dt, format="DD/MM/YYYY")
+            ed_venc = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
+            
+            # Ajuste de Data da Compra (Coluna H)
+            # Verifica se a coluna existe no seu DataFrame, senão usa a data atual
+            data_compra_valor = item.get('Data Compra', item['Data'])
+            try:
+                compra_atual_dt = datetime.strptime(data_compra_valor, "%d/%m/%Y")
+            except:
+                compra_atual_dt = data_atual_dt
+
+            ed_compra = st.date_input("Alterar Data da Compra:", value=compra_atual_dt, format="DD/MM/YYYY")
             
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
@@ -236,13 +256,16 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             col_ed1, col_ed2 = st.columns(2)
             if col_ed1.button("💾 ATUALIZAR"):
                 v_str = f"{ed_val:.2f}".replace('.', ',')
-                ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
-                ws_base.update_cell(int(item['ID']), 2, v_str)
-                ws_base.update_cell(int(item['ID']), 3, ed_desc)
-                ws_base.update_cell(int(item['ID']), 6, ed_bnc)
-                ws_base.update_cell(int(item['ID']), 7, ed_sta)
+                ws_base.update_cell(int(item['ID']), 1, ed_venc.strftime("%d/%m/%Y")) # A: Vencimento
+                ws_base.update_cell(int(item['ID']), 2, v_str)                      # B: Valor
+                ws_base.update_cell(int(item['ID']), 3, ed_desc)                   # C: Descrição
+                ws_base.update_cell(int(item['ID']), 6, ed_bnc)                    # F: Banco
+                ws_base.update_cell(int(item['ID']), 7, ed_sta)                    # G: Status
+                ws_base.update_cell(int(item['ID']), 8, ed_compra.strftime("%d/%m/%Y")) # H: Data Compra
+                
                 atualizar_sessao()
                 st.rerun()
+            
             if col_ed2.button("🚨 EXCLUIR"):
                 if item['Categoria'] == 'Transferência':
                     desc = item['Descrição']
@@ -262,7 +285,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     ws_base.delete_rows(int(item['ID']))
                 atualizar_sessao()
                 st.rerun()
-
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
