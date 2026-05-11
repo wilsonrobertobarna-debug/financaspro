@@ -229,7 +229,8 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
-        # Aumentamos para 200 itens e colocamos Pendentes no topo da lista
+        # Aumentamos para 200 itens para garantir que você veja todos os pendentes
+        # Colocamos os 'Pendentes' no topo da lista para facilitar sua vida
         df_ajuste = df_base.tail(200).copy()
         df_ajuste['Prioridade'] = df_ajuste['Status'].apply(lambda x: 0 if x == 'Pendente' else 1)
         df_ajuste = df_ajuste.sort_values(by=['Prioridade', 'DT'], ascending=[True, False])
@@ -255,33 +256,28 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             
             if col_ed1.button("💾 ATUALIZAR"):
                 v_str = f"{ed_val:.2f}".replace('.', ',')
-                # Atualização direta na planilha
+                # Atualização direta na planilha Google Sheets
                 ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
                 ws_base.update_cell(int(item['ID']), 2, v_str)
                 ws_base.update_cell(int(item['ID']), 3, ed_desc)
                 ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
                 
-                # Força a atualização de tudo no app Wilson
+                # FORÇA A ATUALIZAÇÃO TOTAL: Limpa o cache e a sessão
                 st.cache_data.clear()
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
                 st.rerun()
 
             if col_ed2.button("🚨 EXCLUIR"):
-                # Simplificado para evitar erros de sintaxe
+                # Exclusão direta simplificada para evitar erros de sintaxe
                 ws_base.delete_rows(int(item['ID']))
+                
+                # Limpa tudo para o saldo atualizar na hora
                 st.cache_data.clear()
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
                 st.rerun()
-                else:
-                    ws_base.delete_rows(int(item['ID']))
-                
-                # Limpeza para que o gráfico reflita a exclusão na hora
-                st.cache_data.clear()
-                for key in list(st.session_state.keys()):
-                    del st.session_state[key]
                 
                 st.warning("Lançamento excluído!")
                 st.rerun()
