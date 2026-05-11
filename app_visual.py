@@ -710,7 +710,8 @@ elif "📋" in aba:
         df_v = df_v[df_v['Descrição'].str.contains(b_desc_rel, case=False, na=False)]
         
     st.subheader("Lançamentos Filtrados")
-    df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+    # MUDANÇA FINAL: Atualizamos 'Data' para 'Vencimento' e incluímos 'Data Compra'
+    df_v_display = df_v[['ID', 'Vencimento', 'Data Compra', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
     
