@@ -255,9 +255,38 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
                 
-                # Limpa o cache para atualizar as barrinhas de saldo e gráficos instantaneamente
-                st.cache_data.clear() 
-                atualizar_sessao()
+                # FORÇA TOTAL: Limpa cache e reinicia a variável de dados
+                st.cache_data.clear()
+                if 'df_base' in st.session_state:
+                    del st.session_state['df_base']
+                
+                st.success("Atualizado! Recarregando...")
+                st.rerun()
+
+            if col_ed2.button("🚨 EXCLUIR"):
+                if item['Categoria'] == 'Transferência':
+                    desc = item['Descrição']
+                    data = item['Data']
+                    v_num = item['V_Num']
+                    ids_para_excluir = []
+                    for idx, row in df_base.iterrows():
+                        if (row['Data'] == data and 
+                            abs(row['V_Num'] - v_num) < 0.01 and 
+                            row['Descrição'] == desc and 
+                            row['Categoria'] == 'Transferência'):
+                            ids_para_excluir.append(int(row['ID']))
+                    ids_para_excluir = sorted(list(set(ids_para_excluir)), reverse=True)
+                    for id_linha in ids_para_excluir:
+                        ws_base.delete_rows(id_linha)
+                else:
+                    ws_base.delete_rows(int(item['ID']))
+                
+                # FORÇA TOTAL na exclusão também
+                st.cache_data.clear()
+                if 'df_base' in st.session_state:
+                    del st.session_state['df_base']
+                    
+                st.warning("Excluído! Recarregando...")
                 st.rerun()
 
             if col_ed2.button("🚨 EXCLUIR"):
