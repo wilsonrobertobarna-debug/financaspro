@@ -229,8 +229,7 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
-        # Aumentamos para 200 para garantir que você veja todos os pendentes
-        # Ordenamos para que os 'Pendentes' apareçam primeiro na sua lista
+        # Aumentamos para 200 itens e colocamos Pendentes no topo da lista
         df_ajuste = df_base.tail(200).copy()
         df_ajuste['Prioridade'] = df_ajuste['Status'].apply(lambda x: 0 if x == 'Pendente' else 1)
         df_ajuste = df_ajuste.sort_values(by=['Prioridade', 'DT'], ascending=[True, False])
@@ -253,22 +252,24 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
             col_ed1, col_ed2 = st.columns(2)
+            
             if col_ed1.button("💾 ATUALIZAR"):
                 v_str = f"{ed_val:.2f}".replace('.', ',')
-                # Atualiza diretamente na planilha Google Sheets
+                # Atualização direta na planilha
                 ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
                 ws_base.update_cell(int(item['ID']), 2, v_str)
                 ws_base.update_cell(int(item['ID']), 3, ed_desc)
                 ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
                 
-                # FORÇA A ATUALIZAÇÃO DAS BARRINHAS:
+                # Força a atualização de tudo no app Wilson
                 st.cache_data.clear()
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
                 st.rerun()
 
             if col_ed2.button("🚨 EXCLUIR"):
+                # Simplificado para evitar erros de sintaxe
                 ws_base.delete_rows(int(item['ID']))
                 st.cache_data.clear()
                 for key in list(st.session_state.keys()):
