@@ -227,7 +227,9 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
                 st.rerun()
 
 Conversa com o Gemini
-veja se esta aqui nao estou achando: # 5. TELAS PRINCIPAIS
+veja se esta aqui nao estou achando:
+
+# 5. TELAS PRINCIPAIS
 
 if "💰" in aba:
 
@@ -536,7 +538,6 @@ elif "Pendências" in aba:
     if b_desc:
 
         df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-
         
 
     df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
