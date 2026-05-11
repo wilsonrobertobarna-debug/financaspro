@@ -229,8 +229,6 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
-        # Aumentamos para 200 itens para garantir que você veja todos os pendentes
-        # Colocamos os 'Pendentes' no topo da lista para facilitar sua vida
         df_ajuste = df_base.tail(200).copy()
         df_ajuste['Prioridade'] = df_ajuste['Status'].apply(lambda x: 0 if x == 'Pendente' else 1)
         df_ajuste = df_ajuste.sort_values(by=['Prioridade', 'DT'], ascending=[True, False])
@@ -240,43 +238,39 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         
         if escolha:
             item = lista_edit[escolha]
+            # Criamos uma ID única baseada no registro selecionado
+            id_unico = str(item['ID'])
+            
             data_atual_dt = datetime.strptime(item['Data'], "%d/%m/%Y")
-            ed_dat = st.date_input("Alterar Data:", value=data_atual_dt, format="DD/MM/YYYY")
-            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
-            ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
+            ed_dat = st.date_input("Alterar Data:", value=data_atual_dt, format="DD/MM/YYYY", key=f"dat_{id_unico}")
+            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f", key=f"val_{id_unico}")
+            ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'], key=f"desc_{id_unico}")
             
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
-            ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
+            ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b, key=f"bnc_{id_unico}")
             
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
-            ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
+            ed_sta = st.selectbox("Status:", status_opcoes, index=index_status, key=f"sta_{id_unico}")
             
             col_ed1, col_ed2 = st.columns(2)
             
-            if col_ed1.button("💾 ATUALIZAR"):
+            # O 'key' evita o erro de DuplicateElementId
+            if col_ed1.button("💾 ATUALIZAR", key=f"btn_upd_{id_unico}"):
                 v_str = f"{ed_val:.2f}".replace('.', ',')
-                # Atualização direta na planilha Google Sheets
                 ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
                 ws_base.update_cell(int(item['ID']), 2, v_str)
                 ws_base.update_cell(int(item['ID']), 3, ed_desc)
                 ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
                 
-                # FORÇA A ATUALIZAÇÃO TOTAL: Limpa o cache e a sessão
+                # Força a limpeza para o saldo projetado atualizar
                 st.cache_data.clear()
-                for key in list(st.session_state.keys()):
-                    del st.session_state[key]
                 st.rerun()
 
-            if col_ed2.button("🚨 EXCLUIR"):
-                # Exclusão direta simplificada para evitar erros de sintaxe
+            if col_ed2.button("🚨 EXCLUIR", key=f"btn_del_{id_unico}"):
                 ws_base.delete_rows(int(item['ID']))
-                
-                # Limpa tudo para o saldo atualizar na hora
                 st.cache_data.clear()
-                for key in list(st.session_state.keys()):
-                    del st.session_state[key]
                 st.rerun()
                 
                 st.warning("Lançamento excluído!")
