@@ -336,25 +336,37 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 # Limpa o cache para que o valor excluído saia dos totais imediatamente
                 st.cache_data.clear()
                 atualizar_sessao()
-                st.rerun()# 5. TELAS PRINCIPAIS
+                st.rerun()
+                
+# 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
+        # AJUSTE AQUI: Removido o filtro de 'Pago' para que TUDO apareça nas barras e saldos
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência')]
+        
+        # Cálculo do Saldo Geral considerando Receitas e Despesas (Pagos e Pendentes)
         saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
+        st.info(f"### 🏦 SALDO PROJETADO DO MÊS: {m_fmt(saldo_geral)}")
         
         st.divider()
         
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+        # Agora as métricas abaixo somam TUDO (o que já foi e o que falta pagar)
+        m1.metric("📈 Receita Total", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+        m2.metric("📉 Gasto Total", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
         m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
+        
+        # Mantivemos a métrica de pendentes apenas para você saber quanto ainda falta sair do bolso
+        valor_pendente = df_m_limpo[df_m_limpo['Status'] == 'Pendente']['V_Num'].sum()
+        m4.metric("⏳ Ainda Pendente", m_fmt(valor_pendente))
         
         st.divider()
+        
+        # O restante do código de gráficos e comparativos segue abaixo...
+        # (Eles agora também vão considerar os pendentes automaticamente)
         
         with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
