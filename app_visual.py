@@ -228,13 +228,8 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
-  if not df_base.empty:
-    # Remove espaços em branco dos nomes das colunas e dos dados
-    df_base.columns = df_base.columns.str.strip()
-    df_base['Status'] = df_base['Status'].str.strip()
-    
-    # Força a coluna de valor a ser numérica (corrige o problema da barrinha não somar)
-    df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0)
+    if not df_base.empty:
+        # A linha abaixo precisa estar exatamente 8 espaços (ou 2 tabs) para dentro
         lista_edit = {f"ID {r['ID']} ! {r['Data']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         if escolha:
@@ -261,10 +256,34 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
                 
-                # RESET TOTAL DO APP
+                # Reset para atualizar as barrinhas em Real (R$)
                 st.cache_data.clear()
                 for key in st.session_state.keys():
                     del st.session_state[key]
+                st.rerun()
+
+            if col_ed2.button("🚨 EXCLUIR"):
+                if item['Categoria'] == 'Transferência':
+                    desc = item['Descrição']
+                    data = item['Data']
+                    v_num = item['V_Num']
+                    ids_para_excluir = []
+                    for idx, row in df_base.iterrows():
+                        if (row['Data'] == data and 
+                            abs(row['V_Num'] - v_num) < 0.01 and 
+                            row['Descrição'] == desc and 
+                            row['Categoria'] == 'Transferência'):
+                            ids_para_excluir.append(int(row['ID']))
+                    ids_para_excluir = sorted(list(set(ids_para_excluir)), reverse=True)
+                    for id_linha in ids_para_excluir:
+                        ws_base.delete_rows(id_linha)
+                else:
+                    ws_base.delete_rows(int(item['ID']))
+                
+                st.cache_data.clear()
+                for key in st.session_state.keys():
+                    del st.session_state[key]
+                st.rerun()
                 
                 st.success("Dados salvos! O sistema vai reiniciar para atualizar os saldos...")
                 st.rerun()
