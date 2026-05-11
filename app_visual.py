@@ -74,14 +74,18 @@ def carregar_dados_gs():
     if len(dados) <= 1: return pd.DataFrame()
     df = pd.DataFrame(dados[1:], columns=dados[0])
     df['ID'] = range(2, len(df) + 2)
+    
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
         except: return 0.0
+        
     df['V_Num'] = df['Valor'].apply(p_float)
-    df['DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
+    
+    # AJUSTE AQUI: Mudamos de 'Data' para 'Vencimento' para bater com sua planilha
+    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')
+    
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
     return df
-
 def carregar_bancos_manual_gs():
     if ws_bancos:
         dados = ws_bancos.get_all_values()
