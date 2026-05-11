@@ -229,15 +229,19 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
-        # Criando a lista de edição (garantindo que os 40 últimos apareçam)
-        lista_edit = {f"ID {r['ID']} ! {r['Data']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
+        # Aumentamos para 200 para garantir que você veja todos os pendentes
+        # Ordenamos para que os 'Pendentes' apareçam primeiro na sua lista
+        df_ajuste = df_base.tail(200).copy()
+        df_ajuste['Prioridade'] = df_ajuste['Status'].apply(lambda x: 0 if x == 'Pendente' else 1)
+        df_ajuste = df_ajuste.sort_values(by=['Prioridade', 'DT'], ascending=[True, False])
+        
+        lista_edit = {f"{r['Status']} ! {r['Data']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_ajuste.iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         
         if escolha:
             item = lista_edit[escolha]
             data_atual_dt = datetime.strptime(item['Data'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Data:", value=data_atual_dt, format="DD/MM/YYYY")
-            
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
@@ -249,33 +253,27 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
             col_ed1, col_ed2 = st.columns(2)
-            
             if col_ed1.button("💾 ATUALIZAR"):
-                # Formatando o valor para o padrão da sua planilha (Real R$)
                 v_str = f"{ed_val:.2f}".replace('.', ',')
+                # Atualiza diretamente na planilha Google Sheets
                 ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
                 ws_base.update_cell(int(item['ID']), 2, v_str)
                 ws_base.update_cell(int(item['ID']), 3, ed_desc)
                 ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
                 
-                # LIMPEZA DE CACHE E ESTADO: Força o app Wilson a ler os dados novos
+                # FORÇA A ATUALIZAÇÃO DAS BARRINHAS:
                 st.cache_data.clear()
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
-                
-                st.success("Dados atualizados com sucesso!")
                 st.rerun()
 
             if col_ed2.button("🚨 EXCLUIR"):
-                if item['Categoria'] == 'Transferência':
-                    # Lógica para excluir os dois lados da transferência
-                    desc = item['Descrição']
-                    data = item['Data']
-                    v_num = item['V_Num']
-                    ids_para_excluir = [int(row['ID']) for _, row in df_base.iterrows() if (row['Data'] == data and abs(row['V_Num'] - v_num) < 0.01 and row['Descrição'] == desc and row['Categoria'] == 'Transferência')]
-                    for id_linha in sorted(ids_para_excluir, reverse=True):
-                        ws_base.delete_rows(id_linha)
+                ws_base.delete_rows(int(item['ID']))
+                st.cache_data.clear()
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                st.rerun()
                 else:
                     ws_base.delete_rows(int(item['ID']))
                 
