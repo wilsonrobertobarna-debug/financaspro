@@ -228,7 +228,13 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
-    if not df_base.empty:
+  if not df_base.empty:
+    # Remove espaços em branco dos nomes das colunas e dos dados
+    df_base.columns = df_base.columns.str.strip()
+    df_base['Status'] = df_base['Status'].str.strip()
+    
+    # Força a coluna de valor a ser numérica (corrige o problema da barrinha não somar)
+    df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0)
         lista_edit = {f"ID {r['ID']} ! {r['Data']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         if escolha:
