@@ -9,7 +9,6 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import urllib.parse
-import urllib.parse
 
 # RESOLUÇÃO DO FUSO HORÁRIO (Sem precisar de biblioteca extra)
 # O servidor do Streamlit é 3 horas adiantado. Tiramos 3 horas para ser Brasília.
