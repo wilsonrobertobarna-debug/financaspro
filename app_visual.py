@@ -368,7 +368,8 @@ if "💰" in aba:
             df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
                 lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
             )
-            df_saldo_dia = df_saldo_dia.groupby('Data')['Valor_Com_Sinal'].sum().reset_index()
+           # MUDANÇA: Trocamos 'Data' por 'Vencimento' para o gráfico de saldo
+            df_saldo_dia = df_saldo_dia.groupby('Vencimento')['Valor_Com_Sinal'].sum().reset_index()
             df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
             
             fig_acum = px.line(df_saldo_dia, x='Data', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
