@@ -234,18 +234,21 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         if escolha:
          item = lista_edit[escolha]
             
-            # MUDANÇA AQUI: Trocamos item['Data'] por item['Vencimento']
+            item = lista_edit[escolha]
+            
+            # MUDANÇA: Usando 'Vencimento' como a data principal do sistema
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_venc = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
             
-            # Ajuste de Data da Compra (Coluna H)
-            # MUDANÇA: Se não houver Data Compra, ele usa o Vencimento como referência
+            # Buscando a Data Compra com segurança
             data_compra_valor = item.get('Data Compra', item['Vencimento'])
             
             try:
                 compra_atual_dt = datetime.strptime(data_compra_valor, "%d/%m/%Y")
             except:
                 compra_atual_dt = data_atual_dt
+
+            ed_compra = st.date_input("Alterar Data da Compra:", value=compra_atual_dt, format="DD/MM/YYYY")
 
             ed_compra = st.date_input("Alterar Data da Compra:", value=compra_atual_dt, format="DD/MM/YYYY")
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
