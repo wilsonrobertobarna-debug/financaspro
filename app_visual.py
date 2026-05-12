@@ -52,7 +52,7 @@ def conectar():
 def carregar_dados():
     try:
         gc = conectar()
-        # Certifique-se que o nome da planilha no Google Drive é "FinançasPro"
+        # O nome da sua planilha no Google Drive
         sh = gc.open("FinançasPro") 
         worksheet = sh.get_worksheet(0)
         dados = worksheet.get_all_records()
