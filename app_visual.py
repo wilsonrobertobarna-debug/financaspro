@@ -352,54 +352,55 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             ) 
             # --- BLOCO DE EDIÇÃO LIMPO ---
         # 1. Ajuste do Valor: busca 'Valor' ou 'V_Num
-    if item:
-    # --- 1. TRATAMENTO DE DADOS (Coluna B: Valor | Coluna C: Descrição) ---
-    # Buscamos o valor e garantimos que ele seja um número decimal limpo
-    v_bruto = item.get('Valor', item.get('valor', 0.0))
-    try:
-        # Limpa R$, pontos e ajusta a vírgula para o Python entender
-        v_limpo = float(str(v_bruto).replace('R$', '').replace('.', '').replace(',', '.').strip())
-    except:
-        v_limpo = 0.0
+  # --- BLOCO CORRIGIDO E ALINHADO (app_visual.py) ---
+        
+        if item:
+            # --- 1. TRATAMENTO DE DADOS (Coluna B: Valor | Coluna C: Descrição) ---
+            # Buscamos o valor e garantimos que ele seja um número decimal limpo
+            v_bruto = item.get('Valor', item.get('valor', 0.0))
+            try:
+                # Limpa R$, pontos e ajusta a vírgula para o Python entender
+                v_limpo = float(str(v_bruto).replace('R$', '').replace('.', '').replace(',', '.').strip())
+            except:
+                v_limpo = 0.0
 
-    # Busca a descrição garantindo que venha como texto
-    d_original = str(item.get('Descrição', item.get('Descricao', 'Sem Descrição')))
+            # Busca a descrição garantindo que venha como texto
+            d_original = str(item.get('Descrição', item.get('Descricao', 'Sem Descrição')))
 
-    # --- 2. INTERFACE DE EDIÇÃO (Visual Limpo) ---
-    st.subheader("📝 Ajustar Lançamento")
-    st.markdown(f"**Editando:** {d_original} | **Valor Atual:** R$ {v_limpo:.2f}")
+            # --- 2. INTERFACE DE EDIÇÃO (Visual Limpo) ---
+            st.subheader("📝 Ajustar Lançamento")
+            st.markdown(f"**Editando:** {d_original} | **Valor Atual:** R$ {v_limpo:.2f}")
 
-    # Campo de Valor (Coluna B)
-    ed_val = st.number_input("Alterar Valor:", value=v_limpo, step=0.01, format="%.2f", key="edit_val_pro")
+            # Campo de Valor (Coluna B) - Adicionada Key única
+            ed_val = st.number_input("Alterar Valor:", value=v_limpo, step=0.01, format="%.2f", key="edit_val_pro")
 
-    # Campo de Descrição (Coluna C)
-    ed_desc = st.text_input("Alterar Descrição:", value=d_original, key="edit_desc_pro")
+            # Campo de Descrição (Coluna C) - Adicionada Key única
+            ed_desc = st.text_input("Alterar Descrição:", value=d_original, key="edit_desc_pro")
 
-    # Seleção de Banco
-    banco_atual = item.get('Banco', '')
-    idx_b = bancos_disponiveis.index(banco_atual) if banco_atual in bancos_disponiveis else 0
-    ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b, key="edit_bnc_pro")
+            # Seleção de Banco
+            banco_atual = item.get('Banco', '')
+            idx_b = bancos_disponiveis.index(banco_atual) if banco_atual in bancos_disponiveis else 0
+            ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b, key="edit_bnc_pro")
 
-    # Seleção de Status
-    status_opcoes = ["Pago", "Pendente"]
-    status_atual = item.get('Status', 'Pendente')
-    idx_s = status_opcoes.index(status_atual) if status_atual in status_opcoes else 0
-    ed_sta = st.selectbox("Status:", status_opcoes, index=idx_s, key="edit_sta_pro")
+            # Seleção de Status
+            status_opcoes = ["Pago", "Pendente"]
+            status_atual = item.get('Status', 'Pendente')
+            idx_s = status_opcoes.index(status_atual) if status_atual in status_opcoes else 0
+            ed_sta = st.selectbox("Status:", status_opcoes, index=idx_s, key="edit_sta_pro")
 
-    # --- 3. BOTÕES DE AÇÃO (Alinhados) ---
-    st.write("---") # Linha divisória para separar do formulário
-    col_ed1, col_ed2 = st.columns(2)
-    
-    with col_ed1:
-        if st.button("✅ Salvar Alterações", key="btn_save_final", use_container_width=True):
-            st.info("Processando atualização no Google Sheets...")
-            # Aqui você chama sua função de update (ex: atualizar_planilha(ed_val, ed_desc...))
+            # --- 3. BOTÕES DE AÇÃO (Alinhados) ---
+            st.write("---")
+            col_ed1, col_ed2 = st.columns(2)
+            
+            with col_ed1:
+                if st.button("✅ Salvar Alterações", key="btn_save_final", use_container_width=True):
+                    st.info("Processando atualização no Google Sheets...")
+                    # Aqui entra sua função de salvar
 
-    with col_ed2:
-        if st.button("🗑️ Excluir Registro", type="primary", key="btn_del_final", use_container_width=True):
-            st.warning("Removendo lançamento...")
-            # Aqui você chama sua função de delete
-        # 2. Ajuste da Descrição: busca com ou sem acento
+            with col_ed2:
+                if st.button("🗑️ Excluir Registro", type="primary", key="btn_del_final", use_container_width=True):
+                    st.warning("Removendo lançamento...")
+                    # Aqui entra sua função de excluir        # 2. Ajuste da Descrição: busca com ou sem acento
         valor_desc = str(item.get('Descrição', item.get('Descricao', '')))
         ed_desc = st.text_input("Alterar Descrição:", value=valor_desc, key="ed_desc_ajuste")
 
