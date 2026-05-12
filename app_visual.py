@@ -352,7 +352,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             ) 
             # --- BLOCO DE EDIÇÃO LIMPO ---
         # 1. Ajuste do Valor: busca 'Valor' ou 'V_Num
-    if item
+    if item:
         # --- BLOCO DE EDIÇÃO LIMPO ---
         # 1. Ajuste do Valor: busca 'Valor' ou 'V_Num'
         valor_limpo = float(item.get('Valor', item.get('V_Num', 0.0)))
