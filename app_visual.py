@@ -237,11 +237,35 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
      # Alinhamento correto das variáveis
        # 1. Tentamos pegar os dados do estado da sessão ou do seu DataFrame principal
         # Se você usa outro nome (como 'dados'), substitua o 'df' abaixo
-        dados_para_editar = st.session_state.get('df', df) if 'df' in locals() or 'df' in st.session_state else []
+  # 1. Tenta encontrar os dados em qualquer lugar (df, dados ou session_state)
+        # Priorizamos o que estiver carregado na memória do Streamlit
+        if 'df' in st.session_state:
+            dados_brutos = st.session_state['df']
+        elif 'dados' in st.session_state:
+            dados_brutos = st.session_state['dados']
+        elif 'df' in locals():
+            dados_brutos = df
+        else:
+            dados_brutos = []
 
-# 1. Preparação dos dados para o seletor
-      # 1. Pegamos os dados
-        dados_brutos = st.session_state.get('df', [])
+        # 2. Converte para lista de registros com segurança
+        if hasattr(dados_brutos, 'to_dict'):
+            registros = dados_brutos.to_dict('records')
+        else:
+            registros = dados_brutos
+
+        # 3. Criação do dicionário para o seletor
+        lista_edit = {}
+        for item in registros:
+            if isinstance(item, dict):
+                # Busca Vencimento ou Data para manter a organização
+                venc = item.get('Vencimento') or item.get('Data') or 'Sem Data'
+                desc = item.get('Descrição', 'Sem Descrição')
+                # Busca o valor numérico para o saldo em Real
+                valor = item.get('V_Num') or item.get('Valor') or 0.0
+                
+                label = f"{venc} - {desc} (R$ {valor})"
+                lista_edit[label] = item
         registros = dados_brutos.to_dict('records') if hasattr(dados_brutos, 'to_dict') else dados_brutos
 
         lista_edit = {}
