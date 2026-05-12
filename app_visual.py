@@ -383,7 +383,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 st.warning("Excluindo...") # Aqui vai sua lógica de delete
         # 2. Ajuste da Descrição: busca com ou sem acento
         valor_desc = str(item.get('Descrição', item.get('Descricao', '')))
-        ed_desc = st.text_input("Alterar Descrição:", value=valor_desc)
+        ed_desc = st.text_input("Alterar Descrição:", value=valor_desc, key="ed_desc_ajuste")
 
         # 3. Ajuste do Banco
         banco_atual = item.get('Banco', '')
