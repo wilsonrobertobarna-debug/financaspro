@@ -240,23 +240,28 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         dados_para_editar = st.session_state.get('df', df) if 'df' in locals() or 'df' in st.session_state else []
 
 # 1. Preparação dos dados para o seletor
+      # 1. Pegamos os dados
         dados_brutos = st.session_state.get('df', [])
         registros = dados_brutos.to_dict('records') if hasattr(dados_brutos, 'to_dict') else dados_brutos
 
-        # 2. Criação do dicionário de busca (Corrigindo a sintaxe)
         lista_edit = {}
         for item in registros:
             if isinstance(item, dict):
-                # Usamos Vencimento e V_Num para garantir cálculos precisos em Real (R$)
-                venc = item.get('Vencimento', 'Sem Data')
-                desc = item.get('Descrição', 'Sem Descrição')
-                valor = item.get('V_Num', 0.0)
+                # Tenta buscar Vencimento, se não achar tenta Data, se não achar usa 'Sem Data'
+                venc = item.get('Vencimento') or item.get('Data') or 'Sem Data'
+                desc = item.get('Descrição') or 'Sem Descrição'
+                
+                # Tenta buscar V_Num, se não achar tenta Valor
+                valor = item.get('V_Num') or item.get('Valor') or 0.0
                 
                 label = f"{venc} - {desc} (R$ {valor})"
                 lista_edit[label] = item
 
-        # 3. Componente visual do Streamlit
+        # 2. Mostra o seletor
         opcoes = list(lista_edit.keys())
+        if not opcoes:
+            st.warning("⚠️ Nenhum lançamento encontrado para editar. Verifique se os dados foram carregados.")
+        
         escolha = st.selectbox("Selecione o registro para editar/excluir:", [""] + opcoes)
         if escolha:
             item = lista_edit[escolha]
