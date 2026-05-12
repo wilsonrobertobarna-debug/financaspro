@@ -232,23 +232,22 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         if escolha:
-            item = lista_edit[escolha]
+         item = lista_edit[escolha]
             
             # MUDANÇA AQUI: Trocamos item['Data'] por item['Vencimento']
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_venc = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
             
             # Ajuste de Data da Compra (Coluna H)
-            # Verifica se a coluna existe no seu DataFrame, senão usa a data atual
-            # MUDANÇA: Se não houver Data Compra, ele usa o Vencimento como referênciadata_compra_valor = item.get('Data Compra', item['Vencimento'])
-                data_compra_valor = item.get('Data Compra', item['Vencimento'])
+            # MUDANÇA: Se não houver Data Compra, ele usa o Vencimento como referência
+            data_compra_valor = item.get('Data Compra', item['Vencimento'])
+            
             try:
                 compra_atual_dt = datetime.strptime(data_compra_valor, "%d/%m/%Y")
             except:
                 compra_atual_dt = data_atual_dt
 
             ed_compra = st.date_input("Alterar Data da Compra:", value=compra_atual_dt, format="DD/MM/YYYY")
-            
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
