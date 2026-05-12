@@ -80,7 +80,7 @@ df = st.session_state.get('df', pd.DataFrame())
 with st.spinner("Sincronizando com Google Sheets..."):
 
 # Atalho para o restante do app usar
-df = st.session_state['df']
+    df = st.session_state['df']
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
     if not creds_dict:
         st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
