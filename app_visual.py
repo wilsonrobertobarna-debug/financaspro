@@ -333,8 +333,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 "Alterar Vencimento:", 
                 value=data_atual_dt, 
                 format="DD/MM/YYYY", 
-                key=f"ed_venc_{item['ID']}"
-                
+                key=f"ed_venc_{item.get('ID', 'sem_id')}"
             )
             
             # Busca Data Compra ou usa Vencimento como fallback
