@@ -353,20 +353,20 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             # --- BLOCO DE EDIÇÃO LIMPO ---
         # 1. Ajuste do Valor: busca 'Valor' ou 'V_Num
     if item:
-# 1. TESTE DE COLUNAS: Isso vai mostrar na tela o que o Python achou
-# st.write("Colunas detectadas:", item.keys()) 
+        # 1. TESTE DE COLUNAS: Isso vai mostrar na tela o que o Python achou
+        # st.write("Colunas detectadas:", item.keys()) 
 
-# 2. MAPEAMENTO DIRETO (Forçando Coluna B e C)
-# Se o seu item for uma lista (por posição):
-# valor_bruto = item[1]  # Coluna B (índice 1 no Python)
-# desc_bruta = item[2]   # Coluna C (índice 2 no Python)
+        # 2. MAPEAMENTO DIRETO (Forçando Coluna B e C)
+        # Se o seu item for uma lista (por posição):
+        # valor_bruto = item[1]  # Coluna B (índice 1 no Python)
+        # desc_bruta = item[2]   # Coluna C (índice 2 no Python)
 
-# Se o seu item for um dicionário (pelo nome da coluna):
-valor_limpo = float(item.get('Valor', item.get('valor', 0.0)))
-valor_desc = item.get('Descrição', item.get('Descricao', 'Sem Descrição'))
+        # Se o seu item for um dicionário (pelo nome da coluna):
+        valor_limpo = float(item.get('Valor', item.get('valor', 0.0)))
+        valor_desc = item.get('Descrição', item.get('Descricao', 'Sem Descrição'))
 
-# Exibição para conferência rápida
-st.info(f"Lendo Valor: {valor_limpo} | Lendo Descrição: {valor_desc}")
+        # Exibição para conferência rápida
+        st.info(f"Lendo Valor: {valor_limpo} | Lendo Descrição: {valor_desc}")
         
         # --- BLOCO DE EDIÇÃO LIMPO ---
         # 1. Ajuste do Valor: busca 'Valor' ou 'V_Num'
