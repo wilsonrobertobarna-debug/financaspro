@@ -240,8 +240,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             
             # Ajuste de Data da Compra (Coluna H)
             # Verifica se a coluna existe no seu DataFrame, senão usa a data atual
-            # MUDANÇA: Se não houver Data Compra, ele usa o Vencimento como referência
-             data_compra_valor = item.get('Data Compra', item['Vencimento'])
+            # MUDANÇA: Se não houver Data Compra, ele usa o Vencimento como referênciadata_compra_valor = item.get('Data Compra', item['Vencimento'])
+                data_compra_valor = item.get('Data Compra', item['Vencimento'])
             try:
                 compra_atual_dt = datetime.strptime(data_compra_valor, "%d/%m/%Y")
             except:
