@@ -234,9 +234,9 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         # Certifique-se de que este bloco não está comentado ou dentro de outro 'if' que impeça a execução
        # 1. Criamos a lista de edição usando os dados do seu DataFrame (df)
         # IMPORTANTE: Usamos 'Vencimento' no lugar de 'Data'
-        lista_edit = {
+      lista_edit = {
             f"{item['Vencimento']} - {item['Descrição']} (R$ {item['V_Num']})": item 
-            for item in df.to_dict('records')
+            for item in dados.to_dict('records') # Troque 'df' pelo nome da sua variável
         }
 
         opcoes = list(lista_edit.keys())
