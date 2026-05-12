@@ -40,7 +40,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 2. CONEXÃO COM O GOOGLE SHEETS
+# 2. CONEXÃO (A função precisa envolver o try/except e o return)
 @st.cache_resource
 def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
@@ -56,46 +56,26 @@ def conectar():
         }
         import gspread
         from google.oauth2.service_account import Credentials
+        # O return DEVE estar recuado (8 espaços) para estar dentro do try/def
         return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
     except Exception as e:
         st.error(f"Erro na conexão: {e}"); st.stop()
 
-# 3. CARREGAMENTO DOS DADOS PARA A MEMÓRIA (SESSION STATE)
+# 3. CARREGAMENTO (ESTE BLOCO FICA NA MARGEM ESQUERDA)
 if 'df' not in st.session_state:
-    try:
-        gc = conectar()
-        sh = gc.open("FinançasPro") # Certifique-se que o nome é este no seu Drive
-        worksheet = sh.get_worksheet(0)
-        import pandas as pd
-        # Salva na memória para o 'Ajustar Lançamentos' não ficar branco
-        st.session_state['df'] = pd.DataFrame(worksheet.get_all_records())
-    except Exception as e:
-        st.error(f"Erro ao carregar dados: {e}")
-        st.session_state['df'] = pd.DataFrame()
+    with st.spinner("Sincronizando com Google Sheets..."):
+        try:
+            gc = conectar()
+            sh = gc.open("FinançasPro") # Nome exato da sua planilha
+            worksheet = sh.get_worksheet(0)
+            import pandas as pd
+            st.session_state['df'] = pd.DataFrame(worksheet.get_all_records())
+        except Exception as e:
+            st.error(f"Erro ao carregar dados: {e}")
+            st.session_state['df'] = pd.DataFrame()
 
-# 4. ATALHO GLOBAL
+# 4. ATALHO PARA O RESTANTE DO CÓDIGO
 df = st.session_state.get('df', pd.DataFrame())
-
-# Esta linha deve ficar logo abaixo, sozinha:
-with st.spinner("Sincronizando com Google Sheets..."):
-
-# Atalho para o restante do app usar
-    df = st.session_state['df']
-    creds_dict = st.secrets.get("connections", {}).get("gsheets")
-    if not creds_dict:
-        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
-    try:
-        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
-        if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
-        final_creds = {
-            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
-            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
-            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
-        }
-        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
-    except Exception as e:
-        st.error(f"Erro: {e}"); st.stop()
-
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
