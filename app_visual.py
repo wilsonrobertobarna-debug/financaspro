@@ -264,7 +264,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 st.rerun()
 
  # 5. TELAS PRINCIPAIS
-  if "💰" in aba:
+    if "💰" in aba:
         st.title("🛡️ FinançasPro Wilson")
         # --- FORMULÁRIO DE LANÇAMENTO ---
         st.subheader("➕ Novo Lançamento")
