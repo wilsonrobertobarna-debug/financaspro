@@ -232,7 +232,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         if escolha:
-         item = lista_edit[escolha]
+            item = lista_edit[escolha]
             
             # MUDANÇA: Usando 'Vencimento' como a data principal do sistema
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
@@ -246,6 +246,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             except:
                 compra_atual_dt = data_atual_dt
 
+            ed_compra = st.date_input("Alterar Data da Compra:", value=compra_atual_dt, format="DD/MM/YYYY")
             ed_compra = st.date_input("Alterar Data da Compra:", value=compra_atual_dt, format="DD/MM/YYYY")
 
             ed_compra = st.date_input("Alterar Data da Compra:", value=compra_atual_dt, format="DD/MM/YYYY")
