@@ -229,16 +229,22 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
         # MUDANÇA AQUI: Trocamos r['Data'] por r['Vencimento']
-        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
-        escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
+        # Certifique-se de que o selectbox e o if estão com o mesmo recuo
+        opcoes = list(lista_edit.keys())
+        escolha = st.selectbox("Selecione o registro para editar/excluir:", [""] + opcoes)
+
         if escolha:
             item = lista_edit[escolha]
             
-            # MUDANÇA: Usando 'Vencimento' como a data principal do sistema
+            # MUDANÇA: Usando 'Vencimento' (Coluna A) como referência principal
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
-            ed_venc = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY", key=f"ed_venc_{item['ID']}")
-            
-            # Buscando a Data Compra com segurança
+            ed_venc = st.date_input(
+                "Alterar Vencimento:", 
+                value=data_atual_dt, 
+                format="DD/MM/YYYY", 
+                key=f"ed_venc_{item['ID']}"
+            )            
+            # Busca Data Compra ou usa Vencimento como fallback
             data_compra_valor = item.get('Data Compra', item['Vencimento'])
             
             try:
@@ -251,7 +257,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 value=compra_atual_dt, 
                 format="DD/MM/YYYY",
                 key=f"ed_compra_{item['ID']}"
-            )
             )
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
