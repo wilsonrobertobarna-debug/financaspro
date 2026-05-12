@@ -244,12 +244,13 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             try:
                 compra_atual_dt = datetime.strptime(data_compra_valor, "%d/%m/%Y")
             except:
-                compra_atual_dt = data_atual_dt
-
-            ed_compra = st.date_input("Alterar Data da Compra:", value=compra_atual_dt, format="DD/MM/YYYY")
-            ed_compra = st.date_input("Alterar Data da Compra:", value=compra_atual_dt, format="DD/MM/YYYY")
-
-            ed_compra = st.date_input("Alterar Data da Compra:", value=compra_atual_dt, format="DD/MM/YYYY")
+                # MANTENHA APENAS ESTA VERSÃO (COM A KEY):
+            ed_compra = st.date_input(
+                "Alterar Data da Compra:", 
+                value=compra_atual_dt, 
+                format="DD/MM/YYYY",
+                key=f"ed_compra_{item['ID']}"
+            )
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
