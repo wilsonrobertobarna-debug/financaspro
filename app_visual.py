@@ -62,16 +62,27 @@ def conectar():
         st.error(f"Erro na conexão: {e}"); st.stop()
 
 # 3. CARREGAMENTO (ESTE BLOCO FICA NA MARGEM ESQUERDA)
+# --- LOCAL DE ALTERAÇÃO (BLOCO DE CARREGAMENTO) ---
 if 'df' not in st.session_state:
     with st.spinner("Sincronizando com Google Sheets..."):
         try:
             gc = conectar()
-            sh = gc.open("FinançasPro") # Nome exato da sua planilha
+            sh = gc.open("FinançasPro") 
             worksheet = sh.get_worksheet(0)
+            
             import pandas as pd
-            st.session_state['df'] = pd.DataFrame(worksheet.get_all_records())
+            dados = worksheet.get_all_records()
+            temp_df = pd.DataFrame(dados)
+
+            # AQUI ESTÁ O ACERTO:
+            # 1. Remove espaços invisíveis nos nomes das colunas (ex: "ID " vira "ID")
+            temp_df.columns = temp_df.columns.str.strip()
+            
+            # 2. Garante que os dados fiquem salvos na memória do app
+            st.session_state['df'] = temp_df
+            
         except Exception as e:
-            st.error(f"Erro ao carregar dados: {e}")
+            st.error(f"Erro ao processar as colunas da planilha: {e}")
             st.session_state['df'] = pd.DataFrame()
 
 # 4. ATALHO PARA O RESTANTE DO CÓDIGO
@@ -315,6 +326,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 value=data_atual_dt, 
                 format="DD/MM/YYYY", 
                 key=f"ed_venc_{item['ID']}"
+                
             )
             
             # Busca Data Compra ou usa Vencimento como fallback
