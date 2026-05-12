@@ -241,15 +241,18 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             # Buscando a Data Compra com segurança
             data_compra_valor = item.get('Data Compra', item['Vencimento'])
             
-            try:
+           try:
                 compra_atual_dt = datetime.strptime(data_compra_valor, "%d/%m/%Y")
             except:
-                # MANTENHA APENAS ESTA VERSÃO (COM A KEY):
+                compra_atual_dt = data_atual_dt  # Esta linha precisa do recuo!
+
+            # Agora sim, o ed_compra volta para o alinhamento principal do formulário
             ed_compra = st.date_input(
                 "Alterar Data da Compra:", 
                 value=compra_atual_dt, 
                 format="DD/MM/YYYY",
                 key=f"ed_compra_{item['ID']}"
+            )
             )
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
