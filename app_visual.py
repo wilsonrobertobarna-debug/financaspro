@@ -396,38 +396,32 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         # Estas linhas DEVEM ter espaços/recuo na frente
        # --- FINAL DA ABA ANTERIOR ---
         # Garante que o df_v_display use 'Vencimento' e esteja recuado (dentro do IF)
+        # Fim da aba Lançamentos (com 8 espaços de recuo)
         df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-# --- LINHA 402: ESTE ELIF DEVE ESTAR ALINHADO COM O 'IF' QUE DEFINE AS ABAS ---
+# O elif abaixo deve encostar na margem esquerda (0 espaços) ou alinhar com seu IF original
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
-    
     df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
-    
     if not df_aviso.empty:
-        # Cálculo dos dias usando a coluna DT baseada no Vencimento
         df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
         df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
-        
         if not df_venc.empty:
             for _, row in df_venc.iterrows():
                 d_aviso = row['Dias']
-                # Avisos corrigidos para usar a coluna 'Vencimento'
                 if d_aviso < 0:
-                    st.warning(f"⚠️ **Atrasado (Vencido):** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    st.warning(f"⚠️ **Atrasado:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
                 elif d_aviso == 0:
-                    st.warning(f"⚠️ **Vence hoje:** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    st.warning(f"⚠️ **Vence hoje:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
                 elif d_aviso == 1:
-                    st.warning(f"🚨 **Vence amanhã:** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
-                elif d_aviso == 3:
-                    st.warning(f"⚠️ **Vence em 3 dias:** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    st.warning(f"🚨 **Vence amanhã:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
         else:
-            st.info("Nenhum lançamento a vencer hoje, amanhã ou em atraso.")
+            st.info("Nenhum lançamento para os próximos dias.")
     else:
-        st.info("Nenhum lançamento pendente.")
+        st.info("Tudo em dia por aqui!")
     c1, c2 = st.columns(2)
     s_bnc = c1.multiselect("Filtrar Banco/Cartão:", sorted(bancos_disponiveis))
     b_desc = c2.text_input("Buscar Descrição:")
