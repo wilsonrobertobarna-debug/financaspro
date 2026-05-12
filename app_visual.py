@@ -431,7 +431,7 @@ elif "Pendências" in aba:
                 elif d_aviso == 0:
                     st.warning(f"⚠️ **Vence hoje:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
                 elif d_aviso == 1:
-                    st.warning(f"🚨 **Vence amanhã:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")")
+                    st.warning(f"🚨 **Vence amanhã:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
     
