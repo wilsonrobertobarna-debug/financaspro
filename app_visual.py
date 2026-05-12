@@ -468,7 +468,7 @@ elif "🐾" in aba:
         elif pet_escolha == "Bolt":
             df_show = df_bolt
             
-        df_show_display = df_show[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']].copy()
+        df_show_display = df_show[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']].copy()
         df_show_display['Valor'] = df_show['V_Num'].apply(m_fmt)
         st.dataframe(df_show_display.iloc[::-1], use_container_width=True, hide_index=True)
     else:
