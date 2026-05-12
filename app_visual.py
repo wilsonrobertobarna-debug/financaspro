@@ -404,11 +404,13 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
        # Final do bloco anterior (verifique se termina com parêntese fechado)
         # --- FINAL DA ABA ANTERIOR ---
         # Garante o uso da coluna 'Vencimento' conforme seu padrão
+        # --- FINAL DO BLOCO ANTERIOR ---
+        # Garante o uso da coluna Vencimento e oculta o índice para o visual limpo
         df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-# --- ESTA LINHA DEVE FICAR NA COLUNA ZERO (TOTALMENTE À ESQUERDA) ---
+# --- ESTA LINHA DEVE FICAR TOTALMENTE À ESQUERDA (SEM NENHUM ESPAÇO) ---
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
@@ -416,21 +418,20 @@ elif "Pendências" in aba:
     df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
     
     if not df_aviso.empty:
-        # Cálculo de dias usando a coluna Vencimento para RH e contas do Milo
+        # Cálculo de dias baseado no Vencimento (coluna DT)
         df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
         df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
         
         if not df_venc.empty:
             for _, row in df_venc.iterrows():
                 d_aviso = row['Dias']
+                # Alertas consistentes para despesas (como as do Milo ou RH)
                 if d_aviso < 0:
                     st.warning(f"⚠️ **Atrasado:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
                 elif d_aviso == 0:
                     st.warning(f"⚠️ **Vence hoje:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
                 elif d_aviso == 1:
-                    st.warning(f"🚨 **Vence amanhã:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
-        else:
-            st.info("Nenhum lançamento pendente para os próximos dias.")
+                    st.warning(f"🚨 **Vence amanhã:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")")
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
     
