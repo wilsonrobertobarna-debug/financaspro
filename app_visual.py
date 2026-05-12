@@ -49,17 +49,25 @@ def conectar():
         st.error(f"Erro: {e}"); st.stop()
 
 # 3. FUNÇÃO PARA CARREGAR DADOS (Esta linha deve encostar na margem esquerda)
-def carregar_dados():
-    try:
+# --- INÍCIO DO BLOCO DE CARREGAMENTO ---
+try:
+    if 'df' not in st.session_state:
         gc = conectar()
-        # O nome da sua planilha no Google Drive
+        # Abre a planilha pelo nome exato que está no seu Google Drive
         sh = gc.open("FinançasPro") 
         worksheet = sh.get_worksheet(0)
-        dados = worksheet.get_all_records()
-        return pd.DataFrame(dados)
-    except Exception as e:
-        st.error(f"Erro ao acessar a planilha: {e}")
-        return pd.DataFrame()
+        dados_lista = worksheet.get_all_records()
+        
+        import pandas as pd
+        st.session_state['df'] = pd.DataFrame(dados_lista)
+
+    # Cria o atalho df para o restante do código usar
+    df = st.session_state['df']
+
+except Exception as e:
+    st.error(f"Erro ao carregar dados: {e}")
+    df = pd.DataFrame() # Cria um vazio para o app não travar totalmente
+# --- FIM DO BLOCO DE CARREGAMENTO ---
    
 # 4. SALVANDO NA MEMÓRIA (Para a aba de Ajustes não ficar branca)
 if 'df' not in st.session_state:
