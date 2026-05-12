@@ -351,7 +351,36 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 key=f"ed_compra_{item['ID']}"
             ) 
             # --- BLOCO DE EDIÇÃO LIMPO ---
+        # 1. Ajuste do Valor: busca 'Valor' ou 'V_Num
+    if item
+        # --- BLOCO DE EDIÇÃO LIMPO ---
         # 1. Ajuste do Valor: busca 'Valor' ou 'V_Num'
+        valor_limpo = float(item.get('Valor', item.get('V_Num', 0.0)))
+        ed_val = st.number_input("Alterar Valor:", value=valor_limpo, step=0.01, format="%.2f")
+
+        # 2. Ajuste da Descrição: busca com ou sem acento
+        valor_desc = str(item.get('Descrição', item.get('Descricao', '')))
+        ed_desc = st.text_input("Alterar Descrição:", value=valor_desc)
+
+        # 3. Ajuste do Banco
+        banco_atual = item.get('Banco', '')
+        idx_b = bancos_disponiveis.index(banco_atual) if banco_atual in bancos_disponiveis else 0
+        ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
+
+        # 4. Ajuste do Status
+        status_opcoes = ["Pago", "Pendente"]
+        status_atual = item.get('Status', 'Pendente')
+        idx_s = status_opcoes.index(status_atual) if status_atual in status_opcoes else 0
+        ed_sta = st.selectbox("Status:", status_opcoes, index=idx_s)
+
+        # 5. Botões de Ação (Alinhados corretamente)
+        col_ed1, col_ed2 = st.columns(2)
+        with col_ed1:
+            if st.button("Salvar Alterações"):
+                st.info("Salvando...") # Aqui vai sua lógica de update
+        with col_ed2:
+            if st.button("Excluir", type="primary"):
+                st.warning("Excluindo...") # Aqui vai sua lógica de delete
         # 2. Ajuste da Descrição: busca com ou sem acento
         valor_desc = str(item.get('Descrição', item.get('Descricao', '')))
         ed_desc = st.text_input("Alterar Descrição:", value=valor_desc)
