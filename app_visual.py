@@ -74,8 +74,10 @@ if 'df' not in st.session_state:
         st.session_state['df'] = pd.DataFrame()
 
 # 4. ATALHO GLOBAL
-df = st.session_state.get('df', pd.DataFrame())    with st.spinner("Sincronizando com Google Sheets..."):
-        st.session_state['df'] = carregar_dados()
+df = st.session_state.get('df', pd.DataFrame())
+
+# Esta linha deve ficar logo abaixo, sozinha:
+with st.spinner("Sincronizando com Google Sheets..."):
 
 # Atalho para o restante do app usar
 df = st.session_state['df']
