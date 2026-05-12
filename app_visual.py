@@ -74,17 +74,25 @@ if 'df' not in st.session_state:
             dados = worksheet.get_all_records()
             temp_df = pd.DataFrame(dados)
 
-            # AQUI ESTÁ O ACERTO:
-            # 1. Remove espaços invisíveis nos nomes das colunas (ex: "ID " vira "ID")
-            temp_df.columns = temp_df.columns.str.strip()
+            # --- TRADUÇÃO DAS COLUNAS ---
+            # Remove espaços invisíveis
+            temp_df.columns = temp_df.columns.str.strip() 
             
-            # 2. Garante que os dados fiquem salvos na memória do app
+            # Mapeia os nomes da sua planilha para os nomes que o código entende
+            mapeamento = {
+                'Descrição': 'Descricao',
+                'Valor': 'V_Num'
+            }
+            temp_df.rename(columns=mapeamento, inplace=True)
+            
+            # Como sua planilha não tem a coluna 'ID', vamos criar uma automática
+            # Isso impede o erro KeyError na linha 328
+            temp_df['ID'] = range(1, len(temp_df) + 1)
+            
             st.session_state['df'] = temp_df
-            
         except Exception as e:
-            st.error(f"Erro ao processar as colunas da planilha: {e}")
+            st.error(f"Erro ao organizar colunas: {e}")
             st.session_state['df'] = pd.DataFrame()
-
 # 4. ATALHO PARA O RESTANTE DO CÓDIGO
 df = st.session_state.get('df', pd.DataFrame())
 client = conectar()
