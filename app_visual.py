@@ -389,15 +389,15 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         banco_atual = item.get('Banco', '')
         idx_b = bancos_disponiveis.index(banco_atual) if banco_atual in bancos_disponiveis else 0
      # 3. Ajuste do Banco (Adicionada a key)
-banco_atual = item.get('Banco', '')
-idx_b = bancos_disponiveis.index(banco_atual) if banco_atual in bancos_disponiveis else 0
-ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b, key="ed_bnc_ajuste")
+        banco_atual = item.get('Banco', '')
+        idx_b = bancos_disponiveis.index(banco_atual) if banco_atual in bancos_disponiveis else 0
+        ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b, key="ed_bnc_ajuste")
 
-# 4. Ajuste do Status (Adicionada a key para evitar o próximo erro)
-status_opcoes = ["Pago", "Pendente"]
-status_atual = item.get('Status', 'Pendente')
-idx_s = status_opcoes.index(status_atual) if status_atual in status_opcoes else 0
-ed_sta = st.selectbox("Status:", status_opcoes, index=idx_s, key="ed_sta_ajuste")
+     # 4. Ajuste do Status (Adicionada a key para evitar o próximo erro)
+        status_opcoes = ["Pago", "Pendente"]
+        status_atual = item.get('Status', 'Pendente')
+        idx_s = status_opcoes.index(status_atual) if status_atual in status_opcoes else 0
+        ed_sta = st.selectbox("Status:", status_opcoes, index=idx_s, key="ed_sta_ajuste")
         # 4. Ajuste do Status
         status_opcoes = ["Pago", "Pendente"]
         status_atual = item.get('Status', 'Pendente')
