@@ -350,11 +350,11 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 format="DD/MM/YYYY",
                 key=f"ed_compra_{item['ID']}"
             ) 
-           # 1. Ajuste do Valor: busca 'Valor' ou 'V_Num'
+            # 1. Ajuste do Valor: busca 'Valor' ou 'V_Num'
             valor_limpo = float(item.get('Valor', item.get('V_Num', 0.0)))
             ed_val = st.number_input("Alterar Valor:", value=valor_limpo, step=0.01, format="%.2f")
 
-    '        # 2. Ajuste da Descrição: busca com ou sem acento
+            # 2. Ajuste da Descrição: busca com ou sem acento
             valor_desc = item.get('Descrição', item.get('Descricao', ''))
             ed_desc = st.text_input("Alterar Descrição:", value=valor_desc)
 
