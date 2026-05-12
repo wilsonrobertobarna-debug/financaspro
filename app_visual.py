@@ -43,6 +43,26 @@ st.markdown("""
 # 2. CONEXÃO
 @st.cache_resource
 def conectar():
+    # 3. FUNÇÃO PARA REALMENTE BUSCAR OS DADOS
+def carregar_dados():
+    try:
+        gc = conectar()
+        # IMPORTANTE: Coloque o nome exato da sua planilha do Google Drive aqui
+        sh = gc.open("FinançasPro") 
+        worksheet = sh.get_worksheet(0)
+        dados = worksheet.get_all_records()
+        return pd.DataFrame(dados)
+    except Exception as e:
+        st.error(f"Erro ao acessar a planilha: {e}")
+        return pd.DataFrame()
+
+# 4. SALVANDO NA MEMÓRIA (Para a aba de Ajustes não ficar branca)
+if 'df' not in st.session_state:
+    with st.spinner("Sincronizando com Google Sheets..."):
+        st.session_state['df'] = carregar_dados()
+
+# Atalho para o restante do app usar
+df = st.session_state['df']
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
     if not creds_dict:
         st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
