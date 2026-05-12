@@ -220,7 +220,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         if escolha:
             item = lista_edit[escolha]
-            data_atual_dt = datetime.strptime(item['Data'], "%d/%m/%Y")
+            data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Data:", value=data_atual_dt, format="DD/MM/YYYY")
             
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
