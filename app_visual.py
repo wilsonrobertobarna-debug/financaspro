@@ -403,7 +403,10 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         # 5. Botões de Ação (Alinhados corretamente)
         col_ed1, col_ed2 = st.columns(2)
         with col_ed1:
-            if st.button("Salvar Alterações"):
+            # Altere a linha 406 para incluir a key
+        if st.button("Salvar Alterações", key="btn_salvar_edicao"):
+            # Sua lógica de salvar continua aqui embaixo
+            st.success("Alteração salva com sucesso!")
                 st.info("Salvando...") # Aqui vai sua lógica de update
         with col_ed2:
             if st.button("Excluir", type="primary"):
