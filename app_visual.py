@@ -351,7 +351,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 key=f"ed_compra_{item['ID']}"
             ) 
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
-            ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
+            valor_desc = item.get('Descrição', item.get('Descricao', ''))
+            ed_desc = st.text_input("Alterar Descrição:", value=valor_desc)
             
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
             ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
