@@ -235,13 +235,17 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
        # 1. Criamos a lista de edição usando os dados do seu DataFrame (df)
         # IMPORTANTE: Usamos 'Vencimento' no lugar de 'Data'
      # Alinhamento correto das variáveis
+       # 1. Tentamos pegar os dados do estado da sessão ou do seu DataFrame principal
+        # Se você usa outro nome (como 'dados'), substitua o 'df' abaixo
+        dados_para_editar = st.session_state.get('df', df) if 'df' in locals() or 'df' in st.session_state else []
+
         lista_edit = {
             f"{item['Vencimento']} - {item['Descrição']} (R$ {item['V_Num']})": item 
-            for item in df.to_dict('records')
+            for item in dados_para_editar.to_dict('records')
         }
+
         opcoes = list(lista_edit.keys())
         escolha = st.selectbox("Selecione o registro para editar/excluir:", [""] + opcoes)
-
         if escolha:
             item = lista_edit[escolha]
             
