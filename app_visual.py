@@ -350,21 +350,24 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 format="DD/MM/YYYY",
                 key=f"ed_compra_{item['ID']}"
             ) 
-            # 1. Ajuste do Valor: busca 'Valor' ou 'V_Num' e garante que seja número
-            valor_limpo = float(item.get('Valor', item.get('V_Num', 0.0)))
-            ed_val = st.number_input("Alterar Valor:", value=valor_limpo, step=0.01, format="%.2f")
+           # 1. Ajuste do Valor: busca 'Valor' ou 'V_Num'
+valor_limpo = float(item.get('Valor', item.get('V_Num', 0.0)))
+ed_val = st.number_input("Alterar Valor:", value=valor_limpo, step=0.01, format="%.2f")
 
-            # 2. Ajuste da Descrição: busca com ou sem acento
-            valor_desc = item.get('Descrição', item.get('Descricao', ''))
-            ed_desc = st.text_input("Alterar Descrição:", value=valor_desc)
-                      
-            idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
-            ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
-            
-            status_opcoes = ["Pago", "Pendente"]
-            index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
-            ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
-            
+# 2. Ajuste da Descrição: busca com ou sem acento
+valor_desc = item.get('Descrição', item.get('Descricao', ''))
+ed_desc = st.text_input("Alterar Descrição:", value=valor_desc)
+
+# 3. Ajuste do Banco (Proteção contra erro de coluna)
+banco_atual = item.get('Banco', '')
+idx_b = bancos_disponiveis.index(banco_atual) if banco_atual in bancos_disponiveis else 0
+ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
+
+# 4. Ajuste do Status
+status_opcoes = ["Pago", "Pendente"]
+status_atual = item.get('Status', 'Pendente') # Padrão pendente se não achar
+index_status = status_opcoes.index(status_atual) if status_atual in status_opcoes else 0
+ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             col_ed1, col_ed2 = st.columns(2)
             if col_ed1.button("💾 ATUALIZAR"):
                 v_str = f"{ed_val:.2f}".replace('.', ',')
