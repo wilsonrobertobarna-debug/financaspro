@@ -40,30 +40,41 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- COPIE A PARTIR DAQUI (Linha 40 aproximadamente) ---
+
 # 2. CONEXÃO
 @st.cache_resource
 def conectar():
-    # Final da função conectar()
+    creds_dict = st.secrets.get("connections", {}).get("gsheets")
+    if not creds_dict:
+        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
+    try:
+        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
+        if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
+        final_creds = {
+            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
+            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
+            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
+        }
         return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
     except Exception as e:
-        st.error(f"Erro: {e}"); st.stop()
+        st.error(f"Erro na conexão: {e}"); st.stop()
 
-# 3. FUNÇÃO PARA CARREGAR DADOS (Esta linha deve encostar na margem esquerda)
-# --- INÍCIO DO BLOCO DE CARREGAMENTO ---
-# --- INÍCIO DO CARREGAMENTO ---
+# 3. CARREGAMENTO DIRETO (Cole exatamente na margem esquerda)
 if 'df' not in st.session_state:
     try:
         gc = conectar()
-        # Abre a planilha pelo nome exato
-        sh = gc.open("FinançasPro") 
+        sh = gc.open("FinançasPro") # Nome da sua planilha no Drive
         worksheet = sh.get_worksheet(0)
-        dados_lista = worksheet.get_all_records()
-        
         import pandas as pd
-        st.session_state['df'] = pd.DataFrame(dados_lista)
+        # Salva na memória para o 'Ajustar Lançamentos' funcionar
+        st.session_state['df'] = pd.DataFrame(worksheet.get_all_records())
     except Exception as e:
         st.error(f"Erro ao carregar dados: {e}")
         st.session_state['df'] = pd.DataFrame()
+
+# Atalho para o restante do app usar
+df = st.session_state.get('df', pd.DataFrame())
 
 # Cria o atalho df para o restante do app usar
 df = st.session_state['df']
