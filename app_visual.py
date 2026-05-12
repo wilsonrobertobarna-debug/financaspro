@@ -230,12 +230,17 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
         # MUDANÇA AQUI: Trocamos r['Data'] por r['Vencimento']
         # Certifique-se de que o selectbox e o if estão com o mesmo recuo
+       # 1. Primeiro, criamos a lista (o dicionário) a partir dos seus dados
+        # Certifique-se de que este bloco não está comentado ou dentro de outro 'if' que impeça a execução
+        lista_edit = {f"{item['Vencimento']} - {item['Descrição']} (R$ {item['V_Num']})": item for item in seus_dados_aqui}
+
+        # 2. Só depois usamos ela para criar as opções
         opcoes = list(lista_edit.keys())
         escolha = st.selectbox("Selecione o registro para editar/excluir:", [""] + opcoes)
 
         if escolha:
             item = lista_edit[escolha]
-            
+                
             # MUDANÇA: Usando 'Vencimento' (Coluna A) como referência principal
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_venc = st.date_input(
