@@ -399,8 +399,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         # Fim da aba Lançamentos (com 8 espaços de recuo)
        # Fim da aba Lançamentos (com 8 espaços de recuo)
        df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
-        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+       df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+       st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
