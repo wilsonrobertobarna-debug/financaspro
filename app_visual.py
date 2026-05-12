@@ -239,13 +239,23 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         # Se você usa outro nome (como 'dados'), substitua o 'df' abaixo
         dados_para_editar = st.session_state.get('df', df) if 'df' in locals() or 'df' in st.session_state else []
 
-        lista_edit = {
-            f"{item['Vencimento']} - {item['Descrição']} (R$ {item['V_Num']})": item 
-            # 1. Verificamos a origem dos dados com segurança
-       File "/mount/src/financaspro/app_visual.py", line 242
-          lista_edit = {
-                       ^
-SyntaxError: '{' was never closed
+# 1. Preparação dos dados para o seletor
+        dados_brutos = st.session_state.get('df', [])
+        registros = dados_brutos.to_dict('records') if hasattr(dados_brutos, 'to_dict') else dados_brutos
+
+        # 2. Criação do dicionário de busca (Corrigindo a sintaxe)
+        lista_edit = {}
+        for item in registros:
+            if isinstance(item, dict):
+                # Usamos Vencimento e V_Num para garantir cálculos precisos em Real (R$)
+                venc = item.get('Vencimento', 'Sem Data')
+                desc = item.get('Descrição', 'Sem Descrição')
+                valor = item.get('V_Num', 0.0)
+                
+                label = f"{venc} - {desc} (R$ {valor})"
+                lista_edit[label] = item
+
+        # 3. Componente visual do Streamlit
         opcoes = list(lista_edit.keys())
         escolha = st.selectbox("Selecione o registro para editar/excluir:", [""] + opcoes)
         if escolha:
