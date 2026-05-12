@@ -265,19 +265,19 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
-    st.title("🛡️ FinançasPro Wilson")
-    # --- FORMULÁRIO DE LANÇAMENTO ---
-st.subheader("➕ Novo Lançamento")
+        st.title("🛡️ FinançasPro Wilson")
+        # --- FORMULÁRIO DE LANÇAMENTO ---
+        st.subheader("➕ Novo Lançamento")
 
-# O campo de compra que você pediu (fica acima)
-data_c = st.date_input("Data de Compra:", value=datetime.now(), key="f_compra")
+        # O campo de compra que você pediu (fica acima)
+        data_c = st.date_input("Data de Compra:", value=datetime.now(), key="f_compra")
 
-# O campo de vencimento (que era chamado de Data)
-data_v = st.date_input("Vencimento:", value=datetime.now(), key="f_vencimento")
+        # O campo de vencimento (que era chamado de Data)
+        data_v = st.date_input("Vencimento:", value=datetime.now(), key="f_vencimento")
 
-# Descrição e Valor
-desc = st.text_input("Descrição:", key="f_desc")
-valor = st.number_input("Valor (R$):", step=0.01, format="%.2f", key="f_valor")
+        # Descrição e Valor
+        desc = st.text_input("Descrição:", key="f_desc")
+        valor = st.number_input("Valor (R$):", step=0.01, format="%.2f", key="f_valor")
         
         st.divider()
         
