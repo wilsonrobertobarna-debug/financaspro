@@ -234,9 +234,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         if escolha:
             item = lista_edit[escolha]
             
-           if escolha:
-            item = lista_edit[escolha]
-            
             # MUDANÇA: Usando 'Vencimento' como a data principal do sistema
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_venc = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY", key=f"ed_venc_{item['ID']}")
