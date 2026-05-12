@@ -52,7 +52,7 @@ def conectar():
 def carregar_dados():
     try:
         gc = conectar()
-        # Certifique-se de que o nome da sua planilha está correto aqui
+        # Certifique-se que o nome da planilha no Google Drive é "FinançasPro"
         sh = gc.open("FinançasPro") 
         worksheet = sh.get_worksheet(0)
         dados = worksheet.get_all_records()
@@ -60,6 +60,7 @@ def carregar_dados():
     except Exception as e:
         st.error(f"Erro ao acessar a planilha: {e}")
         return pd.DataFrame()
+   
 # 4. SALVANDO NA MEMÓRIA (Para a aba de Ajustes não ficar branca)
 if 'df' not in st.session_state:
     with st.spinner("Sincronizando com Google Sheets..."):
