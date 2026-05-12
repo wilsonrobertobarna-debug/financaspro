@@ -313,7 +313,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         
         st.subheader("🏦 Informações de Contas e Cartões")
         if not df_bancos_info.empty:
-            st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+            st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
         else:
             st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
         
