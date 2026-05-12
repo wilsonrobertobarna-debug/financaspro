@@ -40,7 +40,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 2. CONEXÃO (A função precisa envolver o try/except e o return)
+# 2. CONEXÃO
 @st.cache_resource
 def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
@@ -54,47 +54,10 @@ def conectar():
             "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
             "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
         }
-        import gspread
-        from google.oauth2.service_account import Credentials
-        # O return DEVE estar recuado (8 espaços) para estar dentro do try/def
         return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
     except Exception as e:
-        st.error(f"Erro na conexão: {e}"); st.stop()
+        st.error(f"Erro: {e}"); st.stop()
 
-# 3. CARREGAMENTO (ESTE BLOCO FICA NA MARGEM ESQUERDA)
-# --- LOCAL DE ALTERAÇÃO (BLOCO DE CARREGAMENTO) ---
-if 'df' not in st.session_state:
-    with st.spinner("Sincronizando com Google Sheets..."):
-        try:
-            gc = conectar()
-            sh = gc.open("FinançasPro") 
-            worksheet = sh.get_worksheet(0)
-            
-            import pandas as pd
-            dados = worksheet.get_all_records()
-            temp_df = pd.DataFrame(dados)
-
-            # --- TRADUÇÃO DAS COLUNAS ---
-            # Remove espaços invisíveis
-            temp_df.columns = temp_df.columns.str.strip() 
-            
-            # Mapeia os nomes da sua planilha para os nomes que o código entende
-            mapeamento = {
-                'Descrição': 'Descricao',
-                'Valor': 'V_Num'
-            }
-            temp_df.rename(columns=mapeamento, inplace=True)
-            
-            # Como sua planilha não tem a coluna 'ID', vamos criar uma automática
-            # Isso impede o erro KeyError na linha 328
-            temp_df['ID'] = range(1, len(temp_df) + 1)
-            
-            st.session_state['df'] = temp_df
-        except Exception as e:
-            st.error(f"Erro ao organizar colunas: {e}")
-            st.session_state['df'] = pd.DataFrame()
-# 4. ATALHO PARA O RESTANTE DO CÓDIGO
-df = st.session_state.get('df', pd.DataFrame())
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
@@ -111,18 +74,14 @@ def carregar_dados_gs():
     if len(dados) <= 1: return pd.DataFrame()
     df = pd.DataFrame(dados[1:], columns=dados[0])
     df['ID'] = range(2, len(df) + 2)
-    
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
         except: return 0.0
-        
     df['V_Num'] = df['Valor'].apply(p_float)
-    
-    # AJUSTE AQUI: Mudamos de 'Data' para 'Vencimento' para bater com sua planilha
-    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')
-    
+    df['DT'] = pd.to_datetime(df['Data'], dayfirst=True, errors='coerce')
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
     return df
+
 def carregar_bancos_manual_gs():
     if ws_bancos:
         dados = ws_bancos.get_all_values()
@@ -213,32 +172,25 @@ st.sidebar.divider()
 # BARRINHA 1: NOVO LANÇAMENTO
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
     with st.form("f_novo", clear_on_submit=True):
-        # Trazendo a Data da Compra (Coluna H) para o topo
-        f_dat_compra = st.date_input("Data da Compra", datetime.now(), format="DD/MM/YYYY")
-        
-        # O campo 'Data' agora é tratado como 'Vencimento' (Coluna A)
-        f_venc = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
-        
+        f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Seguro","Alimentação", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
+        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         
+        # Campo de Vencimento do Cartão
+        f_venc_cartao = st.date_input("Vencimento do Cartão (Opcional)", value=None, format="DD/MM/YYYY")
+        
         if st.form_submit_button("SALVAR"):
             v_str = f"{f_val:.2f}".replace('.', ',')
-            # Formatando as datas para o padrão brasileiro
-            compra_str = f_dat_compra.strftime("%d/%m/%Y")
+            venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
             
             for i in range(f_par):
-                # O vencimento avança conforme as parcelas
-                venc_parcela = f_venc + relativedelta(months=i)
-                venc_str = venc_parcela.strftime("%d/%m/%Y")
-                
-                # Ordem das colunas: A:Vencimento, B:Valor, C:Descrição, D:Categoria, E:Tipo, F:Banco, G:Status, H:Data Compra
-                ws_base.append_row([venc_str, v_str, f_des, f_cat, f_tip, f_bnc, f_sta, compra_str])
+                nova_data = f_dat + relativedelta(months=i)
+                ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta, venc_str])
             
             atualizar_sessao()
             st.rerun()
@@ -256,188 +208,41 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
             else:
                 v_str = f"{t_val:.2f}".replace('.', ',')
                 d_str = t_dat.strftime("%d/%m/%Y")
-                # Mantendo o padrão de 8 colunas para não deslocar a planilha
-                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", d_str])
-                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", d_str])
+                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", ""])
+                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", ""])
                 atualizar_sessao()
                 st.rerun()
 
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
-        # MUDANÇA AQUI: Trocamos r['Data'] por r['Vencimento']
-        # Certifique-se de que o selectbox e o if estão com o mesmo recuo
-       # 1. Primeiro, criamos a lista (o dicionário) a partir dos seus dados
-        # Certifique-se de que este bloco não está comentado ou dentro de outro 'if' que impeça a execução
-       # 1. Criamos a lista de edição usando os dados do seu DataFrame (df)
-        # IMPORTANTE: Usamos 'Vencimento' no lugar de 'Data'
-     # Alinhamento correto das variáveis
-       # 1. Tentamos pegar os dados do estado da sessão ou do seu DataFrame principal
-        # Se você usa outro nome (como 'dados'), substitua o 'df' abaixo
-  # 1. Tenta encontrar os dados em qualquer lugar (df, dados ou session_state)
-        # Priorizamos o que estiver carregado na memória do Streamlit
-        if 'df' in st.session_state:
-            dados_brutos = st.session_state['df']
-        elif 'dados' in st.session_state:
-            dados_brutos = st.session_state['dados']
-        elif 'df' in locals():
-            dados_brutos = df
-        else:
-            dados_brutos = []
-
-        # 2. Converte para lista de registros com segurança
-        if hasattr(dados_brutos, 'to_dict'):
-            registros = dados_brutos.to_dict('records')
-        else:
-            registros = dados_brutos
-
-        # 3. Criação do dicionário para o seletor
-        lista_edit = {}
-        for item in registros:
-            if isinstance(item, dict):
-                # Busca Vencimento ou Data para manter a organização
-                venc = item.get('Vencimento') or item.get('Data') or 'Sem Data'
-                desc = item.get('Descrição', 'Sem Descrição')
-                # Busca o valor numérico para o saldo em Real
-                valor = item.get('V_Num') or item.get('Valor') or 0.0
-                
-                label = f"{venc} - {desc} (R$ {valor})"
-                lista_edit[label] = item
-        registros = dados_brutos.to_dict('records') if hasattr(dados_brutos, 'to_dict') else dados_brutos
-
-        lista_edit = {}
-        for item in registros:
-            if isinstance(item, dict):
-                # Tenta buscar Vencimento, se não achar tenta Data, se não achar usa 'Sem Data'
-                venc = item.get('Vencimento') or item.get('Data') or 'Sem Data'
-                desc = item.get('Descrição') or 'Sem Descrição'
-                
-                # Tenta buscar V_Num, se não achar tenta Valor
-                valor = item.get('V_Num') or item.get('Valor') or 0.0
-                
-                label = f"{venc} - {desc} (R$ {valor})"
-                lista_edit[label] = item
-
-        # 2. Mostra o seletor
-        opcoes = list(lista_edit.keys())
-        if not opcoes:
-            st.warning("⚠️ Nenhum lançamento encontrado para editar. Verifique se os dados foram carregados.")
-        
-        escolha = st.selectbox("Selecione o registro para editar/excluir:", [""] + opcoes)
+        lista_edit = {f"ID {r['ID']} ! {r['Data']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
+        escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         if escolha:
             item = lista_edit[escolha]
+            data_atual_dt = datetime.strptime(item['Data'], "%d/%m/%Y")
+            ed_dat = st.date_input("Alterar Data:", value=data_atual_dt, format="DD/MM/YYYY")
             
-            # Converte a string de Vencimento para formato de data do Python
-            data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
-            ed_venc = st.date_input(
-                "Alterar Vencimento:", 
-                value=data_atual_dt, 
-                format="DD/MM/YYYY", 
-                key=f"ed_venc_{item.get('ID', 'sem_id')}"
-            )
+            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+            ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
-            # Busca Data Compra ou usa Vencimento como fallback
-            data_compra_valor = item.get('Data Compra', item['Vencimento'])
+            idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
+            ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
             
-            try:
-                compra_atual_dt = datetime.strptime(data_compra_valor, "%d/%m/%Y")
-            except:
-                compra_atual_dt = data_atual_dt
-
-            ed_compra = st.date_input(
-                "Alterar Data da Compra:", 
-                value=compra_atual_dt, 
-                format="DD/MM/YYYY",
-                key=f"ed_compra_{item['ID']}"
-            ) 
-            # --- BLOCO DE EDIÇÃO LIMPO ---
-        # 1. Ajuste do Valor: busca 'Valor' ou 'V_Num
-  # --- BLOCO CORRIGIDO E ALINHADO (app_visual.py) ---
-        
-        if item:
-          if item:
-            # --- 1. CAPTURA DOS DADOS (Foco em B e C) ---
-            # Pegamos o valor bruto (Coluna B) e limpamos símbolos de Real (R$)
-            v_original = item.get('Valor', item.get('valor', 0.0))
-            try:
-                # Transforma em número decimal puro para o Python não se perder
-                v_ajustado = float(str(v_original).replace('R$', '').replace('.', '').replace(',', '.').strip())
-            except:
-                v_ajustado = 0.0
-
-            # Pegamos a descrição (Coluna C) com ou sem acento
-            d_ajustada = str(item.get('Descrição', item.get('Descricao', 'Sem Descrição')))
-
-            # --- 2. INTERFACE ÚNICA (Visual Limpo) ---
-            st.divider() # Uma linha fina para organizar
-            st.subheader("📝 Ajustar Lançamento")
-            
-            # Mostra o que está sendo editado para conferência
-            st.info(f"**Descrição Atual:** {d_ajustada} | **Valor:** R$ {v_ajustado:.2f}")
-
-            # Campos de Entrada com Chaves (Keys) Únicas
-            ed_val = st.number_input("Alterar Valor:", value=v_ajustado, step=0.01, format="%.2f", key="f_val_edit")
-            ed_desc = st.text_input("Alterar Descrição:", value=d_ajustada, key="f_desc_edit")
-
-            # Seleção de Banco (Busca automática do banco atual)
-            banco_atual = item.get('Banco', '')
-            idx_b = bancos_disponiveis.index(banco_atual) if banco_atual in bancos_disponiveis else 0
-            ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b, key="f_bnc_edit")
-
-            # Seleção de Status
             status_opcoes = ["Pago", "Pendente"]
-            status_atual = item.get('Status', 'Pendente')
-            idx_s = status_opcoes.index(status_atual) if status_atual in status_opcoes else 0
-            ed_sta = st.selectbox("Status:", status_opcoes, index=idx_s, key="f_sta_edit")
-
-            # --- 3. BOTÕES (Aparecem apenas UMA vez) ---
-            col_b1, col_b2 = st.columns(2)
-            with col_b1:
-                if st.button("✅ Salvar", key="f_btn_save", use_container_width=True):
-                    st.success("Alteração enviada para a planilha!")
-                    # Aqui você chama sua função de salvar no Google Sheets
+            index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
+            ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
-            with col_b2:
-                if st.button("🗑️ Excluir", type="primary", key="f_btn_del", use_container_width=True):
-                    st.warning("Removendo este registro...")
-                    # Aqui você chama sua função de excluir
-            
-            # ATENÇÃO: Verifique se não há NADA escrito abaixo destas linhas que repita o st.button ou st.text_input.
-                    # Aqui entra sua função de excluir        # 2. Ajuste da Descrição: busca com ou sem acento
-        valor_desc = str(item.get('Descrição', item.get('Descricao', '')))
-        ed_desc = st.text_input("Alterar Descrição:", value=valor_desc, key="ed_desc_ajuste")
-
-        # 3. Ajuste do Banco
-        banco_atual = item.get('Banco', '')
-        idx_b = bancos_disponiveis.index(banco_atual) if banco_atual in bancos_disponiveis else 0
-     # 3. Ajuste do Banco (Adicionada a key)
-        banco_atual = item.get('Banco', '')
-        idx_b = bancos_disponiveis.index(banco_atual) if banco_atual in bancos_disponiveis else 0
-        ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b, key="ed_bnc_ajuste")
-
-    # 4. Ajuste do Status - DEIXE APENAS ESTE BLOCO
-        status_opcoes = ["Pago", "Pendente"]
-        status_atual = item.get('Status', 'Pendente')
-        idx_s = status_opcoes.index(status_atual) if status_atual in status_opcoes else 0
-        
-        # Mantenha apenas uma chamada do selectbox
-        ed_sta = st.selectbox("Status:", status_opcoes, index=idx_s, key="ed_status_unico")
-        # 5. Botões de Ação (Alinhados corretamente)
-        col_ed1, col_ed2 = st.columns(2)
-        
-        with col_ed1:
-            # ESTA LINHA PRECISA DE MAIS ESPAÇO (4 espaços ou 1 TAB)
-            if st.button("Salvar Alterações", key="btn_salvar_edicao"):
-                st.success("Alteração salva!") # Esta também precisa estar recuada
-
-        with col_ed2:
-            # ESTA LINHA TAMBÉM PRECISA DO RECUO
-            if st.button("Excluir", key="btn_excluir_edicao", type="primary"):
-                st.warning("Excluído!")
-                
+            col_ed1, col_ed2 = st.columns(2)
+            if col_ed1.button("💾 ATUALIZAR"):
+                v_str = f"{ed_val:.2f}".replace('.', ',')
+                ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
+                ws_base.update_cell(int(item['ID']), 2, v_str)
+                ws_base.update_cell(int(item['ID']), 3, ed_desc)
+                ws_base.update_cell(int(item['ID']), 6, ed_bnc)
+                ws_base.update_cell(int(item['ID']), 7, ed_sta)
                 atualizar_sessao()
                 st.rerun()
-            
             if col_ed2.button("🚨 EXCLUIR"):
                 if item['Categoria'] == 'Transferência':
                     desc = item['Descrição']
@@ -457,6 +262,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     ws_base.delete_rows(int(item['ID']))
                 atualizar_sessao()
                 st.rerun()
+
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
@@ -535,12 +341,10 @@ if "💰" in aba:
             df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
                 lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
             )
-           # MUDANÇA: Trocamos 'Data' por 'Vencimento' para o gráfico de saldo
-            df_saldo_dia = df_saldo_dia.groupby('Vencimento')['Valor_Com_Sinal'].sum().reset_index()
+            df_saldo_dia = df_saldo_dia.groupby('Data')['Valor_Com_Sinal'].sum().reset_index()
             df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
             
-            # MUDANÇA: Trocamos x='Data' por x='Vencimento' para o gráfico Plotly
-            fig_acum = px.line(df_saldo_dia, x='Vencimento', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
+            fig_acum = px.line(df_saldo_dia, x='Data', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
             fig_acum.update_layout(height=350)
             st.plotly_chart(fig_acum, use_container_width=True, config={'staticPlot': True})
         
@@ -573,8 +377,7 @@ if "💰" in aba:
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
         
-       # MUDANÇA: Atualizamos os nomes das colunas para bater com o novo padrão
-        df_v_display = df_v[['ID', 'Vencimento', 'Data Compra', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+        df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
@@ -589,15 +392,13 @@ elif "Pendências" in aba:
             for _, row in df_venc.iterrows():
                 d_aviso = row['Dias']
                 if d_aviso < 0:
-                   # MUDANÇA: Atualizamos para buscar a data da coluna 'Vencimento'
-                    st.warning(f"⚠️ **Atrasado (Vencido):** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    st.warning(f"⚠️ **Atrasado (Vencido):** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
                 elif d_aviso == 0:
                     st.warning(f"⚠️ **Vence hoje:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
                 elif d_aviso == 1:
                     st.warning(f"🚨 **Vence amanhã:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
                 elif d_aviso == 3:
-                    # MUDANÇA: Trocamos 'Data' por 'Vencimento' para o alerta de 3 dias
-                    st.warning(f"⚠️ **Vence em 3 dias:** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    st.warning(f"⚠️ **Vence em 3 dias:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
         else:
             st.info("Nenhum lançamento a vencer hoje, amanhã ou em atraso.")
     else:
@@ -618,8 +419,7 @@ elif "Pendências" in aba:
     if b_desc:
         df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
         
-    # MUDANÇA: Substituímos 'Data' por 'Vencimento' e incluímos 'Data Compra'
-    df_v_display = df_v[['ID', 'Vencimento', 'Data Compra', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+    df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
@@ -668,8 +468,7 @@ elif "🐾" in aba:
         elif pet_escolha == "Bolt":
             df_show = df_bolt
             
-        # MUDANÇA: Atualizamos 'Data' para 'Vencimento' e incluímos a 'Data Compra'
-        df_show_display = df_show[['ID', 'Vencimento', 'Data Compra', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']].copy()
+        df_show_display = df_show[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']].copy()
         df_show_display['Valor'] = df_show['V_Num'].apply(m_fmt)
         st.dataframe(df_show_display.iloc[::-1], use_container_width=True, hide_index=True)
     else:
@@ -716,8 +515,7 @@ elif "🚗" in aba:
     st.divider()
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
     if not df_car.empty:
-       # MUDANÇA: Atualizamos 'Data' para 'Vencimento' e incluímos 'Data Compra' para os cartões
-        df_car_display = df_car[['ID', 'Vencimento', 'Data Compra', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']].copy()
+        df_car_display = df_car[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']].copy()
         df_car_display['Valor'] = df_car['V_Num'].apply(m_fmt)
         st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
@@ -877,8 +675,7 @@ elif "📋" in aba:
         df_v = df_v[df_v['Descrição'].str.contains(b_desc_rel, case=False, na=False)]
         
     st.subheader("Lançamentos Filtrados")
-    # MUDANÇA FINAL: Atualizamos 'Data' para 'Vencimento' e incluímos 'Data Compra'
-    df_v_display = df_v[['ID', 'Vencimento', 'Data Compra', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+    df_v_display = df_v[['ID', 'Data', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
     
