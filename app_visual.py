@@ -234,19 +234,21 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         if escolha:
             item = lista_edit[escolha]
             
+           if escolha:
+            item = lista_edit[escolha]
+            
             # MUDANÇA: Usando 'Vencimento' como a data principal do sistema
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
-            ed_venc = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
+            ed_venc = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY", key=f"ed_venc_{item['ID']}")
             
             # Buscando a Data Compra com segurança
             data_compra_valor = item.get('Data Compra', item['Vencimento'])
             
-           try:
+            try:
                 compra_atual_dt = datetime.strptime(data_compra_valor, "%d/%m/%Y")
             except:
-                compra_atual_dt = data_atual_dt  # Esta linha precisa do recuo!
+                compra_atual_dt = data_atual_dt
 
-            # Agora sim, o ed_compra volta para o alinhamento principal do formulário
             ed_compra = st.date_input(
                 "Alterar Data da Compra:", 
                 value=compra_atual_dt, 
