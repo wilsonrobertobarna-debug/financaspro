@@ -429,11 +429,7 @@ elif "Pendências" in aba:
             for _, row in df_venc.iterrows():
                 d_aviso = row['Dias']
                 if d_aviso < 0:
-                    st.warning(f"⚠️ **Atrasado:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
-                elif d_aviso == 0:
-                    st.warning(f"⚠️ **Vence hoje:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
-                elif d_aviso == 1:
-                    st.warning(f"🚨 **Vence amanhã:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")ição']} ({m_fmt(row['V_Num'])})")
+                   
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
     
