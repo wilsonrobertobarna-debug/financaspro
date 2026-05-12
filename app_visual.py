@@ -383,37 +383,40 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
         
+       # --- FINAL DA ABA ANTERIOR (Busca e Tabela) ---
         df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
-        
+
+# --- INÍCIO DA ABA DE PENDÊNCIAS (Alinhado com o IF inicial) ---
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
+    
     df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
+    
     if not df_aviso.empty:
+        # Cálculo dos dias para o vencimento
         df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
         df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
+        
         if not df_venc.empty:
             for _, row in df_venc.iterrows():
                 d_aviso = row['Dias']
+                # AGORA TUDO ABAIXO ESTÁ DENTRO DO FOR (IDENTADO)
                 if d_aviso < 0:
-    # Este você já tinha acertado!
-    st.warning(f"⚠️ **Atrasado (Vencido):** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
-elif d_aviso == 0:
-    # Trocando row['Data'] por row['Vencimento']
-    st.warning(f"⚠️ **Vence hoje:** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
-elif d_aviso == 1:
-    # Trocando row['Data'] por row['Vencimento']
-    st.warning(f"🚨 **Vence amanhã:** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
-elif d_aviso == 3:
-    # Trocando row['Data'] por row['Vencimento']
-    st.warning(f"⚠️ **Vence em 3 dias:** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    st.warning(f"⚠️ **Atrasado (Vencido):** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                elif d_aviso == 0:
+                    st.warning(f"⚠️ **Vence hoje:** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                elif d_aviso == 1:
+                    st.warning(f"🚨 **Vence amanhã:** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                elif d_aviso == 3:
+                    st.warning(f"⚠️ **Vence em 3 dias:** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
         else:
             st.info("Nenhum lançamento a vencer hoje, amanhã ou em atraso.")
     else:
         st.info("Nenhum lançamento pendente.")
-        
+    
     st.divider()
     
     st.subheader("🔍 Busca de Lançamentos Pendentes")
