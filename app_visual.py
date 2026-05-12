@@ -43,11 +43,16 @@ st.markdown("""
 # 2. CONEXÃO
 @st.cache_resource
 def conectar():
-    # 3. FUNÇÃO PARA REALMENTE BUSCAR OS DADOS
+    # Final da função conectar()
+        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
+    except Exception as e:
+        st.error(f"Erro: {e}"); st.stop()
+
+# 3. FUNÇÃO PARA CARREGAR DADOS (Esta linha deve encostar na margem esquerda)
 def carregar_dados():
     try:
         gc = conectar()
-        # IMPORTANTE: Coloque o nome exato da sua planilha do Google Drive aqui
+        # Certifique-se de que o nome da sua planilha está correto aqui
         sh = gc.open("FinançasPro") 
         worksheet = sh.get_worksheet(0)
         dados = worksheet.get_all_records()
@@ -55,7 +60,6 @@ def carregar_dados():
     except Exception as e:
         st.error(f"Erro ao acessar a planilha: {e}")
         return pd.DataFrame()
-
 # 4. SALVANDO NA MEMÓRIA (Para a aba de Ajustes não ficar branca)
 if 'df' not in st.session_state:
     with st.spinner("Sincronizando com Google Sheets..."):
