@@ -267,7 +267,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 value=compra_atual_dt, 
                 format="DD/MM/YYYY",
                 key=f"ed_compra_{item['ID']}"
-            )            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+            ) 
+            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
