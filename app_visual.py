@@ -241,8 +241,23 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
         lista_edit = {
             f"{item['Vencimento']} - {item['Descrição']} (R$ {item['V_Num']})": item 
-            for item in dados_para_editar.to_dict('records')
+            # 1. Verificamos a origem dos dados com segurança
+        dados_brutos = st.session_state.get('df', [])
+        
+        # 2. Se for DataFrame, converte. Se já for lista, usa direto.
+        if hasattr(dados_brutos, 'to_dict'):
+            registros = dados_brutos.to_dict('records')
+        else:
+            registros = dados_brutos # Já é uma lista
+
+        # 3. Criamos a lista de edição focada no Vencimento e Valor Real (R$)
+        lista_edit = {
+            f"{item['Vencimento']} - {item['Descrição']} (R$ {item['V_Num']})": item 
+            for item in registros if isinstance(item, dict)
         }
+
+        opcoes = list(lista_edit.keys())
+        escolha = st.selectbox("Selecione o registro para editar/excluir:", [""] + opcoes)
 
         opcoes = list(lista_edit.keys())
         escolha = st.selectbox("Selecione o registro para editar/excluir:", [""] + opcoes)
