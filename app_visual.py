@@ -398,12 +398,11 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         # Garante que o df_v_display use 'Vencimento' e esteja recuado (dentro do IF)
         # Fim da aba Lançamentos (com 8 espaços de recuo)
        # Fim da aba Lançamentos (com 8 espaços de recuo)
+        # Final da aba anterior
         df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
---- INÍCIO DA ABA DE PENDÊNCIAS ---
-# Esta linha deve ficar totalmente na esquerda (sem espaços), alinhada com o IF das abas
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
@@ -411,14 +410,12 @@ elif "Pendências" in aba:
     df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
     
     if not df_aviso.empty:
-        # Cálculo de dias baseado no Vencimento (DT)
         df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
         df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
         
         if not df_venc.empty:
             for _, row in df_venc.iterrows():
                 d_aviso = row['Dias']
-                # Alertas para RH e despesas como as do Milo
                 if d_aviso < 0:
                     st.warning(f"⚠️ **Atrasado:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
                 elif d_aviso == 0:
