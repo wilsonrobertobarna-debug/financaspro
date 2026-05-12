@@ -266,12 +266,18 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
-    if not df_base.empty:
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
-        
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
+    # --- FORMULÁRIO DE LANÇAMENTO ---
+st.subheader("➕ Novo Lançamento")
+
+# O campo de compra que você pediu (fica acima)
+data_c = st.date_input("Data de Compra:", value=datetime.now(), key="f_compra")
+
+# O campo de vencimento (que era chamado de Data)
+data_v = st.date_input("Vencimento:", value=datetime.now(), key="f_vencimento")
+
+# Descrição e Valor
+desc = st.text_input("Descrição:", key="f_desc")
+valor = st.number_input("Valor (R$):", step=0.01, format="%.2f", key="f_valor")
         
         st.divider()
         
