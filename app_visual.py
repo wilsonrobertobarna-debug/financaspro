@@ -40,9 +40,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- COPIE A PARTIR DAQUI (Linha 40 aproximadamente) ---
-
-# 2. CONEXÃO
+# 2. CONEXÃO COM O GOOGLE SHEETS
 @st.cache_resource
 def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
@@ -56,38 +54,27 @@ def conectar():
             "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
             "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
         }
+        import gspread
+        from google.oauth2.service_account import Credentials
         return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
     except Exception as e:
         st.error(f"Erro na conexão: {e}"); st.stop()
 
-# 3. CARREGAMENTO DIRETO (Cole exatamente na margem esquerda)
+# 3. CARREGAMENTO DOS DADOS PARA A MEMÓRIA (SESSION STATE)
 if 'df' not in st.session_state:
     try:
         gc = conectar()
-        sh = gc.open("FinançasPro") # Nome da sua planilha no Drive
+        sh = gc.open("FinançasPro") # Certifique-se que o nome é este no seu Drive
         worksheet = sh.get_worksheet(0)
         import pandas as pd
-        # Salva na memória para o 'Ajustar Lançamentos' funcionar
+        # Salva na memória para o 'Ajustar Lançamentos' não ficar branco
         st.session_state['df'] = pd.DataFrame(worksheet.get_all_records())
     except Exception as e:
         st.error(f"Erro ao carregar dados: {e}")
         st.session_state['df'] = pd.DataFrame()
 
-# Atalho para o restante do app usar
-df = st.session_state.get('df', pd.DataFrame())
-
-# Cria o atalho df para o restante do app usar
-df = st.session_state['df']
-# --- FIM DO CARREGAMENTO ---
-
-except Exception as e:
-    st.error(f"Erro ao carregar dados: {e}")
-    df = pd.DataFrame() # Cria um vazio para o app não travar totalmente
-# --- FIM DO BLOCO DE CARREGAMENTO ---
-   
-# 4. SALVANDO NA MEMÓRIA (Para a aba de Ajustes não ficar branca)
-if 'df' not in st.session_state:
-    with st.spinner("Sincronizando com Google Sheets..."):
+# 4. ATALHO GLOBAL
+df = st.session_state.get('df', pd.DataFrame())    with st.spinner("Sincronizando com Google Sheets..."):
         st.session_state['df'] = carregar_dados()
 
 # Atalho para o restante do app usar
