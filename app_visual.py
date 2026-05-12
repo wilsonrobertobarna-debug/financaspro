@@ -232,23 +232,28 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         # Certifique-se de que o selectbox e o if estão com o mesmo recuo
        # 1. Primeiro, criamos a lista (o dicionário) a partir dos seus dados
         # Certifique-se de que este bloco não está comentado ou dentro de outro 'if' que impeça a execução
-        lista_edit = {f"{item['Vencimento']} - {item['Descrição']} (R$ {item['V_Num']})": item for item in seus_dados_aqui}
+       # 1. Criamos a lista de edição usando os dados do seu DataFrame (df)
+        # IMPORTANTE: Usamos 'Vencimento' no lugar de 'Data'
+        lista_edit = {
+            f"{item['Vencimento']} - {item['Descrição']} (R$ {item['V_Num']})": item 
+            for item in df.to_dict('records')
+        }
 
-        # 2. Só depois usamos ela para criar as opções
         opcoes = list(lista_edit.keys())
         escolha = st.selectbox("Selecione o registro para editar/excluir:", [""] + opcoes)
 
         if escolha:
             item = lista_edit[escolha]
-                
-            # MUDANÇA: Usando 'Vencimento' (Coluna A) como referência principal
+            
+            # Converte a string de Vencimento para formato de data do Python
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_venc = st.date_input(
                 "Alterar Vencimento:", 
                 value=data_atual_dt, 
                 format="DD/MM/YYYY", 
                 key=f"ed_venc_{item['ID']}"
-            )            
+            )
+            
             # Busca Data Compra ou usa Vencimento como fallback
             data_compra_valor = item.get('Data Compra', item['Vencimento'])
             
@@ -262,8 +267,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 value=compra_atual_dt, 
                 format="DD/MM/YYYY",
                 key=f"ed_compra_{item['ID']}"
-            )
-            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+            )            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
