@@ -352,7 +352,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             ) 
             # 1. Ajuste do Valor: busca 'Valor' ou 'V_Num' e garante que seja número
             valor_limpo = float(item.get('Valor', item.get('V_Num', 0.0)))
-e            d_val = st.number_input("Alterar Valor:", value=valor_limpo, step=0.01, format="%.2f")
+            ed_val = st.number_input("Alterar Valor:", value=valor_limpo, step=0.01, format="%.2f")
 
             # 2. Ajuste da Descrição: busca com ou sem acento
             valor_desc = item.get('Descrição', item.get('Descricao', ''))
