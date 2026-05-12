@@ -408,11 +408,12 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         # Garante o uso da coluna Vencimento e oculta o índice para o visual limpo
         # Fim da aba Lançamentos - Verifique se o parêntese fecha aqui:
         # Fim da aba anterior - Certifique-se que fecha com ')'
+       # --- FINAL DO BLOCO DE LANÇAMENTOS ---
         df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-# ESTA LINHA DEVE FICAR TOTALMENTE À ESQUERDA (SEM ESPAÇOS ANTES DO ELIF)
+# --- ESTA LINHA DEVE FICAR NA PAREDE ESQUERDA DO EDITOR (COLUNA 0) ---
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
@@ -420,7 +421,7 @@ elif "Pendências" in aba:
     df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
     
     if not df_aviso.empty:
-        # Cálculo usando a coluna Vencimento para alertas de RH e contas do Milo
+        # Cálculo de dias usando o Vencimento (RH e Milo)
         df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
         df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
         
@@ -432,7 +433,7 @@ elif "Pendências" in aba:
                 elif d_aviso == 0:
                     st.warning(f"⚠️ **Vence hoje:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
                 elif d_aviso == 1:
-                    st.warning(f"🚨 **Vence amanhã:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
+                    st.warning(f"🚨 **Vence amanhã:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")ição']} ({m_fmt(row['V_Num'])})")
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
     
