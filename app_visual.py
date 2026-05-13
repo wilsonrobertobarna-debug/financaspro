@@ -298,8 +298,8 @@ with st.expander("📊 Clique para ver o Comparativo de Sobra Mensal", expanded=
 
     # A barra de progresso ou percentual que você mencionou
     st.progress(0.0) 
-    st.caption("A variação de 0.0% está oculta até que você abra este painel.")%")
-        
+    st.caption("A variação de 0.0% está oculta até que você abra este painel.")
+            
         st.divider()
         
         st.subheader("🏦 Informações de Contas e Cartões")
