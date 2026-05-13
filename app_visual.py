@@ -302,12 +302,12 @@ with st.expander(f"📊 Comparativo de Sobra: {s_ini.strftime('%d/%m')} até {s_
     st.divider()
     st.metric("Sobra Líquida Atual", m_fmt(sobra_atual))        
     st.subheader("🏦 Informações de Contas e Cartões")
-        if not df_bancos_info.empty:
+    if not df_bancos_info.empty:
             st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
-        else:
+    else:
             st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
         
-        st.divider()
+    st.divider()
         
         with st.expander("🎯 Configurar Metas"):
             todas_cats = sorted(df_base['Categoria'].unique())
