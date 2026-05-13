@@ -95,7 +95,7 @@ if 'df_base' not in st.session_state:
 if 'df_bancos_info' not in st.session_state:
     st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
     with st.expander("📊 RESUMO DOS MESES", expanded=False):
-    col1, col2, col3 = st.columns(3)
+        col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Entradas", "R$ 0,00")
     with col2:
