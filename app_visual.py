@@ -302,13 +302,13 @@ with st.expander("📊 Clique para ver o Comparativo de Sobra Mensal", expanded=
             
     st.divider()
         
-        st.subheader("🏦 Informações de Contas e Cartões")
+    st.subheader("🏦 Informações de Contas e Cartões")
         if not df_bancos_info.empty:
-            st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+    st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
         else:
-            st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
+    st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
         
-        st.divider()
+    st.divider()
         
         with st.expander("🎯 Configurar Metas"):
             todas_cats = sorted(df_base['Categoria'].unique())
