@@ -191,43 +191,52 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir Lançamento", expanded=False)
                     atualizar_sessao()
                     st.rerun()
 
-# 5. TELAS PRINCIPAIS
-if "💰" in aba:
-   if "💰" in aba:
+elif "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
-        # Pega o mês atual (05/26)
-        mes_atual = datetime.now().strftime('%m/%y')
+        # --- FILTROS DE BUSCA (VOLTANDO A APARECER) ---
+        st.subheader("🔍 Filtros e Pesquisa")
+        c1, c2, c3 = st.columns([1, 1, 2])
         
-        # Filtra o mês, mas se o filtro vier VAZIO, ele avisa você
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        
-        if df_m.empty:
-            st.warning(f"Nenhum lançamento encontrado para o mês {mes_atual}. Mostrando todos os dados gerais abaixo.")
-            df_m_pago = df_base[df_base['Status'] == 'Pago'].copy()
-        else:
-            df_m_pago = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
-        
-        # Cálculos
-        receita = df_m_pago[df_m_pago['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        despesa = df_m_pago[df_m_pago['Tipo'] == 'Despesa']['V_Num'].sum()
-        
-        st.info(f"### 🏦 SALDO: {m_fmt(receita - despesa)}")
-        
-        # TABELA DE BUSCA (Forçando aparecer)
-        st.subheader("🔍 Busca e Lançamentos")
-        f_txt = st.text_input("Digite para buscar (Descrição ou Banco):")
-        
-        df_display = df_base.copy()
-        if f_txt:
-            df_display = df_display[df_display['Descrição'].str.contains(f_txt, case=False, na=False) | 
-                                    df_display['Banco'].str.contains(f_txt, case=False, na=False)]
-        
-        # Se a tabela ainda não aparecer, o problema é nas colunas. Vamos garantir:
-        st.dataframe(df_display.iloc[::-1], use_container_width=True, hide_index=True)
+        f_bnc = c1.multiselect("Banco:", sorted(bancos_disponiveis))
+        f_sta = c2.multiselect("Status:", ["Pago", "Pendente"])
+        f_txt = c3.text_input("Buscar (Descrição):")
 
+        # Aplicando a filtragem (Se não selecionar nada, mostra TUDO)
+        df_visual = df_base.copy()
+        
+        if f_bnc:
+            df_visual = df_visual[df_visual['Banco'].isin(f_bnc)]
+        if f_sta:
+            df_visual = df_visual[df_visual['Status'].isin(f_sta)]
+        if f_txt:
+            df_visual = df_visual[df_visual['Descrição'].str.contains(f_txt, case=False, na=False)]
+
+        # --- CARDS DE SALDO (USANDO OS DADOS FILTRADOS) ---
+        # Filtra apenas o que é Receita/Despesa para o saldo
+        receita = df_visual[(df_visual['Tipo'].isin(['Receita', 'Rendimento'])) & (df_visual['Status'] == 'Pago')]['V_Num'].sum()
+        despesa = df_visual[(df_visual['Tipo'] == 'Despesa') & (df_visual['Status'] == 'Pago')]['V_Num'].sum()
+        
+        st.info(f"### 🏦 SALDO DOS DADOS EXIBIDOS: {m_fmt(receita - despesa)}")
+        
+        # --- A TABELA (HISTÓRICO) ---
+        st.subheader("📋 Histórico")
+        cols_limpas = ['Vencimento', 'Descrição', 'Valor', 'Banco', 'Status']
+        st.dataframe(df_visual[cols_limpas].iloc[::-1], use_container_width=True, hide_index=True)
+
+        # --- REATIVANDO OS GRÁFICOS ---
         st.divider()
+        st.subheader("📊 Análise de Gastos")
+        df_pizza = df_visual[(df_visual['Tipo'] == 'Despesa') & (df_visual['Status'] == 'Pago')]
+        if not df_pizza.empty:
+            df_gastos = df_pizza.groupby('Categoria')['V_Num'].sum().reset_index()
+            fig = px.pie(df_gastos, values='V_Num', names='Categoria', hole=0.4)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.write("Sem gastos pagos para exibir no gráfico.")
+    else:
+        st.error("A planilha não carregou dados.")
         
         # 4. GRÁFICOS (Opcional, se quiser ver onde está gastando mais)
         with st.expander("📊 Ver Gráficos de Gastos"):
@@ -426,70 +435,31 @@ elif "📄" in aba:
     st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
 
 elif "Relatório PDF" in aba:
-    st.title("📋 Gerar Relatório Mensal (PDF)")
-    st.write(f"Gerando relatório para o período: **{mes_atual}**")
-
-    if not df_base.empty:
-        # 1. Filtra os dados do mês atual
-        df_pdf = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        
-        if df_pdf.empty:
-            st.warning(f"⚠️ Não existem lançamentos para o mês {mes_atual}. Mude o filtro ou adicione lançamentos.")
+    st.title("📋 Gerar Relatório")
+    
+    # Em vez de filtrar por mês, vamos deixar você escolher o que quer no PDF
+    st.write("Selecione os filtros e clique em gerar.")
+    
+    f_pdf_bnc = st.multiselect("Filtrar Bancos para o PDF:", bancos_disponiveis, key="pdf_bnc")
+    
+    if st.button("🔄 GERAR RELATÓRIO AGORA"):
+        df_pdf = df_base.copy()
+        if f_pdf_bnc:
+            df_pdf = df_pdf[df_pdf['Banco'].isin(f_pdf_bnc)]
+            
+        if not df_pdf.empty:
+            # Lógica simplificada do PDF para não falhar
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", "B", 14)
+            pdf.cell(190, 10, "RELATORIO FINANCEIRO", ln=True, align="C")
+            pdf.set_font("Arial", "", 10)
+            
+            for _, r in df_pdf.tail(50).iterrows(): # Mostra os últimos 50
+                texto = f"{r['Vencimento']} - {r['Descrição'][:30]} - R$ {r['V_Num']:.2f}"
+                pdf.cell(190, 8, texto, border=1, ln=True)
+            
+            pdf_bytes = pdf.output(dest='S').encode('latin-1', errors='ignore')
+            st.download_button("📥 Baixar Arquivo PDF", data=pdf_bytes, file_name="relatorio.pdf")
         else:
-            if st.button("🚀 Criar Arquivo PDF"):
-                try:
-                    pdf = FPDF()
-                    pdf.add_page()
-                    pdf.set_font("Arial", "B", 16)
-                    
-                    # Título
-                    pdf.cell(190, 10, f"FINANCASPRO WILSON - {mes_atual}", ln=True, align="C")
-                    pdf.ln(10)
-
-                    # Cabeçalho da Tabela
-                    pdf.set_fill_color(200, 200, 200)
-                    pdf.set_font("Arial", "B", 10)
-                    pdf.cell(25, 10, "Data", 1, 0, 'C', True)
-                    pdf.cell(75, 10, "Descricao", 1, 0, 'C', True)
-                    pdf.cell(35, 10, "Valor", 1, 0, 'C', True)
-                    pdf.cell(25, 10, "Banco", 1, 0, 'C', True)
-                    pdf.cell(30, 10, "Status", 1, 1, 'C', True)
-
-                    # Linhas
-                    pdf.set_font("Arial", "", 9)
-                    df_pdf = df_pdf.sort_values(by='DT')
-                    
-                    for _, row in df_pdf.iterrows():
-                        # Tratamento de texto para evitar erro de caractere especial
-                        txt_desc = str(row['Descrição']).encode('ascii', 'ignore').decode('ascii')[:35]
-                        txt_bnc = str(row['Banco']).encode('ascii', 'ignore').decode('ascii')
-                        
-                        pdf.cell(25, 8, str(row['Vencimento']), 1)
-                        pdf.cell(75, 8, txt_desc, 1)
-                        pdf.cell(35, 8, f"R$ {row['V_Num']:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'), 1)
-                        pdf.cell(25, 8, txt_bnc, 1)
-                        pdf.cell(30, 8, str(row['Status']), 1, 1)
-
-                    # Totalizador no final do PDF
-                    total_gastos = df_pdf[df_pdf['Tipo'] == 'Despesa']['V_Num'].sum()
-                    pdf.ln(5)
-                    pdf.set_font("Arial", "B", 11)
-                    pdf.cell(190, 10, f"Total de Gastos no Mes: R$ {total_gastos:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'), 0, 1, 'R')
-
-                    # Gerar o binário para o Streamlit
-                    pdf_out = pdf.output(dest='S').encode('latin-1', errors='ignore')
-                    
-                    st.download_button(
-                        label="📥 BAIXAR RELATÓRIO AGORA",
-                        data=pdf_out,
-                        file_name=f"Relatorio_Wilson_{mes_atual.replace('/', '_')}.pdf",
-                        mime="application/pdf"
-                    )
-                    st.success("✅ PDF pronto! Clique no botão acima para baixar.")
-                    
-                except Exception as e:
-                    st.error(f"Erro técnico ao gerar PDF: {e}")
-    else:
-        st.error("A base de dados está vazia.")   
-        
-           
+            st.warning("Sem dados para os filtros selecionados.")
