@@ -54,6 +54,8 @@ except:
     ws_bancos = None
 
 # 3. FUNÇÕES DE CARREGAMENTO
+# --- ORDEM CORRETA DAS FUNÇÕES ---
+
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
@@ -73,15 +75,18 @@ def carregar_bancos_manual_gs():
         if len(dados) > 1: return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
 
-if 'df_base' not in st.session_state: atualizar_sessao()
-
+# 1º DEFINIMOS A FUNÇÃO
 def atualizar_sessao():
     st.session_state['df_base'] = carregar_dados_gs()
     st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
 
+# 2º SÓ DEPOIS USAMOS ELA NA SESSION STATE
+if 'df_base' not in st.session_state:
+    atualizar_sessao()
+
+# AGORA O CÓDIGO SEGUE NORMALMENTE
 df_base = st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
-
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
 if not df_bancos_info.empty:
