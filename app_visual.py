@@ -136,7 +136,7 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 with st.sidebar.expander("⚙️ Ajustar / Excluir Lançamento", expanded=False):
     if not df_base.empty:
         # Mostra os últimos 40 lançamentos para facilitar a busca
-        lista = {f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
+        lista = {f"ID {r['ID']} | {r['Vencimento']} | R$ {r['V_Num']:.2f} | {r['Descrição']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione o lançamento:", [""] + list(lista.keys()))
         
         if escolha:
