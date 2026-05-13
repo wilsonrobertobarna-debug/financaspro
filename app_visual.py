@@ -276,10 +276,10 @@ total_despesa = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
 total_rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
 total_pendente = get_valor_pendente(df_base) # Usando sua função original
 
-# Cálculo do Saldo Geral (Receitas + Rendimentos - Despesas)
+# --- CÁLCULO E ORGANIZAÇÃO DO SALDO ---
 saldo_geral = (total_receita + total_rendimento) - total_despesa
 
-# A mágica do visual limpo: Tudo dentro da barrinha de Saldo
+# A barrinha de Saldo (Alinhada à esquerda)
 with st.expander(f"💰 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}", expanded=False):
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("📈 Receita", m_fmt(total_receita))
@@ -287,14 +287,13 @@ with st.expander(f"💰 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}", expanded=False
     m3.metric("💰 Rendimento", m_fmt(total_rendimento))
     m4.metric("⏳ Pendente", m_fmt(total_pendente))
 
-st.divider() # Linha para separar o saldo dos gráficos que virão abaixo 
+st.divider() 
 
-st.divider()
-
-    with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
-            df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
-            df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
-            
+# --- GRÁFICOS (Alinhado exatamente igual ao 'with' de cima) ---
+with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
+    df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
+    df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
+    # Aqui continuaria a lógica do seu gráfico...            
             rec_mar = df_mar[df_mar['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
             desp_mar = df_mar[df_mar['Tipo'] == 'Despesa']['V_Num'].sum()
             sobra_mar = rec_mar - desp_mar
