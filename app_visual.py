@@ -255,7 +255,7 @@ if "💰" in aba:
                 st.plotly_chart(px.pie(df_pizza, values='V_Num', names='Categoria', title="Divisão de Gastos do Mês"), use_container_width=True)
     else:
         st.warning("Nenhum dado encontrado na planilha. Verifique a conexão!")
-    else:
+
         st.success("Tudo em dia!")
         
     st.divider()
