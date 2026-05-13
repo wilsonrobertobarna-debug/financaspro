@@ -172,7 +172,8 @@ st.sidebar.divider()
 # BARRINHA 1: NOVO LANÇAMENTO
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
     with st.form("f_novo", clear_on_submit=True):
-        f_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+        f_compra = st.date_input("🛍️ Data da Compra", value=datetime.now(), format="DD/MM/YYYY")
+        f_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         f_des = st.text_input("Descrição / Beneficiário")
@@ -180,9 +181,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
-        
-        # Campo de Vencimento do Cartão
-        f_venc_cartao = st.date_input("Data Da Compra", value=None, format="DD/MM/YYYY")
+            
         
         if st.form_submit_button("SALVAR"):
             v_str = f"{f_val:.2f}".replace('.', ',')
