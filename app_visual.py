@@ -360,7 +360,7 @@ with st.expander("📊 Clique para ver o Comparativo de Sobra Mensal", expanded=
         
     c_d1, c_d2 = st.columns(2)
     s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-        s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
+    s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
         
         c1, c2, c3 = st.columns(3)
         s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
