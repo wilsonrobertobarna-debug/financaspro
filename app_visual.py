@@ -310,7 +310,7 @@ with st.expander("📊 Clique para ver o Comparativo de Sobra Mensal", expanded=
         
     st.divider()
         
-        with st.expander("🎯 Configurar Metas"):
+    with st.expander("🎯 Configurar Metas"):
             todas_cats = sorted(df_base['Categoria'].unique())
             metas_map = {}
             cols = st.columns(3)
