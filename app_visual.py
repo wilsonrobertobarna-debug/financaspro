@@ -431,9 +431,9 @@ elif "🐾" in aba:
         gasto_total_mes = df_pet_mes['V_Num'].sum()
         
         df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
-                          df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
+                         df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
         df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
-                          df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
+                         df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
         
         m_milo = df_milo[(df_milo['Mes_Ano'] == mes_atual) & (df_milo['Status'] == 'Pago')]['V_Num'].sum()
         m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'] == 'Pago')]['V_Num'].sum()
@@ -526,114 +526,57 @@ elif "📄" in aba:
     saldos_txt = ""
     total_patrimonio = 0.0 
     
-   # 1. LOOP PELOS BANCOS
-    for b in sorted(bancos_disponiveis):
-        valor_base_planilha = 0.0
-        dia_fechamento = 1 # Valor padrão caso esteja vazio
-        
-        # Busca as informações na aba de Bancos
-        if not df_bancos_info.empty:
-            for _, row in df_bancos_info.iterrows():
-                if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
-                    try:
-                        # Coluna B: Valor (Saldo ou Limite)
-                        v_raw = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                        valor_base_planilha = float(v_raw) if v_raw and v_raw != 'nan' else 0.0
-                        
-                        # Coluna C: Dia de Fechamento (se existir)
-                        if len(row) >= 3:
-                            f_raw = str(row.iloc[2]).strip()
-                            if f_raw and f_raw != 'nan':
-                                dia_fechamento = int(float(f_raw))
-                    except: pass
-                    break
-        
-# 1. LOOP PELOS BANCOS (Ajustado para buscar PENDENTE no Cartão)
     for b in sorted(bancos_disponiveis):
         valor_b = 0.0      
         tipo_c = ""
-        dia_fech_d = 1    
         dia_venc_e = 10   
         
         if not df_bancos_info.empty:
             for _, row in df_bancos_info.iterrows():
                 if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
                     try:
-                        # B (1): Valor (Limite)
                         v_raw = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
                         valor_b = float(v_raw) if v_raw and v_raw != 'nan' else 0.0
-                        
-                        # C (2): Tipo
                         tipo_c = str(row.iloc[2]).strip().upper()
-                        
-                        # D (3): Fechamento
-                        if len(row) >= 4:
-                            f_raw = str(row.iloc[3]).replace('R$', '').strip()
-                            dia_fech_d = int(float(f_raw)) if f_raw and f_raw != 'nan' else 1
-                            
-                        # E (4): Vencimento
                         if len(row) >= 5:
                             ven_raw = str(row.iloc[4]).replace('R$', '').strip()
                             dia_venc_e = int(float(ven_raw)) if ven_raw and ven_raw != 'nan' else 10
                     except: pass
                     break
         
-     # --- LÓGICA DE CARTÃO (Soma Pendentes até a data Limite) ---
         if "CARTA" in tipo_c or "CART" in b.upper():
             limite_cartao = valor_b
-            
-            # Filtra a base: 
-            # 1. Do banco específico
-            # 2. Que seja Despesa
-            # 3. Que esteja Pendente
             df_cart_base = df_base[(df_base['Banco'] == b) & 
                                    (df_base['Tipo'].str.upper() == 'DESPESA') & 
                                    (df_base['Status'].str.upper() == 'PENDENTE')].copy()
-            
-            # Garante que a coluna de data está em formato de data
             df_cart_base['DT_ONLY'] = pd.to_datetime(df_cart_base['DT']).dt.date
-            
-            # 🔥 O PULO DO GATO:
-            # Soma tudo o que está pendente DESDE SEMPRE até a DATA FINAL (d_fim) selecionada.
-            # Isso pega contas atrasadas e compras do mês, mas IGNORA parcelas futuras.
             usado = df_cart_base[df_cart_base['DT_ONLY'] <= d_fim]['V_Num'].sum()
-            
             dispo = limite_cartao - usado
-            
             saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
-        
-        # --- LÓGICA DE CONTA / INVESTIMENTO ---
         else:
             saldo_inicial = valor_b
-            # Para contas normais, mantemos apenas o que já foi 'Pago'
             mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
             rec_b = mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
             des_b = mov_paga[mov_paga['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
             s_final = saldo_inicial + rec_b - des_b
-            
             icone = "💰" if "INVEST" in tipo_c else "🏦"
             saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
             total_patrimonio += s_final
 
-    # 2. RESUMO DO RELATÓRIO (Rendimento e Sobra)
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
 
     if not df_per.empty:
         df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
         df_per['C_UP'] = df_per['Categoria'].astype(str).str.upper().str.strip()
-        
-        # Procura REND na Categoria ou no Tipo
         mask_rend = (df_per['T_UP'].str.contains('REND', na=False)) | (df_per['C_UP'].str.contains('REND', na=False))
         rend_v = df_per[mask_rend & (df_per['Status'] == 'Pago')]['V_Num'].sum()
-        
         rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
         des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
         sobra = rec_v - des_v
     else:
         rec_v = des_v = rend_v = sobra = 0.0
 
-    # 3. TEXTO FINAL
     relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"========================================\n"
     relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
