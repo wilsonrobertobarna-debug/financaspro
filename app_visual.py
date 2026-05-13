@@ -282,27 +282,25 @@ if "💰" in aba:
         
         st.divider()
         
-        Como fazer a barra aparecer oculta por padrão:
-Substitua o trecho que exibe esses valores pelo código abaixo:
-
-Python
-# O 'expanded=False' garante que ela comece fechada (oculta)
-with st.expander("📊 Clique para ver o Comparativo de Sobra Mensal", expanded=False):
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric("Sobra de Março", "R$ 0,00")
-    
-    with col2:
-        # Exibe o valor em Real conforme sua preferência de moeda
-        st.metric("Sobra de Abril", "R$ -20.197,60", delta_color="normal")
-        
-    with col3:
-        st.metric("Variação Líquida", "R$ -20.197,60")
-
-    # A barra de progresso ou percentual que você mencionou
-    st.progress(0.0) 
-    st.caption("A variação de 0.0% está oculta até que você abra este painel.")
+        with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
+            df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
+            df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
+            
+            rec_mar = df_mar[df_mar['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            desp_mar = df_mar[df_mar['Tipo'] == 'Despesa']['V_Num'].sum()
+            sobra_mar = rec_mar - desp_mar
+            
+            rec_abr = df_abr[df_abr['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            desp_abr = df_abr[df_abr['Tipo'] == 'Despesa']['V_Num'].sum()
+            sobra_abr = rec_abr - desp_abr
+            
+            var_valor = sobra_abr - sobra_mar
+            var_pct = ((sobra_abr - sobra_mar) / abs(sobra_mar) * 100) if sobra_mar != 0 else 0.0
+            
+            c_c1, c_c2, c_c3 = st.columns(3)
+            c_c1.metric("Sobra de Março", m_fmt(sobra_mar))
+            c_c2.metric("Sobra de Abril", m_fmt(sobra_abr))
+            c_c3.metric("Variação Líquida", m_fmt(var_valor), delta=f"{var_pct:.1f}%")
         
         st.divider()
         
