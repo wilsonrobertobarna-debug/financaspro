@@ -133,20 +133,58 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
                 ws_base.append_row([d_s, v_s, "Transferência Entrada", "Transferência", "Receita", t_dest, "Pago", ""])
                 atualizar_sessao(); st.rerun()
 
-with st.sidebar.expander("⚙️ Ajustar / Excluir", expanded=False):
+with st.sidebar.expander("⚙️ Ajustar / Excluir Lançamento", expanded=False):
     if not df_base.empty:
-        lista = {f"ID {r['ID']} | {r['Descrição']} | {r['Valor']}": r for _, r in df_base.tail(30).iloc[::-1].iterrows()}
-        escolha = st.selectbox("Selecionar:", [""] + list(lista.keys()))
+        # Mostra os últimos 40 lançamentos para facilitar a busca
+        lista = {f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
+        escolha = st.selectbox("Selecione o lançamento:", [""] + list(lista.keys()))
+        
         if escolha:
             item = lista[escolha]
-            ed_val = st.number_input("Novo Valor:", value=float(item['V_Num']))
-            col1, col2 = st.columns(2)
-            if col1.button("💾 SALVAR"):
-                ws_base.update_cell(int(item['ID']), 2, f"{ed_val:.2f}".replace('.', ','))
-                atualizar_sessao(); st.rerun()
-            if col2.button("🚨 EXCLUIR"):
-                ws_base.delete_rows(int(item['ID']))
-                atualizar_sessao(); st.rerun()
+            
+            # Campos para edição
+            with st.container():
+                # Converte a data string para objeto date do python
+                dt_atual = pd.to_datetime(item['Vencimento'], dayfirst=True)
+                
+                ed_dat = st.date_input("Alterar Vencimento:", value=dt_atual, format="DD/MM/YYYY")
+                ed_des = st.text_input("Alterar Descrição:", value=item['Descrição'])
+                ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+                
+                # Busca o índice do banco atual na lista para já vir selecionado
+                try:
+                    idx_banco = bancos_disponiveis.index(item['Banco'])
+                except:
+                    idx_banco = 0
+                ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_banco)
+                
+                # Seleção de Status
+                st_idx = 0 if item['Status'] == "Pago" else 1
+                ed_sta = st.selectbox("Alterar Status:", ["Pago", "Pendente"], index=st_idx)
+                
+                col_ed1, col_ed2 = st.columns(2)
+                
+                if col_ed1.button("💾 ATUALIZAR TUDO"):
+                    v_str = f"{ed_val:.2f}".replace('.', ',')
+                    d_str = ed_dat.strftime("%d/%m/%Y")
+                    linha = int(item['ID'])
+                    
+                    # Atualiza cada célula na planilha (Colunas: 1=Data, 2=Valor, 3=Desc, 6=Banco, 7=Status)
+                    ws_base.update_cell(linha, 1, d_s)
+                    ws_base.update_cell(linha, 2, v_str)
+                    ws_base.update_cell(linha, 3, ed_des)
+                    ws_base.update_cell(linha, 6, ed_bnc)
+                    ws_base.update_cell(linha, 7, ed_sta)
+                    
+                    st.success("Lançamento atualizado!")
+                    atualizar_sessao()
+                    st.rerun()
+                
+                if col_ed2.button("🚨 EXCLUIR"):
+                    ws_base.delete_rows(int(item['ID']))
+                    st.warning("Lançamento excluído!")
+                    atualizar_sessao()
+                    st.rerun()
 
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
