@@ -403,43 +403,54 @@ elif "📄" in aba:
     st.text_area("Copiar Relatório", relat, height=300)
     st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
 
-elif "📋" in aba:
-    st.title("📋 Gerador de Relatório PDF")
-    
-    c1, c2, c3 = st.columns(3)
-    b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY", key="pdf_d1")
-    b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY", key="pdf_d2")
-    
-    st.divider()
-    
-    c_b1, c_b2, c_b3 = st.columns(3)
-    s_bnc_rel = c_b1.multiselect("Filtrar por Banco:", sorted(bancos_disponiveis))
-    s_sta_rel = c_b2.multiselect("Filtrar por Status:", ["Pago", "Pendente"])
-    b_desc_rel = c_b3.text_input("Buscar por Descrição:")
-    
-    st.divider()
-    
-    df_v = df_base.copy()
-    df_v = df_v[df_v['DT'].notna()]
-    df_v = df_v[(df_v['DT'].dt.date >= b_ini) & (df_v['DT'].dt.date <= b_fim)]
-    
-    if s_bnc_rel:
-        df_v = df_v[df_v['Banco'].isin(s_bnc_rel)]
-    if s_sta_rel:
-        df_v = df_v[df_v['Status'].isin(s_sta_rel)]
-    if b_desc_rel:
-        df_v = df_v[df_v['Descrição'].str.contains(b_desc_rel, case=False, na=False)]
+elif "Relatório PDF" in aba:
+    st.title("📋 Gerar Relatório Mensal (PDF)")
+    st.write("Clique no botão abaixo para gerar o PDF dos lançamentos do mês atual.")
+
+    if not df_base.empty:
+        # Filtra os dados do mês atual para o PDF
+        df_pdf = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         
-    st.subheader("Lançamentos Filtrados")
-    df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
-    df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
-    
-    st.divider()
-    
-    if st.button("📄 Gerar PDF"):
-        if df_v.empty:
-            st.warning("Nenhum lançamento selecionado para gerar o PDF.")
+        if st.button("Gerar PDF"):
+            try:
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial", "B", 16)
+                pdf.cell(190, 10, f"Relatório Financeiro - {mes_atual}", ln=True, align="C")
+                pdf.ln(10)
+
+                # Cabeçalho da Tabela
+                pdf.set_font("Arial", "B", 10)
+                pdf.cell(30, 10, "Vencimento", 1) # Trocado de 'Data' para 'Vencimento'
+                pdf.cell(80, 10, "Descricao", 1)
+                pdf.cell(40, 10, "Valor", 1)
+                pdf.cell(40, 10, "Status", 1)
+                pdf.ln()
+
+                # Linhas da Tabela
+                pdf.set_font("Arial", "", 10)
+                for _, row in df_pdf.iterrows():
+                    # Usamos 'Vencimento' aqui para evitar o erro
+                    pdf.cell(30, 10, str(row['Vencimento']), 1)
+                    pdf.cell(80, 10, str(row['Descrição'])[:40], 1)
+                    pdf.cell(40, 10, m_fmt(row['V_Num']), 1)
+                    pdf.cell(40, 10, str(row['Status']), 1)
+                    pdf.ln()
+
+                # Gera o arquivo em memória
+                pdf_output = pdf.output(dest='S').encode('latin-1', errors='ignore')
+                
+                st.download_button(
+                    label="📥 Baixar Relatório PDF",
+                    data=pdf_output,
+                    file_name=f"Relatorio_{mes_atual.replace('/', '_')}.pdf",
+                    mime="application/pdf"
+                )
+                st.success("PDF gerado com sucesso!")
+            except Exception as e:
+                st.error(f"Erro ao gerar o PDF: {e}")
+    else:
+        st.warning("Não há dados para gerar o relatório.")
         else:
             try:
                 pdf = FPDF()
