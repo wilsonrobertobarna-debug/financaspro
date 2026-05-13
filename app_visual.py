@@ -334,7 +334,7 @@ with st.expander("📊 Clique para ver o Comparativo de Sobra Mensal", expanded=
     st.divider()
     st.subheader("📈 Evolução do Saldo Acumulado")
     df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
-        if not df_saldo_dia.empty:
+    if not df_saldo_dia.empty:
             df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
                 lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
             )
