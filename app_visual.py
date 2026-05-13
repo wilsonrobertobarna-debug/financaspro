@@ -355,8 +355,8 @@ with st.expander("📊 Clique para ver o Comparativo de Sobra Mensal", expanded=
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
             fig_m.update_layout(barmode='group', height=350); st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
         
-        st.divider()
-        st.subheader("🔍 Busca e Lançamentos")
+    st.divider()
+    st.subheader("🔍 Busca e Lançamentos")
         
         c_d1, c_d2 = st.columns(2)
         s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
