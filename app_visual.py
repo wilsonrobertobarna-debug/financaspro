@@ -182,7 +182,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         
         # Campo de Vencimento do Cartão
-        f_venc_cartao = st.date_input"Data Da Compra", value=None, format="DD/MM/YYYY")
+        f_venc_cartao = st.date_input("Vencimento do Cartão (Opcional)", value=None, format="DD/MM/YYYY")
         
         if st.form_submit_button("SALVAR"):
             v_str = f"{f_val:.2f}".replace('.', ',')
