@@ -312,27 +312,28 @@ with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded
 
 # Este divisor agora está fora do expander para manter o visual organizado
 st.divider()        
-# Onde era o subheader, agora é a barrinha
+# --- SEÇÃO 1: CONTAS E CARTÕES ---
 with st.expander("🏦 Ver Detalhes de Contas e Cartões", expanded=False):
-    # ATENÇÃO: Tudo aqui embaixo precisa de 4 espaços (ou 1 TAB) de recuo
-    # Exemplo:
-    st.write("Dados da Conta Corrente...")
-    # Seus cartões (Nubank, etc.) entram aqui também, todos recuados
-        if not df_bancos_info.empty:
-            st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
-        else:
-            st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
-        
-        st.divider()
-        
-        with st.expander("🎯 Configurar Metas"):
-            todas_cats = sorted(df_base['Categoria'].unique())
-            metas_map = {}
-            cols = st.columns(3)
-            for i, cat in enumerate(todas_cats):
-                if cat != "Transferência":
-                    default_v = 1200.0 if cat == "Mercado" else 400.0
-                    metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
+    # Tudo aqui dentro tem exatamente 4 espaços de recuo
+    if not df_bancos_info.empty:
+        st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+    else:
+        st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
+
+st.divider() # Fora do expander para separar as seções
+
+# --- SEÇÃO 2: METAS (Agora independente para não sobrecarregar a tela) ---
+with st.expander("🎯 Configurar Metas", expanded=False):
+    todas_cats = sorted(df_base['Categoria'].unique())
+    metas_map = {}
+    cols = st.columns(3)
+    
+    # Loop para criar os campos de meta
+    for i, cat in enumerate(todas_cats):
+        if cat != "Transferência":
+            # Mantendo seus valores padrão
+            default_v = 1200.0 if cat == "Mercado" else 400.0
+            metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
         
         g1, g2 = st.columns(2)
         with g1:
