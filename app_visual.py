@@ -279,7 +279,7 @@ total_pendente = get_valor_pendente(df_base) # Usando sua função original
 # --- CÁLCULO E ORGANIZAÇÃO DO SALDO ---
 saldo_geral = (total_receita + total_rendimento) - total_despesa
 
---- 1. BLOCO DE SALDO GERAL ---
+#--- 1. BLOCO DE SALDO GERAL ---
 with st.expander(f"💰 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}", expanded=False):
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("📈 Receita", m_fmt(total_receita))
