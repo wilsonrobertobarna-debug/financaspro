@@ -416,29 +416,35 @@ elif "Relatório PDF" in aba:
                 pdf = FPDF()
                 pdf.add_page()
                 pdf.set_font("Arial", "B", 16)
-                pdf.cell(190, 10, f"Relatório Financeiro - {mes_atual}", ln=True, align="C")
+                pdf.cell(190, 10, f"RELATORIO FINANCEIRO - {mes_atual}", ln=True, align="C")
                 pdf.ln(10)
 
                 # Cabeçalho da Tabela
                 pdf.set_font("Arial", "B", 10)
-                pdf.cell(30, 10, "Vencimento", 1) # Trocado de 'Data' para 'Vencimento'
-                pdf.cell(80, 10, "Descricao", 1)
-                pdf.cell(40, 10, "Valor", 1)
-                pdf.cell(40, 10, "Status", 1)
+                pdf.cell(30, 8, "Vencimento", 1)
+                pdf.cell(80, 8, "Descricao", 1)
+                pdf.cell(40, 8, "Valor", 1)
+                pdf.cell(40, 8, "Status", 1)
                 pdf.ln()
 
                 # Linhas da Tabela
                 pdf.set_font("Arial", "", 10)
+                # Ordenar por data para o relatório ficar bonito
+                df_pdf = df_pdf.sort_values(by='DT')
+                
                 for _, row in df_pdf.iterrows():
-                    # Usamos 'Vencimento' aqui para evitar o erro
-                    pdf.cell(30, 10, str(row['Vencimento']), 1)
-                    pdf.cell(80, 10, str(row['Descrição'])[:40], 1)
-                    pdf.cell(40, 10, m_fmt(row['V_Num']), 1)
-                    pdf.cell(40, 10, str(row['Status']), 1)
+                    pdf.cell(30, 7, str(row['Vencimento']), 1)
+                    # Corta a descrição se for muito longa para não vazar a tabela
+                    desc = str(row['Descrição'])[:35]
+                    pdf.cell(80, 7, desc, 1)
+                    pdf.cell(40, 7, f"R$ {row['V_Num']:.2f}".replace('.', ','), 1)
+                    pdf.cell(40, 7, str(row['Status']), 1)
                     pdf.ln()
 
                 # Gera o arquivo em memória
-                pdf_output = pdf.output(dest='S').encode('latin-1', errors='ignore')
+                pdf_output = pdf.output(dest='S')
+                if isinstance(pdf_output, str):
+                    pdf_output = pdf_output.encode('latin-1', errors='ignore')
                 
                 st.download_button(
                     label="📥 Baixar Relatório PDF",
@@ -446,12 +452,11 @@ elif "Relatório PDF" in aba:
                     file_name=f"Relatorio_{mes_atual.replace('/', '_')}.pdf",
                     mime="application/pdf"
                 )
-                st.success("PDF gerado com sucesso!")
+                st.success("PDF pronto para baixar!")
             except Exception as e:
                 st.error(f"Erro ao gerar o PDF: {e}")
     else:
-        st.warning("Não há dados para gerar o relatório.")
-        else:
+        st.warning("Não há dados para gerar o relatório.")        else:
             try:
                 pdf = FPDF()
                 pdf.add_page()
