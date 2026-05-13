@@ -94,6 +94,24 @@ if 'df_base' not in st.session_state:
     st.session_state['df_base'] = carregar_dados_gs()
 if 'df_bancos_info' not in st.session_state:
     st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
+    with st.expander("📊 RESUMO DOS MESES", expanded=False):
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Entradas", "R$ 0,00")
+    with col2:
+        st.metric("Saídas", "R$ 0,00")
+    with col3:
+        st.metric("Balanço", "R$ 0,00")
+
+with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
+    if not df_bancos_info.empty:
+        for index, row in df_bancos_info.iterrows():
+            banco_nome = row.iloc[0]
+            st.write(f"🔹 **{banco_nome}**")
+            st.caption("Saldo calculado aparecerá aqui")
+            st.divider()
+    else:
+        st.warning("Nenhum banco encontrado.")
 
 # FUNÇÃO PARA ATUALIZAR O ESTADO
 def atualizar_sessao():
