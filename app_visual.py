@@ -331,7 +331,7 @@ with st.expander("📊 Clique para ver o Comparativo de Sobra Mensal", expanded=
             if not df_f_grouped.empty: 
                 st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa Mensal"), use_container_width=True, config={'staticPlot': True})
         
-        st.divider()
+    st.divider()
         st.subheader("📈 Evolução do Saldo Acumulado")
         df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
         if not df_saldo_dia.empty:
