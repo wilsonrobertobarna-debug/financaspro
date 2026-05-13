@@ -298,13 +298,13 @@ with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded
     desp_mar = df_mar[df_mar['Tipo'] == 'Despesa']['V_Num'].sum()
     sobra_mar = rec_mar - desp_mar
                                    
-            var_valor = sobra_abr - sobra_mar
-            var_pct = ((sobra_abr - sobra_mar) / abs(sobra_mar) * 100) if sobra_mar != 0 else 0.0
+    var_valor = sobra_abr - sobra_mar
+    var_pct = ((sobra_abr - sobra_mar) / abs(sobra_mar) * 100) if sobra_mar != 0 else 0.0
             
-            c_c1, c_c2, c_c3 = st.columns(3)
-            c_c1.metric("Sobra de Março", m_fmt(sobra_mar))
-            c_c2.metric("Sobra de Abril", m_fmt(sobra_abr))
-            c_c3.metric("Variação Líquida", m_fmt(var_valor), delta=f"{var_pct:.1f}%")
+    c_c1, c_c2, c_c3 = st.columns(3)
+    c_c1.metric("Sobra de Março", m_fmt(sobra_mar))
+    c_c2.metric("Sobra de Abril", m_fmt(sobra_abr))
+    c_c3.metric("Variação Líquida", m_fmt(var_valor), delta=f"{var_pct:.1f}%")
         
         st.divider()
         
