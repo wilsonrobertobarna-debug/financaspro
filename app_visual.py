@@ -309,20 +309,25 @@ with st.expander(f"📊 Comparativo de Sobra: {s_ini.strftime('%d/%m')} até {s_
         
     st.divider()
         
-        with st.expander("🎯 Configurar Metas"):
+       # --- SEÇÃO DE METAS ---
+        # Removi os espaços extras para alinhar com o restante do dashboard
+        with st.expander("🎯 Configurar Metas", expanded=False):
             todas_cats = sorted(df_base['Categoria'].unique())
             metas_map = {}
             cols = st.columns(3)
             for i, cat in enumerate(todas_cats):
                 if cat != "Transferência":
+                    # Mantendo seus valores padrão conforme solicitado
                     default_v = 1200.0 if cat == "Mercado" else 400.0
                     metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
         
+        # --- GRÁFICOS (Agora fora do expander para visualização direta) ---
         g1, g2 = st.columns(2)
         with g1:
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             if not df_p.empty: 
                 st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True, config={'staticPlot': True})
+        
         with g2:
             df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
             df_f = df_f.sort_values('DT')
@@ -330,8 +335,7 @@ with st.expander(f"📊 Comparativo de Sobra: {s_ini.strftime('%d/%m')} até {s_
             if not df_f_grouped.empty: 
                 st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa Mensal"), use_container_width=True, config={'staticPlot': True})
         
-        st.divider()
-        st.subheader("📈 Evolução do Saldo Acumulado")
+        st.divider()        st.subheader("📈 Evolução do Saldo Acumulado")
         df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
         if not df_saldo_dia.empty:
             df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
