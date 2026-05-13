@@ -311,7 +311,7 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir Lançamento", expanded=False)
         df_car_display['Valor'] = df_car['V_Num'].apply(m_fmt)
         st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-elif "📄" in aba:
+    elif "📄" in aba:
     st.title("📄 WhatsApp")
     
     c1, c2 = st.columns(2)
