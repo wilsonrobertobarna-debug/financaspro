@@ -282,28 +282,25 @@ if "💰" in aba:
         
         st.divider()
         
-        with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
-            df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
-            df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
-            
-            rec_mar = df_mar[df_mar['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            desp_mar = df_mar[df_mar['Tipo'] == 'Despesa']['V_Num'].sum()
-            sobra_mar = rec_mar - desp_mar
-            
-            rec_abr = df_abr[df_abr['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            desp_abr = df_abr[df_abr['Tipo'] == 'Despesa']['V_Num'].sum()
-            sobra_abr = rec_abr - desp_abr
-            
-            var_valor = sobra_abr - sobra_mar
-            var_pct = ((sobra_abr - sobra_mar) / abs(sobra_mar) * 100) if sobra_mar != 0 else 0.0
-            
-            c_c1, c_c2, c_c3 = st.columns(3)
-            c_c1.metric("Sobra de Março", m_fmt(sobra_mar))
-            c_c2.metric("Sobra de Abril", m_fmt(sobra_abr))
-            c_c3.metric("Variação Líquida", m_fmt(var_valor), delta=f"{var_pct:.1f}%")
-        
-        st.divider()
-        
+        # --- 1. COMPARATIVO DE SOBRA DINÂMICO ---
+# 'expanded=False' garante que a barra venha fechada como você quer
+with st.expander(f"📊 Comparativo de Sobra: {s_ini.strftime('%d/%m')} até {s_fim.strftime('%d/%m')}", expanded=False):
+    
+    # Filtramos os dados com base nas datas 's_ini' e 's_fim' que você já tem no código
+    df_periodo = df_base[(df_base['DT'].dt.date >= s_ini) & (df_base['DT'].dt.date <= s_fim) & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
+    
+    # Cálculos dinâmicos baseados na sua seleção
+    receitas_periodo = df_periodo[df_periodo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+    despesas_periodo = df_periodo[df_periodo['Tipo'] == 'Despesa']['V_Num'].sum()
+    sobra_atual = receitas_periodo - despesas_periodo
+    
+    # Exibição das métricas
+    c1, c2 = st.columns(2)
+    c1.metric("Receitas no Período", m_fmt(receitas_periodo))
+    c2.metric("Despesas no Período", m_fmt(despesas_periodo))
+    
+    st.divider()
+    st.metric("Sobra Líquida Atual", m_fmt(sobra_atual))        
         st.subheader("🏦 Informações de Contas e Cartões")
         if not df_bancos_info.empty:
             st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
