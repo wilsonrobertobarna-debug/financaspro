@@ -195,21 +195,24 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir Lançamento", expanded=False)
     elif "💰" in aba:
         st.title("🛡️ FinançasPro Wilson")
         
-        if not st.session_state.get('df_base', pd.DataFrame()).empty:
-            df_base = st.session_state['df_base']
-            
-            # 1. FILTROS E BUSCA (AS TAGS E PESQUISA)
+        # Recupera os dados da sessão
+        df_base = st.session_state.get('df_base', pd.DataFrame())
+
+        if not df_base.empty:
+            # 1. FILTROS E PESQUISA (AS TAGS NO TOPO)
             st.subheader("🔍 Filtros de Pesquisa")
             c1, c2, c3 = st.columns([1, 1, 2])
             
             with c1:
-                f_bnc = st.multiselect("Banco:", sorted(df_base['Banco'].unique().tolist()))
+                # Pega os bancos direto da sua planilha
+                lista_bancos = sorted(df_base['Banco'].unique().tolist())
+                f_bnc = st.multiselect("Filtrar por Banco:", lista_bancos)
             with c2:
-                f_sta = st.multiselect("Status:", ["Pago", "Pendente"])
+                f_sta = st.multiselect("Filtrar por Status:", ["Pago", "Pendente"])
             with c3:
                 f_txt = st.text_input("Buscar por Descrição:", placeholder="Ex: Mercado, Aluguel...")
 
-            # Lógica de filtragem
+            # APLICAÇÃO DOS FILTROS (Se nada for selecionado, ele mostra tudo)
             df_visual = df_base.copy()
             if f_bnc:
                 df_visual = df_visual[df_visual['Banco'].isin(f_bnc)]
@@ -218,32 +221,48 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir Lançamento", expanded=False)
             if f_txt:
                 df_visual = df_visual[df_visual['Descrição'].str.contains(f_txt, case=False, na=False)]
 
-            # 2. CARDS DE SALDO
+            # 2. CARDS DE SALDO (Calculados sobre o que você filtrou)
             df_pagos = df_visual[(df_visual['Status'] == 'Pago') & (df_visual['Categoria'] != 'Transferência')]
             receita = df_pagos[df_pagos['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
             despesa = df_pagos[df_pagos['Tipo'] == 'Despesa']['V_Num'].sum()
-            
-            st.info(f"### 🏦 SALDO (DADOS FILTRADOS): {m_fmt(receita - despesa)}")
+            pendente_total = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
+
+            st.info(f"### 🏦 SALDO DOS DADOS EXIBIDOS: {m_fmt(receita - despesa)}")
             
             m1, m2, m3 = st.columns(3)
             m1.metric("📈 Receitas Pagas", m_fmt(receita))
             m2.metric("📉 Despesas Pagas", m_fmt(despesa))
-            m3.metric("⏳ Pendente Total", m_fmt(df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()))
+            m3.metric("⏳ Total Pendente (Geral)", m_fmt(pendente_total))
             
             st.divider()
 
-            # 3. TABELA E GRÁFICOS
+            # 3. TABELA DE LANÇAMENTOS (O HISTÓRICO)
             st.subheader("📋 Histórico de Lançamentos")
-            cols_exibir = ['Vencimento', 'Descrição', 'Valor', 'Banco', 'Status']
-            st.dataframe(df_visual[cols_exibir].iloc[::-1], use_container_width=True, hide_index=True)
+            cols_exibir = ['Vencimento', 'Descrição', 'Valor', 'Banco', 'Status', 'Categoria']
+            
+            if not df_visual.empty:
+                st.dataframe(
+                    df_visual[cols_exibir].iloc[::-1], 
+                    use_container_width=True, 
+                    hide_index=True
+                )
+            else:
+                st.warning("Nenhum dado encontrado para esta busca.")
 
-            if not df_pagos.empty:
-                st.subheader("📊 Distribuição de Gastos")
-                fig_pizza = px.pie(df_pagos[df_pagos['Tipo'] == 'Despesa'], values='V_Num', names='Categoria', hole=0.3)
+            # 4. GRÁFICOS (REATIVADOS)
+            st.divider()
+            st.subheader("📊 Distribuição de Gastos (Pagos)")
+            df_gastos = df_pagos[df_pagos['Tipo'] == 'Despesa']
+            
+            if not df_gastos.empty:
+                # Agrupa por categoria para o gráfico
+                df_pizza = df_gastos.groupby('Categoria')['V_Num'].sum().reset_index()
+                fig_pizza = px.pie(df_pizza, values='V_Num', names='Categoria', hole=0.3)
                 st.plotly_chart(fig_pizza, use_container_width=True)
+            else:
+                st.write("Sem gastos pagos para gerar o gráfico nesta seleção.")
         else:
-            st.error("Planilha vazia.")
-
+            st.error("Wilson, a planilha não carregou dados ou está vazia.")
     # --- ABA DO CARRO (A LINHA 310 QUE DAVA ERRO) ---
     elif "🚗" in aba:
         st.title("🚗 Gestão do Veículo")
