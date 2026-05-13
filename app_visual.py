@@ -279,7 +279,7 @@ total_pendente = get_valor_pendente(df_base) # Usando sua função original
 # --- CÁLCULO E ORGANIZAÇÃO DO SALDO ---
 saldo_geral = (total_receita + total_rendimento) - total_despesa
 
-# A barrinha de Saldo (Alinhada à esquerda)
+--- 1. BLOCO DE SALDO GERAL ---
 with st.expander(f"💰 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}", expanded=False):
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("📈 Receita", m_fmt(total_receita))
@@ -287,66 +287,58 @@ with st.expander(f"💰 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}", expanded=False
     m3.metric("💰 Rendimento", m_fmt(total_rendimento))
     m4.metric("⏳ Pendente", m_fmt(total_pendente))
 
-st.divider() 
+st.divider()
 
 # --- GRÁFICOS (Alinhado exatamente igual ao 'with' de cima) ---
+# --- 2. COMPARATIVO MENSAL ---
 with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
-    # Definindo os dados para o comparativo
     df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
     df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
     
-    # Cálculos de Março
     rec_mar = df_mar[df_mar['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
     desp_mar = df_mar[df_mar['Tipo'] == 'Despesa']['V_Num'].sum()
     sobra_mar = rec_mar - desp_mar
     
-    # Cálculos de Abril (Certifique-se que rec_abr e desp_abr foram calculados antes)
+    # Aqui usamos o valor de sobra_abr que você já calculou no código
     var_valor = sobra_abr - sobra_mar
     var_pct = ((sobra_abr - sobra_mar) / abs(sobra_mar) * 100) if sobra_mar != 0 else 0.0
     
-    # Exibição das Métricas
     c_c1, c_c2, c_c3 = st.columns(3)
     c_c1.metric("Sobra de Março", m_fmt(sobra_mar))
     c_c2.metric("Sobra de Abril", m_fmt(sobra_abr))
     c_c3.metric("Variação Líquida", m_fmt(var_valor), delta=f"{var_pct:.1f}%")
 
-# Este divisor agora está fora do expander para manter o visual organizado
-st.divider()        
-# --- SEÇÃO 1: CONTAS E CARTÕES ---
+st.divider()
+# --- 3. CONTAS E CARTÕES ---
 with st.expander("🏦 Ver Detalhes de Contas e Cartões", expanded=False):
-    # Tudo aqui dentro tem exatamente 4 espaços de recuo
     if not df_bancos_info.empty:
         st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
     else:
         st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
 
-st.divider() # Fora do expander para separar as seções
+st.divider()
 
-# --- SEÇÃO 2: METAS (Agora independente para não sobrecarregar a tela) ---
+# ---# --- 4. METAS E GRÁFICOS (Tudo junto como você prefere) ---
 with st.expander("🎯 Configurar Metas", expanded=False):
     todas_cats = sorted(df_base['Categoria'].unique())
     metas_map = {}
     cols = st.columns(3)
-    
-    # Loop para criar os campos de meta
     for i, cat in enumerate(todas_cats):
         if cat != "Transferência":
-            # Mantendo seus valores padrão
             default_v = 1200.0 if cat == "Mercado" else 400.0
             metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
         
-        g1, g2 = st.columns(2)
-        with g1:
-            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-            if not df_p.empty: 
-                st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True, config={'staticPlot': True})
-        with g2:
-            df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
-            df_f = df_f.sort_values('DT')
-            df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
-            if not df_f_grouped.empty: 
-                st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa Mensal"), use_container_width=True, config={'staticPlot': True})
-        
+    # Coloquei os gráficos de volta aqui dentro para não mudar sua lógica
+    g1, g2 = st.columns(2)
+    with g1:
+        df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        if not df_p.empty: 
+            st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True)
+    with g2:
+        df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
+        df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
+        if not df_f_grouped.empty: 
+            st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', title="📊 Fluxo de Caixa Mensal"), use_container_width=True)        
         st.divider()
         st.subheader("📈 Evolução do Saldo Acumulado")
         df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
