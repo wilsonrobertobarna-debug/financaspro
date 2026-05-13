@@ -207,9 +207,9 @@ elif "🚗" in aba:
     alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
     gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
         
-            if alc > 0 and gas > 0:
-            if (alc/gas) <= 0.7: c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
-            else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
+    if alc > 0 and gas > 0:
+    if (alc/gas) <= 0.7: c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
+    else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
         
         st.divider()
         st.subheader("⚙️ Controle de Troca de Óleo")
