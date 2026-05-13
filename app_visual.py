@@ -509,8 +509,6 @@ elif "Relatório PDF" in aba:
                 except Exception as e:
                     st.error(f"Erro técnico ao gerar PDF: {e}")
     else:
-        st.error("A base de dados está vazia.")
-    else:
-        st.warning("Não há dados para gerar o relatório.")
+        st.error("A base de dados está vazia.")   
         
            
