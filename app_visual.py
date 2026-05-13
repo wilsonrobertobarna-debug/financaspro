@@ -195,7 +195,6 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir Lançamento", expanded=False)
     elif "💰" in aba:
         st.title("🛡️ FinançasPro Wilson")
         
-        # Recupera os dados da sessão
         df_base = st.session_state.get('df_base', pd.DataFrame())
 
         if not df_base.empty:
@@ -204,15 +203,14 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir Lançamento", expanded=False)
             c1, c2, c3 = st.columns([1, 1, 2])
             
             with c1:
-                # Pega os bancos direto da sua planilha
                 lista_bancos = sorted(df_base['Banco'].unique().tolist())
-                f_bnc = st.multiselect("Filtrar por Banco:", lista_bancos)
+                f_bnc = st.multiselect("Banco:", lista_bancos)
             with c2:
-                f_sta = st.multiselect("Filtrar por Status:", ["Pago", "Pendente"])
+                f_sta = st.multiselect("Status:", ["Pago", "Pendente"])
             with c3:
                 f_txt = st.text_input("Buscar por Descrição:", placeholder="Ex: Mercado, Aluguel...")
 
-            # APLICAÇÃO DOS FILTROS (Se nada for selecionado, ele mostra tudo)
+            # APLICAÇÃO DOS FILTROS
             df_visual = df_base.copy()
             if f_bnc:
                 df_visual = df_visual[df_visual['Banco'].isin(f_bnc)]
@@ -221,34 +219,59 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir Lançamento", expanded=False)
             if f_txt:
                 df_visual = df_visual[df_visual['Descrição'].str.contains(f_txt, case=False, na=False)]
 
-            # 2. CARDS DE SALDO (Calculados sobre o que você filtrou)
+            # 2. CARDS DE SALDO
             df_pagos = df_visual[(df_visual['Status'] == 'Pago') & (df_visual['Categoria'] != 'Transferência')]
             receita = df_pagos[df_pagos['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
             despesa = df_pagos[df_pagos['Tipo'] == 'Despesa']['V_Num'].sum()
-            pendente_total = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
 
-            st.info(f"### 🏦 SALDO DOS DADOS EXIBIDOS: {m_fmt(receita - despesa)}")
+            st.info(f"### 🏦 SALDO FILTRADO: {m_fmt(receita - despesa)}")
             
             m1, m2, m3 = st.columns(3)
-            m1.metric("📈 Receitas Pagas", m_fmt(receita))
-            m2.metric("📉 Despesas Pagas", m_fmt(despesa))
-            m3.metric("⏳ Total Pendente (Geral)", m_fmt(pendente_total))
+            m1.metric("📈 Receitas", m_fmt(receita))
+            m2.metric("📉 Gastos", m_fmt(despesa))
+            m3.metric("⏳ Pendente Total", m_fmt(df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()))
             
             st.divider()
 
-            # 3. TABELA DE LANÇAMENTOS (O HISTÓRICO)
-            st.subheader("📋 Histórico de Lançamentos")
-            cols_exibir = ['Vencimento', 'Descrição', 'Valor', 'Banco', 'Status', 'Categoria']
-            
-            if not df_visual.empty:
-                st.dataframe(
-                    df_visual[cols_exibir].iloc[::-1], 
-                    use_container_width=True, 
-                    hide_index=True
-                )
-            else:
-                st.warning("Nenhum dado encontrado para esta busca.")
+            # 3. TABELA DE LANÇAMENTOS
+            st.subheader("📋 Histórico")
+            cols_ver = ['Vencimento', 'Descrição', 'Valor', 'Banco', 'Status']
+            st.dataframe(df_visual[cols_ver].iloc[::-1], use_container_width=True, hide_index=True)
 
+            # 4. GRÁFICOS
+            if not df_pagos[df_pagos['Tipo'] == 'Despesa'].empty:
+                st.divider()
+                st.subheader("📊 Distribuição de Gastos")
+                df_pizza = df_pagos[df_pagos['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+                fig = px.pie(df_pizza, values='V_Num', names='Categoria', hole=0.3)
+                st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("Dados não carregados.")
+
+    # --- ABA DE RELATÓRIO PDF (CORRIGINDO O ERRO DE SINTAXE) ---
+    elif "📄" in aba:
+        st.title("📋 Gerar Relatório Mensal (PDF)")
+        st.write(f"Período: **{mes_atual}**")
+        
+        if st.button("🚀 Gerar PDF"):
+            df_pdf = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+            if not df_pdf.empty:
+                try:
+                    pdf = FPDF()
+                    pdf.add_page()
+                    pdf.set_font("Arial", "B", 14)
+                    pdf.cell(190, 10, f"RELATORIO - {mes_atual}", ln=True, align="C")
+                    pdf.ln(5)
+                    pdf.set_font("Arial", "", 10)
+                    for _, row in df_pdf.iterrows():
+                        pdf.cell(190, 8, f"{row['Vencimento']} - {row['Descrição'][:30]} - R$ {row['V_Num']:.2f}", border=1, ln=True)
+                    
+                    pdf_out = pdf.output(dest='S').encode('latin-1', errors='ignore')
+                    st.download_button("📥 Baixar PDF", data=pdf_out, file_name=f"Relatorio_{mes_atual.replace('/','_')}.pdf")
+                except Exception as e:
+                    st.error(f"Erro no PDF: {e}")
+            else:
+                st.warning("Sem dados para o mês atual.")
             # 4. GRÁFICOS (REATIVADOS)
             st.divider()
             st.subheader("📊 Distribuição de Gastos (Pagos)")
@@ -311,7 +334,7 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir Lançamento", expanded=False)
         df_car_display['Valor'] = df_car['V_Num'].apply(m_fmt)
         st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-    elif "📄" in aba:
+elif "📄" in aba:
     st.title("📄 WhatsApp")
     
     c1, c2 = st.columns(2)
