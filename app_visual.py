@@ -191,68 +191,73 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir Lançamento", expanded=False)
                     atualizar_sessao()
                     st.rerun()
 
-# --- ABA PRINCIPAL CORRIGIDA ---
-elif "💰" in aba:
-    st.title("🛡️ FinançasPro Wilson")
-    
-    if not df_base.empty:
-        # 1. FILTROS (AS TAGS DE BUSCA)
-        st.subheader("🔍 Filtros de Pesquisa")
-        c1, c2, c3 = st.columns([1, 1, 2])
+# --- ABA PRINCIPAL (FINANÇAS & BANCOS) ---
+    elif "💰" in aba:
+        st.title("🛡️ FinançasPro Wilson")
         
-        with c1:
-            f_bnc = st.multiselect("Banco:", sorted(bancos_disponiveis))
-        with c2:
-            f_sta = st.multiselect("Status:", ["Pago", "Pendente"])
-        with c3:
-            f_txt = st.text_input("Buscar por Descrição:")
+        if not st.session_state.get('df_base', pd.DataFrame()).empty:
+            df_base = st.session_state['df_base']
+            
+            # 1. FILTROS E BUSCA (AS TAGS E PESQUISA)
+            st.subheader("🔍 Filtros de Pesquisa")
+            c1, c2, c3 = st.columns([1, 1, 2])
+            
+            with c1:
+                f_bnc = st.multiselect("Banco:", sorted(df_base['Banco'].unique().tolist()))
+            with c2:
+                f_sta = st.multiselect("Status:", ["Pago", "Pendente"])
+            with c3:
+                f_txt = st.text_input("Buscar por Descrição:", placeholder="Ex: Mercado, Aluguel...")
 
-        # Lógica de filtragem: Se nada for selecionado, mostra tudo
-        df_visual = df_base.copy()
-        if f_bnc:
-            df_visual = df_visual[df_visual['Banco'].isin(f_bnc)]
-        if f_sta:
-            df_visual = df_visual[df_visual['Status'].isin(f_sta)]
-        if f_txt:
-            df_visual = df_visual[df_visual['Descrição'].str.contains(f_txt, case=False, na=False)]
+            # Lógica de filtragem: Se não filtrar nada, mostra tudo
+            df_visual = df_base.copy()
+            if f_bnc:
+                df_visual = df_visual[df_visual['Banco'].isin(f_bnc)]
+            if f_sta:
+                df_visual = df_visual[df_visual['Status'].isin(f_sta)]
+            if f_txt:
+                df_visual = df_visual[df_visual['Descrição'].str.contains(f_txt, case=False, na=False)]
 
-        # 2. CARDS DE SALDO (Calculados sobre o que está na tela)
-        receita = df_visual[(df_visual['Tipo'].isin(['Receita', 'Rendimento'])) & (df_visual['Status'] == 'Pago')]['V_Num'].sum()
-        despesa = df_visual[(df_visual['Tipo'] == 'Despesa') & (df_visual['Status'] == 'Pago')]['V_Num'].sum()
-        pendente_total = df_visual[df_visual['Status'] == 'Pendente']['V_Num'].sum()
+            # 2. CARDS DE SALDO
+            df_pagos = df_visual[(df_visual['Status'] == 'Pago') & (df_visual['Categoria'] != 'Transferência')]
+            receita = df_pagos[df_pagos['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            despesa = df_pagos[df_pagos['Tipo'] == 'Despesa']['V_Num'].sum()
+            pendente_total = df_visual[df_visual['Status'] == 'Pendente']['V_Num'].sum()
 
-        st.info(f"### 🏦 SALDO (DADOS FILTRADOS): {m_fmt(receita - despesa)}")
-        
-        m1, m2, m3 = st.columns(3)
-        m1.metric("📈 Receitas Pagas", m_fmt(receita))
-        m2.metric("📉 Despesas Pagas", m_fmt(despesa))
-        m3.metric("⏳ Pendente Nesta Busca", m_fmt(pendente_total))
-        
-        st.divider()
+            st.info(f"### 🏦 SALDO (DADOS FILTRADOS): {m_fmt(receita - despesa)}")
+            
+            m1, m2, m3 = st.columns(3)
+            m1.metric("📈 Receitas Pagas", m_fmt(receita))
+            m2.metric("📉 Despesas Pagas", m_fmt(despesa))
+            m3.metric("⏳ Pendente na Busca", m_fmt(pendente_total))
+            
+            st.divider()
 
-        # 3. TABELA DE LANÇAMENTOS (O HISTÓRICO)
-        st.subheader("📋 Histórico de Lançamentos")
-        cols_exibir = ['Vencimento', 'Descrição', 'Valor', 'Banco', 'Status', 'Categoria']
-        
-        # Mostra a tabela - Se estiver vazia, avisa
-        if not df_visual.empty:
-            st.dataframe(df_visual[cols_exibir].iloc[::-1], use_container_width=True, hide_index=True)
+            # 3. TABELA DE LANÇAMENTOS (O RELATÓRIO QUE SUMIU)
+            st.subheader("📋 Histórico de Lançamentos")
+            cols_exibir = ['Vencimento', 'Descrição', 'Valor', 'Banco', 'Status', 'Categoria']
+            
+            if not df_visual.empty:
+                st.dataframe(df_visual[cols_exibir].iloc[::-1], use_container_width=True, hide_index=True)
+            else:
+                st.warning("Nenhum dado encontrado para os filtros selecionados.")
+
+            # 4. GRÁFICOS (REATIVADOS)
+            st.divider()
+            st.subheader("📊 Distribuição de Gastos")
+            df_gastos = df_pagos[df_pagos['Tipo'] == 'Despesa']
+            
+            if not df_gastos.empty:
+                fig_pizza = px.pie(df_gastos, values='V_Num', names='Categoria', hole=0.3)
+                st.plotly_chart(fig_pizza, use_container_width=True)
+            else:
+                st.write("Sem gastos pagos para gerar gráfico nesta seleção.")
         else:
-            st.warning("Nenhum dado encontrado para os filtros selecionados.")
-
-        # 4. GRÁFICOS (REATIVADOS)
-        st.divider()
-        st.subheader("📊 Distribuição de Gastos (Pagos)")
-        df_gastos = df_visual[(df_visual['Tipo'] == 'Despesa') & (df_visual['Status'] == 'Pago')]
-        
-        if not df_gastos.empty:
-            fig_pizza = px.pie(df_gastos, values='V_Num', names='Categoria', hole=0.3)
-            st.plotly_chart(fig_pizza, use_container_width=True)
-        else:
-            st.write("Sem gastos pagos para gerar gráfico nesta seleção.")
+            st.error("Wilson, a planilha não carregou dados. Verifique a conexão.")
 
     else:
-        st.error("A base de dados está vazia ou não foi carregada.")    st.title("🐾 Gestão Milo & Bolt")
+        st.error("A base de dados está vazia ou não foi carregada.")
+        st.title("🐾 Gestão Milo & Bolt")
     
     df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
                      df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
