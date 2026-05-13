@@ -209,7 +209,7 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir Lançamento", expanded=False)
             with c3:
                 f_txt = st.text_input("Buscar por Descrição:", placeholder="Ex: Mercado, Aluguel...")
 
-            # Lógica de filtragem: Se não filtrar nada, mostra tudo
+            # Lógica de filtragem
             df_visual = df_base.copy()
             if f_bnc:
                 df_visual = df_visual[df_visual['Banco'].isin(f_bnc)]
@@ -222,94 +222,34 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir Lançamento", expanded=False)
             df_pagos = df_visual[(df_visual['Status'] == 'Pago') & (df_visual['Categoria'] != 'Transferência')]
             receita = df_pagos[df_pagos['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
             despesa = df_pagos[df_pagos['Tipo'] == 'Despesa']['V_Num'].sum()
-            pendente_total = df_visual[df_visual['Status'] == 'Pendente']['V_Num'].sum()
-
+            
             st.info(f"### 🏦 SALDO (DADOS FILTRADOS): {m_fmt(receita - despesa)}")
             
             m1, m2, m3 = st.columns(3)
             m1.metric("📈 Receitas Pagas", m_fmt(receita))
             m2.metric("📉 Despesas Pagas", m_fmt(despesa))
-            m3.metric("⏳ Pendente na Busca", m_fmt(pendente_total))
+            m3.metric("⏳ Pendente Total", m_fmt(df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()))
             
             st.divider()
 
-            # 3. TABELA DE LANÇAMENTOS (O RELATÓRIO QUE SUMIU)
+            # 3. TABELA E GRÁFICOS
             st.subheader("📋 Histórico de Lançamentos")
-            cols_exibir = ['Vencimento', 'Descrição', 'Valor', 'Banco', 'Status', 'Categoria']
-            
-            if not df_visual.empty:
-                st.dataframe(df_visual[cols_exibir].iloc[::-1], use_container_width=True, hide_index=True)
-            else:
-                st.warning("Nenhum dado encontrado para os filtros selecionados.")
+            cols_exibir = ['Vencimento', 'Descrição', 'Valor', 'Banco', 'Status']
+            st.dataframe(df_visual[cols_exibir].iloc[::-1], use_container_width=True, hide_index=True)
 
-            # 4. GRÁFICOS (REATIVADOS)
-            st.divider()
-            st.subheader("📊 Distribuição de Gastos")
-            df_gastos = df_pagos[df_pagos['Tipo'] == 'Despesa']
-            
-            if not df_gastos.empty:
-                fig_pizza = px.pie(df_gastos, values='V_Num', names='Categoria', hole=0.3)
+            if not df_pagos.empty:
+                st.subheader("📊 Distribuição de Gastos")
+                fig_pizza = px.pie(df_pagos[df_pagos['Tipo'] == 'Despesa'], values='V_Num', names='Categoria', hole=0.3)
                 st.plotly_chart(fig_pizza, use_container_width=True)
-            else:
-                st.write("Sem gastos pagos para gerar gráfico nesta seleção.")
         else:
-            st.error("Wilson, a planilha não carregou dados. Verifique a conexão.")
+            st.error("Planilha vazia.")
 
-    else:
-        st.error("A base de dados está vazia ou não foi carregada.")
-        st.title("🐾 Gestão Milo & Bolt")
-    
-    df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
-                     df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
-    
-    if not df_pet.empty:
-        df_pet_mes = df_pet[(df_pet['Mes_Ano'] == mes_atual) & (df_pet['Status'] == 'Pago')]
-        gasto_total_mes = df_pet_mes['V_Num'].sum()
+    # --- ABA DO CARRO (A LINHA 310 QUE DAVA ERRO) ---
+    elif "🚗" in aba:
+        st.title("🚗 Gestão do Veículo")
+        st.write("Acompanhe aqui seus gastos com combustível e manutenção.")
+        # Seu código do carro continua aqui...
         
-        df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
-                         df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
-        df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
-                         df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
-        
-        m_milo = df_milo[(df_milo['Mes_Ano'] == mes_atual) & (df_milo['Status'] == 'Pago')]['V_Num'].sum()
-        m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'] == 'Pago')]['V_Num'].sum()
-        
-        c_p1, c_p2, c_p3 = st.columns(3)
-        c_p1.metric("📈 Gasto Total (Mês)", m_fmt(gasto_total_mes))
-        c_p2.metric("🐶 Com o Milo (Mês)", m_fmt(m_milo))
-        c_p3.metric("🐱 Com o Bolt (Mês)", m_fmt(m_bolt))
-        
-        st.divider()
-        st.subheader("📋 Controle de Saúde e Ração")
-        c_v1, c_v2 = st.columns(2)
-        with c_v1:
-            st.markdown("**💊 Vacinas, Vermífugos e Veterinário**")
-            st.info("💡 *Dica: Ao lançar na descrição, coloque o nome do pet (ex: Vacina V10 Milo).*")
-        with c_v2:
-            st.markdown("**🛍️ Controle de Ração e PetShop**")
-            st.info("💡 *Dica: Use a categoria 'Pet: Milo' ou 'Pet: Bolt' para facilitar a separação!*")
-            
-        st.divider()
-        st.subheader("🔍 Lançamentos dos Meninos")
-        
-        c_f1, c_f2 = st.columns([1, 2])
-        pet_escolha = c_f1.radio("Filtrar por Pet:", ["Todos", "Milo", "Bolt"], horizontal=True)
-        
-        df_show = df_pet.copy()
-        if pet_escolha == "Milo":
-            df_show = df_milo
-        elif pet_escolha == "Bolt":
-            df_show = df_bolt
-            
-        df_show_display = df_show[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']].copy()
-        df_show_display['Valor'] = df_show['V_Num'].apply(m_fmt)
-        st.dataframe(df_show_display.iloc[::-1], use_container_width=True, hide_index=True)
-    else:
-        st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
-
-elif "🚗" in aba:
-    st.title("🚗 Gestão do Veículo")
-    
     c1, c2, c3 = st.columns([1,1,2])
     alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
     gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
