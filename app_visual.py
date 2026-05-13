@@ -201,12 +201,11 @@ if "💰" in aba:
 # --- ABA DO VEÍCULO (AGORA O ELIF FUNCIONA PORQUE O ELSE ACIMA TERMINOU) ---
 elif "🚗" in aba:
     st.title("🚗 Gestão do Veículo")
-    st.write("Acompanhe aqui seus gastos com combustível e manutenção.")
-    # ... Restante do código do carro
-        
-        c1, c2, c3 = st.columns([1,1,2])
-        alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
-        gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
+    st.write("Acompanhe seus gastos aqui.")
+    # A linha 207 deve estar alinhada com as de cima:
+    c1, c2, c3 = st.columns([1,1,2]) 
+    alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
+    gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
         
         if alc > 0 and gas > 0:
             if (alc/gas) <= 0.7: c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
