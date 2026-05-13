@@ -446,56 +446,70 @@ elif "📄" in aba:
 
 elif "Relatório PDF" in aba:
     st.title("📋 Gerar Relatório Mensal (PDF)")
-    st.write("Clique no botão abaixo para gerar o PDF dos lançamentos do mês atual.")
+    st.write(f"Gerando relatório para o período: **{mes_atual}**")
 
     if not df_base.empty:
-        # Filtra os dados do mês atual para o PDF
+        # 1. Filtra os dados do mês atual
         df_pdf = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         
-        if st.button("Gerar PDF"):
-            try:
-                pdf = FPDF()
-                pdf.add_page()
-                pdf.set_font("Arial", "B", 16)
-                pdf.cell(190, 10, f"RELATORIO FINANCEIRO - {mes_atual}", ln=True, align="C")
-                pdf.ln(10)
+        if df_pdf.empty:
+            st.warning(f"⚠️ Não existem lançamentos para o mês {mes_atual}. Mude o filtro ou adicione lançamentos.")
+        else:
+            if st.button("🚀 Criar Arquivo PDF"):
+                try:
+                    pdf = FPDF()
+                    pdf.add_page()
+                    pdf.set_font("Arial", "B", 16)
+                    
+                    # Título
+                    pdf.cell(190, 10, f"FINANCASPRO WILSON - {mes_atual}", ln=True, align="C")
+                    pdf.ln(10)
 
-                # Cabeçalho da Tabela
-                pdf.set_font("Arial", "B", 10)
-                pdf.cell(30, 8, "Vencimento", 1)
-                pdf.cell(80, 8, "Descricao", 1)
-                pdf.cell(40, 8, "Valor", 1)
-                pdf.cell(40, 8, "Status", 1)
-                pdf.ln()
+                    # Cabeçalho da Tabela
+                    pdf.set_fill_color(200, 200, 200)
+                    pdf.set_font("Arial", "B", 10)
+                    pdf.cell(25, 10, "Data", 1, 0, 'C', True)
+                    pdf.cell(75, 10, "Descricao", 1, 0, 'C', True)
+                    pdf.cell(35, 10, "Valor", 1, 0, 'C', True)
+                    pdf.cell(25, 10, "Banco", 1, 0, 'C', True)
+                    pdf.cell(30, 10, "Status", 1, 1, 'C', True)
 
-                # Linhas da Tabela
-                pdf.set_font("Arial", "", 10)
-                # Ordenar por data para o relatório ficar bonito
-                df_pdf = df_pdf.sort_values(by='DT')
-                
-                for _, row in df_pdf.iterrows():
-                    pdf.cell(30, 7, str(row['Vencimento']), 1)
-                    # Corta a descrição se for muito longa para não vazar a tabela
-                    desc = str(row['Descrição'])[:35]
-                    pdf.cell(80, 7, desc, 1)
-                    pdf.cell(40, 7, f"R$ {row['V_Num']:.2f}".replace('.', ','), 1)
-                    pdf.cell(40, 7, str(row['Status']), 1)
-                    pdf.ln()
+                    # Linhas
+                    pdf.set_font("Arial", "", 9)
+                    df_pdf = df_pdf.sort_values(by='DT')
+                    
+                    for _, row in df_pdf.iterrows():
+                        # Tratamento de texto para evitar erro de caractere especial
+                        txt_desc = str(row['Descrição']).encode('ascii', 'ignore').decode('ascii')[:35]
+                        txt_bnc = str(row['Banco']).encode('ascii', 'ignore').decode('ascii')
+                        
+                        pdf.cell(25, 8, str(row['Vencimento']), 1)
+                        pdf.cell(75, 8, txt_desc, 1)
+                        pdf.cell(35, 8, f"R$ {row['V_Num']:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'), 1)
+                        pdf.cell(25, 8, txt_bnc, 1)
+                        pdf.cell(30, 8, str(row['Status']), 1, 1)
 
-                # Gera o arquivo em memória
-                pdf_output = pdf.output(dest='S')
-                if isinstance(pdf_output, str):
-                    pdf_output = pdf_output.encode('latin-1', errors='ignore')
-                
-                st.download_button(
-                    label="📥 Baixar Relatório PDF",
-                    data=pdf_output,
-                    file_name=f"Relatorio_{mes_atual.replace('/', '_')}.pdf",
-                    mime="application/pdf"
-                )
-                st.success("PDF pronto para baixar!")
-            except Exception as e:
-                st.error(f"Erro ao gerar o PDF: {e}")
+                    # Totalizador no final do PDF
+                    total_gastos = df_pdf[df_pdf['Tipo'] == 'Despesa']['V_Num'].sum()
+                    pdf.ln(5)
+                    pdf.set_font("Arial", "B", 11)
+                    pdf.cell(190, 10, f"Total de Gastos no Mes: R$ {total_gastos:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'), 0, 1, 'R')
+
+                    # Gerar o binário para o Streamlit
+                    pdf_out = pdf.output(dest='S').encode('latin-1', errors='ignore')
+                    
+                    st.download_button(
+                        label="📥 BAIXAR RELATÓRIO AGORA",
+                        data=pdf_out,
+                        file_name=f"Relatorio_Wilson_{mes_atual.replace('/', '_')}.pdf",
+                        mime="application/pdf"
+                    )
+                    st.success("✅ PDF pronto! Clique no botão acima para baixar.")
+                    
+                except Exception as e:
+                    st.error(f"Erro técnico ao gerar PDF: {e}")
+    else:
+        st.error("A base de dados está vazia.")
     else:
         st.warning("Não há dados para gerar o relatório.")
         
