@@ -263,21 +263,15 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
- # 5. TELAS PRINCIPAIS
-    if "💰" in aba:
-        st.title("🛡️ FinançasPro Wilson")
-        # --- FORMULÁRIO DE LANÇAMENTO ---
-        st.subheader("➕ Novo Lançamento")
-
-        # O campo de compra que você pediu (fica acima)
-        data_c = st.date_input("Data de Compra:", value=datetime.now(), key="f_compra")
-
-        # O campo de vencimento (que era chamado de Data)
-        data_v = st.date_input("Vencimento:", value=datetime.now(), key="f_vencimento")
-
-        # Descrição e Valor
-        desc = st.text_input("Descrição:", key="f_desc")
-        valor = st.number_input("Valor (R$):", step=0.01, format="%.2f", key="f_valor")
+# 5. TELAS PRINCIPAIS
+if "💰" in aba:
+    st.title("🛡️ FinançasPro Wilson")
+    if not df_base.empty:
+        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+        
+        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
         st.divider()
         
@@ -313,7 +307,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         
         st.subheader("🏦 Informações de Contas e Cartões")
         if not df_bancos_info.empty:
-            st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+            st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
         else:
             st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
         
@@ -383,65 +377,52 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
         
-       # --- FINAL DA ABA ANTERIOR (Busca e Tabela) ---
-        # --- FINAL DA ABA ANTERIOR ---
-        # Garante que a tabela use 'Vencimento' e esteja recuada corretamente
-       # --- FINAL DA ABA DE LANÇAMENTOS ---
-        # Este bloco deve estar com recuo (espaço na frente)
-       # --- FINAL DO BLOCO DE LANÇAMENTOS ---
-        # Certifique-se que estas 3 linhas abaixo têm 8 espaços (ou 2 TABs) de recuo
-        # --- FINAL DO BLOCO DE LANÇAMENTOS ---
-        # Certifique-se que estas linhas têm espaços na frente (estão "dentro" do IF)
-        # --- FINAL DA ABA DE LANÇAMENTOS ---
-        # Estas linhas DEVEM ter espaços/recuo na frente
-       # --- FINAL DA ABA ANTERIOR ---
-        # Garante que o df_v_display use 'Vencimento' e esteja recuado (dentro do IF)
-        # Fim da aba Lançamentos (com 8 espaços de recuo)
-       # Fim da aba Lançamentos (com 8 espaços de recuo)
-        # Final da aba anterior
-        # --- FINAL DO BLOCO DE LANÇAMENTOS ---
-       # --- FINAL DA ABA ANTERIOR (Certifique-se que estas 3 linhas têm 8 espaços de recuo) ---
-       # Final do bloco anterior (verifique se termina com parêntese fechado)
-        # --- FINAL DA ABA ANTERIOR ---
-        # Garante o uso da coluna 'Vencimento' conforme seu padrão
-        # --- FINAL DO BLOCO ANTERIOR ---
-        # Garante o uso da coluna Vencimento e oculta o índice para o visual limpo
-        # Fim da aba Lançamentos - Verifique se o parêntese fecha aqui:
-        # Fim da aba anterior - Certifique-se que fecha com ')'
-       # --- FINAL DO BLOCO DE LANÇAMENTOS ---
-     # --- FIM DA ABA LANÇAMENTOS ---
-       # Exibição da tabela com foco no Vencimento e Moeda Real
         df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-# ESTA LINHA DEVE ESTAR ENCOSTADA NA MARGEM ESQUERDA (COLUNA 0)
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
-    
     df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
-    
     if not df_aviso.empty:
-        # Cálculo de dias para RH e contas do Milo
         df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
         df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
-        
         if not df_venc.empty:
             for _, row in df_venc.iterrows():
                 d_aviso = row['Dias']
-                # Alertas padronizados para o FinançasPro
                 if d_aviso < 0:
-                    st.warning(f"⚠️ **Atrasado:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
+                    st.warning(f"⚠️ **Atrasado (Vencido):** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
                 elif d_aviso == 0:
-                    st.warning(f"⚠️ **Vence hoje:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
+                    st.warning(f"⚠️ **Vence hoje:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
                 elif d_aviso == 1:
-                    st.warning(f"🚨 **Vence amanhã:** {row['Vencimento']} - {row['Descrição']} ({m_fmt(row['V_Num'])})")
-        if not df_venc.empty:
-            for _, row in df_venc.iterrows():
-                d_aviso = row['Dias']
-                if d_aviso < 0:
-                   
+                    st.warning(f"🚨 **Vence amanhã:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                elif d_aviso == 3:
+                    st.warning(f"⚠️ **Vence em 3 dias:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+        else:
+            st.info("Nenhum lançamento a vencer hoje, amanhã ou em atraso.")
+    else:
+        st.info("Nenhum lançamento pendente.")
+        
+    st.divider()
+    
+    st.subheader("🔍 Busca de Lançamentos Pendentes")
+    
+    c1, c2 = st.columns(2)
+    s_bnc = c1.multiselect("Filtrar Banco/Cartão:", sorted(bancos_disponiveis))
+    b_desc = c2.text_input("Buscar Descrição:")
+    
+    df_v = df_base[df_base['Status'] == 'Pendente'].copy()
+    df_v = df_v[df_v['DT'].notna()]
+    if s_bnc:
+        df_v = df_v[df_v['Banco'].isin(s_bnc)]
+    if b_desc:
+        df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
+        
+    df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+    df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
     
