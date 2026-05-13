@@ -194,31 +194,67 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir Lançamento", expanded=False)
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
+    
     if not df_base.empty:
+        # 1. CÁLCULOS DO TOPO
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_pago = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
         receita = df_m_pago[df_m_pago['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
         despesa = df_m_pago[df_m_pago['Tipo'] == 'Despesa']['V_Num'].sum()
-        
+        pendente = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
+
         st.info(f"### 🏦 SALDO DO MÊS: {m_fmt(receita - despesa)}")
+        
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Receitas", m_fmt(receita))
         m2.metric("📉 Gastos", m_fmt(despesa))
-        m3.metric("⏳ Pendente", m_fmt(df_base[(df_base['Status'] == 'Pendente')]['V_Num'].sum()))
+        m3.metric("💰 Rendimento", m_fmt(df_m_pago[df_m_pago['Tipo'] == 'Rendimento']['V_Num'].sum()))
+        m4.metric("⏳ Total Pendente", m_fmt(pendente))
         
         st.divider()
-        st.subheader("🔍 Histórico de Lançamentos")
-        st.dataframe(df_base.iloc[::-1], use_container_width=True, hide_index=True)
 
-elif "Pendências" in aba:
-    st.title("📋 Lançamentos Pendentes")
-    df_p = df_base[df_base['Status'] == 'Pendente'].copy()
-    if not df_p.empty:
-        df_p['Dias'] = (df_p['DT'] - pd.to_datetime(hoje_br)).dt.days
-        for _, r in df_p.iterrows():
-            cor = "🚨" if r['Dias'] <= 1 else "⚠️"
-            st.warning(f"{cor} **{r['Vencimento']}** - {r['Descrição']} ({m_fmt(r['V_Num'])})")
+        # 2. FILTROS DE BUSCA (A parte que estava faltando)
+        st.subheader("🔍 Busca e Filtros")
+        c1, c2, c3 = st.columns(3)
+        
+        f_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
+        f_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
+        f_txt = c3.text_input("Buscar Descrição/Beneficiário:")
+
+        # Aplicando a lógica da busca
+        df_filtrado = df_base.copy()
+        
+        if f_bnc:
+            df_filtrado = df_filtrado[df_filtrado['Banco'].isin(f_bnc)]
+        if f_sta:
+            df_filtrado = df_filtrado[df_filtrado['Status'].isin(f_sta)]
+        if f_txt:
+            # Busca ignorando maiúsculas/minúsculas
+            df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(f_txt, case=False, na=False)]
+
+        # 3. EXIBIÇÃO DA TABELA (RELATÓRIO)
+        st.subheader("📋 Histórico de Lançamentos")
+        
+        # Selecionamos as colunas principais para o visual ficar limpo
+        colunas_ver = ['Vencimento', 'Descrição', 'Categoria', 'Valor', 'Banco', 'Status', 'Tipo']
+        
+        # Mostra do mais novo para o mais antigo (.iloc[::-1])
+        st.dataframe(
+            df_filtrado[colunas_ver].iloc[::-1], 
+            use_container_width=True, 
+            hide_index=True
+        )
+
+        st.divider()
+        
+        # 4. GRÁFICOS (Opcional, se quiser ver onde está gastando mais)
+        with st.expander("📊 Ver Gráficos de Gastos"):
+            df_pizza = df_m_pago[df_m_pago['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            if not df_pizza.empty:
+                st.plotly_chart(px.pie(df_pizza, values='V_Num', names='Categoria', title="Divisão de Gastos do Mês"), use_container_width=True)
+    else:
+        st.warning("Nenhum dado encontrado na planilha. Verifique a conexão!")
     else:
         st.success("Tudo em dia!")
         
