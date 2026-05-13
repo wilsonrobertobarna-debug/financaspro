@@ -312,7 +312,12 @@ with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded
 
 # Este divisor agora está fora do expander para manter o visual organizado
 st.divider()        
-        st.subheader("🏦 Informações de Contas e Cartões")
+# Onde era o subheader, agora é a barrinha
+with st.expander("🏦 Ver Detalhes de Contas e Cartões", expanded=False):
+    # ATENÇÃO: Tudo aqui embaixo precisa de 4 espaços (ou 1 TAB) de recuo
+    # Exemplo:
+    st.write("Dados da Conta Corrente...")
+    # Seus cartões (Nubank, etc.) entram aqui também, todos recuados
         if not df_bancos_info.empty:
             st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
         else:
