@@ -193,58 +193,39 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir Lançamento", expanded=False)
 
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
+   if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
-        # 1. CÁLCULOS DO TOPO
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_pago = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+        # Pega o mês atual (05/26)
+        mes_atual = datetime.now().strftime('%m/%y')
         
+        # Filtra o mês, mas se o filtro vier VAZIO, ele avisa você
+        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+        
+        if df_m.empty:
+            st.warning(f"Nenhum lançamento encontrado para o mês {mes_atual}. Mostrando todos os dados gerais abaixo.")
+            df_m_pago = df_base[df_base['Status'] == 'Pago'].copy()
+        else:
+            df_m_pago = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+        
+        # Cálculos
         receita = df_m_pago[df_m_pago['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
         despesa = df_m_pago[df_m_pago['Tipo'] == 'Despesa']['V_Num'].sum()
-        pendente = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
-
-        st.info(f"### 🏦 SALDO DO MÊS: {m_fmt(receita - despesa)}")
         
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("📈 Receitas", m_fmt(receita))
-        m2.metric("📉 Gastos", m_fmt(despesa))
-        m3.metric("💰 Rendimento", m_fmt(df_m_pago[df_m_pago['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        m4.metric("⏳ Total Pendente", m_fmt(pendente))
+        st.info(f"### 🏦 SALDO: {m_fmt(receita - despesa)}")
         
-        st.divider()
-
-        # 2. FILTROS DE BUSCA (A parte que estava faltando)
-        st.subheader("🔍 Busca e Filtros")
-        c1, c2, c3 = st.columns(3)
+        # TABELA DE BUSCA (Forçando aparecer)
+        st.subheader("🔍 Busca e Lançamentos")
+        f_txt = st.text_input("Digite para buscar (Descrição ou Banco):")
         
-        f_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
-        f_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
-        f_txt = c3.text_input("Buscar Descrição/Beneficiário:")
-
-        # Aplicando a lógica da busca
-        df_filtrado = df_base.copy()
-        
-        if f_bnc:
-            df_filtrado = df_filtrado[df_filtrado['Banco'].isin(f_bnc)]
-        if f_sta:
-            df_filtrado = df_filtrado[df_filtrado['Status'].isin(f_sta)]
+        df_display = df_base.copy()
         if f_txt:
-            # Busca ignorando maiúsculas/minúsculas
-            df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(f_txt, case=False, na=False)]
-
-        # 3. EXIBIÇÃO DA TABELA (RELATÓRIO)
-        st.subheader("📋 Histórico de Lançamentos")
+            df_display = df_display[df_display['Descrição'].str.contains(f_txt, case=False, na=False) | 
+                                    df_display['Banco'].str.contains(f_txt, case=False, na=False)]
         
-        # Selecionamos as colunas principais para o visual ficar limpo
-        colunas_ver = ['Vencimento', 'Descrição', 'Categoria', 'Valor', 'Banco', 'Status', 'Tipo']
-        
-        # Mostra do mais novo para o mais antigo (.iloc[::-1])
-        st.dataframe(
-            df_filtrado[colunas_ver].iloc[::-1], 
-            use_container_width=True, 
-            hide_index=True
-        )
+        # Se a tabela ainda não aparecer, o problema é nas colunas. Vamos garantir:
+        st.dataframe(df_display.iloc[::-1], use_container_width=True, hide_index=True)
 
         st.divider()
         
