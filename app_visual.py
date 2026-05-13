@@ -269,76 +269,70 @@ if "💰" in aba:
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-       # --- CÁLCULO E ORGANIZAÇÃO DO SALDO (Substituindo o seu bloco antigo) ---
-# Primeiro calculamos os valores para as variáveis ficarem limpas
-total_receita = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-total_despesa = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-total_rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-total_pendente = get_valor_pendente(df_base) # Usando sua função original
-
-# --- CÁLCULO E ORGANIZAÇÃO DO SALDO ---
-saldo_geral = (total_receita + total_rendimento) - total_despesa
-
-#--- 1. BLOCO DE SALDO GERAL ---
-with st.expander(f"💰 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}", expanded=False):
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("📈 Receita", m_fmt(total_receita))
-    m2.metric("📉 Gasto", m_fmt(total_despesa))
-    m3.metric("💰 Rendimento", m_fmt(total_rendimento))
-    m4.metric("⏳ Pendente", m_fmt(total_pendente))
-
-st.divider()
-
-# --- GRÁFICOS (Alinhado exatamente igual ao 'with' de cima) ---
-# --- 2. COMPARATIVO MENSAL ---
-with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
-    df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
-    df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
-    
-    rec_mar = df_mar[df_mar['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-    desp_mar = df_mar[df_mar['Tipo'] == 'Despesa']['V_Num'].sum()
-    sobra_mar = rec_mar - desp_mar
-    
-    # Aqui usamos o valor de sobra_abr que você já calculou no código
-    var_valor = sobra_abr - sobra_mar
-    var_pct = ((sobra_abr - sobra_mar) / abs(sobra_mar) * 100) if sobra_mar != 0 else 0.0
-    
-    c_c1, c_c2, c_c3 = st.columns(3)
-    c_c1.metric("Sobra de Março", m_fmt(sobra_mar))
-    c_c2.metric("Sobra de Abril", m_fmt(sobra_abr))
-    c_c3.metric("Variação Líquida", m_fmt(var_valor), delta=f"{var_pct:.1f}%")
-
-st.divider()
-# --- 3. CONTAS E CARTÕES ---
-with st.expander("🏦 Ver Detalhes de Contas e Cartões", expanded=False):
-    if not df_bancos_info.empty:
-        st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
-    else:
-        st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
-
-st.divider()
-
-# ---# --- 4. METAS E GRÁFICOS (Tudo junto como você prefere) ---
-with st.expander("🎯 Configurar Metas", expanded=False):
-    todas_cats = sorted(df_base['Categoria'].unique())
-    metas_map = {}
-    cols = st.columns(3)
-    for i, cat in enumerate(todas_cats):
-        if cat != "Transferência":
-            default_v = 1200.0 if cat == "Mercado" else 400.0
-            metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
+        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
-    # Coloquei os gráficos de volta aqui dentro para não mudar sua lógica
-    g1, g2 = st.columns(2)
-    with g1:
-        df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-        if not df_p.empty: 
-            st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True)
-    with g2:
-        df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
-        df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
-        if not df_f_grouped.empty: 
-            st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', title="📊 Fluxo de Caixa Mensal"), use_container_width=True)        
+        st.divider()
+        
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+        m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+        m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+        m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
+        
+        st.divider()
+        
+        with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
+            df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
+            df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
+            
+            rec_mar = df_mar[df_mar['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            desp_mar = df_mar[df_mar['Tipo'] == 'Despesa']['V_Num'].sum()
+            sobra_mar = rec_mar - desp_mar
+            
+            rec_abr = df_abr[df_abr['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            desp_abr = df_abr[df_abr['Tipo'] == 'Despesa']['V_Num'].sum()
+            sobra_abr = rec_abr - desp_abr
+            
+            var_valor = sobra_abr - sobra_mar
+            var_pct = ((sobra_abr - sobra_mar) / abs(sobra_mar) * 100) if sobra_mar != 0 else 0.0
+            
+            c_c1, c_c2, c_c3 = st.columns(3)
+            c_c1.metric("Sobra de Março", m_fmt(sobra_mar))
+            c_c2.metric("Sobra de Abril", m_fmt(sobra_abr))
+            c_c3.metric("Variação Líquida", m_fmt(var_valor), delta=f"{var_pct:.1f}%")
+        
+        st.divider()
+        
+        st.subheader("🏦 Informações de Contas e Cartões")
+        if not df_bancos_info.empty:
+            st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+        else:
+            st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
+        
+        st.divider()
+        
+        with st.expander("🎯 Configurar Metas"):
+            todas_cats = sorted(df_base['Categoria'].unique())
+            metas_map = {}
+            cols = st.columns(3)
+            for i, cat in enumerate(todas_cats):
+                if cat != "Transferência":
+                    default_v = 1200.0 if cat == "Mercado" else 400.0
+                    metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
+        
+        g1, g2 = st.columns(2)
+        with g1:
+            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            if not df_p.empty: 
+                st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True, config={'staticPlot': True})
+        with g2:
+            df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
+            df_f = df_f.sort_values('DT')
+            df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
+            if not df_f_grouped.empty: 
+                st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa Mensal"), use_container_width=True, config={'staticPlot': True})
+        
         st.divider()
         st.subheader("📈 Evolução do Saldo Acumulado")
         df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
@@ -350,8 +344,8 @@ with st.expander("🎯 Configurar Metas", expanded=False):
             df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
             
             fig_acum = px.line(df_saldo_dia, x='Vencimento', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
-            fig_m.update_layout(barmode='group', height=350) 
-            st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
+            fig_acum.update_layout(height=350)
+            st.plotly_chart(fig_acum, use_container_width=True, config={'staticPlot': True})
         
         st.divider()
         st.subheader("🎯 Metas vs Realizado")
@@ -378,7 +372,6 @@ with st.expander("🎯 Configurar Metas", expanded=False):
         df_v = df_base.copy()
         df_v = df_v[df_v['DT'].notna()]
         df_v = df_v[(df_v['DT'].dt.date >= s_ini) & (df_v['DT'].dt.date <= s_fim)]
-        
         if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
@@ -386,8 +379,9 @@ with st.expander("🎯 Configurar Metas", expanded=False):
         df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+
 elif "Pendências" in aba:
-    st.subheader("⏳ Lançamentos Pendentes")
+    st.title("📋 Lançamentos Pendentes")
     st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
     df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
     if not df_aviso.empty:
