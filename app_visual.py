@@ -287,10 +287,11 @@ with st.expander(f"💰 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}", expanded=False
     m3.metric("💰 Rendimento", m_fmt(total_rendimento))
     m4.metric("⏳ Pendente", m_fmt(total_pendente))
 
-        st.divider() # Linha para separar o saldo dos gráficos que virão abaixo        
+st.divider() # Linha para separar o saldo dos gráficos que virão abaixo        
 
-        
-        with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
+st.divider()
+
+with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
             df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
             
