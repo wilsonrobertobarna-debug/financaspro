@@ -291,23 +291,27 @@ st.divider()
 
 # --- GRÁFICOS (Alinhado exatamente igual ao 'with' de cima) ---
 with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
+    # Definindo os dados para o comparativo
     df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
     df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
-    # Aqui continuaria a lógica do seu gráfico...            
+    
+    # Cálculos de Março
     rec_mar = df_mar[df_mar['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
     desp_mar = df_mar[df_mar['Tipo'] == 'Despesa']['V_Num'].sum()
     sobra_mar = rec_mar - desp_mar
-                                   
+    
+    # Cálculos de Abril (Certifique-se que rec_abr e desp_abr foram calculados antes)
     var_valor = sobra_abr - sobra_mar
     var_pct = ((sobra_abr - sobra_mar) / abs(sobra_mar) * 100) if sobra_mar != 0 else 0.0
-            
+    
+    # Exibição das Métricas
     c_c1, c_c2, c_c3 = st.columns(3)
     c_c1.metric("Sobra de Março", m_fmt(sobra_mar))
     c_c2.metric("Sobra de Abril", m_fmt(sobra_abr))
     c_c3.metric("Variação Líquida", m_fmt(var_valor), delta=f"{var_pct:.1f}%")
-        
-        st.divider()
-        
+
+# Este divisor agora está fora do expander para manter o visual organizado
+st.divider()        
         st.subheader("🏦 Informações de Contas e Cartões")
         if not df_bancos_info.empty:
             st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
