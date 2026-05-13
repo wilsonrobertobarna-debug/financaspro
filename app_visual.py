@@ -301,7 +301,7 @@ with st.expander(f"📊 Comparativo de Sobra: {s_ini.strftime('%d/%m')} até {s_
     
     st.divider()
     st.metric("Sobra Líquida Atual", m_fmt(sobra_atual))        
-        st.subheader("🏦 Informações de Contas e Cartões")
+    st.subheader("🏦 Informações de Contas e Cartões")
         if not df_bancos_info.empty:
             st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
         else:
