@@ -282,7 +282,27 @@ if "💰" in aba:
         
         st.divider()
         
-        with st.expander
+        Como fazer a barra aparecer oculta por padrão:
+Substitua o trecho que exibe esses valores pelo código abaixo:
+
+Python
+# O 'expanded=False' garante que ela comece fechada (oculta)
+with st.expander("📊 Clique para ver o Comparativo de Sobra Mensal", expanded=False):
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Sobra de Março", "R$ 0,00")
+    
+    with col2:
+        # Exibe o valor em Real conforme sua preferência de moeda
+        st.metric("Sobra de Abril", "R$ -20.197,60", delta_color="normal")
+        
+    with col3:
+        st.metric("Variação Líquida", "R$ -20.197,60")
+
+    # A barra de progresso ou percentual que você mencionou
+    st.progress(0.0) 
+    st.caption("A variação de 0.0% está oculta até que você abra este painel.")
         
         st.divider()
         
