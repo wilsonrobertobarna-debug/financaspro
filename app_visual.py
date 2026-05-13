@@ -294,9 +294,9 @@ with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded
     df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
     df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
     # Aqui continuaria a lógica do seu gráfico...            
-     rec_mar = df_mar[df_mar['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-     desp_mar = df_mar[df_mar['Tipo'] == 'Despesa']['V_Num'].sum()
-     sobra_mar = rec_mar - desp_mar
+             rec_mar = df_mar[df_mar['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+             desp_mar = df_mar[df_mar['Tipo'] == 'Despesa']['V_Num'].sum()
+             sobra_mar = rec_mar - desp_mar
                                    
             var_valor = sobra_abr - sobra_mar
             var_pct = ((sobra_abr - sobra_mar) / abs(sobra_mar) * 100) if sobra_mar != 0 else 0.0
