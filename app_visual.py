@@ -158,46 +158,51 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir"):
                 st.warning("Excluído!"); atualizar_sessao(); st.rerun()
 
 # --- ABA PRINCIPAL (FINANÇAS & BANCOS) ---
-# MUITO IMPORTANTE: AQUI COMEÇA COM "IF", NÃO "ELIF"
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
+    
+    # Verificamos se os dados existem primeiro
     if not df_base.empty:
-        st.subheader("🔍 Filtros")
+        st.subheader("🔍 Filtros de Pesquisa")
         c1, c2, c3 = st.columns([1, 1, 2])
-        f_bnc = c1.multiselect("Banco:", sorted(df_base['Banco'].unique().tolist()))
-        f_sta = c2.multiselect("Status:", ["Pago", "Pendente"])
-        f_txt = c3.text_input("Buscar Descrição:")
+        
+        with c1:
+            lista_bancos = sorted(df_base['Banco'].unique().tolist())
+            f_bnc = st.multiselect("Banco:", lista_bancos)
+        with c2:
+            f_sta = st.multiselect("Status:", ["Pago", "Pendente"])
+        with c3:
+            f_txt = st.text_input("Buscar por Descrição:", placeholder="Ex: Mercado...")
 
-        df_v = df_base.copy()
-        if f_bnc: df_v = df_v[df_v['Banco'].isin(f_bnc)]
-        if f_sta: df_v = df_v[df_v['Status'].isin(f_sta)]
-        if f_txt: df_v = df_v[df_v['Descrição'].str.contains(f_txt, case=False, na=False)]
+        # Aplicação dos filtros
+        df_visual = df_base.copy()
+        if f_bnc: df_visual = df_visual[df_visual['Banco'].isin(f_bnc)]
+        if f_sta: df_visual = df_visual[df_visual['Status'].isin(f_sta)]
+        if f_txt: df_visual = df_visual[df_visual['Descrição'].str.contains(f_txt, case=False, na=False)]
 
-        df_p = df_v[(df_v['Status'] == 'Pago') & (df_v['Categoria'] != 'Transferência')]
-        rec = df_p[df_p['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        des = df_p[df_p['Tipo'] == 'Despesa']['V_Num'].sum()
+        # Cards de Saldo
+        df_pagos = df_visual[(df_visual['Status'] == 'Pago') & (df_visual['Categoria'] != 'Transferência')]
+        receita = df_pagos[df_pagos['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        despesa = df_pagos[df_pagos['Tipo'] == 'Despesa']['V_Num'].sum()
 
-        st.info(f"### 🏦 SALDO FILTRADO: {m_fmt(rec - des)}")
+        st.info(f"### 🏦 SALDO FILTRADO: {m_fmt(receita - despesa)}")
+        
         m1, m2, m3 = st.columns(3)
-        m1.metric("📈 Receitas", m_fmt(rec))
-        m2.metric("📉 Gastos", m_fmt(des))
+        m1.metric("📈 Receitas", m_fmt(receita))
+        m2.metric("📉 Gastos", m_fmt(despesa))
         m3.metric("⏳ Pendente Total", m_fmt(df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()))
         
         st.divider()
         st.subheader("📋 Histórico")
-        st.dataframe(df_v[['Vencimento', 'Descrição', 'Valor', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+        st.dataframe(df_visual[['Vencimento', 'Descrição', 'Valor', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+    else:
+        st.warning("Wilson, a planilha parece estar vazia ou não carregou.")
 
-        if not df_p[df_p['Tipo'] == 'Despesa'].empty:
-            st.divider(); st.subheader("📊 Gastos")
-            fig = px.pie(df_p[df_p['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index(), values='V_Num', names='Categoria', hole=0.3)
-            st.plotly_chart(fig, use_container_width=True)
-    else: st.warning("Sem dados.")
-        # --- CONTINUAÇÃO DO BLOCO 1 (ABAS RESTANTES) ---
-
-    # --- ABA DO VEÍCULO ---
-    elif "🚗" in aba:
-        st.title("🚗 Gestão do Veículo")
-        st.write("Acompanhe aqui seus gastos com combustível e manutenção.")
+# --- ABA DO VEÍCULO (AGORA O ELIF FUNCIONA PORQUE O ELSE ACIMA TERMINOU) ---
+elif "🚗" in aba:
+    st.title("🚗 Gestão do Veículo")
+    st.write("Acompanhe aqui seus gastos com combustível e manutenção.")
+    # ... Restante do código do carro
         
         c1, c2, c3 = st.columns([1,1,2])
         alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
