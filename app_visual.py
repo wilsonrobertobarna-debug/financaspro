@@ -269,16 +269,25 @@ if "💰" in aba:
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
-        
-        st.divider()
-        
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
+       # --- CÁLCULO E ORGANIZAÇÃO DO SALDO (Substituindo o seu bloco antigo) ---
+# Primeiro calculamos os valores para as variáveis ficarem limpas
+total_receita = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+total_despesa = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+total_rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+total_pendente = get_valor_pendente(df_base) # Usando sua função original
+
+# Cálculo do Saldo Geral (Receitas + Rendimentos - Despesas)
+saldo_geral = (total_receita + total_rendimento) - total_despesa
+
+# A mágica do visual limpo: Tudo dentro da barrinha de Saldo
+with st.expander(f"💰 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}", expanded=False):
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("📈 Receita", m_fmt(total_receita))
+    m2.metric("📉 Gasto", m_fmt(total_despesa))
+    m3.metric("💰 Rendimento", m_fmt(total_rendimento))
+    m4.metric("⏳ Pendente", m_fmt(total_pendente))
+
+st.divider() # Linha para separar o saldo dos gráficos que virão abaixo
         
         st.divider()
         
