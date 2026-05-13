@@ -367,9 +367,9 @@ with st.expander("📊 Clique para ver o Comparativo de Sobra Mensal", expanded=
     s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
     b_desc = c3.text_input("Buscar Beneficiário:")
         
-        df_v = df_base.copy()
-        df_v = df_v[df_v['DT'].notna()]
-        df_v = df_v[(df_v['DT'].dt.date >= s_ini) & (df_v['DT'].dt.date <= s_fim)]
+    df_v = df_base.copy()
+    df_v = df_v[df_v['DT'].notna()]
+    df_v = df_v[(df_v['DT'].dt.date >= s_ini) & (df_v['DT'].dt.date <= s_fim)]
         if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
