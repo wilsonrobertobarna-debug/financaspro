@@ -456,7 +456,8 @@ elif "Relatório PDF" in aba:
             except Exception as e:
                 st.error(f"Erro ao gerar o PDF: {e}")
     else:
-        st.warning("Não há dados para gerar o relatório.")        else:
+        st.warning("Não há dados para gerar o relatório.")
+    else:
             try:
                 pdf = FPDF()
                 pdf.add_page()
