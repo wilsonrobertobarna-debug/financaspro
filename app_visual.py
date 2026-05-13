@@ -332,7 +332,7 @@ with st.expander("📊 Clique para ver o Comparativo de Sobra Mensal", expanded=
                 st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa Mensal"), use_container_width=True, config={'staticPlot': True})
         
     st.divider()
-        st.subheader("📈 Evolução do Saldo Acumulado")
+    st.subheader("📈 Evolução do Saldo Acumulado")
         df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
         if not df_saldo_dia.empty:
             df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
@@ -345,8 +345,8 @@ with st.expander("📊 Clique para ver o Comparativo de Sobra Mensal", expanded=
             fig_acum.update_layout(height=350)
             st.plotly_chart(fig_acum, use_container_width=True, config={'staticPlot': True})
         
-        st.divider()
-        st.subheader("🎯 Metas vs Realizado")
+    st.divider()
+    st.subheader("🎯 Metas vs Realizado")
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         if not df_metas_graph.empty:
             df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(metas_map).fillna(0.0)
