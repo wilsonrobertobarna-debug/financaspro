@@ -161,26 +161,21 @@ with st.sidebar.expander("⚙️ Ajustar / Excluir"):
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-    # Verificamos se os dados existem primeiro
-    if not df_base.empty:
+    if df_base.empty:
+        st.warning("Wilson, a planilha parece estar vazia ou não carregou.")
+    else:
         st.subheader("🔍 Filtros de Pesquisa")
         c1, c2, c3 = st.columns([1, 1, 2])
         
-        with c1:
-            lista_bancos = sorted(df_base['Banco'].unique().tolist())
-            f_bnc = st.multiselect("Banco:", lista_bancos)
-        with c2:
-            f_sta = st.multiselect("Status:", ["Pago", "Pendente"])
-        with c3:
-            f_txt = st.text_input("Buscar por Descrição:", placeholder="Ex: Mercado...")
+        f_bnc = c1.multiselect("Banco:", sorted(df_base['Banco'].unique().tolist()))
+        f_sta = c2.multiselect("Status:", ["Pago", "Pendente"])
+        f_txt = c3.text_input("Buscar por Descrição:")
 
-        # Aplicação dos filtros
         df_visual = df_base.copy()
         if f_bnc: df_visual = df_visual[df_visual['Banco'].isin(f_bnc)]
         if f_sta: df_visual = df_visual[df_visual['Status'].isin(f_sta)]
         if f_txt: df_visual = df_visual[df_visual['Descrição'].str.contains(f_txt, case=False, na=False)]
 
-        # Cards de Saldo
         df_pagos = df_visual[(df_visual['Status'] == 'Pago') & (df_visual['Categoria'] != 'Transferência')]
         receita = df_pagos[df_pagos['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
         despesa = df_pagos[df_pagos['Tipo'] == 'Despesa']['V_Num'].sum()
@@ -195,25 +190,21 @@ if "💰" in aba:
         st.divider()
         st.subheader("📋 Histórico")
         st.dataframe(df_visual[['Vencimento', 'Descrição', 'Valor', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
-    else:
-        st.warning("Wilson, a planilha parece estar vazia ou não carregou.")
 
-# --- ABA DO VEÍCULO (AGORA O ELIF FUNCIONA PORQUE O ELSE ACIMA TERMINOU) ---
-# --- ABA DO VEÍCULO ---
-    elif "🚗" in aba:
-        st.title("🚗 Gestão do Veículo")
-        st.write("Acompanhe aqui seus gastos com combustível e manutenção.")
-        
-        c1, c2, c3 = st.columns([1,1,2])
-        alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
-        gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
-        
-        # ESTA LINHA ABAIXO (210) DEVE ESTAR ALINHADA COM O 'alc' ACIMA
-        if alc > 0 and gas > 0:
-            if (alc/gas) <= 0.7: 
-                c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
-            else: 
-                c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
+# --- ABA DO VEÍCULO (AGORA SEM ERRO DE SINTAXE) ---
+elif "🚗" in aba:
+    st.title("🚗 Gestão do Veículo")
+    st.write("Acompanhe aqui seus gastos com combustível e manutenção.")
+    
+    c1, c2, c3 = st.columns([1,1,2])
+    alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
+    gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
+    
+    if alc > 0 and gas > 0:
+        if (alc/gas) <= 0.7:
+            c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
+        else:
+            c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
         
         st.divider()
         st.subheader("⚙️ Controle de Troca de Óleo")
