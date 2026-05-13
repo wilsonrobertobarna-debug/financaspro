@@ -350,8 +350,8 @@ with st.expander("🎯 Configurar Metas", expanded=False):
             df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
             
             fig_acum = px.line(df_saldo_dia, x='Vencimento', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
-            fig_acum.update_layout(height=350)
-            st.plotly_chart(fig_acum, use_container_width=True, config={'staticPlot': True})
+            fig_m.update_layout(barmode='group', height=350) 
+            st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
         
         st.divider()
         st.subheader("🎯 Metas vs Realizado")
