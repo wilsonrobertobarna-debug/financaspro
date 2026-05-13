@@ -348,7 +348,7 @@ with st.expander("📊 Clique para ver o Comparativo de Sobra Mensal", expanded=
     st.divider()
     st.subheader("🎯 Metas vs Realizado")
     df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-        if not df_metas_graph.empty:
+    if not df_metas_graph.empty:
             df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(metas_map).fillna(0.0)
             fig_m = go.Figure()
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
