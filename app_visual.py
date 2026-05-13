@@ -320,11 +320,11 @@ with st.expander("📊 Clique para ver o Comparativo de Sobra Mensal", expanded=
                     metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
         
     g1, g2 = st.columns(2)
-        with g1:
+    with g1:
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             if not df_p.empty: 
                 st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True, config={'staticPlot': True})
-        with g2:
+    with g2:
             df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
             df_f = df_f.sort_values('DT')
             df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
