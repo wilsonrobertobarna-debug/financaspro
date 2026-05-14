@@ -95,18 +95,29 @@ if 'df_base' not in st.session_state:
 if 'df_bancos_info' not in st.session_state:
     st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
 
+# --- ITEM 1 DE HOJE: RÉGUA DE MESES (AQUI!) ---
+meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+mes_selecionado = st.segmented_control("Filtrar por Mês:", meses, default="Mai")
+
+st.markdown("---")
+
 # 2. Agora criamos as variáveis locais para usar nas barras
 df_base = st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
 
-with st.expander("📊 RESUMO DOS MESES", expanded=False):
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Entradas", "R$ 0,00")
-    with col2:
-        st.metric("Saídas", "R$ 0,00")
-    with col3:
-        st.metric("Balanço", "R$ 0,00")
+# --- ITEM 2 DE HOJE: A BARRINHA QUE VOCÊ QUERIA ---
+# Substituindo o antigo "RESUMO DOS MESES" pelo novo formato
+with st.expander(f"🏦 SALDO GERAL ATUAL: R$ 2.103,07", expanded=False):
+    c1, c2 = st.columns(2)
+    c3, c4 = st.columns(2)
+    with c1:
+        st.write("📈 **Receita:** R$ 4.893,83")
+    with c2:
+        st.write("📉 **Gasto:** R$ 2.790,92")
+    with c3:
+        st.write("💰 **Rendimento:** R$ 0,16")
+    with c4:
+        st.markdown("<span style='color:#D32F2F;'>⏳ **Pendente:** R$ 6.314,28</span>", unsafe_allow_html=True)
 
 with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
     if not df_bancos_info.empty:
