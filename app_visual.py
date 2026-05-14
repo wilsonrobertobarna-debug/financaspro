@@ -100,30 +100,6 @@ if 'df_bancos_info' not in st.session_state:
 df_base = st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
 
-# --- ITEM 2 DE HOJE: A BARRINHA QUE VOCÊ QUERIA ---
-# Substituindo o antigo "RESUMO DOS MESES" pelo novo formato
-with st.expander(f"🏦 SALDO GERAL ATUAL: R$ 2.103,07", expanded=False):
-    c1, c2 = st.columns(2)
-    c3, c4 = st.columns(2)
-    with c1:
-        st.write("📈 **Receita:** R$ 4.893,83")
-    with c2:
-        st.write("📉 **Gasto:** R$ 2.790,92")
-    with c3:
-        st.write("💰 **Rendimento:** R$ 0,16")
-    with c4:
-        st.markdown("<span style='color:#D32F2F;'>⏳ **Pendente:** R$ 6.314,28</span>", unsafe_allow_html=True)
-
-with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
-    if not df_bancos_info.empty:
-        for index, row in df_bancos_info.iterrows():
-            banco_nome = row.iloc[0]
-            st.write(f"🔹 **{banco_nome}**")
-            st.caption("Saldo calculado aparecerá aqui")
-           
-    else:
-       st.info("Carregando informações dos bancos...")
-
 # FUNÇÃO PARA ATUALIZAR O ESTADO
 def atualizar_sessao():
     st.session_state['df_base'] = carregar_dados_gs()
