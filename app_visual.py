@@ -198,17 +198,28 @@ aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências"
 
 st.sidebar.divider()
 if aba == "💰 Finanças & Bancos":
-    # A RÉGUA ENTRA AQUI NO TOPO DA PÁGINA
+    # 1. A RÉGUA (O que manda no tempo)
     st.markdown("### 📅 Período de Visualização")
-    
     meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    
-    # Criando os botões da régua
-    mes_selecionado = st.segmented_control(
-        label="Selecione o mês:",
-        options=meses_lista,
-        default="Mai" 
-    )
+    mes_selecionado = st.segmented_control("Selecione o mês:", meses_lista, default="Mai")
+    st.divider()
+
+    # 2. A BARRINHA DE HOJE (Saldo Geral)
+    # IMPORTANTE: Ela tem que ter o mesmo espaço (Tab) que a régua acima!
+    with st.expander(f"🏦 SALDO GERAL ATUAL: R$ 2.103,07", expanded=False):
+        c1, c2 = st.columns(2)
+        # ... seus códigos de Receita/Gasto aqui ...
+
+    # 3. A BARRINHA DE ONTEM (A que tinha sumido)
+    # Procure o código dela (que deve estar perdido lá embaixo ou no topo) 
+    # e cole ele aqui, com o mesmo "espaço" de Tab.
+    with st.expander("📊 SALDO MÊS ANTERIOR vs ATUAL", expanded=False):
+        # ... aquele código que mostrava Abril/Março ...
+
+    # 4. BARRINHA DE BANCOS E CARTÕES
+    # Também com o "espaço" de Tab para ficar só nesta aba
+    with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
+        # ... seu código de bancos ...
     st.divider()
 
     # Daqui para baixo entram as suas barras de bancos e saldos...
