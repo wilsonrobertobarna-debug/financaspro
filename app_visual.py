@@ -178,13 +178,16 @@ if aba == "💰 Finanças & Bancos":
     # Isso garante que o Python saiba quem é 'mes_selecionado'
     meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
-   st.markdown("### 📅 Período de Visualização")
+   if aba == "💰 Finanças & Bancos":
+    # --- TUDO AQUI TEM QUE TER EXATAMENTE O MESMO RECUO (1 TAB) ---
+    st.markdown("### 📅 Período de Visualização")
+    
     meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     mes_selecionado = st.segmented_control("Selecione o mês:", meses_lista, default="Mai")
     
     st.divider()
 
-    # 2. BARRINHA DE SALDO GERAL (Completa!)
+    # BARRINHA DE SALDO GERAL (COMPLETA)
     with st.expander(f"🏦 SALDO GERAL ATUAL: R$ 2.103,07", expanded=False):
         c1, c2 = st.columns(2)
         c3, c4 = st.columns(2)
@@ -197,30 +200,18 @@ if aba == "💰 Finanças & Bancos":
         with c4:
             st.markdown("<span style='color:#D32F2F;'>⏳ **Pendente:** R$ 6.314,28</span>", unsafe_allow_html=True)
 
-    # 3. BARRINHA DE BANCOS E CARTÕES (Uma só e limpa!)
+    # BARRINHA DE BANCOS E CARTÕES
     with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
         if not st.session_state['df_bancos_info'].empty:
             for index, row in st.session_state['df_bancos_info'].iterrows():
                 banco_nome = row.iloc[0]
                 st.write(f"🔹 **{banco_nome}**")
-                # Aqui você pode colocar a lógica de saldo se já tiver
                 st.caption("Saldo calculado aparecerá aqui")
         else:
             st.write("Nenhum banco encontrado.")
 
     st.divider()
-    
-    # 4. INFORMATIVO FINAL
-    st.info(f"📅 Você está visualizando os dados de: {mes_selecionado}")
-    with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
-        # Aqui dentro você coloca o que quer que apareça na aba de bancos
-        if not df_bancos_info.empty:
-            for index, row in df_bancos_info.iterrows():
-                st.write(f"🔹 **{row.iloc[0]}**")
-        else:
-            st.write("Nenhum banco encontrado no momento.")
-
-    st.divider()
+    st.info(f"📅 Período selecionado: {mes_selecionado}")
 
     # Informativo do mês selecionado na régua
     st.info(f"📅 Período selecionado: {mes_selecionado}")
