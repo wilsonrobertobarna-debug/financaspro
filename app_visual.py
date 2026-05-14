@@ -202,7 +202,6 @@ if aba == "💰 Finanças & Bancos":
         st.divider()
         st.info(f"📅 Período selecionado: {mes_selecionado}")
 
-elif aba == "Pendências":
     elif aba == "Pendências":
         st.title("📋 Lançamentos Pendentes")  # Deixe PELO MENOS esta linha!
         # Se você tiver lógica de dados aqui, ela vem agora...
