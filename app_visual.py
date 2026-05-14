@@ -202,13 +202,11 @@ if aba == "💰 Finanças & Bancos":
         st.divider()
         st.info(f"📅 Período selecionado: {mes_selecionado}")
 
-    elif aba == "Pendências":
-        st.title("📋 Lançamentos Pendentes")
-        # O código das pendências continua aqui...
+    elif aba == "Pendências":         # TEM QUE TER OS MESMOS 4 ESPAÇOS!
+        st.title("📋 Lançamentos Pendentes") # Aqui tem 8 espaços
 
-    elif aba == "🐾 Milo & Bolt":
-        st.title("🐾 Espaço Pet")
-        # O código do Milo continua aqui...
+    elif aba == "🐾 Milo & Bolt":     # TAMBÉM OS MESMOS 4 ESPAÇOS!
+        st.title("🐾 Espaço Pet")        # O código do Milo continua aqui...
     # Conteúdo sobre o Milo
 # BARRINHA 1: NOVO LANÇAMENTO
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
