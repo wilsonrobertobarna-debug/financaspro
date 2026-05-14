@@ -423,8 +423,8 @@ if "💰" in aba:
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
-    st.divider()
     st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
+    st.divider()
     df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
     if not df_aviso.empty:
         df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
