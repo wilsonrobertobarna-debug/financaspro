@@ -178,33 +178,40 @@ if aba == "💰 Finanças & Bancos":
     # Isso garante que o Python saiba quem é 'mes_selecionado'
     meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
-    st.markdown("### 📅 Período de Visualização")
+   st.markdown("### 📅 Período de Visualização")
+    meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     mes_selecionado = st.segmented_control("Selecione o mês:", meses_lista, default="Mai")
     
     st.divider()
 
-    # 2. SEGUNDO: As barrinhas de resumo (Visual Limpo)
+    # 2. BARRINHA DE SALDO GERAL (Completa!)
     with st.expander(f"🏦 SALDO GERAL ATUAL: R$ 2.103,07", expanded=False):
         c1, c2 = st.columns(2)
-        with c1: st.write("📈 **Receita:** R$ 4.893,83")
-        with c2: st.write("📉 **Gasto:** R$ 2.790,92")
+        c3, c4 = st.columns(2)
+        with c1:
+            st.write("📈 **Receita:** R$ 4.893,83")
+        with c2:
+            st.write("📉 **Gasto:** R$ 2.790,92")
+        with c3:
+            st.write("💰 **Rendimento:** R$ 0,16")
+        with c4:
+            st.markdown("<span style='color:#D32F2F;'>⏳ **Pendente:** R$ 6.314,28</span>", unsafe_allow_html=True)
 
+    # 3. BARRINHA DE BANCOS E CARTÕES (Uma só e limpa!)
     with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
         if not st.session_state['df_bancos_info'].empty:
             for index, row in st.session_state['df_bancos_info'].iterrows():
-                st.write(f"🔹 **{row.iloc[0]}**")
+                banco_nome = row.iloc[0]
+                st.write(f"🔹 **{banco_nome}**")
+                # Aqui você pode colocar a lógica de saldo se já tiver
+                st.caption("Saldo calculado aparecerá aqui")
         else:
             st.write("Nenhum banco encontrado.")
 
-    # 3. TERCEIRO: O informativo (Agora ele funciona!)
-    st.info(f"📅 Período selecionado: {mes_selecionado}")
-# Se a linha do "with" estiver na mesma direção do "if aba", 
-# ela vai aparecer em todas as abas. Para ficar só em Finanças, 
-# ela PRECISA estar um pouco para a direita (um Tab).
-
-    # 4. BARRINHA DE BANCOS E CARTÕES
-    # Também com o "espaço" de Tab para ficar só nesta aba
- # --- LINHA 230 (Ajustada) ---
+    st.divider()
+    
+    # 4. INFORMATIVO FINAL
+    st.info(f"📅 Você está visualizando os dados de: {mes_selecionado}")
     with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
         # Aqui dentro você coloca o que quer que apareça na aba de bancos
         if not df_bancos_info.empty:
