@@ -423,23 +423,35 @@ if "💰" in aba:
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
-    st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
+    # Removi o subheader para não duplicar o título
     st.divider()
+
+    # 1. Filtra os pendentes
     df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
+
     if not df_aviso.empty:
-        df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
+        # Garante que a data está correta para o cálculo
+        df_aviso['DT'] = pd.to_datetime(df_aviso['DT'], errors='coerce')
+        hoje = pd.to_datetime('today').normalize()
+        df_aviso['Dias'] = (df_aviso['DT'] - hoje).dt.days
+
+        # Filtra: Atrasados (<0), Hoje (0), Amanhã (1) e em 3 dias (3)
         df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
+
         if not df_venc.empty:
             for _, row in df_venc.iterrows():
                 d_aviso = row['Dias']
+                # Formatação de valores e dados com segurança
+                v_formatado = f"R$ {row['V_Num']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                
                 if d_aviso < 0:
-                    st.warning(f"⚠️ **Atrasado (Vencido):** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    st.error(f"🚨 **Atrasado:** {row['Descrição']} - {v_formatado} ({row['Banco']})")
                 elif d_aviso == 0:
-                    # 1. Pegamos todos os dados de forma segura
-                    data_venc = row.get('Data', row.get('DATA', '00/00'))
-                    desc_venc = row.get('Descrição', row.get('Descricao', 'Sem descrição'))
-                    valor_venc = row.get('V_Num', 0)
-                    banco_venc = row.get('Banco', 'N/A')
+                    st.warning(f"⚠️ **Vence Hoje:** {row['Descrição']} - {v_formatado} ({row['Banco']})")
+                else:
+                    st.info(f"📅 **Vence em {d_aviso} dias:** {row['Descrição']} - {v_formatado}")
+        else:
+            st.success("✅ Nenhuma conta vencendo hoje ou atrasada!")
 
                     # 2. Agora a mensagem usa essas variáveis seguras
                     st.warning(f"⚠️ **Vence hoje:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")                    
