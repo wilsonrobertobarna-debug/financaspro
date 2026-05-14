@@ -202,7 +202,7 @@ if aba == "💰 Finanças & Bancos":
         st.divider()
         st.info(f"📅 Período selecionado: {mes_selecionado}")
 
- elif aba == "Pendências":
+elif aba == "Pendências":
         st.title("📋 Suas Pendências")
         # ... resto do seu código de pendências ...
     st.title("📋 Suas Pendências")
