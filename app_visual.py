@@ -191,7 +191,30 @@ if st.sidebar.button("🔄 Atualizar dados do Sheets"):
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF"])
 
 st.sidebar.divider()
+if aba == "💰 Finanças & Bancos":
+    # A RÉGUA ENTRA AQUI NO TOPO DA PÁGINA
+    st.markdown("### 📅 Período de Visualização")
+    
+    meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    
+    # Criando os botões da régua
+    mes_selecionado = st.segmented_control(
+        label="Selecione o mês:",
+        options=meses_lista,
+        default="Mai" 
+    )
+    st.divider()
 
+    # Daqui para baixo entram as suas barras de bancos e saldos...
+    st.info(f"Você selecionou o mês: {mes_selecionado}")
+
+elif aba == "Pendências":
+    st.title("📋 Suas Pendências")
+    # Aqui vai o código das pendências que já corrigimos o erro 'Data'
+
+elif aba == "🐾 Milo & Bolt":
+    st.title("🐾 Espaço Pet")
+    # Conteúdo sobre o Milo
 # BARRINHA 1: NOVO LANÇAMENTO
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
     with st.form("f_novo", clear_on_submit=True):
