@@ -416,8 +416,14 @@ elif "Pendências" in aba:
                 if d_aviso < 0:
                     st.warning(f"⚠️ **Atrasado (Vencido):** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
                 elif d_aviso == 0:
-                    desc_vencimento = row.get('Descrição', row.get('Descricao', 'Sem descrição'))
-                    st.warning(f"⚠️ **Vence hoje:** {row['Data']} - {desc_vencimento} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")                    
+                    # 1. Pegamos todos os dados de forma segura
+                    data_venc = row.get('Data', row.get('DATA', '00/00'))
+                    desc_venc = row.get('Descrição', row.get('Descricao', 'Sem descrição'))
+                    valor_venc = row.get('V_Num', 0)
+                    banco_venc = row.get('Banco', 'N/A')
+
+                    # 2. Agora a mensagem usa essas variáveis seguras
+                    st.warning(f"⚠️ **Vence hoje:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")                    
                 elif d_aviso == 1:
                     st.warning(f"🚨 **Vence amanhã:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
                 elif d_aviso == 3:
