@@ -423,7 +423,6 @@ if "💰" in aba:
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
-    # Removi o subheader para não duplicar o título
     st.divider()
 
     # 1. Filtra os pendentes
@@ -441,28 +440,31 @@ elif "Pendências" in aba:
         if not df_venc.empty:
             for _, row in df_venc.iterrows():
                 d_aviso = row['Dias']
-                # Formatação de valores e dados com segurança
-                v_formatado = f"R$ {row['V_Num']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                
+                # Variáveis seguras para evitar erro se a coluna mudar de nome
+                data_venc = row.get('Vencimento', row.get('DT', 'S/D'))
+                desc_venc = row['Descrição']
+                valor_venc = row.get('V_Num', 0)
+                banco_venc = row.get('Banco', 'N/A')
+                
+                # Formatação de moeda simples (R$ 0.000,00)
+                v_formatado = f"R$ {valor_venc:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                 
                 if d_aviso < 0:
-                    st.error(f"🚨 **Atrasado:** {row['Descrição']} - {v_formatado} ({row['Banco']})")
+                    st.error(f"🚨 **Atrasado:** {desc_venc} - {v_formatado} ({banco_venc})")
+                
                 elif d_aviso == 0:
-                    st.warning(f"⚠️ **Vence Hoje:** {row['Descrição']} - {v_formatado} ({row['Banco']})")
-                else:
-                    st.info(f"📅 **Vence em {d_aviso} dias:** {row['Descrição']} - {v_formatado}")
-        else:
-            st.success("✅ Nenhuma conta vencendo hoje ou atrasada!")
-
-                    # 2. Agora a mensagem usa essas variáveis seguras
-                    st.warning(f"⚠️ **Vence hoje:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")                    
+                    st.warning(f"⚠️ **Vence Hoje:** {desc_venc} - {v_formatado} ({banco_venc})")
+                
                 elif d_aviso == 1:
-                    st.warning(f"🚨 **Vence amanhã:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    st.warning(f"🔔 **Vence Amanhã:** {desc_venc} - {v_formatado} ({banco_venc})")
+                
                 elif d_aviso == 3:
-                    st.warning(f"⚠️ **Vence em 3 dias:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    st.info(f"📅 **Vence em 3 dias:** {desc_venc} - {v_formatado}")
         else:
-            st.info("Nenhum lançamento a vencer hoje, amanhã ou em atraso.")
+            st.success("✅ Nenhuma conta vencendo hoje, amanhã ou atrasada!")
     else:
-        st.info("Nenhum lançamento pendente.")
+        st.info("✅ Tudo em dia! Nenhum lançamento pendente encontrado.")
         
     st.divider()
     
