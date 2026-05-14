@@ -203,11 +203,7 @@ if aba == "💰 Finanças & Bancos":
         st.info(f"📅 Período selecionado: {mes_selecionado}")
 
 elif aba == "Pendências":
-        st.title("📋 Suas Pendências")
-        # ... resto do seu código de pendências ...
-        st.title("📋 Suas Pendências")
-    # Aqui vai o código das pendências que já corrigimos o erro 'Data'
-
+        
 elif aba == "🐾 Milo & Bolt":
         st.title("🐾 Espaço Pet")
     # Conteúdo sobre o Milo
