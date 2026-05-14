@@ -95,13 +95,8 @@ if 'df_base' not in st.session_state:
 if 'df_bancos_info' not in st.session_state:
     st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
 
-# --- ITEM 1 DE HOJE: RÉGUA DE MESES (AQUI!) ---
-meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-mes_selecionado = st.segmented_control("Filtrar por Mês:", meses, default="Mai")
 
-st.markdown("---")
-
-# 2. Agora criamos as variáveis locais para usar nas barras
+# 1. Agora criamos as variáveis locais para usar nas barras
 df_base = st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
 
