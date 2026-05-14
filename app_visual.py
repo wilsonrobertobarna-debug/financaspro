@@ -174,29 +174,30 @@ aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências"
 
 st.sidebar.divider()
 if aba == "💰 Finanças & Bancos":
-    # 1. A RÉGUA (Já está aí)
+    # 1. PRIMEIRO: Criamos a variável (A Régua)
+    # Isso garante que o Python saiba quem é 'mes_selecionado'
+    meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    
     st.markdown("### 📅 Período de Visualização")
-    # ... (seu código da régua que já funciona) ...
+    mes_selecionado = st.segmented_control("Selecione o mês:", meses_lista, default="Mai")
+    
     st.divider()
 
-    # 2. BARRINHA DE SALDO GERAL (A que criamos hoje)
+    # 2. SEGUNDO: As barrinhas de resumo (Visual Limpo)
     with st.expander(f"🏦 SALDO GERAL ATUAL: R$ 2.103,07", expanded=False):
         c1, c2 = st.columns(2)
-        with c1:
-            st.write("📈 **Receita:** R$ 4.893,83")
-        with c2:
-            st.write("📉 **Gasto:** R$ 2.790,92")
-        # Nota: Tudo aqui dentro tem que ter o recuo (espaço)!
+        with c1: st.write("📈 **Receita:** R$ 4.893,83")
+        with c2: st.write("📉 **Gasto:** R$ 2.790,92")
 
-    # 3. BARRINHA DE BANCOS E CARTÕES (Onde deu o erro)
     with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
-        # O Python exige que tenha algo aqui dentro com TAB!
-        if not df_bancos_info.empty:
-            for index, row in df_bancos_info.iterrows():
+        if not st.session_state['df_bancos_info'].empty:
+            for index, row in st.session_state['df_bancos_info'].iterrows():
                 st.write(f"🔹 **{row.iloc[0]}**")
         else:
-            st.write("Nenhum banco cadastrado.")
+            st.write("Nenhum banco encontrado.")
 
+    # 3. TERCEIRO: O informativo (Agora ele funciona!)
+    st.info(f"📅 Período selecionado: {mes_selecionado}")
 # Se a linha do "with" estiver na mesma direção do "if aba", 
 # ela vai aparecer em todas as abas. Para ficar só em Finanças, 
 # ela PRECISA estar um pouco para a direita (um Tab).
