@@ -208,6 +208,9 @@ if aba == "💰 Finanças & Bancos":
         st.divider()
         st.info(f"📅 Período selecionado: {mes_selecionado}")
 
+        st.divider()
+        st.info(f"📅 Período selecionado: {mes_selecionado}")
+
     st.divider()
     st.info(f"📅 Período selecionado: {mes_selecionado}")
 
