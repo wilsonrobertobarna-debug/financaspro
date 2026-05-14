@@ -199,7 +199,7 @@ if aba == "💰 Finanças & Bancos":
             else:
                 st.write("Nenhum banco encontrado.")
 
-       st.divider()
+        st.divider()
         st.info(f"📅 Período selecionado: {mes_selecionado}")
 
     elif aba == "Pendências":
