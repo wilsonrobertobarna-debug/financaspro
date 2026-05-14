@@ -205,11 +205,11 @@ if aba == "💰 Finanças & Bancos":
 elif aba == "Pendências":
         st.title("📋 Suas Pendências")
         # ... resto do seu código de pendências ...
-    st.title("📋 Suas Pendências")
+        st.title("📋 Suas Pendências")
     # Aqui vai o código das pendências que já corrigimos o erro 'Data'
 
 elif aba == "🐾 Milo & Bolt":
-    st.title("🐾 Espaço Pet")
+        st.title("🐾 Espaço Pet")
     # Conteúdo sobre o Milo
 # BARRINHA 1: NOVO LANÇAMENTO
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
