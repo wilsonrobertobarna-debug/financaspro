@@ -423,6 +423,7 @@ if "💰" in aba:
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
+    st.divider()
     st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
     df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
     if not df_aviso.empty:
