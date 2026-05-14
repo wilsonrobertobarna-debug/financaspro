@@ -198,23 +198,32 @@ aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências"
 
 st.sidebar.divider()
 if aba == "💰 Finanças & Bancos":
-    # 1. A RÉGUA (O que manda no tempo)
+    # 1. A RÉGUA (Já está aí)
     st.markdown("### 📅 Período de Visualização")
-    meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    mes_selecionado = st.segmented_control("Selecione o mês:", meses_lista, default="Mai")
+    # ... (seu código da régua que já funciona) ...
     st.divider()
 
-    # 2. A BARRINHA DE HOJE (Saldo Geral)
-    # IMPORTANTE: Ela tem que ter o mesmo espaço (Tab) que a régua acima!
+    # 2. BARRINHA DE SALDO GERAL (A que criamos hoje)
     with st.expander(f"🏦 SALDO GERAL ATUAL: R$ 2.103,07", expanded=False):
         c1, c2 = st.columns(2)
-        # ... seus códigos de Receita/Gasto aqui ...
+        with c1:
+            st.write("📈 **Receita:** R$ 4.893,83")
+        with c2:
+            st.write("📉 **Gasto:** R$ 2.790,92")
+        # Nota: Tudo aqui dentro tem que ter o recuo (espaço)!
 
-    # 3. A BARRINHA DE ONTEM (A que tinha sumido)
-    # Procure o código dela (que deve estar perdido lá embaixo ou no topo) 
-    # e cole ele aqui, com o mesmo "espaço" de Tab.
-    with st.expander("📊 SALDO MÊS ANTERIOR vs ATUAL", expanded=False):
-        # ... aquele código que mostrava Abril/Março ...
+    # 3. BARRINHA DE BANCOS E CARTÕES (Onde deu o erro)
+    with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
+        # O Python exige que tenha algo aqui dentro com TAB!
+        if not df_bancos_info.empty:
+            for index, row in df_bancos_info.iterrows():
+                st.write(f"🔹 **{row.iloc[0]}**")
+        else:
+            st.write("Nenhum banco cadastrado.")
+
+# Se a linha do "with" estiver na mesma direção do "if aba", 
+# ela vai aparecer em todas as abas. Para ficar só em Finanças, 
+# ela PRECISA estar um pouco para a direita (um Tab).
 
     # 4. BARRINHA DE BANCOS E CARTÕES
     # Também com o "espaço" de Tab para ficar só nesta aba
