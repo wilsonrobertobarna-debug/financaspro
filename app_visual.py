@@ -174,46 +174,39 @@ aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências"
 
 st.sidebar.divider()
 if aba == "💰 Finanças & Bancos":
-    # 1. PRIMEIRO: Criamos a variável (A Régua)
-    # Isso garante que o Python saiba quem é 'mes_selecionado'
-    meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    
-   if aba == "💰 Finanças & Bancos":
-    # 1. PRIMEIRO: Criamos a variável (A Régua)
-    # Isso garante que o Python saiba quem é 'mes_selecionado'
-    meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    
-   if aba == "💰 Finanças & Bancos":
-    # --- TUDO AQUI TEM QUE TER EXATAMENTE O MESMO RECUO (1 TAB) ---
-    st.markdown("### 📅 Período de Visualização")
-    
-    meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    mes_selecionado = st.segmented_control("Selecione o mês:", meses_lista, default="Mai")
-    
-    st.divider()
+        # --- 1. RÉGUA DE MESES ---
+        st.markdown("### 📅 Período de Visualização")
+        meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+        mes_selecionado = st.segmented_control("Selecione o mês:", meses_lista, default="Mai")
+        
+        st.divider()
 
-    # BARRINHA DE SALDO GERAL (COMPLETA)
-    with st.expander(f"🏦 SALDO GERAL ATUAL: R$ 2.103,07", expanded=False):
-        c1, c2 = st.columns(2)
-        c3, c4 = st.columns(2)
-        with c1:
-            st.write("📈 **Receita:** R$ 4.893,83")
-        with c2:
-            st.write("📉 **Gasto:** R$ 2.790,92")
-        with c3:
-            st.write("💰 **Rendimento:** R$ 0,16")
-        with c4:
-            st.markdown("<span style='color:#D32F2F;'>⏳ **Pendente:** R$ 6.314,28</span>", unsafe_allow_html=True)
+        # --- 2. BARRINHA DE SALDO GERAL (RECEITA, GASTO, RENDIMENTO, PENDÊNCIA) ---
+        with st.expander(f"🏦 SALDO GERAL ATUAL: R$ 2.103,07", expanded=False):
+            c1, c2 = st.columns(2)
+            c3, c4 = st.columns(2)
+            with c1:
+                st.write("📈 **Receita:** R$ 4.893,83")
+            with c2:
+                st.write("📉 **Gasto:** R$ 2.790,92")
+            with c3:
+                st.write("💰 **Rendimento:** R$ 0,16")
+            with c4:
+                st.markdown("<span style='color:#D32F2F;'>⏳ **Pendente:** R$ 6.314,28</span>", unsafe_allow_html=True)
 
-    # BARRINHA DE BANCOS E CARTÕES
-    with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
-        if not st.session_state['df_bancos_info'].empty:
-            for index, row in st.session_state['df_bancos_info'].iterrows():
-                banco_nome = row.iloc[0]
-                st.write(f"🔹 **{banco_nome}**")
-                st.caption("Saldo calculado aparecerá aqui")
-        else:
-            st.write("Nenhum banco encontrado.")
+        # --- 3. BARRINHA DE BANCOS E CARTÕES ---
+        with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
+            # Usando session_state para garantir que os dados apareçam
+            if 'df_bancos_info' in st.session_state and not st.session_state['df_bancos_info'].empty:
+                for index, row in st.session_state['df_bancos_info'].iterrows():
+                    banco_nome = row.iloc[0]
+                    st.write(f"🔹 **{banco_nome}**")
+                    st.caption("Saldo calculado aparecerá aqui")
+            else:
+                st.write("Nenhum banco encontrado ou dados não carregados.")
+
+        st.divider()
+        st.info(f"📅 Período selecionado: {mes_selecionado}")
 
     st.divider()
     st.info(f"📅 Período selecionado: {mes_selecionado}")
