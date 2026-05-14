@@ -174,49 +174,37 @@ aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências"
 
 st.sidebar.divider()
 if aba == "💰 Finanças & Bancos":
-        # --- 1. RÉGUA DE MESES ---
+        # 1. RÉGUA DE MESES
         st.markdown("### 📅 Período de Visualização")
         meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
         mes_selecionado = st.segmented_control("Selecione o mês:", meses_lista, default="Mai")
         
         st.divider()
 
-        # --- 2. BARRINHA DE SALDO GERAL (RECEITA, GASTO, RENDIMENTO, PENDÊNCIA) ---
+        # 2. BARRINHA DE SALDO GERAL
         with st.expander(f"🏦 SALDO GERAL ATUAL: R$ 2.103,07", expanded=False):
             c1, c2 = st.columns(2)
             c3, c4 = st.columns(2)
-            with c1:
-                st.write("📈 **Receita:** R$ 4.893,83")
-            with c2:
-                st.write("📉 **Gasto:** R$ 2.790,92")
-            with c3:
-                st.write("💰 **Rendimento:** R$ 0,16")
-            with c4:
-                st.markdown("<span style='color:#D32F2F;'>⏳ **Pendente:** R$ 6.314,28</span>", unsafe_allow_html=True)
+            with c1: st.write("📈 **Receita:** R$ 4.893,83")
+            with c2: st.write("📉 **Gasto:** R$ 2.790,92")
+            with c3: st.write("💰 **Rendimento:** R$ 0,16")
+            with c4: st.markdown("<span style='color:#D32F2F;'>⏳ **Pendente:** R$ 6.314,28</span>", unsafe_allow_html=True)
 
-        # --- 3. BARRINHA DE BANCOS E CARTÕES ---
+        # 3. BARRINHA DE BANCOS
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
-            # Usando session_state para garantir que os dados apareçam
             if 'df_bancos_info' in st.session_state and not st.session_state['df_bancos_info'].empty:
                 for index, row in st.session_state['df_bancos_info'].iterrows():
-                    banco_nome = row.iloc[0]
-                    st.write(f"🔹 **{banco_nome}**")
+                    st.write(f"🔹 **{row.iloc[0]}**")
                     st.caption("Saldo calculado aparecerá aqui")
             else:
-                st.write("Nenhum banco encontrado ou dados não carregados.")
+                st.write("Nenhum banco encontrado.")
 
         st.divider()
         st.info(f"📅 Período selecionado: {mes_selecionado}")
 
-        st.divider()
-        st.info(f"📅 Período selecionado: {mes_selecionado}")
-
-    st.divider()
-    st.info(f"📅 Período selecionado: {mes_selecionado}")
-
-    # Informativo do mês selecionado na régua
-    st.info(f"📅 Período selecionado: {mes_selecionado}")
-elif aba == "Pendências":
+    elif aba == "Pendências":
+        st.title("📋 Suas Pendências")
+        # ... resto do seu código de pendências ...
     st.title("📋 Suas Pendências")
     # Aqui vai o código das pendências que já corrigimos o erro 'Data'
 
