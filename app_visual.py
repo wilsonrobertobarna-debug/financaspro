@@ -179,6 +179,11 @@ if aba == "💰 Finanças & Bancos":
     meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
    if aba == "💰 Finanças & Bancos":
+    # 1. PRIMEIRO: Criamos a variável (A Régua)
+    # Isso garante que o Python saiba quem é 'mes_selecionado'
+    meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    
+   if aba == "💰 Finanças & Bancos":
     # --- TUDO AQUI TEM QUE TER EXATAMENTE O MESMO RECUO (1 TAB) ---
     st.markdown("### 📅 Período de Visualização")
     
