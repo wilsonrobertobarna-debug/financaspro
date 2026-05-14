@@ -173,7 +173,7 @@ if st.sidebar.button("🔄 Atualizar dados do Sheets"):
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF"])
 
 st.sidebar.divider()
-if aba == "💰 Finanças & Bancos":
+    if aba == "💰 Finanças & Bancos":
         # 1. RÉGUA DE MESES
         st.markdown("### 📅 Período de Visualização")
         meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
