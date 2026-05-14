@@ -202,7 +202,7 @@ if aba == "💰 Finanças & Bancos":
         st.divider()
         st.info(f"📅 Período selecionado: {mes_selecionado}")
 
-    elif aba == "Pendências":
+elif aba == "Pendências":
         st.title("📋 Lançamentos Pendentes")
         # Aqui virá a sua lógica de buscar os dados da planilha
 
