@@ -227,13 +227,19 @@ if aba == "💰 Finanças & Bancos":
 
     # 4. BARRINHA DE BANCOS E CARTÕES
     # Também com o "espaço" de Tab para ficar só nesta aba
+ # --- LINHA 230 (Ajustada) ---
     with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
-        # ... seu código de bancos ...
+        # Aqui dentro você coloca o que quer que apareça na aba de bancos
+        if not df_bancos_info.empty:
+            for index, row in df_bancos_info.iterrows():
+                st.write(f"🔹 **{row.iloc[0]}**")
+        else:
+            st.write("Nenhum banco encontrado no momento.")
+
     st.divider()
 
-    # Daqui para baixo entram as suas barras de bancos e saldos...
-    st.info(f"Você selecionou o mês: {mes_selecionado}")
-
+    # Informativo do mês selecionado na régua
+    st.info(f"📅 Período selecionado: {mes_selecionado}")
 elif aba == "Pendências":
     st.title("📋 Suas Pendências")
     # Aqui vai o código das pendências que já corrigimos o erro 'Data'
