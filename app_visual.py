@@ -203,11 +203,12 @@ if aba == "💰 Finanças & Bancos":
         st.info(f"📅 Período selecionado: {mes_selecionado}")
 
     elif aba == "Pendências":
-        st.title("📋 Lançamentos Pendentes")  # Deixe PELO MENOS esta linha!
-        # Se você tiver lógica de dados aqui, ela vem agora...
-          
-elif aba == "🐾 Milo & Bolt":
+        st.title("📋 Lançamentos Pendentes")
+        # O código das pendências continua aqui...
+
+    elif aba == "🐾 Milo & Bolt":
         st.title("🐾 Espaço Pet")
+        # O código do Milo continua aqui...
     # Conteúdo sobre o Milo
 # BARRINHA 1: NOVO LANÇAMENTO
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
