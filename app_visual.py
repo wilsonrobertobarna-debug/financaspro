@@ -202,10 +202,18 @@ if aba == "💰 Finanças & Bancos":
         st.divider()
         st.info(f"📅 Período selecionado: {mes_selecionado}")
 
-elif aba == "Pendências":
+elif "Pendências" in aba:
         st.title("📋 Lançamentos Pendentes")
-        # Aqui virá a sua lógica de buscar os dados da planilha
-
+        st.divider()
+        
+        # 1. Filtra os dados
+        df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
+        
+        if not df_aviso.empty:
+            # Coloque aqui o restante da sua lógica de avisos (d_aviso, etc.)
+            st.info(f"Você tem {len(df_aviso)} contas pendentes.")
+        else:
+            st.success("✅ Nenhuma pendência encontrada!")
 elif aba == "🐾 Milo & Bolt":
         st.title("🐾 Espaço Pet")
         st.write("Informações e cuidados com o Milo.")
