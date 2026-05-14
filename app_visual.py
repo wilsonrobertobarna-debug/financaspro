@@ -199,12 +199,16 @@ if aba == "💰 Finanças & Bancos":
             else:
                 st.write("Nenhum banco encontrado.")
 
-        st.divider()
+       st.divider()
         st.info(f"📅 Período selecionado: {mes_selecionado}")
-elif aba == "Pendências":         # TEM QUE TER OS MESMOS 4 ESPAÇOS!
-        st.title("📋 Lançamentos Pendentes") # Aqui tem 8 espaços
-elif aba == "🐾 Milo & Bolt":     # TAMBÉM OS MESMOS 4 ESPAÇOS!
-        st.title("🐾 Espaço Pet")        # O código do Milo continua aqui...
+
+    elif aba == "Pendências":
+        st.title("📋 Lançamentos Pendentes")
+        # Aqui virá a sua lógica de buscar os dados da planilha
+
+    elif aba == "🐾 Milo & Bolt":
+        st.title("🐾 Espaço Pet")
+        st.write("Informações e cuidados com o Milo.")
     # Conteúdo sobre o Milo
 # BARRINHA 1: NOVO LANÇAMENTO
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
