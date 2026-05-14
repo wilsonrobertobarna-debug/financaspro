@@ -206,7 +206,7 @@ elif aba == "Pendências":
         st.title("📋 Lançamentos Pendentes")
         # Aqui virá a sua lógica de buscar os dados da planilha
 
-    elif aba == "🐾 Milo & Bolt":
+elif aba == "🐾 Milo & Bolt":
         st.title("🐾 Espaço Pet")
         st.write("Informações e cuidados com o Milo.")
     # Conteúdo sobre o Milo
