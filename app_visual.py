@@ -410,24 +410,37 @@ if "💰" in aba:
         st.divider()
         st.subheader("🔍 Busca e Lançamentos")
 
-        # A barrinha agora vai abraçar TUDO: filtros e tabela
         with st.expander("📑 Pesquisar e Visualizar Histórico", expanded=False):
             
-            # --- ESPAÇO PARA O CÓDIGO DE PESQUISA ---
-            # Se você já tem linhas de código de filtros (período, banco, status), 
-            # elas devem ser movidas para cá (com um Tab para a direita).
+            # --- ESPAÇO PARA AS PESQUISAS ---
+            # Cole aqui os seus filtros (st.columns, st.date_input, etc.)
+            # Lembre-se de dar um "TAB" neles para ficarem dentro da barrinha!
             
             st.markdown("### 📝 Registros Detalhados")
 
-            # ORGANIZANDO AS COLUNAS (O cabeçalho que você pediu)
-            # Verifique se no seu Sheets os nomes são exatamente esses:
-            colunas_na_ordem = ['ID', 'Vencimento', 'Tipo', 'V_Num', 'Descrição', 'Categoria', 'Banco', 'Status']
+            # 1. ORGANIZANDO E RENOMEANDO AS COLUNAS
+            # Criamos uma cópia para não mexer nos dados originais
+            df_view = df_base.copy()
             
-            # Criamos uma visualização com a ordem certa. O errors='ignore' evita erro se faltar uma coluna
-            df_ordenado = df_base.reindex(columns=colunas_na_ordem)
+            # Renomeamos V_Num para VALOR (como você pediu)
+            df_view = df_view.rename(columns={'V_Num': 'VALOR'})
             
-            # Exibe a tabela bonitona
-            st.dataframe(df_ordenado, use_container_width=True)
+            # Ordem exata que você quer
+            ordem_certa = ['ID', 'Vencimento', 'Tipo', 'VALOR', 'Descrição', 'Categoria', 'Banco', 'Status']
+            df_view = df_view.reindex(columns=ordem_certa)
+
+            # 2. EXIBINDO A TABELA SEM O INDEX E COM VALOR FORMATADO
+            st.dataframe(
+                df_view, 
+                use_container_width=True, 
+                hide_index=True,  # ISSO TIRA AQUELA NUMERAÇÃO ESTRANHA!
+                column_config={
+                    "VALOR": st.column_config.NumberColumn(
+                        "VALOR",
+                        format="R$ %.2f" # DEIXA COM CARA DE DINHEIRO
+                    )
+                }
+            )
             
         c_d1, c_d2 = st.columns(2)
         s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
