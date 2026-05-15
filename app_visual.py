@@ -324,31 +324,25 @@ if "💰" in aba:
 
         st.divider()
         
-        # 1. Tentamos encontrar a coluna de data (independente do nome)
-        col_data = None
-        for c in ['Vencimento', 'Data', 'DATA', 'vencimento']:
-            if c in df_base.columns:
-                col_data = c
-                break
+        # 1. Forçamos a coluna 'Vencimento' a ser tratada como data real
+        # O 'coerce' limpa erros e o 'copy' evita que os meses se misturem
+        df_base['Vencimento'] = pd.to_datetime(df_base['Vencimento'], errors='coerce')
         
-        if col_data:
-            # Forçamos a conversão para data
-            df_base[col_data] = pd.to_datetime(df_base[col_data], errors='coerce')
-            # Filtramos apenas o mês 5 de 2026
-            df_maio = df_base[(df_base[col_data].dt.month == 5) & (df_base[col_data].dt.year == 2026)].copy()
-        else:
-            # Se não achar a coluna, cria uma tabela vazia para não explodir os valores
-            df_maio = df_base.iloc[0:0]
+        # 2. Criamos o filtro específico para MAIO/2026
+        df_maio = df_base[(df_base['Vencimento'].dt.month == 5) & (df_base['Vencimento'].dt.year == 2026)].copy()
 
         m1, m2, m3, m4 = st.columns(4)
         
-        # 2. Cálculos usando V_Num (que é o padrão do seu app)
+        # 3. Cálculos usando apenas a tabela de MAIO e a coluna V_Num
         r = df_maio[df_maio['Tipo'] == 'Receita']['V_Num'].sum()
         g = df_maio[df_maio['Tipo'] == 'Despesa']['V_Num'].sum()
         rd = df_maio[df_maio['Tipo'] == 'Rendimento']['V_Num'].sum()
         p = df_maio[df_maio['Status'] == 'Pendente']['V_Num'].sum()
         
-        # 3. Exibição das métricas
+        # 4. Cálculo do Saldo Real de Maio para a barrinha não ficar negativa
+        saldo_maio = r - g + rd
+
+        # Atualizamos os cards com os valores reais (em Real)
         m1.metric("📈 Receita", m_fmt(r))
         m2.metric("📉 Gasto", m_fmt(g))
         m3.metric("💰 Rendimento", m_fmt(rd))
