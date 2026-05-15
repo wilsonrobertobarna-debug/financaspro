@@ -818,7 +818,7 @@ elif "📋" in aba:
                 pdf.ln()
                 
                 for index, row in df_v.iterrows():
-                    # --- BLINDAGEM QUE NÃO TRAVA ---
+                    # --- BLINDAGEM DEFINITIVA (SOLUÇÃO PARA O ERRO 'f') ---
                     
                     # 1. TRATANDO A DATA
                     data_raw = row.get('Vencimento', row.get('Data', row.get('DATA')))
@@ -827,24 +827,28 @@ elif "📋" in aba:
                     except:
                         data_val = str(data_raw) if data_raw else '00/00/0000'
 
-                    # 2. FUNÇÃO INTERNA DE FORMATAÇÃO (PARA VALOR E SALDO)
-                    def formatar_moeda(valor):
+                    # 2. FUNÇÃO PARA FORMATAR MOEDA SEM TRAVAR O BOTÃO
+                    def limpar_e_formatar(valor):
+                        if not valor or valor == "": return "R$ 0,00"
+                        # Se já for um texto com 'R$', o Python apenas retorna ele como está
+                        if isinstance(valor, str) and 'R$' in valor:
+                            return valor
                         try:
-                            # Tenta garantir que seja um número
+                            # Tenta transformar em número para formatar bonitinho
                             v = float(valor)
                             return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                         except:
-                            # Se falhar (já for texto ou erro), retorna como string pura
+                            # Se der qualquer erro (tipo o erro 'f'), ele retorna o texto puro
                             return str(valor)
 
-                    valor_val = formatar_moeda(row.get('V_Num', 0.0))
-                    saldo_val = formatar_moeda(row.get('Saldo_Acum', 0.0))
+                    valor_val = limpar_e_formatar(row.get('V_Num', 0.0))
+                    saldo_val = limpar_e_formatar(row.get('Saldo_Acum', 0.0))
                     
                     tipo_val = str(row.get('Tipo', 'S/T'))
                     desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))
                     status_val = str(row.get('Status', '-'))
                     
-                    # AGORA VOCÊ PODE USAR AS VARIÁVEIS NO PDF.CELL SEM MEDO
+                    # --- ESCREVENDO NO PDF (SÓ ESTE BLOCO DEVE FICAR) ---
                     pdf.cell(20, 8, data_val, 1)
                     pdf.cell(25, 8, tipo_val, 1)
                     pdf.cell(25, 8, valor_val, 1)
@@ -852,15 +856,8 @@ elif "📋" in aba:
                     pdf.cell(75, 8, desc_val, 1)
                     pdf.cell(20, 8, status_val, 1)
                     pdf.ln()
-
-                    pdf.cell(20, 6, str(data_val), 1)
-                    pdf.cell(25, 6, str(tipo_val), 1)
-                    pdf.cell(25, 6, f"R$ {valor_val:.2f}".replace('.', ','), 1)
-                    pdf.cell(25, 6, f"R$ {saldo_val:.2f}".replace('.', ','), 1)
-                    pdf.cell(75, 6, str(desc_val)[:40], 1)
-                    pdf.cell(20, 6, str(status_val), 1)
-                    pdf.ln()
-                
+                    # ----------------------------------------------------
+                                                       
                 pdf_output = pdf.output(dest='S')
                 if isinstance(pdf_output, str):
                     pdf_output = pdf_output.encode('latin-1')
