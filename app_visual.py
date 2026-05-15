@@ -410,11 +410,24 @@ if "💰" in aba:
         st.divider()
         st.subheader("🔍 Busca e Lançamentos")
 
-        # ITEM 1: A barrinha para esconder o "rolo de papel" e manter o visual limpo
-        with st.expander("📑 Clique para visualizar o Histórico de Lançamentos", expanded=False):
-            st.markdown("### 📝 Todos os Registros")
-            # Aqui ele exibe a tabela completa (df_base)
-            st.dataframe(df_base, use_container_width=True)
+        # A barrinha agora vai abraçar TUDO: filtros e tabela
+        with st.expander("📑 Pesquisar e Visualizar Histórico", expanded=False):
+            
+            # --- ESPAÇO PARA O CÓDIGO DE PESQUISA ---
+            # Se você já tem linhas de código de filtros (período, banco, status), 
+            # elas devem ser movidas para cá (com um Tab para a direita).
+            
+            st.markdown("### 📝 Registros Detalhados")
+
+            # ORGANIZANDO AS COLUNAS (O cabeçalho que você pediu)
+            # Verifique se no seu Sheets os nomes são exatamente esses:
+            colunas_na_ordem = ['ID', 'Vencimento', 'Tipo', 'V_Num', 'Descrição', 'Categoria', 'Banco', 'Status']
+            
+            # Criamos uma visualização com a ordem certa. O errors='ignore' evita erro se faltar uma coluna
+            df_ordenado = df_base.reindex(columns=colunas_na_ordem)
+            
+            # Exibe a tabela bonitona
+            st.dataframe(df_ordenado, use_container_width=True)
             
         c_d1, c_d2 = st.columns(2)
         s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
