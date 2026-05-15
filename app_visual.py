@@ -332,7 +332,7 @@ if "💰" in aba:
         
         st.divider()
         
-        with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
+        with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=False):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
             df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
             
@@ -345,8 +345,8 @@ if "💰" in aba:
             sobra_abr = rec_abr - desp_abr
             
             var_valor = sobra_abr - sobra_mar
-            var_pct = ((sobra_abr - sobra_mar) / abs(sobra_mar) * 100) if sobra_mar != 0 else 0.0
-            
+            var_pct = (var_valor / abs(sobra_mar) * 100) if sobra_mar != 0 else 0.0
+                
             c_c1, c_c2, c_c3 = st.columns(3)
             c_c1.metric("Sobra de Março", m_fmt(sobra_mar))
             c_c2.metric("Sobra de Abril", m_fmt(sobra_abr))
