@@ -409,7 +409,13 @@ if "💰" in aba:
         
         st.divider()
         st.subheader("🔍 Busca e Lançamentos")
-        
+
+        # ITEM 1: A barrinha para esconder o "rolo de papel" e manter o visual limpo
+        with st.expander("📑 Clique para visualizar o Histórico de Lançamentos", expanded=False):
+            st.markdown("### 📝 Todos os Registros")
+            # Aqui ele exibe a tabela completa (df_base)
+            st.dataframe(df_base, use_container_width=True)
+            
         c_d1, c_d2 = st.columns(2)
         s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
         s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
