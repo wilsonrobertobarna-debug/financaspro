@@ -817,7 +817,7 @@ elif "📋" in aba:
                 pdf.cell(20, 8, "Status", 1)
                 pdf.ln()
                 
-                for index, row in df_v.iterrows():
+            for index, row in df_v.iterrows():
             # --- BLINDAGEM DE COLUNAS (VERSÃO À PROVA DE ERROS) ---
             
             # 1. Tratando a DATA (Corrigindo o 00/00)
