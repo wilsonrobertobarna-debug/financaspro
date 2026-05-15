@@ -438,7 +438,6 @@ if "💰" in aba:
             # Agora renomeamos o filtrado para exibição
             df_view = df_v.copy()
             df_view = df_view.rename(columns={'V_Num': 'VALOR'})            
-            st.markdown("### 📝 Registros Detalhados")
 
             # 1. ORGANIZANDO E RENOMEANDO AS COLUNAS
             # Criamos uma cópia para não mexer nos dados originais
