@@ -233,6 +233,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
             
         
         if st.form_submit_button("SALVAR"):
+            f_venc_cartao = locals().get('f_venc_cartao', None)
             v_str = f"{f_val:.2f}".replace('.', ',')
             venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
             
