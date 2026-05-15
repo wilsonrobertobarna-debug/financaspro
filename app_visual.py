@@ -817,7 +817,7 @@ elif "📋" in aba:
                 pdf.cell(20, 8, "Status", 1)
                 pdf.ln()
                 
-               for index, row in df_v.iterrows():
+                for index, row in df_v.iterrows():
                     # --- BLINDAGEM TOTAL (A QUE NÃO TRAVA O BOTÃO) ---
                     
                     # 1. Tratando a DATA (Para sair 15/05/2026 e não 00/00)
