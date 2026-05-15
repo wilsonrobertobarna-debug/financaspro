@@ -322,7 +322,7 @@ if "💰" in aba:
         saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")     
 
-       st.divider()
+        st.divider()
         
         # 1. Ajuste o nome abaixo se na sua planilha for 'Data' em vez de 'Vencimento'
         coluna_data = 'Vencimento' 
