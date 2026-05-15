@@ -332,19 +332,24 @@ if "💰" in aba:
         
         st.divider()
         
-        # --- FILTRO PARA O MÊS ATUAL (MAIO/2026) ---
-        df_base['Vencimento'] = pd.to_datetime(df_base['Vencimento'])
-        df_maio = df_base[(df_base['Vencimento'].dt.month == 5) & (df_base['Vencimento'].dt.year == 2026)]
+        # 1. Limpamos a data e filtramos apenas MAIO/2026
+        df_base['Vencimento'] = pd.to_datetime(df_base['Vencimento'], errors='coerce')
+        # Criamos uma cópia limpa só com o mês 5 para não sujar o resto do app
+        df_maio = df_base[(df_base['Vencimento'].dt.month == 5) & (df_base['Vencimento'].dt.year == 2026)].copy()
 
         m1, m2, m3, m4 = st.columns(4)
         
-        # Usando 'V_Num' que é o nome correto da sua coluna de valores
-        m1.metric("📈 Receita", m_fmt(df_maio[df_maio['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Gasto", m_fmt(df_maio[df_maio['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("💰 Rendimento", m_fmt(df_maio[df_maio['Tipo'] == 'Rendimento']['V_Num'].sum()))
+        # 2. Calculamos usando a coluna V_Num (que você já usa no app)
+        rec = df_maio[df_maio['Tipo'] == 'Receita']['V_Num'].sum()
+        gas = df_maio[df_maio['Tipo'] == 'Despesa']['V_Num'].sum()
+        ren = df_maio[df_maio['Tipo'] == 'Rendimento']['V_Num'].sum()
+        pen = df_maio[df_maio['Status'] == 'Pendente']['V_Num'].sum()
         
-        # Corrigindo também a coluna de Status para garantir que o filtro funcione
-        m4.metric("⏳ Pendente", m_fmt(df_maio[df_maio['Status'] == 'Pendente']['V_Num'].sum()))
+        # 3. Exibimos nos cards (usando as variáveis para não duplicar o cálculo)
+        m1.metric("📈 Receita", m_fmt(rec))
+        m2.metric("📉 Gasto", m_fmt(gas))
+        m3.metric("💰 Rendimento", m_fmt(ren))
+        m4.metric("⏳ Pendente", m_fmt(pen))
         
         st.divider()
         
