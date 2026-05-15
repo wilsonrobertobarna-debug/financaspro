@@ -412,10 +412,32 @@ if "💰" in aba:
 
         with st.expander("📑 Pesquisar e Visualizar Histórico", expanded=False):
             
-            # --- ESPAÇO PARA AS PESQUISAS ---
-            # Cole aqui os seus filtros (st.columns, st.date_input, etc.)
-            # Lembre-se de dar um "TAB" neles para ficarem dentro da barrinha!
+            # --- ESPAÇO PARA AS PESQUISAS (A VOLTA DA BUSCA!) ---
+            col_busca1, col_busca2 = st.columns([2, 1])
             
+            with col_busca1:
+                pesquisa = st.text_input("🔍 O que você procura? (Descrição, Banco, etc.)", "")
+            
+            with col_busca2:
+                # Filtro por tipo (opcional, mas ajuda muito)
+                filtro_tipo = st.multiselect("Filtrar por Tipo:", options=df_base['Tipo'].unique())
+
+            # APLICANDO O FILTRO NO DATAFRAME
+            df_v = df_base.copy()
+            
+            if pesquisa:
+                df_v = df_v[df_v['Descrição'].str.contains(pesquisa, case=False, na=False)]
+            
+            if filtro_tipo:
+                df_v = df_v[df_v['Tipo'].isin(filtro_tipo)]
+            
+            # -----------------------------------------------------
+
+            st.markdown("### 📝 Registros Detalhados")
+
+            # Agora renomeamos o filtrado para exibição
+            df_view = df_v.copy()
+            df_view = df_view.rename(columns={'V_Num': 'VALOR'})            
             st.markdown("### 📝 Registros Detalhados")
 
             # 1. ORGANIZANDO E RENOMEANDO AS COLUNAS
