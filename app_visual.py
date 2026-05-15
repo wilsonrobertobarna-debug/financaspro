@@ -330,7 +330,7 @@ if "💰" in aba:
         m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
         m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
         
-       st.divider()
+        st.divider()
         
         # --- FILTRO PARA O MÊS ATUAL (MAIO/2026) ---
         df_base['Vencimento'] = pd.to_datetime(df_base['Vencimento'])
