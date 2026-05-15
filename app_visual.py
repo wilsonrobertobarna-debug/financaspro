@@ -322,31 +322,31 @@ if "💰" in aba:
         saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")     
 
-        st.divider()
+       st.divider()
         
-        # 1. Forçamos a conversão da data e removemos horários para não dar erro
-        df_base['Vencimento'] = pd.to_datetime(df_base['Vencimento'], errors='coerce')
+        # 1. Ajuste o nome abaixo se na sua planilha for 'Data' em vez de 'Vencimento'
+        coluna_data = 'Vencimento' 
         
-        # 2. Criamos o filtro de MAIO de forma ultra específica
-        # O .copy() garante que as somas não se misturem com outros meses
-        filtro_maio = (df_base['Vencimento'].dt.month == 5) & (df_base['Vencimento'].dt.year == 2026)
-        df_maio = df_base[filtro_maio].copy()
+        # Convertemos para data e filtramos o mês 5 (Maio) de 2026
+        df_base[coluna_data] = pd.to_datetime(df_base[coluna_data], errors='coerce')
+        df_maio = df_base[(df_base[coluna_data].dt.month == 5) & (df_base[coluna_data].dt.year == 2026)].copy()
 
         m1, m2, m3, m4 = st.columns(4)
         
-        # 3. Cálculos garantindo que estamos usando a coluna V_Num
-        # Usamos .fillna(0) para que, se não houver dado, ele mostre R$ 0,00 em vez de erro
+        # 2. Cálculos usando a coluna V_Num que você já utiliza
         r = df_maio[df_maio['Tipo'] == 'Receita']['V_Num'].sum()
         g = df_maio[df_maio['Tipo'] == 'Despesa']['V_Num'].sum()
         rd = df_maio[df_maio['Tipo'] == 'Rendimento']['V_Num'].sum()
         p = df_maio[df_maio['Status'] == 'Pendente']['V_Num'].sum()
         
+        # 3. Exibição com formatação de Real
         m1.metric("📈 Receita", m_fmt(r))
         m2.metric("📉 Gasto", m_fmt(g))
         m3.metric("💰 Rendimento", m_fmt(rd))
         m4.metric("⏳ Pendente", m_fmt(p))
         
-        st.divider()       
+        st.divider()
+    
         with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=False):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
             df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
