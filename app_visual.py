@@ -818,32 +818,44 @@ elif "📋" in aba:
                 pdf.ln()
                 
                 for index, row in df_v.iterrows():
-                    # --- BLINDAGEM TOTAL (A QUE NÃO TRAVA O BOTÃO) ---
+                    # --- BLINDAGEM ANTI-ERRO 'f' ---
                     
-                    # 1. Tratando a DATA (Para sair 15/05/2026 e não 00/00)
+                    # 1. DATA: Garantindo formato brasileiro
                     data_raw = row.get('Vencimento', row.get('Data', row.get('DATA')))
                     try:
                         data_val = pd.to_datetime(data_raw).strftime('%d/%m/%Y')
                     except:
                         data_val = str(data_raw) if data_raw else '00/00/0000'
 
-                    # 2. Tratando o VALOR (Evitando o erro do 'f')
+                    # 2. VALOR: Limpando sujeira de texto antes de formatar
                     v_raw = row.get('V_Num', 0.0)
-                    if isinstance(v_raw, (int, float)):
-                        # Só usa o código 'f' se for número de verdade
-                        valor_val = f"R$ {v_raw:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                    else:
-                        # Se já for texto, evita o erro e usa como está
+                    try:
+                        if isinstance(v_raw, str):
+                            # Se for texto, remove R$, pontos e troca vírgula por ponto
+                            v_limpo = v_raw.replace('R$', '').replace('.', '').replace(',', '.').strip()
+                            v_num = float(v_limpo)
+                        else:
+                            v_num = float(v_raw)
+                        
+                        valor_val = f"R$ {v_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    except:
+                        # Se tudo falhar, usa o que vier como texto puro
                         valor_val = str(v_raw)
-                    
-                    # 3. Tratando o SALDO ACUMULADO (Mês 04 para 05)
+
+                    # 3. SALDO ACUMULADO: Mesma lógica de limpeza
                     s_raw = row.get('Saldo_Acum', 0.0)
-                    if isinstance(s_raw, (int, float)):
-                        saldo_val = f"R$ {s_raw:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                    else:
+                    try:
+                        if isinstance(s_raw, str):
+                            s_limpo = s_raw.replace('R$', '').replace('.', '').replace(',', '.').strip()
+                            s_num = float(s_limpo)
+                        else:
+                            s_num = float(s_raw)
+                        
+                        saldo_val = f"R$ {s_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    except:
                         saldo_val = str(s_raw)
-                    
-                    # Outros campos (Garantindo que sejam texto)
+
+                    # Campos de texto simples
                     tipo_val = str(row.get('Tipo', 'S/T'))
                     desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))
                     status_val = str(row.get('Status', '-'))
