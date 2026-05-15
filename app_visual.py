@@ -330,6 +330,23 @@ if "💰" in aba:
         m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
         m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
         
+        st.divider()st.divider()
+        
+        # --- FILTRO PARA O MÊS ATUAL (MAIO/2026) ---
+        # Isso garante que o cálculo não some meses passados
+        df_base['Vencimento'] = pd.to_datetime(df_base['Vencimento'])
+        df_maio = df_base[(df_base['Vencimento'].dt.month == 5) & (df_base['Vencimento'].dt.year == 2026)]
+
+        m1, m2, m3, m4 = st.columns(4)
+        
+        # Agora usamos 'df_maio' em vez de 'df_m_limpo' ou 'df_base'
+        m1.metric("📈 Receita", m_fmt(df_maio[df_maio['Tipo'] == 'Receita']['VALOR'].sum()))
+        m2.metric("📉 Gasto", m_fmt(df_maio[df_maio['Tipo'] == 'Despesa']['VALOR'].sum()))
+        m3.metric("💰 Rendimento", m_fmt(df_maio[df_maio['Tipo'] == 'Rendimento']['V_Num'].sum()))
+        
+        # Aqui corrigimos a pendência para olhar só para MAIO também
+        m4.metric("⏳ Pendente", m_fmt(df_maio[df_maio['Status'] == 'Pendente']['VALOR'].sum()))
+        
         st.divider()
         
         with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=False):
