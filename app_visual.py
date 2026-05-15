@@ -313,18 +313,26 @@ if "💰" in aba:
         saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")     
 
-       # --- FILTRO DE SEGURANÇA: MAIO/2026 ---
-        df_base['Vencimento'] = pd.to_datetime(df_base['Vencimento'], errors='coerce')
-        df_maio = df_base[(df_base['Vencimento'].dt.month == 5) & (df_base['Vencimento'].dt.year == 2026)].copy()
+      # --- FILTRO DE SEGURANÇA MÁXIMA: MAIO/2026 ---
+        # 1. Forçamos a coluna de data a ser lida corretamente
+        # Se na sua planilha o nome for 'Data', mude 'Vencimento' para 'Data' abaixo:
+        col_data = 'Vencimento' 
+        
+        df_base[col_data] = pd.to_datetime(df_base[col_data], dayfirst=True, errors='coerce')
+        
+        # 2. Criamos uma tabela que contém APENAS o mês de Maio de 2026
+        df_maio = df_base[(df_base[col_data].dt.month == 5) & (df_base[col_data].dt.year == 2026)].copy()
 
-        # 1. Cálculos dinâmicos para a Barrinha
+        # 3. Cálculos baseados APENAS na tabela de Maio
+        # Usamos .fillna(0) para garantir que valores vazios virem R$ 0,00
         rec = df_maio[df_maio['Tipo'] == 'Receita']['V_Num'].sum()
         gas = df_maio[df_maio['Tipo'] == 'Despesa']['V_Num'].sum()
         ren = df_maio[df_maio['Tipo'] == 'Rendimento']['V_Num'].sum()
         pen = df_maio[df_maio['Status'] == 'Pendente']['V_Num'].sum()
+        
         saldo_atual = rec - gas + ren
 
-        # 2. Ativação da Barrinha (Expander)
+        # 4. Exibição da Barrinha Única em Real (R$)
         with st.expander(f"🏦 SALDO GERAL ATUAL: R$ {saldo_atual:,.2f}", expanded=False):
             c1, c2 = st.columns(2)
             c3, c4 = st.columns(2)
@@ -333,7 +341,7 @@ if "💰" in aba:
             with c3: st.write(f"💰 **Rendimento:** R$ {ren:,.2f}")
             with c4: st.markdown(f"<span style='color:#D32F2F;'>⏳ **Pendente:** R$ {pen:,.2f}</span>", unsafe_allow_html=True)
         
-        st.divider()    
+        st.divider()
         with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=False):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
             df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
