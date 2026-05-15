@@ -819,7 +819,6 @@ elif "📋" in aba:
                 
         for index, row in df_v.iterrows():
             # --- BLINDAGEM DE COLUNAS (VERSÃO CORRIGIDA) ---
-            
             # 1. Tratando a DATA (para não sair 00/00)
             data_raw = row.get('Vencimento', row.get('Data', row.get('DATA')))
             try:
@@ -834,7 +833,7 @@ elif "📋" in aba:
             v_num = row.get('V_Num', 0.0)
             valor_val = f"R$ {v_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')[cite: 1]
             
-            # 3. Tratando o SALDO ACUMULADO
+            # 3. Tratando o SALDO ACUMULADO[cite: 1]
             s_num = row.get('Saldo_Acum', 0.0)
             saldo_val = f"R$ {s_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')[cite: 1]
             
