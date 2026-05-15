@@ -818,14 +818,29 @@ elif "📋" in aba:
                 pdf.ln()
                 
                 for index, row in df_v.iterrows():
-                    # --- BLINDAGEM DE COLUNAS ---
-                    data_val = row.get('Data', row.get('DATA', '00/00'))
-                    tipo_val = row.get('Tipo', 'S/T')
-                    valor_val = row.get('V_Num', 0.0)
-                    saldo_val = row.get('Saldo_Acum', 0.0)
-                    desc_val = row.get('Descrição', row.get('Descricao', 'Sem nome'))
-                    status_val = row.get('Status', '-')
-                    # -----------------------------
+            # --- BLINDAGEM DE COLUNAS (VERSÃO CORRIGIDA) ---
+            
+            # 1. Tratando a DATA (para não sair 00/00)
+            data_raw = row.get('Vencimento', row.get('Data', row.get('DATA')))
+            try:
+                # Transforma em data real e depois em texto brasileiro
+                data_val = pd.to_datetime(data_raw).strftime('%d/%m/%Y')[cite: 1]
+            except:
+                data_val = '00/00/0000'
+
+            tipo_val = row.get('Tipo', 'S/T')
+            
+            # 2. Tratando o VALOR (para sair R$ 1.234,56)
+            v_num = row.get('V_Num', 0.0)
+            valor_val = f"R$ {v_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')[cite: 1]
+            
+            # 3. Tratando o SALDO ACUMULADO
+            s_num = row.get('Saldo_Acum', 0.0)
+            saldo_val = f"R$ {s_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')[cite: 1]
+            
+            desc_val = row.get('Descrição', row.get('Descricao', 'Sem nome'))
+            status_val = row.get('Status', '-')
+            # ---------------------------------------------
 
                     pdf.cell(20, 6, str(data_val), 1)
                     pdf.cell(25, 6, str(tipo_val), 1)
