@@ -818,29 +818,37 @@ elif "📋" in aba:
                 pdf.ln()
                 
                 for index, row in df_v.iterrows():
-                    # --- BLINDAGEM DE COLUNAS (VERSÃO LIMPA) ---
+                    # --- BLINDAGEM DE COLUNAS (VERSÃO SEM ERRO DE FORMATO) ---
                     
                     # 1. Tratando a DATA (Corrigindo o 00/00)
                     data_raw = row.get('Vencimento', row.get('Data', row.get('DATA')))
                     try:
-                        # Transforma em data real e depois em texto brasileiro
                         data_val = pd.to_datetime(data_raw).strftime('%d/%m/%Y')
                     except:
-                        # Se falhar, evita o erro e coloca padrão
                         data_val = '00/00/0000'
 
-                    tipo_val = row.get('Tipo', 'S/T')
+                    tipo_val = str(row.get('Tipo', 'S/T'))
                     
-                    # 2. Tratando o VALOR (Formatação R$ 1.234,56)
-                    v_num = row.get('V_Num', 0.0)
-                    valor_val = f"R$ {v_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    # 2. Tratando o VALOR (Garantindo que seja número antes de formatar)
+                    v_raw = row.get('V_Num', 0.0)
+                    try:
+                        # Força virar número (float) para poder usar o :,.2f
+                        v_num = float(v_raw)
+                        valor_val = f"R$ {v_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    except:
+                        # Se já for texto (ex: "R$ 10,00"), ele usa como está
+                        valor_val = str(v_raw)
                     
                     # 3. Tratando o SALDO ACUMULADO
-                    s_num = row.get('Saldo_Acum', 0.0)
-                    saldo_val = f"R$ {s_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    s_raw = row.get('Saldo_Acum', 0.0)
+                    try:
+                        s_num = float(s_raw)
+                        saldo_val = f"R$ {s_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    except:
+                        saldo_val = str(s_raw)
                     
-                    desc_val = row.get('Descrição', row.get('Descricao', 'Sem nome'))
-                    status_val = row.get('Status', '-')
+                    desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))
+                    status_val = str(row.get('Status', '-'))
                     # -----------------------------------------------------
 
                     pdf.cell(20, 6, str(data_val), 1)
