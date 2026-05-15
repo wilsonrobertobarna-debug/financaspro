@@ -322,34 +322,27 @@ if "💰" in aba:
         saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")     
 
-        st.divider()
-        
-        # 1. Forçamos a coluna 'Vencimento' a ser tratada como data real
-        # O 'coerce' limpa erros e o 'copy' evita que os meses se misturem
+       # --- FILTRO DE SEGURANÇA: MAIO/2026 ---
         df_base['Vencimento'] = pd.to_datetime(df_base['Vencimento'], errors='coerce')
-        
-        # 2. Criamos o filtro específico para MAIO/2026
         df_maio = df_base[(df_base['Vencimento'].dt.month == 5) & (df_base['Vencimento'].dt.year == 2026)].copy()
 
-        m1, m2, m3, m4 = st.columns(4)
-        
-        # 3. Cálculos usando apenas a tabela de MAIO e a coluna V_Num
-        r = df_maio[df_maio['Tipo'] == 'Receita']['V_Num'].sum()
-        g = df_maio[df_maio['Tipo'] == 'Despesa']['V_Num'].sum()
-        rd = df_maio[df_maio['Tipo'] == 'Rendimento']['V_Num'].sum()
-        p = df_maio[df_maio['Status'] == 'Pendente']['V_Num'].sum()
-        
-        # 4. Cálculo do Saldo Real de Maio para a barrinha não ficar negativa
-        saldo_maio = r - g + rd
+        # 1. Cálculos dinâmicos para a Barrinha
+        rec = df_maio[df_maio['Tipo'] == 'Receita']['V_Num'].sum()
+        gas = df_maio[df_maio['Tipo'] == 'Despesa']['V_Num'].sum()
+        ren = df_maio[df_maio['Tipo'] == 'Rendimento']['V_Num'].sum()
+        pen = df_maio[df_maio['Status'] == 'Pendente']['V_Num'].sum()
+        saldo_atual = rec - gas + ren
 
-        # Atualizamos os cards com os valores reais (em Real)
-        m1.metric("📈 Receita", m_fmt(r))
-        m2.metric("📉 Gasto", m_fmt(g))
-        m3.metric("💰 Rendimento", m_fmt(rd))
-        m4.metric("⏳ Pendente", m_fmt(p))
+        # 2. Ativação da Barrinha (Expander)
+        with st.expander(f"🏦 SALDO GERAL ATUAL: R$ {saldo_atual:,.2f}", expanded=False):
+            c1, c2 = st.columns(2)
+            c3, c4 = st.columns(2)
+            with c1: st.write(f"📈 **Receita:** R$ {rec:,.2f}")
+            with c2: st.write(f"📉 **Gasto:** R$ {gas:,.2f}")
+            with c3: st.write(f"💰 **Rendimento:** R$ {ren:,.2f}")
+            with c4: st.markdown(f"<span style='color:#D32F2F;'>⏳ **Pendente:** R$ {pen:,.2f}</span>", unsafe_allow_html=True)
         
-        st.divider()
-    
+        st.divider()    
         with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=False):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
             df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
