@@ -818,34 +818,32 @@ elif "📋" in aba:
                 pdf.ln()
                 
                 for index, row in df_v.iterrows():
-                    # --- BLINDAGEM TOTAL (SEM ERRO DE FORMATO) ---
+                    # --- BLINDAGEM SIMPLIFICADA (A QUE NÃO TRAVA) ---
                     
-                    # 1. DATA: Garantindo o formato brasileiro
+                    # 1. Tratando a DATA
                     data_raw = row.get('Vencimento', row.get('Data', row.get('DATA')))
                     try:
-                        data_val = pd.to_datetime(data_raw).strftime('%d/%m/%Y')
+                        data_val = pd.to_datetime(data_raw).strftime('%d/%m/%Y')[cite: 1]
                     except:
                         data_val = str(data_raw) if data_raw else '00/00/0000'
 
-                    # 2. VALOR: Se for número, formata. Se for texto, só exibe.
-                    v_raw = row.get('V_Num', 0.0)
-                    try:
-                        # Tenta converter para número puro antes de formatar
-                        v_num = float(v_raw)
-                        valor_val = f"R$ {v_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                    except:
-                        # Se já for texto (ex: "R$ 1.200,00"), ele usa como está
-                        valor_val = str(v_raw)
-                    
-                    # 3. SALDO ACUMULADO: Mesma lógica
-                    s_raw = row.get('Saldo_Acum', 0.0)
-                    try:
-                        s_num = float(s_raw)
-                        saldo_val = f"R$ {s_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                    except:
-                        saldo_val = str(s_raw)
-                    
-                    # Outros campos simples
+                    # 2. Tratando o VALOR (Onde dá o erro do 'f')
+                    valor_val = row.get('V_Num', 0.0)
+                    if isinstance(valor_val, (int, float)):
+                        # Só formata se for número de verdade
+                        valor_val = f"R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    else:
+                        # Se já for texto (R$), só transforma em string e pronto
+                        valor_val = str(valor_val)
+
+                    # 3. Tratando o SALDO ACUMULADO (A mesma lógica)
+                    saldo_val = row.get('Saldo_Acum', 0.0)
+                    if isinstance(saldo_val, (int, float)):
+                        saldo_val = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    else:
+                        saldo_val = str(saldo_val)
+
+                    # Restante normal
                     tipo_val = str(row.get('Tipo', 'S/T'))
                     desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))
                     status_val = str(row.get('Status', '-'))
