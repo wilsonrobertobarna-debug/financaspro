@@ -817,29 +817,31 @@ elif "📋" in aba:
                 pdf.cell(20, 8, "Status", 1)
                 pdf.ln()
                 
-        for index, row in df_v.iterrows():
-            # --- BLINDAGEM DE COLUNAS (VERSÃO CORRIGIDA) ---
-            # 1. Tratando a DATA (para não sair 00/00)
+       for index, row in df_v.iterrows():
+            # --- BLINDAGEM DE COLUNAS (VERSÃO À PROVA DE ERROS) ---
+            
+            # 1. Tratando a DATA (Corrigindo o 00/00)
             data_raw = row.get('Vencimento', row.get('Data', row.get('DATA')))
             try:
-                # Transforma em data real e depois em texto brasileiro
+                # Tenta formatar para o nosso padrão
                 data_val = pd.to_datetime(data_raw).strftime('%d/%m/%Y')[cite: 1]
             except:
+                # Se falhar, evita o erro e coloca padrão
                 data_val = '00/00/0000'
 
             tipo_val = row.get('Tipo', 'S/T')
             
-            # 2. Tratando o VALOR (para sair R$ 1.234,56)
+            # 2. Tratando o VALOR (Formatação R$ 1.234,56)
             v_num = row.get('V_Num', 0.0)
             valor_val = f"R$ {v_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')[cite: 1]
             
-            # 3. Tratando o SALDO ACUMULADO[cite: 1]
+            # 3. Tratando o SALDO ACUMULADO
             s_num = row.get('Saldo_Acum', 0.0)
             saldo_val = f"R$ {s_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')[cite: 1]
             
             desc_val = row.get('Descrição', row.get('Descricao', 'Sem nome'))
             status_val = row.get('Status', '-')
-            # ---------------------------------------------
+            # -----------------------------------------------------
 
                     pdf.cell(20, 6, str(data_val), 1)
                     pdf.cell(25, 6, str(tipo_val), 1)
