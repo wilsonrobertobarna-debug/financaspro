@@ -818,48 +818,40 @@ elif "📋" in aba:
                 pdf.ln()
                 
                 for index, row in df_v.iterrows():
-                    # --- BLINDAGEM ANTI-ERRO 'f' ---
+                    # --- BLINDAGEM QUE NÃO TRAVA ---
                     
-                    # 1. DATA: Garantindo formato brasileiro
+                    # 1. TRATANDO A DATA
                     data_raw = row.get('Vencimento', row.get('Data', row.get('DATA')))
                     try:
                         data_val = pd.to_datetime(data_raw).strftime('%d/%m/%Y')
                     except:
                         data_val = str(data_raw) if data_raw else '00/00/0000'
 
-                    # 2. VALOR: Limpando sujeira de texto antes de formatar
-                    v_raw = row.get('V_Num', 0.0)
-                    try:
-                        if isinstance(v_raw, str):
-                            # Se for texto, remove R$, pontos e troca vírgula por ponto
-                            v_limpo = v_raw.replace('R$', '').replace('.', '').replace(',', '.').strip()
-                            v_num = float(v_limpo)
-                        else:
-                            v_num = float(v_raw)
-                        
-                        valor_val = f"R$ {v_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                    except:
-                        # Se tudo falhar, usa o que vier como texto puro
-                        valor_val = str(v_raw)
+                    # 2. FUNÇÃO INTERNA DE FORMATAÇÃO (PARA VALOR E SALDO)
+                    def formatar_moeda(valor):
+                        try:
+                            # Tenta garantir que seja um número
+                            v = float(valor)
+                            return f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                        except:
+                            # Se falhar (já for texto ou erro), retorna como string pura
+                            return str(valor)
 
-                    # 3. SALDO ACUMULADO: Mesma lógica de limpeza
-                    s_raw = row.get('Saldo_Acum', 0.0)
-                    try:
-                        if isinstance(s_raw, str):
-                            s_limpo = s_raw.replace('R$', '').replace('.', '').replace(',', '.').strip()
-                            s_num = float(s_limpo)
-                        else:
-                            s_num = float(s_raw)
-                        
-                        saldo_val = f"R$ {s_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                    except:
-                        saldo_val = str(s_raw)
-
-                    # Campos de texto simples
+                    valor_val = formatar_moeda(row.get('V_Num', 0.0))
+                    saldo_val = formatar_moeda(row.get('Saldo_Acum', 0.0))
+                    
                     tipo_val = str(row.get('Tipo', 'S/T'))
                     desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))
                     status_val = str(row.get('Status', '-'))
-                    # -----------------------------------------------------
+                    
+                    # AGORA VOCÊ PODE USAR AS VARIÁVEIS NO PDF.CELL SEM MEDO
+                    pdf.cell(20, 8, data_val, 1)
+                    pdf.cell(25, 8, tipo_val, 1)
+                    pdf.cell(25, 8, valor_val, 1)
+                    pdf.cell(25, 8, saldo_val, 1)
+                    pdf.cell(75, 8, desc_val, 1)
+                    pdf.cell(20, 8, status_val, 1)
+                    pdf.ln()
 
                     pdf.cell(20, 6, str(data_val), 1)
                     pdf.cell(25, 6, str(tipo_val), 1)
