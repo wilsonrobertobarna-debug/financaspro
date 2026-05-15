@@ -330,26 +330,30 @@ if "💰" in aba:
         m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
         m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
         
-        st.divider()
+       st.divider()
         
-        # 1. Limpamos a data e filtramos apenas MAIO/2026
+        # 1. Garantimos que o motor olhe APENAS para Maio/2026
+        # 'coerce' evita erros se houver alguma data estranha na planilha
         df_base['Vencimento'] = pd.to_datetime(df_base['Vencimento'], errors='coerce')
-        # Criamos uma cópia limpa só com o mês 5 para não sujar o resto do app
+        
+        # Filtro rigoroso para o mês 5 de 2026
         df_maio = df_base[(df_base['Vencimento'].dt.month == 5) & (df_base['Vencimento'].dt.year == 2026)].copy()
 
+        # 2. Criamos as colunas para o layout que você já aprovou
         m1, m2, m3, m4 = st.columns(4)
         
-        # 2. Calculamos usando a coluna V_Num (que você já usa no app)
-        rec = df_maio[df_maio['Tipo'] == 'Receita']['V_Num'].sum()
-        gas = df_maio[df_maio['Tipo'] == 'Despesa']['V_Num'].sum()
-        ren = df_maio[df_maio['Tipo'] == 'Rendimento']['V_Num'].sum()
-        pen = df_maio[df_maio['Status'] == 'Pendente']['V_Num'].sum()
+        # 3. Cálculos limpos usando a coluna correta (V_Num)
+        r_total = df_maio[df_maio['Tipo'] == 'Receita']['V_Num'].sum()
+        g_total = df_maio[df_maio['Tipo'] == 'Despesa']['V_Num'].sum()
+        rd_total = df_maio[df_maio['Tipo'] == 'Rendimento']['V_Num'].sum()
+        # Pendência: olha apenas o que é 'Pendente' DENTRO de Maio
+        p_total = df_maio[df_maio['Status'] == 'Pendente']['V_Num'].sum()
         
-        # 3. Exibimos nos cards (usando as variáveis para não duplicar o cálculo)
-        m1.metric("📈 Receita", m_fmt(rec))
-        m2.metric("📉 Gasto", m_fmt(gas))
-        m3.metric("💰 Rendimento", m_fmt(ren))
-        m4.metric("⏳ Pendente", m_fmt(pen))
+        # 4. Exibição final (um único bloco)
+        m1.metric("📈 Receita", m_fmt(r_total))
+        m2.metric("📉 Gasto", m_fmt(g_total))
+        m3.metric("💰 Rendimento", m_fmt(rd_total))
+        m4.metric("⏳ Pendente", m_fmt(p_total))
         
         st.divider()
         
