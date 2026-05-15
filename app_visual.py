@@ -818,12 +818,13 @@ elif "📋" in aba:
                 pdf.ln()
                 
                 for index, row in df_v.iterrows():
-                    # --- BLINDAGEM DE COLUNAS (ALINHADA PELO FOR) ---
+                    # --- BLINDAGEM DE COLUNAS (VERSÃO LIMPA) ---
+                    
                     # 1. Tratando a DATA (Corrigindo o 00/00)
                     data_raw = row.get('Vencimento', row.get('Data', row.get('DATA')))
                     try:
-                        # Tenta formatar para o nosso padrão
-                        data_val = pd.to_datetime(data_raw).strftime('%d/%m/%Y')[cite: 1]
+                        # Transforma em data real e depois em texto brasileiro
+                        data_val = pd.to_datetime(data_raw).strftime('%d/%m/%Y')
                     except:
                         # Se falhar, evita o erro e coloca padrão
                         data_val = '00/00/0000'
@@ -832,11 +833,11 @@ elif "📋" in aba:
                     
                     # 2. Tratando o VALOR (Formatação R$ 1.234,56)
                     v_num = row.get('V_Num', 0.0)
-                    valor_val = f"R$ {v_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')[cite: 1]
+                    valor_val = f"R$ {v_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                     
-                    # 3. Tratando o SALDO ACUMULADO[cite: 1]
+                    # 3. Tratando o SALDO ACUMULADO
                     s_num = row.get('Saldo_Acum', 0.0)
-                    saldo_val = f"R$ {s_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')[cite: 1]
+                    saldo_val = f"R$ {s_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                     
                     desc_val = row.get('Descrição', row.get('Descricao', 'Sem nome'))
                     status_val = row.get('Status', '-')
