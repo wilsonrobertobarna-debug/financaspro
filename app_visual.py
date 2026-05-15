@@ -817,29 +817,27 @@ elif "📋" in aba:
                 pdf.cell(20, 8, "Status", 1)
                 pdf.ln()
                 
-                for index, row in df_v.iterrows():
-                    # --- BLINDAGEM DE COLUNAS (VERSÃO SEM ERRO DE FORMATO) ---
+               for index, row in df_v.iterrows():
+                    # --- BLINDAGEM TOTAL (SEM ERRO DE FORMATO) ---
                     
-                    # 1. Tratando a DATA (Corrigindo o 00/00)
+                    # 1. DATA: Garantindo o formato brasileiro
                     data_raw = row.get('Vencimento', row.get('Data', row.get('DATA')))
                     try:
                         data_val = pd.to_datetime(data_raw).strftime('%d/%m/%Y')
                     except:
-                        data_val = '00/00/0000'
+                        data_val = str(data_raw) if data_raw else '00/00/0000'
 
-                    tipo_val = str(row.get('Tipo', 'S/T'))
-                    
-                    # 2. Tratando o VALOR (Garantindo que seja número antes de formatar)
+                    # 2. VALOR: Se for número, formata. Se for texto, só exibe.
                     v_raw = row.get('V_Num', 0.0)
                     try:
-                        # Força virar número (float) para poder usar o :,.2f
+                        # Tenta converter para número puro antes de formatar
                         v_num = float(v_raw)
                         valor_val = f"R$ {v_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                     except:
-                        # Se já for texto (ex: "R$ 10,00"), ele usa como está
+                        # Se já for texto (ex: "R$ 1.200,00"), ele usa como está
                         valor_val = str(v_raw)
                     
-                    # 3. Tratando o SALDO ACUMULADO
+                    # 3. SALDO ACUMULADO: Mesma lógica
                     s_raw = row.get('Saldo_Acum', 0.0)
                     try:
                         s_num = float(s_raw)
@@ -847,6 +845,8 @@ elif "📋" in aba:
                     except:
                         saldo_val = str(s_raw)
                     
+                    # Outros campos simples
+                    tipo_val = str(row.get('Tipo', 'S/T'))
                     desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))
                     status_val = str(row.get('Status', '-'))
                     # -----------------------------------------------------
