@@ -805,43 +805,41 @@ elif "📋" in aba:
                 pdf.cell(20, 8, "Status", 1)
                 pdf.ln()
 
-            # 3. LOOP DE LINHAS COM CORES E SINAL DE NEGATIVO
+            # 3. LOOP DE LINHAS COM LIMPEZA DE TEXTO E CORES
                 for index, row in df_report.iterrows():
-                    # Busca segura de dados (Data, Tipo, Valor, Saldo, Descrição e Status)
+                    # Busca segura de dados
                     dt_obj = row.get('DT', row.get('Data', row.get('DATA', None)))
                     data_str = dt_obj.strftime('%d/%m/%Y') if hasattr(dt_obj, 'strftime') else str(dt_obj)
 
-                    tipo_val = row.get('Tipo', '---')
+                    # Limpamos o texto do Tipo para evitar erros de digitação (ex: " gasto " vira "Gasto")
+                    tipo_raw = str(row.get('Tipo', '---')).strip().capitalize()
                     valor_val = row.get('V_Num', 0.0)
                     saldo_val = row.get('Saldo_Acum', 0.0)
                     desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))[:35]
                     status_val = row.get('Status', '-')
 
-                    # --- Lógica de Formatação Visual ---
-                    # Se for Gasto, aplica sinal de menos e cor vermelha
-                    if tipo_val == 'Gasto':
+                    # --- Lógica de Formatação Visual e Matemática ---
+                    if tipo_raw == 'Gasto':
+                        # Força o sinal de negativo no texto
                         texto_valor = f"- R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                        pdf.set_text_color(255, 0, 0)  # RGB para Vermelho
+                        pdf.set_text_color(255, 0, 0)  # Vermelho para o PDF
                     else:
+                        # Receitas e Rendimentos ficam normais
                         texto_valor = f"R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                        pdf.set_text_color(0, 0, 0)    # RGB para Preto
-
-                    # Formatação do Saldo (sempre em Reais)
-                    texto_saldo = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                        pdf.set_text_color(0, 0, 0)    # Preto para o PDF
 
                     # Escrita das Células
                     pdf.cell(25, 6, data_str, 1)
-                    pdf.cell(20, 6, str(tipo_val), 1)
+                    pdf.cell(20, 6, tipo_raw, 1) # Mostra o tipo limpo
                     pdf.cell(25, 6, texto_valor, 1)
                     
-                    # Resetamos a cor para preto para o restante da linha
+                    # Resetamos para preto para o saldo e o resto da linha
                     pdf.set_text_color(0, 0, 0) 
                     
-                    pdf.cell(30, 6, texto_saldo, 1)
+                    pdf.cell(30, 6, f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'), 1)
                     pdf.cell(70, 6, desc_val, 1)
                     pdf.cell(20, 6, str(status_val), 1)
                     pdf.ln()
-
                 # 4. DOWNLOAD E FINALIZAÇÃO
                 pdf_output = pdf.output(dest='S')
                 if isinstance(pdf_output, str):
