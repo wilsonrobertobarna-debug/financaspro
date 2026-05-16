@@ -371,7 +371,7 @@ elif "💬" in aba:
             c_c2.metric("Sobra de Abril", m_fmt(sobra_abr))
             c_c3.metric("Variação Líquida", m_fmt(var_valor), delta=f"{var_pct:.1f}%")
         
-        st.divider()
+    st.divider()
         
         st.subheader("🏦 Informações de Contas e Cartões")
         if not df_bancos_info.empty:
