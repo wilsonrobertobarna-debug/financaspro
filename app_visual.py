@@ -278,8 +278,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     for id_linha in ids_para_excluir:
                         ws_base.delete_rows(id_linha)
                 else:
-                   st.rerun()
-
 # --- 5. TELAS PRINCIPAIS ---
 if "💰" in aba:
     # Título principal conforme sua preferência por visual limpo
@@ -318,7 +316,7 @@ elif "🐶" in aba:
 # --- WHATSAPP / ALERTAS ---
 elif "💬" in aba:
     st.title("💬 Notificações")
-    st.write("Alertas via Twilio configurados para o sistema.")       
+    st.write("Alertas via Twilio configurados para o sistema.")     
     
     with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
@@ -328,7 +326,7 @@ elif "💬" in aba:
             m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
 
         # --- BANCOS E CARTÕES ---
-    with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
+        with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
             if not df_bancos_info.empty:
                 for index, row in df_bancos_info.iterrows():
                     banco_nome = row.iloc[0]
