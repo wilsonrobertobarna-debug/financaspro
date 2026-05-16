@@ -277,7 +277,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     ids_para_excluir = sorted(list(set(ids_para_excluir)), reverse=True)
                     for id_linha in ids_para_excluir:
                         ws_base.delete_rows(id_linha)
-               else:
+        else:
             ws_base.delete_rows(int(item['ID']))
             atualizar_sessao()
             st.rerun()
