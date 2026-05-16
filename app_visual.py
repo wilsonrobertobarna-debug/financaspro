@@ -10,23 +10,28 @@ import pandas as pd
 from datetime import datetime, timedelta
 import urllib.parse
 
-# RESOLUÇÃO DO FUSO HORÁRIO (Sem precisar de biblioteca extra)
-# O servidor do Streamlit é 3 horas adiantado. Tiramos 3 horas para ser Brasília.
-agora_br = datetime.now() - timedelta(hours=3)
-hoje_br = agora_br.date()
-agora = datetime.now() - timedelta(hours=3)
-hoje = agora.date()
-# --- ADICIONE ESTE BLOCO AQUI ---
-# 1. Identifica o mês e ano atual (Maio de 2026)
-mes_atual = hoje.month
-ano_atual = hoje.year
+# 1. Primeiro as importações e o fuso horário (o que você já tem)
+from datetime import datetime, timedelta
+import streamlit as st
+import pandas as pd
+# ... restante dos imports
 
-# 2. Garante que a coluna 'Data' seja entendida pelo Python
-# (Faça isso logo após ler o df_base da sua planilha)
-df_base['Data'] = pd.to_datetime(df_base['Data'], errors='coerce')
+# 2. A LEITURA DOS DADOS (Certifique-se que isso vem ANTES da linha 26)
+# Aqui é onde você usa o st.connection ou gspread para ler a planilha
+df_base = conn.read(worksheet="Lancamentos") # Exemplo: o nome deve ser df_base
 
-# 3. Cria o filtro para o Mês Corrente
-df_mes = df_base[(df_base['Data'].dt.month == mes_atual) & (df_base['Data'].dt.year == ano_atual)]
+# 3. O TRATAMENTO E FILTRO (Onde deu o erro)
+if df_base is not None:
+    # Agora sim, o Python já conhece o 'df_base'
+    df_base['Data'] = pd.to_datetime(df_base['Data'], errors='coerce')
+    
+    # Filtro de Maio/2026
+    hoje = datetime.now() - timedelta(hours=3)
+    df_mes = df_base[(df_base['Data'].dt.month == hoje.month) & 
+                     (df_base['Data'].dt.year == hoje.year)]
+
+    # 4. OS CÁLCULOS (Usando o df_mes para a receita não vir alta)
+    receita = df_mes[df_mes['Tipo'] == 'Receita']['V_Num'].sum()
 # --------------------------------
 from dateutil.relativedelta import relativedelta
 import urllib.parse
