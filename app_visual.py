@@ -284,10 +284,10 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
-    # Título no topo para o FinançasPro Wilson
+    # Título no topo conforme sua preferência por visual limpo
     st.title("🛡️ FinançasPro Wilson")
     
-    # A barrinha de meses (Jan a Dez) logo abaixo do título para clique direto no celular
+    # A barrinha de meses (Jan a Dez) logo abaixo do título para clique direto
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
