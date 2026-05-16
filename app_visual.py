@@ -241,7 +241,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             item = lista_edit[escolha]
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
-            
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
@@ -262,66 +261,61 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
                 atualizar_sessao()
                 st.rerun()
+            
             if col_ed2.button("🚨 EXCLUIR"):
-                if item['Categoria'] == 'Transferência':
-                    desc = item['Descrição']
-                    data = item['Data']
-                    v_num = item['V_Num']
-                    ids_para_excluir = []
-                    for idx, row in df_base.iterrows():
-                        if (row['Data'] == data and 
-                            abs(row['V_Num'] - v_num) < 0.01 and 
-                            row['Descrição'] == desc and 
-                            row['Categoria'] == 'Transferência'):
-                            ids_para_excluir.append(int(row['ID']))
-                    ids_para_excluir = sorted(list(set(ids_para_excluir)), reverse=True)
-                    for id_linha in ids_para_excluir:
-                        ws_base.delete_rows(id_linha)
-    # 4. FINALIZAÇÃO DO BLOCO DE EXCLUSÃO (Linha 275 aprox.)
-        else:
-            ws_base.delete_rows(int(item['ID']))
-            atualizar_sessao()
-            st.rerun()
+                ws_base.delete_rows(int(item['ID']))
+                atualizar_sessao()
+                st.rerun()
 
-# --- 5. TELAS PRINCIPAIS (ABAS DO TOPO) ---
-# ESTE BLOCO DEVE ESTAR TOTALMENTE ENCOSTADO NA MARGEM ESQUERDA
+# --- 5. TELAS PRINCIPAIS ---
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-    # Abas de meses para facilitar o toque no celular (Jan a Dez)
+    # Abas de meses para facilitar o toque no celular
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
+    # Cálculo do saldo geral (Total de Receitas - Total de Despesas)
+    total_receitas = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+    total_despesas = df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
+    saldo_geral = total_receitas - total_despesas
+
     for i, aba_mes in enumerate(abas_meses):
         with aba_mes:
-            # Filtro mensal com valores formatados em Real (R$)
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
-                # Cálculo automático do saldo mensal
                 saldo_m = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
                           df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
                 
                 st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
                 st.divider()
                 
-                # Métricas em colunas ideais para mobile em Socorro
                 m1, m2, m3 = st.columns(3)
                 m1.metric("📈 Receitas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
                 m2.metric("📉 Despesas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
                 m3.metric("💰 Rendimentos", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+                
+                # Expanders de suporte dentro de cada mês para evitar erros de variável
+                with st.expander("📊 RESUMO GERAL", expanded=False):
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("⚖️ Balanço Geral", m_fmt(saldo_geral))
+                    c2.metric("⏳ Pendente Mês", m_fmt(get_valor_pendente(df_base)))
+                
+                with st.expander("🏦 BANCOS INFO", expanded=False):
+                    if not df_bancos_info.empty:
+                        for _, row in df_bancos_info.iterrows():
+                            st.write(f"🔹 **{row.iloc[0]}**")
             else:
                 st.info(f"Sem lançamentos para {meses_nome[i]}.")
 
-# --- ESPAÇO DO MILO ---
 elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
     st.write("Acompanhamento do seu Golden Retriever.")
 
-# --- WHATSAPP / ALERTAS ---
-elif "💬" in aba:
+elif "💬" in aba or "📄" in aba:
     st.title("💬 Notificações")
-    st.write("Configurações de alertas via Twilio.")
+    st.write("Configurações de alertas via Twilio para o sistema.")
     with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
