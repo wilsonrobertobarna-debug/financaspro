@@ -16,6 +16,18 @@ agora_br = datetime.now() - timedelta(hours=3)
 hoje_br = agora_br.date()
 agora = datetime.now() - timedelta(hours=3)
 hoje = agora.date()
+# --- ADICIONE ESTE BLOCO AQUI ---
+# 1. Identifica o mês e ano atual (Maio de 2026)
+mes_atual = hoje.month
+ano_atual = hoje.year
+
+# 2. Garante que a coluna 'Data' seja entendida pelo Python
+# (Faça isso logo após ler o df_base da sua planilha)
+df_base['Data'] = pd.to_datetime(df_base['Data'], errors='coerce')
+
+# 3. Cria o filtro para o Mês Corrente
+df_mes = df_base[(df_base['Data'].dt.month == mes_atual) & (df_base['Data'].dt.year == ano_atual)]
+# --------------------------------
 from dateutil.relativedelta import relativedelta
 import urllib.parse
 from fpdf import FPDF
