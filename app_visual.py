@@ -1,57 +1,75 @@
 import streamlit as st
 import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import urllib.parse
 
-# 1. RESOLUÇÃO DO FUSO HORÁRIO
-# Ajuste de 3 horas para o horário de Brasília
-agora = datetime.now() - timedelta(hours=3)
-hoje = agora.date()
+# =========================================================
+# 1. CONFIGURAÇÕES DE PÁGINA E VISUAL (Mantendo o visual limpo)
+# =========================================================
+st.set_page_config(page_title="FinançasPro", layout="wide")
 
-# 2. CONFIGURAÇÃO DA CONEXÃO (Usando Gspread que está no seu requirements)
-# O Streamlit Cloud usa o st.secrets para guardar suas chaves do Google
-scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+# =========================================================
+# 2. RESOLUÇÃO DO FUSO HORÁRIO (Brasília)
+# =========================================================
+agora_br = datetime.now() - timedelta(hours=3)
+hoje = agora_br.date()
+mes_atual = hoje.month
+ano_atual = hoje.year
 
-# Se estiver no Streamlit Cloud, ele busca as credenciais nos Secrets
+# =========================================================
+# 3. CONEXÃO COM A PLANILHA (O motor do seu app)
+# =========================================================
 try:
-    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
-    client = gspread.authorize(creds)
-    
-    # Abre a planilha pelo nome - Verifique se o nome está exato
-    # Substituímos o 'st.connection' que estava dando erro
-    sheet = client.open("NOME_DA_SUA_PLANILHA").worksheet("Lancamentos")
-    dados = sheet.get_all_records()
-    df_base = pd.DataFrame(dados)
+    # Usando o conector padrão do Streamlit para evitar erros de 'Secrets'
+    conn = st.connection("gsheets", type="gsheets")
+    df_base = conn.read(worksheet="Lancamentos")
 except Exception as e:
-    st.error(f"Erro ao conectar na planilha: {e}")
+    st.error(f"Erro na conexão: {e}")
     df_base = pd.DataFrame()
 
-# 3. TRATAMENTO DE DADOS E FILTRO (Para o Saldo Real)
+# =========================================================
+# 4. TRATAMENTO E FILTRO (Onde resolvemos a Receita de R$ 28k)
+# =========================================================
 if not df_base.empty:
-    # Garante que o Python entenda a coluna de Data
+    # Garante que a coluna de data seja lida corretamente
     df_base['Data'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
-    
-    # IMPORTANTE: Filtra apenas para MAIO de 2026
-    # Isso resolve o problema da Receita vir alta (R$ 28 mil)
-    df_mes = df_base[(df_base['Data'].dt.month == hoje.month) & 
-                     (df_base['Data'].dt.year == hoje.year)].copy()
-    
-    # Converte os valores para número (Garante o Real R$)
-    # Se você já limpou na planilha (alinhado à direita), isso aqui funciona liso
+
+    # CRIANDO O FILTRO DO MÊS ATUAL (Para não somar 2025 ou meses passados)
+    df_mes = df_base[(df_base['Data'].dt.month == mes_atual) & 
+                     (df_base['Data'].dt.year == ano_atual)].copy()
+
+    # Converte valores para número (Garante o cálculo em Real R$)
     df_mes['V_Num'] = pd.to_numeric(df_mes['V_Num'], errors='coerce').fillna(0)
-    
-    # 4. CÁLCULOS DO PAINEL (Apenas do mês atual)
+
+    # =========================================================
+    # 5. CÁLCULOS TOTAIS (Apenas do que interessa: MAIO/2026)
+    # =========================================================
     receita = df_mes[df_mes['Tipo'] == 'Receita']['V_Num'].sum()
     gasto = df_mes[df_mes['Tipo'] == 'Gasto']['V_Num'].sum()
     rendimento = df_mes[df_mes['Tipo'] == 'Rendimento']['V_Num'].sum()
-    pendente = df_mes[df_mes['Status'] == 'Pendente']['V_Num'].sum()
+    
+    # Pendências (Ajustado para o valor que você notou estar baixando)
+    df_pendente = df_mes[df_mes['Status'] == 'Pendente']
+    valor_pendente = df_pendente['V_Num'].sum()
     
     saldo_geral = receita - gasto + rendimento
-# --------------------------------
+
+    # =========================================================
+    # 6. DASHBOARD (O seu Visual Limpo)
+    # =========================================================
+    st.markdown(f"### 🏦 Resumo Financeiro - {hoje.strftime('%m/%Y')}")
+    
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("SALDO GERAL", f"R$ {saldo_geral:,.2f}")
+    m2.metric("RECEITA", f"R$ {receita:,.2f}")
+    m3.metric("GASTOS", f"R$ {gasto:,.2f}")
+    m4.metric("PENDENTE", f"R$ {valor_pendente:,.2f}")
+
+    # Alerta de Contas (Se houver pendências em Socorro)
+    if not df_pendente.empty:
+        st.info(f"💡 Wilson, você tem {len(df_pendente)} contas pendentes este mês.")
 from dateutil.relativedelta import relativedelta
 import urllib.parse
 from fpdf import FPDF
