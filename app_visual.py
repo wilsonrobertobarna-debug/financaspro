@@ -286,33 +286,39 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 st.rerun()
 
 # 5. TELAS PRINCIPAIS
-if "RESUMO" in aba:  # Garante que nada disso apareça no Milo, WhatsApp, etc.
+if "RESUMO" in aba:  # Garante que este bloco só rode na aba de Resumo
     st.title("🛡️ FinançasPro Wilson")
     
+    # Criamos a barra de navegação mensal no topo
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
     for i, aba_mes in enumerate(abas_meses):
-        with aba_mes: # TUDO que deve sumir ao trocar de mês ou aba deve estar RECUADO aqui
+        with aba_mes:
+            # Filtramos os dados baseados no mês da aba selecionada
+            # O sistema utiliza o Real (R$) como moeda padrão
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
+                # Cálculo do saldo específico do mês
                 saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
                               df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
                 
                 st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
                 
-                st.divider() # O divisor dentro do 'with' some quando você muda de aba
+                st.divider() # Este divisor agora só aparece dentro da aba de Resumo
                 
+                # Exibição das métricas formatadas
                 m1, m2, m3, m4 = st.columns(4)
                 m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
                 m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
                 m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+                # O valor pendente considera o status geral do banco de dados
                 m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
                 
-                # Se você tiver gráficos (Milo, Metas), coloque-os AQUI também
+                # Se você quiser adicionar os gráficos de pizza ou barra, coloque-os aqui embaixo
             else:
-                st.info(f"Nenhum dado encontrado para {meses_nome[i]}.")
+                st.info(f"Nenhum dado encontrado para o mês de {meses_nome[i]}.")
         
       
         
