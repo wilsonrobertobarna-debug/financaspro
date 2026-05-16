@@ -752,10 +752,25 @@ elif "📋" in aba:
                 pdf.add_page()
                 pdf.set_font("Arial", size=10)
                 
+                # Cabeçalho do Relatório
                 pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
                 pdf.ln(2)
                 pdf.cell(200, 10, txt=f"Periodo: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", ln=1, align="L")
                 
+                # --- 1. CÁLCULO DO SALDO ANTERIOR (ACUMULADO) ---
+                # Filtramos tudo que aconteceu ANTES da data inicial (b_ini)
+                data_inicio_relatorio = pd.to_datetime(b_ini)
+                df_base['Data_DT'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
+                df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0)
+                
+                df_passado = df_base[df_base['Data_DT'] < data_inicio_relatorio].copy()
+                
+                # Calculamos o saldo que "sobrou" do passado
+                receitas_passado = df_passado[df_passado['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+                gastos_passado = df_passado[df_passado['Tipo'] == 'Gasto']['V_Num'].sum()
+                saldo_inicial = receitas_passado - gastos_passado
+
+                # --- 2. FILTROS E TEXTO ---
                 filtros_texto = []
                 if s_bnc_rel: filtros_texto.append(f"Bancos: {', '.join(s_bnc_rel)}")
                 if s_sta_rel: filtros_texto.append(f"Status: {', '.join(s_sta_rel)}")
@@ -765,35 +780,53 @@ elif "📋" in aba:
                 pdf.cell(200, 10, txt=texto_filtros, ln=1, align="L")
                 pdf.ln(2)
                 
+                # --- 3. PROCESSO DE DADOS E SALDO ACUMULADO ---
                 df_v = df_v.sort_values(by='DT')
-                df_v['Saldo_Acum'] = df_v['V_Num'].cumsum()
                 
-                pdf.cell(20, 8, "Data", 1)
-                pdf.cell(25, 8, "Tipo", 1)
+                # Calculamos o acumulado linha por linha somando ao saldo inicial
+                saldos_lista = []
+                acumulado_atual = saldo_inicial
+                
+                for _, row in df_v.iterrows():
+                    v_temp = row['V_Num']
+                    if row['Tipo'] == 'Gasto':
+                        acumulado_atual -= v_temp
+                    else:
+                        acumulado_atual += v_temp
+                    saldos_lista.append(acumulado_atual)
+                
+                df_v['Saldo_Acum'] = saldos_lista
+                
+                # Títulos da Tabela (Ajustei as larguras para caber tudo)
+                pdf.cell(25, 8, "Data", 1)
+                pdf.cell(20, 8, "Tipo", 1)
                 pdf.cell(25, 8, "Valor", 1)
-                pdf.cell(25, 8, "Saldo Acum.", 1)
-                pdf.cell(75, 8, "Descricao", 1)
+                pdf.cell(30, 8, "Saldo Acum.", 1)
+                pdf.cell(70, 8, "Descricao", 1)
                 pdf.cell(20, 8, "Status", 1)
                 pdf.ln()
                 
+                # --- 4. LOOP DE LINHAS DO PDF ---
                 for index, row in df_v.iterrows():
-                    # --- BLINDAGEM DE COLUNAS ---
-                    data_val = row.get('Data', row.get('DATA', '00/00'))
+                    # RESOLUÇÃO DA DATA 00/00: Pegamos o objeto DT e formatamos direto
+                    dt_obj = row.get('DT')
+                    data_str = dt_obj.strftime('%d/%m/%Y') if pd.notnull(dt_obj) else "---"
+
                     tipo_val = row.get('Tipo', 'S/T')
                     valor_val = row.get('V_Num', 0.0)
                     saldo_val = row.get('Saldo_Acum', 0.0)
                     desc_val = row.get('Descrição', row.get('Descricao', 'Sem nome'))
                     status_val = row.get('Status', '-')
-                    # -----------------------------
 
-                    pdf.cell(20, 6, str(data_val), 1)
-                    pdf.cell(25, 6, str(tipo_val), 1)
-                    pdf.cell(25, 6, f"R$ {valor_val:.2f}".replace('.', ','), 1)
-                    pdf.cell(25, 6, f"R$ {saldo_val:.2f}".replace('.', ','), 1)
-                    pdf.cell(75, 6, str(desc_val)[:40], 1)
+                    pdf.cell(25, 6, data_str, 1)
+                    pdf.cell(20, 6, str(tipo_val), 1)
+                    pdf.cell(25, 6, f"R$ {valor_val:,.2f}", 1)
+                    pdf.cell(30, 6, f"R$ {saldo_val:,.2f}", 1)
+                    pdf.cell(70, 6, str(desc_val)[:35], 1)
                     pdf.cell(20, 6, str(status_val), 1)
                     pdf.ln()
                 
+                # Finalização e Download
                 pdf_output = pdf.output(dest='S')
                 if isinstance(pdf_output, str):
                     pdf_output = pdf_output.encode('latin-1')
@@ -801,9 +834,10 @@ elif "📋" in aba:
                 st.download_button(
                     label="📥 Baixar PDF",
                     data=pdf_output,
-                    file_name="relatorio.pdf",
+                    file_name=f"relatorio_financeiro_{datetime.now().strftime('%d_%m_%Y')}.pdf",
                     mime="application/pdf"
                 )
-                st.success("PDF gerado com sucesso!")
+                st.success(f"PDF pronto! Saldo vindo de meses anteriores: R$ {saldo_inicial:,.2f}")
+                
             except Exception as e:
                 st.error(f"Erro ao gerar o PDF: {e}")
