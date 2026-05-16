@@ -360,8 +360,7 @@ if "💰" in aba:
                 if cat != "Transferência":
                     default_v = 1200.0 if cat == "Mercado" else 400.0
                     metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
-
-Conversa com o Gemini
+                    
 File "/mount/src/financaspro/app_visual.py", line 860
 
 st.success(f"PDF pronto! Saldo inicial: R$ {saldo_inicial:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
