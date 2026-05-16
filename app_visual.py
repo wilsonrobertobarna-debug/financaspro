@@ -284,6 +284,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
 # --- 5. TELAS PRINCIPAIS ---
 
+# --- 5. TELAS PRINCIPAIS ---
+
 if "RESUMO" in aba or "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
@@ -297,14 +299,14 @@ if "RESUMO" in aba or "💰" in aba:
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
-                # Saldo mensal em Real
+                # Saldo mensal em Real (R$)
                 saldo_m = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
                           df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
                 
                 st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
                 st.divider()
                 
-                # Colunas alinhadas corretamente (Fim do IndentationError)
+                # AQUI O ALINHAMENTO ESTÁ PERFEITO AGORA:
                 m1, m2, m3, m4 = st.columns(4)
                 m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
                 m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
@@ -318,7 +320,7 @@ elif "MILO" in aba:
     st.title("🐶 Espaço do Milo e Bolt")
 
 elif "WHATSAPP" in aba:
-    st.title("💬 Notificações WhatsApp")
+    st.title("💬 WhatsApp")
     # Lógica de alertas Twilio integrada    # Lógica de alertas Twilio integrada
             m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
