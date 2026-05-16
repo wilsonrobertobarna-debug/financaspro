@@ -303,23 +303,21 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
-# 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
-        # --- FILTRO DE SEGURANÇA: MAIO/2026 ---
-        # Isso garante que os R$ 600 mil de gastos sumam da tela
+        # 1. Filtro de Segurança
         df_base['Vencimento'] = pd.to_datetime(df_base['Vencimento'], errors='coerce')
         df_maio = df_base[(df_base['Vencimento'].dt.month == 5) & (df_base['Vencimento'].dt.year == 2026)].copy()
 
-        # Cálculos usando APENAS a tabela filtrada de Maio
+        # 2. Cálculos para a Barrinha
         r = df_maio[df_maio['Tipo'] == 'Receita']['V_Num'].sum()
         g = df_maio[df_maio['Tipo'] == 'Despesa']['V_Num'].sum()
         rd = df_maio[df_maio['Tipo'] == 'Rendimento']['V_Num'].sum()
         p = df_maio[df_maio['Status'] == 'Pendente']['V_Num'].sum()
         saldo_m = r - g + rd
 
-        # Barrinha Única e Organizada (Moeda em Real)
+        # 3. Exibição da Barrinha
         with st.expander(f"🏦 SALDO GERAL ATUAL: R$ {saldo_m:,.2f}", expanded=False):
             c1, c2 = st.columns(2)
             c3, c4 = st.columns(2)
@@ -328,6 +326,10 @@ if "💰" in aba:
             with c3: st.write(f"💰 **Rendimento:** R$ {rd:,.2f}")
             with c4: st.markdown(f"<span style='color:#D32F2F;'>⏳ **Pendente:** R$ {p:,.2f}</span>", unsafe_allow_html=True)
         
+        # --- AQUI ESTÁ A SOLUÇÃO DO ERRO ---
+        df_m_limpo = df_maio[(df_maio['Categoria'] != 'Transferência') & (df_maio['Status'] == 'Pago')]
+        
+             
         st.divider()
         with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=False):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
