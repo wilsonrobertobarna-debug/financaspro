@@ -406,28 +406,34 @@ if "💰" in aba:
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
+    
+    # Filtramos os pendentes (Socorro/SP)
     df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
+    
     if not df_aviso.empty:
-        df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
+        # Usamos o 'hoje' que você já definiu no topo do código para o cálculo de dias
+        df_aviso['Dias'] = (pd.to_datetime(df_aviso['Data'], errors='coerce') - pd.to_datetime(datetime.now())).dt.days
         df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
+        
         if not df_venc.empty:
             for _, row in df_venc.iterrows():
+                # --- BUSCA SEGURA DE DADOS (O ESCUDO) ---
+                # Tentamos várias opções de nomes de coluna para não dar erro
+                data_venc = row.get('Data', row.get('Vencimento', '---'))
+                desc_venc = row.get('Descrição', row.get('Descricao', 'Sem descrição'))
+                valor_venc = row.get('V_Num', 0)
+                banco_venc = row.get('Banco', 'N/A')
                 d_aviso = row['Dias']
-                if d_aviso < 0:
-                    st.warning(f"⚠️ **Atrasado (Vencido):** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
-                elif d_aviso == 0:
-                    # 1. Pegamos todos os dados de forma segura
-                    data_venc = row.get('Data', row.get('DATA', '00/00'))
-                    desc_venc = row.get('Descrição', row.get('Descricao', 'Sem descrição'))
-                    valor_venc = row.get('V_Num', 0)
-                    banco_venc = row.get('Banco', 'N/A')
 
-                    # 2. Agora a mensagem usa essas variáveis seguras
+                # --- EXIBIÇÃO DOS AVISOS ---
+                if d_aviso < 0:
+                    st.warning(f"⚠️ **Atrasado (Vencido):** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")
+                elif d_aviso == 0:
                     st.warning(f"⚠️ **Vence hoje:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")                    
                 elif d_aviso == 1:
-                    st.warning(f"🚨 **Vence amanhã:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    st.warning(f"🚨 **Vence amanhã:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")
                 elif d_aviso == 3:
-                    st.warning(f"⚠️ **Vence em 3 dias:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    st.warning(f"⚠️ **Vence em 3 dias:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")
         else:
             st.info("Nenhum lançamento a vencer hoje, amanhã ou em atraso.")
     else:
