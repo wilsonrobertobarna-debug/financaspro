@@ -284,28 +284,27 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
 # --- 5. TELAS PRINCIPAIS ---
 
-# Se a aba selecionada for a de Resumo
 if "RESUMO" in aba or "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-    # Criamos a barrinha de meses (Jan a Dez) apenas aqui
+    # Barra de meses Jan-Dez apenas nesta tela
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
     for i, aba_mes in enumerate(abas_meses):
         with aba_mes:
-            # Filtro de dados para o mês selecionado em Real (R$)
+            # Filtro para manter o visual limpo por mês em Real (R$)
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
-                # Cálculo do saldo mensal
+                # Saldo mensal em Real
                 saldo_m = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
                           df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
                 
                 st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
                 st.divider()
                 
-                # Métricas em colunas (ALINHAMENTO CORRIGIDO AQUI)
+                # Colunas alinhadas corretamente (Fim do IndentationError)
                 m1, m2, m3, m4 = st.columns(4)
                 m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
                 m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
@@ -314,7 +313,7 @@ if "RESUMO" in aba or "💰" in aba:
             else:
                 st.info(f"Sem lançamentos para {meses_nome[i]}.")
 
-# --- OUTRAS TELAS (A BARRINHA DE MESES SOME AQUI) ---
+# --- OUTRAS TELAS (A BARRINHA SOME AQUI) ---
 elif "MILO" in aba:
     st.title("🐶 Espaço do Milo e Bolt")
 
