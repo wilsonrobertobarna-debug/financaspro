@@ -303,6 +303,13 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
+# --- COLOQUE O TRATAMENTO AQUI ---
+if not df_base.empty:
+    # Remove pontos de milhar, troca vírgula por ponto e garante que seja número
+    df_base['V_Num'] = df_base['V_Num'].astype(str).str.replace('.', '', regex=False).str.replace(',', '.', regex=False)
+    df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0)
+# ---------------------------------
+
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
