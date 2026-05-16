@@ -805,29 +805,44 @@ elif "📋" in aba:
                 pdf.cell(20, 8, "Status", 1)
                 pdf.ln()
 
-                # 3. LOOP DE LINHAS COM "GET" (EVITA QUALQUER ERRO DE COLUNA)
+            # 3. LOOP DE LINHAS COM CORES E SINAL DE NEGATIVO
                 for index, row in df_report.iterrows():
-                    # Busca data em 'DT', 'Data' ou 'DATA'
+                    # Busca segura de dados (Data, Tipo, Valor, Saldo, Descrição e Status)
                     dt_obj = row.get('DT', row.get('Data', row.get('DATA', None)))
                     data_str = dt_obj.strftime('%d/%m/%Y') if hasattr(dt_obj, 'strftime') else str(dt_obj)
 
                     tipo_val = row.get('Tipo', '---')
                     valor_val = row.get('V_Num', 0.0)
                     saldo_val = row.get('Saldo_Acum', 0.0)
-                    # Busca descrição em português ou inglês
                     desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))[:35]
                     status_val = row.get('Status', '-')
 
-                    # Escrita (Visual Limpo em Real R$ conforme sua preferência)
+                    # --- Lógica de Formatação Visual ---
+                    # Se for Gasto, aplica sinal de menos e cor vermelha
+                    if tipo_val == 'Gasto':
+                        texto_valor = f"- R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                        pdf.set_text_color(255, 0, 0)  # RGB para Vermelho
+                    else:
+                        texto_valor = f"R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                        pdf.set_text_color(0, 0, 0)    # RGB para Preto
+
+                    # Formatação do Saldo (sempre em Reais)
+                    texto_saldo = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+                    # Escrita das Células
                     pdf.cell(25, 6, data_str, 1)
                     pdf.cell(20, 6, str(tipo_val), 1)
-                    pdf.cell(25, 6, f"R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'), 1)
-                    pdf.cell(30, 6, f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'), 1)
+                    pdf.cell(25, 6, texto_valor, 1)
+                    
+                    # Resetamos a cor para preto para o restante da linha
+                    pdf.set_text_color(0, 0, 0) 
+                    
+                    pdf.cell(30, 6, texto_saldo, 1)
                     pdf.cell(70, 6, desc_val, 1)
                     pdf.cell(20, 6, str(status_val), 1)
                     pdf.ln()
 
-                # 4. DOWNLOAD
+                # 4. DOWNLOAD E FINALIZAÇÃO
                 pdf_output = pdf.output(dest='S')
                 if isinstance(pdf_output, str):
                     pdf_output = pdf_output.encode('latin-1')
@@ -838,7 +853,7 @@ elif "📋" in aba:
                     file_name="relatorio_financaspro.pdf",
                     mime="application/pdf"
                 )
-                st.success(f"PDF pronto! Saldo inicial recuperado do histórico: R$ {saldo_inicial:,.2f}")
-
+                # Exibe o sucesso com o saldo inicial recuperado
+                st.success(f"PDF pronto! Saldo inicial recuperado: R$ {saldo_inicial:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
             except Exception as e:
                 st.error(f"Erro ao gerar o PDF: {e}")
