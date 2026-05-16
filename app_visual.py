@@ -329,6 +329,8 @@ if "💰" in aba:
         # --- AQUI ESTÁ A SOLUÇÃO DO ERRO ---
         df_m_limpo = df_maio[(df_maio['Categoria'] != 'Transferência') & (df_maio['Status'] == 'Pago')]
         
+        st.divider()
+        
              
         st.divider()
         with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=False):
