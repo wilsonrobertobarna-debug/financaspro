@@ -206,31 +206,33 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
             
         
-       nçamento em "Dinheiro", por exemplo, o Python procura essa variável, não acha e trava.
+    # Garante que a variável exista para evitar o NameError
+        f_venc_cartao = None 
 
-Para resolver isso agora e você conseguir usar o FinançasPro sem erros, basta garantir que essa variável exista antes do botão ser apertado.
-
-🛠️ O Ajuste Final
-Adicione a linha f_venc_cartao = None logo antes de começar a lógica dos cartões (provavelmente um pouco acima do que você me mandou). O código deve ficar assim:
-
-Python
-# --- ADICIONE ESTA LINHA AQUI EM CIMA ---
-f_venc_cartao = None 
-
-# ... (aqui deve ter o seu código que calcula o vencimento se for cartão) ...
-
-if st.form_submit_button("SALVAR"):
-    v_str = f"{f_val:.2f}".replace('.', ',')
-    # Agora o venc_str não vai mais dar erro, pois f_venc_cartao já existe!
-    venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
-    
-    for i in range(f_par):
-        nova_data = f_dat + relativedelta(months=i)
-        ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta, venc_str])
-    
-    atualizar_sessao()
-    st.rerun()
-
+        if st.form_submit_button("SALVAR"):
+            # Formata o valor para o padrão Real R$
+            v_str = f"{f_val:.2f}".replace('.', ',')
+            
+            # Trata o vencimento do cartão com segurança
+            venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
+            
+            # Loop para lançamentos parcelados no FinançasPro
+            for i in range(f_par):
+                nova_data = f_dat + relativedelta(months=i)
+                ws_base.append_row([
+                    nova_data.strftime("%d/%m/%Y"), 
+                    v_str, 
+                    f_des, 
+                    f_cat, 
+                    f_tip, 
+                    f_bnc, 
+                    f_sta, 
+                    venc_str
+                ])
+            
+            # Atualiza o app mantendo o visual limpo
+            atualizar_sessao()
+            st.rerun()
 # BARRINHA 2: TRANSFERÊNCIA
 with st.sidebar.expander("💸 Transferência", expanded=False):
     with st.form("f_transf", clear_on_submit=True):
