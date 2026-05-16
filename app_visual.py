@@ -364,40 +364,33 @@ if "💰" in aba:
        # Verifique se o código acima termina aqui
         # Não pode haver espaços extras antes de g1
 
-        # --- NAVEGAÇÃO POR MESES (Inserir aqui) ---
-    df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%Y')
-    lista_meses = sorted(df_base['Mes_Ano'].unique(), reverse=True)
+ # --- NAVEGAÇÃO POR MESES ---
+        df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%Y')
+        lista_meses = sorted(df_base['Mes_Ano'].unique(), reverse=True)
 
-    st.sidebar.markdown("---")
-    mes_selecionado = st.sidebar.selectbox("📅 Selecione o Mês", lista_meses)
-    df_m_limpo = df_base[df_base['Mes_Ano'] == mes_selecionado].copy()
-    # ------------------------------------------
+        st.sidebar.markdown("---")
+        mes_selecionado = st.sidebar.selectbox("📅 Selecione o Mês", lista_meses)
+        
+        # Dados filtrados para o mês selecionado
+        df_m_limpo = df_base[df_base['Mes_Ano'] == mes_selecionado].copy()
+        # ---------------------------
 
-    # AGORA AS COLUNAS (Alinhadas à esquerda ou dentro do seu bloco principal)
-    g1, g2 = st.columns(2) 
+        # GRÁFICOS LADO A LADO
+        g1, g2 = st.columns(2) 
 
-with g1:
-    df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-    if not df_p.empty: 
-        st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True)
-
-with g2:
-    # Use df_m_limpo aqui também se quiser que o gráfico de barras mude com a navegação
-    df_f = df_m_limpo[(df_m_limpo['Categoria'] != 'Transferência') & (df_m_limpo['Status'] == 'Pago')].copy()
-    if not df_f.empty:
-        df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
-        st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', title="📊 Fluxo do Mês"), use_container_width=True)
         with g1:
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             if not df_p.empty: 
-                st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True, config={'staticPlot': True})
+                st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True)
+
         with g2:
-            df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
-            df_f = df_f.sort_values('DT')
-            df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
-            if not df_f_grouped.empty: 
-                st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa Mensal"), use_container_width=True, config={'staticPlot': True})
-        
+            df_f = df_m_limpo[(df_m_limpo['Categoria'] != 'Transferência') & (df_m_limpo['Status'] == 'Pago')].copy()
+            if not df_f.empty:
+                df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
+                st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', 
+                                     color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, 
+                                     title="📊 Fluxo do Mês"), use_container_width=True)
+
         st.divider()
         st.subheader("📈 Evolução do Saldo Acumulado")
         df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
@@ -408,10 +401,9 @@ with g2:
             df_saldo_dia = df_saldo_dia.groupby('Vencimento')['Valor_Com_Sinal'].sum().reset_index()
             df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
             
-            fig_acum = px.line(df_saldo_dia, x='Vencimento', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
-            fig_acum.update_layout(height=350)
-            st.plotly_chart(fig_acum, use_container_width=True, config={'staticPlot': True})
-        
+            fig_acum = px.line(df_saldo_dia, x='Vencimento', y='Saldo_Acumulado', title="Progresso do Patrimônio (Real)", markers=True)
+            st.plotly_chart(fig_acum, use_container_width=True)
+
         st.divider()
         st.subheader("🎯 Metas vs Realizado")
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
@@ -420,10 +412,12 @@ with g2:
             fig_m = go.Figure()
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
-            fig_m.update_layout(barmode='group', height=350); st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
-        
+            fig_m.update_layout(barmode='group', height=350)
+            st.plotly_chart(fig_m, use_container_width=True)
+
         st.divider()
         st.subheader("🔍 Busca e Lançamentos")
+        # ... (seu código de busca e filtros continua aqui, alinhado com o if) ...
         
         c_d1, c_d2 = st.columns(2)
         s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
