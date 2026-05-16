@@ -743,7 +743,7 @@ elif "📋" in aba:
     
     st.divider()
     
-    if st.button("📄 Gerar PDF"):
+   if st.button("📄 Gerar PDF"):
         if df_v.empty:
             st.warning("Nenhum lançamento selecionado para gerar o PDF.")
         else:
@@ -752,13 +752,15 @@ elif "📋" in aba:
                 pdf.add_page()
                 pdf.set_font("Arial", size=10)
                 
-                # 1. CÁLCULO DO SALDO ANTERIOR (O QUE VEIO ANTES DO FILTRO)
-                # Tratamos a base para garantir que valores sejam números e datas sejam objetos
-                df_base['DT_Temp'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
+                # 1. CÁLCULO SEGURO DO SALDO ANTERIOR
+                # Em vez de procurar por 'Data', usamos a coluna que já convertemos para data (DT)
+                data_inicio_filtro = pd.to_datetime(b_ini)
+                
+                # Filtramos a base original usando a coluna de data tratada
+                # Certifique-se que df_base tenha a coluna 'DT' ou use a conversão na hora:
+                df_base['DT_Temp'] = pd.to_datetime(df_base.iloc[:, 0], dayfirst=True, errors='coerce') 
                 df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0)
                 
-                # Saldo de tudo que aconteceu ANTES da data inicial (b_ini) do seu relatório
-                data_inicio_filtro = pd.to_datetime(b_ini)
                 df_passado = df_base[df_base['DT_Temp'] < data_inicio_filtro].copy()
                 
                 saldo_inicial = 0
@@ -767,8 +769,7 @@ elif "📋" in aba:
                     gastos = df_passado[df_passado['Tipo'] == 'Gasto']['V_Num'].sum()
                     saldo_inicial = receitas - gastos
 
-                # 2. PREPARAÇÃO DO DATAFRAME DO RELATÓRIO
-                # Ordenamos por data e calculamos o acumulado somando o saldo que veio de trás
+                # 2. PREPARAÇÃO DOS DADOS DO RELATÓRIO
                 df_v = df_v.sort_values(by='DT')
                 saldos_lista = []
                 corrente = saldo_inicial
@@ -798,11 +799,11 @@ elif "📋" in aba:
                 pdf.cell(20, 8, "Status", 1)
                 pdf.ln()
 
-                # 3. LOOP DE LINHAS COM BUSCA SEGURA (MATA O ERRO 'DATA')
+                # 3. LOOP DE LINHAS COM "GET" (EVITA O ERRO 'DATA')
                 for index, row in df_v.iterrows():
-                    # Tenta pegar a data de qualquer coluna possível sem dar erro
+                    # Buscamos a data em qualquer uma dessas colunas
                     dt_obj = row.get('DT', row.get('Data', row.get('DATA', None)))
-                    data_str = dt_obj.strftime('%d/%m/%Y') if hasattr(dt_obj, 'strftime') else str(dt_obj) if dt_obj else "---"
+                    data_str = dt_obj.strftime('%d/%m/%Y') if hasattr(dt_obj, 'strftime') else str(dt_obj)
 
                     tipo_val = row.get('Tipo', '---')
                     valor_val = row.get('V_Num', 0.0)
@@ -810,7 +811,7 @@ elif "📋" in aba:
                     desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))[:35]
                     status_val = row.get('Status', '-')
 
-                    # Escrita das células (Visual Limpo em Real R$)
+                    # Escrita (Visual Limpo em Real R$)
                     pdf.cell(25, 6, data_str, 1)
                     pdf.cell(20, 6, str(tipo_val), 1)
                     pdf.cell(25, 6, f"R$ {valor_val:,.2f}", 1)
@@ -819,7 +820,7 @@ elif "📋" in aba:
                     pdf.cell(20, 6, str(status_val), 1)
                     pdf.ln()
 
-                # 4. DOWNLOAD DO ARQUIVO
+                # 4. DOWNLOAD
                 pdf_output = pdf.output(dest='S')
                 if isinstance(pdf_output, str):
                     pdf_output = pdf_output.encode('latin-1')
@@ -827,10 +828,10 @@ elif "📋" in aba:
                 st.download_button(
                     label="📥 Baixar PDF",
                     data=pdf_output,
-                    file_name=f"relatorio_financaspro_{datetime.now().strftime('%d_%m_%Y')}.pdf",
+                    file_name=f"relatorio_financaspro.pdf",
                     mime="application/pdf"
                 )
-                st.success(f"PDF pronto! Saldo inicial recuperado: R$ {saldo_inicial:,.2f}")
+                st.success(f"PDF pronto! Saldo acumulado (considerando meses anteriores): R$ {saldo_inicial:,.2f}")
 
             except Exception as e:
                 st.error(f"Erro ao gerar o PDF: {e}")
