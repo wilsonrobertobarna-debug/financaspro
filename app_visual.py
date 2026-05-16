@@ -288,40 +288,38 @@ if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
-        # Filtro de dados para o mês atual
+        # Filtro de dados para o mês atual em Real (R$)
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-        # Cálculo do saldo em Real (R$)
+        # Cálculo do saldo geral
         saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
                       df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         st.divider()
 
-        # Exibição das métricas em colunas para visual limpo
+        # Métricas organizadas em colunas para visual limpo
         col1, col2, col3 = st.columns(3)
         with col1:
-            receita = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-            st.metric("📈 Receitas", m_fmt(receita))
+            r = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+            st.metric("📈 Receitas", m_fmt(r))
         with col2:
-            despesa = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-            st.metric("📉 Despesas", m_fmt(despesa))
+            d = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+            st.metric("📉 Despesas", m_fmt(d))
         with col3:
-            rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-            st.metric("💰 Rendimentos", m_fmt(rendimento))
+            rend = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+            st.metric("💰 Rendimentos", m_fmt(rend))
 
 # --- ESPAÇO DO MILO ---
 elif "🐶" in aba or "MILO" in aba.upper():
     st.title("🐶 Espaço do Milo")
     st.write("Acompanhamento do seu Golden Retriever.")
-    # Aqui você pode adicionar as informações de saúde ou treinos do Milo
 
-# --- WHATSAPP / ALERTAS ---
+# --- NOTIFICAÇÕES WHATSAPP ---
 elif "💬" in aba or "WHATSAPP" in aba.upper():
     st.title("💬 Notificações")
-    st.write("Configurações de alertas via Twilio.")
-        # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
+    st.write("Configurações de alertas via Twilio.")        # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
