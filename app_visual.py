@@ -322,8 +322,7 @@ elif "WHATSAPP" in aba:
     st.title("💬 Notificações WhatsApp")
     st.write("Alertas financeiros configurados via Twilio.")
         
-        st.divider()
-
+      
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
