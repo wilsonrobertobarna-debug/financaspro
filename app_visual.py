@@ -806,25 +806,25 @@ elif "📋" in aba:
                 pdf.cell(20, 8, "Status", 1)
                 pdf.ln()
                 
-                # --- 4. LOOP DE LINHAS DO PDF (CORRIGIDO E SEGURO) ---
+              # --- 4. LOOP DE LINHAS DO PDF (CORREÇÃO DEFINITIVA) ---
                 for index, row in df_v.iterrows():
-                    # Resolve o erro de 'Data' procurando por qualquer nome de coluna de data
+                    # RESOLUÇÃO DO ERRO 'Data': Busca segura por qualquer nome de coluna de data
                     dt_obj = row.get('DT', row.get('Data', row.get('DATA', None)))
                     
                     if pd.notnull(dt_obj):
-                        # Se for um objeto de data, formata para BR. Se for texto, limpa.
+                        # Se for um objeto de data, formata. Se for texto, limpa.
                         data_str = dt_obj.strftime('%d/%m/%Y') if hasattr(dt_obj, 'strftime') else str(dt_obj)
                     else:
                         data_str = "---"
 
-                    # Busca segura para as outras colunas
+                    # Busca segura para as outras colunas para evitar novos erros
                     tipo_val = row.get('Tipo', 'S/T')
                     valor_val = row.get('V_Num', 0.0)
                     saldo_val = row.get('Saldo_Acum', 0.0)
                     desc_val = row.get('Descrição', row.get('Descricao', 'Sem nome'))
                     status_val = row.get('Status', '-')
 
-                    # Monta a linha no PDF mantendo o visual limpo
+                    # Escreve no PDF mantendo seu visual limpo e alinhado
                     pdf.cell(25, 6, data_str, 1)
                     pdf.cell(20, 6, str(tipo_val), 1)
                     pdf.cell(25, 6, f"R$ {valor_val:,.2f}", 1)
@@ -841,11 +841,11 @@ elif "📋" in aba:
                 st.download_button(
                     label="📥 Baixar PDF",
                     data=pdf_output,
-                    file_name=f"relatorio_financeiro_{datetime.now().strftime('%d_%m_%Y')}.pdf",
+                    file_name=f"relatorio_financaspro_{datetime.now().strftime('%d_%m_%Y')}.pdf",
                     mime="application/pdf"
                 )
-                st.success(f"PDF pronto! Saldo acumulado (considerando meses anteriores): R$ {saldo_inicial:,.2f}")
+                st.success(f"PDF pronto! Saldo acumulado (incluindo meses anteriores) calculado com sucesso.")
                 
             except Exception as e:
-                # Se ainda der erro, o app te avisa qual coluna faltou
+                # Caso ocorra outro erro, ele mostrará exatamente qual coluna causou
                 st.error(f"Erro ao gerar o PDF: {e}")
