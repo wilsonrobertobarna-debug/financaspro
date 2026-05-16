@@ -783,11 +783,11 @@ elif "📋" in aba:
                     val = pd.to_numeric(r.get('V_Num', 0), errors='coerce')
                     if pd.isna(val): val = 0
                     
-                    # Padroniza o texto do Tipo para comparação robusta
+                    # Padroniza o texto para comparação (remove espaços e coloca em maiúsculo)
                     tipo_check = str(r.get('Tipo', '')).upper().strip()
                     
-                    # Lógica matemática: Subtrai se for Gasto, soma se for Receita/Rendimento
-                    if "GASTO" in tipo_check:
+                    # Lógica matemática: Subtrai se for DESPESA ou GASTO
+                    if "DESPESA" in tipo_check or "GASTO" in tipo_check:
                         corrente -= val
                     else:
                         corrente += val
@@ -822,12 +822,12 @@ elif "📋" in aba:
                     status_val = row.get('Status', '-')
 
                     # --- VERIFICAÇÃO PARA APLICAR COR E SINAL ---
-                    if "GASTO" in tipo_str.upper():
-                        # Gasto: Sinal de menos e cor vermelha (RGB: 255, 0, 0)
+                    if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper():
+                        # É uma saída: Sinal de menos e cor vermelha
                         texto_valor = f"- R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                         pdf.set_text_color(255, 0, 0) 
                     else:
-                        # Receita: Cor preta normal
+                        # É uma entrada: Cor preta normal
                         texto_valor = f"R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                         pdf.set_text_color(0, 0, 0)
 
@@ -836,7 +836,7 @@ elif "📋" in aba:
                     pdf.cell(20, 6, tipo_str, 1)
                     pdf.cell(25, 6, texto_valor, 1)
                     
-                    pdf.set_text_color(0, 0, 0) # Reset da cor para as próximas colunas
+                    pdf.set_text_color(0, 0, 0) # Reset para as próximas colunas
                     
                     pdf.cell(30, 6, f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'), 1)
                     pdf.cell(70, 6, desc_val, 1)
