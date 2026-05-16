@@ -285,12 +285,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
-    
-    if not df_base.empty:
-        # --- 5. TELAS PRINCIPAIS ---
-if "💰" in aba:
-    st.title("🛡️ FinançasPro Wilson")
-    
+       
     # Abas simples para os meses (ideal para o celular)
     meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas = st.tabs(meses)
