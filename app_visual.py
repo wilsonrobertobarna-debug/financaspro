@@ -284,28 +284,27 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
 # --- 5. TELAS PRINCIPAIS ---
 
-# Se a aba selecionada for a de Resumo
 if "RESUMO" in aba or "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-    # Criamos a barrinha de meses (Jan a Dez) apenas aqui dentro
+    # Esta é a barra de meses que você pediu, isolada aqui
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
     for i, aba_mes in enumerate(abas_meses):
         with aba_mes:
-            # Filtra os dados em Real (R$) para o mês da aba
+            # Filtro para garantir que cada mês mostre apenas seus dados
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
-                # Cálculo do saldo mensal
+                # Cálculo do saldo em Real (R$)
                 saldo_m = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
                           df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
                 
                 st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
                 st.divider()
                 
-                # Métricas em colunas (Ideal para mobile)
+                # Métricas em colunas (ideal para o celular)
                 m1, m2, m3, m4 = st.columns(4)
                 m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
                 m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
@@ -314,13 +313,14 @@ if "RESUMO" in aba or "💰" in aba:
             else:
                 st.info(f"Sem lançamentos para {meses_nome[i]}.")
 
-# --- OUTRAS TELAS (A BARRINHA DE MESES NÃO APARECE AQUI) ---
+# --- OUTRAS TELAS (AQUI A BARRA DE MESES SOME) ---
 elif "MILO" in aba:
     st.title("🐶 Espaço do Milo e Bolt")
     st.write("Acompanhamento do seu Golden Retriever.")
 
 elif "WHATSAPP" in aba:
     st.title("💬 Notificações WhatsApp")
+    # Aqui entra sua lógica de alertas via Twilio
     # Lógica de integração com Twilio para alertas
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
