@@ -783,7 +783,7 @@ elif "📋" in aba:
                     val = pd.to_numeric(r.get('V_Num', 0), errors='coerce')
                     if pd.isna(val): val = 0
                     
-                    # Padroniza o texto para comparação (remove espaços e coloca em maiúsculo)
+                    # Padroniza o texto para comparação (Despesa ou Gasto)
                     tipo_check = str(r.get('Tipo', '')).upper().strip()
                     
                     # Lógica matemática: Subtrai se for DESPESA ou GASTO
@@ -810,7 +810,7 @@ elif "📋" in aba:
                 pdf.cell(20, 8, "Status", 1)
                 pdf.ln()
 
-                # 3. LOOP DE LINHAS COM FORMATAÇÃO VISUAL (SINAL E COR)
+                # 3. LOOP DE LINHAS COM CORES NO VALOR E NO SALDO
                 for index, row in df_report.iterrows():
                     dt_obj = row.get('DT', row.get('Data', row.get('DATA', None)))
                     data_str = dt_obj.strftime('%d/%m/%Y') if hasattr(dt_obj, 'strftime') else str(dt_obj)
@@ -821,24 +821,35 @@ elif "📋" in aba:
                     desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))[:35]
                     status_val = row.get('Status', '-')
 
-                    # --- VERIFICAÇÃO PARA APLICAR COR E SINAL ---
+                    # --- FORMATAÇÃO DO VALOR (Coluna 3) ---
                     if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper():
-                        # É uma saída: Sinal de menos e cor vermelha
                         texto_valor = f"- R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                        pdf.set_text_color(255, 0, 0) 
+                        cor_valor = (255, 0, 0) # Vermelho
                     else:
-                        # É uma entrada: Cor preta normal
                         texto_valor = f"R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                        pdf.set_text_color(0, 0, 0)
+                        cor_valor = (0, 0, 0)   # Preto
+
+                    # --- FORMATAÇÃO DO SALDO ACUMULADO (Coluna 4) ---
+                    texto_saldo = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    if saldo_val < 0:
+                        cor_saldo = (255, 0, 0) # Vermelho se o saldo estiver negativo
+                    else:
+                        cor_saldo = (0, 0, 0)   # Preto se o saldo estiver positivo
 
                     # Escrita das células
                     pdf.cell(25, 6, data_str, 1)
                     pdf.cell(20, 6, tipo_str, 1)
+                    
+                    # Célula Valor
+                    pdf.set_text_color(*cor_valor)
                     pdf.cell(25, 6, texto_valor, 1)
                     
-                    pdf.set_text_color(0, 0, 0) # Reset para as próximas colunas
+                    # Célula Saldo Acumulado
+                    pdf.set_text_color(*cor_saldo)
+                    pdf.cell(30, 6, texto_saldo, 1)
                     
-                    pdf.cell(30, 6, f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'), 1)
+                    # Reset para Preto (Descrição e Status)
+                    pdf.set_text_color(0, 0, 0)
                     pdf.cell(70, 6, desc_val, 1)
                     pdf.cell(20, 6, str(status_val), 1)
                     pdf.ln()
@@ -854,7 +865,7 @@ elif "📋" in aba:
                     file_name="relatorio_financaspro.pdf",
                     mime="application/pdf"
                 )
-                st.success(f"PDF pronto! Saldo inicial: R$ {saldo_inicial:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+                st.success(f"PDF pronto! Saldo inicial recuperado: R$ {saldo_inicial:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
 
             except Exception as e:
                 st.error(f"Erro ao gerar o PDF: {e}")
