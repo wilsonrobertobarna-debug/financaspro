@@ -312,6 +312,16 @@ if "💰" in aba:
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
         st.divider()
+with st.expander("📊 RESUMO DOS MESES", expanded=False):
+            col1, col2, col3 = st.columns(3)
+            # ... seu código de métricas ...
+
+        with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
+            if not df_bancos_info.empty:
+                for index, row in df_bancos_info.iterrows():
+                    banco_nome = row.iloc[0]
+                    st.write(f"🔹 **{banco_nome}**")
+                    # ... seu código de saldos ...
         
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
