@@ -284,27 +284,27 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 # --- 5. TELAS PRINCIPAIS ---
 
 if "💰" in aba:
-    # Título principal conforme sua preferência por visual limpo
-    st.title("🛡️ FinançasPro Wilson")
+    # Título no topo do seu projeto
+    st.title("🛡️ FinançasPro Wilson") #
     
-    # Barrinha de meses (Jan a Dez) logo abaixo do título para clique direto
+    # A barrinha de meses (Jan a Dez) clicáveis logo abaixo do título
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
     for i, aba_mes in enumerate(abas_meses):
         with aba_mes:
-            # Filtro por mês para visual organizado em Real (R$)
-            df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
+            # Filtro por mês para manter o visual limpo em Real (R$)
+            df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy() #
             
             if not df_m_limpo.empty:
-                # Cálculo do saldo mensal automático em Real (R$)
+                # Cálculo do saldo mensal automático
                 saldo_m = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
                           df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
                 
                 st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
                 st.divider()
                 
-                # Métricas em colunas (Ideal para uso mobile)
+                # Métricas em colunas (Ideal para visualização no celular)
                 m1, m2, m3 = st.columns(3)
                 m1.metric("📈 Receitas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
                 m2.metric("📉 Despesas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
@@ -314,13 +314,13 @@ if "💰" in aba:
 
 # --- ESPAÇO DO MILO ---
 elif "🐶" in aba:
-    st.title("🐶 Espaço do Milo")
-    st.write("Acompanhamento do seu Golden Retriever.")
+    st.title("🐶 Espaço do Milo") #
+    st.write("Acompanhamento do seu Golden Retriever.") #
 
 # --- WHATSAPP / ALERTAS ---
 elif "💬" in aba:
-    st.title("💬 Notificações")
-    st.write("Alertas via Twilio configurados para o sistema.")
+    st.title("💬 Notificações") #
+    st.write("Alertas via Twilio configurados.") #
     
     with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
