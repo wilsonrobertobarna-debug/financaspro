@@ -99,25 +99,6 @@ if 'df_bancos_info' not in st.session_state:
 df_base = st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
 
-with st.expander("📊 RESUMO DOS MESES", expanded=False):
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Entradas", "R$ 0,00")
-    with col2:
-        st.metric("Saídas", "R$ 0,00")
-    with col3:
-        st.metric("Balanço", "R$ 0,00")
-
-with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
-    if not df_bancos_info.empty:
-        for index, row in df_bancos_info.iterrows():
-            banco_nome = row.iloc[0]
-            st.write(f"🔹 **{banco_nome}**")
-            st.caption("Saldo calculado aparecerá aqui")
-           
-    else:
-       st.info("Carregando informações dos bancos...")
-
 # FUNÇÃO PARA ATUALIZAR O ESTADO
 def atualizar_sessao():
     st.session_state['df_base'] = carregar_dados_gs()
@@ -201,22 +182,38 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
+        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
             
         
+    # Garante que a variável exista para evitar o NameError
+        f_venc_cartao = None 
+
         if st.form_submit_button("SALVAR"):
+            # Formata o valor para o padrão Real R$
             v_str = f"{f_val:.2f}".replace('.', ',')
+            
+            # Trata o vencimento do cartão com segurança
             venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
             
+            # Loop para lançamentos parcelados no FinançasPro
             for i in range(f_par):
                 nova_data = f_dat + relativedelta(months=i)
-                ws_base.append_row([nova_data.strftime("%d/%m/%Y"), v_str, f_des, f_cat, f_tip, f_bnc, f_sta, venc_str])
+                ws_base.append_row([
+                    nova_data.strftime("%d/%m/%Y"), 
+                    v_str, 
+                    f_des, 
+                    f_cat, 
+                    f_tip, 
+                    f_bnc, 
+                    f_sta, 
+                    venc_str
+                ])
             
+            # Atualiza o app mantendo o visual limpo
             atualizar_sessao()
             st.rerun()
-
 # BARRINHA 2: TRANSFERÊNCIA
 with st.sidebar.expander("💸 Transferência", expanded=False):
     with st.form("f_transf", clear_on_submit=True):
@@ -286,41 +283,44 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 st.rerun()
 
 # 5. TELAS PRINCIPAIS
-if "RESUMO" in aba:  # Garante que este bloco só rode na aba de Resumo
+if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-    # Criamos a barra de navegação mensal no topo
-    meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    abas_meses = st.tabs(meses_nome)
-    
-    for i, aba_mes in enumerate(abas_meses):
-        with aba_mes:
-            # Filtramos os dados baseados no mês da aba selecionada
-            # O sistema utiliza o Real (R$) como moeda padrão
-            df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
-            
-            if not df_m_limpo.empty:
-                # Cálculo do saldo específico do mês
-                saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
-                              df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-                
-                st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
-                
-                st.divider() # Este divisor agora só aparece dentro da aba de Resumo
-                
-                # Exibição das métricas formatadas
-                m1, m2, m3, m4 = st.columns(4)
-                m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-                m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-                m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-                # O valor pendente considera o status geral do banco de dados
-                m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
-                
-                # Se você quiser adicionar os gráficos de pizza ou barra, coloque-os aqui embaixo
-            else:
-                st.info(f"Nenhum dado encontrado para o mês de {meses_nome[i]}.")
+    if not df_base.empty:
+        # AQUI VOCÊ CRIA A VARIÁVEL
+        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-      
+        # Cálculo do saldo
+        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
+        
+        st.divider()
+
+        # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
+        with st.expander("📊 RESUMO DOS MESES", expanded=False):
+            m1, m2, m3 = st.columns(3)
+            # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
+            m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+            m2.metric("📉 Despesa", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+            m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
+
+        # --- BANCOS E CARTÕES ---
+        with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
+            if not df_bancos_info.empty:
+                for index, row in df_bancos_info.iterrows():
+                    banco_nome = row.iloc[0]
+                    st.write(f"🔹 **{banco_nome}**")
+            else:
+                st.info("Carregando informações dos bancos...")
+        
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+        m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+        m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+        m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
+        
+        st.divider()
         
         with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
@@ -423,30 +423,47 @@ if "RESUMO" in aba:  # Garante que este bloco só rode na aba de Resumo
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
+    
+    # 1. Filtramos os pendentes
     df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
+    
     if not df_aviso.empty:
-        df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(datetime.now())).dt.days
-        df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
-        if not df_venc.empty:
-            for _, row in df_venc.iterrows():
-                d_aviso = row['Dias']
-                if d_aviso < 0:
-                    st.warning(f"⚠️ **Atrasado (Vencido):** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
-                elif d_aviso == 0:
-                    # 1. Pegamos todos os dados de forma segura
-                    data_venc = row.get('Data', row.get('DATA', '00/00'))
+        # --- BUSCA INTELIGENTE PELA COLUNA DE DATA ---
+        # Ele vai tentar achar 'Data', 'DATA', 'Vencimento' ou qualquer uma que exista
+        colunas_possiveis = ['Data', 'DATA', 'Vencimento', 'VENCIMENTO', 'DT']
+        col_data = next((c for c in colunas_possiveis if c in df_aviso.columns), None)
+        
+        if col_data:
+            # Converte e calcula os dias de forma segura
+            df_aviso['Data_Formatada'] = pd.to_datetime(df_aviso[col_data], errors='coerce')
+            df_aviso['Dias'] = (df_aviso['Data_Formatada'].dt.date - hoje).apply(lambda x: x.days if pd.notnull(x) else None)
+            
+            # Filtro de quem vence hoje, amanhã, 3 dias ou está atrasado
+            df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
+            
+            if not df_venc.empty:
+                for _, row in df_venc.iterrows():
+                    d_aviso = row['Dias']
+                    # Pega os dados usando .get() para nunca mais dar KeyError
+                    data_venc = row.get(col_data, '---')
                     desc_venc = row.get('Descrição', row.get('Descricao', 'Sem descrição'))
                     valor_venc = row.get('V_Num', 0)
                     banco_venc = row.get('Banco', 'N/A')
 
-                    # 2. Agora a mensagem usa essas variáveis seguras
-                    st.warning(f"⚠️ **Vence hoje:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")                    
-                elif d_aviso == 1:
-                    st.warning(f"🚨 **Vence amanhã:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
-                elif d_aviso == 3:
-                    st.warning(f"⚠️ **Vence em 3 dias:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    # Exibição dos alertas com o seu visual limpo
+                    if d_aviso < 0:
+                        st.warning(f"⚠️ **Atrasado:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")
+                    elif d_aviso == 0:
+                        st.warning(f"⚠️ **Vence hoje:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")                    
+                    elif d_aviso == 1:
+                        st.warning(f"🚨 **Vence amanhã:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")
+                    elif d_aviso == 3:
+                        st.warning(f"⚠️ **Vence em 3 dias:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")
+            else:
+                st.info("Nenhum lançamento a vencer em breve.")
         else:
-            st.info("Nenhum lançamento a vencer hoje, amanhã ou em atraso.")
+            # Caso ele realmente não ache nenhuma coluna de data, ele te avisa sem travar
+            st.error("Não encontrei a coluna de data. Verifique se o nome na planilha é 'Data'.")
     else:
         st.info("Nenhum lançamento pendente.")
         
@@ -736,48 +753,109 @@ elif "📋" in aba:
                 pdf.add_page()
                 pdf.set_font("Arial", size=10)
                 
+                # 1. CÁLCULO SEGURO DO SALDO ANTERIOR
+                data_inicio_filtro = pd.to_datetime(b_ini)
+                
+                # Criamos uma cópia para não afetar os dados originais da tela
+                df_base_calc = df_base.copy()
+                
+                # Identifica a coluna de data pela posição (geralmente a primeira) ou nome
+                df_base_calc['DT_Temp'] = pd.to_datetime(df_base_calc.iloc[:, 0], dayfirst=True, errors='coerce') 
+                
+                # Busca segura para a coluna de valor
+                col_valor = 'V_Num' if 'V_Num' in df_base_calc.columns else df_base_calc.columns[1]
+                df_base_calc['V_Num_Calc'] = pd.to_numeric(df_base_calc[col_valor], errors='coerce').fillna(0)
+                
+                df_passado = df_base_calc[df_base_calc['DT_Temp'] < data_inicio_filtro].copy()
+                
+                saldo_inicial = 0
+                if not df_passado.empty:
+                    # Filtra por Tipo de forma segura
+                    receitas = df_passado[df_passado['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num_Calc'].sum()
+                    gastos = df_passado[df_passado['Tipo'] == 'Gasto']['V_Num_Calc'].sum()
+                    saldo_inicial = receitas - gastos
+# 2. PREPARAÇÃO DOS DADOS E CÁLCULO DO SALDO ACUMULADO
+                df_report = df_v.copy().sort_values(by='DT')
+                saldos_lista = []
+                corrente = saldo_inicial
+                
+                for _, r in df_report.iterrows():
+                    # Garante que o valor seja numérico para o cálculo
+                    val = pd.to_numeric(r.get('V_Num', 0), errors='coerce')
+                    if pd.isna(val): val = 0
+                    
+                    # Padroniza o texto para comparação (Despesa ou Gasto)
+                    tipo_check = str(r.get('Tipo', '')).upper().strip()
+                    
+                    # Lógica matemática: Subtrai se for DESPESA ou GASTO
+                    if "DESPESA" in tipo_check or "GASTO" in tipo_check:
+                        corrente -= val
+                    else:
+                        corrente += val
+                    saldos_lista.append(corrente)
+                
+                df_report['Saldo_Acum'] = saldos_lista
+
+                # --- Cabeçalho do PDF ---
                 pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
                 pdf.ln(2)
                 pdf.cell(200, 10, txt=f"Periodo: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", ln=1, align="L")
-                
-                filtros_texto = []
-                if s_bnc_rel: filtros_texto.append(f"Bancos: {', '.join(s_bnc_rel)}")
-                if s_sta_rel: filtros_texto.append(f"Status: {', '.join(s_sta_rel)}")
-                if b_desc_rel: filtros_texto.append(f"Descricao: {b_desc_rel}")
-                
-                texto_filtros = "Filtros: " + (" | ".join(filtros_texto) if filtros_texto else "Nenhum")
-                pdf.cell(200, 10, txt=texto_filtros, ln=1, align="L")
-                pdf.ln(2)
-                
-                df_v = df_v.sort_values(by='DT')
-                df_v['Saldo_Acum'] = df_v['V_Num'].cumsum()
-                
-                pdf.cell(20, 8, "Data", 1)
-                pdf.cell(25, 8, "Tipo", 1)
+                pdf.ln(5)
+
+                # Cabeçalho da Tabela
+                pdf.cell(25, 8, "Data", 1)
+                pdf.cell(20, 8, "Tipo", 1)
                 pdf.cell(25, 8, "Valor", 1)
-                pdf.cell(25, 8, "Saldo Acum.", 1)
-                pdf.cell(75, 8, "Descricao", 1)
+                pdf.cell(30, 8, "Saldo Acum.", 1)
+                pdf.cell(70, 8, "Descricao", 1)
                 pdf.cell(20, 8, "Status", 1)
                 pdf.ln()
-                
-                for index, row in df_v.iterrows():
-                    # --- BLINDAGEM DE COLUNAS ---
-                    data_val = row.get('Data', row.get('DATA', '00/00'))
-                    tipo_val = row.get('Tipo', 'S/T')
+
+                # 3. LOOP DE LINHAS COM CORES NO VALOR E NO SALDO
+                for index, row in df_report.iterrows():
+                    dt_obj = row.get('DT', row.get('Data', row.get('DATA', None)))
+                    data_str = dt_obj.strftime('%d/%m/%Y') if hasattr(dt_obj, 'strftime') else str(dt_obj)
+                    
+                    tipo_str = str(row.get('Tipo', '---')).strip()
                     valor_val = row.get('V_Num', 0.0)
                     saldo_val = row.get('Saldo_Acum', 0.0)
-                    desc_val = row.get('Descrição', row.get('Descricao', 'Sem nome'))
+                    desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))[:35]
                     status_val = row.get('Status', '-')
-                    # -----------------------------
 
-                    pdf.cell(20, 6, str(data_val), 1)
-                    pdf.cell(25, 6, str(tipo_val), 1)
-                    pdf.cell(25, 6, f"R$ {valor_val:.2f}".replace('.', ','), 1)
-                    pdf.cell(25, 6, f"R$ {saldo_val:.2f}".replace('.', ','), 1)
-                    pdf.cell(75, 6, str(desc_val)[:40], 1)
+                    # --- FORMATAÇÃO DO VALOR (Coluna 3) ---
+                    if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper():
+                        texto_valor = f"- R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                        cor_valor = (255, 0, 0) # Vermelho
+                    else:
+                        texto_valor = f"R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                        cor_valor = (0, 0, 0)   # Preto
+
+                    # --- FORMATAÇÃO DO SALDO ACUMULADO (Coluna 4) ---
+                    texto_saldo = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    if saldo_val < 0:
+                        cor_saldo = (255, 0, 0) # Vermelho se o saldo estiver negativo
+                    else:
+                        cor_saldo = (0, 0, 0)   # Preto se o saldo estiver positivo
+
+                    # Escrita das células
+                    pdf.cell(25, 6, data_str, 1)
+                    pdf.cell(20, 6, tipo_str, 1)
+                    
+                    # Célula Valor
+                    pdf.set_text_color(*cor_valor)
+                    pdf.cell(25, 6, texto_valor, 1)
+                    
+                    # Célula Saldo Acumulado
+                    pdf.set_text_color(*cor_saldo)
+                    pdf.cell(30, 6, texto_saldo, 1)
+                    
+                    # Reset para Preto (Descrição e Status)
+                    pdf.set_text_color(0, 0, 0)
+                    pdf.cell(70, 6, desc_val, 1)
                     pdf.cell(20, 6, str(status_val), 1)
                     pdf.ln()
-                
+
+                # 4. DOWNLOAD E FINALIZAÇÃO
                 pdf_output = pdf.output(dest='S')
                 if isinstance(pdf_output, str):
                     pdf_output = pdf_output.encode('latin-1')
@@ -785,9 +863,10 @@ elif "📋" in aba:
                 st.download_button(
                     label="📥 Baixar PDF",
                     data=pdf_output,
-                    file_name="relatorio.pdf",
+                    file_name="relatorio_financaspro.pdf",
                     mime="application/pdf"
                 )
-                st.success("PDF gerado com sucesso!")
+                st.success(f"PDF pronto! Saldo inicial recuperado: R$ {saldo_inicial:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+
             except Exception as e:
                 st.error(f"Erro ao gerar o PDF: {e}")
