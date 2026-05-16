@@ -327,7 +327,7 @@ elif "💬" in aba:
     st.write("Configurações de alertas do FinançasPro.")
 
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
-        with st.expander("📊 RESUMO DOS MESES", expanded=False):
+    with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
             m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
@@ -335,7 +335,7 @@ elif "💬" in aba:
             m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
 
         # --- BANCOS E CARTÕES ---
-        with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
+    with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
             if not df_bancos_info.empty:
                 for index, row in df_bancos_info.iterrows():
                     banco_nome = row.iloc[0]
