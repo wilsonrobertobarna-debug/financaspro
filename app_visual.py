@@ -305,23 +305,23 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
-        
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
-        
+        # ... (seu código anterior de saldo geral) ...
         st.divider()
-with st.expander("📊 RESUMO DOS MESES", expanded=False):
+
+        # O BLOCO ABAIXO PRECISA DE 8 ESPAÇOS (ou 2 TABs) NO INÍCIO:
+        with st.expander("📊 RESUMO DOS MESES", expanded=False):
             col1, col2, col3 = st.columns(3)
-            # ... seu código de métricas ...
+            with col1:
+                st.metric("Entradas", "R$ 0,00")
+            # ... continue as outras colunas mantendo o recuo ...
 
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
             if not df_bancos_info.empty:
                 for index, row in df_bancos_info.iterrows():
                     banco_nome = row.iloc[0]
                     st.write(f"🔹 **{banco_nome}**")
-                    # ... seu código de saldos ...
+            else:
+                st.info("Carregando informações dos bancos...")
         
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
