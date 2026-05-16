@@ -277,34 +277,35 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     ids_para_excluir = sorted(list(set(ids_para_excluir)), reverse=True)
                     for id_linha in ids_para_excluir:
                         ws_base.delete_rows(id_linha)
-       else:
+       # Alinhamento correto do bloco de exclusão
+        else:
             ws_base.delete_rows(int(item['ID']))
             atualizar_sessao()
             st.rerun()
 
 # --- 5. TELAS PRINCIPAIS ---
-# Garanta que este 'if' esteja colado na margem esquerda
+# Este bloco deve estar totalmente encostado na margem esquerda
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-    # Abas para os meses (Jan a Dez) facilitam o clique no mobile
+    # Abas de meses facilitam o uso no celular (Jan a Dez)
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
     for i, aba_mes in enumerate(abas_meses):
         with aba_mes:
-            # Filtro mensal com valores formatados em Real (R$)
+            # Filtro mensal com valores em Real (R$)
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
-                # Cálculo do saldo mensal automático
+                # Cálculo automático do saldo mensal
                 saldo_m = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
                           df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
                 
                 st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
                 st.divider()
                 
-                # Métricas em colunas (ideal para a tela do celular)
+                # Métricas em colunas ideais para mobile
                 m1, m2, m3 = st.columns(3)
                 m1.metric("📈 Receitas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
                 m2.metric("📉 Despesas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
@@ -320,7 +321,7 @@ elif "🐶" in aba:
 # --- WHATSAPP / ALERTAS ---
 elif "💬" in aba:
     st.title("💬 Notificações")
-    st.write("Alertas via Twilio configurados para o sistema.")     
+    st.write("Alertas via Twilio configurados para o sistema.")    
     
     with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
