@@ -349,7 +349,7 @@ elif "💬" in aba:
     m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
     m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
         
-        st.divider()
+    st.divider()
         
         with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
