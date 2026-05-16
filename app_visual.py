@@ -303,12 +303,17 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
-# --- COLOQUE O TRATAMENTO AQUI ---
+# --- TRATAMENTO ROBUSTO PARA PADRÃO BRASILEIRO (R$) ---
 if not df_base.empty:
-    # Remove pontos de milhar, troca vírgula por ponto e garante que seja número
-    df_base['V_Num'] = df_base['V_Num'].astype(str).str.replace('.', '', regex=False).str.replace(',', '.', regex=False)
+    # 1. Transforma em string e remove espaços em branco
+    df_base['V_Num'] = df_base['V_Num'].astype(str).str.strip()
+    
+    # 2. Se o valor tem vírgula e ponto (ex: 1.200,50), remove o ponto e troca a vírgula
+    # Se tem apenas vírgula (ex: 140,00), troca por ponto
+    df_base['V_Num'] = df_base['V_Num'].str.replace('.', '', regex=False).str.replace(',', '.', regex=False)
+    
+    # 3. Converte para número e zera o que for inválido
     df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0)
-# ---------------------------------
 
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
