@@ -278,17 +278,18 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     for id_linha in ids_para_excluir:
                         ws_base.delete_rows(id_linha)
        # Alinhamento correto do bloco de exclusão
+       # Alinhamento do bloco de exclusão
         else:
             ws_base.delete_rows(int(item['ID']))
             atualizar_sessao()
             st.rerun()
 
 # --- 5. TELAS PRINCIPAIS ---
-# Este bloco deve estar totalmente encostado na margem esquerda
+# ESTE IF DEVE FICAR TOTALMENTE ENCOSTADO NA ESQUERDA
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-    # Abas de meses facilitam o uso no celular (Jan a Dez)
+    # Abas de meses facilitam o uso no mobile (Jan a Dez)
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
@@ -298,7 +299,7 @@ if "💰" in aba:
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
-                # Cálculo automático do saldo mensal
+                # Cálculo do saldo mensal automático
                 saldo_m = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
                           df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
                 
@@ -313,16 +314,14 @@ if "💰" in aba:
             else:
                 st.info(f"Sem lançamentos para {meses_nome[i]}.")
 
-# --- ESPAÇO DO MILO ---
+# --- OUTRAS ABAS ---
 elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
     st.write("Acompanhamento do seu Golden Retriever.")
 
-# --- WHATSAPP / ALERTAS ---
 elif "💬" in aba:
     st.title("💬 Notificações")
-    st.write("Alertas via Twilio configurados para o sistema.")    
-    
+    st.write("Alertas via Twilio configurados.")    
     with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
