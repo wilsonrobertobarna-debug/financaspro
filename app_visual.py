@@ -271,18 +271,17 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-    # Abas de meses para facilitar o toque no celular
+    # Abas para facilitar o toque no celular em Socorro
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
-    # Cálculo do saldo geral em Real (R$)
+    # Cálculos globais em Real (R$)
     total_rec = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
     total_des = df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
     saldo_geral = total_rec - total_des
 
     for i, aba_mes in enumerate(abas_meses):
         with aba_mes:
-            # Filtro do mês atual
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
@@ -297,8 +296,7 @@ if "💰" in aba:
                 m2.metric("📉 Despesas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
                 m3.metric("💰 Rendimentos", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
                 
-                # Expanders organizados para não quebrar a indentação
-               # --- AQUI ESTAVA O ERRO (DENTRO DO IF NOT EMPTY) ---
+                # --- BLOCO QUE ESTAVA DANDO ERRO (CORRIGIDO) ---
                 with st.expander("📊 RESUMO GERAL", expanded=False):
                     c1, c2 = st.columns(2)
                     c1.metric("⚖️ Balanço Total", m_fmt(saldo_geral))
@@ -311,14 +309,14 @@ if "💰" in aba:
             else:
                 st.info(f"Sem lançamentos para {meses_nome[i]}.")
 
-# --- ESTAS LINHAS DEVEM ESTAR NA MARGEM ESQUERDA (ALINHADAS COM O IF DA MOEDA) ---
+# --- ALINHAMENTO EXTERNO (NA MARGEM ESQUERDA) ---
 elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
     st.write("Acompanhamento do seu Golden Retriever.")
 
 elif "💬" in aba or "📋" in aba:
     st.title("💬 Notificações & Relatórios")
-    st.write("Configurações do sistema FinançasPro.")
+    st.write("Configurações do FinançasPro e alertas Twilio.")
     with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
