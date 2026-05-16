@@ -743,7 +743,7 @@ elif "📋" in aba:
     
     st.divider()
     
-   if st.button("📄 Gerar PDF"):
+    if st.button("📄 Gerar PDF"):
         if df_v.empty:
             st.warning("Nenhum lançamento selecionado para gerar o PDF.")
         else:
