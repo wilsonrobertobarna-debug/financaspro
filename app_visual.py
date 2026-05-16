@@ -274,14 +274,14 @@ if "💰" in aba:
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
-    # Cálculo do saldo geral em Real (R$)
+    # Cálculos em Real (R$)
     total_rec = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
     total_des = df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
     saldo_geral = total_rec - total_des
 
     for i, aba_mes in enumerate(abas_meses):
         with aba_mes:
-            # Filtra os dados do mês específico
+            # Filtra o mês atual (i+1)
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
@@ -296,7 +296,7 @@ if "💰" in aba:
                 m2.metric("📉 Despesas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
                 m3.metric("💰 Rendimentos", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
                 
-                # --- BLOCO CORRIGIDO (DENTRO DO IF NOT EMPTY) ---
+                # --- OS EXPANDERS DEVEM FICAR NESTE ALINHAMENTO ---
                 with st.expander("📊 RESUMO GERAL", expanded=False):
                     c1, c2 = st.columns(2)
                     c1.metric("⚖️ Balanço Total", m_fmt(saldo_geral))
@@ -309,15 +309,14 @@ if "💰" in aba:
             else:
                 st.info(f"Sem lançamentos para {meses_nome[i]}.")
 
-# --- AS LINHAS ABAIXO DEVEM ESTAR TOTALMENTE À ESQUERDA ---
+# --- AS ABAS ABAIXO FORA DO BLOCO DE DINHEIRO (NA MARGEM ESQUERDA) ---
 elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
     st.write("Acompanhamento do seu Golden Retriever.")
 
 elif "💬" in aba or "📋" in aba:
     st.title("💬 Notificações & Relatórios")
-    st.write("Configurações do FinançasPro e alertas via WhatsApp.")
-    with st.expander("📊 RESUMO DOS MESES", expanded=False):
+    st.write("Configurações do sistema e alertas WhatsApp.")    with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
             m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
