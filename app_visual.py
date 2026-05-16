@@ -773,8 +773,7 @@ elif "📋" in aba:
                     receitas = df_passado[df_passado['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num_Calc'].sum()
                     gastos = df_passado[df_passado['Tipo'] == 'Gasto']['V_Num_Calc'].sum()
                     saldo_inicial = receitas - gastos
-
-              # 2. PREPARAÇÃO DOS DADOS E CÁLCULO DO SALDO ACUMULADO
+# 2. PREPARAÇÃO DOS DADOS E CÁLCULO DO SALDO ACUMULADO
                 df_report = df_v.copy().sort_values(by='DT')
                 saldos_lista = []
                 corrente = saldo_inicial
@@ -784,7 +783,7 @@ elif "📋" in aba:
                     val = pd.to_numeric(r.get('V_Num', 0), errors='coerce')
                     if pd.isna(val): val = 0
                     
-                    # Verificação robusta: padroniza o texto do Tipo para comparação
+                    # Padroniza o texto do Tipo para comparação robusta
                     tipo_check = str(r.get('Tipo', '')).upper().strip()
                     
                     # Lógica matemática: Subtrai se for Gasto, soma se for Receita/Rendimento
@@ -813,7 +812,6 @@ elif "📋" in aba:
 
                 # 3. LOOP DE LINHAS COM FORMATAÇÃO VISUAL (SINAL E COR)
                 for index, row in df_report.iterrows():
-                    # Tratamento da Data
                     dt_obj = row.get('DT', row.get('Data', row.get('DATA', None)))
                     data_str = dt_obj.strftime('%d/%m/%Y') if hasattr(dt_obj, 'strftime') else str(dt_obj)
                     
@@ -829,24 +827,23 @@ elif "📋" in aba:
                         texto_valor = f"- R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                         pdf.set_text_color(255, 0, 0) 
                     else:
-                        # Receita: Sem sinal extra e cor preta (RGB: 0, 0, 0)
+                        # Receita: Cor preta normal
                         texto_valor = f"R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                         pdf.set_text_color(0, 0, 0)
 
-                    # Escrita das células do relatório
+                    # Escrita das células
                     pdf.cell(25, 6, data_str, 1)
                     pdf.cell(20, 6, tipo_str, 1)
                     pdf.cell(25, 6, texto_valor, 1)
                     
-                    # Reset da cor para preto para as demais colunas
-                    pdf.set_text_color(0, 0, 0)
+                    pdf.set_text_color(0, 0, 0) # Reset da cor para as próximas colunas
                     
                     pdf.cell(30, 6, f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'), 1)
                     pdf.cell(70, 6, desc_val, 1)
                     pdf.cell(20, 6, str(status_val), 1)
                     pdf.ln()
 
-                # 4. DOWNLOAD DO ARQUIVO
+                # 4. DOWNLOAD E FINALIZAÇÃO
                 pdf_output = pdf.output(dest='S')
                 if isinstance(pdf_output, str):
                     pdf_output = pdf_output.encode('latin-1')
@@ -858,3 +855,6 @@ elif "📋" in aba:
                     mime="application/pdf"
                 )
                 st.success(f"PDF pronto! Saldo inicial: R$ {saldo_inicial:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+
+            except Exception as e:
+                st.error(f"Erro ao gerar o PDF: {e}")
