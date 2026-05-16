@@ -743,7 +743,7 @@ elif "📋" in aba:
     
     st.divider()
     
-    if st.button("📄 Gerar PDF"):
+  if st.button("📄 Gerar PDF"):
         if df_v.empty:
             st.warning("Nenhum lançamento selecionado para gerar o PDF.")
         else:
@@ -752,52 +752,44 @@ elif "📋" in aba:
                 pdf.add_page()
                 pdf.set_font("Arial", size=10)
                 
-                # Cabeçalho do Relatório
+                # 1. CÁLCULO DO SALDO ANTERIOR (O QUE VEIO ANTES DE MAIO)
+                # Garantimos que a base tenha as datas e valores tratados como números
+                df_base['DT_Temp'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
+                df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0)
+                
+                # Saldo de tudo que aconteceu antes da data inicial escolhida no filtro
+                data_inicio_filtro = pd.to_datetime(b_ini)
+                df_passado = df_base[df_base['DT_Temp'] < data_inicio_filtro].copy()
+                
+                saldo_inicial = 0
+                if not df_passado.empty:
+                    receitas = df_passado[df_passado['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+                    gastos = df_passado[df_passado['Tipo'] == 'Gasto']['V_Num'].sum()
+                    saldo_inicial = receitas - gastos
+
+                # 2. PREPARAÇÃO DO DATAFRAME DO RELATÓRIO
+                # Ordenamos e recalculamos o acumulado somando o saldo_inicial
+                df_v = df_v.sort_values(by='DT')
+                saldos_lista = []
+                corrente = saldo_inicial
+                
+                for _, r in df_v.iterrows():
+                    val = r['V_Num']
+                    if r['Tipo'] == 'Gasto':
+                        corrente -= val
+                    else:
+                        corrente += val
+                    saldos_lista.append(corrente)
+                
+                df_v['Saldo_Acum'] = saldos_lista
+
+                # --- Cabeçalho do PDF ---
                 pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
                 pdf.ln(2)
                 pdf.cell(200, 10, txt=f"Periodo: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", ln=1, align="L")
-                
-                # --- 1. CÁLCULO DO SALDO ANTERIOR (ACUMULADO) ---
-                # Filtramos tudo que aconteceu ANTES da data inicial (b_ini)
-                data_inicio_relatorio = pd.to_datetime(b_ini)
-                df_base['Data_DT'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
-                df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0)
-                
-                df_passado = df_base[df_base['Data_DT'] < data_inicio_relatorio].copy()
-                
-                # Calculamos o saldo que "sobrou" do passado
-                receitas_passado = df_passado[df_passado['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-                gastos_passado = df_passado[df_passado['Tipo'] == 'Gasto']['V_Num'].sum()
-                saldo_inicial = receitas_passado - gastos_passado
+                pdf.ln(5)
 
-                # --- 2. FILTROS E TEXTO ---
-                filtros_texto = []
-                if s_bnc_rel: filtros_texto.append(f"Bancos: {', '.join(s_bnc_rel)}")
-                if s_sta_rel: filtros_texto.append(f"Status: {', '.join(s_sta_rel)}")
-                if b_desc_rel: filtros_texto.append(f"Descricao: {b_desc_rel}")
-                
-                texto_filtros = "Filtros: " + (" | ".join(filtros_texto) if filtros_texto else "Nenhum")
-                pdf.cell(200, 10, txt=texto_filtros, ln=1, align="L")
-                pdf.ln(2)
-                
-                # --- 3. PROCESSO DE DADOS E SALDO ACUMULADO ---
-                df_v = df_v.sort_values(by='DT')
-                
-                # Calculamos o acumulado linha por linha somando ao saldo inicial
-                saldos_lista = []
-                acumulado_atual = saldo_inicial
-                
-                for _, row in df_v.iterrows():
-                    v_temp = row['V_Num']
-                    if row['Tipo'] == 'Gasto':
-                        acumulado_atual -= v_temp
-                    else:
-                        acumulado_atual += v_temp
-                    saldos_lista.append(acumulado_atual)
-                
-                df_v['Saldo_Acum'] = saldos_lista
-                
-                # Títulos da Tabela (Ajustei as larguras para caber tudo)
+                # Cabeçalho da Tabela
                 pdf.cell(25, 8, "Data", 1)
                 pdf.cell(20, 8, "Tipo", 1)
                 pdf.cell(25, 8, "Valor", 1)
@@ -805,35 +797,29 @@ elif "📋" in aba:
                 pdf.cell(70, 8, "Descricao", 1)
                 pdf.cell(20, 8, "Status", 1)
                 pdf.ln()
-                
-              # --- 4. LOOP DE LINHAS DO PDF (CORREÇÃO DEFINITIVA) ---
-                for index, row in df_v.iterrows():
-                    # RESOLUÇÃO DO ERRO 'Data': Busca segura por qualquer nome de coluna de data
-                    dt_obj = row.get('DT', row.get('Data', row.get('DATA', None)))
-                    
-                    if pd.notnull(dt_obj):
-                        # Se for um objeto de data, formata. Se for texto, limpa.
-                        data_str = dt_obj.strftime('%d/%m/%Y') if hasattr(dt_obj, 'strftime') else str(dt_obj)
-                    else:
-                        data_str = "---"
 
-                    # Busca segura para as outras colunas para evitar novos erros
-                    tipo_val = row.get('Tipo', 'S/T')
+                # 3. LOOP DE LINHAS COM "GET" SEGURO (MATA O ERRO 'DATA')
+                for index, row in df_v.iterrows():
+                    # Tentamos pegar a data de qualquer coluna disponível (DT, Data ou DATA)
+                    dt_obj = row.get('DT', row.get('Data', row.get('DATA', None)))
+                    data_str = dt_obj.strftime('%d/%m/%Y') if hasattr(dt_obj, 'strftime') else str(dt_obj) if dt_obj else "---"
+
+                    tipo_val = row.get('Tipo', '---')
                     valor_val = row.get('V_Num', 0.0)
                     saldo_val = row.get('Saldo_Acum', 0.0)
-                    desc_val = row.get('Descrição', row.get('Descricao', 'Sem nome'))
+                    desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))[:35]
                     status_val = row.get('Status', '-')
 
-                    # Escreve no PDF mantendo seu visual limpo e alinhado
+                    # Escrita das células (Visual Limpo em Real R$)
                     pdf.cell(25, 6, data_str, 1)
                     pdf.cell(20, 6, str(tipo_val), 1)
                     pdf.cell(25, 6, f"R$ {valor_val:,.2f}", 1)
                     pdf.cell(30, 6, f"R$ {saldo_val:,.2f}", 1)
-                    pdf.cell(70, 6, str(desc_val)[:35], 1)
+                    pdf.cell(70, 6, desc_val, 1)
                     pdf.cell(20, 6, str(status_val), 1)
                     pdf.ln()
-                
-                # Finalização e Download
+
+                # 4. DOWNLOAD DO ARQUIVO
                 pdf_output = pdf.output(dest='S')
                 if isinstance(pdf_output, str):
                     pdf_output = pdf_output.encode('latin-1')
@@ -844,8 +830,7 @@ elif "📋" in aba:
                     file_name=f"relatorio_financaspro_{datetime.now().strftime('%d_%m_%Y')}.pdf",
                     mime="application/pdf"
                 )
-                st.success(f"PDF pronto! Saldo acumulado (incluindo meses anteriores) calculado com sucesso.")
-                
+                st.success(f"PDF pronto! Saldo inicial recuperado: R$ {saldo_inicial:,.2f}")
+
             except Exception as e:
-                # Caso ocorra outro erro, ele mostrará exatamente qual coluna causou
                 st.error(f"Erro ao gerar o PDF: {e}")
