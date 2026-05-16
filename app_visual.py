@@ -297,7 +297,7 @@ if "💰" in aba:
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
-                # Cálculo do saldo mensal automático
+                # Cálculo do saldo mensal automático em Real (R$)
                 saldo_m = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
                           df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
                 
