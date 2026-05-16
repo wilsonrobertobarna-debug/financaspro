@@ -10,22 +10,29 @@ import pandas as pd
 from datetime import datetime, timedelta
 import urllib.parse
 
-# 2. A LEITURA DOS DADOS (Certifique-se que isso vem ANTES da linha 26)
-# Aqui é onde você usa o st.connection ou gspread para ler a planilha
-df_base = conn.read(worksheet="Lancamentos") # Exemplo: o nome deve ser df_base
+## 2. Fuso Horário (Você já tem)
+agora = datetime.now() - timedelta(hours=3)
+hoje = agora.date()
 
-# 3. O TRATAMENTO E FILTRO (Onde deu o erro)
+# 3. CRIAÇÃO DA CONEXÃO (Faltava isso antes da linha 15!)
+# Se você usa o st.connection (padrão novo do Streamlit):
+conn = st.connection("gsheets", type="gsheets")
+
+# 4. LEITURA DOS DADOS (Agora o 'conn' existe)
+df_base = conn.read(worksheet="Lancamentos")
+
+# 5. FILTROS E CÁLCULOS (Para a receita não vir alta)
 if df_base is not None:
-    # Agora sim, o Python já conhece o 'df_base'
+    # Trata a data
     df_base['Data'] = pd.to_datetime(df_base['Data'], errors='coerce')
     
-    # Filtro de Maio/2026
-    hoje = datetime.now() - timedelta(hours=3)
+    # Filtra apenas o mês atual
     df_mes = df_base[(df_base['Data'].dt.month == hoje.month) & 
                      (df_base['Data'].dt.year == hoje.year)]
-
-    # 4. OS CÁLCULOS (Usando o df_mes para a receita não vir alta)
+    
+    # Calcula valores reais em Real (R$)
     receita = df_mes[df_mes['Tipo'] == 'Receita']['V_Num'].sum()
+    gasto = df_mes[df_mes['Tipo'] == 'Gasto']['V_Num'].sum()
 # --------------------------------
 from dateutil.relativedelta import relativedelta
 import urllib.parse
