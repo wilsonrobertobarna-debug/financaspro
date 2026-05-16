@@ -289,7 +289,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 if "RESUMO" in aba or "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-    # Esta é a barra de meses (Jan, Fev, Mar...) isolada apenas aqui
+    # Esta é a barra de meses (Jan, Fev, Mar...) que você pediu
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
