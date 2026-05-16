@@ -268,10 +268,11 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 st.rerun()
 
 # --- 5. TELAS PRINCIPAIS ---
+# Este bloco deve estar totalmente encostado na margem esquerda
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-    # Abas de meses para facilitar o toque no celular
+    # Abas de meses para facilitar o toque no celular (Jan a Dez)
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
@@ -296,7 +297,7 @@ if "💰" in aba:
                 m2.metric("📉 Despesas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
                 m3.metric("💰 Rendimentos", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
                 
-                # Expanders de suporte dentro de cada mês para evitar erros de variável
+                # Expanders de suporte organizados dentro de cada mês
                 with st.expander("📊 RESUMO GERAL", expanded=False):
                     c1, c2, c3 = st.columns(3)
                     c1.metric("⚖️ Balanço Geral", m_fmt(saldo_geral))
@@ -309,10 +310,12 @@ if "💰" in aba:
             else:
                 st.info(f"Sem lançamentos para {meses_nome[i]}.")
 
+# --- ESPAÇO DO MILO ---
 elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
     st.write("Acompanhamento do seu Golden Retriever.")
 
+# --- WHATSAPP / ALERTAS ---
 elif "💬" in aba or "📄" in aba:
     st.title("💬 Notificações")
     st.write("Configurações de alertas via Twilio para o sistema.")
