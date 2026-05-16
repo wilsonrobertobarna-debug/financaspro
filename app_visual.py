@@ -282,21 +282,45 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
-# 5. TELAS PRINCIPAIS
+# --- 5. TELAS PRINCIPAIS ---
+
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
-        # AQUI VOCÊ CRIA A VARIÁVEL
+        # Filtro de dados para o mês atual
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-        # Cálculo do saldo
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
+        # Cálculo do saldo em Real (R$)
+        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
+                      df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         
+        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         st.divider()
 
+        # Exibição das métricas em colunas para visual limpo
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            receita = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+            st.metric("📈 Receitas", m_fmt(receita))
+        with col2:
+            despesa = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+            st.metric("📉 Despesas", m_fmt(despesa))
+        with col3:
+            rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+            st.metric("💰 Rendimentos", m_fmt(rendimento))
+
+# --- ESPAÇO DO MILO ---
+elif "🐶" in aba or "MILO" in aba.upper():
+    st.title("🐶 Espaço do Milo")
+    st.write("Acompanhamento do seu Golden Retriever.")
+    # Aqui você pode adicionar as informações de saúde ou treinos do Milo
+
+# --- WHATSAPP / ALERTAS ---
+elif "💬" in aba or "WHATSAPP" in aba.upper():
+    st.title("💬 Notificações")
+    st.write("Configurações de alertas via Twilio.")
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
