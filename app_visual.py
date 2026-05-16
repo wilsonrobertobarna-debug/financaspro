@@ -360,7 +360,17 @@ if "💰" in aba:
                 if cat != "Transferência":
                     default_v = 1200.0 if cat == "Mercado" else 400.0
                     metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
-        
+
+        # Criar a lista de meses para a navegação
+df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%Y')
+lista_meses = sorted(df_base['Mes_Ano'].unique(), reverse=True)
+
+# A Barrinha de Navegação
+st.sidebar.markdown("---")
+mes_selecionado = st.sidebar.selectbox("📅 Selecione o Mês", lista_meses)
+
+# Filtrando os dados que os seus gráficos usam
+df_m_limpo = df_base[df_base['Mes_Ano'] == mes_selecionado].copy()
         g1, g2 = st.columns(2)
         with g1:
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
