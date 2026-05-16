@@ -284,16 +284,16 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 # --- 5. TELAS PRINCIPAIS ---
 
 if "💰" in aba:
-    # Título no topo conforme seu projeto FinançasPro
+    # Título no topo conforme planejado
     st.title("🛡️ FinançasPro Wilson")
     
-    # A barrinha de meses clicáveis (Jan a Dez) logo abaixo do título
+    # A barrinha de meses (Jan a Dez) logo abaixo do título para clique direto
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
     for i, aba_mes in enumerate(abas_meses):
         with aba_mes:
-            # Filtro por mês para manter o visual limpo e organizado em Real (R$)
+            # Filtro por mês em Real (R$) para manter o visual limpo
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
@@ -304,7 +304,7 @@ if "💰" in aba:
                 st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
                 st.divider()
                 
-                # Métricas em colunas (Ideal para visualização no celular)
+                # Métricas em colunas (Visualização ideal para mobile)
                 m1, m2, m3 = st.columns(3)
                 m1.metric("📈 Receitas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
                 m2.metric("📉 Despesas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
@@ -317,10 +317,10 @@ elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
     st.write("Acompanhamento do seu Golden Retriever.")
 
-# --- WHATSAPP / TWILIO ---
+# --- WHATSAPP / ALERTAS ---
 elif "💬" in aba:
     st.title("💬 Notificações")
-    st.write("Alertas via Twilio configurados para pagamentos.")
+    st.write("Alertas via Twilio configurados para o sistema.")
     
     with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
