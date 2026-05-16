@@ -290,43 +290,55 @@ Python
             st.rerun()
 
 # --- 5. TELAS PRINCIPAIS ---
-# ESTE IF DEVE FICAR TOTALMENTE ENCOSTADO NA ESQUERDA
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-    # Abas de meses (Jan a Dez) facilitam o toque no celular
+    # Abas de meses para facilitar o toque no celular
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
+    # Cálculo do saldo geral em Real (R$)
+    total_rec = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+    total_des = df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
+    saldo_geral = total_rec - total_des
+
     for i, aba_mes in enumerate(abas_meses):
         with aba_mes:
-            # Filtro mensal com valores em Real (R$)
+            # Filtra os lançamentos do mês atual
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
-                # Cálculo automático do saldo mensal
                 saldo_m = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
                           df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
                 
                 st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
                 st.divider()
                 
-                # Métricas em colunas ideais para mobile
                 m1, m2, m3 = st.columns(3)
                 m1.metric("📈 Receitas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
                 m2.metric("📉 Despesas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
                 m3.metric("💰 Rendimentos", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+                
+                # Resumo e Bancos integrados no visual limpo
+                with st.expander("📊 RESUMO GERAL", expanded=False):
+                    c1, c2 = st.columns(2)
+                    c1.metric("⚖️ Balanço Total", m_fmt(saldo_geral))
+                    c2.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
+                
+                with st.expander("🏦 BANCOS INFO", expanded=False):
+                    if not df_bancos_info.empty:
+                        for _, row in df_bancos_info.iterrows():
+                            st.write(f"🔹 **{row.iloc[0]}**")
             else:
                 st.info(f"Sem lançamentos para {meses_nome[i]}.")
 
-# --- OUTRAS ABAS ---
 elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
     st.write("Acompanhamento do seu Golden Retriever.")
 
-elif "💬" in aba:
-    st.title("💬 Notificações")
-    st.write("Alertas via Twilio configurados.")
+elif "💬" in aba or "📋" in aba:
+    st.title("💬 Notificações & Relatórios")
+    st.write("Configurações do sistema FinançasPro.")
 O que foi corrigido:
 Fim do IndentationError: Removemos o st.expander("🏦 BANCOS E CARTÕES"...) que estava perdido e causando o erro na linha 333.
 
