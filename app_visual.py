@@ -351,7 +351,7 @@ elif "💬" in aba:
         
     st.divider()
         
-        with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
+    with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
             df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
             
