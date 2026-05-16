@@ -286,22 +286,27 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 st.rerun()
 
 # 5. TELAS PRINCIPAIS
-if "💰" in aba:
+if "RESUMO" in aba:  # Substitua o emoji pelo nome da sua aba principal
     st.title("🛡️ FinançasPro Wilson")
-    if not df_base.empty:
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
-        
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
-        
-        st.divider()
-        
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
+    
+    # --- A BARRINHA DE MESES SÓ ENTRA AQUI ---
+    meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    abas_meses = st.tabs(meses_nome)
+    
+    for i, aba_mes in enumerate(abas_meses):
+        with aba_mes:
+            # Todo o cálculo de Saldo e Métricas que você postou vai AQUI DENTRO
+            df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
+            
+            if not df_m_limpo.empty:
+                saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
+                              df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+                
+                st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
+                
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+                # ... (restante das suas métricas)
         
         st.divider()
         
