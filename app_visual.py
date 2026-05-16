@@ -287,15 +287,49 @@ if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
-        # AQUI VOCÊ CRIA A VARIÁVEL
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
-        
-        # Cálculo do saldo
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
-        
-        st.divider()
+        # --- 5. TELAS PRINCIPAIS ---
+if "💰" in aba:
+    st.title("🛡️ FinançasPro Wilson")
+    
+    # Abas simples para os meses (ideal para o celular)
+    meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    abas = st.tabs(meses)
+    
+    for i, aba_mes in enumerate(abas):
+        with aba_mes:
+            # Filtramos os dados do mês i+1
+            df_mes = df_base[df_base['DT'].dt.month == (i + 1)].copy()
+            
+            if not df_mes.empty:
+                # Cálculo rápido do saldo do mês em Real (R$)
+                receitas_m = df_mes[df_mes['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+                despesas_m = df_mes[df_mes['Tipo'] == 'Despesa']['V_Num'].sum()
+                saldo_m = receitas_m - despesas_m
+                
+                st.info(f"### 🏦 SALDO: {m_fmt(saldo_m)}")
+                
+                # Três colunas de métricas
+                c1, c2, c3 = st.columns(3)
+                c1.metric("📈 Ganho", m_fmt(receitas_m))
+                c2.metric("📉 Gasto", m_fmt(despesas_m))
+                c3.metric("💰 Saldo", m_fmt(saldo_m))
+
+                # Expander de Bancos (sempre alinhado aqui)
+                with st.expander("🏦 MEUS BANCOS", expanded=False):
+                    if not df_bancos_info.empty:
+                        for _, linha in df_bancos_info.iterrows():
+                            st.write(f"🔹 {linha.iloc[0]}")
+            else:
+                st.write("Nenhum registro este mês.")
+
+# --- OUTRAS ABAS (Sempre na margem esquerda total) ---
+elif "🐶" in aba:
+    st.title("🐶 Espaço do Milo")
+    st.write("Informações do seu Golden Retriever.")
+
+elif "💬" in aba:
+    st.title("💬 Notificações")
+    st.write("Configurações de alertas do FinançasPro.")
 
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
