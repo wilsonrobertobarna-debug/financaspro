@@ -321,8 +321,7 @@ elif "🐶" in aba:
 elif "💬" in aba:
     st.title("💬 Notificações")
     st.write("Alertas via Twilio configurados para o sistema.")
-
-        # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
+    
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
