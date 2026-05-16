@@ -266,16 +266,15 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 ws_base.delete_rows(int(item['ID']))
                 atualizar_sessao()
                 st.rerun()
-
 # --- 5. TELAS PRINCIPAIS ---
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-    # Abas para facilitar o toque no celular em Socorro
+    # Abas de meses para facilitar o toque no celular
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
-    # Cálculos globais em Real (R$)
+    # Cálculo do saldo geral em Real (R$)
     total_rec = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
     total_des = df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
     saldo_geral = total_rec - total_des
@@ -296,7 +295,7 @@ if "💰" in aba:
                 m2.metric("📉 Despesas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
                 m3.metric("💰 Rendimentos", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
                 
-                # --- BLOCO QUE ESTAVA DANDO ERRO (CORRIGIDO) ---
+                # --- BLOCO CORRIGIDO (DENTRO DO IF NOT EMPTY) ---
                 with st.expander("📊 RESUMO GERAL", expanded=False):
                     c1, c2 = st.columns(2)
                     c1.metric("⚖️ Balanço Total", m_fmt(saldo_geral))
