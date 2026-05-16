@@ -361,17 +361,32 @@ if "💰" in aba:
                     default_v = 1200.0 if cat == "Mercado" else 400.0
                     metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
 
-        # Criar a lista de meses para a navegação
+       # Verifique se o código acima termina aqui
+# Não pode haver espaços extras antes de g1
+
+# --- NAVEGAÇÃO POR MESES (Inserir aqui) ---
 df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%Y')
 lista_meses = sorted(df_base['Mes_Ano'].unique(), reverse=True)
 
-# A Barrinha de Navegação
 st.sidebar.markdown("---")
 mes_selecionado = st.sidebar.selectbox("📅 Selecione o Mês", lista_meses)
-
-# Filtrando os dados que os seus gráficos usam
 df_m_limpo = df_base[df_base['Mes_Ano'] == mes_selecionado].copy()
-        g1, g2 = st.columns(2)
+# ------------------------------------------
+
+# AGORA AS COLUNAS (Alinhadas à esquerda ou dentro do seu bloco principal)
+g1, g2 = st.columns(2) 
+
+with g1:
+    df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+    if not df_p.empty: 
+        st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True)
+
+with g2:
+    # Use df_m_limpo aqui também se quiser que o gráfico de barras mude com a navegação
+    df_f = df_m_limpo[(df_m_limpo['Categoria'] != 'Transferência') & (df_m_limpo['Status'] == 'Pago')].copy()
+    if not df_f.empty:
+        df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
+        st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', title="📊 Fluxo do Mês"), use_container_width=True)
         with g1:
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             if not df_p.empty: 
