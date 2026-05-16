@@ -416,7 +416,14 @@ elif "Pendências" in aba:
                 if d_aviso < 0:
                     st.warning(f"⚠️ **Atrasado (Vencido):** {row['Vencimento']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
                 elif d_aviso == 0:
-                    st.warning(f"⚠️ **Vence hoje:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
+                    # 1. Pegamos todos os dados de forma segura
+                    data_venc = row.get('Data', row.get('DATA', '00/00'))
+                    desc_venc = row.get('Descrição', row.get('Descricao', 'Sem descrição'))
+                    valor_venc = row.get('V_Num', 0)
+                    banco_venc = row.get('Banco', 'N/A')
+
+                    # 2. Agora a mensagem usa essas variáveis seguras
+                    st.warning(f"⚠️ **Vence hoje:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")                    
                 elif d_aviso == 1:
                     st.warning(f"🚨 **Vence amanhã:** {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})")
                 elif d_aviso == 3:
@@ -737,12 +744,21 @@ elif "📋" in aba:
                 pdf.ln()
                 
                 for index, row in df_v.iterrows():
-                    pdf.cell(20, 6, str(row['Data']), 1)
-                    pdf.cell(25, 6, str(row['Tipo']), 1)
-                    pdf.cell(25, 6, f"R$ {row['V_Num']:.2f}".replace('.', ','), 1)
-                    pdf.cell(25, 6, f"R$ {row['Saldo_Acum']:.2f}".replace('.', ','), 1)
-                    pdf.cell(75, 6, str(row['Descrição'])[:40], 1)
-                    pdf.cell(20, 6, str(row['Status']), 1)
+                    # --- BLINDAGEM DE COLUNAS ---
+                    data_val = row.get('Data', row.get('DATA', '00/00'))
+                    tipo_val = row.get('Tipo', 'S/T')
+                    valor_val = row.get('V_Num', 0.0)
+                    saldo_val = row.get('Saldo_Acum', 0.0)
+                    desc_val = row.get('Descrição', row.get('Descricao', 'Sem nome'))
+                    status_val = row.get('Status', '-')
+                    # -----------------------------
+
+                    pdf.cell(20, 6, str(data_val), 1)
+                    pdf.cell(25, 6, str(tipo_val), 1)
+                    pdf.cell(25, 6, f"R$ {valor_val:.2f}".replace('.', ','), 1)
+                    pdf.cell(25, 6, f"R$ {saldo_val:.2f}".replace('.', ','), 1)
+                    pdf.cell(75, 6, str(desc_val)[:40], 1)
+                    pdf.cell(20, 6, str(status_val), 1)
                     pdf.ln()
                 
                 pdf_output = pdf.output(dest='S')
