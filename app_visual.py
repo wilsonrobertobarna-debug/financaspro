@@ -806,18 +806,25 @@ elif "📋" in aba:
                 pdf.cell(20, 8, "Status", 1)
                 pdf.ln()
                 
-                # --- 4. LOOP DE LINHAS DO PDF ---
+                # --- 4. LOOP DE LINHAS DO PDF (CORRIGIDO E SEGURO) ---
                 for index, row in df_v.iterrows():
-                    # RESOLUÇÃO DA DATA 00/00: Pegamos o objeto DT e formatamos direto
-                    dt_obj = row.get('DT')
-                    data_str = dt_obj.strftime('%d/%m/%Y') if pd.notnull(dt_obj) else "---"
+                    # Resolve o erro de 'Data' procurando por qualquer nome de coluna de data
+                    dt_obj = row.get('DT', row.get('Data', row.get('DATA', None)))
+                    
+                    if pd.notnull(dt_obj):
+                        # Se for um objeto de data, formata para BR. Se for texto, limpa.
+                        data_str = dt_obj.strftime('%d/%m/%Y') if hasattr(dt_obj, 'strftime') else str(dt_obj)
+                    else:
+                        data_str = "---"
 
+                    # Busca segura para as outras colunas
                     tipo_val = row.get('Tipo', 'S/T')
                     valor_val = row.get('V_Num', 0.0)
                     saldo_val = row.get('Saldo_Acum', 0.0)
                     desc_val = row.get('Descrição', row.get('Descricao', 'Sem nome'))
                     status_val = row.get('Status', '-')
 
+                    # Monta a linha no PDF mantendo o visual limpo
                     pdf.cell(25, 6, data_str, 1)
                     pdf.cell(20, 6, str(tipo_val), 1)
                     pdf.cell(25, 6, f"R$ {valor_val:,.2f}", 1)
@@ -837,7 +844,8 @@ elif "📋" in aba:
                     file_name=f"relatorio_financeiro_{datetime.now().strftime('%d_%m_%Y')}.pdf",
                     mime="application/pdf"
                 )
-                st.success(f"PDF pronto! Saldo vindo de meses anteriores: R$ {saldo_inicial:,.2f}")
+                st.success(f"PDF pronto! Saldo acumulado (considerando meses anteriores): R$ {saldo_inicial:,.2f}")
                 
             except Exception as e:
+                # Se ainda der erro, o app te avisa qual coluna faltou
                 st.error(f"Erro ao gerar o PDF: {e}")
