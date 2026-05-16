@@ -304,17 +304,27 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
+    
     if not df_base.empty:
-        # ... (seu código anterior de saldo geral) ...
+        # AQUI VOCÊ CRIA A VARIÁVEL
+        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+        
+        # Cálculo do saldo
+        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
+        
         st.divider()
 
-        # O BLOCO ABAIXO PRECISA DE 8 ESPAÇOS (ou 2 TABs) NO INÍCIO:
+        # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Entradas", "R$ 0,00")
-            # ... continue as outras colunas mantendo o recuo ...
+            m1, m2, m3 = st.columns(3)
+            # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
+            m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+            m2.metric("📉 Despesa", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+            m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
 
+        # --- BANCOS E CARTÕES ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
             if not df_bancos_info.empty:
                 for index, row in df_bancos_info.iterrows():
