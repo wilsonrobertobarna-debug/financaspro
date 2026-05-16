@@ -271,18 +271,18 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-    # Abas de meses otimizadas para toque no celular
+    # Abas de meses para facilitar o toque no celular
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
-    # Cálculo do saldo geral (Real R$)
+    # Cálculo do saldo geral em Real (R$)
     total_rec = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
     total_des = df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
     saldo_geral = total_rec - total_des
 
     for i, aba_mes in enumerate(abas_meses):
         with aba_mes:
-            # Filtra dados do mês correspondente
+            # Filtro do mês atual
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
@@ -292,36 +292,32 @@ if "💰" in aba:
                 st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
                 st.divider()
                 
-                # Métricas em colunas
                 m1, m2, m3 = st.columns(3)
                 m1.metric("📈 Receitas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
                 m2.metric("📉 Despesas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
                 m3.metric("💰 Rendimentos", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
                 
-                # Blocos expansíveis para manter a tela limpa no celular
+                # Expanders organizados para não quebrar a indentação
                 with st.expander("📊 RESUMO GERAL", expanded=False):
                     c1, c2 = st.columns(2)
                     c1.metric("⚖️ Balanço Total", m_fmt(saldo_geral))
                     c2.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
                 
+                # A LINHA 333 CORRIGIDA AQUI (DENTRO DO IF E DO WITH):
                 with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
                     if not df_bancos_info.empty:
                         for _, row in df_bancos_info.iterrows():
-                            # Exibe informações dos bancos cadastrados
                             st.write(f"🔹 **{row.iloc[0]}**")
             else:
-                st.info(f"Sem lançamentos registrados para {meses_nome[i]}.")
+                st.info(f"Sem lançamentos para {meses_nome[i]}.")
 
-# --- ABA DO MILO ---
 elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
-    st.write("Área dedicada ao acompanhamento do seu Golden Retriever.")
-    # Aqui você poderá adicionar o histórico de vacinas ou consultas do Milo futuramente
+    st.write("Acompanhamento do seu Golden Retriever.")
 
-# --- CONFIGURAÇÕES E ALERTAS ---
 elif "💬" in aba or "📋" in aba:
     st.title("💬 Notificações & Relatórios")
-    st.write("Configurações de avisos automáticos via WhatsApp e extração de relatórios.")
+    st.write("Configurações do sistema FinançasPro.")
     with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
