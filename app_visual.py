@@ -285,49 +285,20 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
-       
-    # Abas simples para os meses (ideal para o celular)
-    meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    abas = st.tabs(meses)
     
-    for i, aba_mes in enumerate(abas):
-        with aba_mes:
-            # Filtramos os dados do mês i+1
-            df_mes = df_base[df_base['DT'].dt.month == (i + 1)].copy()
-            
-            if not df_mes.empty:
-                # Cálculo rápido do saldo do mês em Real (R$)
-                receitas_m = df_mes[df_mes['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-                despesas_m = df_mes[df_mes['Tipo'] == 'Despesa']['V_Num'].sum()
-                saldo_m = receitas_m - despesas_m
-                
-                st.info(f"### 🏦 SALDO: {m_fmt(saldo_m)}")
-                
-                # Três colunas de métricas
-                c1, c2, c3 = st.columns(3)
-                c1.metric("📈 Ganho", m_fmt(receitas_m))
-                c2.metric("📉 Gasto", m_fmt(despesas_m))
-                c3.metric("💰 Saldo", m_fmt(saldo_m))
-
-                # Expander de Bancos (sempre alinhado aqui)
-                with st.expander("🏦 MEUS BANCOS", expanded=False):
-                    if not df_bancos_info.empty:
-                        for _, linha in df_bancos_info.iterrows():
-                            st.write(f"🔹 {linha.iloc[0]}")
-            else:
-                st.write("Nenhum registro este mês.")
-
-# --- OUTRAS ABAS (Sempre na margem esquerda total) ---
-elif "🐶" in aba:
-    st.title("🐶 Espaço do Milo")
-    st.write("Informações do seu Golden Retriever.")
-
-elif "💬" in aba:
-    st.title("💬 Notificações")
-    st.write("Configurações de alertas do FinançasPro.")
+    if not df_base.empty:
+        # AQUI VOCÊ CRIA A VARIÁVEL
+        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+        
+        # Cálculo do saldo
+        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
+        
+        st.divider()
 
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
-    with st.expander("📊 RESUMO DOS MESES", expanded=False):
+        with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
             m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
@@ -335,7 +306,7 @@ elif "💬" in aba:
             m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
 
         # --- BANCOS E CARTÕES ---
-    with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
+        with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
             if not df_bancos_info.empty:
                 for index, row in df_bancos_info.iterrows():
                     banco_nome = row.iloc[0]
@@ -343,15 +314,15 @@ elif "💬" in aba:
             else:
                 st.info("Carregando informações dos bancos...")
         
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-    m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-    m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-    m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+        m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+        m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+        m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
         
-    st.divider()
+        st.divider()
         
-    with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
+        with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
             df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
             
@@ -371,7 +342,7 @@ elif "💬" in aba:
             c_c2.metric("Sobra de Abril", m_fmt(sobra_abr))
             c_c3.metric("Variação Líquida", m_fmt(var_valor), delta=f"{var_pct:.1f}%")
         
-    st.divider()
+        st.divider()
         
         st.subheader("🏦 Informações de Contas e Cartões")
         if not df_bancos_info.empty:
