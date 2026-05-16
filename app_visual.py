@@ -286,6 +286,9 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 # --- 5. TELAS PRINCIPAIS ---
 
 # Se a aba selecionada for a de Resumo
+# --- 5. TELAS PRINCIPAIS ---
+
+# Se a aba selecionada for a de Resumo
 if "RESUMO" in aba or "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
@@ -322,7 +325,7 @@ elif "MILO" in aba:
 
 elif "WHATSAPP" in aba:
     st.title("💬 Notificações WhatsApp")
-    # Lógica de alertas Twilio integrada
+    # Lógica de alertas Twilio integrada    # Lógica de alertas Twilio integrada
             m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
             m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
