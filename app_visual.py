@@ -284,6 +284,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
 # --- 5. TELAS PRINCIPAIS ---
 
+# --- 5. TELAS PRINCIPAIS ---
+
 if "RESUMO" in aba or "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
