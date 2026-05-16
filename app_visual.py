@@ -362,19 +362,19 @@ if "💰" in aba:
                     metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
 
        # Verifique se o código acima termina aqui
-# Não pode haver espaços extras antes de g1
+        # Não pode haver espaços extras antes de g1
 
-# --- NAVEGAÇÃO POR MESES (Inserir aqui) ---
-df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%Y')
-lista_meses = sorted(df_base['Mes_Ano'].unique(), reverse=True)
+        # --- NAVEGAÇÃO POR MESES (Inserir aqui) ---
+    df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%Y')
+    lista_meses = sorted(df_base['Mes_Ano'].unique(), reverse=True)
 
-st.sidebar.markdown("---")
-mes_selecionado = st.sidebar.selectbox("📅 Selecione o Mês", lista_meses)
-df_m_limpo = df_base[df_base['Mes_Ano'] == mes_selecionado].copy()
-# ------------------------------------------
+    st.sidebar.markdown("---")
+    mes_selecionado = st.sidebar.selectbox("📅 Selecione o Mês", lista_meses)
+    df_m_limpo = df_base[df_base['Mes_Ano'] == mes_selecionado].copy()
+    # ------------------------------------------
 
-# AGORA AS COLUNAS (Alinhadas à esquerda ou dentro do seu bloco principal)
-g1, g2 = st.columns(2) 
+    # AGORA AS COLUNAS (Alinhadas à esquerda ou dentro do seu bloco principal)
+    g1, g2 = st.columns(2) 
 
 with g1:
     df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
