@@ -411,30 +411,31 @@ elif "Pendências" in aba:
     df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
     
     if not df_aviso.empty:
-        # --- CORREÇÃO DA LINHA 415 (Cálculo Seguro) ---
-        # Tentamos achar a coluna de data idependente do nome (Data ou DATA)
-        col_data = 'Data' if 'Data' in df_aviso.columns else 'DATA' if 'DATA' in df_aviso.columns else None
+        # --- BUSCA INTELIGENTE PELA COLUNA DE DATA ---
+        # Ele vai tentar achar 'Data', 'DATA', 'Vencimento' ou qualquer uma que exista
+        colunas_possiveis = ['Data', 'DATA', 'Vencimento', 'VENCIMENTO', 'DT']
+        col_data = next((c for c in colunas_possiveis if c in df_aviso.columns), None)
         
         if col_data:
+            # Converte e calcula os dias de forma segura
             df_aviso['Data_Formatada'] = pd.to_datetime(df_aviso[col_data], errors='coerce')
-            # Usamos o 'agora' que você já definiu no topo do código
             df_aviso['Dias'] = (df_aviso['Data_Formatada'].dt.date - hoje).apply(lambda x: x.days if pd.notnull(x) else None)
             
-            # Filtramos quem vence hoje (0), amanhã (1), em 3 dias (3) ou está atrasado (<0)
+            # Filtro de quem vence hoje, amanhã, 3 dias ou está atrasado
             df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
             
             if not df_venc.empty:
                 for _, row in df_venc.iterrows():
-                    # --- BUSCA SEGURA DE DADOS ---
                     d_aviso = row['Dias']
+                    # Pega os dados usando .get() para nunca mais dar KeyError
                     data_venc = row.get(col_data, '---')
                     desc_venc = row.get('Descrição', row.get('Descricao', 'Sem descrição'))
                     valor_venc = row.get('V_Num', 0)
                     banco_venc = row.get('Banco', 'N/A')
 
-                    # --- EXIBIÇÃO DOS AVISOS ---
+                    # Exibição dos alertas com o seu visual limpo
                     if d_aviso < 0:
-                        st.warning(f"⚠️ **Atrasado (Vencido):** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")
+                        st.warning(f"⚠️ **Atrasado:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")
                     elif d_aviso == 0:
                         st.warning(f"⚠️ **Vence hoje:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")                    
                     elif d_aviso == 1:
@@ -442,9 +443,10 @@ elif "Pendências" in aba:
                     elif d_aviso == 3:
                         st.warning(f"⚠️ **Vence em 3 dias:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")
             else:
-                st.info("Nenhum lançamento a vencer hoje, amanhã ou em atraso.")
+                st.info("Nenhum lançamento a vencer em breve.")
         else:
-            st.error("A coluna de 'Data' não foi encontrada na planilha de Lançamentos.")
+            # Caso ele realmente não ache nenhuma coluna de data, ele te avisa sem travar
+            st.error("Não encontrei a coluna de data. Verifique se o nome na planilha é 'Data'.")
     else:
         st.info("Nenhum lançamento pendente.")
         
