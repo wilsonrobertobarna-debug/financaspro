@@ -10,12 +10,6 @@ import pandas as pd
 from datetime import datetime, timedelta
 import urllib.parse
 
-# 1. Primeiro as importações e o fuso horário (o que você já tem)
-from datetime import datetime, timedelta
-import streamlit as st
-import pandas as pd
-# ... restante dos imports
-
 # 2. A LEITURA DOS DADOS (Certifique-se que isso vem ANTES da linha 26)
 # Aqui é onde você usa o st.connection ou gspread para ler a planilha
 df_base = conn.read(worksheet="Lancamentos") # Exemplo: o nome deve ser df_base
