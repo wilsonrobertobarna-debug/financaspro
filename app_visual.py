@@ -374,7 +374,6 @@ Wilson, esse erro acontece porque o bloco try ficou "aberto". No Python, sempre 
 
 Como substituímos apenas o miolo do código, o final do seu arquivo acabou perdendo essa conclusão.
 
-🛠️ Código Completo e Corrigido
 Copie o bloco abaixo integralmente. Ele já inclui a lógica de cor vermelha, o sinal de negativo para gastos e o fechamento correto do bloco para eliminar o SyntaxError.
 
 Python
