@@ -287,16 +287,18 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 # Se a aba selecionada for a de Resumo (Troque o nome se no seu menu estiver diferente)
 # --- 5. TELAS PRINCIPAIS ---
 
+# --- 5. TELAS PRINCIPAIS ---
+
 if "RESUMO" in aba or "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-    # A BARRINHA DE MESES (Jan, Fev, Mar...)
+    # Criamos a barra de meses (Jan, Fev, Mar...) apenas aqui
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
     for i, aba_mes in enumerate(abas_meses):
         with aba_mes:
-            # Filtro por mês para garantir o visual limpo
+            # Filtro de dados para o mês selecionado
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
@@ -307,7 +309,7 @@ if "RESUMO" in aba or "💰" in aba:
                 st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
                 st.divider()
                 
-                # Métricas em colunas para facilitar o uso no mobile
+                # Métricas organizadas para visualização mobile
                 m1, m2, m3, m4 = st.columns(4)
                 m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
                 m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
@@ -316,12 +318,13 @@ if "RESUMO" in aba or "💰" in aba:
             else:
                 st.info(f"Sem dados para {meses_nome[i]}.")
 
-# --- OUTRAS TELAS (AQUI O RESUMO DESAPARECE) ---
+# --- OUTRAS TELAS (AQUI A BARRA DE MESES DESAPARECE) ---
 elif "MILO" in aba:
     st.title("🐶 Espaço do Milo e Bolt")
+    st.write("Acompanhamento do seu Golden Retriever.")
 
 elif "WHATSAPP" in aba:
-    st.title("💬 WhatsApp")
+    st.title("💬 Notificações WhatsApp")
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
