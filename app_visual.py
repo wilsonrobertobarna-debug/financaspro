@@ -361,63 +361,61 @@ if "💰" in aba:
                     default_v = 1200.0 if cat == "Mercado" else 400.0
                     metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
 
-       # Verifique se o código acima termina aqui
-        # Não pode haver espaços extras antes de g1
+       # --- TÍTULO PRINCIPAL ---
+st.title("FinançasPro - Wilson")
 
- # --- NAVEGAÇÃO POR MESES ---
-        df_base['Mes_Ano'] = df_base['DT'].dt.strftime('%m/%Y')
-        lista_meses = sorted(df_base['Mes_Ano'].unique(), reverse=True)
+# --- NAVEGAÇÃO POR MESES (ESTILO ABAS NO TOPO) ---
+meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+abas_meses = st.tabs(meses_nome)
 
-        st.sidebar.markdown("---")
-        mes_selecionado = st.sidebar.selectbox("📅 Selecione o Mês", lista_meses)
+# Identifica o mês atual para pré-selecionar (Opcional)
+mes_atual = datetime.now().month - 1 
+
+for i, aba in enumerate(abas_meses):
+    with aba:
+        # Filtra os dados de acordo com o mês da aba selecionada
+        df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
         
-        # Dados filtrados para o mês selecionado
-        df_m_limpo = df_base[df_base['Mes_Ano'] == mes_selecionado].copy()
-        # ---------------------------
+        if not df_m_limpo.empty:
+            # --- GRÁFICOS LADO A LADO ---
+            g1, g2 = st.columns(2) 
 
-        # GRÁFICOS LADO A LADO
-        g1, g2 = st.columns(2) 
+            with g1:
+                df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+                if not df_p.empty: 
+                    st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title=f"✨ Gastos em {meses_nome[i]} (%)", hole=0.4), use_container_width=True)
 
-        with g1:
-            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-            if not df_p.empty: 
-                st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True)
+            with g2:
+                df_f = df_m_limpo[(df_m_limpo['Categoria'] != 'Transferência') & (df_m_limpo['Status'] == 'Pago')].copy()
+                if not df_f.empty:
+                    df_f_grouped = df_f.groupby(['Tipo'], sort=False)['V_Num'].sum().reset_index()
+                    st.plotly_chart(px.bar(df_f_grouped, x='Tipo', y='V_Num', color='Tipo', 
+                                         color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, 
+                                         title=f"📊 Fluxo de {meses_nome[i]}"), use_container_width=True)
 
-        with g2:
-            df_f = df_m_limpo[(df_m_limpo['Categoria'] != 'Transferência') & (df_m_limpo['Status'] == 'Pago')].copy()
-            if not df_f.empty:
-                df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
-                st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', 
-                                     color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, 
-                                     title="📊 Fluxo do Mês"), use_container_width=True)
+            st.divider()
+            # --- METAS VS REALIZADO ---
+            st.subheader(f"🎯 Metas vs Realizado - {meses_nome[i]}")
+            df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            if not df_metas_graph.empty:
+                df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(metas_map).fillna(0.0)
+                fig_m = go.Figure()
+                fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
+                fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
+                fig_m.update_layout(barmode='group', height=350)
+                st.plotly_chart(fig_m, use_container_width=True)
+        else:
+            st.info(f"Nenhum dado encontrado para o mês de {meses_nome[i]}.")
 
-        st.divider()
-        st.subheader("📈 Evolução do Saldo Acumulado")
-        df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
-        if not df_saldo_dia.empty:
-            df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
-                lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
-            )
-            df_saldo_dia = df_saldo_dia.groupby('Vencimento')['Valor_Com_Sinal'].sum().reset_index()
-            df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
-            
-            fig_acum = px.line(df_saldo_dia, x='Vencimento', y='Saldo_Acumulado', title="Progresso do Patrimônio (Real)", markers=True)
-            st.plotly_chart(fig_acum, use_container_width=True)
+# --- EVOLUÇÃO ACUMULADA (Fora das abas para ver o ano todo) ---
+st.divider()
+st.subheader("📈 Evolução do Saldo Acumulado (Anual)")
+# ... (mantenha aqui o seu código do fig_acum usando df_base) ...
 
-        st.divider()
-        st.subheader("🎯 Metas vs Realizado")
-        df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-        if not df_metas_graph.empty:
-            df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(metas_map).fillna(0.0)
-            fig_m = go.Figure()
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
-            fig_m.update_layout(barmode='group', height=350)
-            st.plotly_chart(fig_m, use_container_width=True)
-
-        st.divider()
-        st.subheader("🔍 Busca e Lançamentos")
-        # ... (seu código de busca e filtros continua aqui, alinhado com o if) ...
+# --- BUSCA E LANÇAMENTOS (Fora das abas) ---
+st.divider()
+st.subheader("🔍 Busca e Lançamentos")
+# ... (mantenha aqui o seu código de busca) ...
         
         c_d1, c_d2 = st.columns(2)
         s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
