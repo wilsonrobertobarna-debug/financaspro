@@ -286,16 +286,19 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
 # --- 5. TELAS PRINCIPAIS ---
 
+# --- 5. TELAS PRINCIPAIS ---
+
+# Se a aba selecionada for a de Resumo
 if "RESUMO" in aba or "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-    # Esta é a barra de meses que você pediu, isolada aqui
+    # Esta é a barrinha de meses (Jan, Fev, Mar...) isolada apenas aqui
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
     for i, aba_mes in enumerate(abas_meses):
         with aba_mes:
-            # Filtro para garantir que cada mês mostre apenas seus dados
+            # Filtro para garantir o visual limpo por mês
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
@@ -315,17 +318,12 @@ if "RESUMO" in aba or "💰" in aba:
             else:
                 st.info(f"Sem lançamentos para {meses_nome[i]}.")
 
-# --- OUTRAS TELAS (AQUI A BARRA DE MESES SOME) ---
+# --- OUTRAS TELAS (A BARRINHA DE MESES SOME AQUI) ---
 elif "MILO" in aba:
-    st.title("🐶 Espaço do Milo e Bolt")
-    st.write("Acompanhamento do seu Golden Retriever.")
+    st.title("🐶 Espaço do Milo e Bolt") # Referência ao seu pet Milo
 
 elif "WHATSAPP" in aba:
-    st.title("💬 Notificações WhatsApp")
-    # Aqui entra sua lógica de alertas via Twilio
-    # Lógica de integração com Twilio para alertas
-        # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
-        with st.expander("📊 RESUMO DOS MESES", expanded=False):
+    st.title("💬 Notificações WhatsApp") # Integração com alertas do Twilio
             m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
             m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
