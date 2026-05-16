@@ -303,21 +303,23 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
+# 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     if not df_base.empty:
-        # 1. Filtro de Segurança
+        # --- FILTRO DE SEGURANÇA: MAIO/2026 ---
+        # Forçamos o Python a ignorar os R$ 600 mil de anos anteriores
         df_base['Vencimento'] = pd.to_datetime(df_base['Vencimento'], errors='coerce')
         df_maio = df_base[(df_base['Vencimento'].dt.month == 5) & (df_base['Vencimento'].dt.year == 2026)].copy()
 
-        # 2. Cálculos para a Barrinha
+        # Cálculos usando APENAS a tabela filtrada de Maio
         r = df_maio[df_maio['Tipo'] == 'Receita']['V_Num'].sum()
         g = df_maio[df_maio['Tipo'] == 'Despesa']['V_Num'].sum()
         rd = df_maio[df_maio['Tipo'] == 'Rendimento']['V_Num'].sum()
         p = df_maio[df_maio['Status'] == 'Pendente']['V_Num'].sum()
         saldo_m = r - g + rd
 
-        # 3. Exibição da Barrinha
+        # Barrinha Única e Organizada (Moeda em Real)
         with st.expander(f"🏦 SALDO GERAL ATUAL: R$ {saldo_m:,.2f}", expanded=False):
             c1, c2 = st.columns(2)
             c3, c4 = st.columns(2)
@@ -326,11 +328,11 @@ if "💰" in aba:
             with c3: st.write(f"💰 **Rendimento:** R$ {rd:,.2f}")
             with c4: st.markdown(f"<span style='color:#D32F2F;'>⏳ **Pendente:** R$ {p:,.2f}</span>", unsafe_allow_html=True)
         
-        # --- AQUI ESTÁ A SOLUÇÃO DO ERRO ---
+        # --- PONTE PARA OS GRÁFICOS NÃO SUMIREM ---
+        # Reativamos a variável df_m_limpo que os gráficos usam, mas filtrada para Maio
         df_m_limpo = df_maio[(df_maio['Categoria'] != 'Transferência') & (df_maio['Status'] == 'Pago')]
         
         st.divider()
-        
              
         st.divider()
         with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=False):
