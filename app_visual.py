@@ -281,6 +281,7 @@ if "💰" in aba:
 
     for i, aba_mes in enumerate(abas_meses):
         with aba_mes:
+            # Filtra os dados do mês específico
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
@@ -308,14 +309,14 @@ if "💰" in aba:
             else:
                 st.info(f"Sem lançamentos para {meses_nome[i]}.")
 
-# --- ALINHAMENTO EXTERNO (NA MARGEM ESQUERDA) ---
+# --- AS LINHAS ABAIXO DEVEM ESTAR TOTALMENTE À ESQUERDA ---
 elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
     st.write("Acompanhamento do seu Golden Retriever.")
 
 elif "💬" in aba or "📋" in aba:
     st.title("💬 Notificações & Relatórios")
-    st.write("Configurações do FinançasPro e alertas Twilio.")
+    st.write("Configurações do FinançasPro e alertas via WhatsApp.")
     with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
