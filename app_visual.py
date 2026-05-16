@@ -1,38 +1,56 @@
 import streamlit as st
+import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-import streamlit as st
-import pandas as pd
-from datetime import datetime, timedelta
 import urllib.parse
 
-## 2. Fuso Horário (Você já tem)
+# 1. RESOLUÇÃO DO FUSO HORÁRIO
+# Ajuste de 3 horas para o horário de Brasília
 agora = datetime.now() - timedelta(hours=3)
 hoje = agora.date()
 
-# 3. CRIAÇÃO DA CONEXÃO (Faltava isso antes da linha 15!)
-# Se você usa o st.connection (padrão novo do Streamlit):
-conn = st.connection("gsheets", type="gsheets")
+# 2. CONFIGURAÇÃO DA CONEXÃO (Usando Gspread que está no seu requirements)
+# O Streamlit Cloud usa o st.secrets para guardar suas chaves do Google
+scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 
-# 4. LEITURA DOS DADOS (Agora o 'conn' existe)
-df_base = conn.read(worksheet="Lancamentos")
-
-# 5. FILTROS E CÁLCULOS (Para a receita não vir alta)
-if df_base is not None:
-    # Trata a data
-    df_base['Data'] = pd.to_datetime(df_base['Data'], errors='coerce')
+# Se estiver no Streamlit Cloud, ele busca as credenciais nos Secrets
+try:
+    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
+    client = gspread.authorize(creds)
     
-    # Filtra apenas o mês atual
+    # Abre a planilha pelo nome - Verifique se o nome está exato
+    # Substituímos o 'st.connection' que estava dando erro
+    sheet = client.open("NOME_DA_SUA_PLANILHA").worksheet("Lancamentos")
+    dados = sheet.get_all_records()
+    df_base = pd.DataFrame(dados)
+except Exception as e:
+    st.error(f"Erro ao conectar na planilha: {e}")
+    df_base = pd.DataFrame()
+
+# 3. TRATAMENTO DE DADOS E FILTRO (Para o Saldo Real)
+if not df_base.empty:
+    # Garante que o Python entenda a coluna de Data
+    df_base['Data'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
+    
+    # IMPORTANTE: Filtra apenas para MAIO de 2026
+    # Isso resolve o problema da Receita vir alta (R$ 28 mil)
     df_mes = df_base[(df_base['Data'].dt.month == hoje.month) & 
-                     (df_base['Data'].dt.year == hoje.year)]
+                     (df_base['Data'].dt.year == hoje.year)].copy()
     
-    # Calcula valores reais em Real (R$)
+    # Converte os valores para número (Garante o Real R$)
+    # Se você já limpou na planilha (alinhado à direita), isso aqui funciona liso
+    df_mes['V_Num'] = pd.to_numeric(df_mes['V_Num'], errors='coerce').fillna(0)
+    
+    # 4. CÁLCULOS DO PAINEL (Apenas do mês atual)
     receita = df_mes[df_mes['Tipo'] == 'Receita']['V_Num'].sum()
     gasto = df_mes[df_mes['Tipo'] == 'Gasto']['V_Num'].sum()
+    rendimento = df_mes[df_mes['Tipo'] == 'Rendimento']['V_Num'].sum()
+    pendente = df_mes[df_mes['Status'] == 'Pendente']['V_Num'].sum()
+    
+    saldo_geral = receita - gasto + rendimento
 # --------------------------------
 from dateutil.relativedelta import relativedelta
 import urllib.parse
