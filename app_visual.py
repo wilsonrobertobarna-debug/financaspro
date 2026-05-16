@@ -752,12 +752,12 @@ elif "📋" in aba:
                 pdf.add_page()
                 pdf.set_font("Arial", size=10)
                 
-                # 1. CÁLCULO DO SALDO ANTERIOR (O QUE VEIO ANTES DE MAIO)
-                # Garantimos que a base tenha as datas e valores tratados como números
+                # 1. CÁLCULO DO SALDO ANTERIOR (O QUE VEIO ANTES DO FILTRO)
+                # Tratamos a base para garantir que valores sejam números e datas sejam objetos
                 df_base['DT_Temp'] = pd.to_datetime(df_base['Data'], dayfirst=True, errors='coerce')
                 df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0)
                 
-                # Saldo de tudo que aconteceu antes da data inicial escolhida no filtro
+                # Saldo de tudo que aconteceu ANTES da data inicial (b_ini) do seu relatório
                 data_inicio_filtro = pd.to_datetime(b_ini)
                 df_passado = df_base[df_base['DT_Temp'] < data_inicio_filtro].copy()
                 
@@ -768,7 +768,7 @@ elif "📋" in aba:
                     saldo_inicial = receitas - gastos
 
                 # 2. PREPARAÇÃO DO DATAFRAME DO RELATÓRIO
-                # Ordenamos e recalculamos o acumulado somando o saldo_inicial
+                # Ordenamos por data e calculamos o acumulado somando o saldo que veio de trás
                 df_v = df_v.sort_values(by='DT')
                 saldos_lista = []
                 corrente = saldo_inicial
@@ -798,9 +798,9 @@ elif "📋" in aba:
                 pdf.cell(20, 8, "Status", 1)
                 pdf.ln()
 
-                # 3. LOOP DE LINHAS COM "GET" SEGURO (MATA O ERRO 'DATA')
+                # 3. LOOP DE LINHAS COM BUSCA SEGURA (MATA O ERRO 'DATA')
                 for index, row in df_v.iterrows():
-                    # Tentamos pegar a data de qualquer coluna disponível (DT, Data ou DATA)
+                    # Tenta pegar a data de qualquer coluna possível sem dar erro
                     dt_obj = row.get('DT', row.get('Data', row.get('DATA', None)))
                     data_str = dt_obj.strftime('%d/%m/%Y') if hasattr(dt_obj, 'strftime') else str(dt_obj) if dt_obj else "---"
 
