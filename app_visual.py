@@ -332,7 +332,7 @@ elif "WHATSAPP" in aba:
             m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
 
         # --- BANCOS E CARTÕES ---
-        with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
+    with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
             if not df_bancos_info.empty:
                 for index, row in df_bancos_info.iterrows():
                     banco_nome = row.iloc[0]
