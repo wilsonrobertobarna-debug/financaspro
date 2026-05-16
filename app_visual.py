@@ -298,12 +298,12 @@ if "💰" in aba:
                 m3.metric("💰 Rendimentos", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
                 
                 # Expanders organizados para não quebrar a indentação
+               # --- AQUI ESTAVA O ERRO (DENTRO DO IF NOT EMPTY) ---
                 with st.expander("📊 RESUMO GERAL", expanded=False):
                     c1, c2 = st.columns(2)
                     c1.metric("⚖️ Balanço Total", m_fmt(saldo_geral))
                     c2.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
                 
-                # A LINHA 333 CORRIGIDA AQUI (DENTRO DO IF E DO WITH):
                 with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
                     if not df_bancos_info.empty:
                         for _, row in df_bancos_info.iterrows():
@@ -311,6 +311,7 @@ if "💰" in aba:
             else:
                 st.info(f"Sem lançamentos para {meses_nome[i]}.")
 
+# --- ESTAS LINHAS DEVEM ESTAR NA MARGEM ESQUERDA (ALINHADAS COM O IF DA MOEDA) ---
 elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
     st.write("Acompanhamento do seu Golden Retriever.")
