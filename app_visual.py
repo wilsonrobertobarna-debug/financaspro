@@ -277,33 +277,34 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     ids_para_excluir = sorted(list(set(ids_para_excluir)), reverse=True)
                     for id_linha in ids_para_excluir:
                         ws_base.delete_rows(id_linha)
-        else:
+       else:
             ws_base.delete_rows(int(item['ID']))
             atualizar_sessao()
             st.rerun()
+
 # --- 5. TELAS PRINCIPAIS ---
+# Garanta que este 'if' esteja colado na margem esquerda
 if "💰" in aba:
-    # Título principal conforme sua preferência por visual limpo
     st.title("🛡️ FinançasPro Wilson")
     
-    # Barrinha de meses (Jan a Dez) logo abaixo do título para clique direto
+    # Abas para os meses (Jan a Dez) facilitam o clique no mobile
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
     for i, aba_mes in enumerate(abas_meses):
         with aba_mes:
-            # Filtro por mês para visual organizado em Real (R$)
+            # Filtro mensal com valores formatados em Real (R$)
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
-                # Cálculo do saldo mensal automático em Real (R$)
+                # Cálculo do saldo mensal automático
                 saldo_m = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
                           df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
                 
                 st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
                 st.divider()
                 
-                # Métricas em colunas (Ideal para uso mobile)
+                # Métricas em colunas (ideal para a tela do celular)
                 m1, m2, m3 = st.columns(3)
                 m1.metric("📈 Receitas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
                 m2.metric("📉 Despesas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
