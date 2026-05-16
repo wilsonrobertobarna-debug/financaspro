@@ -286,16 +286,14 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 st.rerun()
 
 # 5. TELAS PRINCIPAIS
-if "RESUMO" in aba:  # Substitua o emoji pelo nome da sua aba principal
+if "RESUMO" in aba:  # Garante que nada disso apareça no Milo, WhatsApp, etc.
     st.title("🛡️ FinançasPro Wilson")
     
-    # --- A BARRINHA DE MESES SÓ ENTRA AQUI ---
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     abas_meses = st.tabs(meses_nome)
     
     for i, aba_mes in enumerate(abas_meses):
-        with aba_mes:
-            # Todo o cálculo de Saldo e Métricas que você postou vai AQUI DENTRO
+        with aba_mes: # TUDO que deve sumir ao trocar de mês ou aba deve estar RECUADO aqui
             df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
             
             if not df_m_limpo.empty:
@@ -304,11 +302,19 @@ if "RESUMO" in aba:  # Substitua o emoji pelo nome da sua aba principal
                 
                 st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
                 
+                st.divider() # O divisor dentro do 'with' some quando você muda de aba
+                
                 m1, m2, m3, m4 = st.columns(4)
                 m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-                # ... (restante das suas métricas)
+                m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+                m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+                m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
+                
+                # Se você tiver gráficos (Milo, Metas), coloque-os AQUI também
+            else:
+                st.info(f"Nenhum dado encontrado para {meses_nome[i]}.")
         
-        st.divider()
+      
         
         with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
