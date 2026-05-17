@@ -317,11 +317,11 @@ if "💰" in aba:
                 else:
                     st.info(f"Sem lançamentos registrados em {meses_nome[i]}.")
 
-# --- FINAL DO ARQUIVO (Ajustado para Mobile) ---
+# --- FINAL DO ARQUIVO ORGANIZADO ---
 
 elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
-    st.write("Acompanhamento do seu filhote.") # Mantendo o visual limpo
+    st.write("Acompanhamento do seu Golden Retriever.")
 
 elif "💬" in aba or "📋" in aba:
     st.title("💬 Notificações & Relatórios")
