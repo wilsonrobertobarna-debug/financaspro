@@ -1,14 +1,11 @@
 import streamlit as st
 import gspread
-from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
-import streamlit as st
-import pandas as pd
-from datetime import datetime, timedelta
 import urllib.parse
+from google.oauth2.service_account import Credentials
+from datetime import datetime, timedelta  # Esta linha é a chave para o erro sumir!
 
 # RESOLUÇÃO DO FUSO HORÁRIO (Sem precisar de biblioteca extra)
 # O servidor do Streamlit é 3 horas adiantado. Tiramos 3 horas para ser Brasília.
