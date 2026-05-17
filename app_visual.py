@@ -333,13 +333,13 @@ if "💰" in aba:
 
 # As abas abaixo ficam fora do bloco de finanças (margem zero à esquerda)
 elif "🐶" in aba:
-    st.title("🐶 Espaço do Milo")
+    st.title("🐶 Espaço do Milo") #
     st.write("Acompanhamento do seu Golden Retriever.")
 
 elif "💬" in aba or "📋" in aba:
     st.title("💬 Notificações & Relatórios")
-    st.write("Configurações do sistema FinançasPro.")
-        # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
+    st.write("Configurações do sistema FinançasPro.") #
+    # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
