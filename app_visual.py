@@ -154,10 +154,18 @@ def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace(
 
 # FUNÇÃO PARA OBTER O VALOR PENDENTE ATUAL
 def get_valor_pendente(df):
+    # Pega a data atual
     now = datetime.now()
-    end_of_month = datetime(now.year, now.month, 1) + relativedelta(months=1, days=-1)
+    
+    # Define o último dia do mês atual usando o calendar (mais seguro)
+    ultimo_dia = calendar.monthrange(now.year, now.month)[1]
+    end_of_month = datetime(now.year, now.month, ultimo_dia)
+    
+    # Filtra: Status 'Pendente' e data até o fim deste mês
     df_p = df[(df['Status'] == 'Pendente') & (df['DT'].dt.date <= end_of_month.date())]
-    return df_p['V_Num'].sum()
+    
+    # Retorna a soma dos valores em Real (R$)
+    return df_p['V_Num'].sum())
 
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
