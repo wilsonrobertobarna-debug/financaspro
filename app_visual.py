@@ -317,13 +317,15 @@ if "💰" in aba:
                 else:
                     st.info(f"Sem lançamentos registrados em {meses_nome[i]}.")
 
-# FIM DO BLOCO DE FINANÇAS. AGORA AS OUTRAS TELAS ENCOSTADAS NA MARGEM ESQUERDA:
+# --- FINAL DO ARQUIVO (Ajustado para Mobile) ---
+
 elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
-    st.write("Acompanhamento do seu Golden Retriever.")
+    st.write("Acompanhamento do seu filhote.") # Mantendo o visual limpo
 
 elif "💬" in aba or "📋" in aba:
     st.title("💬 Notificações & Relatórios")
+    st.write("Configurações do sistema FinançasPro.")
 
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
