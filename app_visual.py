@@ -316,7 +316,7 @@ if "💰" in aba:
                         m3.metric("⚖️ Balanço", m_fmt(saldo_m))
                 else:
                     st.info(f"Sem lançamentos registrados em {meses_nome[i]}.")
-# --- FINAL DO ARQUIVO ORGANIZADO ---
+# --- FINAL DO ARQUIVO CORRIGIDO ---
 
 elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
@@ -325,7 +325,7 @@ elif "🐶" in aba:
 elif "💬" in aba or "📋" in aba:
     st.title("💬 Notificações & Relatórios")
     st.write("Configurações do sistema FinançasPro.")
-
+    
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
