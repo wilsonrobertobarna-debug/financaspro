@@ -300,6 +300,33 @@ if "💰" in aba:
             with aba_mes:
                 # O filtro agora é dinâmico por mês (i + 1)
                 df_m = df_base[df_base['DT'].dt.month == (i + 1)].copy()
+
+                # --- 1. GRÁFICOS LADO A LADO ---
+                col_graf1, col_graf2 = st.columns(2)
+
+                with col_graf1:
+                    # Se houver dados, gera o gráfico de Pizza (Categorias)
+                    if not df_m[df_m['Tipo'] == 'Despesa'].empty:
+                        # Seu código de pizza aqui usando df_m
+                        pass 
+
+                with col_graf2:
+                    # Gera o gráfico de Barras (Receita x Despesa)
+                    if not df_m.empty:
+                        # Seu código de barras aqui usando df_m
+                        pass
+
+                # --- 2. LÓGICA DA META (APENAS MÊS ATUAL) ---
+                import datetime
+                mes_agora = datetime.datetime.now().month # Pega o mês atual (Maio é 5)
+
+                if (i + 1) == mes_agora:
+                    st.divider()
+                    st.markdown("### 🎯 Meta do Mês Atual")
+                    # Seu código da barra de meta ou progresso aqui
+                
+                # O filtro agora é dinâmico por mês (i + 1)
+                df_m = df_base[df_base['DT'].dt.month == (i + 1)].copy()
                 
                 # Filtro: apenas o que foi pago e não é transferência
                 df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
