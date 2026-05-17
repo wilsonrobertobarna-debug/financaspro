@@ -317,7 +317,7 @@ if "💰" in aba:
                 else:
                     st.info(f"Sem lançamentos registrados em {meses_nome[i]}.")
 
-# --- FINAL DO ARQUIVO ORGANIZADO ---
+# --- FINAL DO ARQUIVO LIMPO ---
 
 elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
