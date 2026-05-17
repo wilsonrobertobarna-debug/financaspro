@@ -317,6 +317,18 @@ if "💰" in aba:
                     m1.metric("📈 Receitas", m_fmt(receitas_m))
                     m2.metric("📉 Despesas", m_fmt(despesas_m))
                     m3.metric("💰 Saldo", m_fmt(saldo_m))
+
+                    # As abas abaixo ficam fora do bloco de finanças (margem zero à esquerda)
+elif "🐶" in aba:
+    st.title("🐶 Espaço do Milo") #
+    st.write("Acompanhamento do seu Golden Retriever.")
+
+elif "💬" in aba or "📋" in aba:
+    st.title("💬 Notificações & Relatórios")
+    st.write("Configurações do sistema FinançasPro.")
+
+
+                    
                     
                     # Expanders para manter a tela do celular limpa
                     with st.expander("📊 RESUMO GERAL", expanded=False):
