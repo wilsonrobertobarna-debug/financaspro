@@ -287,38 +287,38 @@ if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
-        # Abas para cada mês (Ideal para facilitar o toque no celular)
+        # Abas para cada mês (Essencial para o visual limpo no mobile)
         meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
         abas_meses = st.tabs(meses_nome)
 
-        # Cálculo do saldo global acumulado em Real (R$)
+        # Cálculo do saldo global em Real (R$)
         total_rec = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
         total_des = df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
         saldo_geral_acumulado = total_rec - total_des
 
         for i, aba_mes in enumerate(abas_meses):
             with aba_mes:
-                # O filtro muda conforme o mês da aba (i + 1)
+                # O filtro agora é dinâmico por mês (i + 1)
                 df_m = df_base[df_base['DT'].dt.month == (i + 1)].copy()
                 
-                # Filtro para cálculos (tirando transferências e pegando apenas os pagos)
+                # Filtro: apenas o que foi pago e não é transferência
                 df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
                 
                 if not df_m_limpo.empty:
-                    # Saldo do mês da aba
+                    # Cálculo do saldo do mês da aba selecionada
                     receitas_m = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
                     despesas_m = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
                     saldo_m = receitas_m - despesas_m
                     
                     st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
                     
-                    # Métricas em colunas (Visual Limpo e Organizado)
+                    # Métricas em colunas (Visual Organizado)
                     m1, m2, m3 = st.columns(3)
                     m1.metric("📈 Receitas", m_fmt(receitas_m))
                     m2.metric("📉 Despesas", m_fmt(despesas_m))
                     m3.metric("💰 Saldo", m_fmt(saldo_m))
                     
-                    # Expanders para manter a tela do celular organizada
+                    # Expanders para manter a tela do celular limpa
                     with st.expander("📊 RESUMO GERAL", expanded=False):
                         c1, c2 = st.columns(2)
                         c1.metric("⚖️ Balanço Total", m_fmt(saldo_geral_acumulado))
@@ -331,7 +331,7 @@ if "💰" in aba:
                 else:
                     st.info(f"Sem lançamentos registrados em {meses_nome[i]}.")
 
-# Estas abas devem estar totalmente alinhadas à esquerda (margem zero)
+# As abas abaixo ficam fora do bloco de finanças (margem zero à esquerda)
 elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
     st.write("Acompanhamento do seu Golden Retriever.")
