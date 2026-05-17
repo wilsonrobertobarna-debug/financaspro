@@ -335,12 +335,12 @@ if "💰" in aba:
 # --- FINAL DO ARQUIVO SEM ERROS ---
 
 elif "🐶" in aba:
-st.title("🐶 Espaço do Milo")
-st.write("Acompanhamento do seu Golden Retriever.")
+    st.title("🐶 Espaço do Milo")
+    st.write("Acompanhamento do seu Golden Retriever.")
 
 elif "💬" in aba or "📋" in aba:
-st.title("💬 Notificações & Relatórios")
-st.write("Configurações do sistema FinançasPro.")
+    st.title("💬 Notificações & Relatórios")
+    st.write("Configurações do sistema FinançasPro.")
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
