@@ -327,7 +327,7 @@ if "💰" in aba:
                     # Exibe o valor em Real (R$) ao passar o mouse
                     fig_pizza.update_traces(textinfo='percent+label', hovertemplate="R$ %{value:.2f}")
                 
-                    st.plotly_chart(fig_pizza, use_container_width=True)
+                    st.plotly_chart(fig_pizza, use_container_width=True, key=f"pizza_mes_{i}")
                 else:
                     st.info("Nenhuma despesa para este mês.")    
                     fig_meta.update_layout(xaxis_title="Valor em Real (R$)", yaxis_title="")
