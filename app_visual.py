@@ -331,10 +331,7 @@ if "💰" in aba:
                 else:
                     st.info(f"Sem lançamentos registrados em {meses_nome[i]}.")
 
-# As abas abaixo ficam fora do bloco de finanças (margem zero à esquerda)
-elif "🐶" in aba:
-    st.title("🐶 Espaço do Milo") #
-    st.write("Acompanhamento do seu Golden Retriever.")
+
 
 
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
