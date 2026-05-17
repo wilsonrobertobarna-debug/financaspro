@@ -325,7 +325,7 @@ elif "🐶" in aba:
 
 elif "💬" in aba or "📋" in aba:
     st.title("💬 Notificações & Relatórios")
-    st.write("Configurações do sistema FinançasPro.")   
+    st.write("Configurações do sistema FinançasPro.")
     
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
