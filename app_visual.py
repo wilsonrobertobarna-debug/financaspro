@@ -316,6 +316,7 @@ if "💰" in aba:
                         m3.metric("⚖️ Balanço", m_fmt(saldo_m))
                 else:
                     st.info(f"Sem lançamentos registrados em {meses_nome[i]}.")
+                    
 # --- FINAL DO ARQUIVO CORRIGIDO ---
 
 elif "🐶" in aba:
