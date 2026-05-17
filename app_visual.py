@@ -481,7 +481,13 @@ if "💰" in aba:
         format="DD/MM/YYYY",
         key="data_inicio_lancamentos"  # Isso aqui mata o erro de duplicidade!
 )
-        s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
+        import datetime as dt # Garante a referência correta
+        s_fim = c_d2.date_input(
+        "Fim", 
+        dt.datetime.now().date(), 
+        format="DD/MM/YYYY",
+        key="data_fim_lancamentos" # Evita o erro de DuplicateElementId
+)
         
         c1, c2, c3 = st.columns(3)
         s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
