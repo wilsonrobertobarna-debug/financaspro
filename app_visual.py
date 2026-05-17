@@ -165,7 +165,7 @@ def get_valor_pendente(df):
     df_p = df[(df['Status'] == 'Pendente') & (df['DT'].dt.date <= end_of_month.date())]
     
     # Retorna a soma dos valores em Real (R$)
-    return df_p['V_Num'].sum())
+    return df_p['V_Num'].sum()
 
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
