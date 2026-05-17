@@ -311,11 +311,11 @@ if "💰" in aba:
                 col_graf1, col_graf2 = st.columns(2)
 
             with col_graf1:
-            # Filtra apenas as despesas do mês para o gráfico
+            # Aqui precisa de 1 "Tab" ou 4 espaços para dentro do 'with'
             df_pizza = df_m[df_m['Tipo'] == 'Despesa']
             
             if not df_pizza.empty:
-                # Gera o gráfico de Pizza
+                # Aqui precisa de outro "Tab" para dentro do 'if'
                 fig_pizza = px.pie(
                     df_pizza, 
                     values='V_Num', 
@@ -324,27 +324,12 @@ if "💰" in aba:
                     title="Gastos por Categoria"
                 )
                 
-                # Ajusta para mostrar o símbolo de Real (R$) ao passar o mouse
+                # Exibe o valor em Real (R$) ao passar o mouse
                 fig_pizza.update_traces(textinfo='percent+label', hovertemplate="R$ %{value:.2f}")
                 
                 st.plotly_chart(fig_pizza, use_container_width=True)
             else:
-                st.info("Nenhuma despesa registrada neste mês.")
-
-        with col_graf2:
-            # Gráfico de Barras para Metas por Categoria
-            if not df_pizza.empty:
-                df_cat = df_pizza.groupby('Categoria')['V_Num'].sum().reset_index()
-                
-                fig_meta = px.bar(
-                    df_cat, 
-                    x='V_Num', 
-                    y='Categoria', 
-                    orientation='h',
-                    title="Meta por Categoria",
-                    text_auto='.2s'
-                )
-                
+                st.info("Nenhuma despesa para este mês.")    
                 fig_meta.update_layout(xaxis_title="Valor em Real (R$)", yaxis_title="")
                 st.plotly_chart(fig_meta, use_container_width=True)
 
