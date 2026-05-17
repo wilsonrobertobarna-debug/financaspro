@@ -328,10 +328,10 @@ if "💰" in aba:
                     fig_pizza.update_traces(textinfo='percent+label', hovertemplate="R$ %{value:.2f}")
                 
                     st.plotly_chart(fig_pizza, use_container_width=True)
-            else:
-                st.info("Nenhuma despesa para este mês.")    
-                fig_meta.update_layout(xaxis_title="Valor em Real (R$)", yaxis_title="")
-                st.plotly_chart(fig_meta, use_container_width=True)
+                else:
+                    st.info("Nenhuma despesa para este mês.")    
+                    fig_meta.update_layout(xaxis_title="Valor em Real (R$)", yaxis_title="")
+                    st.plotly_chart(fig_meta, use_container_width=True)
 
                 # --- 2. LÓGICA DA META (APENAS MÊS ATUAL) ---
                 import datetime
