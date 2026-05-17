@@ -310,7 +310,7 @@ if "💰" in aba:
                 # --- 1. GRÁFICOS LADO A LADO ---
                 col_graf1, col_graf2 = st.columns(2)
 
-                with col_graf1:
+            with col_graf1:
             # Filtra apenas as despesas do mês para o gráfico
             df_pizza = df_m[df_m['Tipo'] == 'Despesa']
             
