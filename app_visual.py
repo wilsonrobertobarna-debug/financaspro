@@ -474,7 +474,13 @@ if "💰" in aba:
         import datetime as dt 
         s_ini = c_d1.date_input("Início", (dt.datetime.now() - dt.timedelta(days=30)).date(), format="DD/MM/YYYY")
         import datetime as dt # Garante que o Python reconheça o comando abaixo
-        s_ini = c_d1.date_input("Início", (dt.datetime.now() - dt.timedelta(days=30)).date(), format="DD/MM/YYYY")
+        import datetime as dt 
+        s_ini = c_d1.date_input(
+        "Início", 
+        (dt.datetime.now() - dt.timedelta(days=30)).date(), 
+        format="DD/MM/YYYY",
+        key="data_inicio_lancamentos"  # Isso aqui mata o erro de duplicidade!
+)
         s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
         
         c1, c2, c3 = st.columns(3)
