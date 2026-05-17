@@ -298,48 +298,32 @@ if "💰" in aba:
 
         for i, aba_mes in enumerate(abas_meses):
             with aba_mes:
-                # O filtro agora é dinâmico por mês (i + 1)
                 df_m = df_base[df_base['DT'].dt.month == (i + 1)].copy()
-                
-                # Filtro: apenas o que foi pago e não é transferência
                 df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
                 
                 if not df_m_limpo.empty:
-                    # Cálculo do saldo do mês da aba selecionada
                     receitas_m = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
                     despesas_m = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
                     saldo_m = receitas_m - despesas_m
                     
                     st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
                     
-                    # Métricas em colunas (Visual Organizado)
-                    m1, m2, m3 = st.columns(3)
-                    m1.metric("📈 Receitas", m_fmt(receitas_m))
-                    m2.metric("📉 Despesas", m_fmt(despesas_m))
-                    m3.metric("💰 Saldo", m_fmt(saldo_m))
-                    
-                    # Expanders para manter a tela do celular limpa
-                    with st.expander("📊 RESUMO GERAL", expanded=False):
-                        c1, c2 = st.columns(2)
-                        c1.metric("⚖️ Balanço Total", m_fmt(saldo_geral_acumulado))
-                        c2.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
-
-                    with st.expander("🏦 BANCOS INFO", expanded=False):
-                        if not df_bancos_info.empty:
-                            for _, row in df_bancos_info.iterrows():
-                                st.write(f"🔹 **{row.iloc[0]}**")
+                    # --- RESUMO DOS MESES (AGORA NO LUGAR CORRETO) ---
+                    with st.expander("📊 DETALHES DO MÊS", expanded=False):
+                        m1, m2, m3 = st.columns(3)
+                        m1.metric("📈 Receita", m_fmt(receitas_m))
+                        m2.metric("📉 Despesa", m_fmt(despesas_m))
+                        m3.metric("⚖️ Balanço", m_fmt(saldo_m))
                 else:
                     st.info(f"Sem lançamentos registrados em {meses_nome[i]}.")
 
-# --- FINAL DO ARQUIVO ORGANIZADO ---
-
+# FIM DO BLOCO DE FINANÇAS. AGORA AS OUTRAS TELAS ENCOSTADAS NA MARGEM ESQUERDA:
 elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
     st.write("Acompanhamento do seu Golden Retriever.")
 
 elif "💬" in aba or "📋" in aba:
     st.title("💬 Notificações & Relatórios")
-    st.write("Configurações do sistema FinançasPro.")
 
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
