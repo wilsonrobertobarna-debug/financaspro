@@ -331,7 +331,8 @@ if "💰" in aba:
                 else:
                     st.info(f"Sem lançamentos registrados em {meses_nome[i]}.")
 
-   # As abas abaixo ficam fora do bloco de finanças (alinhadas totalmente à esquerda)
+     # --- FINAL DO ARQUIVO ORGANIZADO ---
+
 elif "🐶" in aba:
     st.title("🐶 Espaço do Milo")
     st.write("Acompanhamento do seu Golden Retriever.")
