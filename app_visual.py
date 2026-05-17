@@ -286,17 +286,63 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
+   # --- 5. TELAS PRINCIPAIS ---
+if "💰" in aba:
+    st.title("🛡️ FinançasPro Wilson")
+    
     if not df_base.empty:
-        # AQUI VOCÊ CRIA A VARIÁVEL
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
-        
-        # Cálculo do saldo
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
-        
-        st.divider()
+        # Criando as abas para cada mês (Ideal para mobile)
+        meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+        abas_meses = st.tabs(meses_nome)
 
+        # Cálculo do saldo global para o Resumo
+        total_rec = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        total_des = df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
+        saldo_geral_acumulado = total_rec - total_des
+
+        for i, aba_mes in enumerate(abas_meses):
+            with aba_mes:
+                # O df_m agora é criado dinamicamente para o mês da aba (i + 1)
+                df_m = df_base[df_base['DT'].dt.month == (i + 1)].copy()
+                
+                # Filtro de segurança (limpando transferências para o cálculo de saldo)
+                df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+                
+                if not df_m_limpo.empty:
+                    # Cálculo do saldo do mês selecionado
+                    receitas_m = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+                    despesas_m = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+                    saldo_m = receitas_m - despesas_m
+                    
+                    st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
+                    st.divider()
+
+                    # Métricas em colunas (Visual Limpo)
+                    m1, m2, m3 = st.columns(3)
+                    m1.metric("📈 Receitas", m_fmt(receitas_m))
+                    m2.metric("📉 Despesas", m_fmt(despesas_m))
+                    m3.metric("💰 Saldo", m_fmt(saldo_m))
+                    
+                    # Expanders para não poluir a tela no celular
+                    with st.expander("📊 RESUMO GERAL", expanded=False):
+                        c1, c2 = st.columns(2)
+                        c1.metric("⚖️ Balanço Total", m_fmt(saldo_geral_acumulado))
+                        c2.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
+
+                    with st.expander("🏦 BANCOS INFO", expanded=False):
+                        if not df_bancos_info.empty:
+                            for _, row in df_bancos_info.iterrows():
+                                st.write(f"🔹 **{row.iloc[0]}**")
+                else:
+                    st.info(f"Sem lançamentos registrados em {meses_nome[i]}.")
+
+elif "🐶" in aba:
+    st.title("🐶 Espaço do Milo")
+    st.write("Acompanhamento do seu Golden Retriever.")
+
+elif "💬" in aba:
+    st.title("💬 Notificações & Relatórios")
+    st.write("Configurações do sistema FinançasPro.")
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
