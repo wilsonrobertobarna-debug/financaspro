@@ -343,9 +343,9 @@ elif "💬" in aba or "📋" in aba:
     with st.expander("📊 RESUMO DOS MESES", expanded=False):
         m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
-            m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-            m2.metric("📉 Despesa", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-            m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
+        m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+        m2.metric("📉 Despesa", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+        m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
 
         # --- BANCOS E CARTÕES ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
