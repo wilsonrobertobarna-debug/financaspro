@@ -473,7 +473,8 @@ if "💰" in aba:
         c_d1, c_d2 = st.columns(2)
         import datetime as dt 
         s_ini = c_d1.date_input("Início", (dt.datetime.now() - dt.timedelta(days=30)).date(), format="DD/MM/YYYY")
-        s_ini = c_d1.date_input("Início", (datetime.now() - timedelta(days=30)).date(), format="DD/MM/YYYY")
+        import datetime as dt # Garante que o Python reconheça o comando abaixo
+        s_ini = c_d1.date_input("Início", (dt.datetime.now() - dt.timedelta(days=30)).date(), format="DD/MM/YYYY")
         s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
         
         c1, c2, c3 = st.columns(3)
