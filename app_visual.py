@@ -294,23 +294,23 @@ if "💰" in aba:
 
 import datetime
 
-# 1. Verifica se o banco de dados não está vazio
+# 1. Início do bloco de visualização
 if not df_base.empty:
-    # 2. Pega o mês atual (Maio = 4 no índice do Python)
+    # 2. Descobre o mês atual para abrir direto em Maio (Maio = 4 no índice)
     mes_atual_idx = datetime.datetime.now().month - 1
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
-    # 3. Cria o seletor que já começa em Maio (index=mes_atual_idx)
-    # Isso substitui as abas que ficavam empilhadas no seu celular
+    # 3. Selectbox: Essencial para o visual limpo no mobile (Substitui as abas)
+    #
     escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual_idx)
     
-    # 4. Filtra os dados usando o nome real da sua coluna: 'Mes_Ano'
+    # 4. Filtro direto usando a sua coluna 'Mes_Ano'
     df_m_limpo = df_base[df_base['Mes_Ano'] == escolha_mes]
 
-    # --- AGORA OS CÁLCULOS (Importante: todos alinhados aqui) ---
+    # --- CÁLCULOS DO MÊS SELECIONADO ---
     total_rec = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
     total_des = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-    saldo_m = total_rec - total_des 
+    saldo_m = total_rec - total_des
     
     # --- FAXINA DAS BARRINHAS ---
        
