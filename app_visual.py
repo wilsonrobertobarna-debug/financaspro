@@ -344,7 +344,7 @@ elif "📅" in aba:
                     banco_nome = row.iloc[0]
                     st.write(f"🔹 **{banco_nome}**")
             else:
-            st.info("Carregando informações dos bancos...")
+                st.info("Carregando informações dos bancos...")
                 
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
