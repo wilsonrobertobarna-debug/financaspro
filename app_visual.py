@@ -347,31 +347,31 @@ if "💰" in aba:
             if 'fig_categoria' in locals():
                 st.plotly_chart(fig_categoria, use_container_width=True)
 
-       # --- COLE ESTA "RECEITA" ANTES DO BLOCO DE EXIBIÇÃO ---
-import plotly.express as px
+        # --- COLE ESTA "RECEITA" ANTES DO BLOCO DE EXIBIÇÃO ---
+             import plotly.express as px
 
-# 1. Agrupamos por mês para a barra ficar larga (Gorda)
-df_fluxo_bom = df_base.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
+        # 1. Agrupamos por mês para a barra ficar larga (Gorda)
+        df_fluxo_bom = df_base.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
 
-# 2. Criamos o gráfico com as suas cores: Verde, Azul e Vermelho
-cores_map = {'Receita': '#00CC96', 'Rendimento': '#19D3F3', 'Despesa': '#EF553B'}
+        # 2. Criamos o gráfico com as suas cores: Verde, Azul e Vermelho
+        cores_map = {'Receita': '#00CC96', 'Rendimento': '#19D3F3', 'Despesa': '#EF553B'}
 
-fig_fluxo = px.bar(
-    df_fluxo_bom, 
-    x='Mes_Ano', 
-    y='V_Num', 
-    color='Tipo', 
-    barmode='group',
-    color_discrete_map=cores_map,
-    text_auto='.2s'
+        fig_fluxo = px.bar(
+        df_fluxo_bom, 
+        x='Mes_Ano', 
+        y='V_Num', 
+        color='Tipo', 
+        barmode='group',
+        color_discrete_map=cores_map,
+        text_auto='.2s'
 )
 
-# 3. Forçamos o eixo X a ser categórico para acabar com os "alfinetes"
-fig_fluxo.update_layout(
-    xaxis={'type': 'category'}, 
-    xaxis_title=None, 
-    yaxis_title=None,
-    margin=dict(l=5, r=5, t=5, b=5)
+        # 3. Forçamos o eixo X a ser categórico para acabar com os "alfinetes"
+        fig_fluxo.update_layout(
+        xaxis={'type': 'category'}, 
+        xaxis_title=None, 
+        yaxis_title=None,
+        margin=dict(l=5, r=5, t=5, b=5)
 )
 
         st.divider()
