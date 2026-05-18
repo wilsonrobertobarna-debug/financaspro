@@ -322,15 +322,21 @@ if "💰" in aba:
             if 'fig_categoria' in locals(): 
                 st.plotly_chart(fig_categoria, use_container_width=True)
 
+        # ... (final do bloco dos gráficos) ...
         with col_graf2:
             st.subheader("📈 Fluxo de Caixa Mensal")
             if 'fig_fluxo' in locals():
                 st.plotly_chart(fig_fluxo, use_container_width=True)
-        st.divider()
-        # O próximo "elif" deve ficar alinhado com o primeiro "if" lá de cima
-elif "📅" in aba:
-        st.write("Outra tela...")
 
+        # 5. TUDO O QUE SUMIU PRECISA VIR AQUI (Ainda com 8 espaços de recuo)
+        st.divider()
+        with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
+            # O código que gera os cartões e bancos entra aqui
+            st.write("Seus bancos voltaram a aparecer aqui!")
+
+# SÓ AGORA você encosta na parede esquerda para o próximo menu
+elif "📅" in aba:
+    st.write("Outra tela...")
         # --- BANCOS E CARTÕES ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
             if not df_bancos_info.empty:
