@@ -287,8 +287,9 @@ if "💰" in aba:
         st.title("🛡️ FinançasPro Wilson")
         
         if not df_base.empty:
-            # --- 1. FILTRAR CARTÃO PLUXEE ---
-            df_va = df_base[df_base['Cartao_ou_Conta'] == 'Cartão Pluxee'].copy()
+            # --- 1. FILTRAR VALE ALIMENTAÇÃO ---
+            # Agora usando o título correto da sua coluna: 'Tipo de Conta'
+            df_va = df_base[df_base['Tipo de Conta'] == 'Vale Alimentação'].copy()
             
             # --- 2. CÁLCULOS EM REAL ---
             entrada_va = df_va[df_va['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
@@ -296,17 +297,17 @@ if "💰" in aba:
             saldo_va = entrada_va - usado_va
 
             # --- 3. VISUAL LIMPO ---
-            st.info(f"### 🛒 Saldo Pluxee: {m_fmt(saldo_va)}")
+            st.info(f"### 🛒 Saldo Vale: {m_fmt(saldo_va)}")
             c_v1, c_v2 = st.columns(2)
             c_v1.metric("📥 Depósitos", m_fmt(entrada_va))
             c_v2.metric("🛍️ Utilizado", m_fmt(usado_va))
             st.divider()
 
-        # O df_m deve estar alinhado com o 'if not df_base.empty'
+        # Alinhamento para evitar o erro de Indentation
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m.dropna(subset=['Tipo', 'V_Num'])
         saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-
+    
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
