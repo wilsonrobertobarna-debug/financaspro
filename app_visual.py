@@ -286,29 +286,25 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-   File "/mount/src/financaspro/app_visual.py", line 289
-     if not df_base.empty:
-                         ^
-IndentationError: unindent does not match any outer indentation level
-        
-        # AQUI VOCÊ CRIA A VARIÁVEL
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
-        
-        # Cálculo do saldo
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
-        
-        st.divider()
+  if not df_base.empty:
+            # --- 1. PREPARAÇÃO DOS DADOS ---
+            df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+            df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
 
-        # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
-        with st.expander("📊 RESUMO DOS MESES", expanded=False):
-            m1, m2, m3 = st.columns(3)
-            # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
-            m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-            m2.metric("📉 Despesa", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-            m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
+            # --- 2. CONTROLE DO VALE ALIMENTAÇÃO ---
+            # Filtra movimentações específicas da conta VA
+            df_va = df_base[df_base['Cartao_ou_Conta'] == 'Vale Alimentação'].copy()
+            entrada_va = df_va[df_va['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            usado_va = df_va[df_va['Tipo'] == 'Despesa']['V_Num'].sum()
+            saldo_va = entrada_va - usado_va
 
+            # --- 3. EXIBIÇÃO ---
+            st.info(f"### 🛒 Saldo Vale: {m_fmt(saldo_va)}")
+            c_va1, c_va2 = st.columns(2)
+            c_va1.metric("📥 Depósitos", m_fmt(entrada_va))
+            c_va2.metric("🛍️ Utilizado", m_fmt(usado_va))
+            st.divider()
+     
         # --- BANCOS E CARTÕES ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
             if not df_bancos_info.empty:
