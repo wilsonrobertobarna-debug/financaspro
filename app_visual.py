@@ -282,20 +282,47 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
-# 5. TELAS PRINCIPAIS
+st.rerun()
+
+# --- 5. TELAS PRINCIPAIS ---
 if "💰" in aba:
+    # Título principal conforme sua preferência por visual limpo
     st.title("🛡️ FinançasPro Wilson")
     
-    if not df_base.empty:
-        # AQUI VOCÊ CRIA A VARIÁVEL
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
-        
-        # Cálculo do saldo
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
-        
-        st.divider()
+    # Barrinha de meses (Jan a Dez) logo abaixo do título para clique direto
+    meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    abas_meses = st.tabs(meses_nome)
+    
+    for i, aba_mes in enumerate(abas_meses):
+        with aba_mes:
+            # Filtro por mês para visual organizado em Real (R$)
+            df_m_limpo = df_base[df_base['DT'].dt.month == (i + 1)].copy()
+            
+            if not df_m_limpo.empty:
+                # Cálculo do saldo mensal automático em Real (R$)
+                saldo_m = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
+                          df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+                
+                st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
+                st.divider()
+                
+                # Métricas em colunas (Ideal para uso mobile)
+                m1, m2, m3 = st.columns(3)
+                m1.metric("📈 Receitas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+                m2.metric("📉 Despesas", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+                m3.metric("💰 Rendimentos", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+            else:
+                st.info(f"Sem lançamentos para {meses_nome[i]}.")
+
+# --- ESPAÇO DO MILO ---
+elif "🐶" in aba:
+    st.title("🐶 Espaço do Milo")
+    st.write("Acompanhamento do seu Golden Retriever.")
+
+# --- WHATSAPP / ALERTAS ---
+elif "💬" in aba:
+    st.title("💬 Notificações")
+    st.write("Alertas via Twilio configurados para o sistema.")
 
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
