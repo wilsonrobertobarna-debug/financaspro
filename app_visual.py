@@ -286,7 +286,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
-    if not df_base.empty:
+if not df_base.empty:
         # 1. BARRINHA DE DIAS NO TOPO
         dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
         abas_dias = st.tabs(dias_semana)
