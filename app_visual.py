@@ -298,8 +298,9 @@ if "💰" in aba:
         mes_atual = datetime.datetime.now().month - 1
         # Abas para cada mês (Essencial para o visual limpo no mobile)
         meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-        escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual)
         abas_meses = st.tabs(meses_nome)
+        escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual)
+       
 
         # Cálculo do saldo global em Real (R$)
         total_rec = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
