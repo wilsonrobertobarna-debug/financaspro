@@ -291,24 +291,22 @@ if "💰" in aba:
         dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
         abas_dias = st.tabs(dias_semana)
         
-        # 2. SALDO GERAL (Logo abaixo da barra)
+        # 2. SALDO GERAL (Cálculos e Exibição)
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_pago = df_m[df_m['Status'] == 'Pago']
-        
-        saldo_geral = df_m_pago[df_m_pago['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
-                      df_m_pago[df_m_pago['Tipo'] == 'Despesa']['V_Num'].sum()
-        
-        st.info(f"### 🏦 SALDO GERAL ATUAL: R$ {saldo_geral:,.2f}")
-        st.divider()
-
-        # 3. TAGS DE VALORES (Abaixo do Saldo)
-        c1, c2, c3, c4 = st.columns(4)
         
         receita = df_m_pago[df_m_pago['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
         gasto = df_m_pago[df_m_pago['Tipo'] == 'Despesa']['V_Num'].sum()
         rend = df_m_pago[df_m_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
         pend = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
+        
+        saldo_geral = receita - gasto
+        
+        st.info(f"### 🏦 SALDO GERAL ATUAL: R$ {saldo_geral:,.2f}")
+        st.divider()
 
+        # 3. TAGS DE VALORES
+        c1, c2, c3, c4 = st.columns(4)
         c1.metric("📈 Receita", f"R$ {receita:,.2f}")
         c2.metric("📉 Gasto", f"R$ {gasto:,.2f}")
         c3.metric("💰 Rend", f"R$ {rend:,.2f}")
@@ -316,27 +314,22 @@ if "💰" in aba:
 
         st.divider()
 
-        # 4. GRÁFICOS (Abaixo das Tags)
-       # Gráficos abaixo das tags
-col_graf1, col_graf2 = st.columns(2)
+        # 4. GRÁFICOS (Agora com a indentação correta para não quebrar)
+        col_graf1, col_graf2 = st.columns(2)
 
-with col_graf1:
-    st.subheader("📊 Gastos por Categoria")
-    # Aqui entra o seu código do gráfico de pizza/barras
-    if 'fig_categoria' in locals(): # Verifica se o gráfico existe para não quebrar
-        st.plotly_chart(fig_categoria, use_container_width=True)
+        with col_graf1:
+            st.subheader("📊 Gastos por Categoria")
+            if 'fig_categoria' in locals(): 
+                st.plotly_chart(fig_categoria, use_container_width=True)
 
-with col_graf2:
-    st.subheader("📈 Fluxo de Caixa Mensal")
-    # Aqui entra o seu código do gráfico de linhas/fluxo
-    if 'fig_fluxo' in locals():
-        st.plotly_chart(fig_fluxo, use_container_width=True)
+        with col_graf2:
+            st.subheader("📈 Fluxo de Caixa Mensal")
+            if 'fig_fluxo' in locals():
+                st.plotly_chart(fig_fluxo, use_container_width=True)
 
-        st.divider()
-        # 4. RESUMO DE BANCOS E CARTÕES (AGORA NO FINAL)
-        st.subheader("🏦 Resumo de Bancos e Cartões")
-        # COLOQUE AQUI O CÓDIGO QUE MOSTRA OS BANCOS E CARTÕES QUE ESTAVA LÁ EM CIMA
-
+# O próximo "elif" deve ficar alinhado com o primeiro "if" lá de cima
+elif "📅" in aba:
+    st.write("Outra tela...")
         # --- BANCOS E CARTÕES ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
             if not df_bancos_info.empty:
