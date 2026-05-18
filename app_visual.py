@@ -494,12 +494,12 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-    elif "Pendências" in aba:
-        st.title("📋 Lançamentos Pendentes")
-        st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
+ elif "Pendências" in aba:
+    st.title("📋 Lançamentos Pendentes")
+    st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
     
-        # 1. Filtramos os pendentes
-        df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
+    # 1. Filtramos os pendentes
+    df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
     
     if not df_aviso.empty:
         # --- BUSCA INTELIGENTE PELA COLUNA DE DATA ---
