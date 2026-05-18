@@ -339,7 +339,9 @@ if "💰" in aba:
 
         with col_graf2:
             st.subheader("📈 Fluxo de Caixa Mensal")
-            st.plotly_chart(fig_fluxo, use_container_width=True)        st.divider()
+            st.plotly_chart(fig_fluxo, use_container_width=True) 
+            
+            st.divider()
 
         # --- PASSO 4: SALDO E MÉTRICAS (Apenas uma vez) ---
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
