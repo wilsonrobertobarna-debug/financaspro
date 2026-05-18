@@ -287,35 +287,38 @@ if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
-        # 1. CÁLCULOS (Isso você já tem, mantemos igual)
+        # 1. A BARRINHA DE DIAS NO TOPO (Acima de tudo)
+        dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+        abas_dias = st.tabs(dias_semana)
+        
+        # O conteúdo abaixo vai aparecer independente de qual aba você clicar
+        # Mas se quiser que mude por dia, colocamos dentro do 'with' depois.
+        
+        # 2. O SALDO GERAL (Logo abaixo da barrinha)
+        # Recalculando para garantir que ele apareça em Real
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-        # 2. AS TAGS (RECEITA, GASTO, ETC) - SUBINDO PARA O TOPO
-        # Criamos 4 colunas para ficarem lado a lado e economizar espaço
-        c1, c2, c3, c4 = st.columns(4)
+        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
+                      df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         
-        # Calculamos os valores para as tags
-        receita = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        gasto = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-        # Aqui você usa a sua função de pendentes
-        pendente = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum() 
-
-        # Exibindo as tags em Real
-        c1.metric("📈 Receita", f"R$ {receita:,.2f}")
-        c2.metric("📉 Gasto", f"R$ {gasto:,.2f}")
-        c3.metric("💰 Rend", f"R$ {rendimento:,.2f}")
-        c4.metric("⏳ Pend", f"R$ {pendente:,.2f}")
+        st.info(f"### 🏦 SALDO GERAL ATUAL: R$ {saldo_geral:,.2f}")
         
         st.divider()
 
-        # 3. A BARRINHA DE DIAS (SEG - TER - QUA...)
-        dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
-        abas_dias = st.tabs(dias_semana)
-        for i, aba_dia in enumerate(abas_dias):
-            with aba_dia:
-                st.caption(f"Lançamentos de {dias_semana[i]}")
+        # 3. AS TAGS DE VALORES (Abaixo do Saldo)
+        c1, c2, c3, c4 = st.columns(4)
+        
+        # Valores para as tags (Maio/2026)
+        receita = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        gasto = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        pend = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
+
+        c1.metric("📈 Receita", f"R$ {receita:,.2f}")
+        c2.metric("📉 Gasto", f"R$ {gasto:,.2f}")
+        c3.metric("💰 Rend", f"R$ {rend:,.2f}")
+        c4.metric("⏳ Pend", f"R$ {pend:,.2f}")
 
         st.divider()
 
