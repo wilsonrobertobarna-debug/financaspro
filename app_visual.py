@@ -337,7 +337,7 @@ if "💰" in aba:
 # SÓ AGORA você encosta na parede esquerda para o próximo menu
 elif "📅" in aba:
     st.write("Outra tela...")
-        # --- BANCOS E CARTÕES ---
+
     with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
         if not df_bancos_info.empty:
             for index, row in df_bancos_info.iterrows():
@@ -345,14 +345,14 @@ elif "📅" in aba:
                 st.write(f"🔹 **{banco_nome}**")
         else:
             st.info("Carregando informações dos bancos...")
-                
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
-        
-   st.divider()
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+    m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+    m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+    m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
+
+    st.divider()  # <-- LINHA 355 AGORA ALINHADA COM O 'WITH' E O 'M1'
         
         with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
