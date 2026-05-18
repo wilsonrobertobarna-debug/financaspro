@@ -348,7 +348,7 @@ if "💰" in aba:
                 # Filtro: apenas o que foi pago e não é transferência
                 df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
                 
-               if not df_m_limpo.empty:
+                if not df_m_limpo.empty:
                    # Cálculo do saldo do mês da aba selecionada
                    receitas_m = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
                    despesas_m = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
