@@ -287,9 +287,8 @@ if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
-        # --- PRIMEIRO: PREPARAÇÃO DOS DADOS (Necessário para os gráficos e métricas) ---
+        # --- 1. PREPARAÇÃO DOS DADOS (Essencial para não dar erro) ---
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        # Criando a variável que o erro apontou como faltante
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
         receita = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
@@ -298,22 +297,25 @@ if "💰" in aba:
         pend = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
         saldo_geral = receita - gasto
 
-        # --- SEGUNDO: OS GRÁFICOS NO TOPO (Agora com os dados prontos) ---
+        # --- 2. EXIBIÇÃO DOS GRÁFICOS NO TOPO ---
         col_graf1, col_graf2 = st.columns(2)
 
         with col_graf1:
-            st.subheader("📊 Gastos por Categoria")
-            if 'fig_categoria' in locals(): 
+            # Se o gráfico não aparecer, vamos forçar uma mensagem de aviso
+            if 'fig_categoria' in locals() and fig_categoria is not None: 
                 st.plotly_chart(fig_categoria, use_container_width=True)
+            else:
+                st.warning("Aguardando dados para o gráfico de Pizza...")
 
         with col_graf2:
-            st.subheader("📈 Fluxo de Caixa Mensal")
-            if 'fig_fluxo' in locals():
+            if 'fig_fluxo' in locals() and fig_fluxo is not None:
                 st.plotly_chart(fig_fluxo, use_container_width=True)
+            else:
+                st.warning("Aguardando dados para o gráfico de Barras...")
 
         st.divider()
 
-        # --- TERCEIRO: SALDO E MÉTRICAS ---
+        # --- 3. SALDO E MÉTRICAS EM REAL ---
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
         c1, c2, c3, c4 = st.columns(4)
@@ -324,14 +326,15 @@ if "💰" in aba:
 
         st.divider()
 
-        # --- QUARTO: BANCOS E CARTÕES NO FINAL ---
+        # --- 4. BANCOS E CARTÕES (EXPANDIDO PARA VER AS BARRINHAS) ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
             if 'df_bancos_info' in locals() and not df_bancos_info.empty:
+                # Aqui o sistema gera as barrinhas que você mencionou
                 for index, row in df_bancos_info.iterrows():
                     banco_nome = row.iloc[0]
                     st.write(f"🔹 **{banco_nome}**")
             else:
-                st.info("Carregando informações dos bancos...")
+                st.info("Nenhuma informação de banco encontrada.")
 
         # --- BANCOS E CARTÕES NO FINAL ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
