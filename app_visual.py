@@ -308,6 +308,9 @@ if "💰" in aba:
         
         st.divider()
 
+        st.subheader(f"Resumo de {mes_atual}")
+        st.bar_chart(df_m_limpo.groupby('Categoria')['V_Num'].sum())
+
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
