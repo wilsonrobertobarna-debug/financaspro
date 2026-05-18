@@ -297,18 +297,18 @@ if "💰" in aba:
     if not df_base.empty:
         # 1. Descobre o mês atual (Maio = 4)
         mes_atual = datetime.datetime.now().month - 1
-    
-        # 2. Lista de meses
         meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
-        # 3. O Selectbox já começa em Maio por causa do index=mes_atual
+        # 2. Selectbox para abrir direto no mês atual
         escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual)
     
-        # 4. Agora filtramos os dados com base no mês que você escolheu no selectbox
-        # (Isso substitui o loop das abas e limpa o visual)
-        # 1. Identifica automaticamente se a coluna é 'Mês', 'Mes' ou 'mes'
-        colunas_possiveis = [c for c in df_base.columns if c.lower() in ['mês', 'mes']]
+        # 3. Filtra usando o nome REAL da sua coluna: 'Mes_Ano'
+        df_m_limpo = df_base[df_base['Mes_Ano'] == escolha_mes]
 
+        # --- A partir daqui, remova qualquer linha que diga 'for i, aba_mes in enumerate(abas_meses):' ---
+        # O código abaixo agora roda direto para o mês escolhido
+    
+       
     if colunas_possiveis:
         nome_coluna_real = colunas_possiveis[0]
         df_m_limpo = df_base[df_base[nome_coluna_real] == escolha_mes]
