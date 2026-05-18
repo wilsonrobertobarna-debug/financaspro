@@ -287,6 +287,21 @@ if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
+        # --- 1. FILTRAR CARTÃO PLUXEE ---
+            # Mudamos de 'Vale Alimentação' para 'Cartão Pluxee' para bater com sua planilha
+            df_va = df_base[df_base['Cartao_ou_Conta'] == 'Cartão Pluxee'].copy()
+            
+            # --- 2. CÁLCULOS EM REAL ---
+            entrada_va = df_va[df_va['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            usado_va = df_va[df_va['Tipo'] == 'Despesa']['V_Num'].sum()
+            saldo_va = entrada_va - usado_va
+
+            # --- 3. VISUAL LIMPO ---
+            st.info(f"### 🛒 Saldo {df_va['Cartao_ou_Conta'].unique()[0] if not df_va.empty else 'Pluxee'}: {m_fmt(saldo_va)}")
+            c_v1, c_v2 = st.columns(2)
+            c_v1.metric("📥 Depósitos", m_fmt(entrada_va))
+            c_v2.metric("🛍️ Utilizado", m_fmt(usado_va))
+            st.divider()
         # AQUI VOCÊ CRIA A VARIÁVEL
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
