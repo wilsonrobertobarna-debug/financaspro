@@ -285,7 +285,14 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
+    # --- COLE AQUI (INÍCIO DA BARRINHA) ---
+    meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
+    # Isso cria a barra horizontal de meses
+    st.pills("Período:", meses, selection_mode="single", default="Mai")
+    
+    st.divider() 
+       
     if not df_base.empty:
         # AQUI VOCÊ CRIA A VARIÁVEL
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
