@@ -303,7 +303,7 @@ if "💰" in aba:
             c_v2.metric("🛍️ Utilizado", m_fmt(usado_va))
             st.divider()
         # AQUI VOCÊ CRIA A VARIÁVEL
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+    df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
         # Cálculo do saldo
