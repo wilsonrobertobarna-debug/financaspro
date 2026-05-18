@@ -297,47 +297,60 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             pend = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
             saldo_geral = receita - gasto
 
-            # --- PASSO 2: CRIAÇÃO DOS GRÁFICOS (BARRAS GORDAS) ---
+            # --- PASSO 2: CRIAÇÃO DOS GRÁFICOS (BARRAS GORDAS E RENDIMENTO AZUL) ---
             import plotly.express as px
 
-            # 1. Pizza
+            # 1. Gráfico de Pizza
             df_pizza = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             fig_categoria = px.pie(df_pizza, values='V_Num', names='Categoria', hole=0.4)
             fig_categoria.update_layout(showlegend=False, margin=dict(l=20, r=20, t=20, b=20))
 
-            # 2. Barras Mensais (Verde, Azul e Vermelho)
+            # 2. Gráfico de Barras Mensal (A "Belezinha")
             df_fluxo_bom = df_base.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
+            # Mapeamento de cores: Verde para Receita, Azul para Rendimento e Vermelho para Despesa
             cores_map = {'Receita': '#00CC96', 'Rendimento': '#19D3F3', 'Despesa': '#EF553B'}
 
             fig_fluxo = px.bar(
-                df_fluxo_bom, x='Mes_Ano', y='V_Num', color='Tipo', 
-                barmode='group', color_discrete_map=cores_map, text_auto='.2s'
+                df_fluxo_bom, 
+                x='Mes_Ano', 
+                y='V_Num', 
+                color='Tipo', 
+                barmode='group',
+                color_discrete_map=cores_map,
+                text_auto='.2s'
             )
+
+            # Força o eixo como categoria para evitar o efeito "alfinete" e alargar as barras
             fig_fluxo.update_layout(
-                xaxis={'type': 'category'}, xaxis_title=None, yaxis_title=None,
+                xaxis={'type': 'category'}, 
+                xaxis_title=None, 
+                yaxis_title=None,
                 margin=dict(l=5, r=5, t=5, b=5)
             )
 
-            # --- PASSO 3: EXIBIÇÃO ---
-            c_g1, c_g2 = st.columns(2)
-            with c_g1:
+            # --- PASSO 3: EXIBIÇÃO NO TOPO ---
+            col_graf1, col_graf2 = st.columns(2)
+            with col_graf1:
                 st.subheader("📊 Gastos por Categoria")
                 st.plotly_chart(fig_categoria, use_container_width=True)
-            with c_g2:
+
+            with col_graf2:
                 st.subheader("📈 Fluxo de Caixa Mensal")
                 st.plotly_chart(fig_fluxo, use_container_width=True)
 
             st.divider()
 
-            # --- PASSO 4: MÉTRICAS EM REAL ---
+            # --- PASSO 4: SALDO E MÉTRICAS (Formatado em Real) ---
             st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
+            
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("📈 Receita", m_fmt(receita))
             c2.metric("📉 Gasto", m_fmt(gasto))
             c3.metric("💰 Rend", m_fmt(rend))
             c4.metric("⏳ Pend", m_fmt(pend))
-            st.divider()
 
+            st.divider()
+            
     elif "Pendências" in aba:
             
           # --- PASSO 5: BANCOS E CARTÕES (No final da página) ---
