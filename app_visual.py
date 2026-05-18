@@ -1,11 +1,14 @@
 import streamlit as st
 import gspread
+from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from datetime import datetime, timedelta
+import streamlit as st
+import pandas as pd
+from datetime import datetime, timedelta
 import urllib.parse
-from google.oauth2.service_account import Credentials
-from datetime import datetime, timedelta  # Esta linha é a chave para o erro sumir!
 
 # RESOLUÇÃO DO FUSO HORÁRIO (Sem precisar de biblioteca extra)
 # O servidor do Streamlit é 3 horas adiantado. Tiramos 3 horas para ser Brasília.
@@ -154,20 +157,11 @@ def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace(
 
 # FUNÇÃO PARA OBTER O VALOR PENDENTE ATUAL
 def get_valor_pendente(df):
-    # Importação direta dentro da função para matar o erro de vez
-    import datetime as dt 
-    import calendar
-    
-    now = dt.datetime.now() # O 'dt.' antes garante que o Python não se perca
-    
-    # Define o último dia do mês atual
-    ultimo_dia = calendar.monthrange(now.year, now.month)[1]
-    end_of_month = dt.datetime(now.year, now.month, ultimo_dia)
-    
-    # Filtra o que está pendente até o fim do mês
+    now = datetime.now()
+    end_of_month = datetime(now.year, now.month, 1) + relativedelta(months=1, days=-1)
     df_p = df[(df['Status'] == 'Pendente') & (df['DT'].dt.date <= end_of_month.date())]
-    
     return df_p['V_Num'].sum()
+
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 
@@ -288,132 +282,20 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
-# --- 5. TELAS PRINCIPAIS ---
+# 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
-
-import datetime
-
-# 1. Início do bloco de visualização corrigido
-if not df_base.empty:
-    # 2. Identifica o mês de Maio como padrão (índice 4)
-    meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    mes_atual_idx = datetime.datetime.now().month - 1
     
-    # 3. Selectbox: Essencial para o mobile (substitui as abas que empilham)
-    escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual_idx)
-    
-    # 4. Filtro Direto: Usa o nome real da coluna da sua planilha
-    df_m_limpo = df_base[df_base['Mes_Ano'] == escolha_mes]
-
-    # --- CÁLCULOS (Mantenha o alinhamento aqui) ---
-    total_rec = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-    total_des = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-    saldo_m = total_rec - total_des
-    # --- FAXINA DAS BARRINHAS ---
-       
-    if colunas_possiveis:
-        nome_coluna_real = colunas_possiveis[0]
-        df_m_limpo = df_base[df_base[nome_coluna_real] == escolha_mes]
-    else:
-        # Caso não encontre nada parecido, o app não trava e mostra um aviso
-        st.error(f"Coluna de mês não encontrada. Colunas disponíveis: {list(df_base.columns)}")
-        df_m_limpo = pd.DataFrame()
-       
-
-        # Cálculo do saldo global em Real (R$)
-        total_rec = df_base[df_base['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        total_des = df_base[df_base['Tipo'] == 'Despesa']['V_Num'].sum()
-        saldo_geral_acumulado = total_rec - total_des
-
-        for i, aba_mes in enumerate(abas_meses):
-            with aba_mes:
-                # O filtro agora é dinâmico por mês (i + 1)
-                df_m = df_base[df_base['DT'].dt.month == (i + 1)].copy()
-
-                # --- 1. GRÁFICOS LADO A LADO ---
-                col_graf1, col_graf2 = st.columns(2)
-
-            with col_graf1:
-                # Aqui precisa de 1 "Tab" ou 4 espaços para dentro do 'with'
-                df_pizza = df_m[df_m['Tipo'] == 'Despesa']
-            
-                if not df_pizza.empty:
-                    # Aqui precisa de outro "Tab" para dentro do 'if'
-                    fig_pizza = px.pie(
-                        df_pizza, 
-                        values='V_Num', 
-                        names='Categoria', 
-                        hole=0.4,
-                        title="Gastos por Categoria"
-                    )
-                
-                    # Exibe o valor em Real (R$) ao passar o mouse
-                    fig_pizza.update_traces(textinfo='percent+label', hovertemplate="R$ %{value:.2f}")
-                
-                    st.plotly_chart(fig_pizza, use_container_width=True, key=f"pizza_mes_{i}")
-                else:
-                    st.info("Nenhuma despesa para este mês.")    
-                    fig_meta.update_layout(xaxis_title="Valor em Real (R$)", yaxis_title="")
-                    st.plotly_chart(fig_meta, use_container_width=True)
-
-                # --- 2. LÓGICA DA META (APENAS MÊS ATUAL) ---
-                import datetime
-                mes_agora = datetime.datetime.now().month # Pega o mês atual (Maio é 5)
-
-                if (i + 1) == mes_agora:
-                    st.divider()
-                    st.markdown("### 🎯 Meta do Mês Atual")
-                    # Seu código da barra de meta ou progresso aqui
-                
-                # O filtro agora é dinâmico por mês (i + 1)
-                df_m = df_base[df_base['DT'].dt.month == (i + 1)].copy()
-                
-                # Filtro: apenas o que foi pago e não é transferência
-                df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
-                
-                if not df_m_limpo.empty:
-                    # Cálculo do saldo do mês da aba selecionada
-                    receitas_m = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-                    despesas_m = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-    
-                    # 1. Calculando o Rendimento separadamente
-                    rendimento_m = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-                    # 1. Forçamos a coluna Status a virar texto e removemos espaços invisíveis
-                    df_m_limpo['Status'] = df_m_limpo['Status'].astype(str).fillna('').str.strip()
-
-                    # 2. Calculamos a Pendência somando tudo que NÃO é 'Pago' (independente de maiúscula/minúscula)
-                    # E garantimos que o valor (V_Num) seja tratado como número
-                    pendencia_m = df_m_limpo[
-                    (df_m_limpo['Tipo'] == 'Despesa') & 
-                    (df_m_limpo['Status'].str.upper() != 'PAGO')
-                    ]['V_Num'].sum()
-                    # 3. O Saldo Final (Receitas + Rendimentos - Despesas)
-                    saldo_m = (receitas_m + rendimento_m) - despesas_m
-
-                    st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
-    
-                    # 4. Métricas em 4 colunas (Visual Desapertado)
-                    m1, m2, m3, m4 = st.columns(4)
-                    m1.metric("📈 Receitas", m_fmt(receitas_m))
-                    m2.metric("📉 Despesas", m_fmt(despesas_m))
-                    m3.metric("💎 Rendimentos", m_fmt(rendimento_m))
-                    m4.metric("⏳ Pendências", m_fmt(pendencia_m))
-                    # Expanders para manter a tela do celular limpa
-                    with st.expander("📊 RESUMO GERAL", expanded=False):
-                        c1, c2 = st.columns(2)
-                        c1.metric("⚖️ Balanço Total", m_fmt(saldo_geral_acumulado))
-                        c2.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
-
-                    with st.expander("🏦 BANCOS INFO", expanded=False):
-                        if not df_bancos_info.empty:
-                            for _, row in df_bancos_info.iterrows():
-                                st.write(f"🔹 **{row.iloc[0]}**")
-                else:
-                    st.info(f"Sem lançamentos registrados em {meses_nome[i]}.")
-
-
-
+    if not df_base.empty:
+        # AQUI VOCÊ CRIA A VARIÁVEL
+        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+        
+        # Cálculo do saldo
+        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
+        
+        st.divider()
 
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
@@ -421,7 +303,7 @@ if not df_base.empty:
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
             m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
             m2.metric("📉 Despesa", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-            m3.metric("⚖️ Balanço", m_fmt(saldo_geral_acumulado))
+            m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
 
         # --- BANCOS E CARTÕES ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
@@ -519,23 +401,8 @@ if not df_base.empty:
         st.subheader("🔍 Busca e Lançamentos")
         
         c_d1, c_d2 = st.columns(2)
-        import datetime as dt 
-        s_ini = c_d1.date_input("Início", (dt.datetime.now() - dt.timedelta(days=30)).date(), format="DD/MM/YYYY")
-        import datetime as dt # Garante que o Python reconheça o comando abaixo
-        import datetime as dt 
-        s_ini = c_d1.date_input(
-        "Início", 
-        (dt.datetime.now() - dt.timedelta(days=30)).date(), 
-        format="DD/MM/YYYY",
-        key="data_inicio_lancamentos"  # Isso aqui mata o erro de duplicidade!
-)
-        import datetime as dt # Garante a referência correta
-        s_fim = c_d2.date_input(
-        "Fim", 
-        dt.datetime.now().date(), 
-        format="DD/MM/YYYY",
-        key="data_fim_lancamentos" # Evita o erro de DuplicateElementId
-)
+        s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+        s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
         
         c1, c2, c3 = st.columns(3)
         s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
