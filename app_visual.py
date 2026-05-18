@@ -300,7 +300,33 @@ if "💰" in aba:
     
     # Isso cria a barra horizontal de meses
     st.pills("Período:", meses, selection_mode="single", default="Mai")
+
+    # --- 1. O SALDO GERAL (REI DA TELA) ---
+    # Usamos uma fonte maior e centralizada para ele ser "mais notado"
+    saldo_geral = receita_total - gasto_total
+    cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c" # Verde se positivo, Vermelho se negativo
     
+    st.markdown(f"""
+        <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
+            <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
+            <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
+        </div>
+    """.replace(",", "X").replace(".", ",").replace("X", "."), unsafe_allow_html=True)
+
+    st.write("") # Espaço de respiro
+
+    # --- 2. OS CARDS DE APOIO (MENORES) ---
+    # Aqui os valores ficam organizados em colunas, ocupando menos espaço vertical
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric("📈 Receita", f"R$ {receita_total:,.2f}")
+    with c2:
+        st.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
+    with c3:
+        st.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
+    with c4:
+        st.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
+
     st.divider()
 
     g1, g2 = st.columns(2)
