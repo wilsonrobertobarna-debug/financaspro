@@ -331,12 +331,6 @@ if "💰" in aba:
         st.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
     with c4:
         st.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
-        
-        # --- MÁQUINA EM ESPERA (VALORES TEMPORÁRIOS) ---
-receita_total = 0.0
-gasto_total = 0.0
-rendimento = 0.0
-pendente = 0.0
 # ----------------------------------------------
 
 if "💰" in aba:
