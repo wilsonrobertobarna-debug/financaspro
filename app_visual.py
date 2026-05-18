@@ -287,6 +287,23 @@ if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
+        # --- ITEM: CONTROLE DO VALE ALIMENTAÇÃO ---
+            # Filtra movimentações específicas da conta VA
+            df_va = df_base[df_base['Cartao_ou_Conta'] == 'Vale Alimentação'].copy()
+
+            # Cálculos em Real (R$)
+            entrada_va = df_va[df_va['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            usado_va = df_va[df_va['Tipo'] == 'Despesa']['V_Num'].sum()
+            saldo_va = entrada_va - usado_va
+
+            # Exibição das Métricas do VA
+            st.info(f"### 🛒 Saldo Vale: {m_fmt(saldo_va)}")
+            
+            c_va1, c_va2 = st.columns(2)
+            c_va1.metric("📥 Depósito (Dia 10)", m_fmt(entrada_va))
+            c_va2.metric("🛍️ Total Utilizado", m_fmt(usado_va))
+            
+            st.divider()
         # AQUI VOCÊ CRIA A VARIÁVEL
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
