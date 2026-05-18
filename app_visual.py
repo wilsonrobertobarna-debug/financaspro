@@ -349,31 +349,31 @@ if "💰" in aba:
                 df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
                 
                 if not df_m_limpo.empty:
-                   # Cálculo do saldo do mês da aba selecionada
-                   receitas_m = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-                   despesas_m = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+                    # Cálculo do saldo do mês da aba selecionada
+                    receitas_m = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+                    despesas_m = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
     
-                   # 1. Calculando o Rendimento separadamente
-                   rendimento_m = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+                    # 1. Calculando o Rendimento separadamente
+                    rendimento_m = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
     
-                   # 2. Calculando a Pendência (Soma o que é Despesa e NÃO está 'Pago')
-                   # Ajustamos para ser resistente a erros de digitação (maiúsculas/minúsculas)
-                   pendencia_m = df_m_limpo[
+                    # 2. Calculando a Pendência (Soma o que é Despesa e NÃO está 'Pago')
+                    # Ajustamos para ser resistente a erros de digitação (maiúsculas/minúsculas)
+                    pendencia_m = df_m_limpo[
                        (df_m_limpo['Tipo'] == 'Despesa') & 
                        (df_m_limpo['Status'].astype(str).str.strip().str.upper() != 'PAGO')
-                   ]['V_Num'].sum()
+                    ]['V_Num'].sum()
 
-                   # 3. O Saldo Final (Receitas + Rendimentos - Despesas)
-                   saldo_m = (receitas_m + rendimento_m) - despesas_m
+                    # 3. O Saldo Final (Receitas + Rendimentos - Despesas)
+                    saldo_m = (receitas_m + rendimento_m) - despesas_m
 
-                   st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
+                    st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
     
-                   # 4. Métricas em 4 colunas (Visual Desapertado)
-                   m1, m2, m3, m4 = st.columns(4)
-                   m1.metric("📈 Receitas", m_fmt(receitas_m))
-                   m2.metric("📉 Despesas", m_fmt(despesas_m))
-                   m3.metric("💎 Rendimentos", m_fmt(rendimento_m))
-                   m4.metric("⏳ Pendências", m_fmt(pendencia_m))
+                    # 4. Métricas em 4 colunas (Visual Desapertado)
+                    m1, m2, m3, m4 = st.columns(4)
+                    m1.metric("📈 Receitas", m_fmt(receitas_m))
+                    m2.metric("📉 Despesas", m_fmt(despesas_m))
+                    m3.metric("💎 Rendimentos", m_fmt(rendimento_m))
+                    m4.metric("⏳ Pendências", m_fmt(pendencia_m))
                     # Expanders para manter a tela do celular limpa
                     with st.expander("📊 RESUMO GERAL", expanded=False):
                         c1, c2 = st.columns(2)
