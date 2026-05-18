@@ -291,10 +291,14 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 # --- 5. TELAS PRINCIPAIS ---
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
-    
+
+    import datetime    
     if not df_base.empty:
+        # 1. Descobre o mês atual (Maio é 5, mas no Python o índice começa em 0, então Janeiro=0, Maio=4)
+        mes_atual = datetime.datetime.now().month - 1
         # Abas para cada mês (Essencial para o visual limpo no mobile)
         meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+        escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual)
         abas_meses = st.tabs(meses_nome)
 
         # Cálculo do saldo global em Real (R$)
