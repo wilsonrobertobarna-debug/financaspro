@@ -297,10 +297,10 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             pend = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
             saldo_geral = receita - gasto
 
-            # --- PASSO 2: CRIAÇÃO DOS GRÁFICOS (UMA ÚNICA VEZ) ---
+            # --- PASSO 2: CRIAÇÃO DOS GRÁFICOS (BARRAS GORDAS E RENDIMENTO AZUL) ---
             import plotly.express as px
 
-            # 1. Gráfico de Pizza (Categorias)
+            # 1. Gráfico de Pizza
             df_pizza = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             fig_categoria = px.pie(df_pizza, values='V_Num', names='Categoria', hole=0.4)
             fig_categoria.update_layout(showlegend=False, margin=dict(l=20, r=20, t=20, b=20))
@@ -319,12 +319,10 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 text_auto='.2s'
             )
 
-            # Ajuste para as barras ficarem GORDAS e sem efeito alfinete
             fig_fluxo.update_layout(
                 xaxis={'type': 'category'}, 
                 xaxis_title=None, 
                 yaxis_title=None,
-                legend_title_text='Legenda',
                 margin=dict(l=5, r=5, t=5, b=5)
             )
 
@@ -350,16 +348,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             c4.metric("⏳ Pend", m_fmt(pend))
 
             st.divider()
-        # --- PASSO 4: SALDO E MÉTRICAS (Apenas uma vez) ---
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
-        
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("📈 Receita", m_fmt(receita))
-        c2.metric("📉 Gasto", m_fmt(gasto))
-        c3.metric("💰 Rend", m_fmt(rend))
-        c4.metric("⏳ Pend", m_fmt(pend))
-
-        st.divider()
+            
+    elif "Pendências" in aba:
 
         # --- PASSO 5: BANCOS E CARTÕES (No final da página) ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
