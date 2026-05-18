@@ -283,98 +283,73 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 st.rerun()
 
 # 5. TELAS PRINCIPAIS
-if "💰" in aba:
-    st.title("🛡️ FinançasPro Wilson")
-    
-    if not df_base.empty:
-        # --- PASSO 1: PREPARAÇÃO DOS DADOS ---
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+    if "💰" in aba:
+        st.title("🛡️ FinançasPro Wilson")
         
-        receita = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        gasto = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        rend = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-        pend = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
-        saldo_geral = receita - gasto
+        if not df_base.empty:
+            # --- PASSO 1: PREPARAÇÃO DOS DADOS ---
+            df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+            df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+            
+            receita = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            gasto = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+            rend = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+            pend = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
+            saldo_geral = receita - gasto
 
-# --- PASSO 2: CRIAÇÃO DOS GRÁFICOS (AGRUPAMENTO MENSAL E BARRAS LARGAS) ---
-        import plotly.express as px
+            # --- PASSO 2: CRIAÇÃO DOS GRÁFICOS (UMA ÚNICA VEZ) ---
+            import plotly.express as px
 
-        # 1. Gráfico de Pizza (Categorias)
-        df_pizza = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-        fig_categoria = px.pie(df_pizza, values='V_Num', names='Categoria', hole=0.4)
-        fig_categoria.update_layout(showlegend=False)
+            # 1. Gráfico de Pizza (Categorias)
+            df_pizza = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            fig_categoria = px.pie(df_pizza, values='V_Num', names='Categoria', hole=0.4)
+            fig_categoria.update_layout(showlegend=False, margin=dict(l=20, r=20, t=20, b=20))
 
-        # 2. Gráfico de Barras - Agrupando por Mês para as barras ficarem "gordas"
-        # Aqui garantimos que o eixo X seja tratado como TEXTO (categoria) e não DATA (diário)
-        df_fluxo_mensal = df_base.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
-        
-        cores_map = {
-            'Receita': '#00CC96',    # Verde
-            'Rendimento': '#19D3F3', # Azul
-            'Despesa': '#EF553B'     # Vermelho
-        }
+            # 2. Gráfico de Barras Mensal (A "Belezinha")
+            df_fluxo_bom = df_base.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
+            cores_map = {'Receita': '#00CC96', 'Rendimento': '#19D3F3', 'Despesa': '#EF553B'}
 
-        fig_fluxo = px.bar(
-            df_fluxo_mensal, 
-            x='Mes_Ano', 
-            y='V_Num', 
-            color='Tipo', 
-            barmode='group',
-            color_discrete_map=cores_map,
-            text_auto='.2s' # Adiciona o valor em cima da barra para facilitar a leitura
-        )
-        
-        fig_fluxo.update_layout(
-            legend_title_text='Legenda',
-            xaxis_title=None,
-            yaxis_title=None,
-            xaxis={'type': 'category'}, # FORÇA o gráfico a ser mensal/categórico (tira o efeito alfinete)
-            bargap=0.2, # Ajusta o espaço entre os grupos de meses
-            bargroupgap=0.1, # Ajusta o espaço entre as barras do mesmo mês
-            margin=dict(l=20, r=20, t=20, b=20)
-        )
+            fig_fluxo = px.bar(
+                df_fluxo_bom, 
+                x='Mes_Ano', 
+                y='V_Num', 
+                color='Tipo', 
+                barmode='group',
+                color_discrete_map=cores_map,
+                text_auto='.2s'
+            )
 
-        # --- PASSO 3: EXIBIÇÃO DOS GRÁFICOS NO TOPO ---
-        # --- PASSO 2 e 3: EXIBIÇÃO DOS GRÁFICOS NO TOPO ---
-        # Aqui apenas chamamos o que já está "uma belezinha"
-        
-        col_graf1, col_graf2 = st.columns(2)
+            # Ajuste para as barras ficarem GORDAS e sem efeito alfinete
+            fig_fluxo.update_layout(
+                xaxis={'type': 'category'}, 
+                xaxis_title=None, 
+                yaxis_title=None,
+                legend_title_text='Legenda',
+                margin=dict(l=5, r=5, t=5, b=5)
+            )
 
-        with col_graf1:
-            st.subheader("📊 Gastos por Categoria")
-            # Verifica se o gráfico de pizza existe e o exibe
-            if 'fig_categoria' in locals():
+            # --- PASSO 3: EXIBIÇÃO NO TOPO ---
+            col_graf1, col_graf2 = st.columns(2)
+            with col_graf1:
+                st.subheader("📊 Gastos por Categoria")
                 st.plotly_chart(fig_categoria, use_container_width=True)
 
-        # --- COLE ESTA "RECEITA" ANTES DO BLOCO DE EXIBIÇÃO ---
-             import plotly.express as px
+            with col_graf2:
+                st.subheader("📈 Fluxo de Caixa Mensal")
+                st.plotly_chart(fig_fluxo, use_container_width=True)
 
-        # 1. Agrupamos por mês para a barra ficar larga (Gorda)
-        df_fluxo_bom = df_base.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
+            st.divider()
 
-        # 2. Criamos o gráfico com as suas cores: Verde, Azul e Vermelho
-        cores_map = {'Receita': '#00CC96', 'Rendimento': '#19D3F3', 'Despesa': '#EF553B'}
+            # --- PASSO 4: SALDO E MÉTRICAS ---
+            st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
+            
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("📈 Receita", m_fmt(receita))
+            c2.metric("📉 Gasto", m_fmt(gasto))
+            c3.metric("💰 Rend", m_fmt(rend))
+            c4.metric("⏳ Pend", m_fmt(pend))
 
-        fig_fluxo = px.bar(
-        df_fluxo_bom, 
-        x='Mes_Ano', 
-        y='V_Num', 
-        color='Tipo', 
-        barmode='group',
-        color_discrete_map=cores_map,
-        text_auto='.2s'
-)
-
-        # 3. Forçamos o eixo X a ser categórico para acabar com os "alfinetes"
-        fig_fluxo.update_layout(
-        xaxis={'type': 'category'}, 
-        xaxis_title=None, 
-        yaxis_title=None,
-        margin=dict(l=5, r=5, t=5, b=5)
-)
-
-        st.divider()
+            st.divider()
         # --- PASSO 4: SALDO E MÉTRICAS (Apenas uma vez) ---
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
