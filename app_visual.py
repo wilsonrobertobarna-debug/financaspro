@@ -288,8 +288,9 @@ if "💰" in aba:
         
         if not df_base.empty:
             # --- 1. FILTRAR VALE ALIMENTAÇÃO ---
-            # Agora usando o título correto da sua coluna: 'Tipo de Conta'
-            df_va = df_base[df_base['Tipo de Conta'] == 'Vale Alimentação'].copy()
+            # Este comando tenta achar a coluna 'Tipo de Conta' mesmo com espaços extras
+            col_conta = [c for c in df_base.columns if 'Tipo de Conta' in c][0]
+            df_va = df_base[df_base[col_conta] == 'Vale Alimentação'].copy()
             
             # --- 2. CÁLCULOS EM REAL ---
             entrada_va = df_va[df_va['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
@@ -303,11 +304,10 @@ if "💰" in aba:
             c_v2.metric("🛍️ Utilizado", m_fmt(usado_va))
             st.divider()
 
-        # Alinhamento para evitar o erro de Indentation
+        # Mantendo o alinhamento correto das outras variáveis
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m.dropna(subset=['Tipo', 'V_Num'])
         saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-    
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
