@@ -356,11 +356,17 @@ if "💰" in aba:
                     
                     st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
                     
-                    # Métricas em colunas (Visual Organizado)
-                    m1, m2, m3 = st.columns(3)
+                    # 1. Primeiro, vamos calcular o Rendimento separadamente (ajuste conforme sua lógica)
+                    rendimento_m = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+                    pendencia_m = get_valor_pendente(df_m_limpo) # Pega apenas o que falta pagar no mês
+
+                    # 2. Criamos 5 colunas para o PC (no celular elas vão empilhar sozinhas)
+                    m1, m2, m3, m4, m5 = st.columns(5)
                     m1.metric("📈 Receitas", m_fmt(receitas_m))
                     m2.metric("📉 Despesas", m_fmt(despesas_m))
-                    m3.metric("💰 Saldo", m_fmt(saldo_m))
+                    m3.metric("💎 Rendimentos", m_fmt(rendimento_m)) # Nome novo!
+                    m4.metric("⏳ Pendências", m_fmt(pendencia_m))   # Nome novo!
+                    m5.metric("💰 Saldo Final", m_fmt(saldo_m))
                     
                     # Expanders para manter a tela do celular limpa
                     with st.expander("📊 RESUMO GERAL", expanded=False):
