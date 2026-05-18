@@ -300,14 +300,14 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             # --- PASSO 2: CRIAÇÃO DOS GRÁFICOS (BARRAS GORDAS E RENDIMENTO AZUL) ---
             import plotly.express as px
 
-            # 1. Gráfico de Pizza
+            # 1. Gráfico de Pizza (Categorias)
             df_pizza = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             fig_categoria = px.pie(df_pizza, values='V_Num', names='Categoria', hole=0.4)
             fig_categoria.update_layout(showlegend=False, margin=dict(l=20, r=20, t=20, b=20))
 
             # 2. Gráfico de Barras Mensal (A "Belezinha")
             df_fluxo_bom = df_base.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
-            # Mapeamento: Verde para Receita, Azul para Rendimento e Vermelho para Despesa
+            # Verde para Receita, Azul para Rendimento e Vermelho para Despesa
             cores_map = {'Receita': '#00CC96', 'Rendimento': '#19D3F3', 'Despesa': '#EF553B'}
 
             fig_fluxo = px.bar(
@@ -320,7 +320,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 text_auto='.2s'
             )
 
-            # Ajuste para as barras ficarem largas e mensais (sem efeito alfinete)
+            # Ajuste para as barras ficarem largas e mensais (sem o efeito alfinete diário)
             fig_fluxo.update_layout(
                 xaxis={'type': 'category'}, 
                 xaxis_title=None, 
@@ -340,7 +340,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
             st.divider()
 
-            # --- PASSO 4: SALDO E MÉTRICAS ---
+            # --- PASSO 4: SALDO E MÉTRICAS (Formatado em Real) ---
             st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
             
             c1, c2, c3, c4 = st.columns(4)
