@@ -292,7 +292,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
 
-   import datetime
+import datetime
 
 if not df_base.empty:
     # 1. Descobre o mês atual para abrir direto em Maio
