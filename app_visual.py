@@ -284,7 +284,17 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
-    st.title("🛡️ FinançasPro Wilson")
+    # 1. ESTILO (CSS) - Isso aqui "puxa" tudo para cima antes de desenhar o título
+    st.markdown("""
+        <style>
+               .block-container {
+                    padding-top: 0rem; /* Zera o espaço no topo */
+                    padding-bottom: 0rem;
+                }
+        </style>
+        """, unsafe_allow_html=True)
+    
+    st.subheader("🛡️ FinançasPro Wilson")
     # --- COLE AQUI (INÍCIO DA BARRINHA) ---
     meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
