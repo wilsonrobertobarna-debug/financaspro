@@ -283,28 +283,41 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 st.rerun()
 
 # 5. TELAS PRINCIPAIS
-if "💰" in aba:
-    st.title("🛡️ FinançasPro Wilson")
-    
-    if not df_base.empty:
-        # AQUI VOCÊ CRIA A VARIÁVEL
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+    if "💰" in aba:
+        st.title("🛡️ FinançasPro Wilson")
         
-        # Cálculo do saldo
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
-        
-        st.divider()
+        if not df_base.empty:
+            # --- PASSO 1: DADOS (Moeda: Real) ---
+            df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+            df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+            
+            receita = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            gasto = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+            rend = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+            pend = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
+            saldo_geral = receita - gasto
 
-        # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
-        with st.expander("📊 RESUMO DOS MESES", expanded=False):
-            m1, m2, m3 = st.columns(3)
-            # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
-            m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-            m2.metric("📉 Despesa", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-            m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
+            # --- PASSO 2: APENAS O GRÁFICO DE PIZZA ---
+            import plotly.express as px
+            
+            df_pizza = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            fig_pizza = px.pie(df_pizza, values='V_Num', names='Categoria', hole=0.4)
+            fig_pizza.update_layout(showlegend=False, margin=dict(l=20, r=20, t=20, b=20))
 
+            st.subheader("📊 Gastos por Categoria")
+            st.plotly_chart(fig_pizza, use_container_width=True)
+            st.divider()
+
+            # --- PASSO 3: MÉTRICAS ---
+            st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("📈 Receita", m_fmt(receita))
+            c2.metric("📉 Gasto", m_fmt(gasto))
+            c3.metric("💰 Rend", m_fmt(rend))
+            c4.metric("⏳ Pend", m_fmt(pend))
+            st.divider()
+
+    elif "Pendências" in aba:
         # --- BANCOS E CARTÕES ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
             if not df_bancos_info.empty:
