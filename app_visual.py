@@ -295,14 +295,14 @@ if "💰" in aba:
 import datetime
 
 if not df_base.empty:
-    # 1. Descobre o mês atual para abrir direto em Maio (mês 5)
+    # 1. Descobre o mês atual para abrir direto em Maio
     mes_atual_idx = datetime.datetime.now().month - 1
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
-    # 2. Selectbox: Prático para o celular e garante o visual limpo
+    # 2. Selectbox: Substitui as abas que estão "empilhadas" no celular
     escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual_idx)
     
-    # 3. Filtra os dados de Maio usando a coluna correta 'Mes_Ano'
+    # 3. Filtra os dados de Maio usando a coluna correta da sua planilha
     df_m_limpo = df_base[df_base['Mes_Ano'] == escolha_mes]
     # --- FAXINA DAS BARRINHAS ---
     # Importante: Delete ou comente as linhas abaixo no seu arquivo original:
