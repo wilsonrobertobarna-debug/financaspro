@@ -291,21 +291,13 @@ if "💰" in aba:
         
         # Este bloco abaixo deve ter EXATAMENTE 8 espaços de recuo
         if not df_base.empty:
-            # --- 1. FILTRAR VALE ALIMENTAÇÃO ---
-            df_va = df_base[df_base['Cartao_ou_Conta'] == 'Vale Alimentação'].copy()
-            
-            # --- 2. CÁLCULOS EM REAL ---
-            entrada_va = df_va[df_va['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            usado_va = df_va[df_va['Tipo'] == 'Despesa']['V_Num'].sum()
-            saldo_va = entrada_va - usado_va
+           if not df_base.empty:
+        # 1. Filtro do Vale Alimentação
+        df_va = df_base[df_base['Cartao_ou_Conta'] == 'Vale Alimentação'].copy()
 
-            # --- 3. VISUAL LIMPO ---
-            st.info(f"### 🛒 Saldo Vale: {m_fmt(saldo_va)}")
-            c_v1, c_v2 = st.columns(2)
-            c_v1.metric("📥 Depósitos", m_fmt(entrada_va))
-            c_v2.metric("🛍️ Utilizado", m_fmt(usado_va))
-            st.divider()
-     
+
+
+      
         # --- BANCOS E CARTÕES ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
             if not df_bancos_info.empty:
