@@ -309,10 +309,10 @@ if "💰" in aba:
         # 1. Identifica automaticamente se a coluna é 'Mês', 'Mes' ou 'mes'
         colunas_possiveis = [c for c in df_base.columns if c.lower() in ['mês', 'mes']]
 
-        if colunas_possiveis:
+    if colunas_possiveis:
         nome_coluna_real = colunas_possiveis[0]
         df_m_limpo = df_base[df_base[nome_coluna_real] == escolha_mes]
-        else:
+    else:
         # Caso não encontre nada parecido, o app não trava e mostra um aviso
         st.error(f"Coluna de mês não encontrada. Colunas disponíveis: {list(df_base.columns)}")
         df_m_limpo = pd.DataFrame()
