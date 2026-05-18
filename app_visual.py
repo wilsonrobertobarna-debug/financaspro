@@ -284,14 +284,14 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
-    st.title("🛡️ FinançasPro Wilson")
+    st.title("🛡️ FinançasPro Wilson") # Nome do projeto corrigido
     
-        if not df_base.empty:
-        # 1. BARRINHA DE DIAS NO TOPO
+    if not df_base.empty:
+        # 1. BARRINHA DE DIAS NO TOPO (4 espaços de recuo)
         dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
         abas_dias = st.tabs(dias_semana)
         
-        # 2. SALDO GERAL (Cálculos e Exibição)
+        # 2. SALDO GERAL (4 espaços de recuo)
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_pago = df_m[df_m['Status'] == 'Pago']
         
@@ -302,10 +302,11 @@ if "💰" in aba:
         
         saldo_geral = receita - gasto
         
+        # Exibição sempre em Real
         st.info(f"### 🏦 SALDO GERAL ATUAL: R$ {saldo_geral:,.2f}")
         st.divider()
 
-        # 3. TAGS DE VALORES
+        # 3. TAGS DE VALORES (4 espaços de recuo)
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("📈 Receita", f"R$ {receita:,.2f}")
         c2.metric("📉 Gasto", f"R$ {gasto:,.2f}")
@@ -314,7 +315,7 @@ if "💰" in aba:
 
         st.divider()
 
-        # 4. GRÁFICOS (Agora com a indentação correta para não quebrar)
+        # 4. GRÁFICOS (4 espaços de recuo)
         col_graf1, col_graf2 = st.columns(2)
 
         with col_graf1:
@@ -322,21 +323,34 @@ if "💰" in aba:
             if 'fig_categoria' in locals(): 
                 st.plotly_chart(fig_categoria, use_container_width=True)
 
-        # ... (final do bloco dos gráficos) ...
         with col_graf2:
             st.subheader("📈 Fluxo de Caixa Mensal")
             if 'fig_fluxo' in locals():
                 st.plotly_chart(fig_fluxo, use_container_width=True)
 
-        # 5. TUDO O QUE SUMIU PRECISA VIR AQUI (Ainda com 8 espaços de recuo)
+        # 5. BANCOS E CARTÕES (4 espaços de recuo - Alinhado com os gráficos)
         st.divider()
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
-# O código que gera os cartões e bancos entra aqui
             st.write("Seus bancos voltaram a aparecer aqui!")
+            # O código que gera os cartões e bancos entra aqui (com 8 espaços)
 
-# SÓ AGORA você encosta na parede esquerda para o próximo menu
+# --- FIM DA PRIMEIRA ABA / INÍCIO DA SEGUNDA ---
 elif "📅" in aba:
     st.write("Outra tela...")
+
+    # 1. COMPARATIVO (4 espaços de recuo)
+    with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
+        # 8 espaços de recuo aqui dentro
+        st.write("Conteúdo do gráfico comparativo aqui...")
+
+    # 2. BANCOS E CARTÕES NA SEGUNDA TELA (4 espaços de recuo)
+    with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
+        if not df_bancos_info.empty:
+            for index, row in df_bancos_info.iterrows():
+                banco_nome = row.iloc[0]
+                st.write(f"🔹 **{banco_nome}**")
+        else:
+            st.info("Carregando informações dos bancos...")    st.write("Outra tela...")
 
     # 1. Alinhado com 4 espaços (mesmo nível do st.write)
     with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
