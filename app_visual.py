@@ -301,7 +301,6 @@ if not df_base.empty:
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
     # 3. Selectbox: Essencial para o visual limpo no mobile (Substitui as abas)
-    #
     escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual_idx)
     
     # 4. Filtro direto usando a sua coluna 'Mes_Ano'
