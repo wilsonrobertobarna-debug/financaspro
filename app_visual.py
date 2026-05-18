@@ -284,10 +284,11 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
-    st.title("🛡️ FinançasPro Wilson")
-    
-    if not df_base.empty:
-        df_va = df_base[df_base['Cartao_ou_Conta'] == 'Cartão Pluxee'].copy()
+        st.title("🛡️ FinançasPro Wilson")
+        
+        if not df_base.empty:
+            # --- 1. FILTRAR CARTÃO PLUXEE ---
+            df_va = df_base[df_base['Cartao_ou_Conta'] == 'Cartão Pluxee'].copy()
             
             # --- 2. CÁLCULOS EM REAL ---
             entrada_va = df_va[df_va['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
@@ -301,11 +302,10 @@ if "💰" in aba:
             c_v2.metric("🛍️ Utilizado", m_fmt(usado_va))
             st.divider()
 
-        # ESTAS LINHAS ABAIXO DEVEM ESTAR ALINHADAS COM O "if not df_base.empty"
+        # O df_m deve estar alinhado com o 'if not df_base.empty'
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m.dropna(subset=['Tipo', 'V_Num'])
         saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.divider()
 
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
