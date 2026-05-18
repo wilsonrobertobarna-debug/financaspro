@@ -295,19 +295,19 @@ if "💰" in aba:
 
     g1, g2 = st.columns(2)
     with g1:
-        # Removi o # para o gráfico de pizza voltar a funcionar
+        st.write("### 🍕 Gastos por Categoria")
+        # Coloque o '#' no início destas linhas abaixo:
         df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-        if not df_p.empty: 
-            st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True, config={'staticPlot': True})
+         if not df_p.empty: 
+             st.plotly_chart(px.pie(df_p, values='V_Num', ...), use_container_width=True)
+        st.info("Aguardando conexão com os dados...")
 
     with g2:
-        # Removi o # para o gráfico de fluxo voltar a funcionar
-        df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
-        df_f = df_f.sort_values('DT')
-        df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
-        if not df_f_grouped.empty: 
-            st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa Mensal"), use_container_width=True, config={'staticPlot': True})
-        st.info("Fluxo de Caixa (Em breve)")
+        st.write("### 📊 Fluxo de Caixa")
+        # Coloque o '#' no início destas linhas abaixo:
+        df_f = df_base[(df_base['Categoria'] != 'Transferência') ...].copy()
+        # ... restante da lógica ...
+        st.info("Aguardando conexão com os dados...")
        
     if not df_base.empty:
         # AQUI VOCÊ CRIA A VARIÁVEL
