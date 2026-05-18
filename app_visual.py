@@ -307,6 +307,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
             # 2. Gráfico de Barras Mensal (A "Belezinha")
             df_fluxo_bom = df_base.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
+            # Mapeamento de cores solicitado: Verde, Azul e Vermelho
             cores_map = {'Receita': '#00CC96', 'Rendimento': '#19D3F3', 'Despesa': '#EF553B'}
 
             fig_fluxo = px.bar(
@@ -319,6 +320,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 text_auto='.2s'
             )
 
+            # Força o eixo como categoria para evitar o efeito "alfinete"
             fig_fluxo.update_layout(
                 xaxis={'type': 'category'}, 
                 xaxis_title=None, 
@@ -338,7 +340,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
             st.divider()
 
-            # --- PASSO 4: SALDO E MÉTRICAS ---
+            # --- PASSO 4: SALDO E MÉTRICAS (Formatado em Real) ---
             st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
             
             c1, c2, c3, c4 = st.columns(4)
@@ -350,8 +352,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             st.divider()
             
     elif "Pendências" in aba:
-
-        # --- PASSO 5: BANCOS E CARTÕES (No final da página) ---
+            
+          # --- PASSO 5: BANCOS E CARTÕES (No final da página) ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
             if 'df_bancos_info' in locals() and not df_bancos_info.empty:
                 for index, row in df_bancos_info.iterrows():
