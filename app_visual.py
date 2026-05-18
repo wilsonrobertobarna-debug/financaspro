@@ -282,18 +282,29 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
+import datetime
+
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
-        # AQUI VOCÊ CRIA A VARIÁVEL
+        # 1. Identifica o mês atual para o filtro (Ex: 'Mai')
+        meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+        mes_atual = meses_nome[datetime.datetime.now().month - 1]
+
+        # 2. Cria a variável df_m filtrando pela coluna correta da sua planilha
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+        
+        # 3. Limpa os dados (remove transferências e foca no que foi pago)
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-        # Cálculo do saldo
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
+        # 4. Cálculo do saldo em Real
+        total_rec = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        total_des = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        saldo_geral = total_rec - total_des
+        
+        st.info(f"### 🏦 SALDO GERAL ({mes_atual}): R$ {saldo_geral:,.2f}")
         
         st.divider()
 
