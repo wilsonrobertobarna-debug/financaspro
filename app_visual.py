@@ -292,22 +292,24 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
 
-    import datetime
+   import datetime
 
-    if not df_base.empty:
-        # 1. Descobre o mês atual (Maio = 4)
-        mes_atual = datetime.datetime.now().month - 1
-        meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+if not df_base.empty:
+    # 1. Descobre o mês atual para abrir direto em Maio
+    mes_atual_idx = datetime.datetime.now().month - 1
+    meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
-        # 2. Selectbox para abrir direto no mês atual
-        escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual)
+    # 2. Selectbox: Prático para o celular e evita erro de abas
+    escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual_idx)
     
-        # 3. Filtra usando o nome REAL da sua coluna: 'Mes_Ano'
-        df_m_limpo = df_base[df_base['Mes_Ano'] == escolha_mes]
+    # 3. Filtra os dados de Maio usando a coluna correta que vimos no erro anterior
+    df_m_limpo = df_base[df_base['Mes_Ano'] == escolha_mes]
 
-        # --- A partir daqui, remova qualquer linha que diga 'for i, aba_mes in enumerate(abas_meses):' ---
-        # O código abaixo agora roda direto para o mês escolhido
-    
+    # --- FAXINA DAS BARRINHAS ---
+    # Importante: Delete ou comente as linhas abaixo no seu arquivo original:
+    # abas_meses = st.tabs(meses_nome)  <-- APAGAR
+    # for i, aba_mes in enumerate(abas_meses): <-- APAGAR
+    # with aba_mes: <-- APAGAR
        
     if colunas_possiveis:
         nome_coluna_real = colunas_possiveis[0]
