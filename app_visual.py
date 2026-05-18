@@ -336,16 +336,26 @@ if "💰" in aba:
         )
 
         # --- PASSO 3: EXIBIÇÃO DOS GRÁFICOS NO TOPO ---
+        # --- PASSO 2 e 3: EXIBIÇÃO DOS GRÁFICOS NO TOPO ---
+        # Aqui apenas chamamos o que já está "uma belezinha"
+        
         col_graf1, col_graf2 = st.columns(2)
+
         with col_graf1:
             st.subheader("📊 Gastos por Categoria")
-            st.plotly_chart(fig_categoria, use_container_width=True)
+            # Verifica se o gráfico de pizza existe e o exibe
+            if 'fig_categoria' in locals():
+                st.plotly_chart(fig_categoria, use_container_width=True)
 
         with col_graf2:
             st.subheader("📈 Fluxo de Caixa Mensal")
-            st.plotly_chart(fig_fluxo, use_container_width=True)         
-            st.divider()
+            # Exibe o fig_fluxo que você já tem pronto e bonito
+            if 'fig_fluxo' in locals():
+                st.plotly_chart(fig_fluxo, use_container_width=True)
+            else:
+                st.info("Gráfico 'fig_fluxo' não encontrado no código acima.")
 
+        st.divider()
         # --- PASSO 4: SALDO E MÉTRICAS (Apenas uma vez) ---
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
