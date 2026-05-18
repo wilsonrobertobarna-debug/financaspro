@@ -287,31 +287,41 @@ if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
-        # AQUI VOCÊ CRIA A VARIÁVEL
+        # 1. CÁLCULOS (Isso você já tem, mantemos igual)
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-        # Cálculo do saldo
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
+        # 2. AS TAGS (RECEITA, GASTO, ETC) - SUBINDO PARA O TOPO
+        # Criamos 4 colunas para ficarem lado a lado e economizar espaço
+        c1, c2, c3, c4 = st.columns(4)
+        
+        # Calculamos os valores para as tags
+        receita = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        gasto = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        # Aqui você usa a sua função de pendentes
+        pendente = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum() 
+
+        # Exibindo as tags em Real
+        c1.metric("📈 Receita", f"R$ {receita:,.2f}")
+        c2.metric("📉 Gasto", f"R$ {gasto:,.2f}")
+        c3.metric("💰 Rend", f"R$ {rendimento:,.2f}")
+        c4.metric("⏳ Pend", f"R$ {pendente:,.2f}")
         
         st.divider()
-        # A barrinha que você pediu: seg - ter - qua...
+
+        # 3. A BARRINHA DE DIAS (SEG - TER - QUA...)
         dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
         abas_dias = st.tabs(dias_semana)
-        
-        # Por enquanto, deixamos elas prontas para receber o conteúdo depois
         for i, aba_dia in enumerate(abas_dias):
             with aba_dia:
                 st.caption(f"Lançamentos de {dias_semana[i]}")
-        
-        # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
-        with st.expander("📊 RESUMO DOS MESES", expanded=False):
-            m1, m2, m3 = st.columns(3)
-            # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
-            m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-            m2.metric("📉 Despesa", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-            m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
+
+        st.divider()
+
+        # 4. RESUMO DE BANCOS E CARTÕES (AGORA NO FINAL)
+        st.subheader("🏦 Resumo de Bancos e Cartões")
+        # COLOQUE AQUI O CÓDIGO QUE MOSTRA OS BANCOS E CARTÕES QUE ESTAVA LÁ EM CIMA
 
         # --- BANCOS E CARTÕES ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
