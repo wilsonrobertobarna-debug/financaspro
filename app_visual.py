@@ -306,7 +306,7 @@ if "💰" in aba:
     
         # 4. Agora filtramos os dados com base no mês que você escolheu no selectbox
         # (Isso substitui o loop das abas e limpa o visual)
-        df_m_limpo = df_base[df_base['Mes'] == escolha_mes]
+        df_m_limpo = df_base[df_base['Mês'] == escolha_mes]
        
 
         # Cálculo do saldo global em Real (R$)
