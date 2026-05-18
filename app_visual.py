@@ -328,7 +328,7 @@ if "💰" in aba:
                 st.plotly_chart(fig_fluxo, use_container_width=True)
         st.divider()
         # O próximo "elif" deve ficar alinhado com o primeiro "if" lá de cima
-        elif "📅" in aba:
+            elif "📅" in aba:
         st.write("Outra tela...")
 
               # --- BANCOS E CARTÕES ---
