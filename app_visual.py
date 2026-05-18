@@ -306,7 +306,16 @@ if "💰" in aba:
     
         # 4. Agora filtramos os dados com base no mês que você escolheu no selectbox
         # (Isso substitui o loop das abas e limpa o visual)
-        df_m_limpo = df_base[df_base['Mês'] == escolha_mes]
+        # 1. Identifica automaticamente se a coluna é 'Mês', 'Mes' ou 'mes'
+        colunas_possiveis = [c for c in df_base.columns if c.lower() in ['mês', 'mes']]
+
+        if colunas_possiveis:
+        nome_coluna_real = colunas_possiveis[0]
+        df_m_limpo = df_base[df_base[nome_coluna_real] == escolha_mes]
+        else:
+        # Caso não encontre nada parecido, o app não trava e mostra um aviso
+        st.error(f"Coluna de mês não encontrada. Colunas disponíveis: {list(df_base.columns)}")
+        df_m_limpo = pd.DataFrame()
        
 
         # Cálculo do saldo global em Real (R$)
