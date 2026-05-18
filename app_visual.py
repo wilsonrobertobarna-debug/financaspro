@@ -317,17 +317,20 @@ if "💰" in aba:
         st.divider()
 
         # 4. GRÁFICOS (Abaixo das Tags)
-        col_graf1, col_graf2 = st.columns(2)
+       # Gráficos abaixo das tags
+col_graf1, col_graf2 = st.columns(2)
 
-        with col_graf1:
-            st.subheader("📊 Gastos por Categoria")
-            # Aqui você chama o seu gráfico de pizza ou barras de categoria
-            # Exemplo: st.plotly_chart(fig_categoria, use_container_width=True)
+with col_graf1:
+    st.subheader("📊 Gastos por Categoria")
+    # Aqui entra o seu código do gráfico de pizza/barras
+    if 'fig_categoria' in locals(): # Verifica se o gráfico existe para não quebrar
+        st.plotly_chart(fig_categoria, use_container_width=True)
 
-        with col_graf2:
-            st.subheader("📈 Fluxo de Caixa Mensal")
-            # Aqui você chama o seu gráfico de fluxo
-            # Exemplo: st.plotly_chart(fig_fluxo, use_container_width=True)
+with col_graf2:
+    st.subheader("📈 Fluxo de Caixa Mensal")
+    # Aqui entra o seu código do gráfico de linhas/fluxo
+    if 'fig_fluxo' in locals():
+        st.plotly_chart(fig_fluxo, use_container_width=True)
 
         st.divider()
         # 4. RESUMO DE BANCOS E CARTÕES (AGORA NO FINAL)
