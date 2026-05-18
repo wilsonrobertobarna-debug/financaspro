@@ -351,7 +351,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
             st.divider()
 
-elif "Pendências" in aba:
+    elif "Pendências" in aba:
             
           # --- PASSO 5: BANCOS E CARTÕES (No final da página) ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
