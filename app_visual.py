@@ -287,17 +287,11 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         st.title("🛡️ FinançasPro Wilson")
         
         if not df_base.empty:
-            # --- PREPARAÇÃO DOS DADOS ---
+            # --- 1. PREPARAÇÃO (Moeda: Real) ---
             df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
             df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
             
-            receita = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            gasto = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-            rend = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-            pend = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
-            saldo_geral = receita - gasto
-
-            # --- GRÁFICO 1 (PIZZA) ---
+            # --- 2. GRÁFICO DE PIZZA ---
             import plotly.express as px
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             fig_p = px.pie(df_p, values='V_Num', names='Categoria', hole=0.4)
@@ -305,15 +299,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
             st.subheader("📊 Gastos por Categoria")
             st.plotly_chart(fig_p, use_container_width=True)
-            st.divider()
-
-            # --- MÉTRICAS EM REAL ---
-            st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("📈 Receita", m_fmt(receita))
-            c2.metric("📉 Gasto", m_fmt(gasto))
-            c3.metric("💰 Rend", m_fmt(rend))
-            c4.metric("⏳ Pend", m_fmt(pend))
             st.divider()
 
     elif "Pendências" in aba:
