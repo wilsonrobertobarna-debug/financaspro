@@ -299,10 +299,10 @@ if not df_base.empty:
     mes_atual_idx = datetime.datetime.now().month - 1
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
-    # 2. Selectbox: Substitui as abas que estão "empilhadas" no celular
+    # 2. Selectbox: Abre em Maio e limpa o topo do app no mobile
     escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual_idx)
     
-    # 3. Filtra os dados de Maio usando a coluna correta da sua planilha
+    # 3. Filtra os dados usando a coluna correta 'Mes_Ano' que está na sua planilha
     df_m_limpo = df_base[df_base['Mes_Ano'] == escolha_mes]
     # --- FAXINA DAS BARRINHAS ---
     # Importante: Delete ou comente as linhas abaixo no seu arquivo original:
