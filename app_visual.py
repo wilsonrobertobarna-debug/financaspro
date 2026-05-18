@@ -494,7 +494,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-elif "Pendências" in aba:
+    elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
     
