@@ -355,15 +355,15 @@ if "💰" in aba:
     
                     # 1. Calculando o Rendimento separadamente
                     rendimento_m = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-                    # 1. Pegamos a coluna de Status e limpamos (tira espaços e deixa em maiúsculo)
-                    status_verificacao = df_m_limpo['Status'].astype(str).str.strip().str.upper()
+                    # 1. Forçamos a coluna Status a virar texto e removemos espaços invisíveis
+                    df_m_limpo['Status'] = df_m_limpo['Status'].astype(str).fillna('').str.strip()
 
-                    # 2. Soma tudo que é Despesa E que o Status NÃO seja 'PAGO'
+                    # 2. Calculamos a Pendência somando tudo que NÃO é 'Pago' (independente de maiúscula/minúscula)
+                    # E garantimos que o valor (V_Num) seja tratado como número
                     pendencia_m = df_m_limpo[
                     (df_m_limpo['Tipo'] == 'Despesa') & 
-                    (status_verificacao != 'PAGO')
+                    (df_m_limpo['Status'].str.upper() != 'PAGO')
                     ]['V_Num'].sum()
-
                     # 3. O Saldo Final (Receitas + Rendimentos - Despesas)
                     saldo_m = (receitas_m + rendimento_m) - despesas_m
 
