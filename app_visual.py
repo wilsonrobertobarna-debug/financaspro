@@ -326,11 +326,12 @@ if "💰" in aba:
             st.subheader("📈 Fluxo de Caixa Mensal")
             if 'fig_fluxo' in locals():
                 st.plotly_chart(fig_fluxo, use_container_width=True)
+        st.divider()
+        # O próximo "elif" deve ficar alinhado com o primeiro "if" lá de cima
+        elif "📅" in aba:
+        st.write("Outra tela...")
 
-# O próximo "elif" deve ficar alinhado com o primeiro "if" lá de cima
-elif "📅" in aba:
-    st.write("Outra tela...")
-        # --- BANCOS E CARTÕES ---
+              # --- BANCOS E CARTÕES ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
             if not df_bancos_info.empty:
                 for index, row in df_bancos_info.iterrows():
