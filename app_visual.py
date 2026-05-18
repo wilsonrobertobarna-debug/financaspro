@@ -297,17 +297,39 @@ if "💰" in aba:
         pend = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
         saldo_geral = receita - gasto
 
-        # --- PASSO 2: CRIAÇÃO DOS GRÁFICOS (Isso faz eles aparecerem!) ---
+        # --- PASSO 2: CRIAÇÃO DOS GRÁFICOS COM CORES PERSONALIZADAS ---
         import plotly.express as px
 
-        # Gráfico de Pizza (Gastos por Categoria)
+        # 1. Gráfico de Pizza (Categorias)
         df_pizza = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         fig_categoria = px.pie(df_pizza, values='V_Num', names='Categoria', hole=0.4)
-        fig_categoria.update_layout(showlegend=False) # Visual limpo
+        fig_categoria.update_layout(showlegend=False) # Mantém o visual limpo
 
-        # Gráfico de Barras (Fluxo Mensal)
+        # 2. Gráfico de Barras com as cores solicitadas
         df_fluxo = df_base.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
-        fig_fluxo = px.bar(df_fluxo, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group')
+        
+        # Mapeamento de cores: Verde, Azul e Vermelho
+        cores_map = {
+            'Receita': '#00CC96',    # Verde
+            'Rendimento': '#19D3F3', # Azul
+            'Despesa': '#EF553B'     # Vermelho
+        }
+
+        fig_fluxo = px.bar(
+            df_fluxo, 
+            x='Mes_Ano', 
+            y='V_Num', 
+            color='Tipo', 
+            barmode='group',
+            color_discrete_map=cores_map
+        )
+        
+        fig_fluxo.update_layout(
+            legend_title_text='Legenda',
+            xaxis_title=None,
+            yaxis_title=None,
+            margin=dict(l=20, r=20, t=20, b=20)
+        )
 
         # --- PASSO 3: EXIBIÇÃO DOS GRÁFICOS NO TOPO ---
         col_graf1, col_graf2 = st.columns(2)
@@ -317,9 +339,7 @@ if "💰" in aba:
 
         with col_graf2:
             st.subheader("📈 Fluxo de Caixa Mensal")
-            st.plotly_chart(fig_fluxo, use_container_width=True)
-
-        st.divider()
+            st.plotly_chart(fig_fluxo, use_container_width=True)        st.divider()
 
         # --- PASSO 4: SALDO E MÉTRICAS (Apenas uma vez) ---
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
