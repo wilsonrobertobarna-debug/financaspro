@@ -296,7 +296,15 @@ if "💰" in aba:
         st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
         st.divider()
-
+        # A barrinha que você pediu: seg - ter - qua...
+        dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+        abas_dias = st.tabs(dias_semana)
+        
+        # Por enquanto, deixamos elas prontas para receber o conteúdo depois
+        for i, aba_dia in enumerate(abas_dias):
+            with aba_dia:
+                st.caption(f"Lançamentos de {dias_semana[i]}")
+        
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
