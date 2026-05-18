@@ -4,9 +4,7 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
-import streamlit as st
-import pandas as pd
+import datetime
 from datetime import datetime, timedelta
 import urllib.parse
 
