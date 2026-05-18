@@ -298,7 +298,7 @@ if "💰" in aba:
         st.write("### 🍕 Gastos por Categoria")
         # Coloque o '#' no início destas linhas abaixo:
         df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-         if not df_p.empty: 
+        if not df_p.empty: 
              st.plotly_chart(px.pie(df_p, values='V_Num', ...), use_container_width=True)
         st.info("Aguardando conexão com os dados...")
 
