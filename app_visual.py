@@ -294,17 +294,23 @@ if "💰" in aba:
 
 import datetime
 
+# 1. Verifica se há dados para exibir
 if not df_base.empty:
-    # Define os meses e o atual (Maio)
+    # 2. Configura os meses e define Maio como padrão (índice 4)
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     mes_atual_idx = datetime.datetime.now().month - 1
     
-    # O seletor para o mobile
+    # 3. Selectbox: Abre em Maio e evita o empilhamento de abas no celular
+    # Isso garante o "visual limpo" que você pediu
     escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual_idx)
     
-    # FILTRO DIRETO (Sem a variável que está dando erro)
+    # 4. Filtro Direto: Usa o nome real da coluna da sua planilha: 'Mes_Ano'
     df_m_limpo = df_base[df_base['Mes_Ano'] == escolha_mes]
-    
+
+    # --- CÁLCULOS (Alinhados com o df_m_limpo) ---
+    total_rec = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+    total_des = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+    saldo_m = total_rec - total_des
     # --- FAXINA DAS BARRINHAS ---
        
     if colunas_possiveis:
