@@ -287,7 +287,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         st.title("🛡️ FinançasPro Wilson")
         
         if not df_base.empty:
-            # --- PASSO 1: PREPARAÇÃO DOS DADOS ---
+            # --- PASSO 1: PREPARAÇÃO DOS DADOS (Em Real) ---
             df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
             df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
             
@@ -297,14 +297,14 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             pend = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
             saldo_geral = receita - gasto
 
-            # --- PASSO 2: CRIAÇÃO DO GRÁFICO DE PIZZA ---
+            # --- PASSO 2: APENAS O GRÁFICO DE PIZZA (Por enquanto) ---
             import plotly.express as px
             
             df_pizza = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             fig_categoria = px.pie(df_pizza, values='V_Num', names='Categoria', hole=0.4)
             fig_categoria.update_layout(showlegend=False, margin=dict(l=20, r=20, t=20, b=20))
 
-            # --- PASSO 3: EXIBIÇÃO ---
+            # --- PASSO 3: EXIBIÇÃO NO TOPO ---
             st.subheader("📊 Gastos por Categoria")
             st.plotly_chart(fig_categoria, use_container_width=True)
 
@@ -318,7 +318,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             c2.metric("📉 Gasto", m_fmt(gasto))
             c3.metric("💰 Rend", m_fmt(rend))
             c4.metric("⏳ Pend", m_fmt(pend))
-
             st.divider()
 
     elif "Pendências" in aba:
