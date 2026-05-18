@@ -287,15 +287,51 @@ if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
-        # AQUI VOCÊ CRIA A VARIÁVEL
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
-        
-        # Cálculo do saldo
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
-        
+        # --- OS GRÁFICOS AGORA APARECEM NO TOPO ---
+        col_graf1, col_graf2 = st.columns(2)
+
+        with col_graf1:
+            st.subheader("📊 Gastos por Categoria")
+            if 'fig_categoria' in locals(): 
+                st.plotly_chart(fig_categoria, use_container_width=True)
+
+        with col_graf2:
+            st.subheader("📈 Fluxo de Caixa Mensal")
+            if 'fig_fluxo' in locals():
+                st.plotly_chart(fig_fluxo, use_container_width=True)
+
         st.divider()
+
+        # --- CÁLCULOS E SALDO GERAL ---
+        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+        df_m_pago = df_m[df_m['Status'] == 'Pago']
+        
+        receita = df_m_pago[df_m_pago['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        gasto = df_m_pago[df_m_pago['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend = df_m_pago[df_m_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
+        pend = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
+        
+        saldo_geral = receita - gasto
+        
+        st.info(f"### 🏦 SALDO GERAL ATUAL: R$ {saldo_geral:,.2f}")
+        
+        # --- TAGS DE MÉTRICAS ---
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("📈 Receita", f"R$ {receita:,.2f}")
+        c2.metric("📉 Gasto", f"R$ {gasto:,.2f}")
+        c3.metric("💰 Rend", f"R$ {rend:,.2f}")
+        c4.metric("⏳ Pend", f"R$ {pend:,.2f}")
+
+        st.divider()
+
+        # --- BANCOS E CARTÕES NO FINAL ---
+        with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
+            if 'df_bancos_info' in locals() and not df_bancos_info.empty:
+                for index, row in df_bancos_info.iterrows():
+                    banco_nome = row.iloc[0]
+                    st.write(f"🔹 **{banco_nome}**")
+            else:
+                st.info("Carregando informações dos bancos...")
 
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
