@@ -287,7 +287,18 @@ if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
-        # --- OS GRÁFICOS AGORA APARECEM NO TOPO ---
+        # --- PRIMEIRO: PREPARAÇÃO DOS DADOS (Necessário para os gráficos e métricas) ---
+        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+        # Criando a variável que o erro apontou como faltante
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+        
+        receita = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        gasto = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        pend = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
+        saldo_geral = receita - gasto
+
+        # --- SEGUNDO: OS GRÁFICOS NO TOPO (Agora com os dados prontos) ---
         col_graf1, col_graf2 = st.columns(2)
 
         with col_graf1:
@@ -302,27 +313,25 @@ if "💰" in aba:
 
         st.divider()
 
-        # --- CÁLCULOS E SALDO GERAL ---
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_pago = df_m[df_m['Status'] == 'Pago']
+        # --- TERCEIRO: SALDO E MÉTRICAS ---
+        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
-        receita = df_m_pago[df_m_pago['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        gasto = df_m_pago[df_m_pago['Tipo'] == 'Despesa']['V_Num'].sum()
-        rend = df_m_pago[df_m_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
-        pend = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
-        
-        saldo_geral = receita - gasto
-        
-        st.info(f"### 🏦 SALDO GERAL ATUAL: R$ {saldo_geral:,.2f}")
-        
-        # --- TAGS DE MÉTRICAS ---
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("📈 Receita", f"R$ {receita:,.2f}")
-        c2.metric("📉 Gasto", f"R$ {gasto:,.2f}")
-        c3.metric("💰 Rend", f"R$ {rend:,.2f}")
-        c4.metric("⏳ Pend", f"R$ {pend:,.2f}")
+        c1.metric("📈 Receita", m_fmt(receita))
+        c2.metric("📉 Gasto", m_fmt(gasto))
+        c3.metric("💰 Rend", m_fmt(rend))
+        c4.metric("⏳ Pend", m_fmt(pend))
 
         st.divider()
+
+        # --- QUARTO: BANCOS E CARTÕES NO FINAL ---
+        with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
+            if 'df_bancos_info' in locals() and not df_bancos_info.empty:
+                for index, row in df_bancos_info.iterrows():
+                    banco_nome = row.iloc[0]
+                    st.write(f"🔹 **{banco_nome}**")
+            else:
+                st.info("Carregando informações dos bancos...")
 
         # --- BANCOS E CARTÕES NO FINAL ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
