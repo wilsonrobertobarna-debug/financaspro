@@ -314,15 +314,6 @@ if "💰" in aba:
             else:
                 st.info(f"Sem lançamentos para {meses_nome[i]}.")
 
-# --- ESPAÇO DO MILO ---
-elif "🐶" in aba:
-    st.title("🐶 Espaço do Milo")
-    st.write("Acompanhamento do seu Golden Retriever.")
-
-# --- WHATSAPP / ALERTAS ---
-elif "💬" in aba:
-    st.title("💬 Notificações")
-    st.write("Alertas via Twilio configurados para o sistema.")
 
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
