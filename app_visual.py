@@ -366,7 +366,7 @@ if "💰" in aba:
                    # 3. O Saldo Final (Receitas + Rendimentos - Despesas)
                    saldo_m = (receitas_m + rendimento_m) - despesas_m
 
-                   st.info(f 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
+                   st.info(f"### 🏦 SALDO EM {meses_nome[i].upper()}: {m_fmt(saldo_m)}")
     
                    # 4. Métricas em 4 colunas (Visual Desapertado)
                    m1, m2, m3, m4 = st.columns(4)
