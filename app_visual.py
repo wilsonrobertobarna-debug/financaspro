@@ -294,22 +294,24 @@ if "💰" in aba:
 
 import datetime
 
-# 1. Garante que o app só rode se houver dados
+# 1. Verifica se o banco de dados não está vazio
 if not df_base.empty:
-    # 2. Descobre o mês atual (Maio)
+    # 2. Pega o mês atual (Maio = 4 no índice do Python)
     mes_atual_idx = datetime.datetime.now().month - 1
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
-    # 3. Selectbox: Isso substitui as abas e limpa o visual no celular
+    # 3. Cria o seletor que já começa em Maio (index=mes_atual_idx)
+    # Isso substitui as abas que ficavam empilhadas no seu celular
     escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual_idx)
     
-    # 4. Filtro Direto: Usa o nome que está na sua planilha do Google
+    # 4. Filtra os dados usando o nome real da sua coluna: 'Mes_Ano'
     df_m_limpo = df_base[df_base['Mes_Ano'] == escolha_mes]
 
-    # --- AGORA OS CÁLCULOS (Alinhados com o df_m_limpo) ---
+    # --- AGORA OS CÁLCULOS (Importante: todos alinhados aqui) ---
     total_rec = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
     total_des = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-    saldo_m = total_rec - total_des
+    saldo_m = total_rec - total_des 
+    
     # --- FAXINA DAS BARRINHAS ---
        
     if colunas_possiveis:
