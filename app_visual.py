@@ -296,17 +296,17 @@ import datetime
 
 # 1. Início do bloco de visualização corrigido
 if not df_base.empty:
-    # 2. Identifica o mês de Maio como padrão para o app
+    # 2. Identifica o mês de Maio como padrão (índice 4)
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     mes_atual_idx = datetime.datetime.now().month - 1
     
-    # 3. Selectbox: Essencial para o visual limpo (evita meses empilhados)
+    # 3. Selectbox: Essencial para o mobile (substitui as abas que empilham)
     escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual_idx)
     
-    # 4. Filtro Direto: Usa a coluna real identificada no seu sistema
+    # 4. Filtro Direto: Usa o nome real da coluna da sua planilha
     df_m_limpo = df_base[df_base['Mes_Ano'] == escolha_mes]
 
-    # --- CÁLCULOS DO MÊS (Mantenha o alinhamento aqui) ---
+    # --- CÁLCULOS (Mantenha o alinhamento aqui) ---
     total_rec = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
     total_des = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
     saldo_m = total_rec - total_des
