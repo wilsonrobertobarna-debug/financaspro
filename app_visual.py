@@ -294,20 +294,19 @@ if "💰" in aba:
 
 import datetime
 
-# 1. Verifica se há dados para exibir
+# Início do bloco de visualização corrigido
 if not df_base.empty:
-    # 2. Configura os meses e define Maio como padrão (índice 4)
+    # 1. Identifica Maio como mês padrão
     meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     mes_atual_idx = datetime.datetime.now().month - 1
     
-    # 3. Selectbox: Abre em Maio e evita o empilhamento de abas no celular
-    # Isso garante o "visual limpo" que você pediu
+    # 2. Seletor para celular (limpa as abas/barrinhas empilhadas)
     escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual_idx)
     
-    # 4. Filtro Direto: Usa o nome real da coluna da sua planilha: 'Mes_Ano'
+    # 3. Filtro direto pela coluna real da sua planilha
     df_m_limpo = df_base[df_base['Mes_Ano'] == escolha_mes]
 
-    # --- CÁLCULOS (Alinhados com o df_m_limpo) ---
+    # --- CÁLCULOS DO MÊS ---
     total_rec = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
     total_des = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
     saldo_m = total_rec - total_des
