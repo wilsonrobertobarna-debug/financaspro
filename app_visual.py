@@ -287,28 +287,30 @@ if "💰" in aba:
         st.title("🛡️ FinançasPro Wilson")
         
         if not df_base.empty:
-            # --- 1. FILTRAR VALE ALIMENTAÇÃO ---
-            # Este comando tenta achar a coluna 'Tipo de Conta' mesmo com espaços extras
-            col_conta = [c for c in df_base.columns if 'Tipo de Conta' in c][0]
-            df_va = df_base[df_base[col_conta] == 'Vale Alimentação'].copy()
+            # --- 1. LOCALIZAR COLUNA DE CONTA ---
+            # Busca por nomes prováveis; se não achar, usa a 5ª coluna (índice 4)
+            colunas_possiveis = [c for c in df_base.columns if 'Conta' in c or 'Cartao' in c]
+            col_conta = colunas_possiveis[0] if colunas_possiveis else df_base.columns[4]
             
-            # --- 2. CÁLCULOS EM REAL ---
+            # --- 2. FILTRAR VALE ALIMENTAÇÃO ---
+            df_va = df_base[df_base[col_conta].isin(['Vale Alimentação', 'Cartão Pluxee'])].copy()
+            
+            # --- 3. CÁLCULOS EM REAL ---
             entrada_va = df_va[df_va['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
             usado_va = df_va[df_va['Tipo'] == 'Despesa']['V_Num'].sum()
             saldo_va = entrada_va - usado_va
 
-            # --- 3. VISUAL LIMPO ---
+            # --- 4. VISUAL LIMPO ---
             st.info(f"### 🛒 Saldo Vale: {m_fmt(saldo_va)}")
             c_v1, c_v2 = st.columns(2)
             c_v1.metric("📥 Depósitos", m_fmt(entrada_va))
             c_v2.metric("🛍️ Utilizado", m_fmt(usado_va))
             st.divider()
 
-        # Mantendo o alinhamento correto das outras variáveis
+        # Mantendo o alinhamento para evitar erros de indentação
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m.dropna(subset=['Tipo', 'V_Num'])
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
+    
+    # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
