@@ -287,32 +287,26 @@ if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
-        # 1. A BARRINHA DE DIAS NO TOPO (Acima de tudo)
+        # 1. BARRINHA DE DIAS NO TOPO
         dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
         abas_dias = st.tabs(dias_semana)
         
-        # O conteúdo abaixo vai aparecer independente de qual aba você clicar
-        # Mas se quiser que mude por dia, colocamos dentro do 'with' depois.
-        
-        # 2. O SALDO GERAL (Logo abaixo da barrinha)
-        # Recalculando para garantir que ele apareça em Real
+        # 2. SALDO GERAL (Logo abaixo da barra)
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+        df_m_pago = df_m[df_m['Status'] == 'Pago']
         
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
-                      df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        saldo_geral = df_m_pago[df_m_pago['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - \
+                      df_m_pago[df_m_pago['Tipo'] == 'Despesa']['V_Num'].sum()
         
         st.info(f"### 🏦 SALDO GERAL ATUAL: R$ {saldo_geral:,.2f}")
-        
         st.divider()
 
-        # 3. AS TAGS DE VALORES (Abaixo do Saldo)
+        # 3. TAGS DE VALORES (Abaixo do Saldo)
         c1, c2, c3, c4 = st.columns(4)
         
-        # Valores para as tags (Maio/2026)
-        receita = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        gasto = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        rend = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        receita = df_m_pago[df_m_pago['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        gasto = df_m_pago[df_m_pago['Tipo'] == 'Despesa']['V_Num'].sum()
+        rend = df_m_pago[df_m_pago['Tipo'] == 'Rendimento']['V_Num'].sum()
         pend = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
 
         c1.metric("📈 Receita", f"R$ {receita:,.2f}")
@@ -322,6 +316,20 @@ if "💰" in aba:
 
         st.divider()
 
+        # 4. GRÁFICOS (Abaixo das Tags)
+        col_graf1, col_graf2 = st.columns(2)
+
+        with col_graf1:
+            st.subheader("📊 Gastos por Categoria")
+            # Aqui você chama o seu gráfico de pizza ou barras de categoria
+            # Exemplo: st.plotly_chart(fig_categoria, use_container_width=True)
+
+        with col_graf2:
+            st.subheader("📈 Fluxo de Caixa Mensal")
+            # Aqui você chama o seu gráfico de fluxo
+            # Exemplo: st.plotly_chart(fig_fluxo, use_container_width=True)
+
+        st.divider()
         # 4. RESUMO DE BANCOS E CARTÕES (AGORA NO FINAL)
         st.subheader("🏦 Resumo de Bancos e Cartões")
         # COLOQUE AQUI O CÓDIGO QUE MOSTRA OS BANCOS E CARTÕES QUE ESTAVA LÁ EM CIMA
