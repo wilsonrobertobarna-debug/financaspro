@@ -331,7 +331,7 @@ if "💰" in aba:
         # 5. TUDO O QUE SUMIU PRECISA VIR AQUI (Ainda com 8 espaços de recuo)
         st.divider()
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
-            # O código que gera os cartões e bancos entra aqui
+# O código que gera os cartões e bancos entra aqui
             st.write("Seus bancos voltaram a aparecer aqui!")
 
 # SÓ AGORA você encosta na parede esquerda para o próximo menu
@@ -339,20 +339,20 @@ elif "📅" in aba:
     st.write("Outra tela...")
         # --- BANCOS E CARTÕES ---
     with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
-            if not df_bancos_info.empty:
-                for index, row in df_bancos_info.iterrows():
-                    banco_nome = row.iloc[0]
-                    st.write(f"🔹 **{banco_nome}**")
-            else:
-                st.info("Carregando informações dos bancos...")
+        if not df_bancos_info.empty:
+            for index, row in df_bancos_info.iterrows():
+                banco_nome = row.iloc[0]
+                st.write(f"🔹 **{banco_nome}**")
+        else:
+            st.info("Carregando informações dos bancos...")
                 
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
         
-        st.divider()
+   st.divider()
         
         with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
