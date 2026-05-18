@@ -292,14 +292,21 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
 
-    import datetime    
-    if not df_base.empty:
-        # 1. Descobre o mês atual (Maio é 5, mas no Python o índice começa em 0, então Janeiro=0, Maio=4)
-        mes_atual = datetime.datetime.now().month - 1
-        # Abas para cada mês (Essencial para o visual limpo no mobile)
-        meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-        abas_meses = st.tabs(meses_nome)
-        escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual)
+    import datetime
+
+if not df_base.empty:
+    # 1. Descobre o mês atual (Maio = 4)
+    mes_atual = datetime.datetime.now().month - 1
+    
+    # 2. Lista de meses
+    meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    
+    # 3. O Selectbox já começa em Maio por causa do index=mes_atual
+    escolha_mes = st.selectbox("Selecione o Mês", meses_nome, index=mes_atual)
+    
+    # 4. Agora filtramos os dados com base no mês que você escolheu no selectbox
+    # (Isso substitui o loop das abas e limpa o visual)
+    df_m_limpo = df_base[df_base['Mes'] == escolha_mes]
        
 
         # Cálculo do saldo global em Real (R$)
