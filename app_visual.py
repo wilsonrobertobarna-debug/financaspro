@@ -281,7 +281,12 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     ws_base.delete_rows(int(item['ID']))
                 atualizar_sessao()
                 st.rerun()
-
+                
+# 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
+receita_total = 7626.23  # Exemplo do seu valor real
+gasto_total = 3434.45
+rendimento = 0.19
+pendente = 6932.67
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
     # 1. ESTILO (CSS) - Isso aqui "puxa" tudo para cima antes de desenhar o título
@@ -326,6 +331,20 @@ if "💰" in aba:
         st.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
     with c4:
         st.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
+        
+        # --- MÁQUINA EM ESPERA (VALORES TEMPORÁRIOS) ---
+receita_total = 0.0
+gasto_total = 0.0
+rendimento = 0.0
+pendente = 0.0
+# ----------------------------------------------
+
+if "💰" in aba:
+    # ... seu código do CSS e Título ...
+    
+    saldo_geral = receita_total - gasto_total # Agora ele não trava mais!
+
+    
 
     st.divider()
 
