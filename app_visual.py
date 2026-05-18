@@ -293,7 +293,7 @@ if "💰" in aba:
     
     st.divider()
 
-     g1, g2 = st.columns(2)
+    g1, g2 = st.columns(2)
         with g1:
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             if not df_p.empty: 
