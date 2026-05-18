@@ -284,41 +284,45 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
-    st.title("🛡️ FinançasPro Wilson") #
+    st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
-        # --- 1. PREPARAÇÃO DOS DATAFRAMES ---
+        # --- PASSO 1: PREPARAÇÃO DOS DADOS ---
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-        # --- 2. CÁLCULO DAS MÉTRICAS (Apenas uma vez) ---
         receita = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
         gasto = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         rend = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
         pend = df_base[df_base['Status'] == 'Pendente']['V_Num'].sum()
         saldo_geral = receita - gasto
 
-        # --- 3. EXIBIÇÃO DOS GRÁFICOS (Pizza e Barra) ---
-        # Certifique-se que fig_categoria e fig_fluxo foram criados antes desta linha
+        # --- PASSO 2: CRIAÇÃO DOS GRÁFICOS (Isso faz eles aparecerem!) ---
+        import plotly.express as px
+
+        # Gráfico de Pizza (Gastos por Categoria)
+        df_pizza = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        fig_categoria = px.pie(df_pizza, values='V_Num', names='Categoria', hole=0.4)
+        fig_categoria.update_layout(showlegend=False) # Visual limpo
+
+        # Gráfico de Barras (Fluxo Mensal)
+        df_fluxo = df_base.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
+        fig_fluxo = px.bar(df_fluxo, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group')
+
+        # --- PASSO 3: EXIBIÇÃO DOS GRÁFICOS NO TOPO ---
         col_graf1, col_graf2 = st.columns(2)
         with col_graf1:
             st.subheader("📊 Gastos por Categoria")
-            if 'fig_categoria' in locals():
-                st.plotly_chart(fig_categoria, use_container_width=True)
-            else:
-                st.info("Configure o gráfico de pizza acima deste bloco.")
+            st.plotly_chart(fig_categoria, use_container_width=True)
 
         with col_graf2:
             st.subheader("📈 Fluxo de Caixa Mensal")
-            if 'fig_fluxo' in locals():
-                st.plotly_chart(fig_fluxo, use_container_width=True)
-            else:
-                st.info("Configure o gráfico de barras acima deste bloco.")
+            st.plotly_chart(fig_fluxo, use_container_width=True)
 
         st.divider()
 
-        # --- 4. SALDO GERAL E TAGS (Uma única vez) ---
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}") #
+        # --- PASSO 4: SALDO E MÉTRICAS (Apenas uma vez) ---
+        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("📈 Receita", m_fmt(receita))
@@ -328,10 +332,9 @@ if "💰" in aba:
 
         st.divider()
 
-        # --- 5. BANCOS E CARTÕES (Fora de qualquer loop) ---
+        # --- PASSO 5: BANCOS E CARTÕES (No final da página) ---
         with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
             if 'df_bancos_info' in locals() and not df_bancos_info.empty:
-                # Verifique se este trecho não está repetido no seu arquivo original
                 for index, row in df_bancos_info.iterrows():
                     banco_nome = row.iloc[0]
                     st.write(f"🔹 **{banco_nome}**")
