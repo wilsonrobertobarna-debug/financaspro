@@ -338,6 +338,12 @@ if "💰" in aba:
 elif "📅" in aba:
     st.write("Outra tela...")
 
+    # 1. Alinhado com 4 espaços (mesmo nível do st.write)
+    with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
+        # Aqui dentro agora tem 8 espaços
+        st.write("Conteúdo do gráfico comparativo aqui...")
+
+    # 2. Também com 4 espaços (fora do expander anterior)
     with st.expander("🏦 BANCOS E CARTÕES", expanded=False):
         if not df_bancos_info.empty:
             for index, row in df_bancos_info.iterrows():
@@ -346,14 +352,15 @@ elif "📅" in aba:
         else:
             st.info("Carregando informações dos bancos...")
 
+    # 3. Métricas também com 4 espaços
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
     m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
     m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
     m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
 
-    st.divider()  # <-- LINHA 355 AGORA ALINHADA COM O 'WITH' E O 'M1'
-        
+    # 4. Divider com 4 espaços
+    st.divider()        
         with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
             df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
             df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
