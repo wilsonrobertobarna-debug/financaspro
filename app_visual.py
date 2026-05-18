@@ -157,8 +157,8 @@ def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace(
 
 # FUNÇÃO PARA OBTER O VALOR PENDENTE ATUAL
 def get_valor_pendente(df):
-    now = datetime.datetime.now()
-    end_of_month = datetime.datetime(now.year, now.month, 1) + relativedelta(months=1, days=-1)
+    now = datetime.now()
+    end_of_month = datetime(now.year, now.month, 1) + relativedelta(months=1, days=-1)
     df_p = df[(df['Status'] == 'Pendente') & (df['DT'].dt.date <= end_of_month.date())]
     return df_p['V_Num'].sum()
 
@@ -282,34 +282,20 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
-import datetime
-
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
     st.title("🛡️ FinançasPro Wilson")
     
     if not df_base.empty:
-        # 1. Identifica o mês atual para o filtro (Ex: 'Mai')
-        meses_nome = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-        mes_atual = meses_nome[datetime.datetime.now().month - 1]
-
-        # 2. Cria a variável df_m filtrando pela coluna correta da sua planilha
+        # AQUI VOCÊ CRIA A VARIÁVEL
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        
-        # 3. Limpa os dados (remove transferências e foca no que foi pago)
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-        # 4. Cálculo do saldo em Real
-        total_rec = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        total_des = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        saldo_geral = total_rec - total_des
-        
-        st.info(f"### 🏦 SALDO GERAL ({mes_atual}): R$ {saldo_geral:,.2f}")
+        # Cálculo do saldo
+        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
         st.divider()
-
-        st.subheader(f"Resumo de {mes_atual}")
-        st.bar_chart(df_m_limpo.groupby('Categoria')['V_Num'].sum())
 
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
@@ -415,7 +401,7 @@ if "💰" in aba:
         st.subheader("🔍 Busca e Lançamentos")
         
         c_d1, c_d2 = st.columns(2)
-        s_ini = c_d1.date_input("Início", datetime.datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+        s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
         s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
         
         c1, c2, c3 = st.columns(3)
