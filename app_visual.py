@@ -864,29 +864,34 @@ elif "📋" in aba:
                         else:
                             saldo_anterior += val_passado
 
-              # ========================================================
-                # 1. CÁLCULO DO SALDO ANTERIOR + SALDO INICIAL FIXO
+             # ========================================================
+                # 1. RECUPERAÇÃO DINÂMICA DO SALDO INICIAL DA PLANILHA
                 # ========================================================
+                # Resgata o nome do banco selecionado no seu formulário
+                banco_nome = str(locals().get('banco_selecionado', globals().get('banco_selecionado', 'Todos'))).strip()
+                
+                base_inicial = 0.0
                 try:
-                    df_historico = carregar_dados_gs()
-                    df_passado = df_historico[df_historico['DT'] < pd.to_datetime(b_ini)].copy()
-                except:
-                    df_passado = pd.DataFrame()
-                
-                # Resgata a variável do saldo da sua conta; se não achar, começa zerado
-                base_inicial = float(locals().get('saldo_inicial', globals().get('saldo_inicial', 0.0)))
+                    # Lê a aba 'Bancos' da sua planilha (ajuste 'sh' se o objeto tiver outro nome no seu código)
+                    ws_bancos = sh.worksheet("Bancos")
+                    dados_bancos = ws_bancos.get_all_values()
+                    df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
+                    
+                    # Identifica as colunas de Banco e Saldo automaticamente pelas palavras-chave
+                    col_banco = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
+                    col_saldo = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
+                    
+                    # Filtra a linha correspondente ao banco selecionado
+                    linha_banco = df_bancos_cad[df_bancos_cad[col_banco].str.upper().str.strip() == banco_nome.upper()]
+                    if not linha_banco.empty:
+                        val_cru = linha_banco.iloc[0][col_saldo]
+                        base_inicial = float(str(val_cru).replace('R$', '').replace('.', '').replace(',', '.').strip())
+                except Exception as e_banco:
+                    # Se for "Todos" ou der erro na busca, mantém 0.0 para não travar o relatório
+                    base_inicial = 0.0
+
+                # O saldo anterior assume o saldo inicial real cadastrado para iniciar o caixa limpo
                 saldo_anterior = base_inicial
-                
-                if not df_passado.empty:
-                    for _, r_passado in df_passado.iterrows():
-                        val_passado = pd.to_numeric(r_passado.get('V_Num', 0), errors='coerce')
-                        if pd.isna(val_passado): val_passado = 0
-                        
-                        tipo_p = str(r_passado.get('Tipo', '')).upper().strip()
-                        if "DESPESA" in tipo_p or "GASTO" in tipo_p:
-                            saldo_anterior -= val_passado
-                        else:
-                            saldo_anterior += val_passado
 
                 # ========================================================
                 # 2. CÁLCULO DOS LANÇAMENTOS DO MÊS ATUAL
@@ -894,6 +899,7 @@ elif "📋" in aba:
                 corrente = saldo_anterior 
                 saldos_lista = []
 
+                # Loop ÚNICO para calcular o saldo acumulado linha por linha
                 for _, r in df_report.iterrows():
                     val = pd.to_numeric(r.get('V_Num', 0), errors='coerce')
                     if pd.isna(val): val = 0
@@ -905,6 +911,7 @@ elif "📋" in aba:
                         corrente += val
                     saldos_lista.append(corrente)
                 
+                # Aplica a lista de saldos calculados de forma exata à coluna
                 df_report['Saldo_Acum'] = saldos_lista
 
                 # ========================================================
@@ -914,24 +921,23 @@ elif "📋" in aba:
                 pdf.cell(195, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
                 pdf.set_font("Arial", '', 10)
                 
-                # Resgata dinamicamente o banco selecionado no formulário se existir
-                banco_nome = str(locals().get('banco_selecionado', globals().get('banco_selecionado', 'Todos')))
+                # Formata as datas de início e fim para exibir no título
                 p_inicio = b_ini.strftime('%d/%m/%Y') if hasattr(b_ini, 'strftime') else str(b_ini)
                 p_fim = b_fim.strftime('%d/%m/%Y') if hasattr(b_fim, 'strftime') else str(b_fim)
                 
+                # Imprime Período e Banco selecionados no topo do PDF
                 pdf.cell(195, 6, txt=f"Periodo: {p_inicio} a {p_fim}   |   Banco: {banco_nome}", ln=1, align="L")
                 
-                # Mostra o ponto de partida do saldo de forma clara no topo
+                # Exibe o Saldo Inicial recuperado de forma clara no cabeçalho do documento
                 txt_saldo_ini = f"R$ {base_inicial:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                txt_saldo_ant = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                pdf.cell(195, 6, txt=f"Saldo Inicial Conta: {txt_saldo_ini}   |   Saldo Anterior ao Periodo: {txt_saldo_ant}", ln=1, align="L")
+                pdf.cell(195, 6, txt=f"Saldo Inicial de Abertura do Banco: {txt_saldo_ini}", ln=1, align="L")
                 pdf.ln(4)
 
-                # Cabeçalho da Tabela (Ajustado para incluir Categoria)
+                # Cabeçalho da Tabela (Ajustado milimetricamente para incluir Categoria)
                 pdf.set_font("Arial", 'B', 9)
                 pdf.cell(20, 7, "Data", 1)
                 pdf.cell(18, 7, "Tipo", 1)
-                pdf.cell(35, 7, "Categoria", 1)  # Nova coluna adicionada!
+                pdf.cell(35, 7, "Categoria", 1)  # Nova coluna física na tabela do PDF
                 pdf.cell(45, 7, "Descricao", 1)
                 pdf.cell(25, 7, "Valor", 1)
                 pdf.cell(32, 7, "Saldo Acum.", 1)
@@ -939,7 +945,7 @@ elif "📋" in aba:
                 pdf.ln()
 
                 # ========================================================
-                # 4. LOOP DE LINHAS DO PDF
+                # 4. LOOP DE IMPRESSÃO DAS LINHAS DO RELATÓRIO
                 # ========================================================
                 pdf.set_font("Arial", '', 9)
                 for index, row in df_report.iterrows():
@@ -947,42 +953,45 @@ elif "📋" in aba:
                     data_str = dt_obj.strftime('%d/%m/%Y') if hasattr(dt_obj, 'strftime') else str(dt_obj)
                     
                     tipo_str = str(row.get('Tipo', '---')).strip()
-                    cat_val = str(row.get('Categoria', row.get('CATEGORIA', 'Geral')))[:18] # Nova variável
+                    cat_val = str(row.get('Categoria', row.get('CATEGORIA', 'Geral')))[:18]
                     desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))[:24]
                     valor_val = row.get('V_Num', 0.0)
                     saldo_val = row.get('Saldo_Acum', 0.0)
                     status_val = str(row.get('Status', '-'))
 
-                    # Formatação do Valor
+                    # --- Formatação do Valor (Coluna 5) ---
                     if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper():
                         texto_valor = f"- R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                        cor_valor = (255, 0, 0)
+                        cor_valor = (255, 0, 0) # Vermelho para saídas
                     else:
                         texto_valor = f"R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                        cor_valor = (0, 0, 0)
+                        cor_valor = (0, 0, 0)   # Preto para entradas
 
-                    # Formatação do Saldo Acumulado
+                    # --- Formatação do Saldo Acumulado (Coluna 6) ---
                     texto_saldo = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                     cor_saldo = (255, 0, 0) if saldo_val < 0 else (0, 0, 0)
 
-                    # Impressão das células na linha (larguras batendo exatamente com o cabeçalho)
+                    # Impressão física das células (Larguras batendo com o cabeçalho)
                     pdf.cell(20, 6, data_str, 1)
                     pdf.cell(18, 6, tipo_str, 1)
-                    pdf.cell(35, 6, cat_val, 1) # Imprime a Categoria
+                    pdf.cell(35, 6, cat_val, 1)  # Desenha o texto da Categoria
                     pdf.cell(45, 6, desc_val, 1)
                     
+                    # Escreve o Valor com a sua cor correspondente
                     pdf.set_text_color(*cor_valor)
                     pdf.cell(25, 6, texto_valor, 1)
                     
+                    # Escreve o Saldo Acumulado com a sua cor correspondente
                     pdf.set_text_color(*cor_saldo)
                     pdf.cell(32, 6, texto_saldo, 1)
                     
+                    # Reseta a cor para o Preto padrão antes de escrever o Status
                     pdf.set_text_color(0, 0, 0)
                     pdf.cell(20, 6, status_val, 1)
                     pdf.ln()
 
                 # ========================================================
-                # 5. DOWNLOAD E FINALIZAÇÃO
+                # 5. EXPORTAÇÃO E DOWNLOAD DO COMPONENTE STREAMLIT
                 # ========================================================
                 pdf_output = pdf.output(dest='S')
                 if isinstance(pdf_output, str):
