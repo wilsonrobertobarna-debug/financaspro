@@ -843,10 +843,9 @@ elif "📋" in aba:
                 saldos_lista = []
                 corrente = saldo_inicial
 
-               # ========================================================
-                # CÁLCULO DO SALDO ANTERIOR (HISTÓRICO AUTOMÁTICO)
+# ========================================================
+                # 1. CÁLCULO DO SALDO ANTERIOR (HISTÓRICO AUTOMÁTICO)
                 # ========================================================
-                # Carrega os dados completos para calcular o histórico
                 try:
                     df_historico = carregar_dados_gs()
                     df_passado = df_historico[df_historico['DT'] < pd.to_datetime(b_ini)].copy()
@@ -865,53 +864,31 @@ elif "📋" in aba:
                         else:
                             saldo_anterior += val_passado
 
-                # O saldo corrente agora começa com o histórico acumulado do passado
+                # ========================================================
+                # 2. CÁLCULO DOS LANÇAMENTOS DO MÊS ATUAL
+                # ========================================================
+                # O saldo corrente começa exatamente com o saldo que veio do passado
                 corrente = saldo_anterior 
                 saldos_lista = []
-                # ========================================================
-                # Seu loop original de lançamentos do mês continua aqui:
+
+                # Loop ÚNICO para o mês atual (vai gerar exatamente as 23 linhas necessárias)
                 for _, r in df_report.iterrows():
-                    # Garante que o valor seja numérico para o cálculo
                     val = pd.to_numeric(r.get('V_Num', 0), errors='coerce')
                     if pd.isna(val): val = 0
                     
-                    # Padroniza o texto para comparação (Despesa ou Gasto)
                     tipo_check = str(r.get('Tipo', '')).upper().strip()
                     
-                    # Lógica matemática: Subtrai se for DESPESA ou GASTO
                     if "DESPESA" in tipo_check or "GASTO" in tipo_check:
                         corrente -= val
                     else:
                         corrente += val
                     saldos_lista.append(corrente)
                 
+                # Aplica a lista na coluna (agora com tamanhos idênticos: 23 e 23)
                 df_report['Saldo_Acum'] = saldos_lista
 
                 # --- Cabeçalho do PDF ---
                 pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
-                
-                for _, r in df_report.iterrows():
-                    # Garante que o valor seja numérico para o cálculo
-                    val = pd.to_numeric(r.get('V_Num', 0), errors='coerce')
-                    if pd.isna(val): val = 0
-                    
-                    # Padroniza o texto para comparação (Despesa ou Gasto)
-                    tipo_check = str(r.get('Tipo', '')).upper().strip()
-                    
-                    # Lógica matemática: Subtrai se for DESPESA ou GASTO
-                    if "DESPESA" in tipo_check or "GASTO" in tipo_check:
-                        corrente -= val
-                    else:
-                        corrente += val
-                    saldos_lista.append(corrente)
-                
-                df_report['Saldo_Acum'] = saldos_lista
-
-                # --- Cabeçalho do PDF ---
-                pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
-                pdf.ln(2)
-                pdf.cell(200, 10, txt=f"Periodo: {b_ini.strftime('%d/%m/%Y')} a {b_fim.strftime('%d/%m/%Y')}", ln=1, align="L")
-                pdf.ln(5)
 
                 # Cabeçalho da Tabela
                 pdf.cell(25, 8, "Data", 1)
