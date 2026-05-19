@@ -842,6 +842,50 @@ elif "📋" in aba:
                 df_report = df_v.copy().sort_values(by='DT')
                 saldos_lista = []
                 corrente = saldo_inicial
+
+                # ========================================================
+                # CÁLCULO DO SALDO ANTERIOR (HISTÓRICO AUTOMÁTICO)
+                # ========================================================
+                # Puxa tudo o que aconteceu ANTES da data inicial do relatório (b_ini)
+                df_passado = df[df['DT'] < pd.to_datetime(b_ini)].copy()
+                
+                saldo_anterior = 0.0
+                if not df_passado.empty:
+                    for _, r_passado in df_passado.iterrows():
+                        val_passado = pd.to_numeric(r_passado.get('V_Num', 0), errors='coerce')
+                        if pd.isna(val_passado): val_passado = 0
+                        
+                        tipo_p = str(r_passado.get('Tipo', '')).upper().strip()
+                        if "DESPESA" in tipo_p or "GASTO" in tipo_p:
+                            saldo_anterior -= val_passado
+                        else:
+                            saldo_anterior += val_passado
+
+                # O saldo corrente agora começa com o histórico acumulado do passado
+                corrente = saldo_anterior 
+                saldos_lista = []
+                # ========================================================
+
+                # Seu loop original de lançamentos do mês continua aqui:
+                for _, r in df_report.iterrows():
+                    # Garante que o valor seja numérico para o cálculo
+                    val = pd.to_numeric(r.get('V_Num', 0), errors='coerce')
+                    if pd.isna(val): val = 0
+                    
+                    # Padroniza o texto para comparação (Despesa ou Gasto)
+                    tipo_check = str(r.get('Tipo', '')).upper().strip()
+                    
+                    # Lógica matemática: Subtrai se for DESPESA ou GASTO
+                    if "DESPESA" in tipo_check or "GASTO" in tipo_check:
+                        corrente -= val
+                    else:
+                        corrente += val
+                    saldos_lista.append(corrente)
+                
+                df_report['Saldo_Acum'] = saldos_lista
+
+                # --- Cabeçalho do PDF ---
+                pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
                 
                 for _, r in df_report.iterrows():
                     # Garante que o valor seja numérico para o cálculo
