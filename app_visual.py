@@ -843,11 +843,15 @@ elif "📋" in aba:
                 saldos_lista = []
                 corrente = saldo_inicial
 
-                # ========================================================
+               # ========================================================
                 # CÁLCULO DO SALDO ANTERIOR (HISTÓRICO AUTOMÁTICO)
                 # ========================================================
-                # Puxa tudo o que aconteceu ANTES da data inicial do relatório (b_ini)
-                df_passado = df[df['DT'] < pd.to_datetime(b_ini)].copy()
+                # Carrega os dados completos para calcular o histórico
+                try:
+                    df_historico = carregar_dados_gs()
+                    df_passado = df_historico[df_historico['DT'] < pd.to_datetime(b_ini)].copy()
+                except:
+                    df_passado = pd.DataFrame()
                 
                 saldo_anterior = 0.0
                 if not df_passado.empty:
@@ -865,7 +869,6 @@ elif "📋" in aba:
                 corrente = saldo_anterior 
                 saldos_lista = []
                 # ========================================================
-
                 # Seu loop original de lançamentos do mês continua aqui:
                 for _, r in df_report.iterrows():
                     # Garante que o valor seja numérico para o cálculo
