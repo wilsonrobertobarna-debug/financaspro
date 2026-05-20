@@ -774,42 +774,40 @@ elif "📄" in aba:
     st.text_area("Copiar Relatório", relat, height=300)
     st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
 
-elif "📋" in aba:
-    st.title("📋 Gerador de Relatório PDF")
+if aba == "📋 Relatório PDF":
+    st.markdown("### 📋 Emissão de Relatório Financeiro")
     
-    c1, c2, c3 = st.columns(3)
-    b_ini = c1.date_input("Data Inicial", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY", key="pdf_d1")
-    b_fim = c2.date_input("Data Final", datetime.now(), format="DD/MM/YYYY", key="pdf_d2")
+    # -------------------------------------------------------------------------
+    # FORMULÁRIO DE FILTROS DO RELATÓRIO (Mantendo o visual limpo e direto)
+    # -------------------------------------------------------------------------
+    col_rel1, col_rel2 = st.columns(2)
     
-    st.divider()
-    
-    c_b1, c_b2, c_b3 = st.columns(3)
-    s_bnc_rel = c_b1.multiselect("Filtrar por Banco:", sorted(bancos_disponiveis))
-    s_sta_rel = c_b2.multiselect("Filtrar por Status:", ["Pago", "Pendente"])
-    b_desc_rel = c_b3.text_input("Buscar por Descrição:")
-    
-    st.divider()
-    
-    df_v = df_base.copy()
-    df_v = df_v[df_v['DT'].notna()]
-    df_v = df_v[(df_v['DT'].dt.date >= b_ini) & (df_v['DT'].dt.date <= b_fim)]
-    
-    if s_bnc_rel:
-        df_v = df_v[df_v['Banco'].isin(s_bnc_rel)]
-    if s_sta_rel:
-        df_v = df_v[df_v['Status'].isin(s_sta_rel)]
-    if b_desc_rel:
-        df_v = df_v[df_v['Descrição'].str.contains(b_desc_rel, case=False, na=False)]
+    with col_rel1:
+        # Puxa a lista de bancos disponíveis e adiciona a opção "Todos"
+        opcoes_banco_rel = ["Todos"] + list(bancos_disponiveis)
+        banco_relatorio = st.selectbox("Filtrar Banco para o PDF:", opcoes_banco_rel)
         
-    st.subheader("Lançamentos Filtrados")
-    df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
-    df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
-    
-    st.divider()
-    
+    with col_rel2:
+        # Define o período do relatório direto na tela de emissão
+        # Usando como padrão o intervalo que você estava buscando (20/04/2026 a 20/05/2026)
+        data_padrao_ini = datetime(2026, 4, 20)
+        data_padrao_fim = datetime(2026, 5, 20)
+        periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
+
+    st.markdown("---")
+
+    # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
+            # Garante que as duas datas foram preenchidas no componente
+            if isinstance(periodo_pdf, list) or isinstance(periodo_pdf, tuple):
+                if len(periodo_pdf) == 2:
+                    b_ini, b_fim = periodo_pdf[0], periodo_pdf[1]
+                else:
+                    b_ini = b_fim = periodo_pdf[0]
+            else:
+                b_ini = b_fim = periodo_pdf
+
             # ========================================================
             # 1. INICIALIZAÇÃO DO PDF
             # ========================================================
@@ -818,55 +816,49 @@ elif "📋" in aba:
             pdf.add_page()
 
             # ========================================================
-            # 2. CAPTURA DOS DADOS
+            # 2. CAPTURA E FILTRAGEM DOS DADOS (CRONOLÓGICO)
             # ========================================================
-            df_origem = locals().get('df_filtrado', 
-                        globals().get('df_filtrado', 
-                        locals().get('df_mes', 
-                        globals().get('df_mes', 
-                        locals().get('df', 
-                        globals().get('df', None))))))
-            
-            if df_origem is None:
-                for k, v in st.session_state.items():
-                    if isinstance(v, pd.DataFrame) and not v.empty and 'Banco' in v.columns:
-                        df_origem = v
-                        break
+            # Carrega a cópia dos dados brutos
+            df_report = df_base.copy()
 
-            if df_origem is not None:
-                df_report = df_origem.copy()
+            # Identifica a coluna de Banco na base de dados
+            col_banco_df = None
+            for c in df_report.columns:
+                if c.upper() in ['BANCO', 'CONTA']:
+                    col_banco_df = c
+                    break
+
+            # Identifica a coluna de Data na base de dados
+            col_data_df = None
+            for c in df_report.columns:
+                if c.upper() in ['VENCIMENTO', 'DATA', 'DT']:
+                    col_data_df = c
+                    break
+
+            # Converte a coluna de data para o formato datetime para poder filtrar
+            if col_data_df:
+                df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
             else:
-                df_report = carregar_dados_gs().copy()
+                df_report['DT_FILTRO'] = pd.to_datetime(df_report.index, errors='coerce')
 
-            # Identifica a coluna de Banco
-            col_banco_df = 'Banco' if 'Banco' in df_report.columns else ('BANCO' if 'BANCO' in df_report.columns else None)
+            # Filtra por Data primeiro
+            t_ini = pd.to_datetime(b_ini)
+            t_fim = pd.to_datetime(b_fim)
+            df_report = df_report[(df_report['DT_FILTRO'] >= t_ini) & (df_report['DT_FILTRO'] <= t_fim)]
 
-            # ========================================================
-            # 3. CAPTURA DIRETA DA CHAVE DA MEMÓRIA (CORREÇÃO DO PERRENGUE)
-            # ========================================================
-            # Forçamos o código a ler direto o componente com a chave fixa
-            banco_nome = st.session_state.get('filtro_banco_pdf', 'Todos')
-            
-            # Se por acaso retornar Vazio ou Todos, tenta a checagem secundária
-            if str(banco_nome).strip() == "" or str(banco_nome).upper() == "TODOS":
-                if col_banco_df and df_report[col_banco_df].nunique() == 1:
-                    banco_nome = str(df_report[col_banco_df].iloc[0]).strip()
-                else:
-                    banco_nome = "Todos os Bancos"
-
-            # Executa o filtro no DataFrame se um banco específico foi selecionado
-            if banco_nome.upper() != "TODOS" and banco_nome.upper() != "TODOS OS BANCOS":
+            # Filtra por Banco (se não for "Todos")
+            banco_nome = "Todos os Bancos"
+            if banco_relatorio != "Todos":
+                banco_nome = banco_relatorio
                 if col_banco_df:
                     df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_nome).upper()]
 
-            # Garante formato de data e ordena cronologicamente
-            if 'DT' in df_report.columns:
-                df_report['DT'] = pd.to_datetime(df_report['DT'], errors='coerce')
-            elif 'Data' in df_report.columns:
-                df_report['DT'] = pd.to_datetime(df_report['Data'], errors='coerce')
-            df_report = df_report.sort_values(by='DT')
-            
-            # Busca o saldo na aba 'Bancos'
+            # Ordena de forma estritamente cronológica
+            df_report = df_report.sort_values(by='DT_FILTRO')
+
+            # ========================================================
+            # 3. BUSCA DO SALDO DE ABERTURA NA ABA 'BANCOS'
+            # ========================================================
             base_inicial = 0.0
             try:
                 ws_bancos = sh.worksheet("Bancos")
@@ -876,7 +868,7 @@ elif "📋" in aba:
                 col_banco_cad = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
                 col_saldo_cad = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
                 
-                if banco_nome.upper() != "TODOS OS BANCOS":
+                if banco_nome != "Todos os Bancos":
                     linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome.upper()]
                     if not linha_banco.empty:
                         val_cru = linha_banco.iloc[0][col_saldo_cad]
@@ -918,10 +910,10 @@ elif "📋" in aba:
             pdf.ln(2)
             
             pdf.set_font("Arial", '', 10)
-            p_inicio = b_ini.strftime('%d/%m/%Y') if hasattr(b_ini, 'strftime') else str(b_ini)
-            p_fim = b_fim.strftime('%d/%m/%Y') if hasattr(b_fim, 'strftime') else str(b_fim)
+            p_inicio = b_ini.strftime('%d/%m/%Y')
+            p_fim = b_fim.strftime('%d/%m/%Y')
             
-            # Dados dinâmicos corrigidos no topo
+            # Cabeçalho dinâmico e corrigido de acordo com a seleção da tela!
             pdf.set_font("Arial", 'B', 10)
             pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {str(banco_nome).upper()}", ln=1, align="L")
             pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
@@ -946,8 +938,7 @@ elif "📋" in aba:
             # ========================================================
             pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
-                dt_obj = row.get('DT', row.get('Data', None))
-                data_str = dt_obj.strftime('%d/%m/%Y') if hasattr(dt_obj, 'strftime') else str(dt_obj)
+                data_str = row['DT_FILTRO'].strftime('%d/%m/%Y') if not pd.isna(row['DT_FILTRO']) else str(row.get(col_data_df, '---'))
                 
                 tipo_str = str(row.get('Tipo', '---')).strip()
                 cat_val = str(row.get('Categoria', 'Geral'))[:18]
