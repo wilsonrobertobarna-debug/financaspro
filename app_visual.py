@@ -808,7 +808,7 @@ elif "📋" in aba:
     
     st.divider()
     
-    if st.button("📄 Gerar PDF"):
+   if st.button("📄 Gerar PDF"):
         try:
             # ========================================================
             # 1. INICIALIZAÇÃO DO PDF
@@ -843,26 +843,33 @@ elif "📋" in aba:
             df_report = df_report.sort_values(by='DT')
 
             # ========================================================
-            # 3. DESCOBRE O BANCO E O PERÍODO NA MEMÓRIA DA SESSÃO
+            # 3. DESCOBRE O BANCO (MELHORADO: PEGA DIRETO DA TABELA FILTRADA)
             # ========================================================
             base_inicial = 0.0
             banco_nome = "Todos"
 
-            for chave, valor in st.session_state.items():
-                if isinstance(valor, str) and valor.strip() != "" and valor.upper() != "TODOS":
-                    if 'Banco' in df_report.columns and valor in df_report['Banco'].unique():
-                        banco_nome = valor
-                        break
+            # Primeiro, tenta descobrir pelas colunas da tabela que está na tela
+            col_banco_df = None
+            if 'Banco' in df_report.columns:
+                col_banco_df = 'Banco'
+            elif 'BANCO' in df_report.columns:
+                col_banco_df = 'BANCO'
 
-            if banco_nome == "Todos":
-                if 'Banco' in df_report.columns and df_report['Banco'].nunique() == 1:
-                    banco_nome = str(df_report['Banco'].iloc[0]).strip()
-                elif 'BANCO' in df_report.columns and df_report['BANCO'].nunique() == 1:
-                    banco_nome = str(df_report['BANCO'].iloc[0]).strip()
+            if col_banco_df and df_report[col_banco_df].nunique() == 1:
+                # Se a tabela da tela só tem 1 banco, é esse que o usuário filtrou!
+                banco_nome = str(df_report[col_banco_df].iloc[0]).strip()
+            else:
+                # Se tiver mais de um, tenta buscar nos componentes da tela (session_state)
+                for chave, valor in st.session_state.items():
+                    if isinstance(valor, str) and valor.strip() != "" and valor.upper() != "TODOS":
+                        if col_banco_df and valor in df_report[col_banco_df].unique():
+                            banco_nome = valor
+                            break
 
+            # Força o filtro físico no relatório caso tenha achado um banco específico
             if banco_nome.upper() != "TODOS" and "TODOS" not in banco_nome.upper():
-                if 'Banco' in df_report.columns:
-                    df_report = df_report[df_report['Banco'].str.upper().str.strip() == banco_nome.upper()]
+                if col_banco_df:
+                    df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == banco_nome.upper()]
             
             # Busca o saldo inicial cadastrado na aba 'Bancos'
             try:
@@ -870,13 +877,13 @@ elif "📋" in aba:
                 dados_bancos = ws_bancos.get_all_values()
                 df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
                 
-                col_banco = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
-                col_saldo = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
+                col_banco_cad = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
+                col_saldo_cad = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
                 
                 if banco_nome.upper() != "TODOS" and "TODOS" not in banco_nome.upper():
-                    linha_banco = df_bancos_cad[df_bancos_cad[col_banco].str.upper().str.strip() == banco_nome.upper()]
+                    linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome.upper()]
                     if not linha_banco.empty:
-                        val_cru = linha_banco.iloc[0][col_saldo]
+                        val_cru = linha_banco.iloc[0][col_saldo_cad]
                         val_limpo = str(val_cru).replace('R$', '').strip()
                         if '.' in val_limpo and ',' in val_limpo:
                             val_limpo = val_limpo.replace('.', '').replace(',', '.')
@@ -911,24 +918,26 @@ elif "📋" in aba:
             df_report['Saldo_Acum'] = saldos_lista
 
             # ========================================================
-            # 5. MONTAGEM DO CABEÇALHO DO PDF (TÍTULO E DESCRIÇÃO TOP-LEVEL)
+            # 5. MONTAGEM DO CABEÇALHO DO PDF (CORRIGIDO TAMANHO E TEXTO)
             # ========================================================
-            pdf.set_font("Arial", 'B', 14)
-            pdf.cell(195, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
-            pdf.set_font("Arial", '', 10)
+            pdf.set_font("Arial", 'B', 12)
+            # Aumentamos o tamanho da célula para 200 para não comer letras
+            pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
+            pdf.ln(2)
             
+            pdf.set_font("Arial", '', 10)
             p_inicio = b_ini.strftime('%d/%m/%Y') if hasattr(b_ini, 'strftime') else str(b_ini)
             p_fim = b_fim.strftime('%d/%m/%Y') if hasattr(b_fim, 'strftime') else str(b_fim)
             
-            # Descrição do relatório com as variáveis no topo como solicitado
+            # Descrição do relatório com as variáveis solicitadas
             pdf.set_font("Arial", 'B', 10)
-            pdf.cell(195, 6, txt=f"BANCO SELECIONADO: {banco_nome.upper()}", ln=1, align="L")
-            pdf.cell(195, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
+            pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {banco_nome.upper()}", ln=1, align="L")
+            pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
             
             # Formatação de Moeda Brasileira (Real)
             txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-            pdf.cell(195, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
-            pdf.ln(4)
+            pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
+            pdf.ln(5)
 
             # Cabeçalho da Tabela
             pdf.set_font("Arial", 'B', 9)
@@ -994,7 +1003,7 @@ elif "📋" in aba:
                 file_name="relatorio_financaspro.pdf",
                 mime="application/pdf"
             )
-            st.success(f"PDF pronto! Saldo inicial recuperado: R$ {base_inicial:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+            st.success(f"PDF pronto! Relatório gerado com sucesso.")
 
         except Exception as e:
             st.error(f"Erro ao gerar o PDF: {e}")
