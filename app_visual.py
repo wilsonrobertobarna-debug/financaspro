@@ -988,5 +988,39 @@ if aba == "📋 Relatório PDF":
             )
             st.success(f"PDF pronto! Relatório atualizado.")
 
+        
         except Exception as e:
             st.error(f"Erro ao gerar o PDF: {e}")
+
+    # =========================================================================
+    # RETORNO DA TELA DE LANÇAMENTOS E PESQUISAS (VISUAL ORIGINAL RECOMPANHO)
+    # =========================================================================
+    st.markdown("---")
+    st.markdown("### 🔍 Lançamentos no Período Selecionado")
+
+    # Recompondo os mesmos filtros aplicados acima para exibir a tabela correta na tela
+    df_tela = df_base.copy()
+    
+    # Identifica colunas de data e banco
+    col_data_df = next((c for c in df_tela.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+    col_banco_df = next((c for c in df_tela.columns if c.upper() in ['BANCO', 'CONTA']), None)
+
+    if col_data_df:
+        df_tela['DT_FILTRO'] = pd.to_datetime(df_tela[col_data_df], format="%d/%m/%Y", errors='coerce')
+        # Aplica o filtro de data selecionado no topo
+        if isinstance(periodo_pdf, (list, tuple)) and len(periodo_pdf) == 2:
+            df_tela = df_tela[(df_tela['DT_FILTRO'] >= pd.to_datetime(periodo_pdf[0])) & 
+                               (df_tela['DT_FILTRO'] <= pd.to_datetime(periodo_pdf[1]))]
+
+    if banco_relatorio != "Todos" and col_banco_df:
+        df_tela = df_tela[df_tela[col_banco_df].str.upper().str.strip() == str(banco_relatorio).upper()]
+
+    # Remove a coluna auxiliar antes de exibir para manter o visual limpo
+    if 'DT_FILTRO' in df_tela.columns:
+        df_tela = df_tela.drop(columns=['DT_FILTRO'])
+
+    # Exibe a tabela com os seus dados pesquisados de volta na tela!
+    if not df_tela.empty:
+        st.dataframe(df_tela, use_container_width=True)
+    else:
+        st.info("Nenhum lançamento encontrado para os filtros selecionados.")
