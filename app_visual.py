@@ -820,7 +820,6 @@ elif "📋" in aba:
             # ========================================================
             # 2. CAPTURA A TABELA FILTRADA DIRETAMENTE DA TELA
             # ========================================================
-            # Procura primeiro nas variáveis locais, depois na memória do Streamlit
             df_origem = locals().get('df_filtrado', 
                         globals().get('df_filtrado', 
                         locals().get('df_mes', 
@@ -828,7 +827,6 @@ elif "📋" in aba:
                         locals().get('df', 
                         globals().get('df', None))))))
             
-            # Se não achou nas variáveis, tenta buscar qualquer DataFrame salvo na sessão
             if df_origem is None:
                 for k, v in st.session_state.items():
                     if isinstance(v, pd.DataFrame) and not v.empty and 'Banco' in v.columns:
@@ -845,32 +843,28 @@ elif "📋" in aba:
             df_report = df_report.sort_values(by='DT')
 
             # ========================================================
-            # 3. DESCOBRE O BANCO BUSCANDO NA MEMÓRIA DA SESSÃO (SESSION STATE)
+            # 3. DESCOBRE O BANCO E O PERÍODO NA MEMÓRIA DA SESSÃO
             # ========================================================
             base_inicial = 0.0
             banco_nome = "Todos"
 
-            # Vasculha TODAS as caixinhas de seleção salvas na memória para achar o Banco escolhido
             for chave, valor in st.session_state.items():
                 if isinstance(valor, str) and valor.strip() != "" and valor.upper() != "TODOS":
-                    # Se o valor guardado bater com algum banco que você tem na tabela, nós achamos!
                     if 'Banco' in df_report.columns and valor in df_report['Banco'].unique():
                         banco_nome = valor
                         break
 
-            # Se mesmo assim continuar "Todos", faz o teste final pelas colunas da tabela
             if banco_nome == "Todos":
                 if 'Banco' in df_report.columns and df_report['Banco'].nunique() == 1:
                     banco_nome = str(df_report['Banco'].iloc[0]).strip()
                 elif 'BANCO' in df_report.columns and df_report['BANCO'].nunique() == 1:
                     banco_nome = str(df_report['BANCO'].iloc[0]).strip()
 
-            # Força o filtro físico dos lançamentos se tivermos um banco definido
             if banco_nome.upper() != "TODOS" and "TODOS" not in banco_nome.upper():
                 if 'Banco' in df_report.columns:
                     df_report = df_report[df_report['Banco'].str.upper().str.strip() == banco_nome.upper()]
             
-            # Busca o saldo na aba 'Bancos'
+            # Busca o saldo inicial cadastrado na aba 'Bancos'
             try:
                 ws_bancos = sh.worksheet("Bancos")
                 dados_bancos = ws_bancos.get_all_values()
@@ -898,7 +892,7 @@ elif "📋" in aba:
             saldo_anterior = base_inicial
 
             # ========================================================
-            # 4. CÁLCULO DOS LANÇAMENTOS DO MÊS
+            # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO MÊS A MÊS
             # ========================================================
             corrente = saldo_anterior 
             saldos_lista = []
@@ -917,7 +911,7 @@ elif "📋" in aba:
             df_report['Saldo_Acum'] = saldos_lista
 
             # ========================================================
-            # 5. MONTAGEM DO CABEÇALHO DO PDF (TÍTULO DINÂMICO)
+            # 5. MONTAGEM DO CABEÇALHO DO PDF (TÍTULO E DESCRIÇÃO TOP-LEVEL)
             # ========================================================
             pdf.set_font("Arial", 'B', 14)
             pdf.cell(195, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
@@ -926,13 +920,17 @@ elif "📋" in aba:
             p_inicio = b_ini.strftime('%d/%m/%Y') if hasattr(b_ini, 'strftime') else str(b_ini)
             p_fim = b_fim.strftime('%d/%m/%Y') if hasattr(b_fim, 'strftime') else str(b_fim)
             
-            pdf.cell(195, 6, txt=f"Periodo: {p_inicio} a {p_fim}   |   Banco: {banco_nome}", ln=1, align="L")
+            # Descrição do relatório com as variáveis no topo como solicitado
+            pdf.set_font("Arial", 'B', 10)
+            pdf.cell(195, 6, txt=f"BANCO SELECIONADO: {banco_nome.upper()}", ln=1, align="L")
+            pdf.cell(195, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
             
-            txt_saldo_ini = f"R$ {base_inicial:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-            pdf.cell(195, 6, txt=f"Saldo Inicial de Abertura do Banco: {txt_saldo_ini}", ln=1, align="L")
+            # Formatação de Moeda Brasileira (Real)
+            txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+            pdf.cell(195, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
             pdf.ln(4)
 
-            # Cabeçalho da Tabela (Com a coluna Categoria)
+            # Cabeçalho da Tabela
             pdf.set_font("Arial", 'B', 9)
             pdf.cell(20, 7, "Data", 1)
             pdf.cell(18, 7, "Tipo", 1)
