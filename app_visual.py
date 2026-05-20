@@ -808,7 +808,7 @@ elif "📋" in aba:
     
     st.divider()
     
-   if st.button("📄 Gerar PDF"):
+    if st.button("📄 Gerar PDF"):
         try:
             # 1. CARREGAMENTO DOS DADOS COMPLETOS E FILTRO DO PERÍODO
             df_historico = carregar_dados_gs()
