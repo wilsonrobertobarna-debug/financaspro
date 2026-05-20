@@ -1025,6 +1025,7 @@ if aba == "📋 Relatório PDF":
 # =========================================================================
 # NOVA ABA: 📊 ANÁLISES & CONFIGURAÇÕES (Criada no final do arquivo)
 # =========================================================================
+# ATENÇÃO: Essa linha abaixo tem que começar encostada no canto esquerdo!
 if aba == "📊 Análises & Configurações":
     st.markdown("## 📊 Painel de Análises & Configurações")
     
@@ -1076,7 +1077,7 @@ if aba == "📊 Análises & Configurações":
         
     st.divider()
     
-    # 4. FORMULÁRIO: CONFIGURAR METAS (Mantido idêntico)
+    # 4. FORMULÁRIO: CONFIGURAR METAS
     with st.expander("🎯 Configurar Metas", expanded=False):
         todas_cats = sorted(df_base['Categoria'].unique())
         metas_map = {}
