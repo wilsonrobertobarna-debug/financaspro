@@ -778,29 +778,34 @@ if aba == "📋 Relatório PDF":
     st.markdown("### 📋 Emissão de Relatório Financeiro")
     
     # -------------------------------------------------------------------------
-    # FORMULÁRIO DE FILTROS DO RELATÓRIO (Mantendo o visual limpo e direto)
+    # LINHA 1 DE FILTROS: BANCO E PERÍODO
     # -------------------------------------------------------------------------
     col_rel1, col_rel2 = st.columns(2)
-    
     with col_rel1:
-        # Puxa a lista de bancos disponíveis e adiciona a opção "Todos"
         opcoes_banco_rel = ["Todos"] + list(bancos_disponiveis)
-        banco_relatorio = st.selectbox("Filtrar Banco para o PDF:", opcoes_banco_rel)
+        banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel)
         
     with col_rel2:
-        # Define o período do relatório direto na tela de emissão
-        # Usando como padrão o intervalo que você estava buscando (20/04/2026 a 20/05/2026)
         data_padrao_ini = datetime(2026, 4, 20)
         data_padrao_fim = datetime(2026, 5, 20)
         periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
+
+    # -------------------------------------------------------------------------
+    # LINHA 2 DE FILTROS: DESCRIÇÃO E STATUS (AS CAIXINHAS QUE FALTAVAM)
+    # -------------------------------------------------------------------------
+    col_rel3, col_rel4 = st.columns(2)
+    with col_rel3:
+        busca_desc = st.text_input("🔍 Pesquisar por Descrição / Beneficiário:", "").strip()
+        
+    with col_rel4:
+        busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
 
     st.markdown("---")
 
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
-            # Garante que as duas datas foram preenchidas no componente
-            if isinstance(periodo_pdf, list) or isinstance(periodo_pdf, tuple):
+            if isinstance(periodo_pdf, (list, tuple)):
                 if len(periodo_pdf) == 2:
                     b_ini, b_fim = periodo_pdf[0], periodo_pdf[1]
                 else:
@@ -816,44 +821,40 @@ if aba == "📋 Relatório PDF":
             pdf.add_page()
 
             # ========================================================
-            # 2. CAPTURA E FILTRAGEM DOS DADOS (CRONOLÓGICO)
+            # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
             # ========================================================
-            # Carrega a cópia dos dados brutos
             df_report = df_base.copy()
 
-            # Identifica a coluna de Banco na base de dados
-            col_banco_df = None
-            for c in df_report.columns:
-                if c.upper() in ['BANCO', 'CONTA']:
-                    col_banco_df = c
-                    break
+            col_banco_df = next((c for c in df_report.columns if c.upper() in ['BANCO', 'CONTA']), None)
+            col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+            col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
+            col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
 
-            # Identifica a coluna de Data na base de dados
-            col_data_df = None
-            for c in df_report.columns:
-                if c.upper() in ['VENCIMENTO', 'DATA', 'DT']:
-                    col_data_df = c
-                    break
-
-            # Converte a coluna de data para o formato datetime para poder filtrar
+            # 1. Filtro de Data
             if col_data_df:
                 df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
             else:
                 df_report['DT_FILTRO'] = pd.to_datetime(df_report.index, errors='coerce')
 
-            # Filtra por Data primeiro
             t_ini = pd.to_datetime(b_ini)
             t_fim = pd.to_datetime(b_fim)
             df_report = df_report[(df_report['DT_FILTRO'] >= t_ini) & (df_report['DT_FILTRO'] <= t_fim)]
 
-            # Filtra por Banco (se não for "Todos")
+            # 2. Filtro de Banco
             banco_nome = "Todos os Bancos"
-            if banco_relatorio != "Todos":
+            if banco_relatorio != "Todos" and col_banco_df:
                 banco_nome = banco_relatorio
-                if col_banco_df:
-                    df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_nome).upper()]
+                df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_nome).upper()]
 
-            # Ordena de forma estritamente cronológica
+            # 3. Filtro de Descrição
+            if busca_desc and col_desc_df:
+                df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
+
+            # 4. Filtro de Status
+            if busca_status != "Todos" and col_status_df:
+                df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
+
+            # Ordena cronologicamente
             df_report = df_report.sort_values(by='DT_FILTRO')
 
             # ========================================================
@@ -913,7 +914,6 @@ if aba == "📋 Relatório PDF":
             p_inicio = b_ini.strftime('%d/%m/%Y')
             p_fim = b_fim.strftime('%d/%m/%Y')
             
-            # Cabeçalho dinâmico e corrigido de acordo com a seleção da tela!
             pdf.set_font("Arial", 'B', 10)
             pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {str(banco_nome).upper()}", ln=1, align="L")
             pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
@@ -934,7 +934,7 @@ if aba == "📋 Relatório PDF":
             pdf.ln()
 
             # ========================================================
-            # 6. LOOP DE IMPRESSÃO DAS LINHAS
+            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
             pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
@@ -973,9 +973,6 @@ if aba == "📋 Relatório PDF":
                 pdf.cell(20, 6, status_val, 1)
                 pdf.ln()
 
-            # ========================================================
-            # 7. EXPORTAÇÃO E DOWNLOAD
-            # ========================================================
             pdf_output = pdf.output(dest='S')
             if isinstance(pdf_output, str):
                 pdf_output = pdf_output.encode('latin-1')
@@ -988,50 +985,46 @@ if aba == "📋 Relatório PDF":
             )
             st.success(f"PDF pronto! Relatório atualizado.")
 
-        
         except Exception as e:
             st.error(f"Erro ao gerar o PDF: {e}")
 
     # =========================================================================
-    # RETORNO COMPLETO DA TELA DE PESQUISAS E LANÇAMENTOS (VISUAL LIMPO CORRIGIDO)
+    # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS 4 FILTROS (VISUAL LIMPO)
     # =========================================================================
-    st.markdown("---")
-    st.markdown("### 🔍 Pesquisar Lançamentos no Período")
+    st.markdown("### 🔍 Lançamentos Filtrados")
 
-    # 1. Trazendo de volta a caixinha de pesquisa por texto (Descrição)
-    busca_texto = st.text_input("Digite uma palavra-chave para buscar (ex: Mercado, Milo...):", "").strip()
-
-    # Criamos uma cópia para a tela
     df_tela = df_base.copy()
     
-    # Identifica as colunas originais do seu banco de dados
     col_data_df = next((c for c in df_tela.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
     col_banco_df = next((c for c in df_tela.columns if c.upper() in ['BANCO', 'CONTA']), None)
     col_desc_df = next((c for c in df_tela.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
+    col_status_df = next((c for c in df_tela.columns if c.upper() in ['STATUS']), None)
 
-    # Aplica o filtro de data do topo
+    # Aplica Data na tela
     if col_data_df:
         df_tela['DT_FILTRO'] = pd.to_datetime(df_tela[col_data_df], format="%d/%m/%Y", errors='coerce')
         if isinstance(periodo_pdf, (list, tuple)) and len(periodo_pdf) == 2:
             df_tela = df_tela[(df_tela['DT_FILTRO'] >= pd.to_datetime(periodo_pdf[0])) & 
                                (df_tela['DT_FILTRO'] <= pd.to_datetime(periodo_pdf[1]))]
 
-    # Aplica o filtro de banco do topo
+    # Aplica Banco na tela
     if banco_relatorio != "Todos" and col_banco_df:
         df_tela = df_tela[df_tela[col_banco_df].str.upper().str.strip() == str(banco_relatorio).upper()]
 
-    # Aplica a pesquisa por texto se você digitar algo
-    if busca_texto and col_desc_df:
-        df_tela = df_tela[df_tela[col_desc_df].astype(str).str.contains(busca_texto, case=False, na=False)]
+    # Aplica Descrição na tela
+    if busca_desc and col_desc_df:
+        df_tela = df_tela[df_tela[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
 
-    # -------------------------------------------------------------------------
-    # FAXINA CIRÚRGICA: Esconde todas as colunas de cálculo do lado direito
-    # -------------------------------------------------------------------------
+    # Aplica Status na tela
+    if busca_status != "Todos" and col_status_df:
+        df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
+
+    # Faxina das colunas internas para manter o visual limpo
     colunas_para_esconder = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
     colunas_visiveis = [c for c in df_tela.columns if c not in colunas_para_esconder]
     df_tela_limpo = df_tela[colunas_visiveis]
 
-    # Exibe a tabela final limpa e organizada
+    # Exibe os dados
     if not df_tela_limpo.empty:
         st.dataframe(df_tela_limpo, use_container_width=True)
     else:
