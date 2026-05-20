@@ -808,47 +808,49 @@ elif "📋" in aba:
     
     st.divider()
     
-    if st.button("📄 Gerar PDF"):
+   if st.button("📄 Gerar PDF"):
         try:
             # ========================================================
-            # CRIAÇÃO DO OBJETO PDF (CORREÇÃO DO ERRO)
+            # 1. INICIALIZAÇÃO DO PDF
             # ========================================================
             from fpdf import FPDF
             pdf = FPDF()
             pdf.add_page()
+
+            # ========================================================
+            # 2. CAPTURA A TABELA FILTRADA DIRETAMENTE DA TELA
+            # ========================================================
+            # Tenta capturar o DataFrame que já está filtrado e aparecendo na sua tela
+            df_origem = locals().get('df_filtrado', 
+                        globals().get('df_filtrado', 
+                        locals().get('df_mes', 
+                        globals().get('df_mes', 
+                        locals().get('df', globals().get('df', None))))))
             
-            # 1. CARREGAMENTO DOS DADOS COMPLETOS E FILTRO DO PERÍODO
-            df_historico = carregar_dados_gs()
-            
-            # Garante que a coluna de data esteja no formato correto para o Pandas filtrar
-            df_historico['DT'] = pd.to_datetime(df_historico['DT'], errors='coerce')
-            
-            # Filtra a tabela df_report com base nas datas selecionadas na sua tela (b_ini e b_fim)
-            df_report = df_historico[
-                (df_historico['DT'] >= pd.to_datetime(b_ini)) & 
-                (df_historico['DT'] <= pd.to_datetime(b_fim))
-            ].copy()
-            
-            # Ordena por data para o saldo acumulado fazer sentido cronológico
+            if df_origem is not None:
+                df_report = df_origem.copy()
+            else:
+                # Plano B caso não encontre a variável da tela
+                df_report = carregar_dados_gs().copy()
+
+            # Garante formato de data e ordena cronologicamente
+            df_report['DT'] = pd.to_datetime(df_report['DT'], errors='coerce')
             df_report = df_report.sort_values(by='DT')
 
-          # ========================================================
-            # 2. RECUPERAÇÃO DINÂMICA DO SALDO INICIAL DA PLANILHA
             # ========================================================
-            # Vasculha as variáveis exatas do seu sistema. 
-            # Verifique se o seu selectbox usa um desses nomes: 'banco', 'escolha_banco', 'opcao_banco'
-            banco_nome = str(
-                locals().get('banco_selecionado', 
-                globals().get('banco_selecionado', 
-                locals().get('filtro_banco', 
-                globals().get('filtro_banco',
-                locals().get('banco',
-                globals().get('banco', 
-                st.session_state.get('banco_selecionado', 'Todos')))))))
-            ).strip()
-            
+            # 3. DESCOBRE O BANCO E BUSCA O SALDO DE ABERTURA
+            # ========================================================
             base_inicial = 0.0
+            banco_nome = "Todos os Bancos"
+            
+            # Se a tabela da tela só tem 1 banco, o Python descobre o nome dele sozinho!
+            if 'Banco' in df_report.columns and df_report['Banco'].nunique() == 1:
+                banco_nome = str(df_report['Banco'].iloc[0]).strip()
+            elif 'BANCO' in df_report.columns and df_report['BANCO'].nunique() == 1:
+                banco_nome = str(df_report['BANCO'].iloc[0]).strip()
+
             try:
+                # Busca o saldo inicial na aba Bancos para o banco descoberto
                 ws_bancos = sh.worksheet("Bancos")
                 dados_bancos = ws_bancos.get_all_values()
                 df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
@@ -856,13 +858,7 @@ elif "📋" in aba:
                 col_banco = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
                 col_saldo = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
                 
-                # REGRA DE SEGURANÇA: Se a tabela na tela já tiver registros de apenas UM banco,
-                # nós usamos o nome desse banco automaticamente, corrigindo o erro de leitura!
-                if 'Banco' in df_report.columns and df_report['Banco'].nunique() == 1:
-                    banco_nome = str(df_report['Banco'].iloc[0]).strip()
-
-                # Se for um banco específico e válido
-                if banco_nome.upper() != "TODOS" and banco_nome != "" and "TODOS" not in banco_nome.upper():
+                if banco_nome != "Todos os Bancos":
                     linha_banco = df_bancos_cad[df_bancos_cad[col_banco].str.upper().str.strip() == banco_nome.upper()]
                     if not linha_banco.empty:
                         val_cru = linha_banco.iloc[0][col_saldo]
@@ -872,20 +868,14 @@ elif "📋" in aba:
                         else:
                             val_limpo = val_limpo.replace(',', '.')
                         base_inicial = float(val_limpo)
-                    
-                    # Garante que o PDF só vai imprimir as linhas DESSE banco específico
-                    if 'Banco' in df_report.columns:
-                        df_report = df_report[df_report['Banco'].str.upper().str.strip() == banco_nome.upper()]
-                else:
-                    # Se for "Todos" real, zera a base inicial para o cálculo cronológico puro
-                    base_inicial = 0.0
-                    banco_nome = "Todos os Bancos"
-                    
-            except Exception as e_banco:
+            except:
                 base_inicial = 0.0
 
-            saldo_anterior = base_inicial            # ========================================================
-            # 3. CÁLCULO DOS LANÇAMENTOS DO MÊS ATUAL
+            # O saldo anterior começa exatamente com o saldo inicial limpo da planilha
+            saldo_anterior = base_inicial
+
+            # ========================================================
+            # 4. CÁLCULO DOS LANÇAMENTOS DO MÊS
             # ========================================================
             corrente = saldo_anterior 
             saldos_lista = []
@@ -904,7 +894,7 @@ elif "📋" in aba:
             df_report['Saldo_Acum'] = saldos_lista
 
             # ========================================================
-            # 4. MONTAGEM DO CABEÇALHO DO PDF (TÍTULO DINÂMICO)
+            # 5. MONTAGEM DO CABEÇALHO DO PDF (TÍTULO DINÂMICO)
             # ========================================================
             pdf.set_font("Arial", 'B', 14)
             pdf.cell(195, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
@@ -919,7 +909,7 @@ elif "📋" in aba:
             pdf.cell(195, 6, txt=f"Saldo Inicial de Abertura do Banco: {txt_saldo_ini}", ln=1, align="L")
             pdf.ln(4)
 
-            # Cabeçalho da Tabela (Com espaço para a Categoria)
+            # Cabeçalho da Tabela (Com a coluna Categoria)
             pdf.set_font("Arial", 'B', 9)
             pdf.cell(20, 7, "Data", 1)
             pdf.cell(18, 7, "Tipo", 1)
@@ -931,7 +921,7 @@ elif "📋" in aba:
             pdf.ln()
 
             # ========================================================
-            # 5. LOOP DE IMPRESSÃO DAS LINHAS DO RELATÓRIO
+            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
             pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
@@ -955,7 +945,6 @@ elif "📋" in aba:
                 texto_saldo = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                 cor_saldo = (255, 0, 0) if saldo_val < 0 else (0, 0, 0)
 
-                # Impressão das células na linha
                 pdf.cell(20, 6, data_str, 1)
                 pdf.cell(18, 6, tipo_str, 1)
                 pdf.cell(35, 6, cat_val, 1)
@@ -972,7 +961,7 @@ elif "📋" in aba:
                 pdf.ln()
 
             # ========================================================
-            # 6. EXPORTAÇÃO E DOWNLOAD
+            # 7. EXPORTAÇÃO E DOWNLOAD DO ARQUIVO
             # ========================================================
             pdf_output = pdf.output(dest='S')
             if isinstance(pdf_output, str):
