@@ -989,7 +989,7 @@ if aba == "📋 Relatório PDF":
             st.success(f"PDF pronto! Relatório atualizado.")
 
         
-       except Exception as e:
+        except Exception as e:
             st.error(f"Erro ao gerar o PDF: {e}")
 
     # =========================================================================
