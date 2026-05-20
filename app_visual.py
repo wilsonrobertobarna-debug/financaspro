@@ -820,17 +820,24 @@ elif "📋" in aba:
             # ========================================================
             # 2. CAPTURA A TABELA FILTRADA DIRETAMENTE DA TELA
             # ========================================================
-            # Tenta capturar o DataFrame que já está filtrado e aparecendo na sua tela
+            # Procura primeiro nas variáveis locais, depois na memória do Streamlit
             df_origem = locals().get('df_filtrado', 
                         globals().get('df_filtrado', 
                         locals().get('df_mes', 
                         globals().get('df_mes', 
-                        locals().get('df', globals().get('df', None))))))
+                        locals().get('df', 
+                        globals().get('df', None))))))
             
+            # Se não achou nas variáveis, tenta buscar qualquer DataFrame salvo na sessão
+            if df_origem is None:
+                for k, v in st.session_state.items():
+                    if isinstance(v, pd.DataFrame) and not v.empty and 'Banco' in v.columns:
+                        df_origem = v
+                        break
+
             if df_origem is not None:
                 df_report = df_origem.copy()
             else:
-                # Plano B caso não encontre a variável da tela
                 df_report = carregar_dados_gs().copy()
 
             # Garante formato de data e ordena cronologicamente
@@ -838,19 +845,33 @@ elif "📋" in aba:
             df_report = df_report.sort_values(by='DT')
 
             # ========================================================
-            # 3. DESCOBRE O BANCO E BUSCA O SALDO DE ABERTURA
+            # 3. DESCOBRE O BANCO BUSCANDO NA MEMÓRIA DA SESSÃO (SESSION STATE)
             # ========================================================
             base_inicial = 0.0
-            banco_nome = "Todos os Bancos"
-            
-            # Se a tabela da tela só tem 1 banco, o Python descobre o nome dele sozinho!
-            if 'Banco' in df_report.columns and df_report['Banco'].nunique() == 1:
-                banco_nome = str(df_report['Banco'].iloc[0]).strip()
-            elif 'BANCO' in df_report.columns and df_report['BANCO'].nunique() == 1:
-                banco_nome = str(df_report['BANCO'].iloc[0]).strip()
+            banco_nome = "Todos"
 
+            # Vasculha TODAS as caixinhas de seleção salvas na memória para achar o Banco escolhido
+            for chave, valor in st.session_state.items():
+                if isinstance(valor, str) and valor.strip() != "" and valor.upper() != "TODOS":
+                    # Se o valor guardado bater com algum banco que você tem na tabela, nós achamos!
+                    if 'Banco' in df_report.columns and valor in df_report['Banco'].unique():
+                        banco_nome = valor
+                        break
+
+            # Se mesmo assim continuar "Todos", faz o teste final pelas colunas da tabela
+            if banco_nome == "Todos":
+                if 'Banco' in df_report.columns and df_report['Banco'].nunique() == 1:
+                    banco_nome = str(df_report['Banco'].iloc[0]).strip()
+                elif 'BANCO' in df_report.columns and df_report['BANCO'].nunique() == 1:
+                    banco_nome = str(df_report['BANCO'].iloc[0]).strip()
+
+            # Força o filtro físico dos lançamentos se tivermos um banco definido
+            if banco_nome.upper() != "TODOS" and "TODOS" not in banco_nome.upper():
+                if 'Banco' in df_report.columns:
+                    df_report = df_report[df_report['Banco'].str.upper().str.strip() == banco_nome.upper()]
+            
+            # Busca o saldo na aba 'Bancos'
             try:
-                # Busca o saldo inicial na aba Bancos para o banco descoberto
                 ws_bancos = sh.worksheet("Bancos")
                 dados_bancos = ws_bancos.get_all_values()
                 df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
@@ -858,7 +879,7 @@ elif "📋" in aba:
                 col_banco = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
                 col_saldo = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
                 
-                if banco_nome != "Todos os Bancos":
+                if banco_nome.upper() != "TODOS" and "TODOS" not in banco_nome.upper():
                     linha_banco = df_bancos_cad[df_bancos_cad[col_banco].str.upper().str.strip() == banco_nome.upper()]
                     if not linha_banco.empty:
                         val_cru = linha_banco.iloc[0][col_saldo]
@@ -868,10 +889,12 @@ elif "📋" in aba:
                         else:
                             val_limpo = val_limpo.replace(',', '.')
                         base_inicial = float(val_limpo)
+                else:
+                    base_inicial = 0.0
+                    banco_nome = "Todos os Bancos"
             except:
                 base_inicial = 0.0
 
-            # O saldo anterior começa exatamente com o saldo inicial limpo da planilha
             saldo_anterior = base_inicial
 
             # ========================================================
