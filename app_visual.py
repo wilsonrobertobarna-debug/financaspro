@@ -808,7 +808,7 @@ elif "📋" in aba:
     
     st.divider()
     
-   if st.button("📄 Gerar PDF"):
+    if st.button("📄 Gerar PDF"):
         try:
             # ========================================================
             # CRIAÇÃO DO OBJETO PDF (CORREÇÃO DO ERRO)
