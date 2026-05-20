@@ -838,40 +838,37 @@ elif "📋" in aba:
             else:
                 df_report = carregar_dados_gs().copy()
 
-            # Garante formato de data e ordena cronologicamente
+            # ========================================================
+            # 3. CAPTURA O BANCO DIRETAMENTE DA VARIÁVEL DA SUA TELA
+            # ========================================================
+            # DICA DO PERRENGUE: Se a sua variável do selectbox tiver outro nome 
+            # (ex: escolha_banco, filtro_banco), mude o nome dela aqui na direita:
+            banco_nome = locals().get('banco_selecionado', 
+                         globals().get('banco_selecionado', 'Todos'))
+            
+            # Se a variável simples não foi achada, tenta buscar na memória do componente
+            if banco_nome == 'Todos':
+                for k, v in st.session_state.items():
+                    if 'banco' in k.lower() and isinstance(v, str) and v.upper() != 'TODOS':
+                        banco_nome = v
+                        break
+
+            # Se mesmo assim não achar, tenta ver se a tabela tem apenas 1 banco
+            col_banco_df = 'Banco' if 'Banco' in df_report.columns else ('BANCO' if 'BANCO' in df_report.columns else None)
+            if banco_nome == 'Todos' and col_banco_df and df_report[col_banco_df].nunique() == 1:
+                banco_nome = str(df_report[col_banco_df].iloc[0]).strip()
+
+            # AGORA SIM: Força o filtro rígido no relatório para o banco correto!
+            if str(banco_nome).upper() != "TODOS" and "TODOS" not in str(banco_nome).upper():
+                if col_banco_df:
+                    df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_nome).upper()]
+
+            # Garante formato de data e ordena cronologicamente após aplicar o filtro
             df_report['DT'] = pd.to_datetime(df_report['DT'], errors='coerce')
             df_report = df_report.sort_values(by='DT')
-
-            # ========================================================
-            # 3. DESCOBRE O BANCO (MELHORADO: PEGA DIRETO DA TABELA FILTRADA)
-            # ========================================================
-            base_inicial = 0.0
-            banco_nome = "Todos"
-
-            # Primeiro, tenta descobrir pelas colunas da tabela que está na tela
-            col_banco_df = None
-            if 'Banco' in df_report.columns:
-                col_banco_df = 'Banco'
-            elif 'BANCO' in df_report.columns:
-                col_banco_df = 'BANCO'
-
-            if col_banco_df and df_report[col_banco_df].nunique() == 1:
-                # Se a tabela da tela só tem 1 banco, é esse que o usuário filtrou!
-                banco_nome = str(df_report[col_banco_df].iloc[0]).strip()
-            else:
-                # Se tiver mais de um, tenta buscar nos componentes da tela (session_state)
-                for chave, valor in st.session_state.items():
-                    if isinstance(valor, str) and valor.strip() != "" and valor.upper() != "TODOS":
-                        if col_banco_df and valor in df_report[col_banco_df].unique():
-                            banco_nome = valor
-                            break
-
-            # Força o filtro físico no relatório caso tenha achado um banco específico
-            if banco_nome.upper() != "TODOS" and "TODOS" not in banco_nome.upper():
-                if col_banco_df:
-                    df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == banco_nome.upper()]
             
             # Busca o saldo inicial cadastrado na aba 'Bancos'
+            base_inicial = 0.0
             try:
                 ws_bancos = sh.worksheet("Bancos")
                 dados_bancos = ws_bancos.get_all_values()
@@ -880,8 +877,8 @@ elif "📋" in aba:
                 col_banco_cad = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
                 col_saldo_cad = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
                 
-                if banco_nome.upper() != "TODOS" and "TODOS" not in banco_nome.upper():
-                    linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome.upper()]
+                if str(banco_nome).upper() != "TODOS" and "TODOS" not in str(banco_nome).upper():
+                    linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == str(banco_nome).upper()]
                     if not linha_banco.empty:
                         val_cru = linha_banco.iloc[0][col_saldo_cad]
                         val_limpo = str(val_cru).replace('R$', '').strip()
@@ -891,7 +888,6 @@ elif "📋" in aba:
                             val_limpo = val_limpo.replace(',', '.')
                         base_inicial = float(val_limpo)
                 else:
-                    base_inicial = 0.0
                     banco_nome = "Todos os Bancos"
             except:
                 base_inicial = 0.0
@@ -918,10 +914,9 @@ elif "📋" in aba:
             df_report['Saldo_Acum'] = saldos_lista
 
             # ========================================================
-            # 5. MONTAGEM DO CABEÇALHO DO PDF (CORRIGIDO TAMANHO E TEXTO)
+            # 5. MONTAGEM DO CABEÇALHO DO PDF (TÍTULO E DESCRIÇÃO)
             # ========================================================
             pdf.set_font("Arial", 'B', 12)
-            # Aumentamos o tamanho da célula para 200 para não comer letras
             pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
             pdf.ln(2)
             
@@ -929,12 +924,11 @@ elif "📋" in aba:
             p_inicio = b_ini.strftime('%d/%m/%Y') if hasattr(b_ini, 'strftime') else str(b_ini)
             p_fim = b_fim.strftime('%d/%m/%Y') if hasattr(b_fim, 'strftime') else str(b_fim)
             
-            # Descrição do relatório com as variáveis solicitadas
+            # Descrição no topo como você pediu
             pdf.set_font("Arial", 'B', 10)
-            pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {banco_nome.upper()}", ln=1, align="L")
+            pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {str(banco_nome).upper()}", ln=1, align="L")
             pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
             
-            # Formatação de Moeda Brasileira (Real)
             txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
             pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
             pdf.ln(5)
