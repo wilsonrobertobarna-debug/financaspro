@@ -818,72 +818,55 @@ elif "📋" in aba:
             pdf.add_page()
 
             # ========================================================
-            # 2. CAPTURA DOS DADOS (MÉTODO SUPREMO)
+            # 2. CAPTURA DOS DADOS
             # ========================================================
-            # Tentamos pegar o DataFrame exatamente como ele está na tela agora
-            df_origem = None
+            df_origem = locals().get('df_filtrado', 
+                        globals().get('df_filtrado', 
+                        locals().get('df_mes', 
+                        globals().get('df_mes', 
+                        locals().get('df', 
+                        globals().get('df', None))))))
             
-            # 1ª Tentativa: Busca nas variáveis do contexto da tela
-            for nome_var in ['df_filtrado', 'df_mes', 'df_selecionado', 'df']:
-                if nome_var in locals():
-                    df_origem = locals()[nome_var].copy()
-                    break
-                elif nome_var in globals():
-                    df_origem = globals()[nome_var].copy()
-                    break
-            
-            # 2ª Tentativa: Se não achou, varre o session_state por qualquer DataFrame preenchido
             if df_origem is None:
                 for k, v in st.session_state.items():
-                    if isinstance(v, pd.DataFrame) and not v.empty:
-                        # Se tiver coluna de banco ou carteira, encontramos a tabela da tela
-                        if any(c in v.columns for c in ['Banco', 'BANCO', 'Conta', 'CONTA']):
-                            df_origem = v.copy()
-                            break
+                    if isinstance(v, pd.DataFrame) and not v.empty and 'Banco' in v.columns:
+                        df_origem = v
+                        break
 
-            # Se todas as tentativas falharem, busca a carga bruta da planilha
-            if df_origem is None:
-                df_origem = carregar_dados_gs().copy()
-
-            df_report = df_origem.copy()
-
-            # Identifica qual é o nome exato da coluna de Banco na sua planilha
-            col_banco_df = None
-            for c in df_report.columns:
-                if c.upper() in ['BANCO', 'CONTA', 'BANCOS']:
-                    col_banco_df = c
-                    break
-
-            # ========================================================
-            # 3. IDENTIFICAÇÃO DO BANCO DIRETO DOS DADOS FILTRADOS
-            # ========================================================
-            banco_nome = "Todos os Bancos"
-            
-            # Se o usuário filtrou a tela para apenas um banco, a coluna terá apenas 1 valor único!
-            if col_banco_df and df_report[col_banco_df].nunique() == 1:
-                banco_nome = str(df_report[col_banco_df].iloc[0]).strip()
+            if df_origem is not None:
+                df_report = df_origem.copy()
             else:
-                # Se a tabela ainda tem tudo, tentamos pescar o valor selecionado no selectbox da tela
-                for k, v in st.session_state.items():
-                    if isinstance(v, str) and v.strip() != "" and v.upper() != "TODOS":
-                        # Se o texto bate com algum banco existente na tabela, matamos a charada
-                        if col_banco_df and v in df_report[col_banco_df].unique():
-                            banco_nome = v
-                            # Aplica o filtro no relatório para o banco que achamos no componente
-                            df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_nome).upper()]
-                            break
+                df_report = carregar_dados_gs().copy()
+
+            # Identifica a coluna de Banco
+            col_banco_df = 'Banco' if 'Banco' in df_report.columns else ('BANCO' if 'BANCO' in df_report.columns else None)
+
+            # ========================================================
+            # 3. CAPTURA DIRETA DA CHAVE DA MEMÓRIA (CORREÇÃO DO PERRENGUE)
+            # ========================================================
+            # Forçamos o código a ler direto o componente com a chave fixa
+            banco_nome = st.session_state.get('filtro_banco_pdf', 'Todos')
+            
+            # Se por acaso retornar Vazio ou Todos, tenta a checagem secundária
+            if str(banco_nome).strip() == "" or str(banco_nome).upper() == "TODOS":
+                if col_banco_df and df_report[col_banco_df].nunique() == 1:
+                    banco_nome = str(df_report[col_banco_df].iloc[0]).strip()
+                else:
+                    banco_nome = "Todos os Bancos"
+
+            # Executa o filtro no DataFrame se um banco específico foi selecionado
+            if banco_nome.upper() != "TODOS" and banco_nome.upper() != "TODOS OS BANCOS":
+                if col_banco_df:
+                    df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_nome).upper()]
 
             # Garante formato de data e ordena cronologicamente
             if 'DT' in df_report.columns:
                 df_report['DT'] = pd.to_datetime(df_report['DT'], errors='coerce')
             elif 'Data' in df_report.columns:
                 df_report['DT'] = pd.to_datetime(df_report['Data'], errors='coerce')
-            elif 'DATA' in df_report.columns:
-                df_report['DT'] = pd.to_datetime(df_report['DATA'], errors='coerce')
-                
             df_report = df_report.sort_values(by='DT')
-
-            # Busca o saldo inicial cadastrado na aba 'Bancos'
+            
+            # Busca o saldo na aba 'Bancos'
             base_inicial = 0.0
             try:
                 ws_bancos = sh.worksheet("Bancos")
@@ -909,16 +892,16 @@ elif "📋" in aba:
             saldo_anterior = base_inicial
 
             # ========================================================
-            # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO MÊS A MÊS
+            # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO
             # ========================================================
             corrente = saldo_anterior 
             saldos_lista = []
 
             for _, r in df_report.iterrows():
-                val = pd.to_numeric(r.get('V_Num', r.get('Valor', r.get('VALOR', 0))), errors='coerce')
+                val = pd.to_numeric(r.get('V_Num', r.get('Valor', 0)), errors='coerce')
                 if pd.isna(val): val = 0
                 
-                tipo_check = str(r.get('Tipo', r.get('TIPO', ''))).upper().strip()
+                tipo_check = str(r.get('Tipo', '')).upper().strip()
                 if "DESPESA" in tipo_check or "GASTO" in tipo_check:
                     corrente -= val
                 else:
@@ -938,9 +921,9 @@ elif "📋" in aba:
             p_inicio = b_ini.strftime('%d/%m/%Y') if hasattr(b_ini, 'strftime') else str(b_ini)
             p_fim = b_fim.strftime('%d/%m/%Y') if hasattr(b_fim, 'strftime') else str(b_fim)
             
-            # Exibição dos dados no topo
+            # Dados dinâmicos corrigidos no topo
             pdf.set_font("Arial", 'B', 10)
-            pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {banco_nome.upper()}", ln=1, align="L")
+            pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {str(banco_nome).upper()}", ln=1, align="L")
             pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
             
             txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
@@ -959,20 +942,20 @@ elif "📋" in aba:
             pdf.ln()
 
             # ========================================================
-            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
+            # 6. LOOP DE IMPRESSÃO DAS LINHAS
             # ========================================================
             pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
-                dt_obj = row.get('DT', row.get('Data', row.get('DATA', None)))
+                dt_obj = row.get('DT', row.get('Data', None))
                 data_str = dt_obj.strftime('%d/%m/%Y') if hasattr(dt_obj, 'strftime') else str(dt_obj)
                 
-                tipo_str = str(row.get('Tipo', row.get('TIPO', '---'))).strip()
-                cat_val = str(row.get('Categoria', row.get('CATEGORIA', 'Geral')))[:18]
-                desc_val = str(row.get('Descrição', row.get('Descricao', row.get('DESCRICAO', 'Sem nome'))))[:24]
-                valor_val = pd.to_numeric(row.get('V_Num', row.get('Valor', row.get('VALOR', 0))), errors='coerce')
+                tipo_str = str(row.get('Tipo', '---')).strip()
+                cat_val = str(row.get('Categoria', 'Geral'))[:18]
+                desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))[:24]
+                valor_val = pd.to_numeric(row.get('V_Num', row.get('Valor', 0)), errors='coerce')
                 if pd.isna(valor_val): valor_val = 0.0
                 saldo_val = row.get('Saldo_Acum', 0.0)
-                status_val = str(row.get('Status', row.get('STATUS', '-')))
+                status_val = str(row.get('Status', '-'))
 
                 if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper():
                     texto_valor = f"- R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
@@ -1000,7 +983,7 @@ elif "📋" in aba:
                 pdf.ln()
 
             # ========================================================
-            # 7. EXPORTAÇÃO E DOWNLOAD DO ARQUIVO
+            # 7. EXPORTAÇÃO E DOWNLOAD
             # ========================================================
             pdf_output = pdf.output(dest='S')
             if isinstance(pdf_output, str):
