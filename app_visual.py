@@ -832,15 +832,19 @@ elif "📋" in aba:
             # Ordena por data para o saldo acumulado fazer sentido cronológico
             df_report = df_report.sort_values(by='DT')
 
-            # ========================================================
+          # ========================================================
             # 2. RECUPERAÇÃO DINÂMICA DO SALDO INICIAL DA PLANILHA
             # ========================================================
+            # Vasculha as variáveis exatas do seu sistema. 
+            # Verifique se o seu selectbox usa um desses nomes: 'banco', 'escolha_banco', 'opcao_banco'
             banco_nome = str(
                 locals().get('banco_selecionado', 
                 globals().get('banco_selecionado', 
                 locals().get('filtro_banco', 
-                globals().get('filtro_banco', 
-                st.session_state.get('banco_selecionado', 'Todos')))))
+                globals().get('filtro_banco',
+                locals().get('banco',
+                globals().get('banco', 
+                st.session_state.get('banco_selecionado', 'Todos')))))))
             ).strip()
             
             base_inicial = 0.0
@@ -852,12 +856,16 @@ elif "📋" in aba:
                 col_banco = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
                 col_saldo = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
                 
-                # Se for um banco específico, busca o valor real dele
+                # REGRA DE SEGURANÇA: Se a tabela na tela já tiver registros de apenas UM banco,
+                # nós usamos o nome desse banco automaticamente, corrigindo o erro de leitura!
+                if 'Banco' in df_report.columns and df_report['Banco'].nunique() == 1:
+                    banco_nome = str(df_report['Banco'].iloc[0]).strip()
+
+                # Se for um banco específico e válido
                 if banco_nome.upper() != "TODOS" and banco_nome != "" and "TODOS" not in banco_nome.upper():
                     linha_banco = df_bancos_cad[df_bancos_cad[col_banco].str.upper().str.strip() == banco_nome.upper()]
                     if not linha_banco.empty:
                         val_cru = linha_banco.iloc[0][col_saldo]
-                        # Limpeza cirúrgica de pontos e vírgulas do formato de moeda brasileiro
                         val_limpo = str(val_cru).replace('R$', '').strip()
                         if '.' in val_limpo and ',' in val_limpo:
                             val_limpo = val_limpo.replace('.', '').replace(',', '.')
@@ -865,19 +873,18 @@ elif "📋" in aba:
                             val_limpo = val_limpo.replace(',', '.')
                         base_inicial = float(val_limpo)
                     
-                    # Filtra os lançamentos do relatório apenas para este banco
-                    df_report = df_report[df_report['Banco'].str.upper().str.strip() == banco_nome.upper()]
+                    # Garante que o PDF só vai imprimir as linhas DESSE banco específico
+                    if 'Banco' in df_report.columns:
+                        df_report = df_report[df_report['Banco'].str.upper().str.strip() == banco_nome.upper()]
                 else:
-                    # SE FOR "TODOS": Para não somar lixo da planilha, definimos 0.0 
-                    # ou você pode colocar a soma real dos seus saldos atuais aqui (ex: 17.07)
+                    # Se for "Todos" real, zera a base inicial para o cálculo cronológico puro
                     base_inicial = 0.0
                     banco_nome = "Todos os Bancos"
                     
             except Exception as e_banco:
                 base_inicial = 0.0
 
-            saldo_anterior = base_inicial
-            # ========================================================
+            saldo_anterior = base_inicial            # ========================================================
             # 3. CÁLCULO DOS LANÇAMENTOS DO MÊS ATUAL
             # ========================================================
             corrente = saldo_anterior 
