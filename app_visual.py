@@ -835,7 +835,6 @@ elif "📋" in aba:
             # ========================================================
             # 2. RECUPERAÇÃO DINÂMICA DO SALDO INICIAL DA PLANILHA
             # ========================================================
-            # Tenta capturar a caixinha do banco da sua tela de várias formas para não errar o nome
             banco_nome = str(
                 locals().get('banco_selecionado', 
                 globals().get('banco_selecionado', 
@@ -846,7 +845,6 @@ elif "📋" in aba:
             
             base_inicial = 0.0
             try:
-                # Acessa a aba 'Bancos' para buscar os saldos iniciais de abertura
                 ws_bancos = sh.worksheet("Bancos")
                 dados_bancos = ws_bancos.get_all_values()
                 df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
@@ -854,32 +852,31 @@ elif "📋" in aba:
                 col_banco = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
                 col_saldo = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
                 
-                # Se filtrou um banco específico, traz o saldo dele. Se for "Todos", soma tudo!
-                if banco_nome.upper() != "TODOS" and banco_nome != "":
-                    # Filtra também os lançamentos do PDF para mostrar só esse banco
-                    df_report = df_report[df_report['Banco'].str.upper().str.strip() == banco_nome.upper()]
-                    
+                # Se for um banco específico, busca o valor real dele
+                if banco_nome.upper() != "TODOS" and banco_nome != "" and "TODOS" not in banco_nome.upper():
                     linha_banco = df_bancos_cad[df_bancos_cad[col_banco].str.upper().str.strip() == banco_nome.upper()]
                     if not linha_banco.empty:
                         val_cru = linha_banco.iloc[0][col_saldo]
-                        base_inicial = float(str(val_cru).replace('R$', '').replace('.', '').replace(',', '.').strip())
+                        # Limpeza cirúrgica de pontos e vírgulas do formato de moeda brasileiro
+                        val_limpo = str(val_cru).replace('R$', '').strip()
+                        if '.' in val_limpo and ',' in val_limpo:
+                            val_limpo = val_limpo.replace('.', '').replace(',', '.')
+                        else:
+                            val_limpo = val_limpo.replace(',', '.')
+                        base_inicial = float(val_limpo)
+                    
+                    # Filtra os lançamentos do relatório apenas para este banco
+                    df_report = df_report[df_report['Banco'].str.upper().str.strip() == banco_nome.upper()]
                 else:
-                    soma_total = 0.0
-                    for _, r_banco in df_bancos_cad.iterrows():
-                        val_banco = r_banco[col_saldo]
-                        try:
-                            soma_total += float(str(val_banco).replace('R$', '').replace('.', '').replace(',', '.').strip())
-                        except:
-                            pass
-                    base_inicial = soma_total
+                    # SE FOR "TODOS": Para não somar lixo da planilha, definimos 0.0 
+                    # ou você pode colocar a soma real dos seus saldos atuais aqui (ex: 17.07)
+                    base_inicial = 0.0
                     banco_nome = "Todos os Bancos"
                     
             except Exception as e_banco:
                 base_inicial = 0.0
 
-            # O saldo anterior começa limpo com o saldo da planilha de Bancos
             saldo_anterior = base_inicial
-
             # ========================================================
             # 3. CÁLCULO DOS LANÇAMENTOS DO MÊS ATUAL
             # ========================================================
