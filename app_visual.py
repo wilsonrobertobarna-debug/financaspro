@@ -808,8 +808,15 @@ elif "📋" in aba:
     
     st.divider()
     
-    if st.button("📄 Gerar PDF"):
+   if st.button("📄 Gerar PDF"):
         try:
+            # ========================================================
+            # CRIAÇÃO DO OBJETO PDF (CORREÇÃO DO ERRO)
+            # ========================================================
+            from fpdf import FPDF
+            pdf = FPDF()
+            pdf.add_page()
+            
             # 1. CARREGAMENTO DOS DADOS COMPLETOS E FILTRO DO PERÍODO
             df_historico = carregar_dados_gs()
             
