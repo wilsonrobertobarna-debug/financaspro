@@ -552,7 +552,14 @@ elif "Pendências" in aba:
 
     # 4. Exibir e Baixar
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
-    st.dataframe(df_filtrado[['Data', 'Banco', 'Descrição', 'V_Num']], use_container_width=True)
+    # Em vez de forçar nomes de colunas, exibimos o df_filtrado que já está limpo
+    # Se quiser esconder colunas técnicas, usamos o comando abaixo:
+    colunas_para_esconder = ['Data_Formatada'] # Adicione aqui qualquer coluna que não queira ver
+    df_exibir = df_filtrado.drop(columns=[c for c in colunas_para_esconder if c in df_filtrado.columns])
+    
+    st.dataframe(df_exibir, use_container_width=True, hide_index=True)
+    
+    # 5. Botão de Baixa (Mantenha o seu como está abaixo disso)
     
     if not df_filtrado.empty:
         nova_data = st.date_input("Data de pagamento para baixa:", datetime.now())
