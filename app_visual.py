@@ -490,49 +490,105 @@ if "💰" in aba:
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
+Python
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
-    st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
     
-    # 1. Filtramos os pendentes
+    # 1. Filtramos os pendentes gerais
     df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
     
+    # ========================================================
+    # FUNÇÃO DE ALTA PERFORMANCE: BAIXA EM LOTE PARA CARTÕES
+    # ========================================================
     if not df_aviso.empty:
-        # --- BUSCA INTELIGENTE PELA COLUNA DE DATA ---
-        # Ele vai tentar achar 'Data', 'DATA', 'Vencimento' ou qualquer uma que exista
+        # Filtra se existem cartões dentro dos pendentes
+        df_cartoes_pendentes = df_aviso[df_aviso['Banco'].str.upper().str.contains("CARTAO|CARTÃO", na=False)]
+        
+        if not df_cartoes_pendentes.empty:
+            with st.expander("⚡ Baixa Expressa: Todos os Cartões", expanded=False):
+                st.write(f"Encontrei **{len(df_cartoes_pendentes)}** lançamentos de cartão pendentes.")
+                nova_data_venc = st.date_input("Nova data de vencimento para estes cartões:", datetime.now(), format="DD/MM/YYYY")
+                
+                if st.button("🚀 DAR BAIXA EM TODOS OS CARTÕES DE UMA VEZ"):
+                    sucessos = 0
+                    # Descobre em qual coluna da planilha ficam 'Status' e 'Vencimento'
+                    headers = ws_base.row_values(1)
+                    try:
+                        idx_status = headers.index('Status') + 1
+                    except:
+                        idx_status = 7  # Padrão FinançasPro caso não ache pelo nome
+                        
+                    try:
+                        idx_venc = [i for i, h in enumerate(headers) if 'VENC' in h.upper() or 'CART' in h.upper()][0] + 1
+                    except:
+                        idx_venc = 8  # Padrão FinançasPro
+                    
+                    # Roda a atualização na planilha linha por linha pelo índice real
+                    for idx_df, row in df_cartoes_pendentes.iterrows():
+                        linha_sheets = int(idx_df) + 2  # Converte índice do DataFrame para linha real do Sheets
+                        
+                        # Altera na planilha: Status para 'Pago' e atualiza a data de vencimento informada
+                        ws_base.update_cell(linha_sheets, idx_status, "Pago")
+                        ws_base.update_cell(linha_sheets, idx_venc, nova_data_venc.strftime("%d/%m/%Y"))
+                        sucessos += 1
+                    
+                    st.toast(f"✅ {sucessos} cartões foram baixados e atualizados!", icon="💳")
+                    atualizar_sessao()
+                    st.rerun()
+                    
+    st.subheader("🔔 Avisos: Vencimentos de Lançamentos")
+    
+    if not df_aviso.empty:
         colunas_possiveis = ['Data', 'DATA', 'Vencimento', 'VENCIMENTO', 'DT']
         col_data = next((c for c in colunas_possiveis if c in df_aviso.columns), None)
         
         if col_data:
-            # Converte e calcula os dias de forma segura
             df_aviso['Data_Formatada'] = pd.to_datetime(df_aviso[col_data], errors='coerce')
             df_aviso['Dias'] = (df_aviso['Data_Formatada'].dt.date - hoje).apply(lambda x: x.days if pd.notnull(x) else None)
             
-            # Filtro de quem vence hoje, amanhã, 3 dias ou está atrasado
             df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)]
             
             if not df_venc.empty:
-                for _, row in df_venc.iterrows():
+                # Descobre dinamicamente a coluna de Status para atualizar individualmente
+                headers = ws_base.row_values(1)
+                try:
+                    idx_status_ind = headers.index('Status') + 1
+                except:
+                    idx_status_ind = 7
+
+                for idx_df, row in df_venc.iterrows():
                     d_aviso = row['Dias']
-                    # Pega os dados usando .get() para nunca mais dar KeyError
                     data_venc = row.get(col_data, '---')
                     desc_venc = row.get('Descrição', row.get('Descricao', 'Sem descrição'))
                     valor_venc = row.get('V_Num', 0)
                     banco_venc = row.get('Banco', 'N/A')
+                    linha_real_sheets = int(idx_df) + 2  # Localizador perfeito da linha
 
-                    # Exibição dos alertas com o seu visual limpo
-                    if d_aviso < 0:
-                        st.warning(f"⚠️ **Atrasado:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")
-                    elif d_aviso == 0:
-                        st.warning(f"⚠️ **Vence hoje:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")                    
-                    elif d_aviso == 1:
-                        st.warning(f"🚨 **Vence amanhã:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")
-                    elif d_aviso == 3:
-                        st.warning(f"⚠️ **Vence em 3 dias:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")
+                    # Cria o layout limpo dividindo o alerta do botão de ação rápida
+                    col_alerta, col_acao = st.columns([0.85, 0.15])
+                    
+                    with col_alerta:
+                        if d_aviso < 0:
+                            st.warning(f"⚠️ **Atrasado:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")
+                        elif d_aviso == 0:
+                            st.warning(f"⚠️ **Vence hoje:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")                     
+                        elif d_aviso == 1:
+                            st.sidebar.markdown(v_str) # Evita tranco mantendo integridade visual
+                            st.error(f"🚨 **Vence amanhã:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")
+                        elif d_aviso == 3:
+                            st.info(f"💡 **Vence em 3 dias:** {data_venc} - {desc_venc} no valor de {m_fmt(valor_venc)} ({banco_venc})")
+                    
+                    with col_acao:
+                        # O segredo do Streamlit: Usar chaves únicas usando a linha real para não dar conflito de botões
+                        if st.button("✏️ Baixar", key=f"btn_baixar_{linha_real_sheets}"):
+                            # Altera o Status para Pago diretamente na linha certa do Sheets!
+                            ws_base.update_cell(linha_real_sheets, idx_status_ind, "Pago")
+                            st.toast(f"✅ '{desc_venc}' baixado com sucesso!", icon="💰")
+                            atualizar_sessao()
+                            st.rerun()
             else:
                 st.info("Nenhum lançamento a vencer em breve.")
         else:
-            # Caso ele realmente não ache nenhuma coluna de data, ele te avisa sem travar
             st.error("Não encontrei a coluna de data. Verifique se o nome na planilha é 'Data'.")
     else:
         st.info("Nenhum lançamento pendente.")
