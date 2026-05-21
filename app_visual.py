@@ -771,7 +771,7 @@ if aba == "📋 Relatório PDF":
     st.markdown("### 📋 Emissão de Relatório Financeiro")
     
     # -------------------------------------------------------------------------
-    # LINHA 1 DE FILTROS: BANCO E PERÍODO
+    # LINHA 1 DE FILTROS: BANCO E PERÍODO (Estrutura original mantida intacta)
     # -------------------------------------------------------------------------
     col_rel1, col_rel2 = st.columns(2)
     with col_rel1:
@@ -784,7 +784,7 @@ if aba == "📋 Relatório PDF":
         periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
 
     # -------------------------------------------------------------------------
-    # LINHA 2 DE FILTROS: DESCRIÇÃO E STATUS (AS CAIXINHAS QUE FALTAVAM)
+    # LINHA 2 DE FILTROS: DESCRIÇÃO E STATUS 
     # -------------------------------------------------------------------------
     col_rel3, col_rel4 = st.columns(2)
     with col_rel3:
@@ -823,7 +823,7 @@ if aba == "📋 Relatório PDF":
             col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
             col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
 
-            # 1. Filtro de Data
+            # Tratamento e filtro de Data
             if col_data_df:
                 df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
             else:
@@ -831,49 +831,77 @@ if aba == "📋 Relatório PDF":
 
             t_ini = pd.to_datetime(b_ini)
             t_fim = pd.to_datetime(b_fim)
+
+            # Guardamos uma cópia completa para calcular o saldo retroativo do Banco antes de filtrar o período final
+            df_retroativo = df_report.copy()
+
+            # Aplica os filtros na tabela que vai de fato para o PDF
             df_report = df_report[(df_report['DT_FILTRO'] >= t_ini) & (df_report['DT_FILTRO'] <= t_fim)]
 
-            # 2. Filtro de Banco
             banco_nome = "Todos os Bancos"
             if banco_relatorio != "Todos" and col_banco_df:
                 banco_nome = banco_relatorio
                 df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_nome).upper()]
 
-            # 3. Filtro de Descrição
             if busca_desc and col_desc_df:
                 df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
 
-            # 4. Filtro de Status
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
-            # Ordena cronologicamente
             df_report = df_report.sort_values(by='DT_FILTRO')
 
             # ========================================================
-            # 3. BUSCA DO SALDO DE ABERTURA NA ABA 'BANCOS'
+            # 3. BUSCA DO SALDO DE ABERTURA COM LÓGICA DE CARTÃO / HISTÓRICO
             # ========================================================
             base_inicial = 0.0
-            try:
-                ws_bancos = sh.worksheet("Bancos")
-                dados_bancos = ws_bancos.get_all_values()
-                df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
-                
-                col_banco_cad = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
-                col_saldo_cad = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
-                
-                if banco_nome != "Todos os Bancos":
-                    linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome.upper()]
-                    if not linha_banco.empty:
-                        val_cru = linha_banco.iloc[0][col_saldo_cad]
-                        val_limpo = str(val_cru).replace('R$', '').strip()
-                        if '.' in val_limpo and ',' in val_limpo:
-                            val_limpo = val_limpo.replace('.', '').replace(',', '.')
-                        else:
-                            val_limpo = val_limpo.replace(',', '.')
-                        base_inicial = float(val_limpo)
-            except:
+            
+            # REGRA 1: Se for Cartão de Crédito, o saldo inicial DEVE vir zerado
+            if "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper():
                 base_inicial = 0.0
+            else:
+                # REGRA 2: Se for Banco, busca o saldo atual da planilha e calcula o retroativo
+                try:
+                    ws_bancos = sh.worksheet("Bancos")
+                    dados_bancos = ws_bancos.get_all_values()
+                    df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
+                    
+                    col_banco_cad = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
+                    col_saldo_cad = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
+                    
+                    if banco_nome != "Todos os Bancos":
+                        linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome.upper()]
+                        if not linha_banco.empty:
+                            val_cru = linha_banco.iloc[0][col_saldo_cad]
+                            val_limpo = str(val_cru).replace('R$', '').strip()
+                            if '.' in val_limpo and ',' in val_limpo:
+                                val_limpo = val_limpo.replace('.', '').replace(',', '.')
+                            else:
+                                val_limpo = val_limpo.replace(',', '.')
+                            
+                            saldo_atual_planilha = float(val_limpo)
+                            
+                            # Calcula o saldo histórico inicial real (Desfaz os lançamentos posteriores à data de início do PDF)
+                            df_futuro = df_retroativo[
+                                (df_retroativo[col_banco_df].str.upper().str.strip() == banco_nome.upper()) & 
+                                (df_retroativo['DT_FILTRO'] >= t_ini)
+                            ]
+                            
+                            ajuste_retroativo = 0.0
+                            for _, r_fut in df_futuro.iterrows():
+                                val_f = pd.to_numeric(r_fut.get('V_Num', r_fut.get('Valor', 0)), errors='coerce')
+                                if pd.isna(val_f): val_f = 0
+                                
+                                tipo_f = str(r_fut.get('Tipo', '')).upper().strip()
+                                if "DESPESA" in tipo_f or "GASTO" in tipo_f:
+                                    ajuste_retroativo -= val_f
+                                else:
+                                    ajuste_retroativo += val_f
+                            
+                            # O saldo de abertura no dia X é o Saldo Atual menos tudo o que andou do dia X para frente
+                            base_inicial = saldo_atual_planilha - ajuste_retroativo
+                except:
+                    base_inicial = 0.0
 
             saldo_anterior = base_inicial
 
@@ -897,7 +925,7 @@ if aba == "📋 Relatório PDF":
             df_report['Saldo_Acum'] = saldos_lista
 
             # ========================================================
-            # 5. MONTAGEM DO CABEÇALHO DO PDF
+            # 5. MONTAGEM DO CABEÇALHO DO PDF (Mantido padrão limpo)
             # ========================================================
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
