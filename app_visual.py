@@ -851,8 +851,8 @@ if aba == "📋 Relatório PDF":
 
             df_report = df_report.sort_values(by='DT_FILTRO')
 
-          # ========================================================
-            # 3. BUSCA DO SALDO DE ABERTURA - LÓGICA PROGRESSIVA INFALÍVEL
+# ========================================================
+            # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
             # ========================================================
             base_inicial = 0.0
             
@@ -860,12 +860,34 @@ if aba == "📋 Relatório PDF":
             if "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper():
                 base_inicial = 0.0
             else:
-                # REGRA 2: Calcula o saldo histórico somando o passado de forma limpa
+                # REGRA 2: Banco - Pega o Saldo Inicial do Sistema e aplica as movimentações até o dia 17
                 try:
-                    # Criamos uma cópia limpa de toda a base para calcular o passado
+                    # 3.1 Primeiro, buscamos o Saldo Inicial de Cadastro (Aquele de Abril, ex: R$ 17,07)
+                    saldo_sistema_abril = 0.0
+                    try:
+                        ws_bancos = sh.worksheet("Bancos")
+                        dados_bancos = ws_bancos.get_all_values()
+                        df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
+                        
+                        col_banco_cad = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
+                        col_saldo_cad = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
+                        
+                        if banco_nome != "Todos os Bancos":
+                            linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome.upper()]
+                            if not linha_banco.empty:
+                                val_cru = str(linha_banco.iloc[0][col_saldo_cad]).strip()
+                                import re
+                                val_limpo = re.sub(r'[^\d.,-]', '', val_cru)
+                                if '.' in val_limpo and ',' in val_limpo:
+                                    val_limpo = val_limpo.replace('.', '').replace(',', '.')
+                                elif ',' in val_limpo:
+                                    val_limpo = val_limpo.replace(',', '.')
+                                saldo_sistema_abril = float(val_limpo)
+                    except:
+                        saldo_sistema_abril = 0.0
+
+                    # 3.2 Agora, calculamos a movimentação que aconteceu desde o começo até o dia 17/05
                     df_historico = df_base.copy()
-                    
-                    # Identifica a coluna de data na marra
                     col_data_h = next((c for c in df_historico.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
                     col_banco_h = next((c for c in df_historico.columns if c.upper() in ['BANCO', 'CONTA']), None)
                     
@@ -874,18 +896,16 @@ if aba == "📋 Relatório PDF":
                     else:
                         df_historico['DT_HIST'] = pd.to_datetime(df_historico.index, errors='coerce')
                         
-                    # Filtra apenas o banco selecionado e apenas os lançamentos ANTERIORES à data de início (tudo antes do dia 18)
                     if banco_nome != "Todos os Bancos" and col_banco_h:
                         df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == str(banco_nome).upper()]
                     
+                    # Filtra tudo o que aconteceu estritamente ANTES do dia de início do relatório (antes do dia 18)
                     df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
                     
-                    # Faz o cálculo progressivo puro de tudo o que aconteceu antes do dia 18
                     saldo_acumulado_passado = 0.0
                     for _, r_pass in df_antes_do_periodo.iterrows():
                         val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
                         
-                        # Limpeza absoluta de qualquer formatação de texto para número puro
                         if isinstance(val_p_cru, str):
                             import re
                             val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
@@ -904,10 +924,13 @@ if aba == "📋 Relatório PDF":
                             saldo_acumulado_passado -= val_p
                         else:
                             saldo_acumulado_passado += val_p
-                            
-                    base_inicial = saldo_acumulado_passado
+                    
+                    # O saldo inicial real no dia 18 é o saldo base do sistema + as movimentações do passado!
+                    base_inicial = saldo_sistema_abril + saldo_acumulado_passado
                 except:
                     base_inicial = 0.0
+
+            saldo_anterior = base_inicial
 
             saldo_anterior = base_inicial            # ========================================================
             # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO
