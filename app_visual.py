@@ -174,7 +174,11 @@ aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências"
 st.sidebar.divider()
 
 # BARRINHA 1: NOVO LANÇAMENTO
-with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
+# Inicializa a variável de estado para controlar a abertura se ela não existir
+if "expander_lancamento_aberto" not in st.session_state:
+    st.session_state.expander_lancamento_aberto = False
+
+with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
     with st.form("f_novo", clear_on_submit=True):
         f_compra = st.date_input("🛍️ Data da Compra", value=datetime.now(), format="DD/MM/YYYY")
         f_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
@@ -185,12 +189,14 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação","Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
-            
         
-    # Garante que a variável exista para evitar o NameError
+        # Garante que a variável exista para evitar o NameError
         f_venc_cartao = None 
 
         if st.form_submit_button("SALVAR"):
+            # Mantém o expander fixo e aberto no topo durante o processamento
+            st.session_state.expander_lancamento_aberto = True
+            
             # Formata o valor para o padrão Real R$
             v_str = f"{f_val:.2f}".replace('.', ',')
             
@@ -211,9 +217,16 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=False):
                     venc_str
                 ])
             
-            # Atualiza o app mantendo o visual limpo
+            # Mostra o aviso de sucesso discretamente dentro do próprio expander fixado
+            st.toast("✅ Lançamento salvo com sucesso!", icon="💰")
+            
+            # Força a atualização dos dados sem dar tranco na tela
             atualizar_sessao()
             st.rerun()
+
+# Se o usuário mudar de aba ou clicar em outra coisa fora do formulário, o expander fecha amigavelmente
+if aba != "💰 Finanças & Bancos":
+    st.session_state.expander_lancamento_aberto = False
 # BARRINHA 2: TRANSFERÊNCIA
 with st.sidebar.expander("💸 Transferência", expanded=False):
     with st.form("f_transf", clear_on_submit=True):
