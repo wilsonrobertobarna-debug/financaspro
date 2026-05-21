@@ -882,7 +882,7 @@ if aba == "📋 Relatório PDF":
                     
                     # Faz o cálculo progressivo puro de tudo o que aconteceu antes do dia 18
                     saldo_acumulado_passado = 0.0
-                    for _, r_pass em df_antes_do_periodo.iterrows():
+                        for _, r_pass em df_antes_do_periodo.iterrows():
                         val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
                         
                         # Limpeza absoluta de qualquer formatação de texto para número puro
