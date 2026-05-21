@@ -494,64 +494,48 @@ if "💰" in aba:
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     
-    # Filtramos os pendentes gerais
-    df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
-    
-    # --- LINHA DE SEGURANÇA ---
-    # Garantimos que a coluna de data exista sempre
-    colunas_possiveis = ['Data', 'DATA', 'Vencimento', 'VENCIMENTO', 'DT']
-    col_data = next((c for c in colunas_possiveis if c in df_aviso.columns), None)
-    if col_data:
-        df_aviso['Data_Formatada'] = pd.to_datetime(df_aviso[col_data], errors='coerce')
-    else:
-        df_aviso['Data_Formatada'] = pd.NaT # Se não achar data, deixa vazio para não quebrar
-    # --------------------------
+    # 1. Filtros Globais (o que você já tem funcionando)
+    col_b, col_d = st.columns(2)
+    with col_b:
+        filtro_banco = st.multiselect("Filtrar Banco/Cartão:", df_base['Banco'].unique())
+    with col_d:
+        busca_desc = st.text_input("Buscar Descrição:")
 
-    with st.expander("🔍 Conferir e Baixar Lançamentos", expanded=True):
-        # ... (seu código de seleção de cartão continua aqui) ...
-        # (O resto do código permanece igual)
-       # Filtros de seleção otimizados
-        col1, col2 = st.columns(2)
-        with col1:
-            filtro_cartao = st.selectbox("Selecione o Cartão/Banco:", bancos_disponiveis)
-        with col2:
-            # Seletor de período (Data inicial e final)
-            periodo = st.date_input("Período da Fatura:", (hoje.replace(day=1), hoje))
-        
-        # Filtra os pendentes pelo cartão e pelo intervalo selecionado
-        if isinstance(periodo, tuple) and len(periodo) == 2:
-            data_inicio, data_fim = periodo
-            df_fatura = df_aviso[
-                (df_aviso['Banco'] == filtro_cartao) & 
-                (df_aviso['Data_Formatada'].dt.date >= data_inicio) & 
-                (df_aviso['Data_Formatada'].dt.date <= data_fim)
-            ]
-        else:
-            df_fatura = pd.DataFrame() # Caso não selecione o intervalo completo
-        
-        if not df_fatura.empty:
-            st.write(f"Lançamentos encontrados: **{len(df_fatura)}** | Total: **{m_fmt(df_fatura['V_Num'].sum())}**")
-            st.dataframe(df_fatura[['Data', 'Descrição', 'V_Num']], use_container_width=True)
+    # 2. Filtro de Período (o novo)
+    periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)))
+
+    # 3. Aplicar TUDO no DataFrame
+    df_filtrado = df_base[df_base['Status'] == 'Pendente'].copy()
+    df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado['Data'], errors='coerce')
+    
+    if filtro_banco:
+        df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
+    if busca_desc:
+        df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
+    if isinstance(periodo, tuple) and len(periodo) == 2:
+        df_filtrado = df_filtrado[(df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
+                                  (df_filtrado['Data_Formatada'].dt.date <= periodo[1])]
+
+    # 4. Exibir e Baixar
+    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
+    st.dataframe(df_filtrado[['Data', 'Banco', 'Descrição', 'V_Num']], use_container_width=True)
+    
+    if not df_filtrado.empty:
+        nova_data = st.date_input("Data de pagamento para baixa:", datetime.now())
+        if st.button("✅ BAIXAR SELECIONADOS ABAIXO"):
+            sucessos = 0
+            headers = ws_base.row_values(1)
+            idx_status = headers.index('Status') + 1
+            idx_venc = [i for i, h in enumerate(headers) if 'VENC' in h.upper() or 'CART' in h.upper()][0] + 1
             
-            st.divider()
-            nova_data_baixa = st.date_input("Data de pagamento:", datetime.now(), format="DD/MM/YYYY")
-            
-            if st.button(f"✅ CONFIRMAR BAIXA: {filtro_cartao}"):
-                sucessos = 0
-                headers = ws_base.row_values(1)
-                idx_status = headers.index('Status') + 1
-                idx_venc = [i for i, h in enumerate(headers) if 'VENC' in h.upper() or 'CART' in h.upper()][0] + 1
-                
-                for idx_df, row in df_fatura.iterrows():
-                    linha_sheets = int(idx_df) + 2
-                    ws_base.update_cell(linha_sheets, idx_status, "Pago")
-                    ws_base.update_cell(linha_sheets, idx_venc, nova_data_baixa.strftime("%d/%m/%Y"))
-                    sucessos += 1
-                
-                st.toast(f"✅ {sucessos} itens baixados!", icon="💳")
-                atualizar_sessao()
-                st.rerun()
-        else:
+            for idx_df, row in df_filtrado.iterrows():
+                linha_sheets = int(idx_df) + 2
+                ws_base.update_cell(linha_sheets, idx_status, "Pago")
+                ws_base.update_cell(linha_sheets, idx_venc, nova_data.strftime("%d/%m/%Y"))
+                sucessos += 1
+            st.toast(f"✅ {sucessos} itens baixados!", icon="💰")
+            atualizar_sessao()
+            st.rerun()        else:
             st.info("Nenhum lançamento encontrado neste período para este cartão.")
     st.divider()
     st.subheader("🔔 Avisos: Vencimentos Próximos")
