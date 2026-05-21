@@ -506,7 +506,31 @@ elif "Pendências" in aba:
 
    # 3. Aplicar TUDO no DataFrame (Versão Blindada)
     df_filtrado = df_base[df_base['Status'] == 'Pendente'].copy()
+       
+    # Busca inteligente pela coluna de Data (para não dar erro de KeyError)
+    colunas_data = ['Data', 'DATA', 'Vencimento', 'VENCIMENTO', 'DT']
+    col_data = next((c for c in colunas_data if c in df_filtrado.columns), None)
     
+    if col_data:
+        df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
+    else:
+        df_filtrado['Data_Formatada'] = pd.NaT
+
+    # Filtro de Banco
+    if filtro_banco:
+        df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
+        
+    # Filtro de Descrição (Flexível)
+    if busca_desc:
+        colunas_desc = ['Descrição', 'Descricao', 'DESCRIÇÃO', 'DESCRICAO']
+        col_desc = next((c for c in colunas_desc if c in df_filtrado.columns), None)
+        if col_desc:
+            df_filtrado = df_filtrado[df_filtrado[col_desc].str.contains(busca_desc, case=False, na=False)]
+        
+    # Filtro de Período
+    if isinstance(periodo, tuple) and len(periodo) == 2 and col_data:
+        df_filtrado = df_filtrado[(df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
+                                  (df_filtrado['Data_Formatada'].dt.date <= periodo[1])]
     # Busca inteligente pela coluna de Data
     colunas_data = ['Data', 'DATA', 'Vencimento', 'VENCIMENTO', 'DT']
     col_data = next((c for c in colunas_data if c in df_filtrado.columns), None)
