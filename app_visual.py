@@ -497,10 +497,19 @@ elif "Pendências" in aba:
     # Filtramos os pendentes gerais
     df_aviso = df_base[df_base['Status'] == 'Pendente'].copy()
     
-    # ========================================================
-    # PAINEL DE CONFERÊNCIA E BAIXA (Cartão + Período)
-    # ========================================================
+    # --- LINHA DE SEGURANÇA ---
+    # Garantimos que a coluna de data exista sempre
+    colunas_possiveis = ['Data', 'DATA', 'Vencimento', 'VENCIMENTO', 'DT']
+    col_data = next((c for c in colunas_possiveis if c in df_aviso.columns), None)
+    if col_data:
+        df_aviso['Data_Formatada'] = pd.to_datetime(df_aviso[col_data], errors='coerce')
+    else:
+        df_aviso['Data_Formatada'] = pd.NaT # Se não achar data, deixa vazio para não quebrar
+    # --------------------------
+
     with st.expander("🔍 Conferir e Baixar Lançamentos", expanded=True):
+        # ... (seu código de seleção de cartão continua aqui) ...
+        # (O resto do código permanece igual)
         col1, col2 = st.columns(2)
         with col1:
             filtro_cartao = st.selectbox("Selecione o Cartão/Banco:", bancos_disponiveis)
