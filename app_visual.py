@@ -535,7 +535,8 @@ elif "Pendências" in aba:
                 sucessos += 1
             st.toast(f"✅ {sucessos} itens baixados!", icon="💰")
             atualizar_sessao()
-            st.rerun()        else:
+            st.rerun()
+        else:
             st.info("Nenhum lançamento encontrado neste período para este cartão.")
     st.divider()
     st.subheader("🔔 Avisos: Vencimentos Próximos")
