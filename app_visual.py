@@ -553,16 +553,24 @@ elif "Pendências" in aba:
        # ... (aqui você mantém a lógica original dos alertas de vencimento se desejar) ...
         
     
-    c1, c2 = st.columns(2)
+   c1, c2, c3 = st.columns(3) # Aumentei para 3 colunas para caber o filtro de data
     s_bnc = c1.multiselect("Filtrar Banco/Cartão:", sorted(bancos_disponiveis))
     b_desc = c2.text_input("Buscar Descrição:")
-    
+    periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now())) # Filtro de data novo
+
     df_v = df_base[df_base['Status'] == 'Pendente'].copy()
-    df_v = df_v[df_v['DT'].notna()]
+    
+    # Garantir que a coluna de data esteja no formato correto para o filtro
+    df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], errors='coerce') 
+    
     if s_bnc:
         df_v = df_v[df_v['Banco'].isin(s_bnc)]
     if b_desc:
         df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
+    
+    # Aplicação do filtro de data
+    if isinstance(periodo, tuple) and len(periodo) == 2:
+        df_v = df_v[(df_v['DT_Obj'].dt.date >= periodo[0]) & (df_v['DT_Obj'].dt.date <= periodo[1])]
         
     df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
