@@ -852,7 +852,7 @@ if aba == "📋 Relatório PDF":
             df_report = df_report.sort_values(by='DT_FILTRO')
 
           # ========================================================
-            # 3. BUSCA DO SALDO DE ABERTURA - LIMPEZA BRUTA DE TEXTO
+            # 3. BUSCA DO SALDO DE ABERTURA - LÓGICA PROGRESSIVA INFALÍVEL
             # ========================================================
             base_inicial = 0.0
             
@@ -860,76 +860,56 @@ if aba == "📋 Relatório PDF":
             if "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper():
                 base_inicial = 0.0
             else:
-                # REGRA 2: Se for Banco, busca o saldo atual da planilha e desfaz os lançamentos futuros
+                # REGRA 2: Calcula o saldo histórico somando o passado de forma limpa
                 try:
-                    ws_bancos = sh.worksheet("Bancos")
-                    dados_bancos = ws_bancos.get_all_values()
-                    df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
+                    # Criamos uma cópia limpa de toda a base para calcular o passado
+                    df_historico = df_base.copy()
                     
-                    col_banco_cad = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
-                    col_saldo_cad = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
+                    # Identifica a coluna de data na marra
+                    col_data_h = next((c for c in df_historico.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+                    col_banco_h = next((c for c in df_historico.columns if c.upper() in ['BANCO', 'CONTA']), None)
                     
-                    if banco_nome != "Todos os Bancos":
-                        linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome.upper()]
-                        if not linha_banco.empty:
-                            val_cru = str(linha_banco.iloc[0][col_saldo_cad]).strip()
-                            
-                            # LIMPEZA PROTOCOLO REFORÇADO (Para evitar o efeito de multiplicar por 1000)
+                    if col_data_h:
+                        df_historico['DT_HIST'] = pd.to_datetime(df_historico[col_data_h], format="%d/%m/%Y", errors='coerce')
+                    else:
+                        df_historico['DT_HIST'] = pd.to_datetime(df_historico.index, errors='coerce')
+                        
+                    # Filtra apenas o banco selecionado e apenas os lançamentos ANTERIORES à data de início (tudo antes do dia 18)
+                    if banco_nome != "Todos os Bancos" and col_banco_h:
+                        df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == str(banco_nome).upper()]
+                    
+                    df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
+                    
+                    # Faz o cálculo progressivo puro de tudo o que aconteceu antes do dia 18
+                    saldo_acumulado_passado = 0.0
+                    for _, r_pass em df_antes_do_periodo.iterrows():
+                        val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
+                        
+                        # Limpeza absoluta de qualquer formatação de texto para número puro
+                        if isinstance(val_p_cru, str):
                             import re
-                            # Remove "R$", espaços e qualquer caractere que não seja número, ponto ou vírgula
-                            val_limpo = re.sub(r'[^\d.,-]', '', val_cru)
+                            val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
+                            if '.' in val_p_limpo and ',' in val_p_limpo:
+                                val_p_limpo = val_p_limpo.replace('.', '').replace(',', '.')
+                            elif ',' in val_p_limpo:
+                                val_p_limpo = val_p_limpo.replace(',', '.')
+                            val_p = pd.to_numeric(val_p_limpo, errors='coerce')
+                        else:
+                            val_p = pd.to_numeric(val_p_cru, errors='coerce')
                             
-                            if val_limpo:
-                                # Caso clássico brasileiro: "1.500,30" -> vira "1500.30"
-                                if '.' in val_limpo and ',' in val_limpo:
-                                    val_limpo = val_limpo.replace('.', '').replace(',', '.')
-                                # Caso de centavos puro: "17,07" -> vira "17.07"
-                                elif ',' in val_limpo:
-                                    val_limpo = val_limpo.replace(',', '.')
-                                
-                                saldo_atual_planilha = float(val_limpo)
-                            else:
-                                saldo_atual_planilha = 0.0
+                        if pd.isna(val_p): val_p = 0.0
+                        
+                        tipo_p = str(r_pass.get('Tipo', '')).upper().strip()
+                        if "DESPESA" in tipo_p or "GASTO" in tipo_p:
+                            saldo_acumulado_passado -= val_p
+                        else:
+                            saldo_acumulado_passado += val_p
                             
-                            # Pegamos todos os lançamentos do dia inicial para frente para reverter o saldo
-                            df_futuro = df_retroativo[
-                                (df_retroativo[col_banco_df].str.upper().str.strip() == banco_nome.upper()) & 
-                                (df_retroativo['DT_FILTRO'] >= t_ini)
-                            ]
-                            
-                            ajuste_retroativo = 0.0
-                            for _, r_fut in df_futuro.iterrows():
-                                val_f_cru = r_fut.get('V_Num', r_fut.get('Valor', 0))
-                                
-                                # Tratamento idêntico e seguro para os valores dos lançamentos
-                                if isinstance(val_f_cru, str):
-                                    val_f_limpo = re.sub(r'[^\d.,-]', '', val_f_cru).strip()
-                                    if '.' in val_f_limpo and ',' in val_f_limpo:
-                                        val_f_limpo = val_f_limpo.replace('.', '').replace(',', '.')
-                                    elif ',' in val_f_limpo:
-                                        val_f_limpo = val_f_limpo.replace(',', '.')
-                                    val_f = pd.to_numeric(val_f_limpo, errors='coerce')
-                                else:
-                                    val_f = pd.to_numeric(val_f_cru, errors='coerce')
-                                    
-                                if pd.isna(val_f): val_f = 0
-                                
-                                tipo_f = str(r_fut.get('Tipo', '')).upper().strip()
-                                
-                                # LÓGICA RETROATIVA COORDENADA:
-                                # Se foi DESPESA, SOMAMOS de volta. Se foi RECEITA, SUBTRAÍMOS.
-                                if "DESPESA" in tipo_f or "GASTO" in tipo_f:
-                                    ajuste_retroativo += val_f
-                                else:
-                                    ajuste_retroativo -= val_f
-                            
-                            # Aplica o ajuste reverso sobre o saldo real tratado
-                            base_inicial = saldo_atual_planilha + ajuste_retroativo
+                    base_inicial = saldo_acumulado_passado
                 except:
                     base_inicial = 0.0
 
-            saldo_anterior = base_inicial
-            # ========================================================
+            saldo_anterior = base_inicial            # ========================================================
             # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO
             # ========================================================
             corrente = saldo_anterior 
