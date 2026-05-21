@@ -552,12 +552,28 @@ elif "Pendências" in aba:
 
     # 4. Exibir e Baixar
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
-    # Em vez de forçar nomes de colunas, exibimos o df_filtrado que já está limpo
-    # Se quiser esconder colunas técnicas, usamos o comando abaixo:
-    colunas_para_esconder = ['Data_Formatada'] # Adicione aqui qualquer coluna que não queira ver
-    df_exibir = df_filtrado.drop(columns=[c for c in colunas_para_esconder if c in df_filtrado.columns])
+    # 4. Ajuste de exibição limpa
+    # Lista de colunas que VOCÊ quer ver (ajuste os nomes conforme sua planilha)
+    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
     
+    # Criamos uma cópia apenas com as colunas que você quer ver
+    # Verificamos se existem no df_v antes para não dar erro
+    colunas_existentes = [c for c in colunas_visiveis if c in df_v.columns]
+    
+    df_exibir = df_v[colunas_existentes].copy()
+    
+    # Formata a coluna de Valor se ela existir
+    if 'Valor' in df_exibir.columns:
+        df_exibir['Valor'] = df_v['V_Num'].apply(m_fmt)
+
+    # Exibe a tabela apenas com o período filtrado
+    st.write(f"### Lançamentos no Período Selecionado: {len(df_v)}")
     st.dataframe(df_exibir, use_container_width=True, hide_index=True)
+
+    # 5. Botão de Baixa
+    if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_pendencias"):
+        # (Seu código de baixa continua aqui...)
+        st.toast("Baixa realizada com sucesso!", icon="💳")
     
     # 5. Botão de Baixa (Mantenha o seu como está abaixo disso)
     
