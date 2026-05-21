@@ -510,26 +510,31 @@ elif "Pendências" in aba:
     with st.expander("🔍 Conferir e Baixar Lançamentos", expanded=True):
         # ... (seu código de seleção de cartão continua aqui) ...
         # (O resto do código permanece igual)
+       # Filtros de seleção otimizados
         col1, col2 = st.columns(2)
         with col1:
             filtro_cartao = st.selectbox("Selecione o Cartão/Banco:", bancos_disponiveis)
         with col2:
-            mes_ref = st.selectbox("Mês:", range(1, 13), index=datetime.now().month - 1)
-            ano_ref = st.number_input("Ano:", value=datetime.now().year)
+            # Seletor de período (Data inicial e final)
+            periodo = st.date_input("Período da Fatura:", (hoje.replace(day=1), hoje))
         
-        # Filtra os pendentes pelo cartão e pelo período selecionado
-        df_fatura = df_aviso[
-            (df_aviso['Banco'] == filtro_cartao) & 
-            (pd.to_datetime(df_aviso['Data_Formatada'], errors='coerce').dt.month == mes_ref) &
-            (pd.to_datetime(df_aviso['Data_Formatada'], errors='coerce').dt.year == ano_ref)
-        ]
+        # Filtra os pendentes pelo cartão e pelo intervalo selecionado
+        if isinstance(periodo, tuple) and len(periodo) == 2:
+            data_inicio, data_fim = periodo
+            df_fatura = df_aviso[
+                (df_aviso['Banco'] == filtro_cartao) & 
+                (df_aviso['Data_Formatada'].dt.date >= data_inicio) & 
+                (df_aviso['Data_Formatada'].dt.date <= data_fim)
+            ]
+        else:
+            df_fatura = pd.DataFrame() # Caso não selecione o intervalo completo
         
         if not df_fatura.empty:
             st.write(f"Lançamentos encontrados: **{len(df_fatura)}** | Total: **{m_fmt(df_fatura['V_Num'].sum())}**")
             st.dataframe(df_fatura[['Data', 'Descrição', 'V_Num']], use_container_width=True)
             
             st.divider()
-            nova_data_baixa = st.date_input("Definir data de pagamento:", datetime.now(), format="DD/MM/YYYY")
+            nova_data_baixa = st.date_input("Data de pagamento:", datetime.now(), format="DD/MM/YYYY")
             
             if st.button(f"✅ CONFIRMAR BAIXA: {filtro_cartao}"):
                 sucessos = 0
@@ -547,8 +552,7 @@ elif "Pendências" in aba:
                 atualizar_sessao()
                 st.rerun()
         else:
-            st.info("Nenhum lançamento encontrado para este cartão no período selecionado.")
-
+            st.info("Nenhum lançamento encontrado neste período para este cartão.")
     st.divider()
     st.subheader("🔔 Avisos: Vencimentos Próximos")
        # ... (aqui você mantém a lógica original dos alertas de vencimento se desejar) ...
