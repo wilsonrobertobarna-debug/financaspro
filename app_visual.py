@@ -553,7 +553,7 @@ elif "Pendências" in aba:
        # ... (aqui você mantém a lógica original dos alertas de vencimento se desejar) ...
         
     
-   c1, c2, c3 = st.columns(3) # Aumentei para 3 colunas para caber o filtro de data
+    c1, c2, c3 = st.columns(3) # Aumentei para 3 colunas para caber o filtro de data
     s_bnc = c1.multiselect("Filtrar Banco/Cartão:", sorted(bancos_disponiveis))
     b_desc = c2.text_input("Buscar Descrição:")
     periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now())) # Filtro de data novo
