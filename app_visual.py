@@ -851,8 +851,8 @@ if aba == "📋 Relatório PDF":
 
             df_report = df_report.sort_values(by='DT_FILTRO')
 
-            # ========================================================
-            # 3. BUSCA DO SALDO DE ABERTURA COM LÓGICA DE CARTÃO / HISTÓRICO
+          # ========================================================
+            # 3. BUSCA DO SALDO DE ABERTURA - CALIBRAÇÃO DEFINITIVA
             # ========================================================
             base_inicial = 0.0
             
@@ -860,7 +860,7 @@ if aba == "📋 Relatório PDF":
             if "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper():
                 base_inicial = 0.0
             else:
-                # REGRA 2: Se for Banco, busca o saldo atual da planilha e calcula o retroativo
+                # REGRA 2: Se for Banco, busca o saldo atual da planilha e desfaz os lançamentos futuros
                 try:
                     ws_bancos = sh.worksheet("Bancos")
                     dados_bancos = ws_bancos.get_all_values()
@@ -873,15 +873,18 @@ if aba == "📋 Relatório PDF":
                         linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome.upper()]
                         if not linha_banco.empty:
                             val_cru = linha_banco.iloc[0][col_saldo_cad]
+                            
+                            # Tratamento seguro de moeda brasileira (Ex: "R$ 17,07" ou "17,07")
                             val_limpo = str(val_cru).replace('R$', '').strip()
                             if '.' in val_limpo and ',' in val_limpo:
                                 val_limpo = val_limpo.replace('.', '').replace(',', '.')
-                            else:
+                            elif ',' in val_limpo:
                                 val_limpo = val_limpo.replace(',', '.')
-                            
+                                
                             saldo_atual_planilha = float(val_limpo)
                             
-                            # Calcula o saldo histórico inicial real (Desfaz os lançamentos posteriores à data de início do PDF)
+                            # Pegamos TODOS os lançamentos que aconteceram a partir do dia de início (t_ini) 
+                            # para frente, para reverter o saldo até o exato momento de abertura daquela data.
                             df_futuro = df_retroativo[
                                 (df_retroativo[col_banco_df].str.upper().str.strip() == banco_nome.upper()) & 
                                 (df_retroativo['DT_FILTRO'] >= t_ini)
@@ -889,17 +892,27 @@ if aba == "📋 Relatório PDF":
                             
                             ajuste_retroativo = 0.0
                             for _, r_fut in df_futuro.iterrows():
-                                val_f = pd.to_numeric(r_fut.get('V_Num', r_fut.get('Valor', 0)), errors='coerce')
+                                val_f_cru = r_fut.get('V_Num', r_fut.get('Valor', 0))
+                                if isinstance(val_f_cru, str):
+                                    val_f_cru = val_f_cru.replace('R$', '').strip()
+                                    if '.' in val_f_cru and ',' in val_f_cru:
+                                        val_f_cru = val_f_cru.replace('.', '').replace(',', '.')
+                                    elif ',' in val_f_cru:
+                                        val_f_cru = val_f_cru.replace(',', '.')
+                                val_f = pd.to_numeric(val_f_cru, errors='coerce')
                                 if pd.isna(val_f): val_f = 0
                                 
                                 tipo_f = str(r_fut.get('Tipo', '')).upper().strip()
+                                
+                                # Se foi DESPESA, ela reduziu o saldo. Para voltar ao passado, SOMAMOS de volta.
                                 if "DESPESA" in tipo_f or "GASTO" in tipo_f:
-                                    ajuste_retroativo -= val_f
-                                else:
                                     ajuste_retroativo += val_f
+                                # Se foi RECEITA, ela aumentou o saldo. Para voltar ao passado, SUBTRAÍMOS.
+                                else:
+                                    ajuste_retroativo -= val_f
                             
-                            # O saldo de abertura no dia X é o Saldo Atual menos tudo o que andou do dia X para frente
-                            base_inicial = saldo_atual_planilha - ajuste_retroativo
+                            # O saldo de abertura no dia inicial é o atual da planilha mais o ajuste reverso
+                            base_inicial = saldo_atual_planilha + ajuste_retroativo
                 except:
                     base_inicial = 0.0
 
