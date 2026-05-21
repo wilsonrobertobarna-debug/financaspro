@@ -852,7 +852,7 @@ if aba == "📋 Relatório PDF":
             df_report = df_report.sort_values(by='DT_FILTRO')
 
           # ========================================================
-            # 3. BUSCA DO SALDO DE ABERTURA - CALIBRAÇÃO DEFINITIVA
+            # 3. BUSCA DO SALDO DE ABERTURA - LIMPEZA BRUTA DE TEXTO
             # ========================================================
             base_inicial = 0.0
             
@@ -872,19 +872,26 @@ if aba == "📋 Relatório PDF":
                     if banco_nome != "Todos os Bancos":
                         linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome.upper()]
                         if not linha_banco.empty:
-                            val_cru = linha_banco.iloc[0][col_saldo_cad]
+                            val_cru = str(linha_banco.iloc[0][col_saldo_cad]).strip()
                             
-                            # Tratamento seguro de moeda brasileira (Ex: "R$ 17,07" ou "17,07")
-                            val_limpo = str(val_cru).replace('R$', '').strip()
-                            if '.' in val_limpo and ',' in val_limpo:
-                                val_limpo = val_limpo.replace('.', '').replace(',', '.')
-                            elif ',' in val_limpo:
-                                val_limpo = val_limpo.replace(',', '.')
+                            # LIMPEZA PROTOCOLO REFORÇADO (Para evitar o efeito de multiplicar por 1000)
+                            import re
+                            # Remove "R$", espaços e qualquer caractere que não seja número, ponto ou vírgula
+                            val_limpo = re.sub(r'[^\d.,-]', '', val_cru)
+                            
+                            if val_limpo:
+                                # Caso clássico brasileiro: "1.500,30" -> vira "1500.30"
+                                if '.' in val_limpo and ',' in val_limpo:
+                                    val_limpo = val_limpo.replace('.', '').replace(',', '.')
+                                # Caso de centavos puro: "17,07" -> vira "17.07"
+                                elif ',' in val_limpo:
+                                    val_limpo = val_limpo.replace(',', '.')
                                 
-                            saldo_atual_planilha = float(val_limpo)
+                                saldo_atual_planilha = float(val_limpo)
+                            else:
+                                saldo_atual_planilha = 0.0
                             
-                            # Pegamos TODOS os lançamentos que aconteceram a partir do dia de início (t_ini) 
-                            # para frente, para reverter o saldo até o exato momento de abertura daquela data.
+                            # Pegamos todos os lançamentos do dia inicial para frente para reverter o saldo
                             df_futuro = df_retroativo[
                                 (df_retroativo[col_banco_df].str.upper().str.strip() == banco_nome.upper()) & 
                                 (df_retroativo['DT_FILTRO'] >= t_ini)
@@ -893,31 +900,35 @@ if aba == "📋 Relatório PDF":
                             ajuste_retroativo = 0.0
                             for _, r_fut in df_futuro.iterrows():
                                 val_f_cru = r_fut.get('V_Num', r_fut.get('Valor', 0))
+                                
+                                # Tratamento idêntico e seguro para os valores dos lançamentos
                                 if isinstance(val_f_cru, str):
-                                    val_f_cru = val_f_cru.replace('R$', '').strip()
-                                    if '.' in val_f_cru and ',' in val_f_cru:
-                                        val_f_cru = val_f_cru.replace('.', '').replace(',', '.')
-                                    elif ',' in val_f_cru:
-                                        val_f_cru = val_f_cru.replace(',', '.')
-                                val_f = pd.to_numeric(val_f_cru, errors='coerce')
+                                    val_f_limpo = re.sub(r'[^\d.,-]', '', val_f_cru).strip()
+                                    if '.' in val_f_limpo and ',' in val_f_limpo:
+                                        val_f_limpo = val_f_limpo.replace('.', '').replace(',', '.')
+                                    elif ',' in val_f_limpo:
+                                        val_f_limpo = val_f_limpo.replace(',', '.')
+                                    val_f = pd.to_numeric(val_f_limpo, errors='coerce')
+                                else:
+                                    val_f = pd.to_numeric(val_f_cru, errors='coerce')
+                                    
                                 if pd.isna(val_f): val_f = 0
                                 
                                 tipo_f = str(r_fut.get('Tipo', '')).upper().strip()
                                 
-                                # Se foi DESPESA, ela reduziu o saldo. Para voltar ao passado, SOMAMOS de volta.
+                                # LÓGICA RETROATIVA COORDENADA:
+                                # Se foi DESPESA, SOMAMOS de volta. Se foi RECEITA, SUBTRAÍMOS.
                                 if "DESPESA" in tipo_f or "GASTO" in tipo_f:
                                     ajuste_retroativo += val_f
-                                # Se foi RECEITA, ela aumentou o saldo. Para voltar ao passado, SUBTRAÍMOS.
                                 else:
                                     ajuste_retroativo -= val_f
                             
-                            # O saldo de abertura no dia inicial é o atual da planilha mais o ajuste reverso
+                            # Aplica o ajuste reverso sobre o saldo real tratado
                             base_inicial = saldo_atual_planilha + ajuste_retroativo
                 except:
                     base_inicial = 0.0
 
             saldo_anterior = base_inicial
-
             # ========================================================
             # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO
             # ========================================================
