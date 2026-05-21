@@ -490,7 +490,6 @@ if "💰" in aba:
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-Python
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     
