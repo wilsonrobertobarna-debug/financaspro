@@ -550,29 +550,27 @@ elif "Pendências" in aba:
         df_filtrado = df_filtrado[(df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
                                   (df_filtrado['Data_Formatada'].dt.date <= periodo[1])]
 
-    # 4. Exibir e Baixar
-    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
-    # 4. Ajuste de exibição limpa
-    # Lista de colunas que VOCÊ quer ver (ajuste os nomes conforme sua planilha)
+   # 4. Exibir e Baixar (Versão Unificada)
+    # Certifique-se de que seu DataFrame filtrado se chama df_v
+    
+    # Lista de colunas que você quer ver
     colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
     
-    # Criamos uma cópia apenas com as colunas que você quer ver
-    # Verificamos se existem no df_v antes para não dar erro
+    # Criamos uma cópia apenas com as colunas que existem no seu DataFrame
     colunas_existentes = [c for c in colunas_visiveis if c in df_v.columns]
-    
     df_exibir = df_v[colunas_existentes].copy()
     
-    # Formata a coluna de Valor se ela existir
+    # Formata a coluna de Valor usando a função m_fmt que você já tem
     if 'Valor' in df_exibir.columns:
         df_exibir['Valor'] = df_v['V_Num'].apply(m_fmt)
 
-    # Exibe a tabela apenas com o período filtrado
+    # Exibe na tela
     st.write(f"### Lançamentos no Período Selecionado: {len(df_v)}")
     st.dataframe(df_exibir, use_container_width=True, hide_index=True)
 
-    # 5. Botão de Baixa
+    # 5. Botão de Baixa com chave única
     if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_pendencias"):
-        # (Seu código de baixa continua aqui...)
+        # Seu código de baixa aqui
         st.toast("Baixa realizada com sucesso!", icon="💳")
     
     # 5. Botão de Baixa (Mantenha o seu como está abaixo disso)
