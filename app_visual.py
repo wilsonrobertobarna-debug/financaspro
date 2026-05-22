@@ -503,32 +503,10 @@ elif "Pendências" in aba:
 
     periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
 
-    # 2. Processamento e Filtros (Usando df_filtrado)
-    # 2. Processamento e Filtros (Versão Flexível)
     df_filtrado = df_base.copy()
     # Cria uma coluna temporária para comparar sem se importar com espaço ou maiúscula
     df_filtrado['Status_Limpo'] = df_filtrado['Status'].astype(str).str.strip().str.lower()
     df_filtrado = df_filtrado[df_filtrado['Status_Limpo'] == 'pendente'].copy()
-    
-    colunas_data = ['Data', 'DATA', 'Vencimento', 'VENCIMENTO', 'DT']
-    col_data = next((c for c in colunas_data if c in df_filtrado.columns), None)
-    
-    if col_data:
-        df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
-        
-        # Filtros
-        if filtro_banco:
-            df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
-        if busca_desc:
-            colunas_desc = ['Descrição', 'Descricao', 'DESCRIÇÃO', 'DESCRICAO']
-            col_desc = next((c for c in colunas_desc if c in df_filtrado.columns), None)
-            if col_desc:
-                df_filtrado = df_filtrado[df_filtrado[col_desc].str.contains(busca_desc, case=False, na=False)]
-        
-        if isinstance(periodo, tuple) and len(periodo) == 2:
-            df_filtrado = df_filtrado[(df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
-                                      (df_filtrado['Data_Formatada'].dt.date <= periodo[1])]
-
     # 3. Exibição
     # Debug: ver o que o filtro está encontrando
     st.write("Colunas disponíveis no DataFrame:", df_filtrado.columns.tolist())
