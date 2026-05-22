@@ -96,6 +96,7 @@ df_bancos = carregar_bancos_manual_gs()
 
 if not df_bancos.empty:
     st.subheader("📊 Saldo Bancário Atual")
+    st.write(df_bancos.columns) # Isso vai mostrar os nomes exatos para você
     cols = st.columns(len(df_bancos))
     for i, row in df_bancos.iterrows():
         with cols[i]:
