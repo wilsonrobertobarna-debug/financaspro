@@ -121,7 +121,17 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     
                     # Filtra: transações do banco ATÉ HOJE
                     filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
-                    movimentacoes = df.loc[filtro, 'V_Num'].sum()
+                    
+                    # Vamos tratar o sinal: se a categoria for despesa, subtrai
+                    # Supondo que você tenha uma coluna chamada 'Tipo' onde indica 'Despesa'
+                    movimentacoes = 0
+                    for _, row_trans in df[filtro].iterrows():
+                        valor = float(row_trans['V_Num'])
+                        # Se for despesa, subtrai, se for receita/transferência, soma
+                        if row_trans['Tipo'] == 'Despesa':
+                            movimentacoes -= valor
+                        else:
+                            movimentacoes += valor
                     
                     saldo_atual = saldo_inicial + movimentacoes
                     
