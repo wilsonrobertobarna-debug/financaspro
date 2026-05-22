@@ -94,6 +94,11 @@ with tab_bancos:
     
     with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
         df = carregar_dados_gs()
+        if ws_bancos:
+        dados = ws_bancos.get_all_values()
+        if len(dados) > 1:
+            return pd.DataFrame(dados[1:], columns=dados[0])
+    return pd.DataFrame()
         df_bancos = carregar_bancos_manual_gs()
         
         # 1. Ajuste de Datas
