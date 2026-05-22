@@ -115,8 +115,11 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     # Converte o saldo inicial da planilha de bancos para float
                     saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
                     
-                    # Calcula o saldo atual usando a coluna 'Banco' do seu df de transações
-                    movimentacoes = df[df['Banco'] == nome_banco]['V_Num'].sum()
+                   # Filtra apenas transações com data menor ou igual a hoje
+                    filtro_data = df[df['DT'].dt.date <= hoje]
+                    # Soma as movimentações desse banco até hoje
+                    movimentacoes = filtro_data[filtro_data['Banco'] == nome_banco]['V_Num'].sum()
+                    
                     saldo_atual = saldo_inicial + movimentacoes
                     
                     st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
