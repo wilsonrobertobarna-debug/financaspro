@@ -84,42 +84,42 @@ def carregar_dados_gs():
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
     return df
 
-def carregar_bancos_manual_gs():
-    if ws_bancos:
-        dados = ws_bancos.get_all_values()
-        if len(dados) > 1:
-            return pd.DataFrame(dados[1:], columns=dados[0])
-    return pd.DataFrame()
 
-# --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
-with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
-    df = carregar_dados_gs()
-    df_bancos = carregar_bancos_manual_gs()
+# Supondo que seus nomes de abas sejam estes (ajuste se forem diferentes):
+tab_inicio, tab_bancos, tab_lancamentos = st.tabs(["Início", "Finanças Bancos", "Lançamentos"])
+
+# Agora, coloque o seu código do relatório APENAS dentro da aba correta (tab_bancos):
+with tab_bancos:
+    st.subheader("Relatório Financeiro")
     
-    # 1. Ajuste de Datas
-    df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
-    hoje = pd.Timestamp.today().normalize()
-    
-    # 2. Garantir que V_Num seja numérico
-    df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
-    
-    if not df_bancos.empty:
-        qtd_colunas = 4
+    with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
+        df = carregar_dados_gs()
+        df_bancos = carregar_bancos_manual_gs()
         
-        def formatar_moeda(valor):
-            try:
-                return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            except:
-                return "R$ 0,00"
-
-        for i in range(0, len(df_bancos), qtd_colunas):
-            cols = st.columns(qtd_colunas)
-            linha = df_bancos.iloc[i:i + qtd_colunas]
+        # 1. Ajuste de Datas
+        df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
+        hoje = pd.Timestamp.today().normalize()
+        
+        # 2. Garantir que V_Num seja numérico
+        df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
+        
+        if not df_bancos.empty:
+            qtd_colunas = 4
             
-            for j, (index, row) in enumerate(linha.iterrows()):
-                with cols[j]:
-                    nome_banco = row['Nome do Banco']
-                    saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
+            def formatar_moeda(valor):
+                try:
+                    return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                except:
+                    return "R$ 0,00"
+
+            for i in range(0, len(df_bancos), qtd_colunas):
+                cols = st.columns(qtd_colunas)
+                linha = df_bancos.iloc[i:i + qtd_colunas]
+                
+                for j, (index, row) in enumerate(linha.iterrows()):
+                    with cols[j]:
+                        nome_banco = row['Nome do Banco']
+                        saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
                     
                     # 3. Filtrar transações deste banco até hoje
                     filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
