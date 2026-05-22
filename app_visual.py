@@ -504,7 +504,11 @@ elif "Pendências" in aba:
     periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
 
     # 2. Processamento e Filtros (Usando df_filtrado)
-    df_filtrado = df_base[df_base['Status'] == 'Pendente'].copy()
+    # 2. Processamento e Filtros (Versão Flexível)
+    df_filtrado = df_base.copy()
+    # Cria uma coluna temporária para comparar sem se importar com espaço ou maiúscula
+    df_filtrado['Status_Limpo'] = df_filtrado['Status'].astype(str).str.strip().str.lower()
+    df_filtrado = df_filtrado[df_filtrado['Status_Limpo'] == 'pendente'].copy()
     
     colunas_data = ['Data', 'DATA', 'Vencimento', 'VENCIMENTO', 'DT']
     col_data = next((c for c in colunas_data if c in df_filtrado.columns), None)
