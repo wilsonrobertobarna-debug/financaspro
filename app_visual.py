@@ -96,6 +96,10 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
     df = carregar_dados_gs() # Carrega as transações
     df_bancos = carregar_bancos_manual_gs() # Carrega a base de bancos
     
+    # FORÇA A CONVERSÃO DA COLUNA DE DATA PARA EVITAR ERROS
+    df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
+    hoje = pd.Timestamp.today().normalize()
+    
     if not df_bancos.empty:
         qtd_colunas = 4
         
@@ -112,13 +116,12 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
             for j, (index, row) in enumerate(linha.iterrows()):
                 with cols[j]:
                     nome_banco = row['Nome do Banco']
-                    # Converte o saldo inicial da planilha de bancos para float
+                    # Converte o saldo inicial
                     saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
                     
-                   # Filtra apenas transações com data menor ou igual a hoje
-                    filtro_data = df[df['DT'].dt.date <= hoje]
-                    # Soma as movimentações desse banco até hoje
-                    movimentacoes = filtro_data[filtro_data['Banco'] == nome_banco]['V_Num'].sum()
+                    # Filtra: transações do banco ATÉ HOJE
+                    filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
+                    movimentacoes = df.loc[filtro, 'V_Num'].sum()
                     
                     saldo_atual = saldo_inicial + movimentacoes
                     
