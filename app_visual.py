@@ -93,12 +93,15 @@ def carregar_bancos_manual_gs():
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
-    df = carregar_dados_gs() # Carrega as transações
-    df_bancos = carregar_bancos_manual_gs() # Carrega a base de bancos
+    df = carregar_dados_gs()
+    df_bancos = carregar_bancos_manual_gs()
     
-    # FORÇA A CONVERSÃO DA COLUNA DE DATA PARA EVITAR ERROS
+    # 1. Ajuste de Datas
     df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
     hoje = pd.Timestamp.today().normalize()
+    
+    # 2. Garantir que V_Num seja numérico
+    df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
     
     if not df_bancos.empty:
         qtd_colunas = 4
@@ -116,24 +119,20 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
             for j, (index, row) in enumerate(linha.iterrows()):
                 with cols[j]:
                     nome_banco = row['Nome do Banco']
-                    # Converte o saldo inicial
                     saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
                     
-                    # Filtra: transações do banco ATÉ HOJE
+                    # 3. Filtrar transações deste banco até hoje
                     filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
+                    df_banco_atual = df[filtro]
                     
-                    # Vamos tratar o sinal: se a categoria for despesa, subtrai
-                    # Supondo que você tenha uma coluna chamada 'Tipo' onde indica 'Despesa'
-                    movimentacoes = 0
-                    for _, row_trans in df[filtro].iterrows():
-                        valor = float(row_trans['V_Num'])
-                        # Se for despesa, subtrai, se for receita/transferência, soma
-                        if row_trans['Tipo'] == 'Despesa':
-                            movimentacoes -= valor
-                        else:
-                            movimentacoes += valor
+                    # 4. Cálculo inteligente: 
+                    # Soma tudo se for 'Receita' ou 'Transferência' (entrada)
+                    # Subtrai se for 'Despesa'
+                    # Verifique na sua planilha se o nome na coluna 'Tipo' é exatamente 'Despesa'
+                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
                     
-                    saldo_atual = saldo_inicial + movimentacoes
+                    saldo_atual = saldo_inicial + entradas - saidas
                     
                     st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
 # INICIALIZA O CACHE NA SESSÃO
