@@ -16,6 +16,8 @@ agora_br = datetime.now() - timedelta(hours=3)
 hoje_br = agora_br.date()
 agora = datetime.now() - timedelta(hours=3)
 hoje = agora.date()
+agora_br = datetime.utcnow() - timedelta(hours=3)
+hoje_br = agora_br.date()
 from dateutil.relativedelta import relativedelta
 import urllib.parse
 from fpdf import FPDF
