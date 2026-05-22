@@ -182,8 +182,10 @@ if "expander_lancamento_aberto" not in st.session_state:
 
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
     with st.form("f_novo", clear_on_submit=True):
-        f_compra = st.date_input("🛍️ Data da Compra", value=datetime.now(), format="DD/MM/YYYY")
-        f_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
+        # Usando a variável hoje_br que já corrige o fuso horário
+        f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
+        f_dat = st.date_input("Vencimento", value=hoje_br, format="DD/MM/YYYY")
+        
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         f_des = st.text_input("Descrição / Beneficiário")
