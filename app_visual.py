@@ -503,16 +503,32 @@ elif "Pendências" in aba:
 
     periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
 
+   # 2. Processamento e Filtros (Ordem Correta)
     df_filtrado = df_base.copy()
-    # Cria uma coluna temporária para comparar sem se importar com espaço ou maiúscula
+    
+    # 1. Filtro de Status (garante que apenas Pendentes apareçam)
     df_filtrado['Status_Limpo'] = df_filtrado['Status'].astype(str).str.strip().str.lower()
     df_filtrado = df_filtrado[df_filtrado['Status_Limpo'] == 'pendente'].copy()
-    # 3. Exibição
-    # Debug: ver o que o filtro está encontrando
-    st.write("Colunas disponíveis no DataFrame:", df_filtrado.columns.tolist())
-    st.write("Número de linhas após filtros:", len(df_filtrado))
-    if len(df_filtrado) == 0:
-        st.warning("Verifique se as datas no 'Data_Formatada' estão corretas ou se o status 'Pendente' existe.")
+    
+    # 2. Filtro de Banco (se selecionado, filtra agora)
+    if filtro_banco:
+        df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
+        
+    # 3. Conversão de Data e Filtro de Período
+    col_data = 'Vencimento' 
+    if col_data in df_filtrado.columns:
+        df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
+        
+        # Filtra o período se uma tupla válida for selecionada
+        if isinstance(periodo, tuple) and len(periodo) == 2:
+            df_filtrado = df_filtrado[
+                (df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
+                (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
+            ]
+            
+    # 4. Filtro de Descrição (Por último, para refinar)
+    if busca_desc:
+        df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
     
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
     colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
