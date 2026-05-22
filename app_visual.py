@@ -494,105 +494,66 @@ if "💰" in aba:
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     
-    # 1. Filtros Globais (o que você já tem funcionando)
+    # 1. Filtros
     col_b, col_d = st.columns(2)
     with col_b:
-        filtro_banco = st.multiselect("Filtrar Banco/Cartão:", df_base['Banco'].unique())
+        filtro_banco = st.multiselect("Filtrar Banco/Cartão:", df_base['Banco'].unique(), key="banco_pend")
     with col_d:
-        busca_desc = st.text_input("Buscar Descrição:")
+        busca_desc = st.text_input("Buscar Descrição:", key="desc_pend")
 
-    # 2. Filtro de Período (o novo)
-    periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)))
+    periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
 
-   # 3. Aplicar TUDO no DataFrame (Versão Blindada)
+    # 2. Processamento e Filtros (Usando df_filtrado)
     df_filtrado = df_base[df_base['Status'] == 'Pendente'].copy()
-       
-    # Busca inteligente pela coluna de Data (para não dar erro de KeyError)
+    
     colunas_data = ['Data', 'DATA', 'Vencimento', 'VENCIMENTO', 'DT']
     col_data = next((c for c in colunas_data if c in df_filtrado.columns), None)
     
     if col_data:
         df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
-    else:
-        df_filtrado['Data_Formatada'] = pd.NaT
+        
+        # Filtros
+        if filtro_banco:
+            df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
+        if busca_desc:
+            colunas_desc = ['Descrição', 'Descricao', 'DESCRIÇÃO', 'DESCRICAO']
+            col_desc = next((c for c in colunas_desc if c in df_filtrado.columns), None)
+            if col_desc:
+                df_filtrado = df_filtrado[df_filtrado[col_desc].str.contains(busca_desc, case=False, na=False)]
+        
+        if isinstance(periodo, tuple) and len(periodo) == 2:
+            df_filtrado = df_filtrado[(df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
+                                      (df_filtrado['Data_Formatada'].dt.date <= periodo[1])]
 
-    # Filtro de Banco
-    if filtro_banco:
-        df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
-        
-    # Filtro de Descrição (Flexível)
-    if busca_desc:
-        colunas_desc = ['Descrição', 'Descricao', 'DESCRIÇÃO', 'DESCRICAO']
-        col_desc = next((c for c in colunas_desc if c in df_filtrado.columns), None)
-        if col_desc:
-            df_filtrado = df_filtrado[df_filtrado[col_desc].str.contains(busca_desc, case=False, na=False)]
-        
-    # Filtro de Período
-    if isinstance(periodo, tuple) and len(periodo) == 2 and col_data:
-        df_filtrado = df_filtrado[(df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
-                                  (df_filtrado['Data_Formatada'].dt.date <= periodo[1])]
-    # Busca inteligente pela coluna de Data
-    colunas_data = ['Data', 'DATA', 'Vencimento', 'VENCIMENTO', 'DT']
-    col_data = next((c for c in colunas_data if c in df_filtrado.columns), None)
-    df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce') if col_data else pd.NaT
-    
-    # Busca inteligente pela coluna de Descrição
-    colunas_desc = ['Descrição', 'Descricao', 'DESCRIÇÃO', 'DESCRICAO']
-    col_desc = next((c for c in colunas_desc if c in df_filtrado.columns), None)
-    
-    if filtro_banco:
-        df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
-        
-    if busca_desc and col_desc:
-        df_filtrado = df_filtrado[df_filtrado[col_desc].str.contains(busca_desc, case=False, na=False)]
-        
-    if isinstance(periodo, tuple) and len(periodo) == 2 and col_data:
-        df_filtrado = df_filtrado[(df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
-                                  (df_filtrado['Data_Formatada'].dt.date <= periodo[1])]
-
-   # 4. Exibir e Baixar (Versão Unificada)
-    # Certifique-se de que seu DataFrame filtrado se chama df_v
-    
-    # Lista de colunas que você quer ver
+    # 3. Exibição
+    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
     colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
+    cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
     
-    # Criamos uma cópia apenas com as colunas que existem no seu DataFrame
-    colunas_existentes = [c for c in colunas_visiveis if c in df_v.columns]
-    df_exibir = df_v[colunas_existentes].copy()
-    
-    # Formata a coluna de Valor usando a função m_fmt que você já tem
-    if 'Valor' in df_exibir.columns:
-        df_exibir['Valor'] = df_v['V_Num'].apply(m_fmt)
+    # Exibe a tabela
+    st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
 
-    # Exibe na tela
-    st.write(f"### Lançamentos no Período Selecionado: {len(df_v)}")
-    st.dataframe(df_exibir, use_container_width=True, hide_index=True)
-
-    # 5. Botão de Baixa com chave única
-    if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_pendencias"):
-        # Seu código de baixa aqui
-        st.toast("Baixa realizada com sucesso!", icon="💳")
-    
-    # 5. Botão de Baixa (Mantenha o seu como está abaixo disso)
-    
+    # 4. Botão de Baixa (Funcionalidade de Baixa)
     if not df_filtrado.empty:
-        nova_data = st.date_input("Data de pagamento para baixa:", datetime.now())
-        if st.button("✅ BAIXAR SELECIONADOS ABAIXO"):
+        nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
+        if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_final"):
             sucessos = 0
             headers = ws_base.row_values(1)
             idx_status = headers.index('Status') + 1
-            idx_venc = [i for i, h in enumerate(headers) if 'VENC' in h.upper() or 'CART' in h.upper()][0] + 1
+            # Ajuste dinâmico para a coluna de Vencimento/Data
+            idx_venc = [i for i, h in enumerate(headers) if 'VENC' in h.upper() or 'DATA' in h.upper()][0] + 1
             
             for idx_df, row in df_filtrado.iterrows():
                 linha_sheets = int(idx_df) + 2
                 ws_base.update_cell(linha_sheets, idx_status, "Pago")
                 ws_base.update_cell(linha_sheets, idx_venc, nova_data.strftime("%d/%m/%Y"))
                 sucessos += 1
+            
             st.toast(f"✅ {sucessos} itens baixados!", icon="💰")
             atualizar_sessao()
             st.rerun()
-        else:
-            st.info("Nenhum lançamento encontrado neste período para este cartão.")
+    else:
+        st.info("Nenhum lançamento encontrado neste período.")
     st.divider()
     st.subheader("🔔 Avisos: Vencimentos Próximos")
        # ... (aqui você mantém a lógica original dos alertas de vencimento se desejar) ...
