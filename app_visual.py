@@ -526,7 +526,13 @@ elif "Pendências" in aba:
                                       (df_filtrado['Data_Formatada'].dt.date <= periodo[1])]
 
     # 3. Exibição
-    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
+    # Debug: ver o que o filtro está encontrando
+    st.write("Colunas disponíveis no DataFrame:", df_filtrado.columns.tolist())
+    st.write("Número de linhas após filtros:", len(df_filtrado))
+    if len(df_filtrado) == 0:
+        st.warning("Verifique se as datas no 'Data_Formatada' estão corretas ou se o status 'Pendente' existe.")
+    
+    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
     colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
     
