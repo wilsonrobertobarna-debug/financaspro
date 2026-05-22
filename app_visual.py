@@ -93,28 +93,35 @@ def carregar_bancos_manual_gs():
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
-    df_bancos = carregar_bancos_manual_gs()
+    df = carregar_dados_gs() # Carrega todas as transações
+    df_bancos = carregar_bancos_manual_gs() # Carrega a base de bancos
+    
     if not df_bancos.empty:
         qtd_colunas = 4
         
-        # Função para formatar o valor como R$ 0,00
         def formatar_moeda(valor):
             try:
-                # Remove espaços, trata vírgula e converte para float
-                val = float(str(valor).replace('R$', '').replace('.', '').replace(',', '.').strip())
-                return f"R$ {val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             except:
                 return "R$ 0,00"
 
+        # Criar colunas para organizar
         for i in range(0, len(df_bancos), qtd_colunas):
             cols = st.columns(qtd_colunas)
             linha = df_bancos.iloc[i:i + qtd_colunas]
             
             for j, (index, row) in enumerate(linha.iterrows()):
                 with cols[j]:
-                    # Exibe o valor formatado
-                    valor_formatado = formatar_moeda(row['Saldo Inicial'])
-                    st.metric(label=row['Nome do Banco'], value=valor_formatado)
+                    nome_banco = row['Nome do Banco']
+                    # Pega o saldo inicial da planilha de Bancos
+                    saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
+                    
+                    # Calcula o saldo atual: Inicial + (Somas das Entradas - Somas das Saídas) filtrado por este banco
+                    # Assumindo que seu df tem uma coluna 'Conta/Banco' e 'Valor'
+                    movimentacoes = df[df['Conta/Banco'] == nome_banco]['V_Num'].sum()
+                    saldo_atual = saldo_inicial + movimentacoes
+                    
+                    st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
 
 # INICIALIZA O CACHE NA SESSÃO
 if 'df_base' not in st.session_state:
