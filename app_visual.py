@@ -92,9 +92,9 @@ def carregar_bancos_manual_gs():
     return pd.DataFrame()
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
-st.write(df.columns) # Isso vai listar todas as colunas disponíveis no seu df de transações
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
     df = carregar_dados_gs() # Carrega todas as transações
+    st.write("Colunas disponíveis no df:", df.columns)
     df_bancos = carregar_bancos_manual_gs() # Carrega a base de bancos
     
     if not df_bancos.empty:
