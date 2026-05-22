@@ -93,8 +93,7 @@ def carregar_bancos_manual_gs():
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
-    df = carregar_dados_gs() # Carrega todas as transações
-    st.write("Colunas disponíveis no df:", df.columns)
+    df = carregar_dados_gs() # Carrega as transações
     df_bancos = carregar_bancos_manual_gs() # Carrega a base de bancos
     
     if not df_bancos.empty:
@@ -106,7 +105,6 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
             except:
                 return "R$ 0,00"
 
-        # Criar colunas para organizar
         for i in range(0, len(df_bancos), qtd_colunas):
             cols = st.columns(qtd_colunas)
             linha = df_bancos.iloc[i:i + qtd_colunas]
@@ -114,16 +112,14 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
             for j, (index, row) in enumerate(linha.iterrows()):
                 with cols[j]:
                     nome_banco = row['Nome do Banco']
-                    # Pega o saldo inicial da planilha de Bancos
+                    # Converte o saldo inicial da planilha de bancos para float
                     saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
                     
-                    # Calcula o saldo atual: Inicial + (Somas das Entradas - Somas das Saídas) filtrado por este banco
-                    # Assumindo que seu df tem uma coluna 'Conta/Banco' e 'Valor'
-                    movimentacoes = df[df['Conta/Banco'] == nome_banco]['V_Num'].sum()
+                    # Calcula o saldo atual usando a coluna 'Banco' do seu df de transações
+                    movimentacoes = df[df['Banco'] == nome_banco]['V_Num'].sum()
                     saldo_atual = saldo_inicial + movimentacoes
                     
                     st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
-
 # INICIALIZA O CACHE NA SESSÃO
 if 'df_base' not in st.session_state:
     st.session_state['df_base'] = carregar_dados_gs()
