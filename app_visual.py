@@ -71,9 +71,13 @@ except:
     ws_bancos = None
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
-def carregar_dados_gs():
-    dados = ws_base.get_all_values()
-    if len(dados) <= 1: return pd.DataFrame()
+def carregar_bancos_manual_gs():
+    if ws_bancos:
+        # Estas linhas abaixo precisam de um TAB ou 4 espaços de recuo:
+        dados = ws_bancos.get_all_values()
+        if len(dados) > 1:
+            return pd.DataFrame(dados[1:], columns=dados[0])
+    return pd.DataFrame()
     df = pd.DataFrame(dados[1:], columns=dados[0])
     df['ID'] = range(2, len(df) + 2)
     def p_float(v):
