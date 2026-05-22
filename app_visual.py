@@ -95,17 +95,26 @@ def carregar_bancos_manual_gs():
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
     df_bancos = carregar_bancos_manual_gs()
     if not df_bancos.empty:
-        # Definimos 4 colunas por linha para não ficar espremido
         qtd_colunas = 4
         
-        # Quebra os dados em grupos de 4 para organizar as linhas
+        # Função para formatar o valor como R$ 0,00
+        def formatar_moeda(valor):
+            try:
+                # Remove espaços, trata vírgula e converte para float
+                val = float(str(valor).replace('R$', '').replace('.', '').replace(',', '.').strip())
+                return f"R$ {val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+            except:
+                return "R$ 0,00"
+
         for i in range(0, len(df_bancos), qtd_colunas):
             cols = st.columns(qtd_colunas)
             linha = df_bancos.iloc[i:i + qtd_colunas]
             
             for j, (index, row) in enumerate(linha.iterrows()):
                 with cols[j]:
-                    st.metric(label=row['Nome do Banco'], value=row['Saldo Inicial'])
+                    # Exibe o valor formatado
+                    valor_formatado = formatar_moeda(row['Saldo Inicial'])
+                    st.metric(label=row['Nome do Banco'], value=valor_formatado)
 
 # INICIALIZA O CACHE NA SESSÃO
 if 'df_base' not in st.session_state:
