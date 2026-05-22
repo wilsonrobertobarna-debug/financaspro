@@ -91,6 +91,18 @@ def carregar_bancos_manual_gs():
             return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
 
+# --- COLE O RELATÓRIO BANCÁRIO AQUI ---
+df_bancos = carregar_bancos_manual_gs()
+
+if not df_bancos.empty:
+    st.subheader("📊 Saldo Bancário Atual")
+    cols = st.columns(len(df_bancos))
+    for i, row in df_bancos.iterrows():
+        with cols[i]:
+            # Substitua 'Banco' e 'Saldo' pelos nomes exatos das colunas na sua planilha
+            st.metric(label=row['Banco'], value=row['Saldo'])
+    st.write("---")
+
 # INICIALIZA O CACHE NA SESSÃO
 if 'df_base' not in st.session_state:
     st.session_state['df_base'] = carregar_dados_gs()
