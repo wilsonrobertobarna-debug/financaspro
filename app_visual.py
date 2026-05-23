@@ -102,6 +102,7 @@ with tab_bancos:
     with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
         df = carregar_dados_gs()
         df_bancos = carregar_bancos_manual_gs()
+        st.write(df_bancos.columns.tolist())
         hoje = pd.Timestamp.today().normalize()
         
         # 1. Ajuste de Datas e Valores
