@@ -99,7 +99,7 @@ with tab_bancos:
     st.header("Finanças & Bancos")
     
     # --- RELATÓRIO BANCÁRIO (DENTRO DA ABA) ---
-  with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
+    with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
         df = carregar_dados_gs()
         df_bancos = carregar_bancos_manual_gs()
         hoje = pd.Timestamp.today().normalize()
