@@ -9,6 +9,20 @@ import plotly.graph_objects as go
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
+# Ajuste fino para as abas não quebrarem e ocuparem menos espaço
+st.markdown("""
+    <style>
+    /* Ajusta o tamanho da fonte das abas */
+    button[data-baseweb="tab"] {
+        font-size: 14px !important;
+        padding: 5px 10px !important;
+    }
+    /* Remove espaçamentos extras para subir as abas */
+    .stTabs {
+        margin-top: -30px;
+    }
+    </style>
+""", unsafe_allow_html=True)
 st.caption("Versão 2.0.3")
 hoje_br = datetime.today().date()
 
