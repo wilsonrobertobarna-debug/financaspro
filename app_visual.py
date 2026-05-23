@@ -120,8 +120,16 @@ with tab_bancos:
         if not df_bancos.empty:
             for index, row in df_bancos.iterrows():
                 nome_banco = row['Nome do Banco']
-                # Pega o saldo inicial da linha atual da planilha de bancos
-                saldo_inicial = float(row['Saldo Inicial']) 
+                
+                # FUNÇÃO DE LIMPEZA PARA O SALDO
+                raw_saldo = str(row['Saldo Inicial'])
+                # Remove "R$", espaços, substitui ponto por nada e vírgula por ponto
+                saldo_limpo = raw_saldo.replace('R$', '').replace('.', '').replace(',', '.').strip()
+                
+                try:
+                    saldo_inicial = float(saldo_limpo)
+                except ValueError:
+                    saldo_inicial = 0.0 # Se der erro, assume zero para não travar
                 
                 # O filtro gera o df_filtrado
                 filtro = (df['Banco'] == nome_banco) & (df['DT'].notna()) & (df['DT'] <= hoje)
