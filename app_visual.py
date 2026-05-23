@@ -108,7 +108,7 @@ with tab_bancos:
         
         # 2. Garantir que V_Num seja numérico
         df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
-        
+        qtd_colunas = 4
         if not df_bancos.empty:
             def formatar_moeda(valor):
                 try:
@@ -138,6 +138,7 @@ with tab_bancos:
                     saldo_atual = saldo_inicial + entradas - saidas
                     
                     st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
+                    
 # INICIALIZA O CACHE NA SESSÃO
 if 'df_base' not in st.session_state:
     st.session_state['df_base'] = carregar_dados_gs()
