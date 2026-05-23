@@ -65,7 +65,7 @@ def formatar_moeda(valor):
     return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 # 4. INTERFACE
-tab_inicio, tab_bancos, tab_lancamentos = st.tabs(["Início", "Finanças Bancos", "Lançamentos"])
+tab_inicio, tab_bancos, tab_lancamentos = st.tabs(["🏠 Início", "🏦 Bancos", "📝 Lançamentos"])
 
 with tab_bancos:
     st.subheader("Relatório Financeiro")
