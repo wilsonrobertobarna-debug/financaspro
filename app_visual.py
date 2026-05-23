@@ -132,10 +132,10 @@ with tab_bancos:
                     # Soma tudo se for 'Receita' ou 'Transferência' (entrada)
                     # Subtrai se for 'Despesa'
                     # Verifique na sua planilha se o nome na coluna 'Tipo' é exatamente 'Despesa'
-                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
-                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+                entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+                saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
                     
-                    saldo_atual = saldo_inicial + entradas - saidas
+                saldo_atual = saldo_inicial + entradas - saidas
                     
                     st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
                     
