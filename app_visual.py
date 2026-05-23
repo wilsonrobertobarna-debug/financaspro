@@ -137,7 +137,7 @@ with tab_bancos:
                     
                 saldo_atual = saldo_inicial + entradas - saidas
                     
-                    st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
+                st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
                     
 # INICIALIZA O CACHE NA SESSÃO
 if 'df_base' not in st.session_state:
