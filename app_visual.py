@@ -102,6 +102,7 @@ with tab_bancos:
     with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
         df = carregar_dados_gs()
         df_bancos = carregar_bancos_manual_gs()
+        hoje = pd.Timestamp.today().normalize()
         
         # 1. Ajuste de Datas
         df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
@@ -113,7 +114,10 @@ with tab_bancos:
         df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
         qtd_colunas = 4
         if not df_bancos.empty:
+            for index, row in df_bancos.iterrows():
+                nome_banco = row['Bancos']
             def formatar_moeda(valor):
+                filtro = (df['Banco'] == nome_banco) & (df['DT'].notna()) & (df['DT'] <= hoje)
                 try:
                     return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                 except:
