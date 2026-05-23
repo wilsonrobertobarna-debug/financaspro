@@ -90,7 +90,8 @@ def carregar_bancos_manual_gs():
         if len(dados) > 1:
             return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
-
+with tab_bancos:
+    st.header("Finanças & Bancos")
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
     df = carregar_dados_gs()
