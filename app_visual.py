@@ -1,109 +1,140 @@
 import streamlit as st
 import gspread
-import pandas as pd
 from google.oauth2.service_account import Credentials
-from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from datetime import datetime, timedelta
+import streamlit as st
+import pandas as pd
+from datetime import datetime, timedelta
+import urllib.parse
+
+# RESOLUÇÃO DO FUSO HORÁRIO (Sem precisar de biblioteca extra)
+# O servidor do Streamlit é 3 horas adiantado. Tiramos 3 horas para ser Brasília.
+agora_br = datetime.now() - timedelta(hours=3)
+hoje_br = agora_br.date()
+agora = datetime.now() - timedelta(hours=3)
+hoje = agora.date()
+agora_br = datetime.utcnow() - timedelta(hours=3)
+hoje_br = agora_br.date()
+from dateutil.relativedelta import relativedelta
+import urllib.parse
+from fpdf import FPDF
+
+# 0. VERSÃO NO TOPO
+st.caption("Versão 2.0.3")
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
-# Ajuste fino para as abas não quebrarem e ocuparem menos espaço
+
+# ESTILO PARA VALORES E RÓTULOS DOS METRICS
 st.markdown("""
     <style>
-    /* Ajusta o tamanho da fonte das abas */
-    button[data-baseweb="tab"] {
-        font-size: 14px !important;
-        padding: 5px 10px !important;
+    [data-testid='stMetricLabel'] {
+        font-size: 1.1rem !important;
+        font-weight: bold !important;
     }
-    /* Remove espaçamentos extras para subir as abas */
-    .stTabs {
-        margin-top: -30px;
+    [data-testid='stMetricValue'] {
+        font-size: 1.1rem !important;
+        font-weight: bold !important;
     }
     </style>
 """, unsafe_allow_html=True)
-st.caption("Versão 2.0.3")
-hoje_br = datetime.today().date()
 
 # 2. CONEXÃO
 @st.cache_resource
 def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
-    if not creds_dict: st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
-    pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
-    if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
-    final_creds = {
-        "type": creds_dict["type"], "project_id": creds_dict["project_id"],
-        "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
-        "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
-    }
-    return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
+    if not creds_dict:
+        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
+    try:
+        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
+        if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
+        final_creds = {
+            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
+            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
+            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
+        }
+        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
+    except Exception as e:
+        st.error(f"Erro: {e}"); st.stop()
 
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-ws_base = sh.get_worksheet(0)
-ws_bancos = sh.worksheet("Bancos") if "Bancos" in [ws.title for ws in sh.worksheets()] else None
 
-# 3. FUNÇÕES DE PROCESSAMENTO
+# IDENTIFICAÇÃO DAS ABAS
+ws_base = sh.get_worksheet(0)
+try:
+    ws_bancos = sh.worksheet("Bancos")
+except:
+    ws_bancos = None
+
+# FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
-    
     df = pd.DataFrame(dados[1:], columns=dados[0])
-    
-    # LIMPEZA RIGOROSA: Remove tudo que não for número, vírgula ou ponto
-    # Isso impede que o Python leia "1.000,00" como "100000" ou como uma string enorme
-    df['V_Num'] = df['Valor'].replace(r'[^\d,]', '', regex=True) # Remove símbolos (R$, etc)
-    df['V_Num'] = df['V_Num'].str.replace(',', '.') # Padroniza o decimal para ponto
-    df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
-    
-    # Conversão de data para garantir que os filtros funcionem depois
-    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')
-    
+    df['ID'] = range(2, len(df) + 2)
+    def p_float(v):
+        try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
+        except: return 0.0
+    df['V_Num'] = df['Valor'].apply(p_float)
+    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
+    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
     return df
-
-def get_valor_pendente(df):
-    now = datetime.now()
-    start_of_month = datetime(now.year, now.month, 1)
-    end_of_month = start_of_month + relativedelta(months=1, days=-1)
-    pendentes = df[(df['DT'] >= start_of_month) & (df['DT'] <= end_of_month) & (df['Status'] != 'Pago')]
-    return pendentes['V_Num'].sum()
 
 def carregar_bancos_manual_gs():
     if ws_bancos:
         dados = ws_bancos.get_all_values()
-        if len(dados) > 1: return pd.DataFrame(dados[1:], columns=dados[0])
+        if len(dados) > 1:
+            return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
 
-def formatar_moeda(valor):
-    return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-# 4. INTERFACE
-tab_inicio, tab_bancos, tab_lancamentos = st.tabs(["🏠 Início", "🏦 Bancos", "📝 Lançamentos"])
-
-with tab_bancos:
-    st.subheader("Relatório Financeiro")
-    with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
-        df = carregar_dados_gs()
-        df_bancos = carregar_bancos_manual_gs()
-        hoje = pd.Timestamp.today().normalize()
+# --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
+with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
+    df = carregar_dados_gs()
+    df_bancos = carregar_bancos_manual_gs()
+    
+    # 1. Ajuste de Datas
+    df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
+    hoje = pd.Timestamp.today().normalize()
+    
+    # 2. Garantir que V_Num seja numérico
+    df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
+    
+    if not df_bancos.empty:
+        qtd_colunas = 4
         
-        if not df_bancos.empty:
-            qtd_colunas = 4
-            for i in range(0, len(df_bancos), qtd_colunas):
-                cols = st.columns(qtd_colunas)
-                linha = df_bancos.iloc[i:i + qtd_colunas]
-                for j, (index, row) in enumerate(linha.iterrows()):
-                    with cols[j]:
-                        nome_banco = row['Nome do Banco']
-                        saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
-                        filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
-                        df_banco_atual = df[filtro]
-                        entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
-                        saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
-                        saldo_atual = saldo_inicial + entradas - saidas
-                        st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
+        def formatar_moeda(valor):
+            try:
+                return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            except:
+                return "R$ 0,00"
+
+        for i in range(0, len(df_bancos), qtd_colunas):
+            cols = st.columns(qtd_colunas)
+            linha = df_bancos.iloc[i:i + qtd_colunas]
+            
+            for j, (index, row) in enumerate(linha.iterrows()):
+                with cols[j]:
+                    nome_banco = row['Nome do Banco']
+                    saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
+                    
+                    # 3. Filtrar transações deste banco até hoje
+                    filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
+                    df_banco_atual = df[filtro]
+                    
+                    # 4. Cálculo inteligente: 
+                    # Soma tudo se for 'Receita' ou 'Transferência' (entrada)
+                    # Subtrai se for 'Despesa'
+                    # Verifique na sua planilha se o nome na coluna 'Tipo' é exatamente 'Despesa'
+                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+                    
+                    saldo_atual = saldo_inicial + entradas - saidas
+                    
+                    st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
 # INICIALIZA O CACHE NA SESSÃO
 if 'df_base' not in st.session_state:
     st.session_state['df_base'] = carregar_dados_gs()
@@ -265,21 +296,7 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
- # 1. Certifique-se de que a linha abaixo esteja recuada:
-lista_edit = {}
-colunas_necessarias = ['ID', 'Vencimento', 'Descrição', 'Valor']
-
-# 2. A instrução if inicia o bloco (não precisa mudar)
-if all(col in df_base.columns for col in colunas_necessarias):
-    # 3. TODO O CÓDIGO ABAIXO DEVE ESTAR COM TABULAÇÃO (RECUADO):
-    df_tail = df_base.tail(40).iloc[::-1]
-    lista_edit = {
-        f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r 
-        for _, r in df_tail.iterrows()
-    }
-else:
-    # 4. O bloco 'else' também precisa de recuo para o aviso:
-    st.error("⚠️ Erro: As colunas da planilha não conferem com o código (ID, Vencimento, Descrição, Valor).")
+        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         if escolha:
             item = lista_edit[escolha]
