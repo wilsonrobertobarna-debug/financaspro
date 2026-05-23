@@ -265,7 +265,19 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
-        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
+       # Substitua a sua linha 268 por este bloco seguro:
+df_tail = df_base.tail(40).iloc[::-1]
+lista_edit = {}
+
+# Verifica se as colunas esperadas existem antes de processar
+colunas_necessarias = ['ID', 'Vencimento', 'Descrição', 'Valor']
+if all(col in df_tail.columns for col in colunas_necessarias):
+    lista_edit = {
+        f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r 
+        for _, r in df_tail.iterrows()
+    }
+else:
+    st.error("⚠️ Erro: As colunas da planilha não conferem com o código (ID, Vencimento, Descrição, Valor).")
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         if escolha:
             item = lista_edit[escolha]
