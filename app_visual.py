@@ -95,9 +95,9 @@ tab_inicio, tab_bancos, tab_lancamentos = st.tabs(["Início", "Finanças & Banco
 with tab_bancos:
     st.header("Finanças & Bancos")
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
-with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
-    df = carregar_dados_gs()
-    df_bancos = carregar_bancos_manual_gs()
+    with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
+        df = carregar_dados_gs()
+        df_bancos = carregar_bancos_manual_gs()
     
     # 1. Ajuste de Datas
     df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
