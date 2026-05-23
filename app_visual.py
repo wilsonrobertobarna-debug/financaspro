@@ -33,6 +33,7 @@ def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
     df = pd.DataFrame(dados[1:], columns=dados[0])
+    df['ID'] = range(2, len(df) + 2)
     df['V_Num'] = pd.to_numeric(df['Valor'].replace(r'[R$\s.]', '', regex=True).replace(',', '.', regex=True), errors='coerce').fillna(0)
     df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')
     return df
