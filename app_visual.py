@@ -643,8 +643,8 @@ with tab_pendencias:
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-elif "🐾" in aba:
-    st.title("🐾 Gestão Milo & Bolt")
+with tab_milo: # Substitua tab_milo pelo nome que você definiu no st.tabs
+    st.title("🐾 Milo & Bolt")
     
     df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
                      df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
