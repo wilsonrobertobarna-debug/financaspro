@@ -3,13 +3,14 @@ import gspread
 import pandas as pd
 from google.oauth2.service_account import Credentials
 from datetime import datetime, timedelta
-hoje_br = datetime.today().date()
 from dateutil.relativedelta import relativedelta
+
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 st.caption("Versão 2.0.3")
+hoje_br = datetime.today().date()
 
-# 2. CONEXÃO (Mantida a sua lógica original)
+# 2. CONEXÃO
 @st.cache_resource
 def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
@@ -29,14 +30,20 @@ ws_base = sh.get_worksheet(0)
 ws_bancos = sh.worksheet("Bancos") if "Bancos" in [ws.title for ws in sh.worksheets()] else None
 
 # 3. FUNÇÕES DE PROCESSAMENTO
+def carregar_dados_gs():
+    dados = ws_base.get_all_values()
+    if len(dados) <= 1: return pd.DataFrame()
+    df = pd.DataFrame(dados[1:], columns=dados[0])
+    df['ID'] = range(2, len(df) + 2)
+    df['V_Num'] = pd.to_numeric(df['Valor'].replace(r'[R$\s.]', '', regex=True).replace(',', '.', regex=True), errors='coerce').fillna(0)
+    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')
+    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+    return df
+
 def get_valor_pendente(df):
     now = datetime.now()
-    # Define o primeiro dia do mês atual e o último dia do mês
     start_of_month = datetime(now.year, now.month, 1)
     end_of_month = start_of_month + relativedelta(months=1, days=-1)
-    
-    # Filtra o que está pendente (sem status de 'Pago' ou similar) e dentro do mês
-    # Ajuste o filtro 'Status' conforme sua coluna real na planilha
     pendentes = df[(df['DT'] >= start_of_month) & (df['DT'] <= end_of_month) & (df['Status'] != 'Pago')]
     return pendentes['V_Num'].sum()
 
