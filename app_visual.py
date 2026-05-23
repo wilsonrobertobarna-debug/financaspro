@@ -49,17 +49,18 @@ ws_bancos = sh.worksheet("Bancos") if "Bancos" in [ws.title for ws in sh.workshe
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
+    
     df = pd.DataFrame(dados[1:], columns=dados[0])
     
-    # Esta linha garante a conversão correta de R$ 1.000,00 para 1000.00
-    df['V_Num'] = pd.to_numeric(
-        df['Valor'].replace(r'[R$\s.]', '', regex=True).replace(',', '.', regex=True), 
-        errors='coerce'
-    ).fillna(0)
+    # LIMPEZA RIGOROSA: Remove tudo que não for número, vírgula ou ponto
+    # Isso impede que o Python leia "1.000,00" como "100000" ou como uma string enorme
+    df['V_Num'] = df['Valor'].replace(r'[^\d,]', '', regex=True) # Remove símbolos (R$, etc)
+    df['V_Num'] = df['V_Num'].str.replace(',', '.') # Padroniza o decimal para ponto
+    df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
     
+    # Conversão de data para garantir que os filtros funcionem depois
     df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')
-    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
-    df['ID'] = range(2, len(df) + 2)
+    
     return df
 
 def get_valor_pendente(df):
