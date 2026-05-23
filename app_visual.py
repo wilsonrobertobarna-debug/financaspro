@@ -119,7 +119,7 @@ with tab_bancos:
         # 3. Itere sobre os bancos e aplique o filtro dentro do loop
         if not df_bancos.empty:
             for index, row in df_bancos.iterrows():
-                nome_banco = row['Bancos'] # Certifique-se que 'Bancos' é o nome exato da coluna na sua planilha
+                nome_banco = row['Banco'] # Certifique-se que 'Bancos' é o nome exato da coluna na sua planilha
                 
                 # O filtro agora é definido DENTRO do loop, onde nome_banco já existe
                 filtro = (df['Banco'] == nome_banco) & (df['DT'].notna()) & (df['DT'] <= hoje)
