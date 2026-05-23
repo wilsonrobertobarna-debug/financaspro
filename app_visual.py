@@ -93,7 +93,14 @@ def carregar_bancos_manual_gs():
     return pd.DataFrame()
 
 # --- ABAS (FORA DAS FUNÇÕES) ---
-tab_inicio, tab_bancos, tab_lancamentos, tab_pendencias = st.tabs(["Início", "Finanças & Bancos", "Lançamentos", "Pendências"])
+tab_inicio, tab_bancos, tab_lancamentos, tab_pendencias, tab_milo, tab_veiculo = st.tabs([
+    "Início", 
+    "Finanças & Bancos", 
+    "Lançamentos", 
+    "Pendências", 
+    "Milo & Bolt", 
+    "Veículo"
+])
 
 with tab_bancos:
     st.header("Finanças & Bancos")
