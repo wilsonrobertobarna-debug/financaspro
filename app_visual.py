@@ -4,6 +4,7 @@ import pandas as pd
 from google.oauth2.service_account import Credentials
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+import plotly.express as px
 
 # 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
