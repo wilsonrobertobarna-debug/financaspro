@@ -548,7 +548,7 @@ if "💰" in aba:
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 
-elif "Pendências" in aba:
+with tab_pendencias:
     st.title("📋 Lançamentos Pendentes")
     
     # 1. Filtros
@@ -560,7 +560,7 @@ elif "Pendências" in aba:
 
     periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
 
-   # 2. Processamento e Filtros (Ordem Correta)
+    # 2. Processamento e Filtros (O restante do seu código permanece aqui, dentro do 'with')
     df_filtrado = df_base.copy()
     
     # 1. Filtro de Status (garante que apenas Pendentes apareçam)
