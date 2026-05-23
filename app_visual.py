@@ -119,27 +119,25 @@ with tab_bancos:
         # 3. Itere sobre os bancos e aplique o filtro dentro do loop
         if not df_bancos.empty:
             for index, row in df_bancos.iterrows():
-                nome_banco = row['Nome do Banco'] # Certifique-se que 'Bancos' é o nome exato da coluna na sua planilha
+                nome_banco = row['Nome do Banco']
+                # Pega o saldo inicial da linha atual da planilha de bancos
+                saldo_inicial = float(row['Saldo Inicial']) 
                 
-                # O filtro agora é definido DENTRO do loop, onde nome_banco já existe
+                # O filtro gera o df_filtrado
                 filtro = (df['Banco'] == nome_banco) & (df['DT'].notna()) & (df['DT'] <= hoje)
                 df_filtrado = df[filtro]
                 
-                # Exiba os resultados para este banco
-                st.subheader(f"Banco: {nome_banco}")
-                st.write(f"Total gasto: {formatar_moeda(df_filtrado['V_Num'].sum())}")
-                    
-                    # 4. Cálculo inteligente: 
-                    # Soma tudo se for 'Receita' ou 'Transferência' (entrada)
-                    # Subtrai se for 'Despesa'
-                    # Verifique na sua planilha se o nome na coluna 'Tipo' é exatamente 'Despesa'
-                entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
-                saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
-                    
+                # Cálculos usando df_filtrado
+                entradas = df_filtrado[df_filtrado['Tipo'] != 'Despesa']['V_Num'].sum()
+                saidas = df_filtrado[df_filtrado['Tipo'] == 'Despesa']['V_Num'].sum()
+                
                 saldo_atual = saldo_inicial + entradas - saidas
-                    
-                st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
-                    
+                
+                # Exibição
+                st.subheader(f"Banco: {nome_banco}")
+                st.metric(label="Saldo Atual", value=formatar_moeda(saldo_atual))
+                st.write(f"Total Entradas: {formatar_moeda(entradas)}")
+                st.write(f"Total Saídas: {formatar_moeda(saidas)}")                    
 # INICIALIZA O CACHE NA SESSÃO
 if 'df_base' not in st.session_state:
     st.session_state['df_base'] = carregar_dados_gs()
