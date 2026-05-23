@@ -115,7 +115,7 @@ with tab_bancos:
                 return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             except:
                 return "R$ 0,00"
-
+        st.write("Colunas encontradas:", df_bancos.columns.tolist())
         # 3. Itere sobre os bancos e aplique o filtro dentro do loop
         if not df_bancos.empty:
             for index, row in df_bancos.iterrows():
