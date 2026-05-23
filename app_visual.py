@@ -694,7 +694,7 @@ with tab_milo: # Substitua tab_milo pelo nome que você definiu no st.tabs
     else:
         st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
 
-elif "🚗" in aba:
+with tab_Veículo: # Substitua tab_milo pelo nome que você definiu no st.tabs
     st.title("🚗 Gestão do Veículo")
     
     c1, c2, c3 = st.columns([1,1,2])
