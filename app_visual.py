@@ -32,10 +32,17 @@ ws_bancos = sh.worksheet("Bancos") if "Bancos" in [ws.title for ws in sh.workshe
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
+    
     df = pd.DataFrame(dados[1:], columns=dados[0])
+    
+    # Garantir a criação das colunas necessárias para o seu código
     df['ID'] = range(2, len(df) + 2)
     df['V_Num'] = pd.to_numeric(df['Valor'].replace(r'[R$\s.]', '', regex=True).replace(',', '.', regex=True), errors='coerce').fillna(0)
     df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')
+    
+    # ADICIONE ESTA LINHA: Ela cria a coluna que o seu filtro está procurando
+    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+    
     return df
 
 def carregar_bancos_manual_gs():
