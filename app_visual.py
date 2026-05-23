@@ -99,41 +99,34 @@ with tab_bancos:
     st.header("Finanças & Bancos")
     
     # --- RELATÓRIO BANCÁRIO (DENTRO DA ABA) ---
-    with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
+  with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
         df = carregar_dados_gs()
         df_bancos = carregar_bancos_manual_gs()
         hoje = pd.Timestamp.today().normalize()
         
-        # 1. Ajuste de Datas
+        # 1. Ajuste de Datas e Valores
         df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
-        
-        # 2. Garantir que V_Num seja numérico
-        # 2. Definição da data de hoje
-        hoje = pd.Timestamp.today().normalize()
-        filtro = (df['Banco'] == nome_banco) & (df['DT'].notna()) & (df['DT'] <= hoje)
         df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
-        qtd_colunas = 4
+        
+        # 2. Defina a função de formatação fora do loop
+        def formatar_moeda(valor):
+            try:
+                return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            except:
+                return "R$ 0,00"
+
+        # 3. Itere sobre os bancos e aplique o filtro dentro do loop
         if not df_bancos.empty:
             for index, row in df_bancos.iterrows():
-                nome_banco = row['Bancos']
-            def formatar_moeda(valor):
+                nome_banco = row['Bancos'] # Certifique-se que 'Bancos' é o nome exato da coluna na sua planilha
+                
+                # O filtro agora é definido DENTRO do loop, onde nome_banco já existe
                 filtro = (df['Banco'] == nome_banco) & (df['DT'].notna()) & (df['DT'] <= hoje)
-                try:
-                    return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                except:
-                    return "R$ 0,00"
-        for i in range(0, len(df_bancos), qtd_colunas):
-            cols = st.columns(qtd_colunas)
-            linha = df_bancos.iloc[i:i + qtd_colunas]
-            
-            for j, (index, row) in enumerate(linha.iterrows()):
-                with cols[j]:
-                    nome_banco = row['Nome do Banco']
-                    saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
-                    
-                    # 3. Filtrar transações deste banco até hoje
-                    filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
-                    df_banco_atual = df[filtro]
+                df_filtrado = df[filtro]
+                
+                # Exiba os resultados para este banco
+                st.subheader(f"Banco: {nome_banco}")
+                st.write(f"Total gasto: {formatar_moeda(df_filtrado['V_Num'].sum())}")
                     
                     # 4. Cálculo inteligente: 
                     # Soma tudo se for 'Receita' ou 'Transferência' (entrada)
