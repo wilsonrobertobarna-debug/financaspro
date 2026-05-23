@@ -71,6 +71,7 @@ except:
     ws_bancos = None
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
+# --- FUNÇÕES ---
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
@@ -90,31 +91,30 @@ def carregar_bancos_manual_gs():
         if len(dados) > 1:
             return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
-    # ADICIONE ESSA LINHA PARA CRIAR AS ABAS:
+
+# --- ABAS (FORA DAS FUNÇÕES) ---
 tab_inicio, tab_bancos, tab_lancamentos = st.tabs(["Início", "Finanças & Bancos", "Lançamentos"])
+
 with tab_bancos:
     st.header("Finanças & Bancos")
-# --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
+    
+    # --- RELATÓRIO BANCÁRIO (DENTRO DA ABA) ---
     with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
         df = carregar_dados_gs()
         df_bancos = carregar_bancos_manual_gs()
-    
-    # 1. Ajuste de Datas
-    df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
-    hoje = pd.Timestamp.today().normalize()
-    
-    # 2. Garantir que V_Num seja numérico
-    df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
-    
-    if not df_bancos.empty:
-        qtd_colunas = 4
         
-        def formatar_moeda(valor):
-            try:
-                return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            except:
-                return "R$ 0,00"
-
+        # 1. Ajuste de Datas
+        df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
+        
+        # 2. Garantir que V_Num seja numérico
+        df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
+        
+        if not df_bancos.empty:
+            def formatar_moeda(valor):
+                try:
+                    return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                except:
+                    return "R$ 0,00"
         for i in range(0, len(df_bancos), qtd_colunas):
             cols = st.columns(qtd_colunas)
             linha = df_bancos.iloc[i:i + qtd_colunas]
