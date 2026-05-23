@@ -107,6 +107,9 @@ with tab_bancos:
         df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
         
         # 2. Garantir que V_Num seja numérico
+        # 2. Definição da data de hoje
+        hoje = pd.Timestamp.today().normalize()
+        filtro = (df['Banco'] == nome_banco) & (df['DT'].notna()) & (df['DT'] <= hoje)
         df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
         qtd_colunas = 4
         if not df_bancos.empty:
