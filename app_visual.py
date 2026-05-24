@@ -284,13 +284,12 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
         t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
         t_desc = st.text_input("Nota")
         
-        if st.form_submit_button("TRANSFERIR"):
+       if st.form_submit_button("TRANSFERIR"):
             if t_orig == t_dest: 
-               st.error("Escolha bancos diferentes!")
+                st.error("Escolha bancos diferentes!")
             else:
                 # O Python precisa de pelo menos uma linha aqui para não dar erro
                 st.write("Configuração de transferência pendente de lógica.")
-            else:
                 v_str = f"{t_val:.2f}".replace('.', ',')
                 d_str = t_dat.strftime("%d/%m/%Y")
                 ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", ""])
