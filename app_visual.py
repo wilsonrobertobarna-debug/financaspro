@@ -1187,12 +1187,45 @@ if aba == "📊 Análises & Configurações":
     st.divider()
 
     # 3. DATAFRAME: BANCOS E CARTÕES
-    st.subheader("🏦 Informações de Contas e Cartões")
-    if not df_bancos_info.empty:
-        st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
-    else:
-        st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
+   st.divider()
+
         
+
+        st.subheader("🏦 Informações de Contas e Cartões")
+
+        # Inicializa o estado do botão se não existir
+
+        if 'mostrar_relatorio' not in st.session_state:
+
+            st.session_state['mostrar_relatorio'] = False
+
+
+
+        # Botão que alterna o estado (Liga/Desliga)
+
+        if st.button("📊 Clique aqui para ver o Relatório Bancário Completo"):
+
+            st.session_state['mostrar_relatorio'] = not st.session_state['mostrar_relatorio']
+
+
+
+        # Exibe a tabela apenas se o estado for True
+
+        if st.session_state['mostrar_relatorio']:
+
+            if not df_bancos_info.empty:
+
+                st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+
+            else:
+
+                st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
+
+        
+
+        st.divider() 
+
+
     st.divider()
     
     # 4. FORMULÁRIO: CONFIGURAR METAS
