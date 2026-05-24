@@ -284,7 +284,7 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
         t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
         t_desc = st.text_input("Nota")
         
-       if st.form_submit_button("TRANSFERIR"):
+        if st.form_submit_button("TRANSFERIR"):
             if t_orig == t_dest: 
                 st.error("Escolha bancos diferentes!")
             else:
