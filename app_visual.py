@@ -222,21 +222,7 @@ if aba != "💰 Finanças & Bancos":
 
 # Certifique-se de que este 'if' abaixo esteja alinhado exatamente na margem esquerda
 if aba == "💰 Finanças & Bancos":
-    st.header("💰 Finanças & Bancos")
-    st.subheader("🏦 Informações de Contas e Cartões")
     
-    if 'mostrar_relatorio' not in st.session_state:
-        st.session_state['mostrar_relatorio'] = False
-        
-    if st.button("📊 Clique aqui para ver o Relatório Bancário Completo"):
-        st.session_state['mostrar_relatorio'] = not st.session_state['mostrar_relatorio']
-        
-    if st.session_state['mostrar_relatorio']:
-        if not df_bancos_info.empty:
-            st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
-        else:
-            st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
-
 # O 'elif' PRECISA começar na coluna zero, igual ao 'if' acima
 elif aba == "📊 Análises & Configurações":
     st.markdown("## 📊 Painel de Análises & Configurações")
