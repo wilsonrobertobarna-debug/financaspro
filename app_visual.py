@@ -275,7 +275,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 # Se o usuário mudar de aba ou clicar em outra coisa fora do formulário, o expander fecha amigavelmente
 if aba != "💰 Finanças & Bancos":
     st.session_state.expander_lancamento_aberto = False
-# BARRINHA 2: TRANSFERÊNCIA
+    # BARRINHA 2: TRANSFERÊNCIA
 with st.sidebar.expander("💸 Transferência", expanded=False):
     with st.form("f_transf", clear_on_submit=True):
         t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -283,8 +283,13 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
         t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
         t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
         t_desc = st.text_input("Nota")
+        
         if st.form_submit_button("TRANSFERIR"):
-            if t_orig == t_dest: st.error("Escolha bancos diferentes!")
+            if t_orig == t_dest: 
+                st.error("Escolha bancos diferentes!")
+            else:
+                # 3. ADICIONE UM COMANDO AQUI para o else não ficar vazio
+                st.write("Processando transferência...")
             else:
                 v_str = f"{t_val:.2f}".replace('.', ',')
                 d_str = t_dat.strftime("%d/%m/%Y")
