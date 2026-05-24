@@ -96,7 +96,7 @@ def carregar_bancos_manual_gs():
 tabs = st.tabs(["Início", "Finanças & Bancos", "Lançamentos", "Pendências", "Milo & Bolt", "Veículo", "WhatsApp"])
 
 # 2. Atribuição clara (isso vincula o nome à posição da aba)
-tab_inicio, tab_bancos, tab_lancamentos, tab_pendencias, tab_milo, tab_veiculo, tab_whatsapp = tabs
+tab_inicio, tab_bancos, tab_lancamentos, tab_pendencias, tab_milo, tab_veiculo, tab_whatsapp = st.tabs([...])
 
 # 3. Conteúdo Oculto/Vinculado
 with tab_pendencias:
@@ -746,8 +746,8 @@ with tab_veiculo:
         df_car_display['Valor'] = df_car['V_Num'].apply(m_fmt)
         st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-with tab_WhatsApp: # Substitua tab_milo pelo nome que você definiu no st.tabs
-    st.title("📄 WhatsApp")
+with tab_whatsapp: 
+    st.title("WhatsApp")
     
     c1, c2 = st.columns(2)
     d_ini = c1.date_input("Início", hoje_br - timedelta(days=30), format="DD/MM/YYYY", key="zap_d1")
