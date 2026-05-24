@@ -216,6 +216,34 @@ if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     st.rerun()
 
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"])
+# 2. A lógica de resetar o expander (que você já tinha)
+if aba != "💰 Finanças & Bancos":
+    st.session_state.expander_lancamento_aberto = False
+
+# 3. A CRIAÇÃO DO BLOCO DE FINANÇAS (Aqui é onde você coloca o código que me perguntou)
+if aba == "💰 Finanças & Bancos":
+    st.header("💰 Finanças & Bancos")
+    
+    # O código do botão entra aqui dentro, recuado
+    st.subheader("🏦 Informações de Contas e Cartões")
+    
+    if 'mostrar_relatorio' not in st.session_state:
+        st.session_state['mostrar_relatorio'] = False
+        
+    if st.button("📊 Clique aqui para ver o Relatório Bancário Completo"):
+        st.session_state['mostrar_relatorio'] = not st.session_state['mostrar_relatorio']
+        
+    if st.session_state['mostrar_relatorio']:
+        # ... (aqui vai o código da tabela que você tem) ...
+
+# 4. E logo abaixo, você continua com os outros ELIFs para as outras abas
+elif aba == "📊 Análises & Configurações":
+    st.markdown("## 📊 Painel de Análises & Configurações")
+    # ... aqui só entra o que é de análise ...
+
+elif aba == "Pendências":
+    # ... código das pendências ...
+
 
 st.sidebar.divider()
 
