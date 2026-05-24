@@ -92,17 +92,16 @@ def carregar_bancos_manual_gs():
             return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
 
-# Removido o acento de 'tab_veiculo'
-tab_inicio, tab_bancos, tab_lancamentos, tab_pendencias, tab_milo, tab_veiculo, tab_WhatsApp = st.tabs([
-    "Início", 
-    "Finanças & Bancos", 
-    "Lançamentos", 
-    "Pendências", 
-    "Milo & Bolt", 
-    "Veículo", 
-    "WhatsApp"
-])
+# 1. Definição das abas (no topo)
+tabs = st.tabs(["Início", "Finanças & Bancos", "Lançamentos", "Pendências", "Milo & Bolt", "Veículo", "WhatsApp"])
 
+# 2. Atribuição clara (isso vincula o nome à posição da aba)
+tab_inicio, tab_bancos, tab_lancamentos, tab_pendencias, tab_milo, tab_veiculo, tab_whatsapp = tabs
+
+# 3. Conteúdo Oculto/Vinculado
+with tab_pendencias:
+    # TUDO o que estiver aqui dentro só aparece quando clicar em 'Pendências'
+    st.write("Conteúdo de Pendências"
 with tab_bancos:
     st.header("Finanças & Bancos")
     
