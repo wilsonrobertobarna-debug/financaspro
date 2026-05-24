@@ -111,30 +111,7 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                 return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             except:
                 return "R$ 0,00"
-
-        for i in range(0, len(df_bancos), qtd_colunas):
-            cols = st.columns(qtd_colunas)
-            linha = df_bancos.iloc[i:i + qtd_colunas]
-            
-            for j, (index, row) in enumerate(linha.iterrows()):
-                with cols[j]:
-                    nome_banco = row['Nome do Banco']
-                    saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
-                    
-                    # 3. Filtrar transações deste banco até hoje
-                    filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
-                    df_banco_atual = df[filtro]
-                    
-                    # 4. Cálculo inteligente: 
-                    # Soma tudo se for 'Receita' ou 'Transferência' (entrada)
-                    # Subtrai se for 'Despesa'
-                    # Verifique na sua planilha se o nome na coluna 'Tipo' é exatamente 'Despesa'
-                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
-                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
-                    
-                    saldo_atual = saldo_inicial + entradas - saidas
-                    
-                    st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
+        
 # INICIALIZA O CACHE NA SESSÃO
 if 'df_base' not in st.session_state:
     st.session_state['df_base'] = carregar_dados_gs()
