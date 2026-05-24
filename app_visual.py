@@ -71,7 +71,6 @@ except:
     ws_bancos = None
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
-# --- FUNÇÕES ---
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
@@ -92,69 +91,50 @@ def carregar_bancos_manual_gs():
             return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
 
-tab_inicio, tab_bancos, tab_lancamentos, tab_pendencias, tab_milo, tab_veiculo, tab_whatsapp = st.tabs([
-    "Início", 
-    "Finanças & Bancos", 
-    "Lançamentos", 
-    "Pendências", 
-    "Milo & Bolt", 
-    "Veículo", 
-    "WhatsApp"
-])
-
-# 3. Conteúdo Oculto/Vinculado
-with tab_pendencias:
-    # TUDO o que estiver aqui dentro só aparece quando clicar em 'Pendências'
-    st.write("Conteúdo de Pendências")
-with tab_bancos:
-    st.header("Finanças & Bancos")
+# --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
+with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
+    df = carregar_dados_gs()
+    df_bancos = carregar_bancos_manual_gs()
     
-    # --- RELATÓRIO BANCÁRIO (DENTRO DA ABA) ---
-    with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
-        df = carregar_dados_gs()
-        df_bancos = carregar_bancos_manual_gs()
-        hoje = pd.Timestamp.today().normalize()
+    # 1. Ajuste de Datas
+    df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
+    hoje = pd.Timestamp.today().normalize()
+    
+    # 2. Garantir que V_Num seja numérico
+    df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
+    
+    if not df_bancos.empty:
+        qtd_colunas = 4
         
-        # 1. Ajuste de Datas e Valores
-        df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
-        df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
-        
-        # 2. Defina a função de formatação fora do loop
         def formatar_moeda(valor):
             try:
                 return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             except:
                 return "R$ 0,00"
-        # 3. Itere sobre os bancos e aplique o filtro dentro do loop
-        if not df_bancos.empty:
-            for index, row in df_bancos.iterrows():
-                nome_banco = row['Nome do Banco']
-                
-                # FUNÇÃO DE LIMPEZA PARA O SALDO
-                raw_saldo = str(row['Saldo Inicial'])
-                # Remove "R$", espaços, substitui ponto por nada e vírgula por ponto
-                saldo_limpo = raw_saldo.replace('R$', '').replace('.', '').replace(',', '.').strip()
-                
-                try:
-                    saldo_inicial = float(saldo_limpo)
-                except ValueError:
-                    saldo_inicial = 0.0 # Se der erro, assume zero para não travar
-                
-                # O filtro gera o df_filtrado
-                filtro = (df['Banco'] == nome_banco) & (df['DT'].notna()) & (df['DT'] <= hoje)
-                df_filtrado = df[filtro]
-                
-                # Cálculos usando df_filtrado
-                entradas = df_filtrado[df_filtrado['Tipo'] != 'Despesa']['V_Num'].sum()
-                saidas = df_filtrado[df_filtrado['Tipo'] == 'Despesa']['V_Num'].sum()
-                
-                saldo_atual = saldo_inicial + entradas - saidas
-                
-                # Exibição
-                st.subheader(f"Banco: {nome_banco}")
-                st.metric(label="Saldo Atual", value=formatar_moeda(saldo_atual))
-                st.write(f"Total Entradas: {formatar_moeda(entradas)}")
-                st.write(f"Total Saídas: {formatar_moeda(saidas)}")                    
+
+        for i in range(0, len(df_bancos), qtd_colunas):
+            cols = st.columns(qtd_colunas)
+            linha = df_bancos.iloc[i:i + qtd_colunas]
+            
+            for j, (index, row) in enumerate(linha.iterrows()):
+                with cols[j]:
+                    nome_banco = row['Nome do Banco']
+                    saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
+                    
+                    # 3. Filtrar transações deste banco até hoje
+                    filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
+                    df_banco_atual = df[filtro]
+                    
+                    # 4. Cálculo inteligente: 
+                    # Soma tudo se for 'Receita' ou 'Transferência' (entrada)
+                    # Subtrai se for 'Despesa'
+                    # Verifique na sua planilha se o nome na coluna 'Tipo' é exatamente 'Despesa'
+                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+                    
+                    saldo_atual = saldo_inicial + entradas - saidas
+                    
+                    st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
 # INICIALIZA O CACHE NA SESSÃO
 if 'df_base' not in st.session_state:
     st.session_state['df_base'] = carregar_dados_gs()
@@ -559,7 +539,7 @@ if "💰" in aba:
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 
-with tab_pendencias:
+elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     
     # 1. Filtros
@@ -571,7 +551,7 @@ with tab_pendencias:
 
     periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
 
-    # 2. Processamento e Filtros (O restante do seu código permanece aqui, dentro do 'with')
+   # 2. Processamento e Filtros (Ordem Correta)
     df_filtrado = df_base.copy()
     
     # 1. Filtro de Status (garante que apenas Pendentes apareçam)
@@ -654,8 +634,8 @@ with tab_pendencias:
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-with tab_milo: # Substitua tab_milo pelo nome que você definiu no st.tabs
-    st.title("🐾 Milo & Bolt")
+elif "🐾" in aba:
+    st.title("🐾 Gestão Milo & Bolt")
     
     df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
                      df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
@@ -705,7 +685,7 @@ with tab_milo: # Substitua tab_milo pelo nome que você definiu no st.tabs
     else:
         st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
 
-with tab_veiculo: 
+elif "🚗" in aba:
     st.title("🚗 Gestão do Veículo")
     
     c1, c2, c3 = st.columns([1,1,2])
@@ -750,8 +730,8 @@ with tab_veiculo:
         df_car_display['Valor'] = df_car['V_Num'].apply(m_fmt)
         st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-with tab_whatsapp: 
-    st.title("WhatsApp")
+elif "📄" in aba:
+    st.title("📄 WhatsApp")
     
     c1, c2 = st.columns(2)
     d_ini = c1.date_input("Início", hoje_br - timedelta(days=30), format="DD/MM/YYYY", key="zap_d1")
