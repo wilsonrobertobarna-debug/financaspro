@@ -1212,17 +1212,7 @@ if aba == "📊 Análises & Configurações":
         c_c2.metric("Sobra de Abril", m_fmt(sobra_abr))
         c_c3.metric("Variação Líquida", m_fmt(var_valor), delta=f"{var_pct:.1f}%")
 
-    st.divider()
-
-    # 3. DATAFRAME: BANCOS E CARTÕES
-    st.subheader("🏦 Informações de Contas e Cartões")
-    if not df_bancos_info.empty:
-        st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
-    else:
-        st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
-        
-    st.divider()
-    
+     
     # 4. FORMULÁRIO: CONFIGURAR METAS
     with st.expander("🎯 Configurar Metas", expanded=False):
         todas_cats = sorted(df_base['Categoria'].unique())
