@@ -221,16 +221,34 @@ if aba != "💰 Finanças & Bancos":
     st.session_state.expander_lancamento_aberto = False
 
 # Certifique-se de que este 'if' abaixo esteja alinhado exatamente na margem esquerda
+# --- Estrutura da Página ---
 if aba == "💰 Finanças & Bancos":
-    
-# O 'elif' PRECISA começar na coluna zero, igual ao 'if' acima
+    st.header("💰 Finanças & Bancos")
+    # Aqui você coloca apenas o que pertence à tela principal (sem os bancos)
+
 elif aba == "📊 Análises & Configurações":
     st.markdown("## 📊 Painel de Análises & Configurações")
-    # Aqui vai o resto do código da sua página de análises
+    
+    # O CÓDIGO DO RELATÓRIO AGORA FICA AQUI, RECUADO
+    st.subheader("🏦 Informações de Contas e Cartões")
+    
+    if 'mostrar_relatorio' not in st.session_state:
+        st.session_state['mostrar_relatorio'] = False
+        
+    if st.button("📊 Clique aqui para ver o Relatório Bancário Completo"):
+        st.session_state['mostrar_relatorio'] = not st.session_state['mostrar_relatorio']
+        
+    if st.session_state['mostrar_relatorio']:
+        if not df_bancos_info.empty:
+            st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+        else:
+            st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets.")
+    
+    st.divider() # Aquela barrinha que você gosta
+    # ... aqui vem o seu código de metas ...
 
 elif aba == "Pendências":
     st.header("Pendências")
-
 
 st.sidebar.divider()
 
