@@ -92,17 +92,15 @@ def carregar_bancos_manual_gs():
             return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
 
-# --- ABAS (FORA DAS FUNÇÕES) ---
-tab_inicio, tab_bancos, tab_lancamentos, tab_pendencias, tab_milo, tab_veículo, tab_WhatsApp = st.tabs([
+# Removido o acento de 'tab_veiculo'
+tab_inicio, tab_bancos, tab_lancamentos, tab_pendencias, tab_milo, tab_veiculo, tab_WhatsApp = st.tabs([
     "Início", 
     "Finanças & Bancos", 
     "Lançamentos", 
     "Pendências", 
     "Milo & Bolt", 
-    "Veículo"
-    " WhatsApp"
-
-
+    "Veículo", 
+    "WhatsApp"
 ])
 
 with tab_bancos:
