@@ -111,7 +111,30 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                 return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             except:
                 return "R$ 0,00"
-        
+
+        for i in range(0, len(df_bancos), qtd_colunas):
+            cols = st.columns(qtd_colunas)
+            linha = df_bancos.iloc[i:i + qtd_colunas]
+            
+            for j, (index, row) in enumerate(linha.iterrows()):
+                with cols[j]:
+                    nome_banco = row['Nome do Banco']
+                    saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
+                    
+                    # 3. Filtrar transações deste banco até hoje
+                    filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
+                    df_banco_atual = df[filtro]
+                    
+                    # 4. Cálculo inteligente: 
+                    # Soma tudo se for 'Receita' ou 'Transferência' (entrada)
+                    # Subtrai se for 'Despesa'
+                    # Verifique na sua planilha se o nome na coluna 'Tipo' é exatamente 'Despesa'
+                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+                    
+                    saldo_atual = saldo_inicial + entradas - saidas
+                    
+                    st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
 # INICIALIZA O CACHE NA SESSÃO
 if 'df_base' not in st.session_state:
     st.session_state['df_base'] = carregar_dados_gs()
@@ -451,20 +474,10 @@ if "💰" in aba:
         st.divider()
         
         st.subheader("🏦 Informações de Contas e Cartões")
-        # Inicializa o estado do botão se não existir
-        if 'mostrar_relatorio' not in st.session_state:
-            st.session_state['mostrar_relatorio'] = False
-
-        # Botão que alterna o estado (Liga/Desliga)
-        if st.button("📊 Clique aqui para ver o Relatório Bancário Completo"):
-            st.session_state['mostrar_relatorio'] = not st.session_state['mostrar_relatorio']
-
-        # Exibe a tabela apenas se o estado for True
-        if st.session_state['mostrar_relatorio']:
-            if not df_bancos_info.empty:
-                st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
-            else:
-                st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
+        if not df_bancos_info.empty:
+            st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+        else:
+            st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
         
         st.divider()
         
@@ -476,8 +489,23 @@ if "💰" in aba:
                 if cat != "Transferência":
                     default_v = 1200.0 if cat == "Mercado" else 400.0
                     metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
-                    
-      
+        
+               
+        st.divider()
+        st.subheader("📈 Evolução do Saldo Acumulado")
+        df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
+        if not df_saldo_dia.empty:
+            df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
+                lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
+            )
+            df_saldo_dia = df_saldo_dia.groupby('Vencimento')['Valor_Com_Sinal'].sum().reset_index()
+            df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
+            
+            fig_acum = px.line(df_saldo_dia, x='Vencimento', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
+            fig_acum.update_layout(height=350)
+            st.plotly_chart(fig_acum, use_container_width=True, config={'staticPlot': True})
+        
+        st.divider()
         st.subheader("🎯 Metas vs Realizado")
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         if not df_metas_graph.empty:
@@ -1187,45 +1215,12 @@ if aba == "📊 Análises & Configurações":
     st.divider()
 
     # 3. DATAFRAME: BANCOS E CARTÕES
-   st.divider()
-
+    st.subheader("🏦 Informações de Contas e Cartões")
+    if not df_bancos_info.empty:
+        st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+    else:
+        st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
         
-
-        st.subheader("🏦 Informações de Contas e Cartões")
-
-        # Inicializa o estado do botão se não existir
-
-        if 'mostrar_relatorio' not in st.session_state:
-
-            st.session_state['mostrar_relatorio'] = False
-
-
-
-        # Botão que alterna o estado (Liga/Desliga)
-
-        if st.button("📊 Clique aqui para ver o Relatório Bancário Completo"):
-
-            st.session_state['mostrar_relatorio'] = not st.session_state['mostrar_relatorio']
-
-
-
-        # Exibe a tabela apenas se o estado for True
-
-        if st.session_state['mostrar_relatorio']:
-
-            if not df_bancos_info.empty:
-
-                st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
-
-            else:
-
-                st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
-
-        
-
-        st.divider() 
-
-
     st.divider()
     
     # 4. FORMULÁRIO: CONFIGURAR METAS
