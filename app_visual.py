@@ -490,22 +490,7 @@ if "💰" in aba:
                     default_v = 1200.0 if cat == "Mercado" else 400.0
                     metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
         
-               
-        st.divider()
-        st.subheader("📈 Evolução do Saldo Acumulado")
-        df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
-        if not df_saldo_dia.empty:
-            df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
-                lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
-            )
-            df_saldo_dia = df_saldo_dia.groupby('Vencimento')['Valor_Com_Sinal'].sum().reset_index()
-            df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
             
-            fig_acum = px.line(df_saldo_dia, x='Vencimento', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
-            fig_acum.update_layout(height=350)
-            st.plotly_chart(fig_acum, use_container_width=True, config={'staticPlot': True})
-        
-        st.divider()
         st.subheader("🎯 Metas vs Realizado")
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         if not df_metas_graph.empty:
