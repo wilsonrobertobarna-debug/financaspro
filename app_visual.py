@@ -685,7 +685,7 @@ elif "🐾" in aba:
     else:
         st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
 
-elifs "🚗" in aba:
+elif "🚗" in aba:
     st.title("🚗 Gestão do Veículo")
     
     c1, c2, c3 = st.columns([1,1,2])
