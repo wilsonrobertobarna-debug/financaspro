@@ -452,13 +452,13 @@ if "💰" in aba:
         
         st.subheader("🏦 Informações de Contas e Cartões")
         # Adicione o botão aqui logo abaixo do título
-if st.button("📊 Clique aqui para ver o Relatório Bancário Completo"):
-    st.session_state['mostrar_relatorio'] = True
+        if st.button("📊 Clique aqui para ver o Relatório Bancário Completo"):
+            st.session_state['mostrar_relatorio'] = True
 
-if not df_bancos_info.empty:
-    st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
-else:
-    st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
+        if not df_bancos_info.empty:
+            st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+        else:
+            st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
         if not df_bancos_info.empty:
             st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
         else:
