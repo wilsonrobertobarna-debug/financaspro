@@ -101,7 +101,7 @@ tab_inicio, tab_bancos, tab_lancamentos, tab_pendencias, tab_milo, tab_veiculo, 
 # 3. Conteúdo Oculto/Vinculado
 with tab_pendencias:
     # TUDO o que estiver aqui dentro só aparece quando clicar em 'Pendências'
-    st.write("Conteúdo de Pendências"
+    st.write("Conteúdo de Pendências")
 with tab_bancos:
     st.header("Finanças & Bancos")
     
