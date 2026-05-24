@@ -92,11 +92,15 @@ def carregar_bancos_manual_gs():
             return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
 
-# 1. Definição das abas (no topo)
-tabs = st.tabs(["Início", "Finanças & Bancos", "Lançamentos", "Pendências", "Milo & Bolt", "Veículo", "WhatsApp"])
-
-# 2. Atribuição clara (isso vincula o nome à posição da aba)
-tab_inicio, tab_bancos, tab_lancamentos, tab_pendencias, tab_milo, tab_veiculo, tab_whatsapp = st.tabs([...])
+tab_inicio, tab_bancos, tab_lancamentos, tab_pendencias, tab_milo, tab_veiculo, tab_whatsapp = st.tabs([
+    "Início", 
+    "Finanças & Bancos", 
+    "Lançamentos", 
+    "Pendências", 
+    "Milo & Bolt", 
+    "Veículo", 
+    "WhatsApp"
+])
 
 # 3. Conteúdo Oculto/Vinculado
 with tab_pendencias:
