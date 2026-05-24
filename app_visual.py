@@ -215,7 +215,7 @@ if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     atualizar_sessao()
     st.rerun()
 
-aba = st.sidebar.radio("Navegação:", ["Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"])
+aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"])
 
 st.sidebar.divider()
 
@@ -275,7 +275,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 # Se o usuário mudar de aba ou clicar em outra coisa fora do formulário, o expander fecha amigavelmente
 if aba != "💰 Finanças & Bancos":
     st.session_state.expander_lancamento_aberto = False
-    # BARRINHA 2: TRANSFERÊNCIA
+# BARRINHA 2: TRANSFERÊNCIA
 with st.sidebar.expander("💸 Transferência", expanded=False):
     with st.form("f_transf", clear_on_submit=True):
         t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -283,13 +283,9 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
         t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
         t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
         t_desc = st.text_input("Nota")
-        
         if st.form_submit_button("TRANSFERIR"):
-            if t_orig == t_dest: 
-                st.error("Escolha bancos diferentes!")
+            if t_orig == t_dest: st.error("Escolha bancos diferentes!")
             else:
-                # O Python precisa de pelo menos uma linha aqui para não dar erro
-                st.write("Configuração de transferência pendente de lógica.")
                 v_str = f"{t_val:.2f}".replace('.', ',')
                 d_str = t_dat.strftime("%d/%m/%Y")
                 ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", ""])
@@ -494,7 +490,22 @@ if "💰" in aba:
                     default_v = 1200.0 if cat == "Mercado" else 400.0
                     metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
         
+               
+        st.divider()
+        st.subheader("📈 Evolução do Saldo Acumulado")
+        df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
+        if not df_saldo_dia.empty:
+            df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
+                lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
+            )
+            df_saldo_dia = df_saldo_dia.groupby('Vencimento')['Valor_Com_Sinal'].sum().reset_index()
+            df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
             
+            fig_acum = px.line(df_saldo_dia, x='Vencimento', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
+            fig_acum.update_layout(height=350)
+            st.plotly_chart(fig_acum, use_container_width=True, config={'staticPlot': True})
+        
+        st.divider()
         st.subheader("🎯 Metas vs Realizado")
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         if not df_metas_graph.empty:
