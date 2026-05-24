@@ -220,11 +220,9 @@ aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências"
 if aba != "💰 Finanças & Bancos":
     st.session_state.expander_lancamento_aberto = False
 
-# 3. A CRIAÇÃO DO BLOCO DE FINANÇAS (Aqui é onde você coloca o código que me perguntou)
+# Certifique-se de que este 'if' abaixo esteja alinhado exatamente na margem esquerda
 if aba == "💰 Finanças & Bancos":
     st.header("💰 Finanças & Bancos")
-    
-    # O código do botão entra aqui dentro, recuado
     st.subheader("🏦 Informações de Contas e Cartões")
     
     if 'mostrar_relatorio' not in st.session_state:
@@ -234,15 +232,18 @@ if aba == "💰 Finanças & Bancos":
         st.session_state['mostrar_relatorio'] = not st.session_state['mostrar_relatorio']
         
     if st.session_state['mostrar_relatorio']:
-        # ... (aqui vai o código da tabela que você tem) ...
+        if not df_bancos_info.empty:
+            st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+        else:
+            st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
 
-# 4. E logo abaixo, você continua com os outros ELIFs para as outras abas
+# O 'elif' PRECISA começar na coluna zero, igual ao 'if' acima
 elif aba == "📊 Análises & Configurações":
     st.markdown("## 📊 Painel de Análises & Configurações")
-    # ... aqui só entra o que é de análise ...
+    # Aqui vai o resto do código da sua página de análises
 
 elif aba == "Pendências":
-    # ... código das pendências ...
+    st.header("Pendências")
 
 
 st.sidebar.divider()
