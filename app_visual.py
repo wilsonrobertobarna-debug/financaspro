@@ -451,8 +451,8 @@ if not df_base.empty:
       
                
        
-    st.subheader("🎯 Metas vs Realizado")
-    df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        st.subheader("🎯 Metas vs Realizado")
+        df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
 
         if not df_metas_graph.empty:
             # A MÁGICA: busca o valor direto pela chave que você definiu no input
