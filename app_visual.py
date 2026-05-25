@@ -197,19 +197,22 @@ if not df_bancos_info.empty:
 else:
     bancos_disponiveis = ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"]
 
-# Adicione estas linhas no lugar:
+# --- 1. CONFIGURAÇÃO DE DATA ---
+# Verifique se o df_base já foi carregado acima desta linha
 if not df_base.empty:
     # Cria uma lista de meses únicos que existem na sua base de dados
     lista_meses = sorted(df_base['Mes_Ano'].unique(), reverse=True)
     
-    # Cria o seletor na barra lateral (ou onde preferir)
+    # Cria o seletor na barra lateral
     mes_atual = st.sidebar.selectbox("📅 Selecione o Mês:", lista_meses)
 else:
-    # Valor padrão caso não tenha dados
-    mes_atual = datetime.now().strftime('%m/%y')
+    st.error("O banco de dados está vazio!")
+    st.stop()
 
-def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-
+# --- 2. FILTRAGEM (A MÁGICA QUE LIGA O SELETOR AOS GRÁFICOS) ---
+# Isso deve vir logo após o mes_atual
+df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
 # FUNÇÃO PARA OBTER O VALOR PENDENTE ATUAL
 def get_valor_pendente(df):
     now = datetime.now()
