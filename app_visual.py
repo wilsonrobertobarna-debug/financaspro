@@ -465,8 +465,7 @@ if "💰" in aba:
 
         if not df_metas_graph.empty:
             # A MÁGICA: busca o valor direto pela chave que você definiu no input
-            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(
-            lambda cat: st.session_state.get(f"m_{cat}", 0.0)
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
            )
     
             fig_m = go.Figure()
