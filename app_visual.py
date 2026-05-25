@@ -421,28 +421,24 @@ if not df_base.empty:
             st.warning("Sem dados de despesas este mês.")
 
     with g2:
-        st.write("### 📊 Fluxo de Caixa")
+        st.write("### 📊 Fluxo de Caixa (Mês Selecionado)")
         
-        # A LIGAÇÃO: Usamos o df_m (que já está filtrado pelo mês atual)
-        # Se você quiser comparar os meses, usamos o df_base. 
-        # Se quiser ver apenas o mês escolhido, use df_m_limpo.
-        
-        # Sugestão: Mostrar o fluxo de todos os meses, mas destacar o atual
-        df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
+        # O "fio" ligado: usando df_m (filtrado pelo mês escolhido)
+        df_f = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')].copy()
         df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
         
-        if not df_f_grouped.empty:
+        if not df_f_grouped.empty: 
             fig_fluxo = px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', 
                                barmode='group', 
                                color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, 
-                               title="📊 Fluxo de Caixa Mensal")
-            
-            # Aqui ligamos o gráfico ao mês atual (colocamos uma linha ou destaque)
+                               title="Fluxo Mensal")
             st.plotly_chart(fig_fluxo, use_container_width=True, config={'staticPlot': True})
-    # 3. Por fim: Exibimos o Saldo Geral
+        else:
+            st.info("Nenhum dado financeiro para este mês.")
+
+    # 3. Exibição do Saldo (ESSENCIAL: manter esta parte!)
     saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-    st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
-        
+    st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")        
     st.divider()
 
     # --- RESUMO DOS MESES ---
