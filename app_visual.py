@@ -435,7 +435,7 @@ if not df_base.empty:
     st.divider()
 
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
-        with st.expander("📊 RESUMO DOS MESES", expanded=False):
+    with st.expander("📊 RESUMO DOS MESES", expanded=False):
             m1, m2, m3 = st.columns(3)
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
             m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
