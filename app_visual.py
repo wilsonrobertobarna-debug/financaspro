@@ -5,49 +5,41 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-import streamlit as st
-import pandas as pd
-from datetime import datetime, timedelta
 import urllib.parse
-
-# RESOLUÇÃO DO FUSO HORÁRIO (Sem precisar de biblioteca extra)
-# O servidor do Streamlit é 3 horas adiantado. Tiramos 3 horas para ser Brasília.
-agora_br = datetime.now() - timedelta(hours=3)
-hoje_br = agora_br.date()
-agora = datetime.now() - timedelta(hours=3)
-hoje = agora.date()
-agora_br = datetime.utcnow() - timedelta(hours=3)
-hoje_br = agora_br.date()
 from dateutil.relativedelta import relativedelta
-import urllib.parse
 from fpdf import FPDF
 
-# 0. VERSÃO NO TOPO
-st.caption("Versão 2.0.3")
-
-# 1. CONFIGURAÇÃO
+# 1. CONFIGURAÇÃO (Deve ser a primeira chamada)
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
-# ESTILO PARA VALORES E RÓTULOS DOS METRICS
+# 2. FUNÇÕES AUXILIARES
+def m_fmt(valor):
+    try:
+        return f"R$ {float(valor):,.2f}"
+    except:
+        return str(valor)
+
+# 3. ESTILOS E UI
+st.caption("Versão 2.0.3")
 st.markdown("""
     <style>
-    [data-testid='stMetricLabel'] {
-        font-size: 1.1rem !important;
-        font-weight: bold !important;
-    }
-    [data-testid='stMetricValue'] {
+    [data-testid='stMetricLabel'], [data-testid='stMetricValue'] {
         font-size: 1.1rem !important;
         font-weight: bold !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 2. CONEXÃO
+# 4. RESOLUÇÃO DE FUSO HORÁRIO
+agora_br = datetime.utcnow() - timedelta(hours=3)
+hoje_br = agora_br.date()
+
+# 5. CONEXÃO
 @st.cache_resource
 def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
     if not creds_dict:
-        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
+        st.error("⚠️ Wilson, verifique os Secrets no Streamlit Cloud!"); st.stop()
     try:
         pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
         if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
@@ -56,19 +48,25 @@ def conectar():
             "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
             "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
         }
-        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
+        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=[
+            "https://www.googleapis.com/auth/spreadsheets", 
+            "https://www.googleapis.com/auth/drive"
+        ]))
     except Exception as e:
-        st.error(f"Erro: {e}"); st.stop()
+        st.error(f"Erro de conexão: {e}"); st.stop()
 
+# Inicializa o cliente e abre a planilha
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# IDENTIFICAÇÃO DAS ABAS
+# 6. IDENTIFICAÇÃO DAS ABAS
 ws_base = sh.get_worksheet(0)
 try:
     ws_bancos = sh.worksheet("Bancos")
 except:
     ws_bancos = None
+
+# A partir daqui, você pode continuar carregando seu df_base e criando o seletor de mês
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
