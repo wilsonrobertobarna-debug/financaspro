@@ -461,13 +461,19 @@ if "💰" in aba:
                
        
         st.subheader("🎯 Metas vs Realizado")
-        df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-        if not df_metas_graph.empty:
-            df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(metas_map).fillna(0.0)
-            fig_m = go.Figure()
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
-            fig_m.update_layout(barmode='group', height=350); st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
+df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+
+if not df_metas_graph.empty:
+    # A MÁGICA: busca o valor direto pela chave que você definiu no input
+    df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(
+        lambda cat: st.session_state.get(f"m_{cat}", 0.0)
+    )
+    
+    fig_m = go.Figure()
+    fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
+    fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
+    fig_m.update_layout(barmode='group', height=350)
+    st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
         
         st.divider()
         st.subheader("🔍 Busca e Lançamentos")
