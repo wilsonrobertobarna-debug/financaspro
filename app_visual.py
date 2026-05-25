@@ -197,7 +197,16 @@ if not df_bancos_info.empty:
 else:
     bancos_disponiveis = ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"]
 
-mes_atual = datetime.now().strftime('%m/%y')
+# Adicione estas linhas no lugar:
+if not df_base.empty:
+    # Cria uma lista de meses únicos que existem na sua base de dados
+    lista_meses = sorted(df_base['Mes_Ano'].unique(), reverse=True)
+    
+    # Cria o seletor na barra lateral (ou onde preferir)
+    mes_atual = st.sidebar.selectbox("📅 Selecione o Mês:", lista_meses)
+else:
+    # Valor padrão caso não tenha dados
+    mes_atual = datetime.now().strftime('%m/%y')
 
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
