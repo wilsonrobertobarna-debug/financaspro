@@ -451,14 +451,7 @@ if "💰" in aba:
         
        
         
-        st.subheader("🏦 Informações de Contas e Cartões")
-        if not df_bancos_info.empty:
-            st.dataframe(df_bancos_info, use_container_width=True, hide_index=False)
-        else:
-            st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
-        
-        st.divider()
-        
+            
         with st.expander("🎯 Configurar Metas"):
             todas_cats = sorted(df_base['Categoria'].unique())
             metas_map = {}
