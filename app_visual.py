@@ -403,35 +403,36 @@ if "💰" in aba:
 
     st.divider()
 
+# 1. Primeiro: Preparamos os dados (o combustível)
+if not df_base.empty:
+    df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+    df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+
+    # 2. Agora que temos os dados, criamos os gráficos
     g1, g2 = st.columns(2)
+    
     with g1:
         st.write("### 🍕 Gastos por Categoria")
-        # Colocando o '#' para ignorar o erro de dados por enquanto:
-        # df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-        # if not df_p.empty: 
-        #     st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True, config={'staticPlot': True})
-        st.info("Aguardando conexão com os dados...")
+        # Calculamos aqui dentro ou usamos o df_m_limpo que já criamos acima
+        df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        if not df_p.empty: 
+            st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True, config={'staticPlot': True})
+        else:
+            st.warning("Sem dados de despesas este mês.")
 
     with g2:
         st.write("### 📊 Fluxo de Caixa")
-        # Fazendo o mesmo aqui para o fluxo:
-        # df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
-        # df_f = df_f.sort_values('DT')
-        # df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
-        # if not df_f_grouped.empty: 
-        #     st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa Mensal"), use_container_width=True, config={'staticPlot': True})
-        st.info("Aguardando conexão com os dados...")
-       
-    if not df_base.empty:
-        # AQUI VOCÊ CRIA A VARIÁVEL
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+        # Usando o df_base que você já tem
+        df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
+        df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
+        if not df_f_grouped.empty: 
+            st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa Mensal"), use_container_width=True, config={'staticPlot': True})
+
+    # 3. Por fim: Exibimos o Saldo Geral
+    saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+    st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
-        # Cálculo do saldo
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
-        
-        st.divider()
+    st.divider()
 
         # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
         with st.expander("📊 RESUMO DOS MESES", expanded=False):
