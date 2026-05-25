@@ -421,23 +421,21 @@ if not df_base.empty:
             st.warning("Sem dados de despesas este mês.")
 
     with g2:
-        st.write("### 📊 Fluxo de Caixa (Filtrado)")
+        st.write("### 📊 Fluxo de Caixa (Mês Selecionado)")
         
-        # Garantimos que estamos usando a variável mes_atual que você seleciona
-        # Filtramos o df_base exatamente com o mesmo mês do seletor
+        # Filtramos novamente para garantir que estamos pegando o mês atual
         df_f = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_f = df_f[(df_f['Categoria'] != 'Transferência') & (df_f['Status'] == 'Pago')]
         
         df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
         
         if not df_f_grouped.empty: 
-            # O gráfico redesenha sempre que o df_f_grouped muda
-            fig = px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', 
-                         barmode='group', 
-                         color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'})
-            st.plotly_chart(fig, use_container_width=True)
+            fig = px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group')
+            
+            # O 'key' aqui é o segredo: ao mudar o 'mes_atual', o gráfico troca de ID
+            st.plotly_chart(fig, use_container_width=True, key=f"grafico_{mes_atual}")
         else:
-            st.info(f"Nenhum dado para o mês de {mes_atual}.")
+            st.info(f"Nenhum dado financeiro para o mês {mes_atual}.")
 
     # 3. Exibição do Saldo (ESSENCIAL: manter esta parte!)
     saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
