@@ -5,41 +5,49 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+import streamlit as st
+import pandas as pd
+from datetime import datetime, timedelta
 import urllib.parse
+
+# RESOLUÇÃO DO FUSO HORÁRIO (Sem precisar de biblioteca extra)
+# O servidor do Streamlit é 3 horas adiantado. Tiramos 3 horas para ser Brasília.
+agora_br = datetime.now() - timedelta(hours=3)
+hoje_br = agora_br.date()
+agora = datetime.now() - timedelta(hours=3)
+hoje = agora.date()
+agora_br = datetime.utcnow() - timedelta(hours=3)
+hoje_br = agora_br.date()
 from dateutil.relativedelta import relativedelta
+import urllib.parse
 from fpdf import FPDF
 
-# 1. CONFIGURAÇÃO (Deve ser a primeira chamada)
+# 0. VERSÃO NO TOPO
+st.caption("Versão 2.0.3")
+
+# 1. CONFIGURAÇÃO
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
-# 2. FUNÇÕES AUXILIARES
-def m_fmt(valor):
-    try:
-        return f"R$ {float(valor):,.2f}"
-    except:
-        return str(valor)
-
-# 3. ESTILOS E UI
-st.caption("Versão 2.0.3")
+# ESTILO PARA VALORES E RÓTULOS DOS METRICS
 st.markdown("""
     <style>
-    [data-testid='stMetricLabel'], [data-testid='stMetricValue'] {
+    [data-testid='stMetricLabel'] {
+        font-size: 1.1rem !important;
+        font-weight: bold !important;
+    }
+    [data-testid='stMetricValue'] {
         font-size: 1.1rem !important;
         font-weight: bold !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 4. RESOLUÇÃO DE FUSO HORÁRIO
-agora_br = datetime.utcnow() - timedelta(hours=3)
-hoje_br = agora_br.date()
-
-# 5. CONEXÃO
+# 2. CONEXÃO
 @st.cache_resource
 def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
     if not creds_dict:
-        st.error("⚠️ Wilson, verifique os Secrets no Streamlit Cloud!"); st.stop()
+        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
     try:
         pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
         if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
@@ -48,25 +56,19 @@ def conectar():
             "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
             "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
         }
-        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=[
-            "https://www.googleapis.com/auth/spreadsheets", 
-            "https://www.googleapis.com/auth/drive"
-        ]))
+        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
     except Exception as e:
-        st.error(f"Erro de conexão: {e}"); st.stop()
+        st.error(f"Erro: {e}"); st.stop()
 
-# Inicializa o cliente e abre a planilha
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# 6. IDENTIFICAÇÃO DAS ABAS
+# IDENTIFICAÇÃO DAS ABAS
 ws_base = sh.get_worksheet(0)
 try:
     ws_bancos = sh.worksheet("Bancos")
 except:
     ws_bancos = None
-
-# A partir daqui, você pode continuar carregando seu df_base e criando o seletor de mês
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
@@ -195,22 +197,10 @@ if not df_bancos_info.empty:
 else:
     bancos_disponiveis = ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"]
 
-# --- 1. CONFIGURAÇÃO DE DATA ---
-# Verifique se o df_base já foi carregado acima desta linha
-if not df_base.empty:
-    # Cria uma lista de meses únicos que existem na sua base de dados
-    lista_meses = sorted(df_base['Mes_Ano'].unique(), reverse=True)
-    
-    # Cria o seletor na barra lateral
-    mes_atual = st.sidebar.selectbox("📅 Selecione o Mês:", lista_meses)
-else:
-    st.error("O banco de dados está vazio!")
-    st.stop()
+mes_atual = datetime.now().strftime('%m/%y')
 
-# --- 2. FILTRAGEM (A MÁGICA QUE LIGA O SELETOR AOS GRÁFICOS) ---
-# Isso deve vir logo após o mes_atual
-df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
 # FUNÇÃO PARA OBTER O VALOR PENDENTE ATUAL
 def get_valor_pendente(df):
     now = datetime.now()
@@ -413,75 +403,68 @@ if "💰" in aba:
 
     st.divider()
 
-# 1. Primeiro: Preparamos os dados (o combustível)
-if not df_base.empty:
-    df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-    df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
-
-    # 2. Agora que temos os dados, criamos os gráficos
     g1, g2 = st.columns(2)
-    
     with g1:
         st.write("### 🍕 Gastos por Categoria")
-        # Calculamos aqui dentro ou usamos o df_m_limpo que já criamos acima
-        df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-        if not df_p.empty: 
-            st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True, config={'staticPlot': True})
-        else:
-            st.warning("Sem dados de despesas este mês.")
+        # Colocando o '#' para ignorar o erro de dados por enquanto:
+        # df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        # if not df_p.empty: 
+        #     st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True, config={'staticPlot': True})
+        st.info("Aguardando conexão com os dados...")
 
     with g2:
-        st.write("### 📊 Fluxo de Caixa (Mês Selecionado)")
+        st.write("### 📊 Fluxo de Caixa")
+        # Fazendo o mesmo aqui para o fluxo:
+        # df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
+        # df_f = df_f.sort_values('DT')
+        # df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
+        # if not df_f_grouped.empty: 
+        #     st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa Mensal"), use_container_width=True, config={'staticPlot': True})
+        st.info("Aguardando conexão com os dados...")
+       
+    if not df_base.empty:
+        # AQUI VOCÊ CRIA A VARIÁVEL
+        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-        # Filtramos novamente para garantir que estamos pegando o mês atual
-        df_f = df_base[df_base['Mes_Ano'] == mes_atual].copy()
-        df_f = df_f[(df_f['Categoria'] != 'Transferência') & (df_f['Status'] == 'Pago')]
+        # Cálculo do saldo
+        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
-        df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
-        
-        if not df_f_grouped.empty: 
-            fig = px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group')
-            
-            # O 'key' aqui é o segredo: ao mudar o 'mes_atual', o gráfico troca de ID
-            st.plotly_chart(fig, use_container_width=True, key=f"grafico_{mes_atual}")
-        else:
-            st.info(f"Nenhum dado financeiro para o mês {mes_atual}.")
+        st.divider()
 
-    # 3. Exibição do Saldo (ESSENCIAL: manter esta parte!)
-    saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-    st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")        
-    st.divider()
+        # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
+        with st.expander("📊 RESUMO DOS MESES", expanded=False):
+            m1, m2, m3 = st.columns(3)
+            # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
+            m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+            m2.metric("📉 Despesa", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+            m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
 
-    # --- RESUMO DOS MESES ---
-    with st.expander("📊 RESUMO DOS MESES", expanded=False):
-        m1, m2, m3 = st.columns(3)
+        # --- INDICADORES DO MÊS ---
+               
+        m1, m2, m3, m4 = st.columns(4)
         m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Despesa", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
-
-    # --- INDICADORES DO MÊS (Fora do expander, alinhado à esquerda) ---
-    st.write("### 🎯 Indicadores Mensais")
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-    m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-    m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-    m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
+        m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+        m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+        m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
+              
       
                
        
-    st.subheader("🎯 Metas vs Realizado")
-    df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        st.subheader("🎯 Metas vs Realizado")
+        df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
 
-    if not df_metas_graph.empty:
-        # A MÁGICA: busca o valor direto pela chave que você definiu no input
-        df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
+        if not df_metas_graph.empty:
+            # A MÁGICA: busca o valor direto pela chave que você definiu no input
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
            
     
-        fig_m = go.Figure()
-        fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
-        fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
-        fig_m.update_layout(barmode='group', height=350)
-        st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
+            fig_m = go.Figure()
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
+            fig_m.update_layout(barmode='group', height=350)
+            st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
         
         st.divider()
         st.subheader("🔍 Busca e Lançamentos")
