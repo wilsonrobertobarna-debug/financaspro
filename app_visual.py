@@ -441,7 +441,7 @@ if "💰" in aba:
             m2.metric("📉 Despesa", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
             m3.metric("📉 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
             m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
-            m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
+            m5.metric("⚖️ Balanço", m_fmt(saldo_geral))
 
         # --- INDICADORES DO MÊS ---
                
