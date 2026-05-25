@@ -439,6 +439,8 @@ if "💰" in aba:
             # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
             m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
             m2.metric("📉 Despesa", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+            m3.metric("📉 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+            m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
             m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
 
         # --- INDICADORES DO MÊS ---
