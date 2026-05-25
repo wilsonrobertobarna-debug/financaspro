@@ -432,24 +432,22 @@ if not df_base.empty:
     saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
     st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
         
-    st.divider()
+   st.divider()
 
-        # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
+    # --- RESUMO DOS MESES ---
     with st.expander("📊 RESUMO DOS MESES", expanded=False):
-            m1, m2, m3 = st.columns(3)
-            # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
-            m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-            m2.metric("📉 Despesa", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-            m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
-
-        # --- INDICADORES DO MÊS ---
-               
-        m1, m2, m3, m4 = st.columns(4)
+        m1, m2, m3 = st.columns(3)
         m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
-              
+        m2.metric("📉 Despesa", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+        m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
+
+    # --- INDICADORES DO MÊS (Fora do expander, alinhado à esquerda) ---
+    st.write("### 🎯 Indicadores Mensais")
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+    m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+    m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+    m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
       
                
        
