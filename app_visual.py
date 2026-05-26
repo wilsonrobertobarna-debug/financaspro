@@ -241,7 +241,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         # Garante que a variável exista para evitar o NameError
         f_venc_cartao = None 
 
-        if st.button("Salvar Lançamento"):
+        if st.form_submit_button("Salvar Lançamento"):
             # Mantém o expander fixo e aberto no topo durante o processamento
             st.session_state.expander_lancamento_aberto = True
             
