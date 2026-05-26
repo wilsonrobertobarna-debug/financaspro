@@ -248,7 +248,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             # Formata o valor para o padrão Real R$
             v_str = f"{f_val:.2f}".replace('.', ',')
             
-           # 1. Converta as datas ANTES do loop
+            # 1. Converta as datas ANTES do loop
             t_dat_str = t_dat.strftime("%d/%m/%Y")
             venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
 
@@ -265,9 +265,9 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     f_bnc,                          # Coluna F: Banco
                     f_sta,                          # Coluna G: Status
                     t_dat_str                       # Coluna H: Data de Compra
-    ])
+                ])
 
-            # 3. Mantenha estas linhas ALINHADAS COM O 'for' (mesmo nível de recuo)
+            # 3. ESTAS LINHAS AGORA ESTÃO CORRETAMENTE ALINHADAS COM O 'for'
             st.toast("✅ Lançamento salvo com sucesso!", icon="💰")
             atualizar_sessao()
             st.rerun()
