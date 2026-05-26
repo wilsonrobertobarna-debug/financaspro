@@ -1,14 +1,17 @@
 import streamlit as st
 import gspread
-from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-import streamlit as st
-import pandas as pd
-from datetime import datetime, timedelta
 import urllib.parse
+from google.oauth2.service_account import Credentials
+# 1. Defina a função aqui no topo
+def get_meta_value(categoria, df_metas):
+    filtro = df_metas[df_metas['Nome da Meta'] == categoria]
+    if not filtro.empty:
+        return float(filtro['Valor Alvo'].values[0])
+    return 0.0
 
 # RESOLUÇÃO DO FUSO HORÁRIO (Sem precisar de biblioteca extra)
 # O servidor do Streamlit é 3 horas adiantado. Tiramos 3 horas para ser Brasília.
