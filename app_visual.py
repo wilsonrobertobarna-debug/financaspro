@@ -251,20 +251,23 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             # Trata o vencimento do cartão com segurança
             venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
             
-            # Loop para lançamentos parcelados no FinançasPro
-            for i in range(f_par):
-                nova_data = f_dat + relativedelta(months=i)
-                ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"), 
-                    v_str, 
-                    f_des, 
-                    f_cat, 
-                    f_tip, 
-                    f_bnc, 
-                    f_sta, 
-                    compra_str
-                ])
-            
+           # 1. Converta a data que você pegou do formulário para texto aqui mesmo, antes do loop
+t_dat_str = t_dat.strftime("%d/%m/%Y")
+
+# 2. Loop para lançamentos parcelados
+for i in range(f_par):
+    nova_data = f_dat + relativedelta(months=i)
+    
+    ws_base.append_row([
+        nova_data.strftime("%d/%m/%Y"), # Coluna A: Data de Vencimento
+        v_str,                          # Coluna B: Valor
+        f_des,                          # Coluna C: Descrição
+        f_cat,                          # Coluna D: Categoria
+        f_tip,                          # Coluna E: Tipo
+        f_bnc,                          # Coluna F: Banco
+        f_sta,                          # Coluna G: Status
+        t_dat_str                       # Coluna H: Data de Compra (Agora com o nome certo!)
+    ])            
             # Mostra o aviso de sucesso discretamente dentro do próprio expander fixado
             st.toast("✅ Lançamento salvo com sucesso!", icon="💰")
             
