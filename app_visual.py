@@ -248,10 +248,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             # Formata o valor para o padrão Real R$
             v_str = f"{f_val:.2f}".replace('.', ',')
             
-            # Trata o vencimento do cartão com segurança
-            venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
-            
-           # 1. Converta a data que você pegou do formulário para texto aqui mesmo, antes do loop
+           # 1. Converta as datas ANTES do loop
+venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
 t_dat_str = t_dat.strftime("%d/%m/%Y")
 
 # 2. Loop para lançamentos parcelados
@@ -266,12 +264,11 @@ for i in range(f_par):
         f_tip,                          # Coluna E: Tipo
         f_bnc,                          # Coluna F: Banco
         f_sta,                          # Coluna G: Status
-        t_dat_str                       # Coluna H: Data de Compra (Agora com o nome certo!)
-    ])            
-            # Mostra o aviso de sucesso discretamente dentro do próprio expander fixado
+        t_dat_str                       # Coluna H: Data de Compra
+    ])
+
+# 3. Mantenha estas linhas ALINHADAS COM O 'for' (mesmo nível de recuo)
 st.toast("✅ Lançamento salvo com sucesso!", icon="💰")
-            
-            # Força a atualização dos dados sem dar tranco na tela
 atualizar_sessao()
 st.rerun()
 
