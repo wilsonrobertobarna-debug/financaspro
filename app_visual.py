@@ -254,7 +254,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
             # 2. Loop para lançamentos parcelados
             for i in range(f_par):
-                nova_data = f_dat + relativedelta(months=i)
+                nova_data = vencimento + relativedelta(months=i)
     
                 ws_base.append_row([
                     nova_data.strftime("%d/%m/%Y"), # Coluna A: Data de Vencimento
