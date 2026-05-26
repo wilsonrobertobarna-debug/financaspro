@@ -63,6 +63,20 @@ def conectar():
     except Exception as e:
         st.error(f"Erro: {e}"); st.stop()
 
+# --- AQUI É O LUGAR PERFEITO PARA COLOCAR A LEITURA ---
+# Criamos a variável 'gc' para guardar a conexão autorizada
+gc = sua_funcao_de_conexao() # Chame a função que tem aquele 'return gspread.authorize...'
+
+# Agora lemos a aba Meta
+try:
+    sh = gc.open("NOME_DA_SUA_PLANILHA")
+    ws_metas = sh.worksheet("Meta")
+    df_metas = pd.DataFrame(ws_metas.get_all_records())
+except Exception as e:
+    st.error(f"Erro ao carregar metas: {e}")
+    df_metas = pd.DataFrame() # Cria um DF vazio para não quebrar o resto do código
+    
+
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
