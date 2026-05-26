@@ -272,8 +272,8 @@ for i in range(f_par):
 st.toast("✅ Lançamento salvo com sucesso!", icon="💰")
             
             # Força a atualização dos dados sem dar tranco na tela
-            atualizar_sessao()
-            st.rerun()
+atualizar_sessao()
+st.rerun()
 
 # Se o usuário mudar de aba ou clicar em outra coisa fora do formulário, o expander fecha amigavelmente
 if aba != "💰 Finanças & Bancos":
