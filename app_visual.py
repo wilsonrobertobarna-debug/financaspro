@@ -241,33 +241,30 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         # Garante que a variável exista para evitar o NameError
         f_venc_cartao = None 
 
-        if st.form_submit_button("Salvar Lançamento"):
-            # Mantém o expander fixo e aberto no topo durante o processamento
-            st.session_state.expander_lancamento_aberto = True
-            
-            # Formata o valor para o padrão Real R$
-            v_str = f"{f_val:.2f}".replace('.', ',')
-            
-            # 1. Converta as datas ANTES do loop
-            t_dat_str = t_dat.strftime("%d/%m/%Y")
-            venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
+        # ... (após todos os st.selectbox e inputs do formulário)
 
-            # 2. Loop para lançamentos parcelados
+        if st.form_submit_button("Salvar Lançamento"):
+            # 1. Formatações necessárias
+            v_str = f"{f_val:.2f}".replace('.', ',')
+            t_dat_str = t_dat.strftime("%d/%m/%Y")
+            f_compra_str = f_compra.strftime("%d/%m/%Y")
+            
+            # 2. Loop usando 't_dat' (a variável correta do seu formulário)
             for i in range(f_par):
-                nova_data = vencimento + relativedelta(months=i)
-    
+                nova_data = t_dat + relativedelta(months=i)
+                
                 ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Data de Vencimento
+                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
                     v_str,                          # Coluna B: Valor
                     f_des,                          # Coluna C: Descrição
                     f_cat,                          # Coluna D: Categoria
                     f_tip,                          # Coluna E: Tipo
                     f_bnc,                          # Coluna F: Banco
                     f_sta,                          # Coluna G: Status
-                    t_dat_str                       # Coluna H: Data de Compra
+                    f_compra_str                    # Coluna H: Data da Compra
                 ])
-
-            # 3. ESTAS LINHAS AGORA ESTÃO CORRETAMENTE ALINHADAS COM O 'for'
+            
+            # 3. Finalização
             st.toast("✅ Lançamento salvo com sucesso!", icon="💰")
             atualizar_sessao()
             st.rerun()
