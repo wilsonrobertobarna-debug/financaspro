@@ -228,7 +228,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
     with st.form("f_novo", clear_on_submit=True):
         # Usando a variável hoje_br que já corrige o fuso horário
         f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
-        f_dat = st.date_input("Vencimento", value=hoje_br, format="DD/MM/YYYY")
+        t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
         
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
@@ -241,7 +241,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         # Garante que a variável exista para evitar o NameError
         f_venc_cartao = None 
 
-        if st.form_submit_button("SALVAR"):
+        if st.button("Salvar Lançamento"):
             # Mantém o expander fixo e aberto no topo durante o processamento
             st.session_state.expander_lancamento_aberto = True
             
@@ -249,8 +249,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             v_str = f"{f_val:.2f}".replace('.', ',')
             
            # 1. Converta as datas ANTES do loop
-            venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
             t_dat_str = t_dat.strftime("%d/%m/%Y")
+            venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
 
             # 2. Loop para lançamentos parcelados
             for i in range(f_par):
