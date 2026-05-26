@@ -269,7 +269,7 @@ for i in range(f_par):
         t_dat_str                       # Coluna H: Data de Compra (Agora com o nome certo!)
     ])            
             # Mostra o aviso de sucesso discretamente dentro do próprio expander fixado
-            st.toast("✅ Lançamento salvo com sucesso!", icon="💰")
+st.toast("✅ Lançamento salvo com sucesso!", icon="💰")
             
             # Força a atualização dos dados sem dar tranco na tela
             atualizar_sessao()
