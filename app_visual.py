@@ -262,7 +262,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     f_tip, 
                     f_bnc, 
                     f_sta, 
-                    venc_str
+                    compra_str
                 ])
             
             # Mostra o aviso de sucesso discretamente dentro do próprio expander fixado
