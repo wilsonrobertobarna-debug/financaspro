@@ -249,28 +249,28 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             v_str = f"{f_val:.2f}".replace('.', ',')
             
            # 1. Converta as datas ANTES do loop
-venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
-t_dat_str = t_dat.strftime("%d/%m/%Y")
+            venc_str = f_venc_cartao.strftime("%d/%m/%Y") if f_venc_cartao is not None else ""
+            t_dat_str = t_dat.strftime("%d/%m/%Y")
 
-# 2. Loop para lançamentos parcelados
-for i in range(f_par):
-    nova_data = f_dat + relativedelta(months=i)
+            # 2. Loop para lançamentos parcelados
+            for i in range(f_par):
+                nova_data = f_dat + relativedelta(months=i)
     
-    ws_base.append_row([
-        nova_data.strftime("%d/%m/%Y"), # Coluna A: Data de Vencimento
-        v_str,                          # Coluna B: Valor
-        f_des,                          # Coluna C: Descrição
-        f_cat,                          # Coluna D: Categoria
-        f_tip,                          # Coluna E: Tipo
-        f_bnc,                          # Coluna F: Banco
-        f_sta,                          # Coluna G: Status
-        t_dat_str                       # Coluna H: Data de Compra
+                ws_base.append_row([
+                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Data de Vencimento
+                    v_str,                          # Coluna B: Valor
+                    f_des,                          # Coluna C: Descrição
+                    f_cat,                          # Coluna D: Categoria
+                    f_tip,                          # Coluna E: Tipo
+                    f_bnc,                          # Coluna F: Banco
+                    f_sta,                          # Coluna G: Status
+                    t_dat_str                       # Coluna H: Data de Compra
     ])
 
-# 3. Mantenha estas linhas ALINHADAS COM O 'for' (mesmo nível de recuo)
-st.toast("✅ Lançamento salvo com sucesso!", icon="💰")
-atualizar_sessao()
-st.rerun()
+            # 3. Mantenha estas linhas ALINHADAS COM O 'for' (mesmo nível de recuo)
+            st.toast("✅ Lançamento salvo com sucesso!", icon="💰")
+            atualizar_sessao()
+            st.rerun()
 
 # Se o usuário mudar de aba ou clicar em outra coisa fora do formulário, o expander fecha amigavelmente
 if aba != "💰 Finanças & Bancos":
