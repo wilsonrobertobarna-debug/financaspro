@@ -77,7 +77,7 @@ except Exception as e:
     df_metas = pd.DataFrame() # Cria um DF vazio se der erro
 
 # Agora o 'df_metas' está pronto para ser usado na sua função 'get_meta_value'!
-    return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
+return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
     except Exception as e:
         st.error(f"Erro: {e}"); st.stop()
 
