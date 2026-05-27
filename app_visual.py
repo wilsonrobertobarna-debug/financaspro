@@ -506,10 +506,7 @@ if "💰" in aba:
             st.divider()
             else:
                 st.info("Nenhuma despesa encontrada para esta categoria.")
-          else:
-            st.warning("Base de dados vazia.")
-        
-        st.divider()
+          
         st.subheader("🔍 Busca e Lançamentos")
         
         c_d1, c_d2 = st.columns(2)
