@@ -13,19 +13,18 @@ from google.oauth2.service_account import Credentials
 
 @st.cache_resource
 def conectar():
-    # Pega o dicionário diretamente do seu arquivo de secrets
+    # 1. Pega os dados do secret
     creds_dict = st.secrets["connections"]["gsheets"]
     
-    # Cria o objeto de credencial do Google
-    creds = Credentials.from_service_account_info(
-        creds_dict,
-        scopes=[
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive"
-        ]
-    )
+    # 2. Corrige a formatação da private_key (ESSENCIAL)
+    if "private_key" in creds_dict and "\\n" in creds_dict["private_key"]:
+        creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+
+    # 3. Cria as credenciais usando a biblioteca oficial
+    scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
     
-    # Autoriza o gspread
+    # 4. Autoriza e retorna
     return gspread.authorize(creds)
 
 @st.cache_data(ttl=3600)
