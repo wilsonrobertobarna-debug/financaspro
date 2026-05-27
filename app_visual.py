@@ -485,7 +485,7 @@ if "💰" in aba:
             st.subheader("🎯 Metas vs Realizado")
             df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             
-      if not df_metas_graph.empty:
+        if not df_metas_graph.empty:
             # 1. GARANTIR QUE A COLUNA META EXISTE
             if 'Meta' not in df_metas_graph.columns:
                 df_metas_graph['Meta'] = 0.0
