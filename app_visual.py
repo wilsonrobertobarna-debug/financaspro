@@ -369,12 +369,17 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
                 
-# 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
-receita_total = 7626.23  # Exemplo do seu valor real
-gasto_total = 3434.45
-rendimento = 0.19
-pendente = 6932.67
-# 5. TELAS PRINCIPAIS
+def limpar_valor(valor):
+    # Transforma "R$ 1.000,50" em número 1000.50
+    try:
+        if isinstance(valor, (int, float)): return valor
+        return float(str(valor).replace('R$', '').replace('.', '').replace(',', '.').strip())
+    except:
+        return 0.0
+
+# Agora, calcule os totais usando essa limpeza:
+receita_total = df_base['Receita'].apply(limpar_valor).sum()
+despesa_total = df_base['Despesa'].apply(limpar_valor).sum()# 5. TELAS PRINCIPAIS
 if "💰" in aba:
     # 1. ESTILO (CSS) - Isso aqui "puxa" tudo para cima antes de desenhar o título
     st.markdown("""
