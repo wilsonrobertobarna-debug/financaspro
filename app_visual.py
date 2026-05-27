@@ -485,13 +485,12 @@ if "💰" in aba:
             st.subheader("🎯 Metas vs Realizado")
             df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
 
-            if not df_metas_graph.empty:
+           if not df_metas_graph.empty:
             # 1. GARANTIR QUE A COLUNA META EXISTE
             if 'Meta' not in df_metas_graph.columns:
                 df_metas_graph['Meta'] = 0.0
             
-            # 2. SE A COLUNA EXISTIR, TENTA PREENCHER (A sua lógica original)
-            # Certifique-se de que a lógica de busca está aqui:
+            # 2. PREENCHER COM A LÓGICA DO SESSION_STATE
             def buscar_meta(cat):
                 return st.session_state.get(f"m_{cat}", 0.0)
             
