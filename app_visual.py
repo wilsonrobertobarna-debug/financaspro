@@ -171,6 +171,14 @@ def atualizar_sessao():
     st.session_state['df_base'] = carregar_dados_gs()
     st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
 
+# A "MÉCÂNICA" DE SEGURANÇA:
+# Se o programa acabou de abrir e não tem nada na memória, ele carrega.
+# Se já tem algo na memória (mesmo que você tenha fechado e aberto), 
+# ele NÃO limpa, ele mantém o que está lá até que você aperte o botão de atualizar.
+if 'df_base' not in st.session_state:
+    atualizar_sessao()
+
+# Agora, as variáveis sempre terão o conteúdo que foi carregado
 df_base = st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
 
