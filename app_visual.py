@@ -486,15 +486,17 @@ if "💰" in aba:
             df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
 
             if not df_metas_graph.empty:
-            # AQUI DENTRO O CÓDIGO DO GRÁFICO (O seu Plotly)
-            # Ele só vai rodar se o df_metas_graph existir de verdade
+            # 1. CRIA O GRÁFICO (Aqui o fig_m ganha vida)
+            fig_m = go.Figure()
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
+            fig_m.update_layout(barmode='group', height=350)
             
-            # (Cole aqui o seu código do fig_m = go.Figure()...)
-            # ...
-                st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
-                st.divider()
-            else:
-                st.info("Nenhuma despesa encontrada para comparar com metas.")
+            # 2. SÓ DESENHA SE O GRÁFICO TIVER SIDO CRIADO
+            st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
+            st.divider()
+        else:
+            st.info("Nenhuma despesa encontrada para esta categoria.")
         else:
             st.warning("Base de dados vazia.")
         
