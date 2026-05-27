@@ -1228,7 +1228,7 @@ if aba == "📊 Análises & Configurações":
     
    # 4. FORMULÁRIO: CONFIGURAR METAS
     with st.expander("🎯 Configurar Metas", expanded=False):
-        # Carrega a aba "Meta" uma única vez na sessão
+        # 1. Garante que os dados estão carregados
         if 'df_metas_config' not in st.session_state:
             try:
                 st.session_state['df_metas_config'] = pd.DataFrame(sh.worksheet("Meta").get_all_records())
@@ -1236,30 +1236,17 @@ if aba == "📊 Análises & Configurações":
                 st.session_state['df_metas_config'] = pd.DataFrame(columns=['Nome da Meta', 'Valor Alvo'])
         
         df_metas = st.session_state['df_metas_config']
-        cols = st.columns(3)
+        cols = st.columns(3) # Cria 3 colunas para os campos não ficarem um embaixo do outro
         
-      # Itera sobre as metas que estão na planilha
+        # 2. Cria os campos de input automaticamente para cada meta da planilha
         for index, row in df_metas.iterrows():
             nome = row['Nome da Meta']
+            valor_alvo = float(row['Valor Alvo'])
             
-            # --- FILTRO DE SEGURANÇA ---
-            valor_bruto = row['Valor Alvo']
-            
-            # Limpa qualquer coisa que não seja número (tira R$, espaço, etc.)
-            try:
-                # Se for string, remove caracteres estranhos
-                if isinstance(valor_bruto, str):
-                    valor_bruto = valor_bruto.replace('R$', '').replace('.', '').replace(',', '.').strip()
-                
-                valor_alvo = float(valor_bruto)
-            except:
-                # Se não conseguir converter, define um valor padrão de segurança
-                valor_alvo = 0.0
-            
-            # O input agora está blindado
+            # Aqui está o "input" que eu mencionei:
+            # O 'key' é o segredo para o Streamlit salvar o valor automaticamente na memória
             cols[index % 3].number_input(
                 f"Meta: {nome}", 
                 value=st.session_state.get(f"m_{nome}", valor_alvo), 
                 key=f"m_{nome}"
             )
-                       
