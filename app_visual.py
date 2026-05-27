@@ -497,6 +497,8 @@ if "💰" in aba:
             df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(buscar_meta)
 
             # 3. AGORA SIM, DESENHA O GRÁFICO
+            # Coloque isso logo antes da linha: fig_m = go.Figure()
+            st.write("Dados no session_state para Mercado:", st.session_state.get("m_Mercado", "NÃO ENCONTRADO"))
             fig_m = go.Figure()
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
