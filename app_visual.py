@@ -35,7 +35,20 @@ sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # 3. BLOCO DE CARREGAMENTO (Sincroniza Sheets com Session State)
 if 'metas_iniciadas' not in st.session_state:
-
+    # Esta linha abaixo está recuada (indentada) para dentro do IF
+    try:
+        df_metas = pd.DataFrame(sh.worksheet("Meta").get_all_records())
+        for index, row in df_metas.iterrows():
+            nome = row['Nome da Meta']
+            valor_raw = row['Valor Alvo']
+            try:
+                valor = float(valor_raw) if str(valor_raw).strip() != '' else 0.0
+            except:
+                valor = 0.0
+            st.session_state[f"m_{nome}"] = valor
+        st.session_state['metas_iniciadas'] = True
+    except Exception as e:
+        st.error(f"Erro na planilha: {e}")
 # 4. ESTILIZAÇÃO
 st.markdown("""
     <style>
