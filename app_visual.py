@@ -477,29 +477,26 @@ if "💰" in aba:
               
       
                
-       
+    if 'df_m_limpo' in locals() or 'df_m_limpo' in globals():
+    
+    # Só faz a conta se a variável existir
+    if df_m_limpo is not None and not df_m_limpo.empty:
+        
         st.subheader("🎯 Metas vs Realizado")
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
 
-        # --- NO TRECHO DO SEU GRÁFICO ---
-if not df_metas_graph.empty:
-    # 1. Tenta ler do Google Sheets (a fonte da verdade)
-    try:
-        sh = gc.open("FinançasPro")
-        df_sheets = pd.DataFrame(sh.worksheet("Metas").get_all_records())
-        
-        # 2. Faz o gráfico olhar para a planilha, não para o "chute" do session_state
-        def buscar_meta_real(categoria):
-            meta = df_sheets[df_sheets['Categoria'] == categoria]
-            return float(meta['Valor'].values[0]) if not meta.empty else 0.0
+        if not df_metas_graph.empty:
+            # AQUI DENTRO O CÓDIGO DO GRÁFICO (O seu Plotly)
+            # Ele só vai rodar se o df_metas_graph existir de verdade
             
-        df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(buscar_meta_real)
-    except:
-        # Se falhar, usa o que tiver na memória (o plano B)
-        df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
-            
-        # Agora o Plotly desenha com os dados reais
-        fig_m = go.Figure()
+            # (Cole aqui o seu código do fig_m = go.Figure()...)
+            # ...
+            st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
+            st.divider()
+        else:
+            st.info("Nenhuma despesa encontrada para comparar com metas.")
+    else:
+        st.warning("Base de dados vazia.")
         
         st.divider()
         st.subheader("🔍 Busca e Lançamentos")
