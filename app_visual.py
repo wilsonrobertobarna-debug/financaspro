@@ -1205,7 +1205,23 @@ if aba == "📊 Análises & Configurações":
         todas_cats = sorted(df_base['Categoria'].unique())
         metas_map = {}
         cols = st.columns(3)
+        
+        # Carrega a tabela de metas do sheets uma única vez aqui dentro
+        # Certifique-se de que a aba 'Metas' existe na sua planilha
+        try:
+            df_metas_config = pd.DataFrame(sh.worksheet("Metas").get_all_records())
+        except:
+            df_metas_config = pd.DataFrame(columns=['Categoria', 'Valor'])
+
         for i, cat in enumerate(todas_cats):
             if cat != "Transferência":
-                default_v = 1200.0 if cat == "Mercado" else 400.0
+                # Tenta buscar o valor na planilha (df_metas_config)
+                # Se não achar na planilha, aí sim usamos o 400 ou 1200 como socorro
+                meta_salva = df_metas_config[df_metas_config['Categoria'] == cat]
+                
+                if not meta_salva.empty:
+                    default_v = float(meta_salva['Valor'].values[0])
+                else:
+                    default_v = 1200.0 if cat == "Mercado" else 400.0
+                
                 metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
