@@ -481,16 +481,25 @@ if "💰" in aba:
         st.subheader("🎯 Metas vs Realizado")
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
 
-        if not df_metas_graph.empty:
-            # A MÁGICA: busca o valor direto pela chave que você definiu no input
-            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
-           
-    
-            fig_m = go.Figure()
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
-            fig_m.update_layout(barmode='group', height=350)
-            st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
+        # --- NO TRECHO DO SEU GRÁFICO ---
+if not df_metas_graph.empty:
+    # 1. Tenta ler do Google Sheets (a fonte da verdade)
+    try:
+        sh = gc.open("FinançasPro")
+        df_sheets = pd.DataFrame(sh.worksheet("Metas").get_all_records())
+        
+        # 2. Faz o gráfico olhar para a planilha, não para o "chute" do session_state
+        def buscar_meta_real(categoria):
+            meta = df_sheets[df_sheets['Categoria'] == categoria]
+            return float(meta['Valor'].values[0]) if not meta.empty else 0.0
+            
+        df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(buscar_meta_real)
+    except:
+        # Se falhar, usa o que tiver na memória (o plano B)
+        df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
+            
+    # Agora o Plotly desenha com os dados reais
+    fig_m = go.Figure()
         
         st.divider()
         st.subheader("🔍 Busca e Lançamentos")
