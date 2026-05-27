@@ -59,14 +59,22 @@ def conectar():
             "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
             "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
         }
-        # 1. Estabelece a conexão usando a função que você já tinha
+       # 1. FINAL DA SUA FUNÇÃO (O que faltava no seu bloco)
+        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
+    except Exception as e:
+        st.error(f"Erro: {e}"); st.stop()
+
+# 2. AGORA, FORA DA FUNÇÃO (começando do canto esquerdo da tela), coloque isto:
 gc = conectar() 
 
-# 2. Abre a planilha e a aba 'Meta'
-# Substitua "NOME_DO_SEU_ARQUIVO_NO_GOOGLE" pelo nome exato que aparece no seu Google Drive
-sh = gc.open("FinançasPro")
-ws_metas = sh.worksheet("Meta")
-df_metas = pd.DataFrame(ws_metas.get_all_records())
+# 3. Abre a planilha e a aba 'Meta'
+try:
+    sh = gc.open("FinançasPro")
+    ws_metas = sh.worksheet("Meta")
+    df_metas = pd.DataFrame(ws_metas.get_all_records())
+except Exception as e:
+    st.error(f"Erro ao carregar aba Meta: {e}")
+    df_metas = pd.DataFrame() # Cria um DF vazio se der erro
 
 # Agora o 'df_metas' está pronto para ser usado na sua função 'get_meta_value'!
         return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
