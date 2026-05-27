@@ -498,8 +498,8 @@ if not df_metas_graph.empty:
         # Se falhar, usa o que tiver na memória (o plano B)
         df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
             
-    # Agora o Plotly desenha com os dados reais
-    fig_m = go.Figure()
+        # Agora o Plotly desenha com os dados reais
+        fig_m = go.Figure()
         
         st.divider()
         st.subheader("🔍 Busca e Lançamentos")
