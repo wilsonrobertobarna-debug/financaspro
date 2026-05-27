@@ -45,21 +45,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 2. CONEXÃO
-@st.cache_resource
-def conectar():
-    creds_dict = st.secrets.get("connections", {}).get("gsheets")
-    if not creds_dict:
-        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
-    try:
-        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
-        if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
-        final_creds = {
-            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
-            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
-            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
-        }
-      # --- FUNÇÃO DE CONEXÃO (DEFINIDA UMA ÚNICA VEZ) ---
+# --- FUNÇÃO DE CONEXÃO (DEFINIDA UMA ÚNICA VEZ) ---
 @st.cache_resource
 def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
