@@ -92,9 +92,9 @@ except:
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
-    dados = ws_base.get_all_values()
+    dados = ws_base.get_all_records()
     if len(dados) <= 1: return pd.DataFrame()
-    df = pd.DataFrame(dados[1:], columns=dados[0])
+    df = pd.DataFrame(dados)
     df['ID'] = range(2, len(df) + 2)
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
