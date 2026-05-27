@@ -7,6 +7,20 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import urllib.parse
 
+# 2. EM SEGUIDA: As definições das funções (o que você perguntou)
+@st.cache_resource
+def conectar():
+    creds_dict = st.secrets.get("connections", {}).get("gsheets")
+    # ... resto do código da função conectar ...
+    return gspread.authorize(...)
+
+@st.cache_data(ttl=3600)
+def carregar_metas_do_sheets():
+    gc = conectar()
+    sh = gc.open("FinançasPro")
+    ws_metas = sh.worksheet("Meta")
+    return pd.DataFrame(ws_metas.get_all_records())
+
 # Agora, logo abaixo, vem a sua função de conexão e a de carregamento
 # (Onde você definiu o 'def conectar():' e o 'def carregar_metas_do_sheets():')
 
