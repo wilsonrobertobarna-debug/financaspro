@@ -228,12 +228,21 @@ def get_valor_pendente(df):
     df_p = df[(df['Status'] == 'Pendente') & (df['DT'].dt.date <= end_of_month.date())]
     return df_p['V_Num'].sum()
 
+import time # Adicione isso no topo dos seus imports, se já não estiver lá
+
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 
 if st.sidebar.button("🔄 Atualizar dados do Sheets"):
-    atualizar_sessao()
-    st.rerun()
+    with st.spinner("Atualizando dados... aguarde um momento"):
+        # Adiciona uma pequena pausa para evitar o estouro de cota (429)
+        time.sleep(1) 
+        
+        # Chama a função de atualização
+        atualizar_sessao()
+        
+        # Força o recarregamento da página para mostrar os dados novos
+        st.rerun()
 
 aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"])
 
