@@ -10,6 +10,27 @@ import pandas as pd
 from datetime import datetime, timedelta
 import urllib.parse
 
+# --- PONTE DE DADOS ---
+# Toda vez que o app abrir, ele força a leitura da planilha 
+# e joga os valores dentro do session_state (a memória que o seu gráfico lê)
+def recarregar_metas_para_memoria():
+    gc = conectar()
+    sh = gc.open("FinançasPro")
+    # Substitua 'NomeDaSuaAbaDeMetas' pelo nome correto da aba no Sheets
+    dados_sheets = sh.worksheet("NomeDaSuaAbaDeMetas").get_all_records()
+    
+    for item in dados_sheets:
+        categoria = item['Categoria'] # Nome da coluna na planilha
+        valor = item['Valor']         # Nome da coluna na planilha
+        st.session_state[f"m_{categoria}"] = float(valor)
+
+# Só executa a ponte se o session_state estiver vazio (ex: acabou de abrir)
+if 'm_Alimentacao' not in st.session_state: # Verifique uma chave que você sabe que existe
+    try:
+        recarregar_metas_para_memoria()
+    except:
+        pass # Se não encontrar, segue o baile sem quebrar
+
 # RESOLUÇÃO DO FUSO HORÁRIO (Sem precisar de biblioteca extra)
 # O servidor do Streamlit é 3 horas adiantado. Tiramos 3 horas para ser Brasília.
 agora_br = datetime.now() - timedelta(hours=3)
