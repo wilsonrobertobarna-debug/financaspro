@@ -9,10 +9,24 @@ import urllib.parse
 
 # 2. EM SEGUIDA: As definições das funções (o que você perguntou)
 @st.cache_resource
+from google.oauth2.service_account import Credentials
+
+@st.cache_resource
 def conectar():
-    creds_dict = st.secrets.get("connections", {}).get("gsheets")
-    # ... resto do código da função conectar ...
-    return gspread.authorize(...)
+    # Pega o dicionário diretamente do seu arquivo de secrets
+    creds_dict = st.secrets["connections"]["gsheets"]
+    
+    # Cria o objeto de credencial do Google
+    creds = Credentials.from_service_account_info(
+        creds_dict,
+        scopes=[
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+    )
+    
+    # Autoriza o gspread
+    return gspread.authorize(creds)
 
 @st.cache_data(ttl=3600)
 def carregar_metas_do_sheets():
