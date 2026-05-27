@@ -7,16 +7,11 @@ from datetime import datetime, timedelta
 import urllib.parse
 from google.oauth2.service_account import Credentials
 
-# Agora, logo abaixo, as funções:
-
 @st.cache_resource
 def conectar():
     creds_dict = st.secrets["connections"]["gsheets"]
-    
-    # Corrige a quebra de linha da chave privada
     if "private_key" in creds_dict and "\\n" in creds_dict["private_key"]:
         creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
     return gspread.authorize(creds)
