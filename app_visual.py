@@ -504,9 +504,11 @@ if "💰" in aba:
             fig_m.update_layout(barmode='group', height=350)
             st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
             st.divider()
-            else:
-                st.info("Nenhuma despesa encontrada para esta categoria.")
-          
+        else:
+            # Este else pertence ao 'if not df_metas_graph.empty'
+            st.info("Nenhuma despesa encontrada para esta categoria.")
+        
+        # O resto do código continua aqui fora, alinhado com o 'if' principal
         st.subheader("🔍 Busca e Lançamentos")
         
         c_d1, c_d2 = st.columns(2)
