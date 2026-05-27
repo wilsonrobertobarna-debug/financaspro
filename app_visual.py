@@ -64,7 +64,6 @@ def conectar():
         st.error(f"Erro na conexão: {e}"); st.stop()
 
 # --- CARREGAMENTO OTIMIZADO (COM CACHE PARA EVITAR ERRO 429) ---
-
 # 1. Definimos a função que busca os dados, com o @st.cache_data
 @st.cache_data(ttl=600) 
 def carregar_metas_do_sheets():
@@ -79,8 +78,7 @@ try:
     df_metas = carregar_metas_do_sheets()
 except Exception as e:
     st.error(f"Erro ao carregar a aba 'Meta': {e}")
-    df_metas = pd.DataFrame() # Cria um DF vazio para não quebrar o app    
-
+    df_metas = pd.DataFrame() # Cria um DF vazio para não quebrar o app
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
