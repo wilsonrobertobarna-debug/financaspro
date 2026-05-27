@@ -34,7 +34,7 @@ client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # 3. BLOCO DE CARREGAMENTO (Sincroniza Sheets com Session State)
-if 'metas_iniciadas
+if 'metas_iniciadas' not in st.session_state:
 
 # 4. ESTILIZAÇÃO
 st.markdown("""
