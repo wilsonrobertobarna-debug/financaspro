@@ -1,76 +1,58 @@
 import streamlit as st
+import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-import streamlit as st
-import pandas as pd
-from datetime import datetime, timedelta
-import urllib.parse
-
-# 1. BLOCO DE CARREGAMENTO (No topo, antes de tudo)
-if 'metas_iniciadas' not in st.session_state:
-    # Ajuste aqui para a sua função real de buscar metas no Google Sheets
-    df_metas = pd.DataFrame(sh.worksheet("Meta").get_all_records()) 
-    for index, row in df_metas.iterrows():
-        st.session_state[f"m_{row['Nome da Meta']}"] = float(row['Valor Alvo'])
-    st.session_state['metas_iniciadas'] = True
-
-# --- PONTE DE DADOS ---
-# Toda vez que o app abrir, ele força a leitura da planilha 
-# e joga os valores dentro do session_state (a memória que o seu gráfico lê)
-def recarregar_metas_para_memoria():
-    gc = conectar()
-    sh = gc.open("FinançasPro")
-    # Substitua 'NomeDaSuaAbaDeMetas' pelo nome correto da aba no Sheets
-    dados_sheets = sh.worksheet("NomeDaSuaAbaDeMetas").get_all_records()
-    
-    for item in dados_sheets:
-        categoria = item['Categoria'] # Nome da coluna na planilha
-        valor = item['Valor']         # Nome da coluna na planilha
-        st.session_state[f"m_{categoria}"] = float(valor)
-
-# Só executa a ponte se o session_state estiver vazio (ex: acabou de abrir)
-if 'm_Alimentacao' not in st.session_state: # Verifique uma chave que você sabe que existe
-    try:
-        recarregar_metas_para_memoria()
-    except:
-        pass # Se não encontrar, segue o baile sem quebrar
-
-# RESOLUÇÃO DO FUSO HORÁRIO (Sem precisar de biblioteca extra)
-# O servidor do Streamlit é 3 horas adiantado. Tiramos 3 horas para ser Brasília.
-agora_br = datetime.now() - timedelta(hours=3)
-hoje_br = agora_br.date()
-agora = datetime.now() - timedelta(hours=3)
-hoje = agora.date()
-agora_br = datetime.utcnow() - timedelta(hours=3)
-hoje_br = agora_br.date()
 from dateutil.relativedelta import relativedelta
-import urllib.parse
 from fpdf import FPDF
+import urllib.parse
 
-# 0. VERSÃO NO TOPO
+# 1. CONFIGURAÇÃO INICIAL
+st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 st.caption("Versão 2.0.3")
 
-# 1. CONFIGURAÇÃO
-st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
+# 2. CONEXÃO (LIGA O MOTOR)
+@st.cache_resource
+def conectar():
+    creds_dict = st.secrets.get("connections", {}).get("gsheets")
+    if not creds_dict:
+        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
+    try:
+        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
+        final_creds = {
+            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
+            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
+            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
+        }
+        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
+    except Exception as e:
+        st.error(f"Erro na conexão: {e}"); st.stop()
 
-# ESTILO PARA VALORES E RÓTULOS DOS METRICS
+client = conectar()
+sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+
+# 3. BLOCO DE CARREGAMENTO (Sincroniza Sheets com Session State)
+if 'metas_iniciadas' not in st.session_state:
+    try:
+        df_metas = pd.DataFrame(sh.worksheet("Meta").get_all_records())
+        for index, row in df_metas.iterrows():
+            nome = row['Nome da Meta']
+            valor = row['Valor Alvo']
+            st.session_state[f"m_{nome}"] = float(valor)
+        st.session_state['metas_iniciadas'] = True
+    except Exception as e:
+        st.error(f"Erro ao carregar metas da planilha: {e}")
+
+# 4. ESTILIZAÇÃO
 st.markdown("""
     <style>
-    [data-testid='stMetricLabel'] {
-        font-size: 1.1rem !important;
-        font-weight: bold !important;
-    }
-    [data-testid='stMetricValue'] {
-        font-size: 1.1rem !important;
-        font-weight: bold !important;
+    [data-testid='stMetricLabel'], [data-testid='stMetricValue'] {
+        font-size: 1.1rem !important; font-weight: bold !important;
     }
     </style>
 """, unsafe_allow_html=True)
-
 # 2. CONEXÃO
 @st.cache_resource
 def conectar():
