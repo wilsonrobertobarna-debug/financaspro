@@ -1234,10 +1234,4 @@ if aba == "📊 Análises & Configurações":
         for index, row in df_metas.iterrows():
             nome = row['Nome da Meta']
             valor_alvo = float(row['Valor Alvo'])
-            
-            # O input lê do session_state (mantém o que você digitou) ou da planilha (valor inicial)
-            st.session_state[f"m_{nome}"] = cols[index % 3].number_input(
-                f"Meta: {nome}", 
-                value=st.session_state.get(f"m_{nome}", valor_alvo), 
-                key=f"m_{nome}"
-            )
+                       
