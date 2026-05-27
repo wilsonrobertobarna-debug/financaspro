@@ -486,15 +486,25 @@ if "💰" in aba:
             df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
 
             if not df_metas_graph.empty:
-            # 1. CRIA O GRÁFICO (Aqui o fig_m ganha vida)
-                fig_m = go.Figure()
-                fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
-                fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
-                fig_m.update_layout(barmode='group', height=350)
+            # 1. GARANTIR QUE A COLUNA META EXISTE
+            if 'Meta' not in df_metas_graph.columns:
+                df_metas_graph['Meta'] = 0.0
             
-                # 2. SÓ DESENHA SE O GRÁFICO TIVER SIDO CRIADO
-                st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
-                st.divider()
+            # 2. SE A COLUNA EXISTIR, TENTA PREENCHER (A sua lógica original)
+            # Certifique-se de que a lógica de busca está aqui:
+            def buscar_meta(cat):
+                return st.session_state.get(f"m_{cat}", 0.0)
+            
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(buscar_meta)
+
+            # 3. AGORA SIM, DESENHA O GRÁFICO
+            fig_m = go.Figure()
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
+            
+            fig_m.update_layout(barmode='group', height=350)
+            st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
+            st.divider()
             else:
                 st.info("Nenhuma despesa encontrada para esta categoria.")
         else:
