@@ -10,6 +10,14 @@ import pandas as pd
 from datetime import datetime, timedelta
 import urllib.parse
 
+# 1. BLOCO DE CARREGAMENTO (No topo, antes de tudo)
+if 'metas_iniciadas' not in st.session_state:
+    # Ajuste aqui para a sua função real de buscar metas no Google Sheets
+    df_metas = pd.DataFrame(sh.worksheet("Meta").get_all_records()) 
+    for index, row in df_metas.iterrows():
+        st.session_state[f"m_{row['Nome da Meta']}"] = float(row['Valor Alvo'])
+    st.session_state['metas_iniciadas'] = True
+
 # --- PONTE DE DADOS ---
 # Toda vez que o app abrir, ele força a leitura da planilha 
 # e joga os valores dentro do session_state (a memória que o seu gráfico lê)
