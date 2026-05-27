@@ -63,17 +63,23 @@ def conectar():
     except Exception as e:
         st.error(f"Erro na conexão: {e}"); st.stop()
 
-# --- CARREGAMENTO DOS DADOS (FORA DA FUNÇÃO) ---
-gc = conectar() 
+# --- CARREGAMENTO OTIMIZADO (COM CACHE PARA EVITAR ERRO 429) ---
 
-try:
+# 1. Definimos a função que busca os dados, com o @st.cache_data
+@st.cache_data(ttl=600) 
+def carregar_metas_do_sheets():
+    # Usamos o 'gc' da sua função 'conectar'
+    gc = conectar() 
     sh = gc.open("FinançasPro")
     ws_metas = sh.worksheet("Meta")
-    df_metas = pd.DataFrame(ws_metas.get_all_records())
+    return pd.DataFrame(ws_metas.get_all_records())
+
+# 2. Chamamos a função para carregar os dados
+try:
+    df_metas = carregar_metas_do_sheets()
 except Exception as e:
     st.error(f"Erro ao carregar a aba 'Meta': {e}")
-    df_metas = pd.DataFrame()
-    
+    df_metas = pd.DataFrame() # Cria um DF vazio para não quebrar o app    
 
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
