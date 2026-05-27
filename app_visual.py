@@ -487,16 +487,16 @@ if "💰" in aba:
 
             if not df_metas_graph.empty:
             # 1. CRIA O GRÁFICO (Aqui o fig_m ganha vida)
-            fig_m = go.Figure()
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
-            fig_m.update_layout(barmode='group', height=350)
+                fig_m = go.Figure()
+                fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
+                fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
+                fig_m.update_layout(barmode='group', height=350)
             
-            # 2. SÓ DESENHA SE O GRÁFICO TIVER SIDO CRIADO
-            st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
-            st.divider()
-        else:
-            st.info("Nenhuma despesa encontrada para esta categoria.")
+                # 2. SÓ DESENHA SE O GRÁFICO TIVER SIDO CRIADO
+                st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
+                st.divider()
+            else:
+                st.info("Nenhuma despesa encontrada para esta categoria.")
         else:
             st.warning("Base de dados vazia.")
         
