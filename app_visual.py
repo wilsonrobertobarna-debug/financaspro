@@ -479,8 +479,8 @@ if "💰" in aba:
                
     if 'df_m_limpo' in locals() or 'df_m_limpo' in globals():
     
-    # Só faz a conta se a variável existir
-    if df_m_limpo is not None and not df_m_limpo.empty:
+        # Só faz a conta se a variável existir
+        if df_m_limpo is not None and not df_m_limpo.empty:
         
         st.subheader("🎯 Metas vs Realizado")
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
