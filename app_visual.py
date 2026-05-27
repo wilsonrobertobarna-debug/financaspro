@@ -1,30 +1,24 @@
 import streamlit as st
 import gspread
-from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import urllib.parse
-
-# 2. EM SEGUIDA: As definições das funções (o que você perguntou)
-@st.cache_resource
 from google.oauth2.service_account import Credentials
+
+# Agora, logo abaixo, as funções:
 
 @st.cache_resource
 def conectar():
-    # 1. Pega os dados do secret
     creds_dict = st.secrets["connections"]["gsheets"]
     
-    # 2. Corrige a formatação da private_key (ESSENCIAL)
+    # Corrige a quebra de linha da chave privada
     if "private_key" in creds_dict and "\\n" in creds_dict["private_key"]:
         creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
 
-    # 3. Cria as credenciais usando a biblioteca oficial
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
-    
-    # 4. Autoriza e retorna
     return gspread.authorize(creds)
 
 @st.cache_data(ttl=3600)
