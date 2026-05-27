@@ -1218,28 +1218,26 @@ if aba == "📊 Análises & Configurações":
         
     st.divider()
     
-    # 4. FORMULÁRIO: CONFIGURAR METAS
+   # 4. FORMULÁRIO: CONFIGURAR METAS
     with st.expander("🎯 Configurar Metas", expanded=False):
-        todas_cats = sorted(df_base['Categoria'].unique())
-        metas_map = {}
+        # Carrega a aba "Meta" uma única vez na sessão
+        if 'df_metas_config' not in st.session_state:
+            try:
+                st.session_state['df_metas_config'] = pd.DataFrame(sh.worksheet("Meta").get_all_records())
+            except:
+                st.session_state['df_metas_config'] = pd.DataFrame(columns=['Nome da Meta', 'Valor Alvo'])
+        
+        df_metas = st.session_state['df_metas_config']
         cols = st.columns(3)
         
-        # Carrega a tabela de metas do sheets uma única vez aqui dentro
-        # Certifique-se de que a aba 'Metas' existe na sua planilha
-        try:
-            df_metas_config = pd.DataFrame(sh.worksheet("Metas").get_all_records())
-        except:
-            df_metas_config = pd.DataFrame(columns=['Categoria', 'Valor'])
-
-        for i, cat in enumerate(todas_cats):
-            if cat != "Transferência":
-                # Tenta buscar o valor na planilha (df_metas_config)
-                # Se não achar na planilha, aí sim usamos o 400 ou 1200 como socorro
-                meta_salva = df_metas_config[df_metas_config['Categoria'] == cat]
-                
-                if not meta_salva.empty:
-                    default_v = float(meta_salva['Valor'].values[0])
-                else:
-                    default_v = 1200.0 if cat == "Mercado" else 400.0
-                
-                metas_map[cat] = cols[i % 3].number_input(f"Meta: {cat}", value=default_v, key=f"m_{cat}")
+        # Itera sobre as metas que estão na planilha
+        for index, row in df_metas.iterrows():
+            nome = row['Nome da Meta']
+            valor_alvo = float(row['Valor Alvo'])
+            
+            # O input lê do session_state (mantém o que você digitou) ou da planilha (valor inicial)
+            st.session_state[f"m_{nome}"] = cols[index % 3].number_input(
+                f"Meta: {nome}", 
+                value=st.session_state.get(f"m_{nome}", valor_alvo), 
+                key=f"m_{nome}"
+            )
