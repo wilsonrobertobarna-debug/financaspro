@@ -1,18 +1,14 @@
 import streamlit as st
 import gspread
+from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+import streamlit as st
+import pandas as pd
+from datetime import datetime, timedelta
 import urllib.parse
-from google.oauth2.service_account import Credentials
-# 1. Defina a função aqui no topo
-def get_meta_value(categoria, df_metas):
-    filtro = df_metas[df_metas['Nome da Meta'] == categoria]
-    if not filtro.empty:
-        return float(filtro['Valor Alvo'].values[0])
-    return 0.0
-
 
 # RESOLUÇÃO DO FUSO HORÁRIO (Sem precisar de biblioteca extra)
 # O servidor do Streamlit é 3 horas adiantado. Tiramos 3 horas para ser Brasília.
@@ -46,7 +42,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- FUNÇÃO DE CONEXÃO (DEFINIDA UMA ÚNICA VEZ) ---
+# 2. CONEXÃO
 @st.cache_resource
 def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
@@ -62,24 +58,8 @@ def conectar():
         }
         return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
     except Exception as e:
-        st.error(f"Erro na conexão: {e}"); st.stop()
+        st.error(f"Erro: {e}"); st.stop()
 
-# --- CARREGAMENTO OTIMIZADO (COM CACHE PARA EVITAR ERRO 429) ---
-# 1. Definimos a função que busca os dados, com o @st.cache_data
-@st.cache_data(ttl=600) 
-def carregar_metas_do_sheets():
-    # Usamos o 'gc' da sua função 'conectar'
-    gc = conectar() 
-    sh = gc.open("FinançasPro")
-    ws_metas = sh.worksheet("Meta")
-    return pd.DataFrame(ws_metas.get_all_records())
-
-# 2. Chamamos a função para carregar os dados
-try:
-    df_metas = carregar_metas_do_sheets()
-except Exception as e:
-    st.error(f"Erro ao carregar a aba 'Meta': {e}")
-    df_metas = pd.DataFrame() # Cria um DF vazio para não quebrar o app
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
@@ -169,9 +149,6 @@ df_bancos_info = st.session_state['df_bancos_info']
 def atualizar_sessao():
     st.session_state['df_base'] = carregar_dados_gs()
     st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
-      
-    # Adicionamos um LOG apenas para você ver no console se a atualização ocorreu
-    st.write("Dados atualizados, mas as Metas foram preservadas.")
 
 df_base = st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
