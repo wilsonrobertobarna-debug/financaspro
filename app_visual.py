@@ -5,10 +5,14 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-import streamlit as st
-import pandas as pd
-from datetime import datetime, timedelta
 import urllib.parse
+
+# Agora, logo abaixo, vem a sua função de conexão e a de carregamento
+# (Onde você definiu o 'def conectar():' e o 'def carregar_metas_do_sheets():')
+
+# E só depois, a inicialização do session_state:
+if 'df_metas' not in st.session_state:
+    st.session_state['df_metas'] = carregar_metas_do_sheets()
 
 # RESOLUÇÃO DO FUSO HORÁRIO (Sem precisar de biblioteca extra)
 # O servidor do Streamlit é 3 horas adiantado. Tiramos 3 horas para ser Brasília.
