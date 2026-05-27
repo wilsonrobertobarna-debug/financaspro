@@ -1230,7 +1230,20 @@ if aba == "📊 Análises & Configurações":
         # 2. Cria os campos de input automaticamente para cada meta da planilha
         for index, row in df_metas.iterrows():
             nome = row['Nome da Meta']
-            valor_alvo = float(row['Valor Alvo'])
+        # Substitua a linha 1233 por este bloco de segurança:
+        raw_value = row['Valor Alvo']
+        try:
+            # Remove caracteres de formatação comum (R$, espaços, etc) se necessário
+            if isinstance(raw_value, str):
+                raw_value = raw_value.replace('R$', '').replace('.', '').replace(',', '.').strip()
+    
+            # Converte, ou define 0.0 se estiver vazio
+            valor_alvo = float(raw_value) if str(raw_value).strip() != '' else 0.0
+        except ValueError:
+            valor_alvo = 0.0
+        
+        # Remove caracteres de formatação comum (R$, espaços, etc) se necessário
+            
             
             # Aqui está o "input" que eu mencionei:
             # O 'key' é o segredo para o Streamlit salvar o valor automaticamente na memória
