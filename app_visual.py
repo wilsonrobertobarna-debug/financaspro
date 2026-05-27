@@ -1230,8 +1230,28 @@ if aba == "📊 Análises & Configurações":
         df_metas = st.session_state['df_metas_config']
         cols = st.columns(3)
         
-        # Itera sobre as metas que estão na planilha
+      # Itera sobre as metas que estão na planilha
         for index, row in df_metas.iterrows():
             nome = row['Nome da Meta']
-            valor_alvo = float(row['Valor Alvo'])
+            
+            # --- FILTRO DE SEGURANÇA ---
+            valor_bruto = row['Valor Alvo']
+            
+            # Limpa qualquer coisa que não seja número (tira R$, espaço, etc.)
+            try:
+                # Se for string, remove caracteres estranhos
+                if isinstance(valor_bruto, str):
+                    valor_bruto = valor_bruto.replace('R$', '').replace('.', '').replace(',', '.').strip()
+                
+                valor_alvo = float(valor_bruto)
+            except:
+                # Se não conseguir converter, define um valor padrão de segurança
+                valor_alvo = 0.0
+            
+            # O input agora está blindado
+            cols[index % 3].number_input(
+                f"Meta: {nome}", 
+                value=st.session_state.get(f"m_{nome}", valor_alvo), 
+                key=f"m_{nome}"
+            )
                        
