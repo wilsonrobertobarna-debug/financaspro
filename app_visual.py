@@ -493,10 +493,10 @@ if "💰" in aba:
             # ...
             st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
             st.divider()
+            else:
+                st.info("Nenhuma despesa encontrada para comparar com metas.")
         else:
-            st.info("Nenhuma despesa encontrada para comparar com metas.")
-    else:
-        st.warning("Base de dados vazia.")
+            st.warning("Base de dados vazia.")
         
         st.divider()
         st.subheader("🔍 Busca e Lançamentos")
