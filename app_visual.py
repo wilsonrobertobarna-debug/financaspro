@@ -1230,18 +1230,18 @@ if aba == "📊 Análises & Configurações":
         # 2. Cria os campos de input automaticamente para cada meta da planilha
         for index, row in df_metas.iterrows():
             nome = row['Nome da Meta']
-       valor_raw = row.get('Valor Alvo', 0)
+            valor_raw = row.get('Valor Alvo', 0)
         
-        try:
-            # Limpeza básica: remove R$, espaços e ajusta pontos decimais
-            if isinstance(valor_raw, str):
-                valor_raw = valor_raw.replace('R$', '').replace('.', '').replace(',', '.')
+            try:
+                # Limpeza básica: remove R$, espaços e ajusta pontos decimais
+                if isinstance(valor_raw, str):
+                    valor_raw = valor_raw.replace('R$', '').replace('.', '').replace(',', '.')
             
-            valor_alvo = float(valor_raw) if str(valor_raw).strip() != '' else 0.0
-        except:
-            valor_alvo = 0.0 # Se a planilha estiver com sujeira, vira 0 e não trava o app
+                valor_alvo = float(valor_raw) if str(valor_raw).strip() != '' else 0.0
+            except:
+                valor_alvo = 0.0 # Se a planilha estiver com sujeira, vira 0 e não trava o app
         
-        # Remove caracteres de formatação comum (R$, espaços, etc) se necessário
+                # Remove caracteres de formatação comum (R$, espaços, etc) se necessário
             
             
             # Aqui está o "input" que eu mencionei:
