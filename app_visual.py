@@ -59,40 +59,34 @@ def conectar():
             "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
             "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
         }
-       # 1. FINAL DA SUA FUNÇÃO (O que faltava no seu bloco)
+      # --- FUNÇÃO DE CONEXÃO (DEFINIDA UMA ÚNICA VEZ) ---
+@st.cache_resource
+def conectar():
+    creds_dict = st.secrets.get("connections", {}).get("gsheets")
+    if not creds_dict:
+        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
+    try:
+        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
+        if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
+        final_creds = {
+            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
+            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
+            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
+        }
         return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
     except Exception as e:
-        st.error(f"Erro: {e}"); st.stop()
+        st.error(f"Erro na conexão: {e}"); st.stop()
 
-# 2. AGORA, FORA DA FUNÇÃO (começando do canto esquerdo da tela), coloque isto:
+# --- CARREGAMENTO DOS DADOS (FORA DA FUNÇÃO) ---
 gc = conectar() 
 
-# 3. Abre a planilha e a aba 'Meta'
 try:
     sh = gc.open("FinançasPro")
     ws_metas = sh.worksheet("Meta")
     df_metas = pd.DataFrame(ws_metas.get_all_records())
 except Exception as e:
-    st.error(f"Erro ao carregar aba Meta: {e}")
-    df_metas = pd.DataFrame() # Cria um DF vazio se der erro
-
-# Agora o 'df_metas' está pronto para ser usado na sua função 'get_meta_value'!
-return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
-    except Exception as e:
-        st.error(f"Erro: {e}"); st.stop()
-
-# --- AQUI É O LUGAR PERFEITO PARA COLOCAR A LEITURA ---
-# Criamos a variável 'gc' para guardar a conexão autorizada
-gc = sua_funcao_de_conexao() # Chame a função que tem aquele 'return gspread.authorize...'
-
-# Agora lemos a aba Meta
-try:
-    sh = gc.open("NOME_DA_SUA_PLANILHA")
-    ws_metas = sh.worksheet("Meta")
-    df_metas = pd.DataFrame(ws_metas.get_all_records())
-except Exception as e:
-    st.error(f"Erro ao carregar metas: {e}")
-    df_metas = pd.DataFrame() # Cria um DF vazio para não quebrar o resto do código
+    st.error(f"Erro ao carregar a aba 'Meta': {e}")
+    df_metas = pd.DataFrame()
     
 
 client = conectar()
