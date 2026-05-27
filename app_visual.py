@@ -9,6 +9,9 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 
+agora_br = datetime.now() - timedelta(hours=3)
+hoje_br = agora_br.date()
+
 # 1. CONFIGURAÇÃO INICIAL
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 st.caption("Versão 2.0.3")
