@@ -13,18 +13,6 @@ def get_meta_value(categoria, df_metas):
         return float(filtro['Valor Alvo'].values[0])
     return 0.0
 
-# --- 1. GARANTIR QUE AS METAS ESTEJAM SEMPRE NA MEMÓRIA ---
-if 'df_metas' not in st.session_state:
-    st.session_state['df_metas'] = carregar_metas_do_sheets()
-
-# --- 2. USAR SEMPRE O SESSION_STATE NOS SEUS GRÁFICOS ---
-# Agora, em vez de usar 'df_metas' direto, use 'st.session_state.df_metas'
-# Isso garante que o gráfico nunca tente ler algo que está vazio
-df_metas = st.session_state.df_metas
-
-if df_metas is not None and not df_metas.empty:
-    # ... aqui vem o seu código do gráfico ou input ...
-    st.bar_chart(df_metas)
 
 # RESOLUÇÃO DO FUSO HORÁRIO (Sem precisar de biblioteca extra)
 # O servidor do Streamlit é 3 horas adiantado. Tiramos 3 horas para ser Brasília.
