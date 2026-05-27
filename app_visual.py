@@ -491,8 +491,8 @@ if "💰" in aba:
             
             # (Cole aqui o seu código do fig_m = go.Figure()...)
             # ...
-            st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
-            st.divider()
+                st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
+                st.divider()
             else:
                 st.info("Nenhuma despesa encontrada para comparar com metas.")
         else:
