@@ -506,7 +506,7 @@ if "💰" in aba:
             st.divider()
             else:
                 st.info("Nenhuma despesa encontrada para esta categoria.")
-      else:
+          else:
             st.warning("Base de dados vazia.")
         
         st.divider()
