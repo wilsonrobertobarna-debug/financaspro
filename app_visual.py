@@ -1264,10 +1264,14 @@ if aba == "📊 Análises & Configurações":
                 # Remove caracteres de formatação comum (R$, espaços, etc) se necessário
             
             
-            # Aqui está o "input" que eu mencionei:
-            # O 'key' é o segredo para o Streamlit salvar o valor automaticamente na memória
-            cols[index % 3].number_input(
-                f"Meta: {nome}", 
-                value=st.session_state.get(f"m_{nome}", valor_alvo), 
-                key=f"m_{nome}"
-            )
+            # MANTENHA O LOOP QUE VOCÊ JÁ TEM (ex: for index, nome in enumerate(lista_de_metas):)
+# ...
+
+# SUBSTITUA A LINHA DO NUMBER_INPUT POR ESTA:
+cols[index % 3].number_input(
+    f"Meta: {nome}", 
+    value=st.session_state.get(f"m_{nome}", valor_alvo), 
+    key=f"m_{nome}",
+    on_change=atualizar_meta_sheets, 
+    args=(nome,) # O Streamlit vai passar o nome da meta para a função automaticamente
+)
