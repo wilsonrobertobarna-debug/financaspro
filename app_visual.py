@@ -30,6 +30,7 @@ def atualizar_meta_sheets(nome):
                 del st.session_state[f"m_{nome_meta}"]
             # Atualiza na planilha (Coluna B é a 2)
             ws_meta.update_cell(celula.row, 2, novo_valor)
+            st.rerun()
             # Confirmação visual para você
             st.toast(f"Meta '{nome}' atualizada no Sheets!", icon="✅")
     except Exception as e:
