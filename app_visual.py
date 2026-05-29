@@ -12,6 +12,26 @@ import urllib.parse
 agora_br = datetime.now() - timedelta(hours=3)
 hoje_br = agora_br.date()
 
+def salvar_meta_no_sheets(nome_meta, novo_valor):
+    # Conecta na aba de metas
+    worksheet_meta = sh.worksheet("Meta")
+    
+    # Busca a lista de metas para achar a linha correta
+    lista_metas = worksheet_meta.get_all_records()
+    
+    # Procura a linha que tem o 'Nome da Meta' igual ao que você quer alterar
+    for i, row in enumerate(lista_metas):
+        if row['Nome da Meta'] == nome_meta:
+            # O +2 é porque o get_all_records não conta o cabeçalho e o índice começa em 0
+            linha_excel = i + 2 
+            # Atualiza a coluna 2 (assumindo que "Valor Alvo" é a coluna B)
+            worksheet_meta.update_cell(linha_excel, 2, novo_valor)
+            
+            # Atualiza o estado da memória para refletir na hora
+            st.session_state[f"m_{nome_meta}"] = float(novo_valor)
+            return True
+    return False
+
 # 1. CONFIGURAÇÃO INICIAL
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 st.caption("Versão 2.0.3")
