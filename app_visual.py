@@ -21,7 +21,7 @@ def salvar_meta_no_sheets(nome_meta, novo_valor):
     
     # Procura a linha que tem o 'Nome da Meta' igual ao que você quer alterar
     for i, row in enumerate(lista_metas):
-        if row['Nome da Meta'] == nome_meta:
+        if row['Meta'] == nome_meta:
             # O +2 é porque o get_all_records não conta o cabeçalho e o índice começa em 0
             linha_excel = i + 2 
             # Atualiza a coluna 2 (assumindo que "Valor Alvo" é a coluna B)
@@ -1269,7 +1269,7 @@ if aba == "📊 Análises & Configurações":
 
 # SUBSTITUA A LINHA DO NUMBER_INPUT POR ESTA:
 cols[index % 3].number_input(
-    f"Meta: {FinançasPro}", 
+    f"Meta: {}", 
     value=st.session_state.get(f"m_{nome}", valor_alvo), 
     key=f"m_{nome}",
     on_change=atualizar_meta_sheets, 
