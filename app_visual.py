@@ -1248,30 +1248,23 @@ if aba == "📊 Análises & Configurações":
         cols = st.columns(3) # Cria 3 colunas para os campos não ficarem um embaixo do outro
         
         # 2. Cria os campos de input automaticamente para cada meta da planilha
+     
         for index, row in df_metas.iterrows():
             nome = row['Nome da Meta']
             valor_raw = row.get('Valor Alvo', 0)
         
             try:
-                # Limpeza básica: remove R$, espaços e ajusta pontos decimais
                 if isinstance(valor_raw, str):
                     valor_raw = valor_raw.replace('R$', '').replace('.', '').replace(',', '.')
-            
                 valor_alvo = float(valor_raw) if str(valor_raw).strip() != '' else 0.0
             except:
-                valor_alvo = 0.0 # Se a planilha estiver com sujeira, vira 0 e não trava o app
-        
-                # Remove caracteres de formatação comum (R$, espaços, etc) se necessário
-            
-            
-            # MANTENHA O LOOP QUE VOCÊ JÁ TEM (ex: for index, nome in enumerate(lista_de_metas):)
-# ...
+                valor_alvo = 0.0 
 
-# SUBSTITUA A LINHA DO NUMBER_INPUT POR ESTA:
-cols[index % 3].number_input(
-    f"Meta: {}", 
-    value=st.session_state.get(f"m_{nome}", valor_alvo), 
-    key=f"m_{nome}",
-    on_change=atualizar_meta_sheets, 
-    args=(nome,) # O Streamlit vai passar o nome da meta para a função automaticamente
-)
+            # AQUI ESTÁ A MÁGICA: O input agora está conectado ao 'on_change'
+            cols[index % 3].number_input(
+                f"Meta: {nome}", 
+                value=float(st.session_state.get(f"m_{nome}", valor_alvo)), 
+                key=f"m_{nome}",
+                on_change=atualizar_meta_sheets, 
+                args=(nome,) 
+            )
