@@ -1269,7 +1269,7 @@ if aba == "📊 Análises & Configurações":
 
 # SUBSTITUA A LINHA DO NUMBER_INPUT POR ESTA:
 cols[index % 3].number_input(
-    f"Meta: {meta}", 
+    f"Meta: {FinançasPro}", 
     value=st.session_state.get(f"m_{nome}", valor_alvo), 
     key=f"m_{nome}",
     on_change=atualizar_meta_sheets, 
