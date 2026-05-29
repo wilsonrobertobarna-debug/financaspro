@@ -25,6 +25,9 @@ def atualizar_meta_sheets(nome):
         celula = ws_meta.find(nome)
         
         if celula:
+            # 1. A "Paulada": Apaga a memória antiga
+            if f"m_{nome_meta}" in st.session_state:
+                del st.session_state[f"m_{nome_meta}"]
             # Atualiza na planilha (Coluna B é a 2)
             ws_meta.update_cell(celula.row, 2, novo_valor)
             # Confirmação visual para você
