@@ -9,28 +9,28 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 
+# Definições iniciais de data
 agora_br = datetime.now() - timedelta(hours=3)
 hoje_br = agora_br.date()
 
-def salvar_meta_no_sheets(nome_meta, novo_valor):
-    # Conecta na aba de metas
-    worksheet_meta = sh.worksheet("Meta")
+# FUNÇÃO AJUSTADA: Nome correto e acesso global ao 'sh'
+def atualizar_meta_sheets(nome):
+    global sh 
+    # Busca o novo valor diretamente do session_state (onde o input salvou)
+    novo_valor = st.session_state[f"m_{nome}"]
     
-    # Busca a lista de metas para achar a linha correta
-    lista_metas = worksheet_meta.get_all_records()
-    
-    # Procura a linha que tem o 'Nome da Meta' igual ao que você quer alterar
-    for i, row in enumerate(lista_metas):
-        if row['Nome da Meta'] == nome_meta:
-            # O +2 é porque o get_all_records não conta o cabeçalho e o índice começa em 0
-            linha_excel = i + 2 
-            # Atualiza a coluna 2 (assumindo que "Valor Alvo" é a coluna B)
-            worksheet_meta.update_cell(linha_excel, 2, novo_valor)
-            
-            # Atualiza o estado da memória para refletir na hora
-            st.session_state[f"m_{nome_meta}"] = float(novo_valor)
-            return True
-    return False
+    try:
+        ws_meta = sh.worksheet("Meta")
+        # .find é mais eficiente que percorrer a lista toda
+        celula = ws_meta.find(nome)
+        
+        if celula:
+            # Atualiza na planilha (Coluna B é a 2)
+            ws_meta.update_cell(celula.row, 2, novo_valor)
+            # Confirmação visual para você
+            st.toast(f"Meta '{nome}' atualizada no Sheets!", icon="✅")
+    except Exception as e:
+        st.error(f"Erro ao salvar no Sheets: {e}")
 
 # 1. CONFIGURAÇÃO INICIAL
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
