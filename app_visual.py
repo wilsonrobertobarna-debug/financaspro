@@ -357,7 +357,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         lista_edit = {f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']} | R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         
-       if escolha: 
+        if escolha: 
             item = lista_edit[escolha]
             # O ID nasce aqui, mas só se 'escolha' tiver um valor
             id_procurado = str(item['ID']) 
