@@ -363,30 +363,27 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             
             # BOTÃO ATUALIZAR
             # BOTÃO ATUALIZAR
-            if col1.button("💾 ATUALIZAR"):
-                try:
-                    # Busca exata com Regex
-                    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
-                    if celula:
-                        ws_base.update_cell(celula.row, 3, novo_desc)
-                        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-                        ws_base.update_cell(celula.row, 7, novo_sta)
-                        st.success(f"ID {id_fixo} atualizado!")
-                        st.rerun()
-                    else:
-                        st.error(f"ID {id_fixo} não encontrado (Busca exata).")
-                except Exception as e:
-                    st.error(f"Erro: {e}")            # BOTÃO EXCLUIR
-            if col2.button("🚨 EXCLUIR"):
-                try:
-                    celula = ws_base.find(id_fixo, in_column=9) # Usando id_fixo aqui também!
-                    if celula:
-                        ws_base.delete_rows(celula.row)
-                        st.success("Excluído!")
-                        del st.session_state['item_atual'] # Limpa após excluir
-                        st.rerun()
-                except Exception as e:
-                    st.error(f"Erro ao excluir: {e}")
+            # BOTÃO ATUALIZAR
+if col1.button("💾 ATUALIZAR"):
+    try:
+        # Busca exata
+        celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
+        
+        if celula:
+            # CORREÇÃO: Subtraímos 2 porque o gspread conta cabeçalhos ou linhas vazias que o Pandas ignora
+            linha_corrigida = celula.row - 2 
+            
+            # ATUALIZAÇÃO USANDO A LINHA CORRIGIDA
+            ws_base.update_cell(linha_corrigida, 3, novo_desc)
+            ws_base.update_cell(linha_corrigida, 2, f"{novo_val:.2f}".replace('.', ','))
+            ws_base.update_cell(linha_corrigida, 7, novo_sta)
+            
+            st.success(f"ID {id_fixo} atualizado na linha {linha_corrigida}!")
+            st.rerun()
+        else:
+            st.error("ID não encontrado.")
+    except Exception as e:
+        st.error(f"Erro: {e}")
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
