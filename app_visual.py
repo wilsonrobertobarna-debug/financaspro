@@ -355,24 +355,22 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                 
             # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
-    try:
-        # A MÁGICA ESTÁ AQUI: O .find ignora qualquer número de linha que o Pandas te deu.
-        # Ele faz um CTRL+F na planilha e encontra o ID real.
-        celula = ws_base.find(str(id_fixo), in_column=9)
-        
-        if celula:
-            # celula.row é o número absoluto da linha no Google Sheets (começando em 1)
-            # Se o ID está na linha 2, ele vai editar a linha 2.
-            ws_base.update_cell(celula.row, 3, novo_desc)
-            ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-            ws_base.update_cell(celula.row, 7, novo_sta)
-            
-            st.success(f"ID {id_fixo} atualizado na linha {celula.row}!")
-            st.rerun()
-        else:
-            st.error(f"ID {id_fixo} não encontrado na planilha.")
-    except Exception as e:
-        st.error(f"Erro: {e}")
+                try:
+                    # Busca exata do ID na Coluna 9
+                    celula = ws_base.find(str(id_fixo), in_column=9)
+                    
+                    if celula:
+                        # O ID foi achado, agora fazemos a atualização na linha real
+                        ws_base.update_cell(celula.row, 3, novo_desc)
+                        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+                        ws_base.update_cell(celula.row, 7, novo_sta)
+                        
+                        st.success(f"ID {id_fixo} atualizado na linha {celula.row}!")
+                        st.rerun()
+                    else:
+                        st.error("ID não encontrado na planilha.")
+                except Exception as e:
+                    st.error(f"Erro ao atualizar: {e}")
                     
             # BOTÃO EXCLUIR
             if col2.button("🚨 EXCLUIR"):
