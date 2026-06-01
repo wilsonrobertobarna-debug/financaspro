@@ -358,27 +358,29 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             item = lista_edit[escolha]
             meu_id = str(item['ID'])
             
-            # Inicializamos como None para evitar o NameError
-            celula = None 
-            
+            # Campos de input...
+            # (Seus campos de st.date_input, st.number_input, etc.)
+
             col1, col2 = st.columns(2)
             
-            # BOTÃO ATUALIZAR
+            # BOTÃO ATUALIZAR: Tudo aqui dentro é seguro
             if col1.button("💾 ATUALIZAR"):
-                celula = ws_base.find(meu_id, in_column=9)
-                if celula:
-                    # ... seu código de update aqui ...
+                celula_encontrada = ws_base.find(meu_id, in_column=9)
+                if celula_encontrada:
+                    # Executa a ação apenas aqui dentro
+                    ws_base.update_cell(celula_encontrada.row, 1, "dados_aqui")
                     st.success("Atualizado!")
                     st.rerun()
+                else:
+                    st.error("ID não encontrado.")
             
-            # BOTÃO EXCLUIR
+            # BOTÃO EXCLUIR: Tudo aqui dentro é seguro
             if col2.button("🚨 EXCLUIR"):
-                celula = ws_base.find(meu_id, in_column=9)
-                if celula:
-                    ws_base.delete_rows(celula.row)
+                celula_encontrada = ws_base.find(meu_id, in_column=9)
+                if celula_encontrada:
+                    ws_base.delete_rows(celula_encontrada.row)
                     st.success("Excluído!")
-                    st.rerun()
-                    
+                    st.rerun()                    
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
