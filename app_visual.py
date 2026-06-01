@@ -353,21 +353,24 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
 
 
                 
-           # BOTÃO ATUALIZAR
+          # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
-                try:
-                    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
-                    if celula:
-                        # DEBUG: Isso vai mostrar na tela exatamente a linha que ele encontrou
-                        st.error(f"DEBUG: O Gspread encontrou o ID {id_fixo} na LINHA REAL: {celula.row}")
-                        
-                        # Vamos editar a linha que ele achou, mas de forma explícita
-                        ws_base.update_cell(celula.row, 3, novo_desc)
-                        
-                        st.success(f"ID {id_fixo} enviado para a linha {celula.row}")
-                        st.stop() # Para o app aqui para você ler o DEBUG
-                except Exception as e:
-                    st.error(f"Erro: {e}")
+                # Busca o ID na coluna 9
+                celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
+                
+                if celula:
+                    # CALCULAMOS A LINHA REAL:
+                    # Se o sistema sempre erra por 2, vamos forçar o destino correto
+                    linha_real = int(celula.row) + 2
+                    
+                    # Vamos imprimir para garantir o valor antes de executar
+                    st.write(f"ID encontrado na linha: {celula.row} | Editando a linha: {linha_real}")
+                    
+                    ws_base.update_cell(linha_real, 3, novo_desc)
+                    ws_base.update_cell(linha_real, 2, f"{novo_val:.2f}".replace('.', ','))
+                    
+                    st.success(f"ID {id_fixo} atualizado na linha {linha_real}!")
+                    st.rerun()
                     
             # BOTÃO EXCLUIR
             if col2.button("🚨 EXCLUIR"):
