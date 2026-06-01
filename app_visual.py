@@ -380,7 +380,7 @@ if col1.button("💾 ATUALIZAR"):
             st.error("ID não encontrado na planilha.")
     except Exception as e:
         st.error(f"Erro: {e}")
-            if col2.button("🚨 EXCLUIR"):
+if col2.button("🚨 EXCLUIR"):
                 try:
                     celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
                     if celula:
