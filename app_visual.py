@@ -310,7 +310,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 nova_data = t_dat + relativedelta(months=i)
                 
        
-    #if celula:
+    if celula:
         linha = celula.row
         # Atualiza usando a linha exata encontrada
         v_str = f"{ed_val:.2f}".replace('.', ',')
