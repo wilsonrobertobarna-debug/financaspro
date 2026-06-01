@@ -357,7 +357,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             id_fixo = str(item['ID'])
 
             # BOTÃO ATUALIZAR
-          if col1.button("💾 ATUALIZAR"):
+            if col1.button("💾 ATUALIZAR"):
                 try:
                     # 1. Buscamos o ID exatamente na coluna 9
                     celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
