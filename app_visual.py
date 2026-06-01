@@ -351,23 +351,29 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             novo_val = st.number_input("Valor", value=float(str(item['V_Num']).replace(',', '.')))
             id_fixo = str(item['ID'])
 
-            # BOTÃO ATUALIZAR
+
             # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
                 try:
+                    # Busca exata do ID na Coluna 9
                     celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
+                    
                     if celula:
-                        # CORREÇÃO: Somamos 2 linhas ao resultado do gspread para compensar o desvio
-                        linha_ajustada = celula.row + 2
+                        # CORREÇÃO DE DESLOCAMENTO: 
+                        # O gspread encontra na 193, mas o dado real que você quer 
+                        # editar está na 195 (193 + 2).
+                        linha_alvo = celula.row + 2
                         
-                        ws_base.update_cell(linha_ajustada, 3, novo_desc)
-                        ws_base.update_cell(linha_ajustada, 2, f"{novo_val:.2f}".replace('.', ','))
-                        st.success(f"ID {id_fixo} atualizado na linha {linha_ajustada}!")
+                        ws_base.update_cell(linha_alvo, 3, novo_desc)
+                        ws_base.update_cell(linha_alvo, 2, f"{novo_val:.2f}".replace('.', ','))
+                        ws_base.update_cell(linha_alvo, 7, novo_sta)
+                        
+                        st.success(f"ID {id_fixo} atualizado na linha {linha_alvo}!")
                         st.rerun()
                     else:
                         st.error("ID não encontrado.")
                 except Exception as e:
-                    st.error(f"Erro ao atualizar: {e}")
+                    st.error(f"Erro: {e}")
 
             # BOTÃO EXCLUIR
             if col2.button("🚨 EXCLUIR"):
