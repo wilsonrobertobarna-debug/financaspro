@@ -365,24 +365,35 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             
             col1, col2 = st.columns(2)
             
-            # BOTÃO ATUALIZAR
-            if col1.button("💾 ATUALIZAR"):
-                # A variável 'cel' só nasce aqui, dentro do clique
-                cel = ws_base.find(meu_id, in_column=9)
-                if cel:
-                    ws_base.update_cell(cel.row, 1, "dados_aqui")
-                    st.success("Atualizado!")
-                    st.rerun()
-                else:
-                    st.error("ID não encontrado.")
-            
-            # BOTÃO EXCLUIR
-            if col2.button("🚨 EXCLUIR"):
-                cel = ws_base.find(meu_id, in_column=9)
-                if cel:
-                    ws_base.delete_rows(cel.row)
-                    st.success("Excluído!")
-                    st.rerun()
+            # --- BOTÃO ATUALIZAR ---
+if col1.button("💾 ATUALIZAR"):
+    # COLOQUE O CÓDIGO AQUI DENTRO:
+    try:
+        celula = ws_base.find(id_procurado, in_column=9)
+    except:
+        celula = None
+
+    if celula is not None:
+        ws_base.update_cell(celula.row, 1, ed_dat.strftime("%d/%m/%Y"))
+        st.success("Atualizado!")
+        st.rerun()
+    else:
+        st.warning("O item não foi encontrado na busca.")
+
+# --- BOTÃO EXCLUIR ---
+if col2.button("🚨 EXCLUIR"):
+    # COLOQUE O CÓDIGO AQUI DENTRO TAMBÉM:
+    try:
+        celula = ws_base.find(id_procurado, in_column=9)
+    except:
+        celula = None
+
+    if celula is not None:
+        ws_base.delete_rows(celula.row)
+        st.success("Excluído!")
+        st.rerun()
+    else:
+        st.warning("O item não foi encontrado na busca.")
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
