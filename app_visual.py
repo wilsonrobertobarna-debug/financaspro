@@ -354,7 +354,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
 
                 
            # BOTÃO ATUALIZAR
-        if col1.button("💾 ATUALIZAR"):
+           # BOTÃO ATUALIZAR
+if col1.button("💾 ATUALIZAR"):
     # id_fixo é o valor que você selecionou no selectbox
     # Vamos buscar esse valor exato como texto na coluna 9
     celula = ws_base.find(str(id_fixo), in_column=9)
