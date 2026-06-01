@@ -310,25 +310,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             # 2. Loop usando 't_dat' (a variável correta do seu formulário)
             for i in range(f_par):
                 nova_data = t_dat + relativedelta(months=i)
-                
-       
-    if celula:
-        linha = celula.row
-        # Atualiza usando a linha exata encontrada
-        v_str = f"{ed_val:.2f}".replace('.', ',')
-        ws_base.update_cell(linha, 1, ed_dat.strftime("%d/%m/%Y"))
-        ws_base.update_cell(linha, 2, v_str)
-        ws_base.update_cell(linha, 3, ed_desc)
-        ws_base.update_cell(linha, 6, ed_bnc)
-        ws_base.update_cell(linha, 7, ed_sta)
-        
-        st.success("Lançamento ajustado com sucesso!")
-        atualizar_sessao()
-        st.rerun()
-    else:
-        st.error("Erro: Não encontrei este ID na planilha.")
-st.rerun()
-
+          
+    
 # Se o usuário mudar de aba ou clicar em outra coisa fora do formulário, o expander fecha amigavelmente
 if aba != "💰 Finanças & Bancos":
     st.session_state.expander_lancamento_aberto = False
@@ -366,20 +349,26 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             col1, col2 = st.columns(2)
             
             # --- BOTÃO ATUALIZAR ---
-if col1.button("💾 ATUALIZAR"):
-    # COLOQUE O CÓDIGO AQUI DENTRO:
-    try:
-        celula = ws_base.find(id_procurado, in_column=9)
-    except:
-        celula = None
-
-    if celula is not None:
-        ws_base.update_cell(celula.row, 1, ed_dat.strftime("%d/%m/%Y"))
-        st.success("Atualizado!")
+# BOTÃO ATUALIZAR
+if col_ed1.button("💾 ATUALIZAR"):
+    # A busca acontece SÓ quando o botão é clicado
+    celula = ws_base.find(id_procurado, in_column=9)
+    
+    if celula:
+        linha = celula.row
+        # Atualiza usando a linha exata encontrada
+        v_str = f"{ed_val:.2f}".replace('.', ',')
+        ws_base.update_cell(linha, 1, ed_dat.strftime("%d/%m/%Y"))
+        ws_base.update_cell(linha, 2, v_str)
+        ws_base.update_cell(linha, 3, ed_desc)
+        ws_base.update_cell(linha, 6, ed_bnc)
+        ws_base.update_cell(linha, 7, ed_sta)
+        
+        st.success("Lançamento ajustado com sucesso!")
+        # Certifique-se de que a função atualizar_sessao esteja definida no arquivo
+        atualizar_sessao() 
         st.rerun()
     else:
-        st.warning("O item não foi encontrado na busca.")
-
 # --- BOTÃO EXCLUIR ---
 if col2.button("🚨 EXCLUIR"):
     # COLOQUE O CÓDIGO AQUI DENTRO TAMBÉM:
