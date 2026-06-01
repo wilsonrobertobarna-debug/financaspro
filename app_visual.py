@@ -309,25 +309,24 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             for i in range(f_par):
                 nova_data = t_dat + relativedelta(months=i)
                 
-                # Gera um ID único baseado nos milissegundos atuais
-                # Como o loop é rápido, podemos adicionar o i para garantir que cada parcela tenha um ID diferente
-                novo_id = int(time.time() * 1000) + i
+                # Busca o ID na coluna 9 (Coluna I)
+    celula = ws_base.find(id_procurado, in_column=9)
     
-                ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"), # A: Vencimento
-                    v_str,                          # B: Valor
-                    f_des,                          # C: Descrição
-                    f_cat,                          # D: Categoria
-                    f_tip,                          # E: Tipo
-                    f_bnc,                          # F: Banco
-                    f_sta,                          # G: Status
-                    f_compra_str,                   # H: Data da Compra
-                    str(novo_id)                    # I: ID ÚNICO (Gravado na planilha!)
-                ])
-
-            # 3. Finalização
-            st.toast("✅ Lançamento salvo com sucesso!", icon="💰")
-            atualizar_sessao()
+    if celula:
+        linha = celula.row
+        # Atualiza usando a linha exata encontrada
+        v_str = f"{ed_val:.2f}".replace('.', ',')
+        ws_base.update_cell(linha, 1, ed_dat.strftime("%d/%m/%Y"))
+        ws_base.update_cell(linha, 2, v_str)
+        ws_base.update_cell(linha, 3, ed_desc)
+        ws_base.update_cell(linha, 6, ed_bnc)
+        ws_base.update_cell(linha, 7, ed_sta)
+        
+        st.success("Lançamento ajustado com sucesso!")
+        atualizar_sessao()
+        st.rerun()
+    else:
+        st.error("Erro: Não encontrei este ID na planilha.")
 st.rerun()
 
 # Se o usuário mudar de aba ou clicar em outra coisa fora do formulário, o expander fecha amigavelmente
