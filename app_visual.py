@@ -364,19 +364,26 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                     st.error("ID não encontrado.")
 
             if col1.button("💾 ATUALIZAR"):
-                celula = ws_base.find(id_fixo, in_column=9)
+                # Mudamos in_column para 8, que é a sua última coluna
+                celula = ws_base.find(str(id_fixo), in_column=8)
+    
+                if celula:
+                    # Agora o sistema vai encontrar o ID na coluna H
+                    ws_base.update_cell(celula.row, 3, novo_desc)
+                    ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+                    ws_base.update_cell(celula.row, 7, novo_sta)
+                    st.success("Atualizado!")
+                    st.rerun()
+                else:
+                    st.error("ID não encontrado na coluna 8.")
+                    
+            if col2.button("🚨 EXCLUIR"):
+                celula = ws_base.find(str(id_fixo), in_column=8)
                 if celula:
                     ws_base.update_cell(celula.row, 3, novo_desc)
                     ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
                     ws_base.update_cell(celula.row, 7, novo_sta)
-                    st.success(f"Atualizado na linha {celula.row}!")
-                    st.rerun()
-
-            if col2.button("🚨 EXCLUIR"):
-                celula = ws_base.find(id_fixo, in_column=9)
-                if celula:
-                    ws_base.delete_rows(celula.row)
-                    st.success("Excluído!")
+                    st.success("Atualizado!")
                     st.rerun()
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
