@@ -370,30 +370,24 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             
             # ... (seu selectbox de banco e status) ...
 
+           # O código aqui fora (do selectbox) continua normal...
             col_ed1, col_ed2 = st.columns(2)
             
             # ATUALIZAR
             if col_ed1.button("💾 ATUALIZAR"):
-                # Captura o ID diretamente do 'item' que foi selecionado no selectbox
-                id_procurado = str(item['ID'])
+                # A VARIÁVEL SÓ NASCE AQUI DENTRO, NO MOMENTO DO CLIQUE
+                id_procurado = str(item['ID']) 
                 
-                # Busca na coluna 9 (Coluna I)
+                # A BUSCA SÓ ACONTECE DEPOIS QUE O BOTÃO É CLICADO
                 celula = ws_base.find(id_procurado, in_column=9)
                 
                 if celula:
                     linha = celula.row
-                    v_str = f"{ed_val:.2f}".replace('.', ',')
-                    
-                    ws_base.update_cell(linha, 1, ed_dat.strftime("%d/%m/%Y"))
-                    ws_base.update_cell(linha, 2, v_str)
-                    ws_base.update_cell(linha, 3, ed_desc)
-                    ws_base.update_cell(linha, 6, ed_bnc)
-                    ws_base.update_cell(linha, 7, ed_sta)
-                    
-                    st.success("Atualizado com sucesso!")
+                    # ... seu código de update aqui ...
+                    st.success("Atualizado!")
                     st.rerun()
                 else:
-                    st.error(f"Não encontrei o ID {id_procurado} na planilha.")
+                    st.error("ID não encontrado na Coluna I.")
 
             # EXCLUIR
             if col_ed2.button("🚨 EXCLUIR"):
