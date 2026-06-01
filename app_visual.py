@@ -359,41 +359,41 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         
         if escolha: 
             item = lista_edit[escolha]
-            # O ID nasce aqui, mas só se 'escolha' tiver um valor
+           # O ID é definido aqui, dentro do escopo do 'if escolha'
             id_procurado = str(item['ID']) 
             
-            # ... seus outros campos ...
+            # ... campos de input (ed_dat, ed_val, etc) ...
             
             col_ed1, col_ed2 = st.columns(2)
             
-            # O IF abaixo é a "parede" que protege seu código
-            # BOTÃO DE ATUALIZAR
+            # 1. ATUALIZAR
             if col_ed1.button("💾 ATUALIZAR"):
-                # Verificamos se o item foi carregado
-                if 'item' in locals() or 'item' in globals():
-                    id_procurado = str(item['ID']) 
-                    
-                    # A busca só acontece se o ID for válido
+                # O find agora só roda se o botão for clicado E a variável existir
+                try:
                     celula = ws_base.find(id_procurado, in_column=9)
-                    
                     if celula:
                         linha = celula.row
-                        # ... resto do seu código de atualização ...
+                        ws_base.update_cell(linha, 1, ed_dat.strftime("%d/%m/%Y"))
+                        ws_base.update_cell(linha, 2, f"{ed_val:.2f}".replace('.', ','))
+                        ws_base.update_cell(linha, 3, ed_desc)
+                        # ... continue as colunas ...
                         st.success("Atualizado!")
                         st.rerun()
                     else:
-                        st.error("ID não encontrado na coluna 9.")
-                else:
-                    st.warning("Selecione um item antes de atualizar.")
-                
-            # EXCLUIR
+                        st.error("ID não encontrado.")
+                except Exception as e:
+                    st.error(f"Erro na busca: {e}")
+
+            # 2. EXCLUIR
             if col_ed2.button("🚨 EXCLUIR"):
-                id_procurado = str(item['ID'])
-                celula = ws_base.find(id_procurado, in_column=9)
-                if celula:
-                    ws_base.delete_rows(celula.row)
-                    st.success("Excluído com sucesso!")
-                    st.rerun()                
+                try:
+                    celula = ws_base.find(id_procurado, in_column=9)
+                    if celula:
+                        ws_base.delete_rows(celula.row)
+                        st.success("Excluído!")
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Erro na exclusão: {e}")
 # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
