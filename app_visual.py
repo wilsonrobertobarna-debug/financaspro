@@ -368,23 +368,26 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             
             col_ed1, col_ed2 = st.columns(2)
             if col_ed1.button("💾 ATUALIZAR"):
-                # Debug: vamos ver o que o sistema está enxergando
-                st.write(f"Procurando pelo ID: {item['ID']}")
+                # Busca a célula que contém EXATAMENTE o ID que você selecionou
+                # Isso busca na planilha inteira, sem depender de contagem de índice
+                celula = ws_base.find(str(item['ID']))
                 
-                # Procura em toda a coluna 4 (assumindo que a coluna D seja a do ID)
-                # Se o seu ID não estiver na coluna 4, mude o número aqui
-                coluna_id = 4 
-                ids_na_planilha = ws_base.col_values(coluna_id)
-                
-                if str(item['ID']) in ids_na_planilha:
-                    linha = ids_na_planilha.index(str(item['ID'])) + 1
-                    st.write(f"ID encontrado na linha: {linha}")
+                if celula:
+                    linha_real = celula.row  # O gspread te diz exatamente qual é a linha
+                    v_str = f"{ed_val:.2f}".replace('.', ',')
                     
-                    # --- AQUI VOCÊ FAZ A ATUALIZAÇÃO ---
-                    ws_base.update_cell(linha, 1, ed_dat.strftime("%d/%m/%Y"))
-                    # ... restante do seu código
+                    # Atualiza a linha exata que o .find() encontrou
+                    ws_base.update_cell(linha_real, 1, ed_dat.strftime("%d/%m/%Y"))
+                    ws_base.update_cell(linha_real, 2, v_str)
+                    ws_base.update_cell(linha_real, 3, ed_desc)
+                    ws_base.update_cell(linha_real, 6, ed_bnc)
+                    ws_base.update_cell(linha_real, 7, ed_sta)
+                    
+                    st.success(f"ID {item['ID']} atualizado na linha {linha_real}!")
+                    atualizar_sessao()
+                    st.rerun()
                 else:
-                    st.error(f"ID {item['ID']} não encontrado na coluna {coluna_id}")
+                    st.error(f"Não encontrei o ID {item['ID']} na planilha. Verifique se ele não foi apagado.")
             if col_ed2.button("🚨 EXCLUIR"):
                 if item['Categoria'] == 'Transferência':
                     desc = item['Descrição']
