@@ -335,46 +335,44 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 
 # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
-    # Verificação de segurança: só cria as colunas se houver um item selecionado
     if 'df_base' in locals() and not df_base.empty:
+        # Cria a lista de opções
         lista_edit = {f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']}": r for _, r in df_base.iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         
         if escolha: 
-            # Define as colunas AQUI dentro do if
+            item_selecionado = lista_edit[escolha]
+            meu_id = str(item_selecionado['ID'])
+            
+            # Aqui você colocaria seus campos de edição (data, valor, etc.) se necessário
+            
             col1, col2 = st.columns(2)
             
-            # Agora 'col1' e 'col2' existem, pode usar com segurança
+            # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
-                # ... seu código de atualização ...
-                pass
+                try:
+                    celula = ws_base.find(meu_id, in_column=9)
+                    if celula:
+                        # ... coloque aqui o seu código de update_cell ...
+                        st.success("Atualizado!")
+                        st.rerun()
+                    else:
+                        st.error("ID não encontrado.")
+                except Exception as e:
+                    st.error(f"Erro: {e}")
             
+            # BOTÃO EXCLUIR (Apenas um botão, posicionado corretamente)
             if col2.button("🚨 EXCLUIR"):
-                # ... seu código de exclusão ...
-                pass
-            
-            # BOTÃO EXCLUIR (Este IF deve estar alinhado com o IF do botão ATUALIZAR)
-            if col2.button("🚨 EXCLUIR"):
-                celula = ws_base.find(meu_id, in_column=9)
-                if celula:
-                    ws_base.delete_rows(celula.row)
-                    st.success("Excluído!")
-                    st.rerun()
-                else:
-                    st.error("ID não encontrado para exclusão.")# --- BOTÃO EXCLUIR ---
-if col2.button("🚨 EXCLUIR"):
-    # COLOQUE O CÓDIGO AQUI DENTRO TAMBÉM:
-    try: 
-        celula = ws_base.find(id_procurado, in_column=9)
-    except:
-        celula = None
-
-    if celula is not None:
-        ws_base.delete_rows(celula.row)
-        st.success("Excluído!")
-        st.rerun()
-    else:
-        st.warning("O item não foi encontrado na busca.")
+                try:
+                    celula = ws_base.find(meu_id, in_column=9)
+                    if celula:
+                        ws_base.delete_rows(celula.row)
+                        st.success("Excluído!")
+                        st.rerun()
+                    else:
+                        st.warning("O item não foi encontrado.")
+                except Exception as e:
+                    st.error(f"Erro ao excluir: {e}")
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
