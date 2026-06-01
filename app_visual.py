@@ -364,26 +364,25 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             # BOTÃO ATUALIZAR
             # BOTÃO ATUALIZAR
             # BOTÃO ATUALIZAR
-if col1.button("💾 ATUALIZAR"):
-    try:
-        # Busca exata
-        celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
-        
-        if celula:
-            # CORREÇÃO: Subtraímos 2 porque o gspread conta cabeçalhos ou linhas vazias que o Pandas ignora
-            linha_corrigida = celula.row - 2 
-            
-            # ATUALIZAÇÃO USANDO A LINHA CORRIGIDA
-            ws_base.update_cell(linha_corrigida, 3, novo_desc)
-            ws_base.update_cell(linha_corrigida, 2, f"{novo_val:.2f}".replace('.', ','))
-            ws_base.update_cell(linha_corrigida, 7, novo_sta)
-            
-            st.success(f"ID {id_fixo} atualizado na linha {linha_corrigida}!")
-            st.rerun()
-        else:
-            st.error("ID não encontrado.")
-    except Exception as e:
-        st.error(f"Erro: {e}")
+
+            if col1.button("💾 ATUALIZAR"):
+                try:
+                    # Busca exata com Regex
+                    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
+                    
+                    if celula:
+                        # DEBUG: Isso vai printar na sua tela os números reais
+                        st.warning(f"ID {id_fixo} encontrado na linha REAL do Sheets: {celula.row}")
+                        
+                        # Vamos tentar editar a linha que ele encontrou EXATAMENTE como ele encontrou
+                        # SEM subtrair nada, para ver onde ele vai bater
+                        ws_base.update_cell(celula.row, 3, novo_desc)
+                        
+                        st.success(f"Tentei atualizar a linha {celula.row}")
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Erro: {e}")
+                    
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
