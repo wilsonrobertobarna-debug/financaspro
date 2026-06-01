@@ -372,19 +372,20 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
             col_ed1, col_ed2 = st.columns(2)
+            
             if col_ed1.button("💾 ATUALIZAR"):
-                global ws_base  # DEVE SER A PRIMEIRA LINHA AQUI DENTRO!
+                # Remova o global. Vamos usar a variável como ela foi definida no topo do arquivo.
                 
-                # Agora sim, definimos o ID
                 id_procurado = str(item['ID']) 
                 
-                # E fazemos a busca
+                # O Python vai buscar a variável 'ws_base' no topo do arquivo automaticamente
                 celula = ws_base.find(id_procurado, in_column=9)
                 
                 if celula:
                     linha = celula.row
                     v_str = f"{ed_val:.2f}".replace('.', ',')
                     
+                    # Atualiza os dados
                     ws_base.update_cell(linha, 1, ed_dat.strftime("%d/%m/%Y"))
                     ws_base.update_cell(linha, 2, v_str)
                     ws_base.update_cell(linha, 3, ed_desc)
@@ -395,7 +396,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     atualizar_sessao()
                     st.rerun()
                 else:
-                    st.error(f"Não encontrei o ID {id_procurado} na Coluna I.")
+                    st.error(f"ID {id_procurado} não encontrado na Coluna I.")
+                    
             if col_ed2.button("🚨 EXCLUIR"):
                 if item['Categoria'] == 'Transferência':
                     desc = item['Descrição']
