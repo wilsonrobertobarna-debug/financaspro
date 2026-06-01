@@ -366,29 +366,20 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                 idx_origem = item.name # Isso pega o número da linha original do seu DataFrame
                 linha_alvo = idx_origem + 2
 
-            if col1.button("💾 ATUALIZAR"):               
-                # Atualizamos diretamente pela linha calculada, sem precisar de 'find'
+            # --- BOTÕES ---
+            linha_alvo = int(item.name) + 2
+            
+            if col1.button("💾 ATUALIZAR"):
                 ws_base.update_cell(linha_alvo, 3, novo_desc)
                 ws_base.update_cell(linha_alvo, 2, f"{novo_val:.2f}".replace('.', ','))
                 ws_base.update_cell(linha_alvo, 7, novo_sta)
-                
-                st.success(f"Linha {linha_alvo} atualizada com sucesso!")
+                st.success(f"Linha {linha_alvo} atualizada!")
                 st.rerun()
-                
-            if col1.button("🔍 DIAGNOSTICAR"):
-                todos_dados = ws_base.get_all_values()
-                st.write("Exibindo as primeiras 5 linhas da planilha:")
-                for i, linha in enumerate(todos_dados[:5]):
-                    st.write(f"Linha {i+1}: {linha}")
-                st.write(f"Procurando por: '{id_fixo}'")
 
             if col2.button("🚨 EXCLUIR"):
-                Excluímos a linha exata da planilha
                 ws_base.delete_rows(linha_alvo)
                 st.success(f"Linha {linha_alvo} excluída!")
                 st.rerun()
-                else:
-                    st.error("ID não encontrado para exclusão.")
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
