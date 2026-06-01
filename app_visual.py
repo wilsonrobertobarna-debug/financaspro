@@ -337,54 +337,47 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
-    # 1. Verifica se a base existe
     if 'df_base' in locals() and not df_base.empty:
         lista_edit = {f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']}": r for _, r in df_base.iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         
-        # 2. Só entra aqui se algo for selecionado
         if escolha:
             item = lista_edit[escolha]
             st.session_state['item_atual'] = item
             
-            # 3. Cria as colunas SEMPRE que houver uma escolha
             col1, col2 = st.columns(2)
             
-            # 4. Define os campos de edição AGORA, logo após as colunas serem criadas
             novo_desc = st.text_input("Descrição", value=str(item['Descrição']))
             novo_val = st.number_input("Valor", value=float(str(item['V_Num']).replace(',', '.')))
-            
             id_fixo = str(item['ID'])
 
-           # BOTÃO ATUALIZAR
-# BOTÃO ATUALIZAR
+            # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
-                # Busca exata do ID na Coluna 9
-                celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
-                
-                if celula:
-                    # Usamos o row que ele encontrou, mas garantimos que 
-                    # estamos editando exatamente a linha do ID achado.
-                    # Se ele achou na 156, é porque o ID 158 ESTÁ na linha 156.
-                    ws_base.update_cell(celula.row, 3, novo_desc)
-                    ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-                    ws_base.update_cell(celula.row, 7, novo_sta)
-                    
-                    st.success(f"ID {id_fixo} atualizado na linha {celula.row}!")
-                    st.rerun()
-                else:
-                    st.error("ID não encontrado pela busca.")
-    except Exception as e:
-        st.error(f"Erro: {e}")
-if col2.button("🚨 EXCLUIR"):
+                try:
+                    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
+                    if celula:
+                        ws_base.update_cell(celula.row, 3, novo_desc)
+                        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+                        st.success(f"ID {id_fixo} atualizado!")
+                        st.rerun()
+                    else:
+                        st.error("ID não encontrado.")
+                except Exception as e:
+                    st.error(f"Erro ao atualizar: {e}")
+
+            # BOTÃO EXCLUIR
+            if col2.button("🚨 EXCLUIR"):
                 try:
                     celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
                     if celula:
                         ws_base.delete_rows(celula.row)
                         st.success("Excluído!")
+                        if 'item_atual' in st.session_state: del st.session_state['item_atual']
                         st.rerun()
+                    else:
+                        st.error("ID não encontrado.")
                 except Exception as e:
-                    st.error(f"Erro: {e}")
+                    st.error(f"Erro ao excluir: {e}")
                     
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
