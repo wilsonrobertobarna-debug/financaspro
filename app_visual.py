@@ -359,7 +359,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                     for pos in encontrados:
                         st.write(f"ID {id_fixo} está na LINHA REAL {pos + 1} da planilha.")
                 else:
-        s            t.error("ID não encontrado na coluna 9.")
+                    st.error("ID não encontrado na coluna 9.")
             
             
             col1, col2 = st.columns(2)
