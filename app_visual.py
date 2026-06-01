@@ -367,20 +367,24 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             col_ed1, col_ed2 = st.columns(2)
             
             # O IF abaixo é a "parede" que protege seu código
+            # BOTÃO DE ATUALIZAR
             if col_ed1.button("💾 ATUALIZAR"):
-               # TUDO o que estiver abaixo e com um TAB de distância será executado
-               # SOMENTE quando você clicar no botão.
-               id_procurado = str(item['ID']) 
-    
-               # Esta é a sua linha 313. Ela deve estar AQUI DENTRO:
-               celula = ws_base.find(id_procurado, in_column=9)
-    
-            if celula:
-                # ... seu código de update ...
-                st.success("Atualizado!")
-                st.rerun()
-            else:
-                st.error("ID não encontrado.")
+                # Verificamos se o item foi carregado
+                if 'item' in locals() or 'item' in globals():
+                    id_procurado = str(item['ID']) 
+                    
+                    # A busca só acontece se o ID for válido
+                    celula = ws_base.find(id_procurado, in_column=9)
+                    
+                    if celula:
+                        linha = celula.row
+                        # ... resto do seu código de atualização ...
+                        st.success("Atualizado!")
+                        st.rerun()
+                    else:
+                        st.error("ID não encontrado na coluna 9.")
+                else:
+                    st.warning("Selecione um item antes de atualizar.")
                 
             # EXCLUIR
             if col_ed2.button("🚨 EXCLUIR"):
