@@ -353,47 +353,42 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
-        # Carrega a lista com o ID como identificador (Coluna I)
         lista_edit = {f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']} | R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         
         if escolha: 
             item = lista_edit[escolha]
-           # O ID é definido aqui, dentro do escopo do 'if escolha'
-            id_procurado = str(item['ID']) 
             
-            # ... campos de input (ed_dat, ed_val, etc) ...
+            # Campos de input...
+            ed_dat = st.date_input("Alterar Vencimento:", value=datetime.strptime(item['Vencimento'], "%d/%m/%Y"))
+            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01)
+            ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
             col_ed1, col_ed2 = st.columns(2)
             
-            # 1. ATUALIZAR
+            # ATUALIZAR - Protegido pelo clique do botão
             if col_ed1.button("💾 ATUALIZAR"):
-                # O find agora só roda se o botão for clicado E a variável existir
-                try:
-                    celula = ws_base.find(id_procurado, in_column=9)
-                    if celula:
-                        linha = celula.row
-                        ws_base.update_cell(linha, 1, ed_dat.strftime("%d/%m/%Y"))
-                        ws_base.update_cell(linha, 2, f"{ed_val:.2f}".replace('.', ','))
-                        ws_base.update_cell(linha, 3, ed_desc)
-                        # ... continue as colunas ...
-                        st.success("Atualizado!")
-                        st.rerun()
-                    else:
-                        st.error("ID não encontrado.")
-                except Exception as e:
-                    st.error(f"Erro na busca: {e}")
+                # O ID é extraído AQUI, no momento do clique, não antes
+                id_atual = str(item['ID']) 
+                
+                # O find só roda se o botão for clicado
+                celula = ws_base.find(id_atual, in_column=9)
+                
+                if celula:
+                    ws_base.update_cell(celula.row, 1, ed_dat.strftime("%d/%m/%Y"))
+                    ws_base.update_cell(celula.row, 2, f"{ed_val:.2f}".replace('.', ','))
+                    ws_base.update_cell(celula.row, 3, ed_desc)
+                    st.success("Atualizado!")
+                    st.rerun()
 
-            # 2. EXCLUIR
+            # EXCLUIR - Protegido pelo clique do botão
             if col_ed2.button("🚨 EXCLUIR"):
-                try:
-                    celula = ws_base.find(id_procurado, in_column=9)
-                    if celula:
-                        ws_base.delete_rows(celula.row)
-                        st.success("Excluído!")
-                        st.rerun()
-                except Exception as e:
-                    st.error(f"Erro na exclusão: {e}")
+                id_atual = str(item['ID'])
+                celula = ws_base.find(id_atual, in_column=9)
+                if celula:
+                    ws_base.delete_rows(celula.row)
+                    st.success("Excluído!")
+                    st.rerun()
 # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
