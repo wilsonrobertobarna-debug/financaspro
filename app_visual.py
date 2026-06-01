@@ -354,33 +354,31 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
 
             # BOTÃO ATUALIZAR
             # BOTÃO ATUALIZAR
-if col1.button("💾 ATUALIZAR"):
-    # Buscamos o ID exatamente na coluna 9
-    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
-    
-    if celula:
-        # Atualizamos a linha que o Google Sheets encontrou o ID, sem cálculos
-        ws_base.update_cell(celula.row, 3, novo_desc)
-        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-        ws_base.update_cell(celula.row, 7, novo_sta)
-        
-        st.success(f"ID {id_fixo} atualizado com sucesso!")
-        st.rerun()
-    else:
-        st.error(f"ID {id_fixo} não foi encontrado na planilha!")
-
-# BOTÃO EXCLUIR
-if col2.button("🚨 EXCLUIR"):
-    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
-    if celula:
-        ws_base.delete_rows(celula.row)
-        st.success("Excluído com sucesso!")
-        st.rerun()
-                    else:
-                        st.error("ID não encontrado.")
+# BOTÃO ATUALIZAR
+            if col1.button("💾 ATUALIZAR"):
+                try:
+                    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
+                    if celula:
+                        ws_base.update_cell(celula.row, 3, novo_desc)
+                        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+                        ws_base.update_cell(celula.row, 7, novo_sta)
+                        st.success(f"ID {id_fixo} atualizado!")
+                        st.rerun()
+                    # Se não encontrou, o Streamlit simplesmente não faz nada, sem causar erro de sintaxe
                 except Exception as e:
-                    st.error(f"Erro ao excluir: {e}")
-                    
+                    st.error(f"Erro ao atualizar: {e}")
+
+            # BOTÃO EXCLUIR
+            if col2.button("🚨 EXCLUIR"):
+                try:
+                    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
+                    if celula:
+                        ws_base.delete_rows(celula.row)
+                        st.success("Excluído!")
+                        if 'item_atual' in st.session_state: del st.session_state['item_atual']
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Erro ao excluir: {e}")                    
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
