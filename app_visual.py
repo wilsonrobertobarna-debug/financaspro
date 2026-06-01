@@ -344,7 +344,12 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             item_selecionado = lista_edit[escolha]
             meu_id = str(item_selecionado['ID'])
             
-            # Aqui você colocaria seus campos de edição (data, valor, etc.) se necessário
+            # --- NOVOS CAMPOS DE INPUT ---
+            # Aqui carregamos os valores atuais para você editar
+            ed_desc = st.text_input("Descrição", value=item_selecionado['Descrição'])
+            ed_val = st.number_input("Valor", value=float(str(item_selecionado['V_Num']).replace(',', '.')))
+            ed_sta = st.selectbox("Status", ["Pendente", "Pago"], index=0 if item_selecionado['Status'] == "Pendente" else 1)
+            # -----------------------------
             
             col1, col2 = st.columns(2)
             
@@ -353,11 +358,12 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                 try:
                     celula = ws_base.find(meu_id, in_column=9)
                     if celula:
-                        # ... coloque aqui o seu código de update_cell ...
+                        # Exemplo: atualizando as colunas com os novos valores
+                        ws_base.update_cell(celula.row, 3, ed_desc) # Supondo coluna 3 para descrição
+                        ws_base.update_cell(celula.row, 2, f"{ed_val:.2f}".replace('.', ','))
+                        ws_base.update_cell(celula.row, 7, ed_sta)
                         st.success("Atualizado!")
                         st.rerun()
-                    else:
-                        st.error("ID não encontrado.")
                 except Exception as e:
                     st.error(f"Erro: {e}")
             
