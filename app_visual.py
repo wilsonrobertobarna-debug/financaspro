@@ -356,15 +356,19 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             
             id_fixo = str(item['ID'])
 
-            # 5. Botões dentro das colunas
+            # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
                 try:
-                    # Busca exata
                     celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
                     if celula:
-                        ws_base.update_cell(celula.row, 3, novo_desc)
-                        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-                        st.success(f"ID {id_fixo} atualizado!")
+                        # AJUSTE: O erro de 1 linha geralmente ocorre porque o gspread 
+                        # pula o cabeçalho ou tem uma contagem de índice diferente.
+                        # Se ele está editando a de cima, somamos +1 ao row.
+                        linha_correta = celula.row + 1 
+                        
+                        ws_base.update_cell(linha_correta, 3, novo_desc)
+                        ws_base.update_cell(linha_correta, 2, f"{novo_val:.2f}".replace('.', ','))
+                        st.success(f"ID {id_fixo} atualizado na linha {linha_correta}!")
                         st.rerun()
                 except Exception as e:
                     st.error(f"Erro: {e}")
