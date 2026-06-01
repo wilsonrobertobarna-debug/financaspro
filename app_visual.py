@@ -347,9 +347,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             # (Aqui estariam seus inputs de data, valor, etc.)
             
             col1, col2 = st.columns(2)
-            
-            col1, col2 = st.columns(2)
-            
+                                    
             # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
                 celula = ws_base.find(meu_id, in_column=9)
