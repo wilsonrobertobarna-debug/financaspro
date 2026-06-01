@@ -372,7 +372,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
             col_ed1, col_ed2 = st.columns(2)
-           if col_ed1.button("💾 ATUALIZAR"):
+            if col_ed1.button("💾 ATUALIZAR"):
                 global ws_base  # DEVE SER A PRIMEIRA LINHA AQUI DENTRO!
                 
                 # Agora sim, definimos o ID
