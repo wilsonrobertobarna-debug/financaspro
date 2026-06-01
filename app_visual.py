@@ -372,32 +372,30 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
             col_ed1, col_ed2 = st.columns(2)
-            if col_ed1.button("💾 ATUALIZAR"):
-                # 1. Certifique-se de que o ws_base está definido! 
-                # Se você não definiu ele dentro desta função, use 'global ws_base' no início da função
-                global ws_base 
-    
-                # 2. Defina o ID antes de usar
+           if col_ed1.button("💾 ATUALIZAR"):
+                global ws_base  # DEVE SER A PRIMEIRA LINHA AQUI DENTRO!
+                
+                # Agora sim, definimos o ID
                 id_procurado = str(item['ID']) 
-    
-                # 3. Agora sim, faça a busca
+                
+                # E fazemos a busca
                 celula = ws_base.find(id_procurado, in_column=9)
                 
                 if celula:
-                    linha_real = celula.row
+                    linha = celula.row
+                    v_str = f"{ed_val:.2f}".replace('.', ',')
                     
-                    # Atualiza exatamente na linha encontrada
-                    ws_base.update_cell(linha_real, 1, ed_dat.strftime("%d/%m/%Y"))
-                    ws_base.update_cell(linha_real, 2, f"{ed_val:.2f}".replace('.', ','))
-                    ws_base.update_cell(linha_real, 3, ed_desc)
-                    ws_base.update_cell(linha_real, 6, ed_bnc)
-                    ws_base.update_cell(linha_real, 7, ed_sta)
+                    ws_base.update_cell(linha, 1, ed_dat.strftime("%d/%m/%Y"))
+                    ws_base.update_cell(linha, 2, v_str)
+                    ws_base.update_cell(linha, 3, ed_desc)
+                    ws_base.update_cell(linha, 6, ed_bnc)
+                    ws_base.update_cell(linha, 7, ed_sta)
                     
                     st.success("Atualizado com sucesso!")
                     atualizar_sessao()
                     st.rerun()
                 else:
-                    st.error(f"ID {valor_id_procurado} não foi encontrado na coluna {coluna_id_index}.")
+                    st.error(f"Não encontrei o ID {id_procurado} na Coluna I.")
             if col_ed2.button("🚨 EXCLUIR"):
                 if item['Categoria'] == 'Transferência':
                     desc = item['Descrição']
