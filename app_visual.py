@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
-import time
+
 
 # Definições iniciais de data
 agora_br = datetime.now() - timedelta(hours=3)
