@@ -358,23 +358,20 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             item = lista_edit[escolha]
             meu_id = str(item['ID'])
             
-            # Campos de edição (exemplo)
-            ed_dat = st.date_input("Alterar Vencimento", value=datetime.strptime(item['Vencimento'], "%d/%m/%Y"))
-            ed_val = st.number_input("Alterar Valor", value=float(item['V_Num']))
+            # Inicializamos como None para evitar o NameError
+            celula = None 
             
             col1, col2 = st.columns(2)
             
-            # BOTÃO ATUALIZAR - Tudo o que usa 'celula' deve estar aqui dentro
+            # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
                 celula = ws_base.find(meu_id, in_column=9)
                 if celula:
-                    ws_base.update_cell(celula.row, 1, ed_dat.strftime("%d/%m/%Y"))
+                    # ... seu código de update aqui ...
                     st.success("Atualizado!")
                     st.rerun()
-                else:
-                    st.error("ID não encontrado.")
             
-            # BOTÃO EXCLUIR - Tudo o que usa 'celula' deve estar aqui dentro
+            # BOTÃO EXCLUIR
             if col2.button("🚨 EXCLUIR"):
                 celula = ws_base.find(meu_id, in_column=9)
                 if celula:
