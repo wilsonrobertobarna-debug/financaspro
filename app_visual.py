@@ -373,15 +373,15 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             
             col_ed1, col_ed2 = st.columns(2)
             if col_ed1.button("💾 ATUALIZAR"):
-                # 1. Defina aqui a coluna onde está o seu ID (ex: 1 para coluna A, 2 para B, etc)
-                # Se o seu ID é a primeira coluna, use 1.
-                coluna_id_index = 1 
-                
-                # 2. Busca o valor do ID convertido em string
-                valor_id_procurado = str(item['ID'])
-                
-                # 3. Procura apenas na coluna correta
-                celula = ws_base.find(valor_id_procurado, in_column=coluna_id_index)
+                # 1. Certifique-se de que o ws_base está definido! 
+                # Se você não definiu ele dentro desta função, use 'global ws_base' no início da função
+                global ws_base 
+    
+                # 2. Defina o ID antes de usar
+                id_procurado = str(item['ID']) 
+    
+                # 3. Agora sim, faça a busca
+                celula = ws_base.find(id_procurado, in_column=9)
                 
                 if celula:
                     linha_real = celula.row
