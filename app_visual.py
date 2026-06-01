@@ -341,46 +341,48 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         
         if escolha: 
-            item_selecionado = lista_edit[escolha]
-            meu_id = str(item_selecionado['ID'])
+            # Atualiza o session_state com a escolha atual
+            st.session_state['item_atual'] = lista_edit[escolha]
+        
+        # Agora usamos apenas o 'item_atual' do session_state
+        if 'item_atual' in st.session_state:
+            item = st.session_state['item_atual']
             
-            # --- CAMPOS DE EDIÇÃO (Aqui eles aparecem na tela) ---
-            st.write("---") # Linha separadora visual
+            # --- CAMPOS DE EDIÇÃO ---
+            st.write("---") 
             novo_desc = st.text_input("Descrição", value=str(item['Descrição']))
             novo_val = st.number_input("Valor", value=float(str(item['V_Num']).replace(',', '.')))
-            ed_sta = st.selectbox("Status", ["Pendente", "Pago"], index=0 if item_selecionado['Status'] == "Pendente" else 1)
-            # ----------------------------------------------------
-            # Se tiver algo guardado no session_state, exibimos os campos
-        if 'item_atual' in st.session_state:
-            item = st.session_state['item_atual']           
-                        
+            # Usando o status do item atual para o selectbox
+            status_atual = item['Status']
+            novo_sta = st.selectbox("Status", ["Pendente", "Pago"], index=0 if status_atual == "Pendente" else 1)
             
-            # ATENÇÃO AQUI: Guardamos o ID original em uma variável local antes do botão
             id_fixo = str(item['ID']) 
             
-            col1, col2 = st.columns(2)            
+            col1, col2 = st.columns(2)
+            
             # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
-                # Agora usamos o id_fixo, que não muda mesmo se o usuário editar o input
                 try:
                     celula = ws_base.find(id_fixo, in_column=9) 
                     if celula:
-                        ws_base.update_cell(celula.row, 3, novo_desc)
-                        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-                        st.success(f"ID {id_fixo} atualizado com sucesso!")
+                        ws_base.update_cell(celula.row, 3, novo_desc) # Descrição
+                        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ',')) # Valor
+                        ws_base.update_cell(celula.row, 7, novo_sta) # Status
+                        st.success(f"ID {id_fixo} atualizado!")
                         st.rerun()
                     else:
-                        st.error(f"Não encontrei o ID {id_fixo} na coluna 9.")
+                        st.error("ID não encontrado.")
                 except Exception as e:
                     st.error(f"Erro: {e}")
             
             # BOTÃO EXCLUIR
             if col2.button("🚨 EXCLUIR"):
                 try:
-                    celula = ws_base.find(meu_id, in_column=9)
+                    celula = ws_base.find(id_fixo, in_column=9) # Usando id_fixo aqui também!
                     if celula:
                         ws_base.delete_rows(celula.row)
                         st.success("Excluído!")
+                        del st.session_state['item_atual'] # Limpa após excluir
                         st.rerun()
                 except Exception as e:
                     st.error(f"Erro ao excluir: {e}")
