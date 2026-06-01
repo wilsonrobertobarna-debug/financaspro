@@ -371,9 +371,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                 
                 st.success(f"Linha {linha_alvo} atualizada com sucesso!")
                 st.rerun()
-                else:
-                    st.error(f"ID {id_fixo} não encontrado.")
-
+                
             if col1.button("🔍 DIAGNOSTICAR"):
                 todos_dados = ws_base.get_all_values()
                 st.write("Exibindo as primeiras 5 linhas da planilha:")
