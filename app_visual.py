@@ -363,19 +363,24 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                 else:
                     st.error("ID não encontrado.")
 
+            # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
-                # Mudamos in_column para 8, que é a sua última coluna
-                celula = ws_base.find(str(id_fixo), in_column=8)
-    
+                # Procura o ID na planilha TODA, sem restringir a coluna
+                # Isso vai encontrar o ID mesmo se ele estiver na coluna 1, 2, ... ou 8
+                celula = ws_base.find(str(id_fixo))
+                
                 if celula:
-                    # Agora o sistema vai encontrar o ID na coluna H
+                    st.write(f"ID {id_fixo} encontrado na linha {celula.row}, coluna {celula.col}")
+                    
+                    # Agora usamos as coordenadas encontradas para atualizar
                     ws_base.update_cell(celula.row, 3, novo_desc)
                     ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
                     ws_base.update_cell(celula.row, 7, novo_sta)
+                    
                     st.success("Atualizado!")
                     st.rerun()
                 else:
-                    st.error("ID não encontrado na coluna 8.")
+                    st.error(f"ID {id_fixo} não foi encontrado em NENHUMA coluna desta aba.")
                     
             if col2.button("🚨 EXCLUIR"):
                 celula = ws_base.find(str(id_fixo), in_column=8)
