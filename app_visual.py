@@ -354,29 +354,28 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
 
                 
             # BOTÃO ATUALIZAR
-          # BOTÃO ATUALIZAR
-            # BOTÃO ATUALIZAR
-# BOTÃO ATUALIZAR
-if col1.button("💾 ATUALIZAR"):
-    # Buscamos o ID 9 (ou qualquer outro que você selecionar)
-    # A variável 'celula' vai guardar o objeto da célula, incluindo sua linha correta
-    celula = ws_base.find(str(id_fixo), in_column=9)
-    
-    if celula:
-        # AQUI É A MUDANÇA: Usamos o .row que o Google Sheets nos dá.
-        # SEM +2, SEM -2, SEM CÁLCULOS.
-        linha_real = celula.row 
-        
-        st.write(f"Editando a linha real que o Google encontrou: {linha_real}")
-        
-        ws_base.update_cell(linha_real, 3, novo_desc)
-        ws_base.update_cell(linha_real, 2, f"{novo_val:.2f}".replace('.', ','))
-        ws_base.update_cell(linha_real, 7, novo_sta)
-        
-        st.success(f"ID {id_fixo} atualizado exatamente na linha {linha_real}!")
-        st.rerun()
-    else:
-        st.error("ID não encontrado na planilha.")
+         # BOTÃO ATUALIZAR
+            if col1.button("💾 ATUALIZAR"):
+                # Vamos buscar a coluna inteira 9 (onde estão seus IDs)
+                coluna_ids = ws_base.col_values(9)
+                
+                # Encontramos o índice do ID na lista (o Python começa no 0)
+                # Como a primeira linha é o cabeçalho, somamos 1 para a posição real
+                try:
+                    # Encontra a posição do ID na lista
+                    posicao = coluna_ids.index(str(id_fixo)) + 1
+                    
+                    st.write(f"ID {id_fixo} localizado na LINHA {posicao} pelo método de busca de coluna.")
+                    
+                    # Atualiza a linha exata
+                    ws_base.update_cell(posicao, 3, novo_desc)
+                    ws_base.update_cell(posicao, 2, f"{novo_val:.2f}".replace('.', ','))
+                    ws_base.update_cell(posicao, 7, novo_sta)
+                    
+                    st.success(f"Atualizado na linha {posicao}!")
+                    st.rerun()
+                except ValueError:
+                    st.error(f"ID {id_fixo} não encontrado na coluna 9.")
                     
             # BOTÃO EXCLUIR - Alinhado com o 'if' do botão acima
         if col2.button("🚨 EXCLUIR"):
