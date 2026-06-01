@@ -346,26 +346,33 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             
             # --- CAMPOS DE EDIÇÃO (Aqui eles aparecem na tela) ---
             st.write("---") # Linha separadora visual
-            ed_desc = st.text_input("Descrição", value=str(item_selecionado['Descrição']))
-            ed_val = st.number_input("Valor", value=float(str(item_selecionado['V_Num']).replace(',', '.')))
+            novo_desc = st.text_input("Descrição", value=str(item['Descrição']))
+            novo_val = st.number_input("Valor", value=float(str(item['V_Num']).replace(',', '.')))
             ed_sta = st.selectbox("Status", ["Pendente", "Pago"], index=0 if item_selecionado['Status'] == "Pendente" else 1)
             # ----------------------------------------------------
+            # Se tiver algo guardado no session_state, exibimos os campos
+        if 'item_atual' in st.session_state:
+            item = st.session_state['item_atual']           
+                        
             
-            col1, col2 = st.columns(2)
+            # ATENÇÃO AQUI: Guardamos o ID original em uma variável local antes do botão
+            id_fixo = str(item['ID']) 
             
+            col1, col2 = st.columns(2)            
             # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
+                # Agora usamos o id_fixo, que não muda mesmo se o usuário editar o input
                 try:
-                    celula = ws_base.find(meu_id, in_column=9)
+                    celula = ws_base.find(id_fixo, in_column=9) 
                     if celula:
-                        # Coloque aqui as colunas exatas da sua planilha (ajuste os números se necessário)
-                        ws_base.update_cell(celula.row, 3, ed_desc) 
-                        ws_base.update_cell(celula.row, 2, f"{ed_val:.2f}".replace('.', ','))
-                        ws_base.update_cell(celula.row, 7, ed_sta)
-                        st.success("Atualizado!")
+                        ws_base.update_cell(celula.row, 3, novo_desc)
+                        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+                        st.success(f"ID {id_fixo} atualizado com sucesso!")
                         st.rerun()
+                    else:
+                        st.error(f"Não encontrei o ID {id_fixo} na coluna 9.")
                 except Exception as e:
-                    st.error(f"Erro ao salvar: {e}")
+                    st.error(f"Erro: {e}")
             
             # BOTÃO EXCLUIR
             if col2.button("🚨 EXCLUIR"):
