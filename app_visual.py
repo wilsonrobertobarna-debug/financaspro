@@ -356,32 +356,27 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             # BOTÃO ATUALIZAR
           # BOTÃO ATUALIZAR
             # BOTÃO ATUALIZAR
+# BOTÃO ATUALIZAR
 if col1.button("💾 ATUALIZAR"):
-    # Vamos buscar o ID na planilha (Coluna 9)
-    # Ignoramos completamente o número que o relatório te mostra
-    # e usamos o valor real do ID para encontrar a linha.
-    try:
-        # Busca todas as ocorrências desse ID na Coluna 9
-        celulas = ws_base.findall(str(id_fixo), in_column=9)
+    # Buscamos o ID 9 (ou qualquer outro que você selecionar)
+    # A variável 'celula' vai guardar o objeto da célula, incluindo sua linha correta
+    celula = ws_base.find(str(id_fixo), in_column=9)
+    
+    if celula:
+        # AQUI É A MUDANÇA: Usamos o .row que o Google Sheets nos dá.
+        # SEM +2, SEM -2, SEM CÁLCULOS.
+        linha_real = celula.row 
         
-        if celulas:
-            # Pegamos a última célula encontrada (a que corresponde ao ID correto)
-            celula = celulas[-1]
-            
-            # Mostra na tela o que ele encontrou, para termos certeza
-            st.write(f"O sistema encontrou o ID {id_fixo} na linha {celula.row}.")
-            
-            # Executa a atualização na linha REAL encontrada pelo Gspread
-            ws_base.update_cell(celula.row, 3, novo_desc)
-            ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-            ws_base.update_cell(celula.row, 7, novo_sta)
-            
-            st.success("Atualizado com sucesso!")
-            st.rerun()
-        else:
-            st.error("ID não encontrado na planilha.")
-    except Exception as e:
-        st.error(f"Erro: {e}")
+        st.write(f"Editando a linha real que o Google encontrou: {linha_real}")
+        
+        ws_base.update_cell(linha_real, 3, novo_desc)
+        ws_base.update_cell(linha_real, 2, f"{novo_val:.2f}".replace('.', ','))
+        ws_base.update_cell(linha_real, 7, novo_sta)
+        
+        st.success(f"ID {id_fixo} atualizado exatamente na linha {linha_real}!")
+        st.rerun()
+    else:
+        st.error("ID não encontrado na planilha.")
                     
             # BOTÃO EXCLUIR - Alinhado com o 'if' do botão acima
         if col2.button("🚨 EXCLUIR"):
