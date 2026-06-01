@@ -346,20 +346,20 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             st.session_state['item_atual'] = item
 
             # BOTÃO DE AUDITORIA (Substitua o ATUALIZAR temporariamente)
-if col1.button("🔍 AUDITAR PLANILHA"):
-    # Carrega a coluna de IDs novamente
-    coluna_ids = ws_base.col_values(9)
+            if col1.button("🔍 AUDITAR PLANILHA"):
+                # Carrega a coluna de IDs novamente
+                coluna_ids = ws_base.col_values(9)
     
-    # Procura TODAS as posições do ID que você selecionou
-    encontrados = [i for i, valor in enumerate(coluna_ids) if valor == str(id_fixo)]
+                # Procura TODAS as posições do ID que você selecionou
+                encontrados = [i for i, valor in enumerate(coluna_ids) if valor == str(id_fixo)]
     
-    if encontrados:
-        st.write(f"O ID {id_fixo} foi encontrado nas seguintes posições (índice da lista): {encontrados}")
-        st.write("Lembre-se: O Google Sheets começa a contar linhas em 1.")
-        for pos in encontrados:
-            st.write(f"ID {id_fixo} está na LINHA REAL {pos + 1} da planilha.")
-    else:
-        st.error("ID não encontrado na coluna 9.")
+                if encontrados:
+                    st.write(f"O ID {id_fixo} foi encontrado nas seguintes posições (índice da lista): {encontrados}")
+                    st.write("Lembre-se: O Google Sheets começa a contar linhas em 1.")
+                    for pos in encontrados:
+                        st.write(f"ID {id_fixo} está na LINHA REAL {pos + 1} da planilha.")
+                else:
+        s            t.error("ID não encontrado na coluna 9.")
             
             
             col1, col2 = st.columns(2)
