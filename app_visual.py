@@ -357,27 +357,23 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             id_fixo = str(item['ID'])
 
            # BOTÃO ATUALIZAR
-if col1.button("💾 ATUALIZAR"):
-    try:
-        # 1. Procura a célula que contém o ID exato na coluna 9
-        celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
-        
-        if celula:
-            # 2. VALIDAÇÃO DE SEGURANÇA: 
-            # Verifica se o ID que está na linha encontrada é realmente o que queremos
-            valor_na_linha = ws_base.cell(celula.row, 9).value
-            
-            if str(valor_na_linha) == str(id_fixo):
-                # Se for o mesmo, atualiza
-                ws_base.update_cell(celula.row, 3, novo_desc)
-                ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-                ws_base.update_cell(celula.row, 7, novo_sta)
-                st.success(f"ID {id_fixo} atualizado com sucesso na linha {celula.row}!")
-                st.rerun()
-            else:
-                st.error(f"ERRO DE SEGURANÇA: O ID na planilha ({valor_na_linha}) não coincide com o selecionado ({id_fixo}).")
-        else:
-            st.error("ID não encontrado na planilha.")
+# BOTÃO ATUALIZAR
+            if col1.button("💾 ATUALIZAR"):
+                # Busca exata do ID na Coluna 9
+                celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
+                
+                if celula:
+                    # Usamos o row que ele encontrou, mas garantimos que 
+                    # estamos editando exatamente a linha do ID achado.
+                    # Se ele achou na 156, é porque o ID 158 ESTÁ na linha 156.
+                    ws_base.update_cell(celula.row, 3, novo_desc)
+                    ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+                    ws_base.update_cell(celula.row, 7, novo_sta)
+                    
+                    st.success(f"ID {id_fixo} atualizado na linha {celula.row}!")
+                    st.rerun()
+                else:
+                    st.error("ID não encontrado pela busca.")
     except Exception as e:
         st.error(f"Erro: {e}")
 if col2.button("🚨 EXCLUIR"):
