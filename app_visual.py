@@ -356,26 +356,30 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             
             id_fixo = str(item['ID'])
 
-            # BOTÃO ATUALIZAR
-            if col1.button("💾 ATUALIZAR"):
-                try:
-                    # 1. Buscamos o ID exatamente na coluna 9
-                    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
-                    
-                    if celula:
-                        # 2. NÃO FAZEMOS NENHUMA CONTA (+1 ou -2). 
-                        # Usamos o .row que o gspread nos deu. 
-                        # Se ele encontrar na 165, ele vai atualizar a 165.
-                        ws_base.update_cell(celula.row, 3, novo_desc)
-                        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-                        ws_base.update_cell(celula.row, 7, novo_sta)
-                        
-                        st.success(f"ID {id_fixo} atualizado na linha {celula.row}!")
-                        st.rerun()
-                    else:
-                        st.error("ID não encontrado na coluna 9.")
-                except Exception as e:
-                    st.error(f"Erro: {e}")
+           # BOTÃO ATUALIZAR
+if col1.button("💾 ATUALIZAR"):
+    try:
+        # 1. Procura a célula que contém o ID exato na coluna 9
+        celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
+        
+        if celula:
+            # 2. VALIDAÇÃO DE SEGURANÇA: 
+            # Verifica se o ID que está na linha encontrada é realmente o que queremos
+            valor_na_linha = ws_base.cell(celula.row, 9).value
+            
+            if str(valor_na_linha) == str(id_fixo):
+                # Se for o mesmo, atualiza
+                ws_base.update_cell(celula.row, 3, novo_desc)
+                ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+                ws_base.update_cell(celula.row, 7, novo_sta)
+                st.success(f"ID {id_fixo} atualizado com sucesso na linha {celula.row}!")
+                st.rerun()
+            else:
+                st.error(f"ERRO DE SEGURANÇA: O ID na planilha ({valor_na_linha}) não coincide com o selecionado ({id_fixo}).")
+        else:
+            st.error("ID não encontrado na planilha.")
+    except Exception as e:
+        st.error(f"Erro: {e}")
             if col2.button("🚨 EXCLUIR"):
                 try:
                     celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
