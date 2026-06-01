@@ -356,25 +356,15 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             # BOTÃO ATUALIZAR
             # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
-            # id_fixo é o valor que você selecionou no selectbox
-            # Vamos buscar esse valor exato como texto na coluna 9
                 celula = ws_base.find(str(id_fixo), in_column=9)
-    
                 if celula:
-            # AQUI ESTÁ O SEGREDO: Usamos a linha exata que o Gspread encontrou
-            # sem fazer nenhuma conta de +2 ou -2.
-            linha_encontrada = celula.row
-        
-                ws_base.update_cell(linha_encontrada, 3, novo_desc)
-                ws_base.update_cell(linha_encontrada, 2, f"{novo_val:.2f}".replace('.', ','))
-                ws_base.update_cell(linha_encontrada, 7, novo_sta)
-        
-        st.success(f"ID {id_fixo} localizado na linha {linha_encontrada} e atualizado!")
-        st.rerun()
-    else:
-        st.error(f"O ID {id_fixo} não foi encontrado na coluna 9 da planilha!")
+                    ws_base.update_cell(celula.row, 3, novo_desc)
+                    ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+                    ws_base.update_cell(celula.row, 7, novo_sta)
+                    st.success("Atualizado!")
+                    st.rerun()
 
-            # BOTÃO EXCLUIR
+            # BOTÃO EXCLUIR - Alinhado com o 'if' do botão acima
             if col2.button("🚨 EXCLUIR"):
                 celula = ws_base.find(str(id_fixo), in_column=9)
                 if celula:
