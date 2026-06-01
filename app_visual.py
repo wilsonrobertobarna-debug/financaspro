@@ -357,27 +357,27 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         lista_edit = {f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']} | R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         
-        if escolha: # SÓ EXECUTA SE ALGO FOR SELECIONADO
+       if escolha: 
             item = lista_edit[escolha]
+            # O ID nasce aqui, mas só se 'escolha' tiver um valor
             id_procurado = str(item['ID']) 
             
-            # ... seus campos de edição (data, valor, descrição) ...
+            # ... seus outros campos ...
             
             col_ed1, col_ed2 = st.columns(2)
             
-            # O BOTÃO DEVE ESTAR DENTRO DO IF ESCOLHA
+            # O BOTÃO É A "CAIXA" QUE PROTEGE O CÓDIGO DE DAR ERRO
             if col_ed1.button("💾 ATUALIZAR"):
-                # A variável 'id_procurado' agora está segura aqui dentro
+                # ESTA É A LINHA 313: ela precisa estar aqui dentro!
                 celula = ws_base.find(id_procurado, in_column=9)
                 
                 if celula:
                     linha = celula.row
-                    # ... seu update_cell aqui ...
-                    st.success("Atualizado com sucesso!")
+                    # ... seu código de atualização ...
+                    st.success("Atualizado!")
                     st.rerun()
                 else:
-                    st.error("ID não encontrado na Coluna I.")
-
+                    st.error("ID não encontrado.")
             # EXCLUIR
             if col_ed2.button("🚨 EXCLUIR"):
                 id_procurado = str(item['ID'])
