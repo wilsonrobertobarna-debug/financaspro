@@ -353,37 +353,29 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
 
 
             # BOTÃO ATUALIZAR
-            if col1.button("💾 ATUALIZAR"):
-                try:
-                    # Busca exata do ID na Coluna 9
-                    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
-                    
-                    if celula:
-                        # CORREÇÃO DE DESLOCAMENTO: 
-                        # O gspread encontra na 193, mas o dado real que você quer 
-                        # editar está na 195 (193 + 2).
-                        linha_alvo = celula.row (2) 
-                        
-                        ws_base.update_cell(linha_alvo, 3, novo_desc)
-                        ws_base.update_cell(linha_alvo, 2, f"{novo_val:.2f}".replace('.', ','))
-                        ws_base.update_cell(linha_alvo, 7, novo_sta)
-                        
-                        st.success(f"ID {id_fixo} atualizado na linha {linha_alvo}!")
-                        st.rerun()
-                    else:
-                        st.error("ID não encontrado.")
-                except Exception as e:
-                    st.error(f"Erro: {e}")
+            # BOTÃO ATUALIZAR
+if col1.button("💾 ATUALIZAR"):
+    # Buscamos o ID exatamente na coluna 9
+    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
+    
+    if celula:
+        # Atualizamos a linha que o Google Sheets encontrou o ID, sem cálculos
+        ws_base.update_cell(celula.row, 3, novo_desc)
+        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+        ws_base.update_cell(celula.row, 7, novo_sta)
+        
+        st.success(f"ID {id_fixo} atualizado com sucesso!")
+        st.rerun()
+    else:
+        st.error(f"ID {id_fixo} não foi encontrado na planilha!")
 
-            # BOTÃO EXCLUIR
-            if col2.button("🚨 EXCLUIR"):
-                try:
-                    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
-                    if celula:
-                        ws_base.delete_rows(celula.row)
-                        st.success("Excluído!")
-                        if 'item_atual' in st.session_state: del st.session_state['item_atual']
-                        st.rerun()
+# BOTÃO EXCLUIR
+if col2.button("🚨 EXCLUIR"):
+    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
+    if celula:
+        ws_base.delete_rows(celula.row)
+        st.success("Excluído com sucesso!")
+        st.rerun()
                     else:
                         st.error("ID não encontrado.")
                 except Exception as e:
