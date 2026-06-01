@@ -354,33 +354,29 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
 
                 
             # BOTÃO ATUALIZAR
-           # BOTÃO ATUALIZAR
+          # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
-                # Busca exata do ID na Coluna 9
-                try:
-                    # Buscamos a lista de todas as células que contêm esse ID
-                    # Isso vai nos dizer se existem duplicados
-                    todas_celulas = ws_base.findall(str(id_fixo), in_column=9)
+                # Filtramos o DataFrame base para encontrar a linha onde o ID é igual ao escolhido
+                # Isso garante que estamos pegando o registro certo independente da ordem ou posição
+                filtro = df_base[df_base['ID'] == int(id_fixo)]
+                
+                if not filtro.empty:
+                    # 'index' no Pandas aqui retorna a posição original que carregamos da planilha
+                    # Adicionamos 2 porque a planilha começa na linha 2 (cabeçalho na 1)
+                    linha_real = int(filtro.index[0]) + 2
                     
-                    if len(todas_celulas) > 1:
-                        st.warning(f"CUIDADO: Encontrei o ID {id_fixo} em {len(todas_celulas)} linhas diferentes!")
+                    # DEBUG (para você ver se ele acertou a linha)
+                    st.write(f"ID {id_fixo} encontrado no índice {filtro.index[0]}. Editando linha {linha_real}")
                     
-                    if todas_celulas:
-                        # Usamos a última ocorrência (a mais provável de ser a correta)
-                        celula = todas_celulas[-1]
-                        
-                        st.write(f"Editando a linha: {celula.row}")
-                        
-                        ws_base.update_cell(celula.row, 3, novo_desc)
-                        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-                        ws_base.update_cell(celula.row, 7, novo_sta)
-                        
-                        st.success("Atualizado!")
-                        st.rerun()
-                    else:
-                        st.error("ID não encontrado.")
-                except Exception as e:
-                    st.error(f"Erro: {e}")
+                    ws_base.update_cell(linha_real, 3, novo_desc)
+                    ws_base.update_cell(linha_real, 2, f"{novo_val:.2f}".replace('.', ','))
+                    ws_base.update_cell(linha_real, 7, novo_sta)
+                    
+                    st.success("Atualizado com sucesso!")
+                    st.rerun()
+                else:
+                    st.error("ID não localizado no relatório.")
+                    
             # BOTÃO EXCLUIR - Alinhado com o 'if' do botão acima
             if col2.button("🚨 EXCLUIR"):
                 celula = ws_base.find(str(id_fixo), in_column=9)
