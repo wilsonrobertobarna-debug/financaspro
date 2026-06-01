@@ -358,29 +358,31 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             item = lista_edit[escolha]
             meu_id = str(item['ID'])
             
-            # ... campos de input (data, valor, etc) ...
+            # Campos de edição (exemplo)
+            ed_dat = st.date_input("Alterar Vencimento", value=datetime.strptime(item['Vencimento'], "%d/%m/%Y"))
+            ed_val = st.number_input("Alterar Valor", value=float(item['V_Num']))
             
             col1, col2 = st.columns(2)
             
+            # BOTÃO ATUALIZAR - Tudo o que usa 'celula' deve estar aqui dentro
             if col1.button("💾 ATUALIZAR"):
-                # A variável 'celula' só existe se o botão for clicado
                 celula = ws_base.find(meu_id, in_column=9)
-                
-                # O 'if celula' está DENTRO do botão, logo, é seguro
                 if celula:
-                    ws_base.update_cell(celula.row, 1, "dados_aqui")
+                    ws_base.update_cell(celula.row, 1, ed_dat.strftime("%d/%m/%Y"))
                     st.success("Atualizado!")
                     st.rerun()
                 else:
-                    st.warning("ID não localizado.")
+                    st.error("ID não encontrado.")
             
+            # BOTÃO EXCLUIR - Tudo o que usa 'celula' deve estar aqui dentro
             if col2.button("🚨 EXCLUIR"):
-                cel = ws_base.find(meu_id, in_column=9)
-                if cel:
-                    ws_base.delete_rows(cel.row)
+                celula = ws_base.find(meu_id, in_column=9)
+                if celula:
+                    ws_base.delete_rows(celula.row)
                     st.success("Excluído!")
                     st.rerun()
-# 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
+                    
+                    # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
 rendimento = 0.19
