@@ -372,42 +372,37 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
             col_ed1, col_ed2 = st.columns(2)
             
+            # ATUALIZAR
             if col_ed1.button("💾 ATUALIZAR"):
-                # O find agora está seguro DENTRO do if do botão
+                # Captura o ID diretamente do 'item' que foi selecionado no selectbox
+                id_procurado = str(item['ID'])
+                
+                # Busca na coluna 9 (Coluna I)
                 celula = ws_base.find(id_procurado, in_column=9)
                 
                 if celula:
                     linha = celula.row
                     v_str = f"{ed_val:.2f}".replace('.', ',')
+                    
                     ws_base.update_cell(linha, 1, ed_dat.strftime("%d/%m/%Y"))
                     ws_base.update_cell(linha, 2, v_str)
                     ws_base.update_cell(linha, 3, ed_desc)
-                    # ... continue as outras colunas ...
-                    st.success("Atualizado!")
+                    ws_base.update_cell(linha, 6, ed_bnc)
+                    ws_base.update_cell(linha, 7, ed_sta)
+                    
+                    st.success("Atualizado com sucesso!")
                     st.rerun()
                 else:
-                    st.error("ID não encontrado na Coluna I.")
-                    
+                    st.error(f"Não encontrei o ID {id_procurado} na planilha.")
+
+            # EXCLUIR
             if col_ed2.button("🚨 EXCLUIR"):
-                if item['Categoria'] == 'Transferência':
-                    desc = item['Descrição']
-                    data = item['Data']
-                    v_num = item['V_Num']
-                    ids_para_excluir = []
-                    for idx, row in df_base.iterrows():
-                        if (row['Data'] == data and 
-                            abs(row['V_Num'] - v_num) < 0.01 and 
-                            row['Descrição'] == desc and 
-                            row['Categoria'] == 'Transferência'):
-                            ids_para_excluir.append(int(row['ID']))
-                    ids_para_excluir = sorted(list(set(ids_para_excluir)), reverse=True)
-                    for id_linha in ids_para_excluir:
-                        ws_base.delete_rows(id_linha)
-                else:
-                    ws_base.delete_rows(int(item['ID']))
-                atualizar_sessao()
-                st.rerun()
-                
+                id_procurado = str(item['ID'])
+                celula = ws_base.find(id_procurado, in_column=9)
+                if celula:
+                    ws_base.delete_rows(celula.row)
+                    st.success("Excluído com sucesso!")
+                    st.rerun()                
 # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
