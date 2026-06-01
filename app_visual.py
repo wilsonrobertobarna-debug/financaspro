@@ -363,7 +363,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                 if celula:
             # AQUI ESTÁ O SEGREDO: Usamos a linha exata que o Gspread encontrou
             # sem fazer nenhuma conta de +2 ou -2.
-                linha_encontrada = celula.row
+            linha_encontrada = celula.row
         
                 ws_base.update_cell(linha_encontrada, 3, novo_desc)
                 ws_base.update_cell(linha_encontrada, 2, f"{novo_val:.2f}".replace('.', ','))
