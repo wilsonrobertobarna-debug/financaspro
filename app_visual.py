@@ -351,10 +351,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             novo_val = st.number_input("Valor", value=float(str(item['V_Num']).replace(',', '.')))
             id_fixo = str(item['ID'])
 
-
                 
             # BOTÃO ATUALIZAR
-         # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
                 # Vamos buscar a coluna inteira 9 (onde estão seus IDs)
                 coluna_ids = ws_base.col_values(9)
@@ -378,7 +376,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                     st.error(f"ID {id_fixo} não encontrado na coluna 9.")
                     
             # BOTÃO EXCLUIR - Alinhado com o 'if' do botão acima
-        if col2.button("🚨 EXCLUIR"):
+            if col2.button("🚨 EXCLUIR"):
                 celula = ws_base.find(str(id_fixo), in_column=9)
                 if celula:
                     ws_base.delete_rows(celula.row)
