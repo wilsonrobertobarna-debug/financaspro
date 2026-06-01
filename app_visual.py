@@ -359,32 +359,21 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         
         if escolha: # SÓ EXECUTA SE ALGO FOR SELECIONADO
             item = lista_edit[escolha]
-            # O ID está aqui dentro agora!
             id_procurado = str(item['ID']) 
             
-            # Campos de edição...
-            data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
-            ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
-            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
-            ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
+            # ... seus campos de edição (data, valor, descrição) ...
             
-            # ... (seu selectbox de banco e status) ...
-
-           # O código aqui fora (do selectbox) continua normal...
             col_ed1, col_ed2 = st.columns(2)
             
-            # ATUALIZAR
+            # O BOTÃO DEVE ESTAR DENTRO DO IF ESCOLHA
             if col_ed1.button("💾 ATUALIZAR"):
-                # A VARIÁVEL SÓ NASCE AQUI DENTRO, NO MOMENTO DO CLIQUE
-                id_procurado = str(item['ID']) 
-                
-                # A BUSCA SÓ ACONTECE DEPOIS QUE O BOTÃO É CLICADO
+                # A variável 'id_procurado' agora está segura aqui dentro
                 celula = ws_base.find(id_procurado, in_column=9)
                 
                 if celula:
                     linha = celula.row
-                    # ... seu código de update aqui ...
-                    st.success("Atualizado!")
+                    # ... seu update_cell aqui ...
+                    st.success("Atualizado com sucesso!")
                     st.rerun()
                 else:
                     st.error("ID não encontrado na Coluna I.")
