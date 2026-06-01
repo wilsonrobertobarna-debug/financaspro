@@ -351,6 +351,7 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
     if 'df_base' in locals() and not df_base.empty:
+        # Cria a lista de seleção
         lista_edit = {f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']}": r for _, r in df_base.iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         
@@ -358,23 +359,25 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             item = lista_edit[escolha]
             meu_id = str(item['ID'])
             
-            # ... seus campos de input (data, valor, etc) ...
+            # (Aqui estariam seus inputs de data, valor, etc.)
             
             col1, col2 = st.columns(2)
             
-            # ATUALIZAR
+            # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
-                # A variável 'cel' só é criada se o botão for clicado
+                # A variável 'cel' só nasce aqui, dentro do clique
                 cel = ws_base.find(meu_id, in_column=9)
-                if cel: # A verificação acontece aqui, dentro do botão
+                if cel:
                     ws_base.update_cell(cel.row, 1, "dados_aqui")
                     st.success("Atualizado!")
                     st.rerun()
+                else:
+                    st.error("ID não encontrado.")
             
-            # EXCLUIR
+            # BOTÃO EXCLUIR
             if col2.button("🚨 EXCLUIR"):
                 cel = ws_base.find(meu_id, in_column=9)
-                if cel: # A verificação acontece aqui, dentro do botão
+                if cel:
                     ws_base.delete_rows(cel.row)
                     st.success("Excluído!")
                     st.rerun()
