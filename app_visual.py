@@ -335,7 +335,6 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
                 st.rerun()
 
 # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
-# --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
     if 'df_base' in locals() and not df_base.empty:
         lista_edit = {f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']}": r for _, r in df_base.iloc[::-1].iterrows()}
@@ -343,60 +342,42 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
         
         if escolha:
             item = lista_edit[escolha]
-            st.session_state['item_atual'] = item
-
-            # BOTÃO DE AUDITORIA (Substitua o ATUALIZAR temporariamente)
-            if col1.button("🔍 AUDITAR PLANILHA"):
-                # Carrega a coluna de IDs novamente
-                coluna_ids = ws_base.col_values(9)
-    
-                # Procura TODAS as posições do ID que você selecionou
-                encontrados = [i for i, valor in enumerate(coluna_ids) if valor == str(id_fixo)]
-    
-                if encontrados:
-                    st.write(f"O ID {id_fixo} foi encontrado nas seguintes posições (índice da lista): {encontrados}")
-                    st.write("Lembre-se: O Google Sheets começa a contar linhas em 1.")
-                    for pos in encontrados:
-                        st.write(f"ID {id_fixo} está na LINHA REAL {pos + 1} da planilha.")
-                else:
-                    st.error("ID não encontrado na coluna 9.")
+            id_fixo = str(item['ID'])
             
-            
+            # --- AGORA DEFINIMOS AS COLUNAS ---
             col1, col2 = st.columns(2)
             
+            # --- CAMPOS DE ENTRADA ---
             novo_desc = st.text_input("Descrição", value=str(item['Descrição']))
             novo_val = st.number_input("Valor", value=float(str(item['V_Num']).replace(',', '.')))
-            id_fixo = str(item['ID'])
+            # (Adicione aqui o campo novo_sta se ele existir no seu código original)
+            novo_sta = "Pago" # Exemplo, ajuste conforme necessário
+            
+            # --- BOTÕES ---
+            if col1.button("🔍 AUDITAR"):
+                coluna_ids = ws_base.col_values(9)
+                encontrados = [i for i, valor in enumerate(coluna_ids) if valor == id_fixo]
+                if encontrados:
+                    for pos in encontrados:
+                        st.write(f"ID {id_fixo} está na LINHA REAL {pos + 1}")
+                else:
+                    st.error("ID não encontrado.")
 
-                
-           # BOTÃO ATUALIZAR
-if col1.button("💾 ATUALIZAR"):
-    # Buscamos a CÉLULA que contém o ID, não importa a linha
-    celula = ws_base.find(str(id_fixo), in_column=9)
-    
-    if celula:
-        # Usamos o .row que o Google retorna automaticamente
-        # Se o ID 5 está na linha 5 da planilha, ele vai retornar 5.
-        linha_correta = celula.row
-        
-        st.write(f"ID {id_fixo} localizado na linha física {linha_correta}")
-        
-        ws_base.update_cell(linha_correta, 3, novo_desc)
-        ws_base.update_cell(linha_correta, 2, f"{novo_val:.2f}".replace('.', ','))
-        ws_base.update_cell(linha_correta, 7, novo_sta)
-        
-        st.success(f"Atualizado na linha {linha_correta}!")
-        st.rerun()
-    else:
-        st.error(f"ID {id_fixo} não encontrado.")
+            if col1.button("💾 ATUALIZAR"):
+                celula = ws_base.find(id_fixo, in_column=9)
+                if celula:
+                    ws_base.update_cell(celula.row, 3, novo_desc)
+                    ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+                    ws_base.update_cell(celula.row, 7, novo_sta)
+                    st.success(f"Atualizado na linha {celula.row}!")
+                    st.rerun()
 
-# BOTÃO EXCLUIR (Alinhado com o anterior)
-if col2.button("🚨 EXCLUIR"):
-    celula = ws_base.find(str(id_fixo), in_column=9)
-    if celula:
-        ws_base.delete_rows(celula.row)
-        st.success("Excluído!")
-        st.rerun()
+            if col2.button("🚨 EXCLUIR"):
+                celula = ws_base.find(id_fixo, in_column=9)
+                if celula:
+                    ws_base.delete_rows(celula.row)
+                    st.success("Excluído!")
+                    st.rerun()
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
