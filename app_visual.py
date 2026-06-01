@@ -361,20 +361,28 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             col1, col2 = st.columns(2)
             
             # BOTÃO ATUALIZAR
+            # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
-                try:
-                    celula = ws_base.find(id_fixo, in_column=9) 
-                    if celula:
-                        ws_base.update_cell(celula.row, 3, novo_desc) # Descrição
-                        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ',')) # Valor
-                        ws_base.update_cell(celula.row, 7, novo_sta) # Status
-                        st.success(f"ID {id_fixo} atualizado!")
-                        st.rerun()
-                    else:
-                        st.error("ID não encontrado.")
-                except Exception as e:
-                    st.error(f"Erro: {e}")
-            
+                # Vamos converter o ID de todas as formas possíveis para achar
+                ids_possiveis = [str(id_fixo), int(id_fixo) if id_fixo.isdigit() else None, float(id_fixo) if id_fixo.replace('.','',1).isdigit() else None]
+                
+                celula = None
+                for i in ids_possiveis:
+                    if i is not None:
+                        # Tenta buscar pelo valor convertido
+                        celula = ws_base.find(str(i), in_column=9)
+                        if celula: break
+                
+                if celula:
+                    # Se achou, faz a atualização
+                    ws_base.update_cell(celula.row, 3, novo_desc)
+                    ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+                    ws_base.update_cell(celula.row, 7, novo_sta)
+                    st.success(f"ID {id_fixo} atualizado!")
+                    st.rerun()
+                else:
+                    st.error(f"Não encontrei o ID {id_fixo} em NENHUM formato na coluna 9.")
+                    st.write(f"Debug: O ID que estou tentando achar é '{id_fixo}' do tipo {type(id_fixo)}")
             # BOTÃO EXCLUIR
             if col2.button("🚨 EXCLUIR"):
                 try:
