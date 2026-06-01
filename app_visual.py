@@ -356,21 +356,23 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
         
         if escolha: 
             item = lista_edit[escolha]
-            # O ID é extraído AQUI dentro do IF
             meu_id = str(item['ID'])
             
-            # Campos...
-            ed_dat = st.date_input("Vencimento", value=datetime.strptime(item['Vencimento'], "%d/%m/%Y"))
-            ed_val = st.number_input("Valor", value=float(item['V_Num']))
+            # ... campos de input (data, valor, etc) ...
             
             col1, col2 = st.columns(2)
+            
             if col1.button("💾 ATUALIZAR"):
-                # Busca usando a variável local 'meu_id'
-                cel = ws_base.find(meu_id, in_column=9)
-                if cel:
-                    ws_base.update_cell(cel.row, 1, ed_dat.strftime("%d/%m/%Y"))
-                    st.success("Ok!")
+                # A variável 'celula' só existe se o botão for clicado
+                celula = ws_base.find(meu_id, in_column=9)
+                
+                # O 'if celula' está DENTRO do botão, logo, é seguro
+                if celula:
+                    ws_base.update_cell(celula.row, 1, "dados_aqui")
+                    st.success("Atualizado!")
                     st.rerun()
+                else:
+                    st.warning("ID não localizado.")
             
             if col2.button("🚨 EXCLUIR"):
                 cel = ws_base.find(meu_id, in_column=9)
