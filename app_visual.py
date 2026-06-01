@@ -355,27 +355,33 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                 
             # BOTÃO ATUALIZAR
           # BOTÃO ATUALIZAR
-            if col1.button("💾 ATUALIZAR"):
-                # Filtramos o DataFrame base para encontrar a linha onde o ID é igual ao escolhido
-                # Isso garante que estamos pegando o registro certo independente da ordem ou posição
-                filtro = df_base[df_base['ID'] == int(id_fixo)]
-                
-                if not filtro.empty:
-                    # 'index' no Pandas aqui retorna a posição original que carregamos da planilha
-                    # Adicionamos 2 porque a planilha começa na linha 2 (cabeçalho na 1)
-                    linha_real = int(filtro.index[0]) + 2
-                    
-                    # DEBUG (para você ver se ele acertou a linha)
-                    st.write(f"ID {id_fixo} encontrado no índice {filtro.index[0]}. Editando linha {linha_real}")
-                    
-                    ws_base.update_cell(linha_real, 3, novo_desc)
-                    ws_base.update_cell(linha_real, 2, f"{novo_val:.2f}".replace('.', ','))
-                    ws_base.update_cell(linha_real, 7, novo_sta)
-                    
-                    st.success("Atualizado com sucesso!")
-                    st.rerun()
-                else:
-                    st.error("ID não localizado no relatório.")
+            # BOTÃO ATUALIZAR
+if col1.button("💾 ATUALIZAR"):
+    # Vamos buscar o ID na planilha (Coluna 9)
+    # Ignoramos completamente o número que o relatório te mostra
+    # e usamos o valor real do ID para encontrar a linha.
+    try:
+        # Busca todas as ocorrências desse ID na Coluna 9
+        celulas = ws_base.findall(str(id_fixo), in_column=9)
+        
+        if celulas:
+            # Pegamos a última célula encontrada (a que corresponde ao ID correto)
+            celula = celulas[-1]
+            
+            # Mostra na tela o que ele encontrou, para termos certeza
+            st.write(f"O sistema encontrou o ID {id_fixo} na linha {celula.row}.")
+            
+            # Executa a atualização na linha REAL encontrada pelo Gspread
+            ws_base.update_cell(celula.row, 3, novo_desc)
+            ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+            ws_base.update_cell(celula.row, 7, novo_sta)
+            
+            st.success("Atualizado com sucesso!")
+            st.rerun()
+        else:
+            st.error("ID não encontrado na planilha.")
+    except Exception as e:
+        st.error(f"Erro: {e}")
                     
             # BOTÃO EXCLUIR - Alinhado com o 'if' do botão acima
             if col2.button("🚨 EXCLUIR"):
