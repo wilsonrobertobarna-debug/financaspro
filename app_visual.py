@@ -366,8 +366,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             
             col_ed1, col_ed2 = st.columns(2)
             
-           # O IF abaixo é a "parede" que protege seu código
-           if col_ed1.button("💾 ATUALIZAR"):
+            # O IF abaixo é a "parede" que protege seu código
+            if col_ed1.button("💾 ATUALIZAR"):
                # TUDO o que estiver abaixo e com um TAB de distância será executado
                # SOMENTE quando você clicar no botão.
                id_procurado = str(item['ID']) 
