@@ -370,7 +370,7 @@ if col_ed1.button("💾 ATUALIZAR"):
         st.rerun()
     else:
 # --- BOTÃO EXCLUIR ---
- if col2.button("🚨 EXCLUIR"):
+if col2.button("🚨 EXCLUIR"):
     # COLOQUE O CÓDIGO AQUI DENTRO TAMBÉM:
     try: 
         celula = ws_base.find(id_procurado, in_column=9)
