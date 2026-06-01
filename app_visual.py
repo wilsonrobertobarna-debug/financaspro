@@ -367,7 +367,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
             col_ed1, col_ed2 = st.columns(2)
-           if col_ed1.button("💾 ATUALIZAR"):
+            if col_ed1.button("💾 ATUALIZAR"):
                 # Debug: vamos ver o que o sistema está enxergando
                 st.write(f"Procurando pelo ID: {item['ID']}")
                 
