@@ -352,36 +352,34 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             id_fixo = str(item['ID'])
 
                 
-            # BOTÃO ATUALIZAR
-            if col1.button("💾 ATUALIZAR"):
-                # Vamos buscar a coluna inteira 9 (onde estão seus IDs)
-                coluna_ids = ws_base.col_values(9)
-                
-                # Encontramos o índice do ID na lista (o Python começa no 0)
-                # Como a primeira linha é o cabeçalho, somamos 1 para a posição real
-                try:
-                    # Encontra a posição do ID na lista
-                    posicao = coluna_ids.index(str(id_fixo)) + 1
-                    
-                    st.write(f"ID {id_fixo} localizado na LINHA {posicao} pelo método de busca de coluna.")
-                    
-                    # Atualiza a linha exata
-                    ws_base.update_cell(posicao, 3, novo_desc)
-                    ws_base.update_cell(posicao, 2, f"{novo_val:.2f}".replace('.', ','))
-                    ws_base.update_cell(posicao, 7, novo_sta)
-                    
-                    st.success(f"Atualizado na linha {posicao}!")
-                    st.rerun()
-                except ValueError:
-                    st.error(f"ID {id_fixo} não encontrado na coluna 9.")
-                    
-            # BOTÃO EXCLUIR - Alinhado com o 'if' do botão acima
-            if col2.button("🚨 EXCLUIR"):
-                celula = ws_base.find(str(id_fixo), in_column=9)
-                if celula:
-                    ws_base.delete_rows(celula.row)
-                    st.success("Excluído!")
-                    st.rerun()
+           # BOTÃO ATUALIZAR
+if col1.button("💾 ATUALIZAR"):
+    # Buscamos a CÉLULA que contém o ID, não importa a linha
+    celula = ws_base.find(str(id_fixo), in_column=9)
+    
+    if celula:
+        # Usamos o .row que o Google retorna automaticamente
+        # Se o ID 5 está na linha 5 da planilha, ele vai retornar 5.
+        linha_correta = celula.row
+        
+        st.write(f"ID {id_fixo} localizado na linha física {linha_correta}")
+        
+        ws_base.update_cell(linha_correta, 3, novo_desc)
+        ws_base.update_cell(linha_correta, 2, f"{novo_val:.2f}".replace('.', ','))
+        ws_base.update_cell(linha_correta, 7, novo_sta)
+        
+        st.success(f"Atualizado na linha {linha_correta}!")
+        st.rerun()
+    else:
+        st.error(f"ID {id_fixo} não encontrado.")
+
+# BOTÃO EXCLUIR (Alinhado com o anterior)
+if col2.button("🚨 EXCLUIR"):
+    celula = ws_base.find(str(id_fixo), in_column=9)
+    if celula:
+        ws_base.delete_rows(celula.row)
+        st.success("Excluído!")
+        st.rerun()
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
