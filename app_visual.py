@@ -354,7 +354,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
 
                 
           # BOTÃO ATUALIZAR
-            if col1.button("💾 ATUALIZAR"):
+if col1.button("💾 ATUALIZAR"):
     try:
         # A MÁGICA ESTÁ AQUI: O .find ignora qualquer número de linha que o Pandas te deu.
         # Ele faz um CTRL+F na planilha e encontra o ID real.
