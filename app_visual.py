@@ -360,7 +360,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                     if celula:
                         # CORREÇÃO: Forçamos o deslocamento de +2 
                         # para compensar o desvio de 2 linhas que você identificou.
-                        linha_correta = celula.row + 2
+                        linha_correta = celula.row 
                         
                         ws_base.update_cell(linha_correta, 3, novo_desc)
                         ws_base.update_cell(linha_correta, 2, f"{novo_val:.2f}".replace('.', ','))
