@@ -352,22 +352,25 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             id_fixo = str(item['ID'])
 
 
+                
             # BOTÃO ATUALIZAR
-            # BOTÃO ATUALIZAR
-# BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
                 try:
                     celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
                     if celula:
-                        ws_base.update_cell(celula.row, 3, novo_desc)
-                        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-                        ws_base.update_cell(celula.row, 7, novo_sta)
-                        st.success(f"ID {id_fixo} atualizado!")
+                        # CORREÇÃO: Forçamos o deslocamento de +2 
+                        # para compensar o desvio de 2 linhas que você identificou.
+                        linha_correta = celula.row + 2
+                        
+                        ws_base.update_cell(linha_correta, 3, novo_desc)
+                        ws_base.update_cell(linha_correta, 2, f"{novo_val:.2f}".replace('.', ','))
+                        ws_base.update_cell(linha_correta, 7, novo_sta)
+                        
+                        st.success(f"ID {id_fixo} atualizado na linha {linha_correta}!")
                         st.rerun()
-                    # Se não encontrou, o Streamlit simplesmente não faz nada, sem causar erro de sintaxe
                 except Exception as e:
-                    st.error(f"Erro ao atualizar: {e}")
-
+                    st.error(f"Erro: {e}")
+                    
             # BOTÃO EXCLUIR
             if col2.button("🚨 EXCLUIR"):
                 try:
