@@ -17,30 +17,32 @@ hoje_br = agora_br.date()
 # FUNÇÃO AJUSTADA: Nome correto e acesso global ao 'sh'
 def atualizar_meta_sheets(nome):
     global sh 
-    # Verifica se o valor existe antes de tentar atualizar
-    if f"m_{nome}" not in st.session_state:
+    chave_sessao = f"m_{nome}"
+    
+    if chave_sessao not in st.session_state:
         return
 
-    novo_valor = st.session_state[f"m_{nome}"]
+    novo_valor = st.session_state[chave_sessao]
     
     try:
         ws_meta = sh.worksheet("Meta")
-        # Buscamos a célula
+        # 1. Definimos a variável sempre, mesmo que o find não encontre nada
         celula = ws_meta.find(nome)
         
-        # Só fazemos algo se 'celula' for encontrada (não for None)
+        # 2. Agora verificamos se celula não é None
         if celula is not None:
-            # Atualiza o valor na planilha (ajuste a coluna conforme sua necessidade)
+            # Atualiza o valor
             ws_meta.update_cell(celula.row, celula.col + 1, novo_valor)
             
-            # Limpa a memória apenas se a atualização funcionou
-            del st.session_state[f"m_{nome}"]
+            # Limpa o estado
+            del st.session_state[chave_sessao]
             st.success(f"Meta de {nome} atualizada!")
         else:
-            st.error(f"Erro: O nome '{nome}' não foi encontrado na aba Meta.")
+            # Caso o nome não exista, não gera erro, apenas avisa
+            st.warning(f"Nome '{nome}' não encontrado na aba Meta.")
             
     except Exception as e:
-        st.error(f"Erro ao conectar com a planilha: {e}")
+        st.error(f"Erro na conexão: {e}")
         
 # 1. CONFIGURAÇÃO INICIAL
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
