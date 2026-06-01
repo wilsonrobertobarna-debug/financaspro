@@ -358,29 +358,26 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             item = lista_edit[escolha]
             meu_id = str(item['ID'])
             
-            # Campos de input...
-            # (Seus campos de st.date_input, st.number_input, etc.)
-
+            # ... seus campos de input (data, valor, etc) ...
+            
             col1, col2 = st.columns(2)
             
-            # BOTÃO ATUALIZAR: Tudo aqui dentro é seguro
+            # ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
-                celula_encontrada = ws_base.find(meu_id, in_column=9)
-                if celula_encontrada:
-                    # Executa a ação apenas aqui dentro
-                    ws_base.update_cell(celula_encontrada.row, 1, "dados_aqui")
+                # A variável 'cel' só é criada se o botão for clicado
+                cel = ws_base.find(meu_id, in_column=9)
+                if cel: # A verificação acontece aqui, dentro do botão
+                    ws_base.update_cell(cel.row, 1, "dados_aqui")
                     st.success("Atualizado!")
                     st.rerun()
-                else:
-                    st.error("ID não encontrado.")
             
-            # BOTÃO EXCLUIR: Tudo aqui dentro é seguro
+            # EXCLUIR
             if col2.button("🚨 EXCLUIR"):
-                celula_encontrada = ws_base.find(meu_id, in_column=9)
-                if celula_encontrada:
-                    ws_base.delete_rows(celula_encontrada.row)
+                cel = ws_base.find(meu_id, in_column=9)
+                if cel: # A verificação acontece aqui, dentro do botão
+                    ws_base.delete_rows(cel.row)
                     st.success("Excluído!")
-                    st.rerun()                    
+                    st.rerun()
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
