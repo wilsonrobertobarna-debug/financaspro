@@ -333,30 +333,25 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
-# BARRINHA 3: AJUSTE / EXCLUSÃO
+# --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
+    # Verificação de segurança: só cria as colunas se houver um item selecionado
     if 'df_base' in locals() and not df_base.empty:
-        # Cria a lista de seleção
         lista_edit = {f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']}": r for _, r in df_base.iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         
         if escolha: 
-            item = lista_edit[escolha]
-            meu_id = str(item['ID'])
-            
-            # (Aqui estariam seus inputs de data, valor, etc.)
-            
+            # Define as colunas AQUI dentro do if
             col1, col2 = st.columns(2)
-                                    
-            # BOTÃO ATUALIZAR
+            
+            # Agora 'col1' e 'col2' existem, pode usar com segurança
             if col1.button("💾 ATUALIZAR"):
-                celula = ws_base.find(meu_id, in_column=9)
-                if celula:
-                    # (seu código de atualização aqui)
-                    st.success("Atualizado!")
-                    st.rerun()
-                else:
-                    st.error("ID não encontrado.")
+                # ... seu código de atualização ...
+                pass
+            
+            if col2.button("🚨 EXCLUIR"):
+                # ... seu código de exclusão ...
+                pass
             
             # BOTÃO EXCLUIR (Este IF deve estar alinhado com o IF do botão ATUALIZAR)
             if col2.button("🚨 EXCLUIR"):
