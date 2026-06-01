@@ -348,7 +348,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             
             col1, col2 = st.columns(2)
             
-           col1, col2 = st.columns(2)
+            col1, col2 = st.columns(2)
             
             # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
