@@ -353,38 +353,30 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
 
 
                 
-            # BOTÃO ATUALIZAR
+           # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
-                st.write(f"ID que você escolheu: {id_fixo}")
-                
-                # Busca exata do ID na Coluna 9
+                # Busca pelo valor do texto do ID na coluna 9
+                # Ele vai encontrar a CÉLULA exata, não importa o número da linha
                 celula = ws_base.find(str(id_fixo), in_column=9)
                 
                 if celula:
-                    st.write(f"O sistema encontrou o ID {id_fixo} na LINHA FÍSICA: {celula.row}")
-                    
-                    # Vamos verificar o valor que está nesta linha
-                    valor_na_linha = ws_base.cell(celula.row, 9).value
-                    st.write(f"Valor real na coluna 9 da linha {celula.row}: '{valor_na_linha}'")
-                    
-                    # Edição
+                    # Editamos a linha da própria célula encontrada
                     ws_base.update_cell(celula.row, 3, novo_desc)
                     ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+                    ws_base.update_cell(celula.row, 7, novo_sta)
                     
-                    st.success("Atualizado!")
+                    st.success(f"ID {id_fixo} atualizado na linha {celula.row}!")
+                    st.rerun()
                 else:
-                    st.error("ID não encontrado na coluna 9.")
+                    st.error(f"ID {id_fixo} não encontrado na coluna 9.")
+
             # BOTÃO EXCLUIR
             if col2.button("🚨 EXCLUIR"):
-                try:
-                    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
-                    if celula:
-                        ws_base.delete_rows(celula.row)
-                        st.success("Excluído!")
-                        if 'item_atual' in st.session_state: del st.session_state['item_atual']
-                        st.rerun()
-                except Exception as e:
-                    st.error(f"Erro ao excluir: {e}")                    
+                celula = ws_base.find(str(id_fixo), in_column=9)
+                if celula:
+                    ws_base.delete_rows(celula.row)
+                    st.success("Excluído!")
+                    st.rerun()
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
