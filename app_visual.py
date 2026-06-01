@@ -348,7 +348,8 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
-        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
+        # Remova o .tail(40) para listar tudo. Se ficar lento, depois a gente coloca paginação.
+        lista_edit = {f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']} | R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         if escolha:
             item = lista_edit[escolha]
@@ -367,14 +368,25 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             
             col_ed1, col_ed2 = st.columns(2)
             if col_ed1.button("💾 ATUALIZAR"):
-                v_str = f"{ed_val:.2f}".replace('.', ',')
-                ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
-                ws_base.update_cell(int(item['ID']), 2, v_str)
-                ws_base.update_cell(int(item['ID']), 3, ed_desc)
-                ws_base.update_cell(int(item['ID']), 6, ed_bnc)
-                ws_base.update_cell(int(item['ID']), 7, ed_sta)
-                atualizar_sessao()
-                st.rerun()
+                # Procura a linha real do ID na planilha (independente de ordem ou exclusão)
+                celula = ws_base.find(str(item['ID']))
+                
+                if celula:
+                    linha = celula.row
+                    v_str = f"{ed_val:.2f}".replace('.', ',')
+                    
+                    # Atualiza usando a linha encontrada pelo .find()
+                    ws_base.update_cell(linha, 1, ed_dat.strftime("%d/%m/%Y"))
+                    ws_base.update_cell(linha, 2, v_str)
+                    ws_base.update_cell(linha, 3, ed_desc)
+                    ws_base.update_cell(linha, 6, ed_bnc)
+                    ws_base.update_cell(linha, 7, ed_sta)
+                    
+                    st.success("Atualizado com sucesso!")
+                    atualizar_sessao()
+                    st.rerun()
+                else:
+                    st.error(f"Erro: Não encontrei o ID {item['ID']} na planilha. Verifique a aba 'Lançamentos'.")
             if col_ed2.button("🚨 EXCLUIR"):
                 if item['Categoria'] == 'Transferência':
                     desc = item['Descrição']
