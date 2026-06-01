@@ -384,7 +384,7 @@ if col1.button("💾 ATUALIZAR"):
         st.error(f"Erro: {e}")
                     
             # BOTÃO EXCLUIR - Alinhado com o 'if' do botão acima
-            if col2.button("🚨 EXCLUIR"):
+        if col2.button("🚨 EXCLUIR"):
                 celula = ws_base.find(str(id_fixo), in_column=9)
                 if celula:
                     ws_base.delete_rows(celula.row)
