@@ -362,7 +362,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                         # CORREÇÃO DE DESLOCAMENTO: 
                         # O gspread encontra na 193, mas o dado real que você quer 
                         # editar está na 195 (193 + 2).
-                        linha_alvo = celula.row + 3
+                        linha_alvo = celula.row -2
                         
                         ws_base.update_cell(linha_alvo, 3, novo_desc)
                         ws_base.update_cell(linha_alvo, 2, f"{novo_val:.2f}".replace('.', ','))
