@@ -348,28 +348,27 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             
             col1, col2 = st.columns(2)
             
-            # --- BOTÃO ATUALIZAR ---
-# BOTÃO ATUALIZAR
-if col_ed1.button("💾 ATUALIZAR"):
-    # A busca acontece SÓ quando o botão é clicado
-    celula = ws_base.find(id_procurado, in_column=9)
-    
-    if celula:
-        linha = celula.row
-        # Atualiza usando a linha exata encontrada
-        v_str = f"{ed_val:.2f}".replace('.', ',')
-        ws_base.update_cell(linha, 1, ed_dat.strftime("%d/%m/%Y"))
-        ws_base.update_cell(linha, 2, v_str)
-        ws_base.update_cell(linha, 3, ed_desc)
-        ws_base.update_cell(linha, 6, ed_bnc)
-        ws_base.update_cell(linha, 7, ed_sta)
-        
-        st.success("Lançamento ajustado com sucesso!")
-        # Certifique-se de que a função atualizar_sessao esteja definida no arquivo
-        atualizar_sessao() 
-        st.rerun()
-    else:
-# --- BOTÃO EXCLUIR ---
+           col1, col2 = st.columns(2)
+            
+            # BOTÃO ATUALIZAR
+            if col1.button("💾 ATUALIZAR"):
+                celula = ws_base.find(meu_id, in_column=9)
+                if celula:
+                    # (seu código de atualização aqui)
+                    st.success("Atualizado!")
+                    st.rerun()
+                else:
+                    st.error("ID não encontrado.")
+            
+            # BOTÃO EXCLUIR (Este IF deve estar alinhado com o IF do botão ATUALIZAR)
+            if col2.button("🚨 EXCLUIR"):
+                celula = ws_base.find(meu_id, in_column=9)
+                if celula:
+                    ws_base.delete_rows(celula.row)
+                    st.success("Excluído!")
+                    st.rerun()
+                else:
+                    st.error("ID não encontrado para exclusão.")# --- BOTÃO EXCLUIR ---
 if col2.button("🚨 EXCLUIR"):
     # COLOQUE O CÓDIGO AQUI DENTRO TAMBÉM:
     try: 
