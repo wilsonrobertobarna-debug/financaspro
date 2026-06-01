@@ -352,20 +352,17 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             id_fixo = str(item['ID'])
 
             # BOTÃO ATUALIZAR
+            # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
                 try:
                     celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
-                    
-                    # DEBUG: Vamos ver o que está acontecendo na linha encontrada
-                    st.write(f"DEBUG: O sistema buscou o ID {id_fixo} e encontrou na linha: {celula.row}")
-                    valor_encontrado = ws_base.cell(celula.row, 9).value
-                    st.write(f"DEBUG: O valor que está escrito na célula da coluna 9 da linha {celula.row} é: '{valor_encontrado}'")
-                    
-                    
                     if celula:
-                        ws_base.update_cell(celula.row, 3, novo_desc)
-                        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-                        st.success(f"ID {id_fixo} atualizado!")
+                        # CORREÇÃO: Somamos 2 linhas ao resultado do gspread para compensar o desvio
+                        linha_ajustada = celula.row + 2
+                        
+                        ws_base.update_cell(linha_ajustada, 3, novo_desc)
+                        ws_base.update_cell(linha_ajustada, 2, f"{novo_val:.2f}".replace('.', ','))
+                        st.success(f"ID {id_fixo} atualizado na linha {linha_ajustada}!")
                         st.rerun()
                     else:
                         st.error("ID não encontrado.")
