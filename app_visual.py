@@ -355,23 +355,25 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                 
             # BOTÃO ATUALIZAR
             if col1.button("💾 ATUALIZAR"):
-                try:
-                    # Busca exata do ID na Coluna 9
-                    celula = ws_base.find(str(id_fixo), in_column=9)
+                st.write(f"ID que você escolheu: {id_fixo}")
+                
+                # Busca exata do ID na Coluna 9
+                celula = ws_base.find(str(id_fixo), in_column=9)
+                
+                if celula:
+                    st.write(f"O sistema encontrou o ID {id_fixo} na LINHA FÍSICA: {celula.row}")
                     
-                    if celula:
-                        # O ID foi achado, agora fazemos a atualização na linha real
-                        ws_base.update_cell(celula.row, 3, novo_desc)
-                        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-                        ws_base.update_cell(celula.row, 7, novo_sta)
-                        
-                        st.success(f"ID {id_fixo} atualizado na linha {celula.row}!")
-                        st.rerun()
-                    else:
-                        st.error("ID não encontrado na planilha.")
-                except Exception as e:
-                    st.error(f"Erro ao atualizar: {e}")
+                    # Vamos verificar o valor que está nesta linha
+                    valor_na_linha = ws_base.cell(celula.row, 9).value
+                    st.write(f"Valor real na coluna 9 da linha {celula.row}: '{valor_na_linha}'")
                     
+                    # Edição
+                    ws_base.update_cell(celula.row, 3, novo_desc)
+                    ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+                    
+                    st.success("Atualizado!")
+                else:
+                    st.error("ID não encontrado na coluna 9.")
             # BOTÃO EXCLUIR
             if col2.button("🚨 EXCLUIR"):
                 try:
