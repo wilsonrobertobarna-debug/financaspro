@@ -366,18 +366,21 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             
             col_ed1, col_ed2 = st.columns(2)
             
-            # O BOTÃO É A "CAIXA" QUE PROTEGE O CÓDIGO DE DAR ERRO
-            if col_ed1.button("💾 ATUALIZAR"):
-                # ESTA É A LINHA 313: ela precisa estar aqui dentro!
-                celula = ws_base.find(id_procurado, in_column=9)
-                
-                if celula:
-                    linha = celula.row
-                    # ... seu código de atualização ...
-                    st.success("Atualizado!")
-                    st.rerun()
-                else:
-                    st.error("ID não encontrado.")
+           # O IF abaixo é a "parede" que protege seu código
+i           f col_ed1.button("💾 ATUALIZAR"):
+            # TUDO o que estiver abaixo e com um TAB de distância será executado
+            # SOMENTE quando você clicar no botão.
+            id_procurado = str(item['ID']) 
+    
+            # Esta é a sua linha 313. Ela deve estar AQUI DENTRO:
+            celula = ws_base.find(id_procurado, in_column=9)
+    
+            if celula:
+            # ... seu código de update ...
+            st.success("Atualizado!")
+            st.rerun()
+    else:
+        st.error("ID não encontrado.")
             # EXCLUIR
             if col_ed2.button("🚨 EXCLUIR"):
                 id_procurado = str(item['ID'])
