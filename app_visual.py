@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
+import time
 
 # Definições iniciais de data
 agora_br = datetime.now() - timedelta(hours=3)
@@ -308,21 +309,26 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             for i in range(f_par):
                 nova_data = t_dat + relativedelta(months=i)
                 
-                ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
-                    v_str,                          # Coluna B: Valor
-                    f_des,                          # Coluna C: Descrição
-                    f_cat,                          # Coluna D: Categoria
-                    f_tip,                          # Coluna E: Tipo
-                    f_bnc,                          # Coluna F: Banco
-                    f_sta,                          # Coluna G: Status
-                    f_compra_str                    # Coluna H: Data da Compra
-                ])
-            
-            # 3. Finalização
-            st.toast("✅ Lançamento salvo com sucesso!", icon="💰")
-            atualizar_sessao()
-            st.rerun()
+                # Gera um ID único baseado nos milissegundos atuais
+    # Como o loop é rápido, podemos adicionar o i para garantir que cada parcela tenha um ID diferente
+    novo_id = int(time.time() * 1000) + i
+    
+    ws_base.append_row([
+        nova_data.strftime("%d/%m/%Y"), # A: Vencimento
+        v_str,                          # B: Valor
+        f_des,                          # C: Descrição
+        f_cat,                          # D: Categoria
+        f_tip,                          # E: Tipo
+        f_bnc,                          # F: Banco
+        f_sta,                          # G: Status
+        f_compra_str,                   # H: Data da Compra
+        str(novo_id)                    # I: ID ÚNICO (Gravado na planilha!)
+    ])
+
+# 3. Finalização
+st.toast("✅ Lançamento salvo com sucesso!", icon="💰")
+atualizar_sessao()
+st.rerun()
 
 # Se o usuário mudar de aba ou clicar em outra coisa fora do formulário, o expander fecha amigavelmente
 if aba != "💰 Finanças & Bancos":
