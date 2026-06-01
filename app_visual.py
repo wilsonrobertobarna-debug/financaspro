@@ -364,19 +364,19 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                     st.error("ID não encontrado.")
 
             # BOTÃO ATUALIZAR
-            if col1.button("🔍 DIAGNOSTICAR IDS"):
-            # Carrega todos os dados da planilha
-            todos_dados = ws_base.get_all_values()
+        if col1.button("🔍 DIAGNOSTICAR IDS"):
+                # Carrega todos os dados da planilha
+                todos_dados = ws_base.get_all_values()
     
-            # Exibe na tela os primeiros 5 valores da coluna 8 (h) para vermos o formato
-            st.write("Valores encontrados na Coluna 8:")
-            for i, linha in enumerate(todos_dados[:5]):
-                if len(linha) >= 8:
-                    st.write(f"Linha {i+1}: '{linha[7]}'") # índice 7 é a coluna 8
-                else:
-                    st.write(f"Linha {i+1}: [Coluna 8 vazia]")
+                # Exibe na tela os primeiros 5 valores da coluna 8 (h) para vermos o formato
+                st.write("Valores encontrados na Coluna 8:")
+                for i, linha in enumerate(todos_dados[:5]):
+                    if len(linha) >= 8:
+                        st.write(f"Linha {i+1}: '{linha[7]}'") # índice 7 é a coluna 8
+                    else:
+                        st.write(f"Linha {i+1}: [Coluna 8 vazia]")
 
-            st.write(f"O valor que estou buscando (id_fixo) é: '{id_fixo}' (Tipo: {type(id_fixo)})")
+                st.write(f"O valor que estou buscando (id_fixo) é: '{id_fixo}' (Tipo: {type(id_fixo)})")
                 # Procura o ID na planilha TODA, sem restringir a coluna
                 # Isso vai encontrar o ID mesmo se ele estiver na coluna 1, 2, ... ou 8
                 celula = ws_base.find(str(id_fixo))
