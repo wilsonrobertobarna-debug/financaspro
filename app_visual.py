@@ -335,51 +335,49 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
                 st.rerun()
 
 # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
+# --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
+    # 1. Verifica se a base existe
     if 'df_base' in locals() and not df_base.empty:
-        # Cria a lista de opções
         lista_edit = {f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']}": r for _, r in df_base.iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         
-        if escolha: 
-            # Atualiza o session_state com a escolha atual
-            st.session_state['item_atual'] = lista_edit[escolha]
-        
-        # Agora usamos apenas o 'item_atual' do session_state
-        if 'item_atual' in st.session_state:
-            item = st.session_state['item_atual']
+        # 2. Só entra aqui se algo for selecionado
+        if escolha:
+            item = lista_edit[escolha]
+            st.session_state['item_atual'] = item
             
-            # --- CAMPOS DE EDIÇÃO ---
-            st.write("---") 
-            novo_desc = st.text_input("Descrição", value=str(item['Descrição']))
-            novo_val = st.number_input("Valor", value=float(str(item['V_Num']).replace(',', '.')))
-            # Usando o status do item atual para o selectbox
-            status_atual = item['Status']
-            novo_sta = st.selectbox("Status", ["Pendente", "Pago"], index=0 if status_atual == "Pendente" else 1)
-            
-            id_fixo = str(item['ID']) 
-            
+            # 3. Cria as colunas SEMPRE que houver uma escolha
             col1, col2 = st.columns(2)
             
-            # BOTÃO ATUALIZAR
-          
-            # BOTÃO ATUALIZAR
-if col1.button("💾 ATUALIZAR"):
-    try:
-        # Busca exata
-        celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
-        
-        if celula:
-            # ESSA LINHA VAI NOS MOSTRAR A VERDADE
-            st.error(f"DEBUG: O 'ws_base' encontrou o ID {id_fixo} na LINHA: {celula.row}")
+            # 4. Define os campos de edição AGORA, logo após as colunas serem criadas
+            novo_desc = st.text_input("Descrição", value=str(item['Descrição']))
+            novo_val = st.number_input("Valor", value=float(str(item['V_Num']).replace(',', '.')))
             
-            # Não fazemos nenhuma alteração ainda, apenas paramos para ver o número
-            st.stop() 
-        else:
-            st.warning("ID não encontrado pela busca.")
-            
-    except Exception as e:
-        st.error(f"Erro na busca: {e}")
+            id_fixo = str(item['ID'])
+
+            # 5. Botões dentro das colunas
+            if col1.button("💾 ATUALIZAR"):
+                try:
+                    # Busca exata
+                    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
+                    if celula:
+                        ws_base.update_cell(celula.row, 3, novo_desc)
+                        ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+                        st.success(f"ID {id_fixo} atualizado!")
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Erro: {e}")
+
+            if col2.button("🚨 EXCLUIR"):
+                try:
+                    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
+                    if celula:
+                        ws_base.delete_rows(celula.row)
+                        st.success("Excluído!")
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Erro: {e}")
                     
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
