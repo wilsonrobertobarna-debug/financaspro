@@ -363,45 +363,33 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                 else:
                     st.error("ID não encontrado.")
 
-            # BOTÃO ATUALIZAR
-        if col1.button("🔍 DIAGNOSTICAR IDS"):
-                # Carrega todos os dados da planilha
-                todos_dados = ws_base.get_all_values()
-    
-                # Exibe na tela os primeiros 5 valores da coluna 8 (h) para vermos o formato
-                st.write("Valores encontrados na Coluna 8:")
-                for i, linha in enumerate(todos_dados[:5]):
-                    if len(linha) >= 8:
-                        st.write(f"Linha {i+1}: '{linha[7]}'") # índice 7 é a coluna 8
-                    else:
-                        st.write(f"Linha {i+1}: [Coluna 8 vazia]")
-
-                st.write(f"O valor que estou buscando (id_fixo) é: '{id_fixo}' (Tipo: {type(id_fixo)})")
-                # Procura o ID na planilha TODA, sem restringir a coluna
-                # Isso vai encontrar o ID mesmo se ele estiver na coluna 1, 2, ... ou 8
+            if col1.button("💾 ATUALIZAR"):
+                # Busca na planilha toda
                 celula = ws_base.find(str(id_fixo))
-                
                 if celula:
-                    st.write(f"ID {id_fixo} encontrado na linha {celula.row}, coluna {celula.col}")
-                    
-                    # Agora usamos as coordenadas encontradas para atualizar
                     ws_base.update_cell(celula.row, 3, novo_desc)
                     ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
                     ws_base.update_cell(celula.row, 7, novo_sta)
-                    
-                    st.success("Atualizado!")
+                    st.success(f"Atualizado na linha {celula.row}!")
                     st.rerun()
                 else:
-                    st.error(f"ID {id_fixo} não foi encontrado em NENHUMA coluna desta aba.")
-                    
+                    st.error(f"ID {id_fixo} não encontrado.")
+
+            if col1.button("🔍 DIAGNOSTICAR"):
+                todos_dados = ws_base.get_all_values()
+                st.write("Exibindo as primeiras 5 linhas da planilha:")
+                for i, linha in enumerate(todos_dados[:5]):
+                    st.write(f"Linha {i+1}: {linha}")
+                st.write(f"Procurando por: '{id_fixo}'")
+
             if col2.button("🚨 EXCLUIR"):
-                celula = ws_base.find(str(id_fixo), in_column=8)
+                celula = ws_base.find(str(id_fixo))
                 if celula:
-                    ws_base.update_cell(celula.row, 3, novo_desc)
-                    ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-                    ws_base.update_cell(celula.row, 7, novo_sta)
-                    st.success("Atualizado!")
+                    ws_base.delete_rows(celula.row)
+                    st.success("Excluído com sucesso!")
                     st.rerun()
+                else:
+                    st.error("ID não encontrado para exclusão.")
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
