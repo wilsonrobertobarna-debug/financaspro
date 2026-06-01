@@ -17,31 +17,31 @@ hoje_br = agora_br.date()
 # FUNÇÃO AJUSTADA: Nome correto e acesso global ao 'sh'
 def atualizar_meta_sheets(nome):
     global sh 
+    # Verifica se o valor existe antes de tentar atualizar
+    if f"m_{nome}" not in st.session_state:
+        return
+
     novo_valor = st.session_state[f"m_{nome}"]
     
     try:
         ws_meta = sh.worksheet("Meta")
+        # Buscamos a célula
         celula = ws_meta.find(nome)
         
-        if celula:
-            # 1. A "Paulada": Apaga a memória antiga usando o parâmetro 'nome' correto
-            if f"m_{nome}" in st.session_state:
-                del st.session_state[f"m_{nome}"]
+        # Só fazemos algo se 'celula' for encontrada (não for None)
+        if celula is not None:
+            # Atualiza o valor na planilha (ajuste a coluna conforme sua necessidade)
+            ws_meta.update_cell(celula.row, celula.col + 1, novo_valor)
             
-            # 2. Atualiza na planilha
-            ws_meta.update_cell(celula.row, 2, novo_valor)
-            
-            # 3. Força a atualização do DataFrame de controle (para o gráfico ler o valor novo)
-            if 'df_metas_config' in st.session_state:
-                st.session_state['df_metas_config'].loc[st.session_state['df_metas_config']['Nome da Meta'] == nome, 'Valor Alvo'] = novo_valor
-            
-            # 4. Recarrega (O toast vai rodar logo após o rerun se você tirar o rerun daqui, 
-            # ou você pode usar o toast antes do rerun)
-            st.rerun() 
+            # Limpa a memória apenas se a atualização funcionou
+            del st.session_state[f"m_{nome}"]
+            st.success(f"Meta de {nome} atualizada!")
+        else:
+            st.error(f"Erro: O nome '{nome}' não foi encontrado na aba Meta.")
             
     except Exception as e:
-        st.error(f"Erro ao salvar no Sheets: {e}")
-
+        st.error(f"Erro ao conectar com a planilha: {e}")
+        
 # 1. CONFIGURAÇÃO INICIAL
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 st.caption("Versão 2.0.3")
