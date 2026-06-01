@@ -354,23 +354,25 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
 
                 
           # BOTÃO ATUALIZAR
-            if col1.button("💾 ATUALIZAR"):
-                # Busca o ID na coluna 9
-                celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
-                
-                if celula:
-                    # CALCULAMOS A LINHA REAL:
-                    # Se o sistema sempre erra por 2, vamos forçar o destino correto
-                    linha_real = int(celula.row) + 2
-                    
-                    # Vamos imprimir para garantir o valor antes de executar
-                    st.write(f"ID encontrado na linha: {celula.row} | Editando a linha: {linha_real}")
-                    
-                    ws_base.update_cell(linha_real, 3, novo_desc)
-                    ws_base.update_cell(linha_real, 2, f"{novo_val:.2f}".replace('.', ','))
-                    
-                    st.success(f"ID {id_fixo} atualizado na linha {linha_real}!")
-                    st.rerun()
+if col1.button("💾 ATUALIZAR"):
+    try:
+        # A MÁGICA ESTÁ AQUI: O .find ignora qualquer número de linha que o Pandas te deu.
+        # Ele faz um CTRL+F na planilha e encontra o ID real.
+        celula = ws_base.find(str(id_fixo), in_column=9)
+        
+        if celula:
+            # celula.row é o número absoluto da linha no Google Sheets (começando em 1)
+            # Se o ID está na linha 2, ele vai editar a linha 2.
+            ws_base.update_cell(celula.row, 3, novo_desc)
+            ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+            ws_base.update_cell(celula.row, 7, novo_sta)
+            
+            st.success(f"ID {id_fixo} atualizado na linha {celula.row}!")
+            st.rerun()
+        else:
+            st.error(f"ID {id_fixo} não encontrado na planilha.")
+    except Exception as e:
+        st.error(f"Erro: {e}")
                     
             # BOTÃO EXCLUIR
             if col2.button("🚨 EXCLUIR"):
