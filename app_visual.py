@@ -362,26 +362,24 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             col1, col2 = st.columns(2)
             
             # BOTÃO ATUALIZAR
+          
             # BOTÃO ATUALIZAR
-            # BOTÃO ATUALIZAR
-
-            if col1.button("💾 ATUALIZAR"):
-                try:
-                    # Busca exata com Regex
-                    celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
-                    
-                    if celula:
-                        # DEBUG: Isso vai printar na sua tela os números reais
-                        st.warning(f"ID {id_fixo} encontrado na linha REAL do Sheets: {celula.row}")
-                        
-                        # Vamos tentar editar a linha que ele encontrou EXATAMENTE como ele encontrou
-                        # SEM subtrair nada, para ver onde ele vai bater
-                        ws_base.update_cell(celula.row, 3, novo_desc)
-                        
-                        st.success(f"Tentei atualizar a linha {celula.row}")
-                        st.rerun()
-                except Exception as e:
-                    st.error(f"Erro: {e}")
+if col1.button("💾 ATUALIZAR"):
+    try:
+        # Busca exata
+        celula = ws_base.find(f"^{re.escape(id_fixo)}$", in_column=9, match_regex=True)
+        
+        if celula:
+            # ESSA LINHA VAI NOS MOSTRAR A VERDADE
+            st.error(f"DEBUG: O 'ws_base' encontrou o ID {id_fixo} na LINHA: {celula.row}")
+            
+            # Não fazemos nenhuma alteração ainda, apenas paramos para ver o número
+            st.stop() 
+        else:
+            st.warning("ID não encontrado pela busca.")
+            
+    except Exception as e:
+        st.error(f"Erro na busca: {e}")
                     
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
