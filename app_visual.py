@@ -353,50 +353,40 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
-        # Remova o .tail(40) para listar tudo. Se ficar lento, depois a gente coloca paginação.
+        # Carrega a lista com o ID como identificador (Coluna I)
         lista_edit = {f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']} | R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
-        if escolha:
+        
+        if escolha: # SÓ EXECUTA SE ALGO FOR SELECIONADO
             item = lista_edit[escolha]
+            # O ID está aqui dentro agora!
+            id_procurado = str(item['ID']) 
+            
+            # Campos de edição...
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
-            
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
-            idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
-            ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
-            
-            status_opcoes = ["Pago", "Pendente"]
-            index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
-            ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
-            
+            # ... (seu selectbox de banco e status) ...
+
             col_ed1, col_ed2 = st.columns(2)
             
             if col_ed1.button("💾 ATUALIZAR"):
-                # Remova o global. Vamos usar a variável como ela foi definida no topo do arquivo.
-                
-                id_procurado = str(item['ID']) 
-                
-                # O Python vai buscar a variável 'ws_base' no topo do arquivo automaticamente
+                # O find agora está seguro DENTRO do if do botão
                 celula = ws_base.find(id_procurado, in_column=9)
                 
                 if celula:
                     linha = celula.row
                     v_str = f"{ed_val:.2f}".replace('.', ',')
-                    
-                    # Atualiza os dados
                     ws_base.update_cell(linha, 1, ed_dat.strftime("%d/%m/%Y"))
                     ws_base.update_cell(linha, 2, v_str)
                     ws_base.update_cell(linha, 3, ed_desc)
-                    ws_base.update_cell(linha, 6, ed_bnc)
-                    ws_base.update_cell(linha, 7, ed_sta)
-                    
-                    st.success("Atualizado com sucesso!")
-                    atualizar_sessao()
+                    # ... continue as outras colunas ...
+                    st.success("Atualizado!")
                     st.rerun()
                 else:
-                    st.error(f"ID {id_procurado} não encontrado na Coluna I.")
+                    st.error("ID não encontrado na Coluna I.")
                     
             if col_ed2.button("🚨 EXCLUIR"):
                 if item['Categoria'] == 'Transferência':
