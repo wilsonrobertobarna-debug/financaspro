@@ -309,9 +309,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             for i in range(f_par):
                 nova_data = t_dat + relativedelta(months=i)
                 
-                # Busca o ID na coluna 9 (Coluna I)
-    celula = ws_base.find(id_procurado, in_column=9)
-    
+       
     if celula:
         linha = celula.row
         # Atualiza usando a linha exata encontrada
@@ -351,47 +349,35 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
                 st.rerun()
 
 # BARRINHA 3: AJUSTE / EXCLUSÃO
-with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
-    if not df_base.empty:
-        lista_edit = {f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']} | R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
+with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
+    if 'df_base' in locals() and not df_base.empty:
+        lista_edit = {f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']}": r for _, r in df_base.iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         
-        # A variável id_procurado só pode ser declarada se houver uma escolha
         if escolha: 
             item = lista_edit[escolha]
-            id_procurado = str(item['ID']) 
+            # O ID é extraído AQUI dentro do IF
+            meu_id = str(item['ID'])
             
-            # Campos de edição
-            data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
-            ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
-            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
-            ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
+            # Campos...
+            ed_dat = st.date_input("Vencimento", value=datetime.strptime(item['Vencimento'], "%d/%m/%Y"))
+            ed_val = st.number_input("Valor", value=float(item['V_Num']))
             
-            col_ed1, col_ed2 = st.columns(2)
+            col1, col2 = st.columns(2)
+            if col1.button("💾 ATUALIZAR"):
+                # Busca usando a variável local 'meu_id'
+                cel = ws_base.find(meu_id, in_column=9)
+                if cel:
+                    ws_base.update_cell(cel.row, 1, ed_dat.strftime("%d/%m/%Y"))
+                    st.success("Ok!")
+                    st.rerun()
             
-            # --- ATUALIZAR ---
-            if col_ed1.button("💾 ATUALIZAR"):
-                # Verificamos se id_procurado existe antes de rodar o find
-                if 'id_procurado' in locals():
-                    celula = ws_base.find(id_procurado, in_column=9)
-                    if celula:
-                        linha = celula.row
-                        ws_base.update_cell(linha, 1, ed_dat.strftime("%d/%m/%Y"))
-                        ws_base.update_cell(linha, 2, f"{ed_val:.2f}".replace('.', ','))
-                        ws_base.update_cell(linha, 3, ed_desc)
-                        st.success("Atualizado!")
-                        st.rerun()
-                    else:
-                        st.error("ID não encontrado na planilha.")
-
-            # --- EXCLUIR ---
-            if col_ed2.button("🚨 EXCLUIR"):
-                if 'id_procurado' in locals():
-                    celula = ws_base.find(id_procurado, in_column=9)
-                    if celula:
-                        ws_base.delete_rows(celula.row)
-                        st.success("Excluído!")
-                        st.rerun()
+            if col2.button("🚨 EXCLUIR"):
+                cel = ws_base.find(meu_id, in_column=9)
+                if cel:
+                    ws_base.delete_rows(cel.row)
+                    st.success("Excluído!")
+                    st.rerun()
 # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
