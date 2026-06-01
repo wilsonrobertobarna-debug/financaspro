@@ -363,6 +363,9 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                 else:
                     st.error("ID não encontrado.")
 
+                idx_origem = item.name # Isso pega o número da linha original do seu DataFrame
+                linha_alvo = idx_origem + 2
+
             if col1.button("💾 ATUALIZAR"):               
                 # Atualizamos diretamente pela linha calculada, sem precisar de 'find'
                 ws_base.update_cell(linha_alvo, 3, novo_desc)
