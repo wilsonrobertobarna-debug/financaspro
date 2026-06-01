@@ -363,15 +363,14 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                 else:
                     st.error("ID não encontrado.")
 
-            if col1.button("💾 ATUALIZAR"):
-                # Busca na planilha toda
-                celula = ws_base.find(str(id_fixo))
-                if celula:
-                    ws_base.update_cell(celula.row, 3, novo_desc)
-                    ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-                    ws_base.update_cell(celula.row, 7, novo_sta)
-                    st.success(f"Atualizado na linha {celula.row}!")
-                    st.rerun()
+            if col1.button("💾 ATUALIZAR"):               
+                # Atualizamos diretamente pela linha calculada, sem precisar de 'find'
+                ws_base.update_cell(linha_alvo, 3, novo_desc)
+                ws_base.update_cell(linha_alvo, 2, f"{novo_val:.2f}".replace('.', ','))
+                ws_base.update_cell(linha_alvo, 7, novo_sta)
+                
+                st.success(f"Linha {linha_alvo} atualizada com sucesso!")
+                st.rerun()
                 else:
                     st.error(f"ID {id_fixo} não encontrado.")
 
@@ -383,11 +382,10 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
                 st.write(f"Procurando por: '{id_fixo}'")
 
             if col2.button("🚨 EXCLUIR"):
-                celula = ws_base.find(str(id_fixo))
-                if celula:
-                    ws_base.delete_rows(celula.row)
-                    st.success("Excluído com sucesso!")
-                    st.rerun()
+                Excluímos a linha exata da planilha
+                ws_base.delete_rows(linha_alvo)
+                st.success(f"Linha {linha_alvo} excluída!")
+                st.rerun()
                 else:
                     st.error("ID não encontrado para exclusão.")
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
