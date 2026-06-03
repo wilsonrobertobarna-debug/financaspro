@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import gspread
-import re
 from google.oauth2.service_account import Credentials
 import plotly.express as px
 import plotly.graph_objects as go
@@ -10,7 +9,6 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 
-
 # Definições iniciais de data
 agora_br = datetime.now() - timedelta(hours=3)
 hoje_br = agora_br.date()
@@ -18,33 +16,31 @@ hoje_br = agora_br.date()
 # FUNÇÃO AJUSTADA: Nome correto e acesso global ao 'sh'
 def atualizar_meta_sheets(nome):
     global sh 
-    chave_sessao = f"m_{nome}"
-    
-    if chave_sessao not in st.session_state:
-        return
-
-    novo_valor = st.session_state[chave_sessao]
+    novo_valor = st.session_state[f"m_{nome}"]
     
     try:
         ws_meta = sh.worksheet("Meta")
-        # 1. Definimos a variável sempre, mesmo que o find não encontre nada
         celula = ws_meta.find(nome)
         
-        # 2. Agora verificamos se celula não é None
-        if celula is not None:
-            # Atualiza o valor
-            ws_meta.update_cell(celula.row, celula.col + 1, novo_valor)
+        if celula:
+            # 1. A "Paulada": Apaga a memória antiga usando o parâmetro 'nome' correto
+            if f"m_{nome}" in st.session_state:
+                del st.session_state[f"m_{nome}"]
             
-            # Limpa o estado
-            del st.session_state[chave_sessao]
-            st.success(f"Meta de {nome} atualizada!")
-        else:
-            # Caso o nome não exista, não gera erro, apenas avisa
-            st.warning(f"Nome '{nome}' não encontrado na aba Meta.")
+            # 2. Atualiza na planilha
+            ws_meta.update_cell(celula.row, 2, novo_valor)
+            
+            # 3. Força a atualização do DataFrame de controle (para o gráfico ler o valor novo)
+            if 'df_metas_config' in st.session_state:
+                st.session_state['df_metas_config'].loc[st.session_state['df_metas_config']['Nome da Meta'] == nome, 'Valor Alvo'] = novo_valor
+            
+            # 4. Recarrega (O toast vai rodar logo após o rerun se você tirar o rerun daqui, 
+            # ou você pode usar o toast antes do rerun)
+            st.rerun() 
             
     except Exception as e:
-        st.error(f"Erro na conexão: {e}")
-        
+        st.error(f"Erro ao salvar no Sheets: {e}")
+
 # 1. CONFIGURAÇÃO INICIAL
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 st.caption("Versão 2.0.3")
@@ -287,7 +283,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
     with st.form("f_novo", clear_on_submit=True):
         # Usando a variável hoje_br que já corrige o fuso horário
         f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
-        t_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
+        t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
         
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
@@ -302,42 +298,32 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
         # ... (após todos os st.selectbox e inputs do formulário)
 
-       
         if st.form_submit_button("Salvar Lançamento"):
-                # 1. Formatações que não mudam
-                v_str = f"{f_val:.2f}".replace('.', ',')
-                f_compra_str = f_compra.strftime("%d/%m/%Y")
+            # 1. Formatações necessárias
+            v_str = f"{f_val:.2f}".replace('.', ',')
+            t_dat_str = t_dat.strftime("%d/%m/%Y")
+            f_compra_str = f_compra.strftime("%d/%m/%Y")
+            
+            # 2. Loop usando 't_dat' (a variável correta do seu formulário)
+            for i in range(f_par):
+                nova_data = t_dat + relativedelta(months=i)
                 
-                # 2. Loop para processar cada parcela
-                for i in range(f_par):
-                    # Calcula a data de cada parcela
-                    nova_data = t_dat + relativedelta(months=i)
-                    nova_data_str = nova_data.strftime("%d/%m/%Y")
-                    
-                    # --- CRIAÇÃO DO ID ÚNICO ---
-                    # Geramos um ID único para esta linha específica
-                    novo_id = datetime.datetime.now().strftime("%Y%m%d%H%M%S") + f"-{i}"
-                    
-                    # 3. Monta a lista completa com os dados da parcela
-                    # (Certifique-se de que a ordem aqui bata com as colunas da sua planilha)
-                    dados = [
-                        nova_data_str,  # Coluna A (Vencimento)
-                        v_str,          # Coluna B
-                        f_desc,         # Coluna C
-                        f_categoria,    # Coluna D
-                        f_compra_str,   # Coluna E
-                        f_pagamento,    # Coluna F
-                        f_status,       # Coluna G
-                        f_obs,          # Coluna H
-                        novo_id         # Coluna I (ID Único)
-                    ]
-                    
-                    # 4. Salva na planilha
-                    ws_base.append_row(dados)
-                
-                st.success(f"Lançamento realizado com sucesso!")
-          
-    
+                ws_base.append_row([
+                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
+                    v_str,                          # Coluna B: Valor
+                    f_des,                          # Coluna C: Descrição
+                    f_cat,                          # Coluna D: Categoria
+                    f_tip,                          # Coluna E: Tipo
+                    f_bnc,                          # Coluna F: Banco
+                    f_sta,                          # Coluna G: Status
+                    f_compra_str                    # Coluna H: Data da Compra
+                ])
+            
+            # 3. Finalização
+            st.toast("✅ Lançamento salvo com sucesso!", icon="💰")
+            atualizar_sessao()
+            st.rerun()
+
 # Se o usuário mudar de aba ou clicar em outra coisa fora do formulário, o expander fecha amigavelmente
 if aba != "💰 Finanças & Bancos":
     st.session_state.expander_lancamento_aberto = False
@@ -359,67 +345,57 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
-# --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
-with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
-    if 'df_base' in locals() and not df_base.empty:
-        lista_edit = {f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']}": r for _, r in df_base.iloc[::-1].iterrows()}
+# BARRINHA 3: AJUSTE / EXCLUSÃO
+with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
+    if not df_base.empty:
+        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
-        
         if escolha:
             item = lista_edit[escolha]
-            # Pegamos o ID real que o sistema mostra (ex: 9)
-            id_selecionado = str(item['ID']) 
+            data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
+            ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
             
-            # COMANDO DE OURO: Procurar exatamente o ID na planilha (Coluna I = 9)
-            celula = ws_base.find(id_selecionado, in_column=9)
+            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+            ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
-           # 1. Pega o ID que você quer editar (o ID da sua coluna 'ID')
-            id_procurado = st.text_input("Digite o ID que deseja editar:")
-
-if st.button("Buscar ID"):
-    celula = ws_base.find(str(id_procurado).strip(), in_column=9)
-    if celula:
-        st.session_state['linha_edit'] = celula.row
-        st.success(f"ID {id_procurado} encontrado na linha {celula.row}!")
-    else:
-        st.error("ID não encontrado na coluna I.")
-
-# Só exibe a edição se a linha estiver na memória
-if 'linha_edit' in st.session_state:
-    row_num = st.session_state['linha_edit']
-    dados = ws_base.row_values(row_num)
-    
-    # DEBUG: Isso vai mostrar na tela o que o Python está lendo da planilha
-    st.write(f"DEBUG: Dados lidos da linha {row_num}: {dados}")
-    
-    # Se 'dados' for uma lista vazia [], o problema é a leitura do Gspread
-    if len(dados) > 0:
-        st.write(f"### Editando ID: {dados[8]}") # Coluna I (índice 8)
-        
-        # Campos de edição
-        novo_desc = st.text_input("Descrição", value=dados[2]) # Coluna C
-        novo_val = st.text_input("Valor", value=dados[1])      # Coluna B
-    
-    # Botões de Ação
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("💾 ATUALIZAR"):
-            ws_base.update_cell(row_num, 3, novo_desc)
-            ws_base.update_cell(row_num, 2, novo_val)
-            st.success("Atualizado!")
-    else:
-        st.error("Atenção: O sistema encontrou a linha, mas não conseguiu ler os dados!")
-
-    with col2:
-        
-        if st.button("🚨 EXCLUIR"):
-            ws_base.delete_rows(row_num)
-            st.success("Linha excluída!")
-            # Limpa a sessão após excluir
-            del st.session_state['linha_edit']
-            st.rerun()
-                    # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
+            idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
+            ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
+            
+            status_opcoes = ["Pago", "Pendente"]
+            index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
+            ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
+            
+            col_ed1, col_ed2 = st.columns(2)
+            if col_ed1.button("💾 ATUALIZAR"):
+                v_str = f"{ed_val:.2f}".replace('.', ',')
+                ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
+                ws_base.update_cell(int(item['ID']), 2, v_str)
+                ws_base.update_cell(int(item['ID']), 3, ed_desc)
+                ws_base.update_cell(int(item['ID']), 6, ed_bnc)
+                ws_base.update_cell(int(item['ID']), 7, ed_sta)
+                atualizar_sessao()
+                st.rerun()
+            if col_ed2.button("🚨 EXCLUIR"):
+                if item['Categoria'] == 'Transferência':
+                    desc = item['Descrição']
+                    data = item['Data']
+                    v_num = item['V_Num']
+                    ids_para_excluir = []
+                    for idx, row in df_base.iterrows():
+                        if (row['Data'] == data and 
+                            abs(row['V_Num'] - v_num) < 0.01 and 
+                            row['Descrição'] == desc and 
+                            row['Categoria'] == 'Transferência'):
+                            ids_para_excluir.append(int(row['ID']))
+                    ids_para_excluir = sorted(list(set(ids_para_excluir)), reverse=True)
+                    for id_linha in ids_para_excluir:
+                        ws_base.delete_rows(id_linha)
+                else:
+                    ws_base.delete_rows(int(item['ID']))
+                atualizar_sessao()
+                st.rerun()
+                
+# 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
 rendimento = 0.19
@@ -579,28 +555,11 @@ if "💰" in aba:
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
         
-        # 1. Limpeza total: pega o dataframe original e garante que ele seja apenas colunas, sem índices malucos
-        df_limpo = df_v.copy()
-        if 'index' in df_limpo.columns:
-           df_limpo = df_limpo.drop(columns=['index'])
-            
-        # 1. Definir a ordem exata das colunas
-        cols = ['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']
+        df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-        # 2. Criar a exibição (limpando qualquer índice antigo)
-        df_display = df_v[cols].copy()
 
-        # 3. Formatar o valor
-        df_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-
-        # 4. Exibir forçando o ID na esquerda e ocultando o resto
-        st.dataframe(
-        df_display.iloc[::-1], 
-        use_container_width=True, 
-        hide_index=True
-)
-       
-       
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     
