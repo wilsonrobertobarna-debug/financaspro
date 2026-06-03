@@ -377,8 +377,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             id_procurado = st.text_input("Digite o ID que deseja editar:")
 
 if st.button("Buscar ID"):
-      celula = ws_base.find(str(id_procurado).strip(), in_column=9)
-           if celula:
+             celula = ws_base.find(str(id_procurado).strip(), in_column=9)
+    if celula:
         st.session_state['linha_edit'] = celula.row
         st.success(f"ID {id_procurado} encontrado na linha {celula.row}!")
        else:
