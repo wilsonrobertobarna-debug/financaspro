@@ -565,7 +565,7 @@ if "💰" in aba:
         df_v_display = df_v[colunas_exibir].copy()
 
         if 'V_Num' in df_v.columns:
-        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+            df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
 
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
