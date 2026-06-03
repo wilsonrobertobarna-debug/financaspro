@@ -1186,14 +1186,15 @@ if aba == "📋 Relatório PDF":
 
     # Exibe os dados
     if not df_tela_limpo.empty:
-        # Criamos um "ID" temporário baseado na ordem da tabela para não dar erro
+        # Criamos o ID temporário
         df_exibir = df_tela_limpo.copy()
         df_exibir.insert(0, 'ID', range(1, len(df_exibir) + 1))
-        
-        # Agora definimos esse novo 'ID' como índice
         df_exibir = df_exibir.set_index('ID')
         
-        st.dataframe(df_exibir, use_container_width=True)
+        # O 'height' controla o tamanho da caixa. 
+        # Se você quiser que apareça tudo sem barra de rolagem, aumente esse número.
+        # Se quiser que a tabela se ajuste ao tamanho, o 'use_container_width' já ajuda.
+        st.dataframe(df_exibir, use_container_width=True, height=600)
     else:
         st.info("Nenhum lançamento encontrado para os filtros aplicados.")
 # =========================================================================
