@@ -374,7 +374,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             celula = ws_base.find(id_selecionado, in_column=9)
             
            # 1. Pega o ID que você quer editar (o ID da sua coluna 'ID')
-           id_procurado = st.text_input("Digite o ID que deseja editar:")
+            id_procurado = st.text_input("Digite o ID que deseja editar:")
 
 if st.button("Buscar ID"):
           # 2. Busca na coluna I (que é a coluna 9) onde está o valor digitado
