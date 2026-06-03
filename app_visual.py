@@ -559,9 +559,9 @@ if "💰" in aba:
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
         
        # 1. Limpeza total: pega o dataframe original e garante que ele seja apenas colunas, sem índices malucos
-        df_limpo = df_v.copy()
-        if 'index' in df_limpo.columns:
-        df_limpo = df_limpo.drop(columns=['index'])
+       df_limpo = df_v.copy()
+       if 'index' in df_limpo.columns:
+           df_limpo = df_limpo.drop(columns=['index'])
             
         colunas_finais = ['IDs', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']
             
