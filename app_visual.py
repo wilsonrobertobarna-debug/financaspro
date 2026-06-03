@@ -1186,7 +1186,10 @@ if aba == "📋 Relatório PDF":
 
     # Exibe os dados
     if not df_tela_limpo.empty:
-        st.dataframe(df_tela_limpo, use_container_width=True, hide_index=True)
+        # Aqui a gente transforma o seu ID no índice oficial da tabela
+        df_exibir = df_tela_limpo.set_index('ID')
+        # Agora exibimos o ID na lateral esquerda, sem a numeração automática
+        st.dataframe(df_exibir, use_container_width=True)
     else:
         st.info("Nenhum lançamento encontrado para os filtros aplicados.")
 # =========================================================================
