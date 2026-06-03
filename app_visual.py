@@ -366,7 +366,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         
         if escolha:
-            if escolha:
             # Pega o item selecionado no selectbox
             item = lista_edit[escolha]
             
