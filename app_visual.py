@@ -1186,20 +1186,20 @@ if aba == "📋 Relatório PDF":
 
 # 1. Exibição limpa (Sem busca, sem criar ID falso)
     if not df_tela_limpo.empty:
-        # --- APAGUE O QUE TIVER AQUI DENTRO ---
-        # --- E COLE O NOVO CÓDIGO ABAIXO ---
-        
+        # AQUI O PULO DO GATO:
+        # 1. Fazemos uma cópia para não alterar o original
         df_exibir = df_tela_limpo.copy()
         
-        # Cria a numeração limpa 1, 2, 3... para a tela
-        df_exibir.insert(0, 'ID_Exibicao', range(1, len(df_exibir) + 1))
+        # 2. Em vez de criar um ID novo (1, 2, 3...), 
+        # nós garantimos que a coluna 'ID' (que vem da planilha) 
+        # seja a primeira coluna e seja o índice.
+        if 'ID' in df_exibir.columns:
+            df_exibir = df_exibir.set_index('ID')
         
-        # Define essa numeração como o índice da tabela
-        df_exibir = df_exibir.set_index('ID_Exibicao')
-        
-        # Exibe a tabela bonita como você gosta
+        # 3. Exibimos a tabela. 
+        # Agora o número que aparece na esquerda será o ID real da sua planilha.
         st.dataframe(df_exibir, use_container_width=True)
-        
+          
     else:
         st.info("Nenhum lançamento encontrado para os filtros aplicados.")
 # =========================================================================
