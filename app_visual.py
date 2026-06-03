@@ -460,7 +460,7 @@ if "💰" in aba:
         st.write("### 📊 Fluxo de Caixa Mensal")
         
         # 1. Garante que temos uma coluna de data real para agrupar
-        df_base['DT_OBJ'] = pd.to_datetime(df_base['Vencimento'], format='%d/%m/%Y')
+        df_base['DT_OBJ'] = pd.to_datetime(df_base['Vencimento'], format='%d/%m/%Y', errors='coerce')
         df_base['Mes_Ano'] = df_base['DT_OBJ'].dt.strftime('%m/%Y')
         
         # 2. Prepara os dados para o gráfico
