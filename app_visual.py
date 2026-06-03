@@ -342,22 +342,21 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
         
         if escolha:
             item = lista_edit[escolha]
-                       
-            # --- DIAGNÓSTICO ---
-            st.write(f"Item selecionado: {escolha}")
-            # Vamos ver se o seu 'item' possui um índice que aponta para a linha
-            st.write(f"Índice do item: {item.name}") 
-            
-            # --- CÁLCULO ---
             linha_alvo = int(item.name) + 4
             
-            st.write(f"Linha calculada: {linha_alvo}") # Isso vai confirmar se agora aponta para a 11
+            # As colunas SÓ são criadas aqui dentro
+            col1, col2 = st.columns(2)
             
+            novo_desc = st.text_input("Descrição", value=str(item['Descrição']))
+            novo_val = st.number_input("Valor", value=float(str(item['V_Num']).replace(',', '.')))
+            novo_sta = "Pago" 
+            
+            # Agora os botões estão protegidos dentro do bloco 'if escolha'
             if col1.button("💾 ATUALIZAR"):
                 ws_base.update_cell(linha_alvo, 3, novo_desc)
                 ws_base.update_cell(linha_alvo, 2, f"{novo_val:.2f}".replace('.', ','))
                 ws_base.update_cell(linha_alvo, 7, novo_sta)
-                st.success(f"Linha {linha_alvo} atualizada com sucesso!")
+                st.success(f"Linha {linha_alvo} atualizada!")
                 st.rerun()
 
             if col2.button("🚨 EXCLUIR"):
