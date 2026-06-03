@@ -556,7 +556,12 @@ if "💰" in aba:
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
 
         
-        st.write("Colunas presentes no DataFrame:", df_v.columns.tolist()) 
+        TESTE FORÇADO - COLE ISTO NO INÍCIO DO SEU RELATÓRIO
+        st.header("DEBUG DE COLUNAS")
+        st.write("Colunas encontradas:", list(df_v.columns))
+
+        # Se 'ID' não aparecer na lista que vai ser impressa na tela, 
+        # então o seu 'df_v' realmente não tem a coluna ID.
        # 1. Prepara a base (repare que o ID está no final da lista agora)
         df_v_display = df_v[['Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status', 'ID']].copy()
         
