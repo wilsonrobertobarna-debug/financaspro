@@ -524,7 +524,7 @@ if "💰" in aba:
         # --- ADICIONE ISSO ANTES DA LINHA 524 ---
         # Garantimos que a variável exista, mesmo que vazia, para não dar erro
         if 'df_metas_graph' not in locals():
-        df_metas_graph = pd.DataFrame() 
+            df_metas_graph = pd.DataFrame() 
 
         # --- AGORA, O SEU CÓDIGO COM A VERIFICAÇÃO DE SEGURANÇA ---
         if 'df_metas_graph' in locals() and not df_metas_graph.empty:
