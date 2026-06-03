@@ -366,46 +366,40 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         
         if escolha:
+            if escolha:
+            # Pega o item selecionado no selectbox
             item = lista_edit[escolha]
-            # --- DEPURAÇÃO TOTAL ---
-            indice_atual = int(item.name)
             
-            # Vamos imprimir na tela o que o código pensa que é o índice
-            st.write(f"Índice do DataFrame: {indice_atual}")
+            # ATENÇÃO: Aqui assumimos que seu DataFrame (lista_edit) 
+            # possui a coluna 'ID' (que é a coluna I da planilha)
+            # Se o ID não estiver aparecendo no seu SelectBox, 
+            # você precisa garantir que ele esteja no seu DataFrame.
+            id_para_buscar = str(item['ID']) 
             
-            # TESTE: Vamos forçar a linha alvo ser 10, sem contas
-            linha_alvo = int(item.name) + 4
-            st.write(f"Linha que o código vai usar para atualizar: {linha_alvo}")
+            st.write(f"Buscando ID real: {id_para_buscar} na planilha...")
             
-            # As colunas SÓ são criadas aqui dentro
-            col1, col2 = st.columns(2)
+            # O comando de busca real (vai na coluna 9 - Coluna I)
+            celula = ws_base.find(id_para_buscar, in_column=9)
             
-            novo_desc = st.text_input("Descrição", value=str(item['Descrição']))
-            novo_val = st.number_input("Valor", value=float(str(item['V_Num']).replace(',', '.')))
-            novo_sta = "Pago" 
-            
-            # Agora os botões usam essa linha calculada
-            if col1.button("💾 ATUALIZAR"):
-                # 1. Pegamos o ID que está guardado no item selecionado
-                # (Certifique-se de que o seu DataFrame carregou a coluna I)
-                id_para_editar = str(item['ID']) 
+            if celula:
+                st.write(f"ID encontrado na linha: {celula.row}")
                 
-                # 2. PROCURAMOS o ID na coluna 9 (que é a coluna I)
-                celula = ws_base.find(id_para_editar, in_column=9)
+                # Botões de ação
+                col1, col2 = st.columns(2)
                 
-                if celula:
-                    # Agora usamos a linha exata que o Google encontrou
+                if col1.button("💾 ATUALIZAR"):
                     ws_base.update_cell(celula.row, 3, novo_desc)
                     ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
                     ws_base.update_cell(celula.row, 7, novo_sta)
-                    st.success(f"Sucesso! Atualizamos a linha {celula.row}")
+                    st.success(f"Linha {celula.row} atualizada!")
                     st.rerun()
-                else:
-                    st.error("Erro: ID não encontrado na planilha!")
-            if col2.button("🚨 EXCLUIR"):
-                ws_base.delete_rows(linha_alvo)
-                st.success(f"Linha {linha_alvo} excluída!")
-                st.rerun()
+
+                if col2.button("🚨 EXCLUIR"):
+                    ws_base.delete_rows(celula.row)
+                    st.success(f"Linha {celula.row} excluída!")
+                    st.rerun()
+            else:
+                st.error("Erro: O ID deste lançamento não foi encontrado na coluna I da planilha.")
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
