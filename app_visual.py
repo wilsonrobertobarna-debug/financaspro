@@ -1186,15 +1186,18 @@ if aba == "📋 Relatório PDF":
 
 # 1. Exibição limpa (Sem busca, sem criar ID falso)
     if not df_tela_limpo.empty:
-        # Criamos uma cópia apenas para não alterar o original
+        # --- APAGUE O QUE TIVER AQUI DENTRO ---
+        # --- E COLE O NOVO CÓDIGO ABAIXO ---
+        
         df_exibir = df_tela_limpo.copy()
         
-        # Se a coluna 'ID' já existe na sua planilha (que é o número da linha),
-        # nós a transformamos em índice diretamente.
-        if 'ID' in df_exibir.columns:
-            df_exibir = df_exibir.set_index('ID')
+        # Cria a numeração limpa 1, 2, 3... para a tela
+        df_exibir.insert(0, 'ID_Exibicao', range(1, len(df_exibir) + 1))
         
-        # Mostra a tabela na tela
+        # Define essa numeração como o índice da tabela
+        df_exibir = df_exibir.set_index('ID_Exibicao')
+        
+        # Exibe a tabela bonita como você gosta
         st.dataframe(df_exibir, use_container_width=True)
         
     else:
