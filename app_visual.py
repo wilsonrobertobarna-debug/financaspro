@@ -386,12 +386,22 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             
             # Agora os botões usam essa linha calculada
             if col1.button("💾 ATUALIZAR"):
-                ws_base.update_cell(linha_alvo, 3, novo_desc)
-                ws_base.update_cell(linha_alvo, 2, f"{novo_val:.2f}".replace('.', ','))
-                ws_base.update_cell(linha_alvo, 7, novo_sta)
-                st.success(f"Linha {linha_alvo} atualizada com sucesso!")
-                st.rerun()
-
+                # 1. Pegamos o ID que está guardado no item selecionado
+                # (Certifique-se de que o seu DataFrame carregou a coluna I)
+                id_para_editar = str(item['ID']) 
+                
+                # 2. PROCURAMOS o ID na coluna 9 (que é a coluna I)
+                celula = ws_base.find(id_para_editar, in_column=9)
+                
+                if celula:
+                    # Agora usamos a linha exata que o Google encontrou
+                    ws_base.update_cell(celula.row, 3, novo_desc)
+                    ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
+                    ws_base.update_cell(celula.row, 7, novo_sta)
+                    st.success(f"Sucesso! Atualizamos a linha {celula.row}")
+                    st.rerun()
+                else:
+                    st.error("Erro: ID não encontrado na planilha!")
             if col2.button("🚨 EXCLUIR"):
                 ws_base.delete_rows(linha_alvo)
                 st.success(f"Linha {linha_alvo} excluída!")
