@@ -303,7 +303,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         # ... (após todos os st.selectbox e inputs do formulário)
 
        
-            if st.form_submit_button("Salvar Lançamento"):
+        if st.form_submit_button("Salvar Lançamento"):
                 # 1. Formatações que não mudam
                 v_str = f"{f_val:.2f}".replace('.', ',')
                 f_compra_str = f_compra.strftime("%d/%m/%Y")
