@@ -381,7 +381,7 @@ if st.button("Buscar ID"):
        if celula:
         st.session_state['linha_edit'] = celula.row
         st.success(f"ID {id_procurado} encontrado na linha {celula.row}!")
-    else:
+       else:
         st.error("ID não encontrado na coluna I.")
 
 # Só exibe a edição se a linha estiver na memória
