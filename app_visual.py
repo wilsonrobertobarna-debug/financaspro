@@ -456,15 +456,33 @@ if "💰" in aba:
         #     st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True, config={'staticPlot': True})
         st.info("Aguardando conexão com os dados...")
 
-    with g2:
-        st.write("### 📊 Fluxo de Caixa")
-        # Fazendo o mesmo aqui para o fluxo:
-        # df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
-        # df_f = df_f.sort_values('DT')
-        # df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
-        # if not df_f_grouped.empty: 
-        #     st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa Mensal"), use_container_width=True, config={'staticPlot': True})
-        st.info("Aguardando conexão com os dados...")
+   with g2:
+        st.write("### 📊 Fluxo de Caixa Mensal")
+        
+        # 1. Garante que temos uma coluna de data real para agrupar
+        df_base['DT_OBJ'] = pd.to_datetime(df_base['Vencimento'], format='%d/%m/%Y')
+        df_base['Mes_Ano'] = df_base['DT_OBJ'].dt.strftime('%m/%Y')
+        
+        # 2. Prepara os dados para o gráfico
+        df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
+        
+        # Agrupa por Mês e Tipo (Receita/Despesa)
+        df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
+        
+        if not df_f_grouped.empty: 
+            # O código para o gráfico de barras
+            fig = px.bar(
+                df_f_grouped, 
+                x='Mes_Ano', 
+                y='V_Num', 
+                color='Tipo', 
+                barmode='group', 
+                color_discrete_map={'Receita':'#2ecc71', 'Despesa':'#e74c3c'},
+                title="Receitas vs Despesas por Mês"
+            )
+            st.plotly_chart(fig, use_container_width=True, config={'staticPlot': True})
+        else:
+            st.info("Ainda não há dados suficientes para o gráfico.")
        
     if not df_base.empty:
         # AQUI VOCÊ CRIA A VARIÁVEL
