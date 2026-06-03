@@ -558,17 +558,20 @@ if "💰" in aba:
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
         
-        # 1. Ajuste das colunas para exibir o ID da planilha primeiro
-        # Certifique-se de que 'ID' está na lista de colunas que você carregou
-        ordem_colunas = ['IDs', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']
-        df_v_display = df_v[ordem_colunas].copy()
+       # 1. Limpeza total: pega o dataframe original e garante que ele seja apenas colunas, sem índices malucos
+        df_limpo = df_v.copy()
+        if 'index' in df_limpo.columns:
+        df_limpo = df_limpo.drop(columns=['index'])
+            
+        colunas_finais = ['IDs', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']
+            
+       # 3. Criamos o display apenas com as colunas na ordem desejada
+        df_v_display = df_limpo[colunas_finais].copy()
         
-        # 2. Formatação do Valor
-        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        # 4. Formatação do valor (mantendo o que você já faz)
+        df_v_display['Valor'] = df_limpo['V_Num'].apply(m_fmt)
         
-        # 3. Exibição do relatório
-        # O 'hide_index=True' vai esconder aquela numeração automática que te confundia
-        # O 'iloc[::-1]' mantém sua inversão para mostrar o último lançamento primeiro
+        # 5. Exibição: o hide_index=True aqui é o comando final para sumir com qualquer numeração
         st.dataframe(
         df_v_display.iloc[::-1], 
         use_container_width=True, 
