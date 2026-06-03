@@ -513,65 +513,48 @@ if "💰" in aba:
               
       
                
-    if 'df_m_limpo' in locals() or 'df_m_limpo' in globals():
-    
-        # Só faz a conta se a variável existir
-        if df_m_limpo is not None and not df_m_limpo.empty:
-        
-            st.subheader("🎯 Metas vs Realizado")
-            df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-            
-        # --- ADICIONE ISSO ANTES DA LINHA 524 ---
-        # Garantimos que a variável exista, mesmo que vazia, para não dar erro
-        if 'df_metas_graph' not in locals():
-            df_metas_graph = pd.DataFrame() 
+  if 'df_m_limpo' in locals() and df_m_limpo is not None and not df_m_limpo.empty:
+    st.subheader("🎯 Metas vs Realizado")
+    df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
 
-        # --- AGORA, O SEU CÓDIGO COM A VERIFICAÇÃO DE SEGURANÇA ---
-        # Bloco com o alinhamento correto
-    if 'df_metas_graph' in locals() and df_metas_graph is not None and not df_metas_graph.empty:
+    if not df_metas_graph.empty:
         if 'Meta' not in df_metas_graph.columns:
             df_metas_graph['Meta'] = 0.0
         
-        def buscar_meta(cat):
-            return st.session_state.get(f"m_{cat}", 0.0)
+        df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
         
-            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(buscar_meta)
-        else:
-            st.info("Dados de metas ainda não carregados ou vazios.")
-            st.write("Dados no session_state para Mercado:", st.session_state.get("m_Mercado", "NÃO ENCONTRADO"))            fig_m = go.Figure()
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
-            
-            fig_m.update_layout(barmode='group', height=350)
-            st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
-            st.divider()
-        else:
-            # Este else pertence ao 'if not df_metas_graph.empty'
-            st.info("Nenhuma despesa encontrada para esta categoria.")
-        
-        # O resto do código continua aqui fora, alinhado com o 'if' principal
-        st.subheader("🔍 Busca e Lançamentos")
-        
-        c_d1, c_d2 = st.columns(2)
-        s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-        s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
-        
-        c1, c2, c3 = st.columns(3)
-        s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
-        s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
-        b_desc = c3.text_input("Buscar Beneficiário:")
-        
-        df_v = df_base.copy()
-        df_v = df_v[df_v['DT'].notna()]
-        df_v = df_v[(df_v['DT'].dt.date >= s_ini) & (df_v['DT'].dt.date <= s_fim)]
-        if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
-        if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
-        if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-        
-        df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
-        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+        # Desenha o gráfico
+        fig_m = go.Figure()
+        fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
+        fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
+        fig_m.update_layout(barmode='group', height=350)
+        st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
+        st.divider()
+    else:
+        st.info("Nenhuma despesa encontrada para esta categoria.")
 
+# --- Código da Tabela (Fora do bloco das metas) ---
+st.subheader("🔍 Busca e Lançamentos")
+
+c_d1, c_d2 = st.columns(2)
+s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
+
+c1, c2, c3 = st.columns(3)
+s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
+s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
+b_desc = c3.text_input("Buscar Beneficiário:")
+
+df_v = df_base.copy()
+df_v = df_v[df_v['DT'].notna()]
+df_v = df_v[(df_v['DT'].dt.date >= s_ini) & (df_v['DT'].dt.date <= s_fim)]
+if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
+if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
+if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
+
+df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
