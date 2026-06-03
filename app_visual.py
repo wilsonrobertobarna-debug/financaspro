@@ -377,45 +377,42 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             id_procurado = st.text_input("Digite o ID que deseja editar:")
 
 if st.button("Buscar ID"):
-          # 2. Busca na coluna I (que é a coluna 9) onde está o valor digitado
-          # O ws_base.find() devolve o objeto exato da célula na planilha
-            celula = ws_base.find(id_procurado, in_column=9)
-    
-            if celula:
-        # 3. Se achou, a linha real é celula.row. Não importa o que o Pandas diz!
-                st.session_state['linha_edit'] = celula.row
-                st.success(f"ID {id_procurado} encontrado na linha real {celula.row}!")
-            else:
-                st.error("ID não encontrado na coluna I da planilha.")
+       celula = ws_base.find(id_procurado, in_column=9)
+    if celula:
+        st.session_state['linha_edit'] = celula.row
+        st.success(f"ID {id_procurado} encontrado na linha {celula.row}!")
+    else:
+        st.error("ID não encontrado na coluna I.")
 
-        # 4. Só exibe os campos de edição se a linha foi encontrada
-            if 'linha_edit' in st.session_state:
-                row_num = st.session_state['linha_edit']
-                dados = ws_base.row_values(row_num)
+# Só exibe a edição se a linha estiver na memória
+if 'linha_edit' in st.session_state:
+    row_num = st.session_state['linha_edit']
+    # Busca os valores atuais direto da planilha
+    dados = ws_base.row_values(row_num)
     
-                st.write(f"Editando a linha {row_num}")
-        # Agora preenche os campos com a linha real 'row_num'
-                novo_desc = st.text_input("Descrição", value=dados[2]) # Coluna C
-                
-                   # --- EXIBIÇÃO DOS DADOS PARA EDIÇÃO ---
-                novo_desc = st.text_input("Descrição", value=dados_da_linha[2])
-                novo_val = st.number_input("Valor", value=float(dados_da_linha[1].replace(',', '.')))
-                
-                # ... (resto dos seus campos aqui) ...
-                
-                if st.button("💾 ATUALIZAR"):
-                    # Usamos sempre a linha encontrada pelo find()
-                    ws_base.update_cell(celula.row, 3, novo_desc)
-                    ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-                    st.success(f"ID {id_selecionado} atualizado na linha real {celula.row}")
-            else:
-                st.error("O sistema selecionou o ID " + id_selecionado + " mas ele não existe na Coluna I da planilha!")
-
-                if col2.button("🚨 EXCLUIR"):
-                    ws_base.delete_rows(celula.row)
-                    st.success(f"Linha {celula.row} excluída!")
-                    st.rerun()
-                    st.error("Erro: O ID deste lançamento não foi encontrado na coluna I da planilha.")
+    st.write(f"### Editando ID {id_procurado} (Linha {row_num})")
+    
+    # Campos preenchidos com os dados da planilha
+    novo_desc = st.text_input("Descrição", value=dados[2]) # Coluna 3
+    novo_val = st.number_input("Valor", value=float(dados[1].replace(',', '.'))) # Coluna 2
+    
+    # Botões de Ação
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("💾 ATUALIZAR"):
+            ws_base.update_cell(row_num, 3, novo_desc)
+            ws_base.update_cell(row_num, 2, f"{novo_val:.2f}".replace('.', ','))
+            st.success("Atualizado com sucesso!")
+            st.rerun()
+            
+    with col2:
+        if st.button("🚨 EXCLUIR"):
+            ws_base.delete_rows(row_num)
+            st.success("Linha excluída!")
+            # Limpa a sessão após excluir
+            del st.session_state['linha_edit']
+            st.rerun()
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
