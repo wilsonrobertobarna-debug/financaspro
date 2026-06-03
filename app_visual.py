@@ -341,7 +341,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         
         if escolha:
-           if escolha:
             item = lista_edit[escolha]
             
             # --- DEFINIÇÃO DA LINHA (Pega o índice do Pandas e ajusta para a Planilha) ---
