@@ -349,12 +349,12 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             st.write(f"Índice do item: {item.name}") 
             
             # --- CÁLCULO ---
-            linha_alvo = int(item.name) + 2
+            linha_alvo = int(item.name) + 4
             st.write(f"Linha que tentarei alterar na planilha: {linha_alvo}")
 
             
             # --- DEFINIÇÃO DA LINHA (Pega o índice do Pandas e ajusta para a Planilha) ---
-            linha_alvo = int(item.name) + 2
+            linha_alvo = int(item.name) + 4
             
             # --- COLUNAS E INPUTS ---
             col1, col2 = st.columns(2)
