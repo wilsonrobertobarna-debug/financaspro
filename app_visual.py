@@ -558,8 +558,17 @@ if "💰" in aba:
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
         
-        df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+        # 1. Ajuste das colunas para exibir o ID da planilha primeiro
+        # Certifique-se de que 'ID' está na lista de colunas que você carregou
+        colunas_exibicao = ['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']
+        df_v_display = df_v[colunas_exibicao].copy()
+        
+        # 2. Formatação do Valor
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        
+        # 3. Exibição do relatório
+        # O 'hide_index=True' vai esconder aquela numeração automática que te confundia
+        # O 'iloc[::-1]' mantém sua inversão para mostrar o último lançamento primeiro
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 
