@@ -515,7 +515,7 @@ if "💰" in aba:
                
     if 'df_m_limpo' in locals() and df_m_limpo is not None and not df_m_limpo.empty:
         st.subheader("🎯 Metas vs Realizado")
-        df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+    df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
 
     if not df_metas_graph.empty:
         if 'Meta' not in df_metas_graph.columns:
