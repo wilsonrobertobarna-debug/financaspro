@@ -373,10 +373,29 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             # COMANDO DE OURO: Procurar exatamente o ID na planilha (Coluna I = 9)
             celula = ws_base.find(id_selecionado, in_column=9)
             
-            if celula:
-                # Agora o 'celula.row' é a única verdade. 
-                # Se o Google encontrou o ID 9 na linha 10, usaremos a linha 10.
-                dados_da_linha = ws_base.row_values(celula.row)
+           # 1. Pega o ID que você quer editar (o ID da sua coluna 'ID')
+           id_procurado = st.text_input("Digite o ID que deseja editar:")
+
+if st.button("Buscar ID"):
+          # 2. Busca na coluna I (que é a coluna 9) onde está o valor digitado
+          # O ws_base.find() devolve o objeto exato da célula na planilha
+            celula = ws_base.find(id_procurado, in_column=9)
+    
+    if celula:
+        # 3. Se achou, a linha real é celula.row. Não importa o que o Pandas diz!
+        st.session_state['linha_edit'] = celula.row
+        st.success(f"ID {id_procurado} encontrado na linha real {celula.row}!")
+    else:
+        st.error("ID não encontrado na coluna I da planilha.")
+
+# 4. Só exibe os campos de edição se a linha foi encontrada
+if 'linha_edit' in st.session_state:
+    row_num = st.session_state['linha_edit']
+    dados = ws_base.row_values(row_num)
+    
+    st.write(f"Editando a linha {row_num}")
+    # Agora preenche os campos com a linha real 'row_num'
+    novo_desc = st.text_input("Descrição", value=dados[2]) # Coluna C
                 
                 # --- EXIBIÇÃO DOS DADOS PARA EDIÇÃO ---
                 novo_desc = st.text_input("Descrição", value=dados_da_linha[2])
