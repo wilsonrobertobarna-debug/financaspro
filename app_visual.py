@@ -350,24 +350,14 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             
             # --- CÁLCULO ---
             linha_alvo = int(item.name) + 4
-            st.write(f"Linha que tentarei alterar na planilha: {linha_alvo}")
-
             
-            # --- DEFINIÇÃO DA LINHA (Pega o índice do Pandas e ajusta para a Planilha) ---
-            linha_alvo = int(item.name) + 4
+            st.write(f"Linha calculada: {linha_alvo}") # Isso vai confirmar se agora aponta para a 11
             
-            # --- COLUNAS E INPUTS ---
-            col1, col2 = st.columns(2)
-            novo_desc = st.text_input("Descrição", value=str(item['Descrição']))
-            novo_val = st.number_input("Valor", value=float(str(item['V_Num']).replace(',', '.')))
-            novo_sta = "Pago" 
-            
-            # --- BOTÕES ---
             if col1.button("💾 ATUALIZAR"):
                 ws_base.update_cell(linha_alvo, 3, novo_desc)
                 ws_base.update_cell(linha_alvo, 2, f"{novo_val:.2f}".replace('.', ','))
                 ws_base.update_cell(linha_alvo, 7, novo_sta)
-                st.success(f"Linha {linha_alvo} atualizada!")
+                st.success(f"Linha {linha_alvo} atualizada com sucesso!")
                 st.rerun()
 
             if col2.button("🚨 EXCLUIR"):
