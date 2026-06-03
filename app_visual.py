@@ -555,18 +555,15 @@ if "💰" in aba:
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
         
-        # 1. Prepara a base de exibição
-        df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+       # 1. Prepara a base (repare que o ID está no final da lista agora)
+        df_v_display = df_v[['Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status', 'ID']].copy()
         
         # 2. Formata o valor
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         
-        # 3. A MÁGICA: Transformar o ID da planilha no índice oficial da tabela
-        # Isso fará com que o ID da planilha substitua o número do sistema
-        df_v_display = df_v_display.set_index('ID')
-        
-        # 4. Exibe a tabela invertida (ordem que você gosta) sem esconder o índice
-        st.dataframe(df_v_display.iloc[::-1], use_container_width=True)
+        # 3. Exibe sem setar o índice (para que o ID não fique na esquerda)
+        # Isso mantém o ID como uma coluna comum lá no final da tabela
+        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 
 elif "Pendências" in aba:
