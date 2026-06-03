@@ -366,40 +366,31 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         
         if escolha:
-            # Pega o item selecionado no selectbox
             item = lista_edit[escolha]
+            # Pegamos o ID real que o sistema mostra (ex: 9)
+            id_selecionado = str(item['ID']) 
             
-            # ATENÇÃO: Aqui assumimos que seu DataFrame (lista_edit) 
-            # possui a coluna 'ID' (que é a coluna I da planilha)
-            # Se o ID não estiver aparecendo no seu SelectBox, 
-            # você precisa garantir que ele esteja no seu DataFrame.
-            id_para_buscar = str(item['ID']) 
-            
-            st.write(f"Buscando ID real: {id_para_buscar} na planilha...")
-            
-            # O comando de busca real (vai na coluna 9 - Coluna I)
-            celula = ws_base.find(id_para_buscar, in_column=9)
+            # COMANDO DE OURO: Procurar exatamente o ID na planilha (Coluna I = 9)
+            celula = ws_base.find(id_selecionado, in_column=9)
             
             if celula:
-               
-                # 1. Puxa os dados da planilha usando a linha encontrada (celula.row)
+                # Agora o 'celula.row' é a única verdade. 
+                # Se o Google encontrou o ID 9 na linha 10, usaremos a linha 10.
                 dados_da_linha = ws_base.row_values(celula.row)
                 
-                # 2. Exibe os campos para edição já preenchidos com o que está na planilha
-                # Ajuste os índices [X] de acordo com a ordem das colunas na sua planilha
-                novo_desc = st.text_input("Descrição", value=dados_da_linha[2]) # Coluna C
-                novo_val = st.number_input("Valor", value=float(dados_da_linha[1].replace(',', '.'))) # Coluna B
-                novo_sta = st.selectbox("Status", ["Pago", "Pendente"], index=0 if dados_da_linha[6] == "Pago" else 1)
+                # --- EXIBIÇÃO DOS DADOS PARA EDIÇÃO ---
+                novo_desc = st.text_input("Descrição", value=dados_da_linha[2])
+                novo_val = st.number_input("Valor", value=float(dados_da_linha[1].replace(',', '.')))
                 
-                # Botões de ação
-                col1, col2 = st.columns(2)
+                # ... (resto dos seus campos aqui) ...
                 
-                if col1.button("💾 ATUALIZAR"):
+                if st.button("💾 ATUALIZAR"):
+                    # Usamos sempre a linha encontrada pelo find()
                     ws_base.update_cell(celula.row, 3, novo_desc)
                     ws_base.update_cell(celula.row, 2, f"{novo_val:.2f}".replace('.', ','))
-                    ws_base.update_cell(celula.row, 7, novo_sta)
-                    st.success(f"Linha {celula.row} atualizada!")
-                    st.rerun()
+                    st.success(f"ID {id_selecionado} atualizado na linha real {celula.row}")
+            else:
+                st.error("O sistema selecionou o ID " + id_selecionado + " mas ele não existe na Coluna I da planilha!")
 
                 if col2.button("🚨 EXCLUIR"):
                     ws_base.delete_rows(celula.row)
