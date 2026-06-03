@@ -381,7 +381,15 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             celula = ws_base.find(id_para_buscar, in_column=9)
             
             if celula:
-                st.write(f"ID encontrado na linha: {celula.row}")
+               
+                # 1. Puxa os dados da planilha usando a linha encontrada (celula.row)
+                dados_da_linha = ws_base.row_values(celula.row)
+                
+                # 2. Exibe os campos para edição já preenchidos com o que está na planilha
+                # Ajuste os índices [X] de acordo com a ordem das colunas na sua planilha
+                novo_desc = st.text_input("Descrição", value=dados_da_linha[2]) # Coluna C
+                novo_val = st.number_input("Valor", value=float(dados_da_linha[1].replace(',', '.'))) # Coluna B
+                novo_sta = st.selectbox("Status", ["Pago", "Pendente"], index=0 if dados_da_linha[6] == "Pago" else 1)
                 
                 # Botões de ação
                 col1, col2 = st.columns(2)
