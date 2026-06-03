@@ -342,6 +342,16 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
         
         if escolha:
             item = lista_edit[escolha]
+                       
+            # --- DIAGNÓSTICO ---
+            st.write(f"Item selecionado: {escolha}")
+            # Vamos ver se o seu 'item' possui um índice que aponta para a linha
+            st.write(f"Índice do item: {item.name}") 
+            
+            # --- CÁLCULO ---
+            linha_alvo = int(item.name) + 2
+            st.write(f"Linha que tentarei alterar na planilha: {linha_alvo}")
+
             
             # --- DEFINIÇÃO DA LINHA (Pega o índice do Pandas e ajusta para a Planilha) ---
             linha_alvo = int(item.name) + 2
