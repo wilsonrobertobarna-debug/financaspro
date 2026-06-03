@@ -1186,10 +1186,18 @@ if aba == "📋 Relatório PDF":
 
     # Exibe os dados
     if not df_tela_limpo.empty:
-        # Aqui a gente transforma o seu ID no índice oficial da tabela
-        df_exibir = df_tela_limpo.set_index('ID')
-        # Agora exibimos o ID na lateral esquerda, sem a numeração automática
-        st.dataframe(df_exibir, use_container_width=True)
+        # Vamos imprimir a lista de colunas "limpa" para a gente ver o que tem nela
+        colunas_reais = [c.strip() for c in df_tela_limpo.columns]
+        
+        if 'ID' in colunas_reais:
+            # Se encontrar, vamos renomear para garantir que não tem espaços escondidos
+            df_tela_limpo.columns = [c.strip() for c in df_tela_limpo.columns]
+            df_exibir = df_tela_limpo.set_index('ID')
+            st.dataframe(df_exibir, use_container_width=True)
+        else:
+            # Se ainda assim não achar, ele vai mostrar as colunas para a gente
+            st.error(f"Erro: Não achei a coluna 'ID'. Colunas encontradas: {df_tela_limpo.columns.tolist()}")
+            st.dataframe(df_tela_limpo, use_container_width=True)
     else:
         st.info("Nenhum lançamento encontrado para os filtros aplicados.")
 # =========================================================================
