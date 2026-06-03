@@ -389,15 +389,15 @@ if st.button("Buscar ID"):
                 st.error("ID não encontrado na coluna I da planilha.")
 
         # 4. Só exibe os campos de edição se a linha foi encontrada
-        if 'linha_edit' in st.session_state:
-            row_num = st.session_state['linha_edit']
-            dados = ws_base.row_values(row_num)
+            if 'linha_edit' in st.session_state:
+                row_num = st.session_state['linha_edit']
+                dados = ws_base.row_values(row_num)
     
-            st.write(f"Editando a linha {row_num}")
+                st.write(f"Editando a linha {row_num}")
         # Agora preenche os campos com a linha real 'row_num'
-            novo_desc = st.text_input("Descrição", value=dados[2]) # Coluna C
+                novo_desc = st.text_input("Descrição", value=dados[2]) # Coluna C
                 
-                # --- EXIBIÇÃO DOS DADOS PARA EDIÇÃO ---
+                   # --- EXIBIÇÃO DOS DADOS PARA EDIÇÃO ---
                 novo_desc = st.text_input("Descrição", value=dados_da_linha[2])
                 novo_val = st.number_input("Valor", value=float(dados_da_linha[1].replace(',', '.')))
                 
