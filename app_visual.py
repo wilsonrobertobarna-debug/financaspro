@@ -342,7 +342,15 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
         
         if escolha:
             item = lista_edit[escolha]
-            linha_alvo = int(item.name) + 4
+            # --- DEPURAÇÃO TOTAL ---
+            indice_atual = int(item.name)
+            
+            # Vamos imprimir na tela o que o código pensa que é o índice
+            st.write(f"Índice do DataFrame: {indice_atual}")
+            
+            # TESTE: Vamos forçar a linha alvo ser 10, sem contas
+            linha_alvo = 10 
+            st.write(f"Linha que o código vai usar para atualizar: {linha_alvo}")
             
             # As colunas SÓ são criadas aqui dentro
             col1, col2 = st.columns(2)
