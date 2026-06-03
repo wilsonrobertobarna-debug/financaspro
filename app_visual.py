@@ -556,20 +556,17 @@ if "💰" in aba:
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
 
         
-        DEBUG: Vamos verificar se o ID existe nas colunas
+        # O simbolo de tralha abaixo e obrigatorio para o Python ignorar o texto
+        # Agora vai funcionar sem erros:
+
         st.write("Colunas detectadas:", df_v.columns.tolist())
 
-        # 1. Prepara a base garantindo que o ID esteja presente
-        # Se 'ID' não estiver nas colunas do seu df_v, o código vai dar erro aqui
-        # Caso dê erro, é porque o nome da coluna no seu df_v é diferente
         colunas_exibir = ['Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status', 'ID']
         df_v_display = df_v[colunas_exibir].copy()
-        
-        # 2. Formata o valor
+
         if 'V_Num' in df_v.columns:
-            df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-        
-        # 3. Exibe a tabela
+        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "Pendências" in aba:
