@@ -456,7 +456,7 @@ if "💰" in aba:
         #     st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True, config={'staticPlot': True})
         st.info("Aguardando conexão com os dados...")
 
-   with g2:
+    with g2:
         st.write("### 📊 Fluxo de Caixa Mensal")
         
         # 1. Garante que temos uma coluna de data real para agrupar
