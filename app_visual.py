@@ -381,12 +381,12 @@ if st.button("Buscar ID"):
           # O ws_base.find() devolve o objeto exato da célula na planilha
             celula = ws_base.find(id_procurado, in_column=9)
     
-    if celula:
+            if celula:
         # 3. Se achou, a linha real é celula.row. Não importa o que o Pandas diz!
-        st.session_state['linha_edit'] = celula.row
-        st.success(f"ID {id_procurado} encontrado na linha real {celula.row}!")
-    else:
-        st.error("ID não encontrado na coluna I da planilha.")
+                st.session_state['linha_edit'] = celula.row
+                st.success(f"ID {id_procurado} encontrado na linha real {celula.row}!")
+            else:
+                st.error("ID não encontrado na coluna I da planilha.")
 
 # 4. Só exibe os campos de edição se a linha foi encontrada
 if 'linha_edit' in st.session_state:
