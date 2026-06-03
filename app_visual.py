@@ -556,7 +556,7 @@ if "💰" in aba:
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
 
         
-        TESTE FORÇADO - COLE ISTO NO INÍCIO DO SEU RELATÓRIO
+            TESTE FORÇADO - COLE ISTO NO INÍCIO DO SEU RELATÓRIO
         st.header("DEBUG DE COLUNAS")
         st.write("Colunas encontradas:", list(df_v.columns))
 
