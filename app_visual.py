@@ -349,7 +349,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             st.write(f"Índice do DataFrame: {indice_atual}")
             
             # TESTE: Vamos forçar a linha alvo ser 10, sem contas
-            linha_alvo + 4
+            linha_alvo = int(item.name) + 4
             st.write(f"Linha que o código vai usar para atualizar: {linha_alvo}")
             
             # As colunas SÓ são criadas aqui dentro
