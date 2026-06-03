@@ -564,19 +564,19 @@ if "💰" in aba:
            df_limpo = df_limpo.drop(columns=['index'])
             
         # 1. Definir a ordem exata das colunas
-cols = ['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']
+        cols = ['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']
 
-# 2. Criar a exibição (limpando qualquer índice antigo)
-df_display = df_v[cols].copy()
+        # 2. Criar a exibição (limpando qualquer índice antigo)
+        df_display = df_v[cols].copy()
 
-# 3. Formatar o valor
-df_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        # 3. Formatar o valor
+        df_display['Valor'] = df_v['V_Num'].apply(m_fmt)
 
-# 4. Exibir forçando o ID na esquerda e ocultando o resto
-st.dataframe(
-    df_display.iloc[::-1], 
-    use_container_width=True, 
-    hide_index=True
+        # 4. Exibir forçando o ID na esquerda e ocultando o resto
+        st.dataframe(
+        df_display.iloc[::-1], 
+        use_container_width=True, 
+        hide_index=True
 )
        
        
