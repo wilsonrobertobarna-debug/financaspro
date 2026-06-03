@@ -1194,7 +1194,7 @@ if aba == "📋 Relatório PDF":
         # O 'height' controla o tamanho da caixa. 
         # Se você quiser que apareça tudo sem barra de rolagem, aumente esse número.
         # Se quiser que a tabela se ajuste ao tamanho, o 'use_container_width' já ajuda.
-        st.dataframe(df_exibir, use_container_width=True, height=600)
+        st.dataframe(df_exibir, use_container_width=True, height=None)
     else:
         st.info("Nenhum lançamento encontrado para os filtros aplicados.")
 # =========================================================================
