@@ -1184,21 +1184,19 @@ if aba == "📋 Relatório PDF":
     colunas_visiveis = [c for c in df_tela.columns if c not in colunas_para_esconder]
     df_tela_limpo = df_tela[colunas_visiveis]
 
-    # 1. Cria a caixa de busca na lateral (antes de processar a tabela)
-    st.sidebar.header("🔍 Pesquisar Lançamento")
-    busca_termo = st.sidebar.text_input("Digite o nome ou descrição:")
-
-    # Filtra o dataframe se o usuário digitar algo
-    if busca_termo:
-        df_tela_limpo = df_tela_limpo[df_tela_limpo['Descrição'].str.contains(busca_termo, case=False, na=False)]
-
-    # 2. Exibe os dados (mantendo sua lógica de ID e exibição)
+# 1. Exibição limpa (Sem busca, sem criar ID falso)
     if not df_tela_limpo.empty:
+        # Criamos uma cópia apenas para não alterar o original
         df_exibir = df_tela_limpo.copy()
-        df_exibir.insert(0, 'ID', range(1, len(df_exibir) + 1))
-        df_exibir = df_exibir.set_index('ID')
         
+        # Se a coluna 'ID' já existe na sua planilha (que é o número da linha),
+        # nós a transformamos em índice diretamente.
+        if 'ID' in df_exibir.columns:
+            df_exibir = df_exibir.set_index('ID')
+        
+        # Mostra a tabela na tela
         st.dataframe(df_exibir, use_container_width=True)
+        
     else:
         st.info("Nenhum lançamento encontrado para os filtros aplicados.")
 # =========================================================================
