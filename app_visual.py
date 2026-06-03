@@ -387,14 +387,18 @@ if st.button("Buscar ID"):
 # Só exibe a edição se a linha estiver na memória
 if 'linha_edit' in st.session_state:
     row_num = st.session_state['linha_edit']
-    # Busca os valores atuais direto da planilha
     dados = ws_base.row_values(row_num)
     
-    st.write(f"### Editando ID {id_procurado} (Linha {row_num})")
+    # DEBUG: Isso vai mostrar na tela o que o Python está lendo da planilha
+    st.write(f"DEBUG: Dados lidos da linha {row_num}: {dados}")
     
-    # Campos preenchidos com os dados da planilha
-    novo_desc = st.text_input("Descrição", value=dados[2]) # Coluna 3
-    novo_val = st.number_input("Valor", value=float(dados[1].replace(',', '.'))) # Coluna 2
+    # Se 'dados' for uma lista vazia [], o problema é a leitura do Gspread
+    if len(dados) > 0:
+        st.write(f"### Editando ID: {dados[8]}") # Coluna I (índice 8)
+        
+        # Campos de edição
+        novo_desc = st.text_input("Descrição", value=dados[2]) # Coluna C
+        novo_val = st.text_input("Valor", value=dados[1])      # Coluna B
     
     # Botões de Ação
     col1, col2 = st.columns(2)
@@ -402,11 +406,14 @@ if 'linha_edit' in st.session_state:
     with col1:
         if st.button("💾 ATUALIZAR"):
             ws_base.update_cell(row_num, 3, novo_desc)
-            ws_base.update_cell(row_num, 2, f"{novo_val:.2f}".replace('.', ','))
-            st.success("Atualizado com sucesso!")
-            st.rerun()
-            
+            ws_base.update_cell(row_num, 2, novo_val)
+            st.success("Atualizado!")
+    else:
+        st.error("Atenção: O sistema encontrou a linha, mas não conseguiu ler os dados!")
+else:
+    st.info("Digite um ID e clique em 'Buscar ID' para começar a edição.")
     with col2:
+        
         if st.button("🚨 EXCLUIR"):
             ws_base.delete_rows(row_num)
             st.success("Linha excluída!")
