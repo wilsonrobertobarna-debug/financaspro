@@ -349,7 +349,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             st.write(f"Índice do DataFrame: {indice_atual}")
             
             # TESTE: Vamos forçar a linha alvo ser 10, sem contas
-            linha_alvo = 10 
+            linha_alvo + 4
             st.write(f"Linha que o código vai usar para atualizar: {linha_alvo}")
             
             # As colunas SÓ são criadas aqui dentro
@@ -359,12 +359,12 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
             novo_val = st.number_input("Valor", value=float(str(item['V_Num']).replace(',', '.')))
             novo_sta = "Pago" 
             
-            # Agora os botões estão protegidos dentro do bloco 'if escolha'
+            # Agora os botões usam essa linha calculada
             if col1.button("💾 ATUALIZAR"):
                 ws_base.update_cell(linha_alvo, 3, novo_desc)
                 ws_base.update_cell(linha_alvo, 2, f"{novo_val:.2f}".replace('.', ','))
                 ws_base.update_cell(linha_alvo, 7, novo_sta)
-                st.success(f"Linha {linha_alvo} atualizada!")
+                st.success(f"Linha {linha_alvo} atualizada com sucesso!")
                 st.rerun()
 
             if col2.button("🚨 EXCLUIR"):
