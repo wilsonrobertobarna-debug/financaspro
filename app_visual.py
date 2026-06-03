@@ -529,7 +529,7 @@ if "💰" in aba:
         # --- AGORA, O SEU CÓDIGO COM A VERIFICAÇÃO DE SEGURANÇA ---
         if 'df_metas_graph' in locals() and not df_metas_graph.empty:
         # ... aqui entra o seu código que desenha o gráfico ...
-        st.write("Gráfico carregado!")
+            st.write("Gráfico carregado!")
 else:
     st.info("Dados de metas ainda não carregados ou vazios.")
             # 3. AGORA SIM, DESENHA O GRÁFICO
