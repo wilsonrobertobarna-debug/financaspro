@@ -348,53 +348,45 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
-        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
-        escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
+       # 1. Criamos a lista para o Selectbox usando apenas o ID
+        # Usamos df_base.tail(40) para pegar os últimos, mas salvamos o ID real
+        lista_opcoes = [""] + [f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']}" for _, r in df_base.tail(40).iloc[::-1].iterrows()]
+        
+        escolha = st.selectbox("Selecione para Alterar/Excluir:", lista_opcoes)
+        
         if escolha:
-            item = lista_edit[escolha]
-            data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
-            ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
+            # Extraímos o ID do texto selecionado (pegamos o que vem após "ID ")
+            id_selecionado = escolha.split(" | ")[0].replace("ID ", "")
             
-            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
-            ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
+            # Buscamos a linha REAL na planilha pelo ID (Coluna 9 / I)
+            celula = ws_base.find(str(id_selecionado), in_column=9)
             
-            idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
-            ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
-            
-            status_opcoes = ["Pago", "Pendente"]
-            index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
-            ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
-            
-            col_ed1, col_ed2 = st.columns(2)
-            if col_ed1.button("💾 ATUALIZAR"):
-                v_str = f"{ed_val:.2f}".replace('.', ',')
-                ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
-                ws_base.update_cell(int(item['ID']), 2, v_str)
-                ws_base.update_cell(int(item['ID']), 3, ed_desc)
-                ws_base.update_cell(int(item['ID']), 6, ed_bnc)
-                ws_base.update_cell(int(item['ID']), 7, ed_sta)
-                atualizar_sessao()
-                st.rerun()
-            if col_ed2.button("🚨 EXCLUIR"):
-                if item['Categoria'] == 'Transferência':
-                    desc = item['Descrição']
-                    data = item['Data']
-                    v_num = item['V_Num']
-                    ids_para_excluir = []
-                    for idx, row in df_base.iterrows():
-                        if (row['Data'] == data and 
-                            abs(row['V_Num'] - v_num) < 0.01 and 
-                            row['Descrição'] == desc and 
-                            row['Categoria'] == 'Transferência'):
-                            ids_para_excluir.append(int(row['ID']))
-                    ids_para_excluir = sorted(list(set(ids_para_excluir)), reverse=True)
-                    for id_linha in ids_para_excluir:
-                        ws_base.delete_rows(id_linha)
-                else:
-                    ws_base.delete_rows(int(item['ID']))
-                atualizar_sessao()
-                st.rerun()
+            if celula:
+                row_num = celula.row
+                dados = ws_base.row_values(row_num) # Pega os dados atuais da linha
                 
+                # Exibimos os campos de edição preenchidos com os dados da planilha
+                # Nota: Verifique se o índice [2] é descrição e [1] é valor na sua planilha
+                ed_desc = st.text_input("Alterar Descrição:", value=dados[2])
+                ed_val = st.number_input("Alterar Valor:", value=float(dados[1].replace(',', '.')), format="%.2f")
+                
+                # ... (adicione aqui os outros campos como Banco e Status, usando 'dados[X]')
+                
+                col_ed1, col_ed2 = st.columns(2)
+                
+                with col_ed1:
+                    if st.button("💾 ATUALIZAR"):
+                        ws_base.update_cell(row_num, 3, ed_desc)
+                        ws_base.update_cell(row_num, 2, f"{ed_val:.2f}".replace('.', ','))
+                        st.success("Atualizado!")
+                        st.rerun()
+                with col_ed2:
+                    if st.button("🚨 EXCLUIR"):
+                        ws_base.delete_rows(row_num)
+                        st.success("Linha excluída!")
+                        st.rerun()
+            else:
+                st.error("Erro: ID não encontrado na planilha.")                
 # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
