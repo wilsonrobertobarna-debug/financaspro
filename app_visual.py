@@ -410,8 +410,7 @@ if 'linha_edit' in st.session_state:
             st.success("Atualizado!")
     else:
         st.error("Atenção: O sistema encontrou a linha, mas não conseguiu ler os dados!")
-else:
-    st.info("Digite um ID e clique em 'Buscar ID' para começar a edição.")
+
     with col2:
         
         if st.button("🚨 EXCLUIR"):
