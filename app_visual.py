@@ -556,22 +556,21 @@ if "💰" in aba:
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
 
         
-            TESTE FORÇADO - COLE ISTO NO INÍCIO DO SEU RELATÓRIO
-        st.header("DEBUG DE COLUNAS")
-        st.write("Colunas encontradas:", list(df_v.columns))
+        DEBUG: Vamos verificar se o ID existe nas colunas
+        st.write("Colunas detectadas:", df_v.columns.tolist())
 
-        # Se 'ID' não aparecer na lista que vai ser impressa na tela, 
-        # então o seu 'df_v' realmente não tem a coluna ID.
-       # 1. Prepara a base (repare que o ID está no final da lista agora)
-        df_v_display = df_v[['Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status', 'ID']].copy()
+        # 1. Prepara a base garantindo que o ID esteja presente
+        # Se 'ID' não estiver nas colunas do seu df_v, o código vai dar erro aqui
+        # Caso dê erro, é porque o nome da coluna no seu df_v é diferente
+        colunas_exibir = ['Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status', 'ID']
+        df_v_display = df_v[colunas_exibir].copy()
         
         # 2. Formata o valor
-        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        if 'V_Num' in df_v.columns:
+            df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         
-        # 3. Exibe sem setar o índice (para que o ID não fique na esquerda)
-        # Isso mantém o ID como uma coluna comum lá no final da tabela
+        # 3. Exibe a tabela
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
-
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
