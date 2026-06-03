@@ -348,45 +348,53 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
-       # 1. Criamos a lista para o Selectbox usando apenas o ID
-        # Usamos df_base.tail(40) para pegar os últimos, mas salvamos o ID real
-        lista_opcoes = [""] + [f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']}" for _, r in df_base.tail(40).iloc[::-1].iterrows()]
-        
-        escolha = st.selectbox("Selecione para Alterar/Excluir:", lista_opcoes)
-        
+        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
+        escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         if escolha:
-            # Extraímos o ID do texto selecionado (pegamos o que vem após "ID ")
-            id_selecionado = escolha.split(" | ")[0].replace("ID ", "")
+            item = lista_edit[escolha]
+            data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
+            ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
             
-            # Buscamos a linha REAL na planilha pelo ID (Coluna 9 / I)
-            celula = ws_base.find(str(id_selecionado), in_column=9)
+            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+            ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
-            if celula:
-                row_num = celula.row
-                dados = ws_base.row_values(row_num) # Pega os dados atuais da linha
+            idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
+            ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
+            
+            status_opcoes = ["Pago", "Pendente"]
+            index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
+            ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
+            
+            col_ed1, col_ed2 = st.columns(2)
+            if col_ed1.button("💾 ATUALIZAR"):
+                v_str = f"{ed_val:.2f}".replace('.', ',')
+                ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
+                ws_base.update_cell(int(item['ID']), 2, v_str)
+                ws_base.update_cell(int(item['ID']), 3, ed_desc)
+                ws_base.update_cell(int(item['ID']), 6, ed_bnc)
+                ws_base.update_cell(int(item['ID']), 7, ed_sta)
+                atualizar_sessao()
+                st.rerun()
+            if col_ed2.button("🚨 EXCLUIR"):
+                if item['Categoria'] == 'Transferência':
+                    desc = item['Descrição']
+                    data = item['Data']
+                    v_num = item['V_Num']
+                    ids_para_excluir = []
+                    for idx, row in df_base.iterrows():
+                        if (row['Data'] == data and 
+                            abs(row['V_Num'] - v_num) < 0.01 and 
+                            row['Descrição'] == desc and 
+                            row['Categoria'] == 'Transferência'):
+                            ids_para_excluir.append(int(row['ID']))
+                    ids_para_excluir = sorted(list(set(ids_para_excluir)), reverse=True)
+                    for id_linha in ids_para_excluir:
+                        ws_base.delete_rows(id_linha)
+                else:
+                    ws_base.delete_rows(int(item['ID']))
+                atualizar_sessao()
+                st.rerun()
                 
-                # Exibimos os campos de edição preenchidos com os dados da planilha
-                # Nota: Verifique se o índice [2] é descrição e [1] é valor na sua planilha
-                ed_desc = st.text_input("Alterar Descrição:", value=dados[2])
-                ed_val = st.number_input("Alterar Valor:", value=float(dados[1].replace(',', '.')), format="%.2f")
-                
-                # ... (adicione aqui os outros campos como Banco e Status, usando 'dados[X]')
-                
-                col_ed1, col_ed2 = st.columns(2)
-                
-                with col_ed1:
-                    if st.button("💾 ATUALIZAR"):
-                        ws_base.update_cell(row_num, 3, ed_desc)
-                        ws_base.update_cell(row_num, 2, f"{ed_val:.2f}".replace('.', ','))
-                        st.success("Atualizado!")
-                        st.rerun()
-                with col_ed2:
-                    if st.button("🚨 EXCLUIR"):
-                        ws_base.delete_rows(row_num)
-                        st.success("Linha excluída!")
-                        st.rerun()
-            else:
-                st.error("Erro: ID não encontrado na planilha.")                
 # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
 gasto_total = 3434.45
@@ -457,32 +465,14 @@ if "💰" in aba:
         st.info("Aguardando conexão com os dados...")
 
     with g2:
-        st.write("### 📊 Fluxo de Caixa Mensal")
-        
-        # 1. Garante que temos uma coluna de data real para agrupar
-        df_base['DT_OBJ'] = pd.to_datetime(df_base['Vencimento'], format='%d/%m/%Y', errors='coerce')
-        df_base['Mes_Ano'] = df_base['DT_OBJ'].dt.strftime('%m/%Y')
-        
-        # 2. Prepara os dados para o gráfico
-        df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
-        
-        # Agrupa por Mês e Tipo (Receita/Despesa)
-        df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
-        
-        if not df_f_grouped.empty: 
-            # O código para o gráfico de barras
-            fig = px.bar(
-                df_f_grouped, 
-                x='Mes_Ano', 
-                y='V_Num', 
-                color='Tipo', 
-                barmode='group', 
-                color_discrete_map={'Receita':'#2ecc71', 'Despesa':'#e74c3c'},
-                title="Receitas vs Despesas por Mês"
-            )
-            st.plotly_chart(fig, use_container_width=True, config={'staticPlot': True})
-        else:
-            st.info("Ainda não há dados suficientes para o gráfico.")
+        st.write("### 📊 Fluxo de Caixa")
+        # Fazendo o mesmo aqui para o fluxo:
+        # df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
+        # df_f = df_f.sort_values('DT')
+        # df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
+        # if not df_f_grouped.empty: 
+        #     st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa Mensal"), use_container_width=True, config={'staticPlot': True})
+        st.info("Aguardando conexão com os dados...")
        
     if not df_base.empty:
         # AQUI VOCÊ CRIA A VARIÁVEL
@@ -513,54 +503,64 @@ if "💰" in aba:
               
       
                
-    if 'df_m_limpo' in locals() and df_m_limpo is not None and not df_m_limpo.empty:
-        st.subheader("🎯 Metas vs Realizado")
-        df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-
-   # --- CAMADA DE SEGURANÇA ---
-if 'df_metas_graph' not in locals():
-    df_metas_graph = pd.DataFrame()
-
-# --- CÓDIGO DO GRÁFICO ---
-if not df_metas_graph.empty:
-    if 'Meta' not in df_metas_graph.columns:
-        df_metas_graph['Meta'] = 0.0
+    if 'df_m_limpo' in locals() or 'df_m_limpo' in globals():
     
-    df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
-    
-    fig_m = go.Figure()
-    fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
-    fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
-    fig_m.update_layout(barmode='group', height=350)
-    st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
-    st.divider()
-else:
-    st.info("Nenhuma despesa encontrada ou dados de metas não carregados.")
+        # Só faz a conta se a variável existir
+        if df_m_limpo is not None and not df_m_limpo.empty:
+        
+            st.subheader("🎯 Metas vs Realizado")
+            df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            
+        if not df_metas_graph.empty:
+            # 1. GARANTIR QUE A COLUNA META EXISTE
+            if 'Meta' not in df_metas_graph.columns:
+                df_metas_graph['Meta'] = 0.0
+            
+            # 2. PREENCHER COM A LÓGICA DO SESSION_STATE
+            def buscar_meta(cat):
+                return st.session_state.get(f"m_{cat}", 0.0)
+            
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(buscar_meta)
 
-# --- Código da Tabela (Alinhado na margem esquerda, fora do if acima) ---
-    st.subheader("🔍 Busca e Lançamentos")
+            # 3. AGORA SIM, DESENHA O GRÁFICO
+            # Coloque isso logo antes da linha: fig_m = go.Figure()
+            st.write("Dados no session_state para Mercado:", st.session_state.get("m_Mercado", "NÃO ENCONTRADO"))
+            fig_m = go.Figure()
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
+            
+            fig_m.update_layout(barmode='group', height=350)
+            st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
+            st.divider()
+        else:
+            # Este else pertence ao 'if not df_metas_graph.empty'
+            st.info("Nenhuma despesa encontrada para esta categoria.")
+        
+        # O resto do código continua aqui fora, alinhado com o 'if' principal
+        st.subheader("🔍 Busca e Lançamentos")
+        
+        c_d1, c_d2 = st.columns(2)
+        s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+        s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
+        
+        c1, c2, c3 = st.columns(3)
+        s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
+        s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
+        b_desc = c3.text_input("Buscar Beneficiário:")
+        
+        df_v = df_base.copy()
+        df_v = df_v[df_v['DT'].notna()]
+        df_v = df_v[(df_v['DT'].dt.date >= s_ini) & (df_v['DT'].dt.date <= s_fim)]
+        if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
+        if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
+        if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
+        
+        df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-    c_d1, c_d2 = st.columns(2)
-    s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-    s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
 
-    c1, c2, c3 = st.columns(3)
-    s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
-    s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
-    b_desc = c3.text_input("Buscar Beneficiário:")
-
-    df_v = df_base.copy()
-    df_v = df_v[df_v['DT'].notna()]
-    df_v = df_v[(df_v['DT'].dt.date >= s_ini) & (df_v['DT'].dt.date <= s_fim)]
-if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
-if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
-if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-
-    df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
-    df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
-
-elif: "Pendências" in aba:
+elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     
     # 1. Filtros
