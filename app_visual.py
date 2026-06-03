@@ -1186,7 +1186,7 @@ if aba == "📋 Relatório PDF":
 
     # Exibe os dados
     if not df_tela_limpo.empty:
-        st.dataframe(df_tela_limpo, use_container_width=True)
+        st.dataframe(df_tela_limpo, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhum lançamento encontrado para os filtros aplicados.")
 # =========================================================================
