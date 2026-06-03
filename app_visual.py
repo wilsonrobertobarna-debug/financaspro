@@ -302,15 +302,40 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
         # ... (após todos os st.selectbox e inputs do formulário)
 
-        if st.form_submit_button("Salvar Lançamento"):
-            # 1. Formatações necessárias
-            v_str = f"{f_val:.2f}".replace('.', ',')
-            t_dat_str = t_dat.strftime("%d/%m/%Y")
-            f_compra_str = f_compra.strftime("%d/%m/%Y")
-            
-            # 2. Loop usando 't_dat' (a variável correta do seu formulário)
-            for i in range(f_par):
-                nova_data = t_dat + relativedelta(months=i)
+       
+            if st.form_submit_button("Salvar Lançamento"):
+                # 1. Formatações que não mudam
+                v_str = f"{f_val:.2f}".replace('.', ',')
+                f_compra_str = f_compra.strftime("%d/%m/%Y")
+                
+                # 2. Loop para processar cada parcela
+                for i in range(f_par):
+                    # Calcula a data de cada parcela
+                    nova_data = t_dat + relativedelta(months=i)
+                    nova_data_str = nova_data.strftime("%d/%m/%Y")
+                    
+                    # --- CRIAÇÃO DO ID ÚNICO ---
+                    # Geramos um ID único para esta linha específica
+                    novo_id = datetime.datetime.now().strftime("%Y%m%d%H%M%S") + f"-{i}"
+                    
+                    # 3. Monta a lista completa com os dados da parcela
+                    # (Certifique-se de que a ordem aqui bata com as colunas da sua planilha)
+                    dados = [
+                        nova_data_str,  # Coluna A (Vencimento)
+                        v_str,          # Coluna B
+                        f_desc,         # Coluna C
+                        f_categoria,    # Coluna D
+                        f_compra_str,   # Coluna E
+                        f_pagamento,    # Coluna F
+                        f_status,       # Coluna G
+                        f_obs,          # Coluna H
+                        novo_id         # Coluna I (ID Único)
+                    ]
+                    
+                    # 4. Salva na planilha
+                    ws_base.append_row(dados)
+                
+                st.success(f"Lançamento realizado com sucesso!")
           
     
 # Se o usuário mudar de aba ou clicar em outra coisa fora do formulário, o expander fecha amigavelmente
