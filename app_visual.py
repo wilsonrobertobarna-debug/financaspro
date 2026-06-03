@@ -560,7 +560,7 @@ if "💰" in aba:
         
         # 1. Ajuste das colunas para exibir o ID da planilha primeiro
         # Certifique-se de que 'ID' está na lista de colunas que você carregou
-        colunas_exibicao = ['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']
+        colunas_exibicao = ['IDs', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']
         df_v_display = df_v[colunas_exibicao].copy()
         
         # 2. Formatação do Valor
