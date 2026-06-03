@@ -561,7 +561,7 @@ if "💰" in aba:
 
         st.write("Colunas detectadas:", df_v.columns.tolist())
 
-        colunas_exibir = ['Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status', 'ID']
+        colunas_exibir = ['ID','Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status', 'ID']
         df_v_display = df_v[colunas_exibir].copy()
 
         if 'V_Num' in df_v.columns:
