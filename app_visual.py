@@ -555,9 +555,16 @@ if "💰" in aba:
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
         
+        # 1. Seleciona as colunas (incluindo o ID)
         df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+        
+        # 2. Formata o valor
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+        
+        # 3. EXIBIÇÃO: O segredo está aqui. 
+        # Removemos o 'hide_index=True' para que o ID da planilha apareça.
+        # Usamos o set_index('ID') para que o ID seja a primeira coluna.
+        st.dataframe(df_v_display.set_index('ID').iloc[::-1], use_container_width=True)
 
 
 elif "Pendências" in aba:
