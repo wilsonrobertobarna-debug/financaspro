@@ -415,7 +415,6 @@ if st.button("Buscar ID"):
                     ws_base.delete_rows(celula.row)
                     st.success(f"Linha {celula.row} excluída!")
                     st.rerun()
-            else:
                     st.error("Erro: O ID deste lançamento não foi encontrado na coluna I da planilha.")
                     # 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
 receita_total = 7626.23  # Exemplo do seu valor real
