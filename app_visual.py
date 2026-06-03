@@ -521,17 +521,17 @@ if "💰" in aba:
             st.subheader("🎯 Metas vs Realizado")
             df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             
-        if not df_metas_graph.empty:
-            # 1. GARANTIR QUE A COLUNA META EXISTE
-            if 'Meta' not in df_metas_graph.columns:
-                df_metas_graph['Meta'] = 0.0
-            
-            # 2. PREENCHER COM A LÓGICA DO SESSION_STATE
-            def buscar_meta(cat):
-                return st.session_state.get(f"m_{cat}", 0.0)
-            
-            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(buscar_meta)
+        # --- ADICIONE ISSO ANTES DA LINHA 524 ---
+        # Garantimos que a variável exista, mesmo que vazia, para não dar erro
+        if 'df_metas_graph' not in locals():
+        df_metas_graph = pd.DataFrame() 
 
+        # --- AGORA, O SEU CÓDIGO COM A VERIFICAÇÃO DE SEGURANÇA ---
+        if 'df_metas_graph' in locals() and not df_metas_graph.empty:
+        # ... aqui entra o seu código que desenha o gráfico ...
+    st.write("Gráfico carregado!")
+else:
+    st.info("Dados de metas ainda não carregados ou vazios.")
             # 3. AGORA SIM, DESENHA O GRÁFICO
             # Coloque isso logo antes da linha: fig_m = go.Figure()
             st.write("Dados no session_state para Mercado:", st.session_state.get("m_Mercado", "NÃO ENCONTRADO"))
