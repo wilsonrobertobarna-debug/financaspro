@@ -558,14 +558,14 @@ if "💰" in aba:
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
         
-       # 1. Limpeza total: pega o dataframe original e garante que ele seja apenas colunas, sem índices malucos
-       df_limpo = df_v.copy()
-       if 'index' in df_limpo.columns:
+        # 1. Limpeza total: pega o dataframe original e garante que ele seja apenas colunas, sem índices malucos
+        df_limpo = df_v.copy()
+        if 'index' in df_limpo.columns:
            df_limpo = df_limpo.drop(columns=['index'])
             
         colunas_finais = ['IDs', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']
             
-       # 3. Criamos o display apenas com as colunas na ordem desejada
+        # 3. Criamos o display apenas com as colunas na ordem desejada
         df_v_display = df_limpo[colunas_finais].copy()
         
         # 4. Formatação do valor (mantendo o que você já faz)
