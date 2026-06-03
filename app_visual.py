@@ -560,8 +560,8 @@ if "💰" in aba:
         
         # 1. Ajuste das colunas para exibir o ID da planilha primeiro
         # Certifique-se de que 'ID' está na lista de colunas que você carregou
-        colunas_exibicao = ['IDs', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']
-        df_v_display = df_v[colunas_exibicao].copy()
+        ordem_colunas = ['IDs', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']
+        df_v_display = df_v[ordem_colunas].copy()
         
         # 2. Formatação do Valor
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
@@ -569,8 +569,11 @@ if "💰" in aba:
         # 3. Exibição do relatório
         # O 'hide_index=True' vai esconder aquela numeração automática que te confundia
         # O 'iloc[::-1]' mantém sua inversão para mostrar o último lançamento primeiro
-        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
-
+        st.dataframe(
+        df_v_display.iloc[::-1], 
+        use_container_width=True, 
+        hide_index=True
+)
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
