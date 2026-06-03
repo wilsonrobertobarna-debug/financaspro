@@ -556,7 +556,7 @@ if "💰" in aba:
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
 
         
-       st.write("Colunas presentes no DataFrame:", df_v.columns.tolist()) 
+        st.write("Colunas presentes no DataFrame:", df_v.columns.tolist()) 
        # 1. Prepara a base (repare que o ID está no final da lista agora)
         df_v_display = df_v[['Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status', 'ID']].copy()
         
