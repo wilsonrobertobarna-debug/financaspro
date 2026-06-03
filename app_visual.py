@@ -341,34 +341,19 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=True):
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         
         if escolha:
+           if escolha:
             item = lista_edit[escolha]
-            id_fixo = str(item['ID'])
             
-            # --- AGORA DEFINIMOS AS COLUNAS ---
-            col1, col2 = st.columns(2)
-            
-            # --- CAMPOS DE ENTRADA ---
-            novo_desc = st.text_input("Descrição", value=str(item['Descrição']))
-            novo_val = st.number_input("Valor", value=float(str(item['V_Num']).replace(',', '.')))
-            # (Adicione aqui o campo novo_sta se ele existir no seu código original)
-            novo_sta = "Pago" # Exemplo, ajuste conforme necessário
-            
-            # --- BOTÕES ---
-            if col1.button("🔍 AUDITAR"):
-                coluna_ids = ws_base.col_values(9)
-                encontrados = [i for i, valor in enumerate(coluna_ids) if valor == id_fixo]
-                if encontrados:
-                    for pos in encontrados:
-                        st.write(f"ID {id_fixo} está na LINHA REAL {pos + 1}")
-                else:
-                    st.error("ID não encontrado.")
-
-                idx_origem = item.name # Isso pega o número da linha original do seu DataFrame
-                linha_alvo = idx_origem + 2
-
-            # --- BOTÕES ---
+            # --- DEFINIÇÃO DA LINHA (Pega o índice do Pandas e ajusta para a Planilha) ---
             linha_alvo = int(item.name) + 2
             
+            # --- COLUNAS E INPUTS ---
+            col1, col2 = st.columns(2)
+            novo_desc = st.text_input("Descrição", value=str(item['Descrição']))
+            novo_val = st.number_input("Valor", value=float(str(item['V_Num']).replace(',', '.')))
+            novo_sta = "Pago" 
+            
+            # --- BOTÕES ---
             if col1.button("💾 ATUALIZAR"):
                 ws_base.update_cell(linha_alvo, 3, novo_desc)
                 ws_base.update_cell(linha_alvo, 2, f"{novo_val:.2f}".replace('.', ','))
