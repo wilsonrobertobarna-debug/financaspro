@@ -563,21 +563,23 @@ if "💰" in aba:
         if 'index' in df_limpo.columns:
            df_limpo = df_limpo.drop(columns=['index'])
             
-        colunas_finais = ['IDs', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']
-            
-        # 3. Criamos o display apenas com as colunas na ordem desejada
-        df_v_display = df_limpo[colunas_finais].copy()
-        
-        # 4. Formatação do valor (mantendo o que você já faz)
-        df_v_display['Valor'] = df_limpo['V_Num'].apply(m_fmt)
-        
-        # 5. Exibição: o hide_index=True aqui é o comando final para sumir com qualquer numeração
-        st.dataframe(
-        df_v_display.iloc[::-1], 
-        use_container_width=True, 
-        hide_index=True
-)
+        # 1. Definir a ordem exata das colunas
+cols = ['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']
 
+# 2. Criar a exibição (limpando qualquer índice antigo)
+df_display = df_v[cols].copy()
+
+# 3. Formatar o valor
+df_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+
+# 4. Exibir forçando o ID na esquerda e ocultando o resto
+st.dataframe(
+    df_display.iloc[::-1], 
+    use_container_width=True, 
+    hide_index=True
+)
+       
+       
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     
