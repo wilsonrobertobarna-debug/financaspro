@@ -1306,3 +1306,23 @@ if aba == "📊 Análises & Configurações":
                 on_change=atualizar_meta_sheets, 
                 args=(nome,) 
             )
+
+# ... (seu código atual das colunas termina aqui) ...
+        # Exemplo: cols[index % 3].number_input(...)
+
+    # 1. FECHE O BLOCO DAS COLUNAS (se houver um loop ou with, o botão deve estar fora dele)
+    
+    # 2. COLOQUE O BOTÃO AQUI, ABAIXO DAS COLUNAS:
+    st.divider() # Adiciona uma linha horizontal para organizar
+    
+    if st.button("📥 Gerar e Baixar PDF"):
+        try:
+            # Usa os dados que estão na tela
+            df_report = df_tela_limpo.copy()
+            
+            # (AQUI VOCÊ COLA O CÓDIGO DO PDF QUE JÁ TEMOS)
+            # ...
+            
+            st.success("PDF pronto!")
+        except Exception as e:
+            st.error(f"Erro ao gerar PDF: {e}")
