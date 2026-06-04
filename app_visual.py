@@ -918,6 +918,10 @@ if aba == "📋 Relatório PDF":
             else:
                 b_ini = b_fim = periodo_pdf
 
+            st.success("PDF gerado com sucesso!")
+        except Exception as e:
+            st.error(f"Erro ao gerar: {e}")
+
             # ========================================================
             # 1. INICIALIZAÇÃO DO PDF
             # ========================================================
