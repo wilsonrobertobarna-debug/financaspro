@@ -1306,7 +1306,18 @@ if aba == "📊 Análises & Configurações":
                 on_change=atualizar_meta_sheets, 
                 args=(nome,) 
             )
+            # ... (seu código das colunas de meta) ...
+        # cols[index % 3].number_input(...)
 
+    # 1. O código das metas acabou, voltamos para a margem da esquerda
+    
+    # 2. O botão vem aqui
+    if st.button("📥 Gerar e Baixar PDF"):
+        # (O código que gera o PDF vai aqui dentro)
+        st.write("Gerando PDF...")
+
+    # 3. A linha divisória vem logo abaixo do botão
+    st.divider()
 # ... (seu código atual das colunas termina aqui) ...
         # Exemplo: cols[index % 3].number_input(...)
 
