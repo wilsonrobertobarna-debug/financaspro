@@ -556,12 +556,13 @@ if "💰" in aba:
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
         
         # CRIAÇÃO DA TABELA UMA ÚNICA VEZ
+        # 1. Primeiro: Prepara os dados (isso o Streamlit faz rápido, não gasta espaço)
         df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
         # BOTÃO ÚNICO LOGO ABAIXO
         if st.button("📥 Gerar PDF do Relatório"):
+            st.write("Gerando PDF...")
             try:
                 # Usa os dados que acabamos de exibir na tabela
                 df_report = df_v_display.iloc[::-1].copy()
@@ -654,7 +655,8 @@ elif "Pendências" in aba:
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
     
     # Exibe a tabela
-    st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
+    
+    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
     # 4. Botão de Baixa (Funcionalidade de Baixa)
     if not df_filtrado.empty:
