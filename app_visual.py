@@ -649,7 +649,11 @@ elif "Pendências" in aba:
     if busca_desc:
         df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
     
-    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
+    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}") 
+    if not df_filtrado.empty:
+        st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
+    else:
+        st.write("A tabela de pendências está vazia. Verifique os filtros.")
     colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
     
