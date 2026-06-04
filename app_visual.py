@@ -1186,68 +1186,39 @@ if aba == "📋 Relatório PDF":
 
     # Exibe os dados
    # Exibe os dados
-    if not df_tela_limpo.empty:
-        st.dataframe(df_tela_limpo, use_container_width=True)
+# 1. Exibe os dados de qualquer jeito (para você ver se eles existem mesmo)
+    st.dataframe(df_tela_limpo, use_container_width=True)
+
+    # 2. Força a criação do botão ABAIXO da tabela, sem depender de "if" de tabela vazia
+    if st.button("📥 Gerar e Baixar PDF"):
+        try:
+            st.write("Gerando PDF...") # Feedback visual para você saber que clicou
+            
+            # Aqui vai a lógica do PDF que montamos antes
+            from fpdf import FPDF
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS", ln=1, align="C")
+            
+            # Loop simples para testar
+            pdf.set_font("Arial", '', 9)
+            for index, row in df_tela_limpo.iterrows():
+                id_real = str(row.get('ID', 'Sem ID'))
+                pdf.cell(200, 6, txt=f"Lançamento ID: {id_real}", ln=1)
+            
+            pdf_output = pdf.output(dest='S').encode('latin-1')
+            
+            st.download_button(
+                label="💾 BAIXAR ARQUIVO PDF",
+                data=pdf_output,
+                file_name="relatorio.pdf",
+                mime="application/pdf"
+            )
+        except Exception as e:
+            st.error(f"Erro ao gerar: {e}")
         
-        # Botão para gerar o PDF baseado no que está na tela
-        if st.button("📥 Gerar e Baixar PDF"):
-            try:
-                # 1. Preparação (Usando os dados que já estão na tela)
-                df_report = df_tela_limpo.copy()
-                
-                # 2. Inicia o PDF
-                from fpdf import FPDF
-                pdf = FPDF()
-                pdf.add_page()
-                
-                # 3. Cabeçalho (Fixo)
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
-                pdf.ln(5)
-                
-                # Cabeçalho da Tabela
-                pdf.set_font("Arial", 'B', 9)
-                # Note: Ajustei a ordem para incluir o ID na primeira coluna
-                pdf.cell(10, 7, "ID", 1)
-                pdf.cell(20, 7, "Data", 1)
-                pdf.cell(20, 7, "Tipo", 1)
-                pdf.cell(35, 7, "Categoria", 1)
-                pdf.cell(40, 7, "Descricao", 1)
-                pdf.cell(25, 7, "Valor", 1)
-                pdf.cell(20, 7, "Status", 1)
-                pdf.ln()
-
-                # 4. Loop de Impressão (Lendo a coluna 'ID' real da planilha)
-                pdf.set_font("Arial", '', 9)
-                for index, row in df_report.iterrows():
-                    # Captura o ID real da planilha
-                    id_real = str(row.get('ID', '-'))
-                    
-                    # Imprime as células
-                    pdf.cell(10, 6, id_real, 1)
-                    pdf.cell(20, 6, str(row.get(col_data_df, '---')), 1)
-                    pdf.cell(20, 6, str(row.get('Tipo', '-')), 1)
-                    pdf.cell(35, 6, str(row.get('Categoria', '-'))[:18], 1)
-                    pdf.cell(40, 6, str(row.get('Descrição', row.get('Descricao', '-')))[:20], 1)
-                    pdf.cell(25, 6, str(row.get('V_Num', '0')), 1)
-                    pdf.cell(20, 6, str(row.get('Status', '-')), 1)
-                    pdf.ln()
-
-                # 5. Download do Arquivo
-                pdf_output = pdf.output(dest='S')
-                st.download_button(
-                    label="💾 Clique aqui para baixar o PDF",
-                    data=pdf_output.encode('latin-1'),
-                    file_name="relatorio_final.pdf",
-                    mime="application/pdf"
-                )
-                st.success("PDF pronto!")
-                
-            except Exception as e:
-                st.error(f"Erro ao gerar PDF: {e}")
-                
-    else:
-        st.info("Nenhum lançamento encontrado para os filtros aplicados.")# =========================================================================
+# =========================================================================
 # NOVA ABA: 📊 ANÁLISES & CONFIGURAÇÕES (Criada no final do arquivo)
 # =========================================================================
 # ATENÇÃO: Essa linha abaixo tem que começar encostada no canto esquerdo!
