@@ -119,34 +119,17 @@ except:
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
-    try:
-        dados = ws_base.get_all_values()
-        if len(dados) <= 1: 
-            return pd.DataFrame()
-        
-        # Cria o DataFrame com o que veio da planilha
-        df = pd.DataFrame(dados[1:], columns=dados[0])
-        
-        # --- BLINDAGEM: Não vamos mais criar IDs automáticos ---
-        # Se não houver coluna ID, o sistema vai te avisar claramente
-        if 'ID' not in df.columns:
-            st.error("ERRO: A coluna 'ID' não existe na planilha. Adicione-a na Google Sheets!")
-            st.stop()
-        
-        # Processamento de valores (mantendo o que você já tinha)
-        def p_float(v):
-            try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
-            except: return 0.0
-        
-        df['V_Num'] = df['Valor'].apply(p_float)
-        df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
-        df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
-        
-        return df
-        
-    except Exception as e:
-        st.error(f"Erro ao conectar com o Google Sheets: {e}")
-        return pd.DataFrame()
+    dados = ws_base.get_all_values()
+    if len(dados) <= 1: return pd.DataFrame()
+    df = pd.DataFrame(dados[1:], columns=dados[0])
+    df['ID'] = range(2, len(df) + 2)
+    def p_float(v):
+        try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
+        except: return 0.0
+    df['V_Num'] = df['Valor'].apply(p_float)
+    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
+    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+    return df
 
 def carregar_bancos_manual_gs():
     if ws_bancos:
@@ -365,7 +348,7 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
-        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
+        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         if escolha:
             item = lista_edit[escolha]
@@ -1113,14 +1096,9 @@ if aba == "📋 Relatório PDF":
             # ========================================================
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
-            ppdf.set_font("Arial", '', 9)
+            pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
-            # --- AQUI VOCÊ CAPTURA O ID REAL DA PLANILHA ---
-                id_real = str(row.get('ID', '---'))
-    
-                # --- AQUI VOCÊ ADICIONA O ID NO PDF (Como a primeira coluna) ---
-                pdf.cell(10, 6, id_real, 1) # Adicione esta célula para mostrar o ID 278
-
+                data_str = row['DT_FILTRO'].strftime('%d/%m/%Y') if not pd.isna(row['DT_FILTRO']) else str(row.get(col_data_df, '---'))
                 
                 tipo_str = str(row.get('Tipo', '---')).strip()
                 cat_val = str(row.get('Categoria', 'Geral'))[:18]
