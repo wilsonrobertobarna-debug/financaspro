@@ -348,7 +348,7 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
-        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
+        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         if escolha:
             item = lista_edit[escolha]
@@ -555,60 +555,10 @@ if "💰" in aba:
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
         
-        # CRIAÇÃO DA TABELA UMA ÚNICA VEZ
-        # 1. Primeiro: Prepara os dados (isso o Streamlit faz rápido, não gasta espaço)
         df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-        # BOTÃO ÚNICO LOGO ABAIXO
-        if st.button("📥 Gerar PDF do Relatório"):          
-            try:
-                # Usa os dados que acabamos de exibir na tabela
-                df_report = df_v_display.iloc[::-1].copy()
-                
-                from fpdf import FPDF
-                pdf = FPDF()
-                pdf.add_page()
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS", ln=1, align="C")
-                pdf.ln(5)
-                
-                # Cabeçalho da tabela no PDF
-                pdf.set_font("Arial", 'B', 8)
-                pdf.cell(10, 7, "ID", 1)
-                pdf.cell(20, 7, "Data", 1)
-                pdf.cell(20, 7, "Tipo", 1)
-                pdf.cell(25, 7, "Valor", 1)
-                pdf.cell(40, 7, "Descricao", 1)
-                pdf.cell(30, 7, "Categoria", 1)
-                pdf.cell(20, 7, "Banco", 1)
-                pdf.cell(20, 7, "Status", 1)
-                pdf.ln()
-                
-                # Linhas
-                pdf.set_font("Arial", '', 8)
-                for _, row in df_report.iterrows():
-                    pdf.cell(10, 6, str(row['ID']), 1)
-                    pdf.cell(20, 6, str(row['Vencimento']), 1)
-                    pdf.cell(20, 6, str(row['Tipo']), 1)
-                    pdf.cell(25, 6, str(row['Valor']), 1)
-                    pdf.cell(40, 6, str(row['Descrição'])[:20], 1)
-                    pdf.cell(30, 6, str(row['Categoria'])[:15], 1)
-                    pdf.cell(20, 6, str(row['Banco']), 1)
-                    pdf.cell(20, 6, str(row['Status']), 1)
-                    pdf.ln()
-                
-                pdf_output = pdf.output(dest='S').encode('latin-1')
-                
-                st.download_button(
-                    label="💾 BAIXAR PDF AGORA",
-                    data=pdf_output,
-                    file_name="relatorio_financas.pdf",
-                    mime="application/pdf"
-                )
-                st.success("PDF gerado!")
-            except Exception as e:
-                st.error(f"Erro ao gerar PDF: {e}")
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
@@ -649,26 +599,12 @@ elif "Pendências" in aba:
     if busca_desc:
         df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
     
-    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}") 
-    if not df_filtrado.empty:
-        st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
-    else:
-        st.write("A tabela de pendências está vazia. Verifique os filtros.")
+    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
     colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
     
     # Exibe a tabela
-    
-    # Exibe a tabela filtrada corretamente para a aba de Pendências
-    if not df_filtrado.empty:
-        # Prepara a exibição igual você fez na outra aba
-        df_display_pend = df_filtrado[['Vencimento', 'Banco', 'Descrição', 'Valor']].copy()
-        # Se você tiver a função m_fmt definida no seu código, a linha abaixo funcionará:
-        df_display_pend['Valor'] = df_display_pend['Valor'].apply(m_fmt)
-        
-        st.dataframe(df_display_pend.iloc[::-1], use_container_width=True, hide_index=True)
-    else:
-        st.warning("Nenhum lançamento pendente encontrado para este filtro.")   
+    st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
 
     # 4. Botão de Baixa (Funcionalidade de Baixa)
     if not df_filtrado.empty:
@@ -982,10 +918,6 @@ if aba == "📋 Relatório PDF":
             else:
                 b_ini = b_fim = periodo_pdf
 
-            st.success("PDF gerado com sucesso!")
-        except Exception as e:
-            st.error(f"Erro ao gerar: {e}")
-
             # ========================================================
             # 1. INICIALIZAÇÃO DO PDF
             # ========================================================
@@ -1253,39 +1185,10 @@ if aba == "📋 Relatório PDF":
     df_tela_limpo = df_tela[colunas_visiveis]
 
     # Exibe os dados
-   # Exibe os dados
-# 1. Exibe os dados de qualquer jeito (para você ver se eles existem mesmo)
-    st.dataframe(df_tela_limpo, use_container_width=True)
-
-    # 2. Força a criação do botão ABAIXO da tabela, sem depender de "if" de tabela vazia
-    if st.button("📥 Gerar e Baixar PDF"):
-        try:
-            st.write("Gerando PDF...") # Feedback visual para você saber que clicou
-            
-            # Aqui vai a lógica do PDF que montamos antes
-            from fpdf import FPDF
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", 'B', 12)
-            pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS", ln=1, align="C")
-            
-            # Loop simples para testar
-            pdf.set_font("Arial", '', 9)
-            for index, row in df_tela_limpo.iterrows():
-                id_real = str(row.get('ID', 'Sem ID'))
-                pdf.cell(200, 6, txt=f"Lançamento ID: {id_real}", ln=1)
-            
-            pdf_output = pdf.output(dest='S').encode('latin-1')
-            
-            st.download_button(
-                label="💾 BAIXAR ARQUIVO PDF",
-                data=pdf_output,
-                file_name="relatorio.pdf",
-                mime="application/pdf"
-            )
-        except Exception as e:
-            st.error(f"Erro ao gerar: {e}")
-        
+    if not df_tela_limpo.empty:
+        st.dataframe(df_tela_limpo, use_container_width=True)
+    else:
+        st.info("Nenhum lançamento encontrado para os filtros aplicados.")
 # =========================================================================
 # NOVA ABA: 📊 ANÁLISES & CONFIGURAÇÕES (Criada no final do arquivo)
 # =========================================================================
@@ -1374,34 +1277,3 @@ if aba == "📊 Análises & Configurações":
                 on_change=atualizar_meta_sheets, 
                 args=(nome,) 
             )
-            # ... (seu código das colunas de meta) ...
-        # cols[index % 3].number_input(...)
-
-    # 1. O código das metas acabou, voltamos para a margem da esquerda
-    
-    # 2. O botão vem aqui
-    if st.button("📥 Gerar e Baixar PDF"):
-        # (O código que gera o PDF vai aqui dentro)
-        st.write("Gerando PDF...")
-
-    # 3. A linha divisória vem logo abaixo do botão
-    st.divider()
-# ... (seu código atual das colunas termina aqui) ...
-        # Exemplo: cols[index % 3].number_input(...)
-
-    # 1. FECHE O BLOCO DAS COLUNAS (se houver um loop ou with, o botão deve estar fora dele)
-    
-    # 2. COLOQUE O BOTÃO AQUI, ABAIXO DAS COLUNAS:
-    st.divider() # Adiciona uma linha horizontal para organizar
-    
-    if st.button("📥 Gerar e Baixar PDF"):
-        try:
-            # Usa os dados que estão na tela
-            df_report = df_tela_limpo.copy()
-            
-            # (AQUI VOCÊ COLA O CÓDIGO DO PDF QUE JÁ TEMOS)
-            # ...
-            
-            st.success("PDF pronto!")
-        except Exception as e:
-            st.error(f"Erro ao gerar PDF: {e}")
