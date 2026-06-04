@@ -655,7 +655,16 @@ elif "Pendências" in aba:
     
     # Exibe a tabela
     
-    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)   
+    # Exibe a tabela filtrada corretamente para a aba de Pendências
+    if not df_filtrado.empty:
+        # Prepara a exibição igual você fez na outra aba
+        df_display_pend = df_filtrado[['Vencimento', 'Banco', 'Descrição', 'Valor']].copy()
+        # Se você tiver a função m_fmt definida no seu código, a linha abaixo funcionará:
+        df_display_pend['Valor'] = df_display_pend['Valor'].apply(m_fmt)
+        
+        st.dataframe(df_display_pend.iloc[::-1], use_container_width=True, hide_index=True)
+    else:
+        st.warning("Nenhum lançamento pendente encontrado para este filtro.")   
 
     # 4. Botão de Baixa (Funcionalidade de Baixa)
     if not df_filtrado.empty:
