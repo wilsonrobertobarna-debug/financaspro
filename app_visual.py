@@ -605,24 +605,19 @@ if busca_status != "Todos":
     if col_status:
         df_filtrado = df_filtrado[df_filtrado[col_status].str.upper().str.strip() == str(busca_status).upper()]
 
-# =========================================================================
 # 2. EXIBIÇÃO NA TELA
-# =========================================================================
-st.markdown("### 🔍 Lançamentos Filtrados")
+    st.markdown("### 🔍 Lançamentos Filtrados")
 
-# Remove colunas técnicas para exibição limpa
-colunas_visiveis = [c for c in df_filtrado.columns if c.lower() not in ['id', 'v_num', 'dt', 'dt_filtro', 'mesa']]
-df_exibicao = df_filtrado[colunas_visiveis].iloc[::-1] # Invertido conforme solicitado
+    colunas_visiveis = [c for c in df_filtrado.columns if c.lower() not in ['id', 'v_num', 'dt', 'dt_filtro', 'mesa']]
+    df_exibicao = df_filtrado[colunas_visiveis].iloc[::-1]
 
-if not df_exibicao.empty:
-    st.dataframe(df_exibicao, use_container_width=True)
-else:
-    st.info("Nenhum lançamento encontrado.")
+    if not df_exibicao.empty:
+        st.dataframe(df_exibicao, use_container_width=True)
+    else:
+        st.info("Nenhum lançamento encontrado.")
 
-# =========================================================================
-# 3. BOTÃO DE PDF (Usa o mesmo df_filtrado)
-# =========================================================================
-if st.button("📄 Gerar PDF"):
+    # 3. BOTÃO DE PDF
+    if st.button("📄 Gerar PDF"):
         try:
             from fpdf import FPDF
             pdf = FPDF()
@@ -630,9 +625,7 @@ if st.button("📄 Gerar PDF"):
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
             
-            # Aqui você pode adicionar o resto da sua lógica de cálculo que já existia
             pdf_output = pdf.output(dest='S')
-            
             if isinstance(pdf_output, str):
                 pdf_output = pdf_output.encode('latin-1')
                 
@@ -642,7 +635,9 @@ if st.button("📄 Gerar PDF"):
                 file_name="relatorio_financaspro.pdf",
                 mime="application/pdf"
             )
-            st.success("PDF gerado com sucesso!")
+            st.success("PDF pronto para baixar!")
+        except Exception as e:
+            st.error(f"Erro ao gerar o PDF: {e}")
 
             # ========================================================
             # 1. INICIALIZAÇÃO DO PDF
