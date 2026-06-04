@@ -67,14 +67,9 @@ sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # 3. BLOCO DE CARREGAMENTO (Sincroniza Sheets com Session State)
 if 'metas_iniciadas' not in st.session_state:
+    # Esta linha abaixo está recuada (indentada) para dentro do IF
     try:
-        # Carrega a planilha completa
         df_metas = pd.DataFrame(sh.worksheet("Meta").get_all_records())
-        
-        # SALVA O DATAFRAME COMPLETO (Isso é o que vai te salvar no futuro)
-        st.session_state['df_metas'] = df_metas
-        
-        # Mantém a sua lógica de variáveis para não quebrar o que já funciona
         for index, row in df_metas.iterrows():
             nome = row['Nome da Meta']
             valor_raw = row['Valor Alvo']
@@ -83,18 +78,9 @@ if 'metas_iniciadas' not in st.session_state:
             except:
                 valor = 0.0
             st.session_state[f"m_{nome}"] = valor
-            
         st.session_state['metas_iniciadas'] = True
-        st.success("Metas carregadas com sucesso!")
-        
     except Exception as e:
-        st.error(f"Erro ao carregar a planilha 'Meta': {e}")
-# --- DEBUG DE EMERGÊNCIA ---
-if 'df_metas' in st.session_state:
-    st.write("### Diagnóstico da Planilha Meta")
-    st.write("Colunas encontradas:", st.session_state['df_metas'].columns.tolist())
-    st.dataframe(st.session_state['df_metas'].head()) # Mostra as 5 primeiras linhas
-
+        st.error(f"Erro na planilha: {e}")
 # 4. ESTILIZAÇÃO
 st.markdown("""
     <style>
@@ -297,7 +283,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
     with st.form("f_novo", clear_on_submit=True):
         # Usando a variável hoje_br que já corrige o fuso horário
         f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
-        t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+        t_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
         
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
@@ -362,7 +348,7 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
 # BARRINHA 3: AJUSTE / EXCLUSÃO
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
-        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
+        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.tail(40).iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
         if escolha:
             item = lista_edit[escolha]
@@ -568,27 +554,11 @@ if "💰" in aba:
         if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-
-        # 3. VERIFICAÇÃO FINAL: Se o ID sumiu aqui, é porque ele não veio do df_base
-        if 'ID' not in df_v.columns:
-            st.error("ERRO: A coluna 'ID' não existe no df_base. Verifique o carregamento da planilha.")
-
         
-        # O simbolo de tralha abaixo e obrigatorio para o Python ignorar o texto
-        # Agora vai funcionar sem erros:
+        df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-        # --- BLOCO DE EXIBIÇÃO FORÇADO ---
-        st.write("Colunas totais disponíveis:", df_v.columns.tolist())
-
-        # Fazemos uma cópia limpa de TUDO que o df_v tem
-        df_final = df_v.copy()
-
-        # Se 'V_Num' existir, formatamos
-        if 'V_Num' in df_final.columns:
-            df_final['Valor'] = df_v['V_Num'].apply(m_fmt)
-
-        # Exibe tudo, sem esconder nada
-        st.dataframe(df_final.iloc[::-1], use_container_width=True)
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
@@ -1214,22 +1184,9 @@ if aba == "📋 Relatório PDF":
     colunas_visiveis = [c for c in df_tela.columns if c not in colunas_para_esconder]
     df_tela_limpo = df_tela[colunas_visiveis]
 
-# 1. Exibição limpa (Sem busca, sem criar ID falso)
+    # Exibe os dados
     if not df_tela_limpo.empty:
-        # AQUI O PULO DO GATO:
-        # 1. Fazemos uma cópia para não alterar o original
-        df_exibir = df_tela_limpo.copy()
-        
-        # 2. Em vez de criar um ID novo (1, 2, 3...), 
-        # nós garantimos que a coluna 'ID' (que vem da planilha) 
-        # seja a primeira coluna e seja o índice.
-        if 'ID' in df_exibir.columns:
-            df_exibir = df_exibir.set_index('ID')
-        
-        # 3. Exibimos a tabela. 
-        # Agora o número que aparece na esquerda será o ID real da sua planilha.
-        st.dataframe(df_exibir, use_container_width=True)
-          
+        st.dataframe(df_tela_limpo, use_container_width=True)
     else:
         st.info("Nenhum lançamento encontrado para os filtros aplicados.")
 # =========================================================================
