@@ -637,7 +637,7 @@ if st.button("📄 Gerar PDF"):
             
         st.download_button("📥 Baixar PDF", data=pdf_output, file_name="relatorio.pdf", mime="application/pdf")
         st.success("Relatório gerado com sucesso!")
-    except Exception as e:
+        except Exception as e:
         st.error(f"Erro ao gerar: {e}")
 
             # ========================================================
