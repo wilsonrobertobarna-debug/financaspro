@@ -623,22 +623,26 @@ else:
 # 3. BOTÃO DE PDF (Usa o mesmo df_filtrado)
 # =========================================================================
 if st.button("📄 Gerar PDF"):
-    try:
-        from fpdf import FPDF
-        # ... [Aqui você mantém a lógica de cálculo do saldo que você já tem no código original] ...
-        # Dica: use o 'df_filtrado' dentro deste bloco para calcular o saldo acumulado
-        
-        pdf = FPDF()
-        pdf.add_page()
-        # [.. restante da montagem do seu PDF ..]
-        
-        pdf_output = pdf.output(dest='S')
-        if isinstance(pdf_output, str): pdf_output = pdf_output.encode('latin-1')
+        try:
+            from fpdf import FPDF
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
             
-        st.download_button("📥 Baixar PDF", data=pdf_output, file_name="relatorio.pdf", mime="application/pdf")
-        st.success("Relatório gerado com sucesso!")
-        except Exception as e:
-        st.error(f"Erro ao gerar: {e}")
+            # Aqui você pode adicionar o resto da sua lógica de cálculo que já existia
+            pdf_output = pdf.output(dest='S')
+            
+            if isinstance(pdf_output, str):
+                pdf_output = pdf_output.encode('latin-1')
+                
+            st.download_button(
+                label="📥 Baixar PDF",
+                data=pdf_output,
+                file_name="relatorio_financaspro.pdf",
+                mime="application/pdf"
+            )
+            st.success("PDF gerado com sucesso!")
 
             # ========================================================
             # 1. INICIALIZAÇÃO DO PDF
