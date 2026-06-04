@@ -119,31 +119,34 @@ except:
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
-    dados = ws_base.get_all_values()
-    if len(dados) <= 1: return pd.DataFrame()
-    
-    # Cria o DataFrame
-    df = pd.DataFrame(dados[1:], columns=dados[0])
-    
-    # Tenta usar o ID que já existe na planilha
-    if 'ID' in df.columns:
-        # Se a coluna 'ID' existir, ele mantém a da planilha
-        pass 
-    else:
-        # Se a coluna não existir, ele gera o ID sequencial e avisa
-        df['ID'] = range(2, len(df) + 2)
-        st.warning("Aviso: Coluna 'ID' não encontrada na planilha. ID gerado automaticamente.")
-    
-    # Processamento de valores
-    def p_float(v):
-        try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
-        except: return 0.0
-    
-    df['V_Num'] = df['Valor'].apply(p_float)
-    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
-    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
-    
-    return df
+    try:
+        dados = ws_base.get_all_values()
+        if len(dados) <= 1: 
+            return pd.DataFrame()
+        
+        # Cria o DataFrame com o que veio da planilha
+        df = pd.DataFrame(dados[1:], columns=dados[0])
+        
+        # --- BLINDAGEM: Não vamos mais criar IDs automáticos ---
+        # Se não houver coluna ID, o sistema vai te avisar claramente
+        if 'ID' not in df.columns:
+            st.error("ERRO: A coluna 'ID' não existe na planilha. Adicione-a na Google Sheets!")
+            st.stop()
+        
+        # Processamento de valores (mantendo o que você já tinha)
+        def p_float(v):
+            try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
+            except: return 0.0
+        
+        df['V_Num'] = df['Valor'].apply(p_float)
+        df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
+        df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+        
+        return df
+        
+    except Exception as e:
+        st.error(f"Erro ao conectar com o Google Sheets: {e}")
+        return pd.DataFrame()
 
 def carregar_bancos_manual_gs():
     if ws_bancos:
