@@ -89,6 +89,12 @@ if 'metas_iniciadas' not in st.session_state:
         
     except Exception as e:
         st.error(f"Erro ao carregar a planilha 'Meta': {e}")
+# --- DEBUG DE EMERGÊNCIA ---
+if 'df_metas' in st.session_state:
+    st.write("### Diagnóstico da Planilha Meta")
+    st.write("Colunas encontradas:", st.session_state['df_metas'].columns.tolist())
+    st.dataframe(st.session_state['df_metas'].head()) # Mostra as 5 primeiras linhas
+
 # 4. ESTILIZAÇÃO
 st.markdown("""
     <style>
