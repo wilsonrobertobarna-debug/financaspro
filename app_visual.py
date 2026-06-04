@@ -1115,8 +1115,8 @@ if aba == "📋 Relatório PDF":
             # --- AQUI VOCÊ CAPTURA O ID REAL DA PLANILHA ---
                 id_real = str(row.get('ID', '---'))
     
-            # --- AQUI VOCÊ ADICIONA O ID NO PDF (Como a primeira coluna) ---
-            pdf.cell(10, 6, id_real, 1) # Adicione esta célula para mostrar o ID 278
+                # --- AQUI VOCÊ ADICIONA O ID NO PDF (Como a primeira coluna) ---
+                pdf.cell(10, 6, id_real, 1) # Adicione esta célula para mostrar o ID 278
 
                 
                 tipo_str = str(row.get('Tipo', '---')).strip()
