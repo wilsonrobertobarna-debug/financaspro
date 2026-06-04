@@ -1113,7 +1113,7 @@ if aba == "📋 Relatório PDF":
             ppdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
             # --- AQUI VOCÊ CAPTURA O ID REAL DA PLANILHA ---
-            id_real = str(row.get('ID', '---'))
+                id_real = str(row.get('ID', '---'))
     
             # --- AQUI VOCÊ ADICIONA O ID NO PDF (Como a primeira coluna) ---
             pdf.cell(10, 6, id_real, 1) # Adicione esta célula para mostrar o ID 278
