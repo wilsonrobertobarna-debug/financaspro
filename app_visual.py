@@ -69,7 +69,13 @@ sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 if 'metas_iniciadas' not in st.session_state:
     # Esta linha abaixo está recuada (indentada) para dentro do IF
     try:
+        # Carrega a planilha completa
         df_metas = pd.DataFrame(sh.worksheet("Meta").get_all_records())
+        
+        # SALVA O DATAFRAME COMPLETO (Isso é o que vai te salvar no futuro)
+        st.session_state['df_metas'] = df_metas
+        
+        # Mantém a sua lógica de variáveis para não quebrar o que já funciona
         for index, row in df_metas.iterrows():
             nome = row['Nome da Meta']
             valor_raw = row['Valor Alvo']
@@ -78,9 +84,12 @@ if 'metas_iniciadas' not in st.session_state:
             except:
                 valor = 0.0
             st.session_state[f"m_{nome}"] = valor
+            
         st.session_state['metas_iniciadas'] = True
+        st.success("Metas carregadas com sucesso!")
+        
     except Exception as e:
-        st.error(f"Erro na planilha: {e}")
+        st.error(f"Erro ao carregar a planilha 'Meta': {e}")
 # 4. ESTILIZAÇÃO
 st.markdown("""
     <style>
