@@ -67,7 +67,6 @@ sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # 3. BLOCO DE CARREGAMENTO (Sincroniza Sheets com Session State)
 if 'metas_iniciadas' not in st.session_state:
-    # Esta linha abaixo está recuada (indentada) para dentro do IF
     try:
         # Carrega a planilha completa
         df_metas = pd.DataFrame(sh.worksheet("Meta").get_all_records())
