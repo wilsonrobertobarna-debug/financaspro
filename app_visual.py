@@ -561,8 +561,7 @@ if "💰" in aba:
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
 
         # BOTÃO ÚNICO LOGO ABAIXO
-        if st.button("📥 Gerar PDF do Relatório"):
-            st.write("Gerando PDF...")
+        if st.button("📥 Gerar PDF do Relatório"):          
             try:
                 # Usa os dados que acabamos de exibir na tabela
                 df_report = df_v_display.iloc[::-1].copy()
@@ -656,7 +655,7 @@ elif "Pendências" in aba:
     
     # Exibe a tabela
     
-    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)   
 
     # 4. Botão de Baixa (Funcionalidade de Baixa)
     if not df_filtrado.empty:
