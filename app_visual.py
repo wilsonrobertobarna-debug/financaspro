@@ -559,6 +559,59 @@ if "💰" in aba:
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
+        df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+
+        # --- BOTÃO DE PDF ---
+        if st.button("📥 Gerar PDF do Relatório"):
+            try:
+                # Usa os dados que acabamos de exibir na tabela
+                df_report = df_v_display.iloc[::-1].copy()
+                
+                from fpdf import FPDF
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial", 'B', 12)
+                pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS", ln=1, align="C")
+                pdf.ln(5)
+                
+                # Cabeçalho da tabela no PDF
+                pdf.set_font("Arial", 'B', 8)
+                pdf.cell(10, 7, "ID", 1)
+                pdf.cell(20, 7, "Data", 1)
+                pdf.cell(20, 7, "Tipo", 1)
+                pdf.cell(25, 7, "Valor", 1)
+                pdf.cell(40, 7, "Descricao", 1)
+                pdf.cell(30, 7, "Categoria", 1)
+                pdf.cell(20, 7, "Banco", 1)
+                pdf.cell(20, 7, "Status", 1)
+                pdf.ln()
+                
+                # Linhas
+                pdf.set_font("Arial", '', 8)
+                for _, row in df_report.iterrows():
+                    pdf.cell(10, 6, str(row['ID']), 1)
+                    pdf.cell(20, 6, str(row['Vencimento']), 1)
+                    pdf.cell(20, 6, str(row['Tipo']), 1)
+                    pdf.cell(25, 6, str(row['Valor']), 1)
+                    pdf.cell(40, 6, str(row['Descrição'])[:20], 1)
+                    pdf.cell(30, 6, str(row['Categoria'])[:15], 1)
+                    pdf.cell(20, 6, str(row['Banco']), 1)
+                    pdf.cell(20, 6, str(row['Status']), 1)
+                    pdf.ln()
+                
+                pdf_output = pdf.output(dest='S').encode('latin-1')
+                
+                st.download_button(
+                    label="💾 BAIXAR PDF AGORA",
+                    data=pdf_output,
+                    file_name="relatorio_financas.pdf",
+                    mime="application/pdf"
+                )
+                st.success("PDF gerado!")
+            except Exception as e:
+                st.error(f"Erro ao gerar PDF: {e}")
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
