@@ -555,6 +555,10 @@ if "💰" in aba:
         if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
         if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
 
+        # 3. VERIFICAÇÃO FINAL: Se o ID sumiu aqui, é porque ele não veio do df_base
+        if 'ID' not in df_v.columns:
+            st.error("ERRO: A coluna 'ID' não existe no df_base. Verifique o carregamento da planilha.")
+
         
         # O simbolo de tralha abaixo e obrigatorio para o Python ignorar o texto
         # Agora vai funcionar sem erros:
