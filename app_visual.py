@@ -121,14 +121,28 @@ except:
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
+    
+    # Cria o DataFrame
     df = pd.DataFrame(dados[1:], columns=dados[0])
-    df['ID'] = range(2, len(df) + 2)
+    
+    # Tenta usar o ID que já existe na planilha
+    if 'ID' in df.columns:
+        # Se a coluna 'ID' existir, ele mantém a da planilha
+        pass 
+    else:
+        # Se a coluna não existir, ele gera o ID sequencial e avisa
+        df['ID'] = range(2, len(df) + 2)
+        st.warning("Aviso: Coluna 'ID' não encontrada na planilha. ID gerado automaticamente.")
+    
+    # Processamento de valores
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
         except: return 0.0
+    
     df['V_Num'] = df['Valor'].apply(p_float)
     df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+    
     return df
 
 def carregar_bancos_manual_gs():
