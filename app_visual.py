@@ -931,7 +931,7 @@ if aba == "📋 Relatório PDF":
             # ========================================================
             # 1. INICIALIZAÇÃO DO PDF
             # ========================================================
-            from fpdf import FPDF
+        from fpdf import FPDF
             pdf = FPDF()
             pdf.add_page()
 
