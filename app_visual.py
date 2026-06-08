@@ -448,7 +448,7 @@ if "💰" in aba:
     
     st.subheader("🛡️ FinançasPro Wilson")
     meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    st.pills("Período:", meses, selection_mode="single", default="Mai")
+    st.pills("Período:", meses, selection_mode="single", default="Mai", key="filtro_meses_principal")
 
     # 2. SALDO GERAL (DESTAQUE)
     saldo_geral = receita_total - gasto_total 
