@@ -910,13 +910,42 @@ if aba == "📋 Relatório PDF":
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
-            if isinstance(periodo_pdf, (list, tuple)):
-                if len(periodo_pdf) == 2:
-                    b_ini, b_fim = periodo_pdf[0], periodo_pdf[1]
-                else:
-                    b_ini = b_fim = periodo_pdf[0]
-            else:
-                b_ini = b_fim = periodo_pdf
+            # 1. Pega os dados que já foram filtrados na tela (df_v_display)
+            # Usamos o iloc[::-1] para manter a ordem do mais recente para o mais antigo
+            df_pdf = df_v_display.iloc[::-1].copy()
+            
+            # 2. Reseta o índice para criar uma numeração sequencial (1, 2, 3...)
+            df_pdf = df_pdf.reset_index(drop=True)
+            df_pdf.index += 1
+            
+            # 3. Gera o PDF
+            from fpdf import FPDF
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(200, 10, txt="Relatorio de Lancamentos", ln=True, align='C')
+            pdf.ln(5)
+            
+            # Cabeçalho da tabela no PDF
+            pdf.set_font("Arial", 'B', 8)
+            pdf.cell(10, 7, "ID", border=1)
+            pdf.cell(30, 7, "Data", border=1)
+            pdf.cell(80, 7, "Descricao", border=1)
+            pdf.cell(30, 7, "Valor", border=1, ln=True)
+            
+            # Linhas da tabela (loop)
+            pdf.set_font("Arial", size=8)
+            for index, row in df_pdf.iterrows():
+                pdf.cell(10, 7, str(index), border=1)
+                pdf.cell(30, 7, str(row['Vencimento']), border=1)
+                pdf.cell(80, 7, str(row['Descrição']), border=1)
+                pdf.cell(30, 7, str(row['Valor']), border=1, ln=True)
+            
+            pdf.output("relatorio.pdf")
+            st.success("PDF Gerado com sucesso!")
+            
+        except Exception as e:
+            st.error(f"Erro ao gerar PDF: {e}")
 
             # ========================================================
             # 1. INICIALIZAÇÃO DO PDF
