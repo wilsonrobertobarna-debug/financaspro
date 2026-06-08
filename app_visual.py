@@ -402,6 +402,47 @@ rendimento = 0.19
 pendente = 6932.67
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
+    # 1. CSS LIMPO
+    st.markdown("<style>.block-container { padding-top: 0rem; }</style>", unsafe_allow_html=True)
+    
+    st.subheader("🛡️ FinançasPro Wilson")
+    meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    st.pills("Período:", meses, selection_mode="single", default="Mai")
+
+    # 2. SALDO GERAL
+    # (Certifique-se de que receita_total e gasto_total estão calculados antes deste bloco!)
+    saldo_geral = receita_total - gasto_total 
+    cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
+    
+    st.markdown(f"""
+        <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
+            <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
+            <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
+        </div>
+    """.replace(",", "X").replace(".", ",").replace("X", "."), unsafe_allow_html=True)
+
+    st.divider()
+
+    # 3. BOTÃO GERAR PDF (A LÓGICA DEVE ESTAR AQUI)
+    if st.button("📄 Gerar Relatório PDF"):
+        # Aqui dentro vai a função que gera o seu PDF
+        st.write("Gerando PDF... (Verifique se sua função 'gerar_pdf' ou código está acessível aqui)")
+
+    st.divider()
+
+    # 4. TABELA DE LANÇAMENTOS
+    st.subheader("🔍 Lançamentos")
+    
+    # Filtros
+    c1, c2, c3 = st.columns(3)
+    b_desc = c3.text_input("Buscar Beneficiário:")
+    
+    df_v = df_base.copy()
+    if b_desc: 
+        df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
+    
+    # Exibir DataFrame
+    st.dataframe(df_v.iloc[::-1], use_container_width=True, hide_index=True)
     # 1. ESTILO (CSS)
     st.markdown("<style>.block-container { padding-top: 0rem; }</style>", unsafe_allow_html=True)
     
