@@ -921,14 +921,15 @@ if aba == "📋 Relatório PDF":
 
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
+        # Verificamos se os dados existem no cofre
         if 'df_relatorio' not in st.session_state:
-            st.error("Erro: Acesse a aba Finanças primeiro!")
+            st.error("Erro: Vá na aba de Finanças primeiro para carregar os dados!")
         else:
             try:
                 # 1. Pega os dados do cofre
                 df_pdf = st.session_state.df_relatorio.copy()
                 
-                # --- CHECAGEM ---
+                # Exibe a contagem para conferência
                 st.write(f"DEBUG: O PDF recebeu {len(df_pdf)} linhas do cofre.")
                 
                 # 2. Gera o PDF
@@ -938,7 +939,7 @@ if aba == "📋 Relatório PDF":
                 pdf.set_font("Arial", 'B', 12)
                 pdf.cell(200, 10, txt="Relatorio de Lancamentos", ln=True, align='C')
                 
-                # 3. Loop de Impressão (com contador interno)
+                # 3. Loop de Impressão
                 contador = 0
                 pdf.set_font("Arial", size=8)
                 for index, row in df_pdf.iterrows():
