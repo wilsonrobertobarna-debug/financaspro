@@ -921,31 +921,29 @@ if aba == "📋 Relatório PDF":
 
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
-        # Verifica se o dado existe
+        if st.button("📄 Gerar PDF"):
         if 'df_relatorio' not in st.session_state:
             st.error("Erro: Acesse a aba Finanças primeiro!")
         else:
-            # Pega os dados
-            df_pdf = st.session_state.df_relatorio.copy()
-            st.write(f"DEBUG: O PDF recebeu {len(df_pdf)} linhas.")
+            df_tela = st.session_state.df_relatorio.copy()
+            # Se você ainda tiver o df_base ou o filtro que gera o PDF, 
+            # vamos verificar o que está chegando nele:
+            # df_pdf = [SEU CÓDIGO DE FILTRAGEM AQUI] 
             
-            from fpdf import FPDF
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", 'B', 12)
-            pdf.cell(200, 10, txt="Relatorio de Lancamentos", ln=True, align='C')
+            # MANTENHA SIMPLES POR AGORA:
+            df_pdf = df_tela.copy() 
             
-            pdf.set_font("Arial", size=8)
-            contador = 0
-            for index, row in df_pdf.iterrows():
-                contador += 1
-                pdf.cell(10, 7, str(contador), border=1)
-                pdf.cell(30, 7, str(row['Vencimento']), border=1)
-                pdf.cell(80, 7, str(row['Descrição']), border=1)
-                pdf.cell(30, 7, str(row['Valor']), border=1, ln=True)
+            st.write(f"Total na Tela: {len(df_tela)}")
+            st.write(f"Total no PDF: {len(df_pdf)}")
             
-            pdf.output("relatorio.pdf")
-            st.success(f"PDF Gerado! Total: {contador} linhas.")
+            if len(df_tela) != len(df_pdf):
+                st.warning("DIVERGÊNCIA ENCONTRADA!")
+                # Isso mostra os itens que estão na tela mas não estão no PDF
+                # Assumindo que você tenha uma coluna 'ID' ou 'Descrição' única:
+                # st.write("Itens na tela mas não no PDF:")
+                # st.write(df_tela[~df_tela.index.isin(df_pdf.index)])
+            
+            # ... (seu código de gerar PDF segue aqui)
             # ========================================================
             # 1. INICIALIZAÇÃO DO PDF
             # ========================================================
