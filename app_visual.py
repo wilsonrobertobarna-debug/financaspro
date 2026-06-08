@@ -402,15 +402,18 @@ rendimento = 0.19
 pendente = 6932.67
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
-    # 1. CSS LIMPO
+   if "💰" in aba:
+    # 1. ESTILO (CSS) - Apenas uma vez
     st.markdown("<style>.block-container { padding-top: 0rem; }</style>", unsafe_allow_html=True)
     
     st.subheader("🛡️ FinançasPro Wilson")
+    
+    # 2. SELETOR DE MÊS - Apenas uma vez
     meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    # Se você ainda tiver erro de duplicidade, troque o key para "filtro_meses_v2"
     st.pills("Período:", meses, selection_mode="single", default="Mai", key="filtro_meses_principal")
 
-    # 2. SALDO GERAL
-    # (Certifique-se de que receita_total e gasto_total estão calculados antes deste bloco!)
+    # 3. SALDO GERAL
     saldo_geral = receita_total - gasto_total 
     cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
     
@@ -423,17 +426,15 @@ if "💰" in aba:
 
     st.divider()
 
-    # 3. BOTÃO GERAR PDF (A LÓGICA DEVE ESTAR AQUI)
+    # 4. BOTÃO GERAR PDF
     if st.button("📄 Gerar Relatório PDF", key="btn_pdf_relatorio"):
-        # Aqui dentro vai a função que gera o seu PDF
-        st.write("Gerando PDF... (Verifique se sua função 'gerar_pdf' ou código está acessível aqui)")
+        st.write("Gerando PDF...")
 
     st.divider()
 
-    # 4. TABELA DE LANÇAMENTOS
+    # 5. TABELA DE LANÇAMENTOS
     st.subheader("🔍 Lançamentos")
     
-    # Filtros
     c1, c2, c3 = st.columns(3)
     b_desc = c3.text_input("Buscar Beneficiário:")
     
@@ -441,14 +442,7 @@ if "💰" in aba:
     if b_desc: 
         df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
     
-    # Exibir DataFrame
     st.dataframe(df_v.iloc[::-1], use_container_width=True, hide_index=True)
-    # 1. ESTILO (CSS)
-    st.markdown("<style>.block-container { padding-top: 0rem; }</style>", unsafe_allow_html=True)
-    
-    st.subheader("🛡️ FinançasPro Wilson")
-    meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    st.pills("Período:", meses, selection_mode="single", default="Mai", key="filtro_meses_principal")
 
     # 2. SALDO GERAL (DESTAQUE)
     saldo_geral = receita_total - gasto_total 
