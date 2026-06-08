@@ -920,7 +920,7 @@ if aba == "📋 Relatório PDF":
     st.markdown("---")
 
     # Botão para processar e gerar o documento
-   if st.button("📄 Gerar PDF"):
+    if st.button("📄 Gerar PDF"):
         # Verifica se o dado foi carregado na memória (session_state)
         if 'df_relatorio' not in st.session_state:
             st.error("Erro: Vá na aba de Finanças primeiro para carregar os dados!")
