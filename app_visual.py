@@ -287,7 +287,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
-        f_des = st.text_input("Descrição / Beneficiário", key="desc_novo_lancamento")
+        f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação","Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
@@ -402,20 +402,27 @@ rendimento = 0.19
 pendente = 6932.67
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
-   if "💰" in aba:
-    # 1. ESTILO (CSS) - Apenas uma vez
-    st.markdown("<style>.block-container { padding-top: 0rem; }</style>", unsafe_allow_html=True)
+    # 1. ESTILO (CSS) - Isso aqui "puxa" tudo para cima antes de desenhar o título
+    st.markdown("""
+        <style>
+               .block-container {
+                    padding-top: 0rem; /* Zera o espaço no topo */
+                    padding-bottom: 0rem;
+                }
+        </style>
+        """, unsafe_allow_html=True)
     
     st.subheader("🛡️ FinançasPro Wilson")
-    
-    # 2. SELETOR DE MÊS - Apenas uma vez
+    # --- COLE AQUI (INÍCIO DA BARRINHA) ---
     meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    # Se você ainda tiver erro de duplicidade, troque o key para "filtro_meses_v2"
-    st.pills("Período:", meses, selection_mode="single", default="Mai", key="filtro_meses_principal")
+    
+    # Isso cria a barra horizontal de meses
+    st.pills("Período:", meses, selection_mode="single", default="Mai")
 
-    # 3. SALDO GERAL
-    saldo_geral = receita_total - gasto_total 
-    cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
+    # --- 1. O SALDO GERAL (REI DA TELA) ---
+    # Usamos uma fonte maior e centralizada para ele ser "mais notado"
+    saldo_geral = receita_total - gasto_total
+    cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c" # Verde se positivo, Vermelho se negativo
     
     st.markdown(f"""
         <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
@@ -424,65 +431,134 @@ if "💰" in aba:
         </div>
     """.replace(",", "X").replace(".", ",").replace("X", "."), unsafe_allow_html=True)
 
+    st.write("") # Espaço de respiro
+
+    # --- 2. OS CARDS DE APOIO (MENORES) ---
+    # Aqui os valores ficam organizados em colunas, ocupando menos espaço vertical
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric("📈 Receita", f"R$ {receita_total:,.2f}")
+    with c2:
+        st.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
+    with c3:
+        st.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
+    with c4:
+        st.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
+# ----------------------------------------------
+
+if "💰" in aba:
+    # ... seu código do CSS e Título ...
+    
+    saldo_geral = receita_total - gasto_total # Agora ele não trava mais!
+
+    
+
     st.divider()
 
-    # 4. BOTÃO GERAR PDF
-    if st.button("📄 Gerar Relatório PDF", key="btn_pdf_relatorio"):
-        st.write("Gerando PDF...")
+    g1, g2 = st.columns(2)
+    with g1:
+        st.write("### 🍕 Gastos por Categoria")
+        # Colocando o '#' para ignorar o erro de dados por enquanto:
+        # df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        # if not df_p.empty: 
+        #     st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True, config={'staticPlot': True})
+        st.info("Aguardando conexão com os dados...")
 
-    st.divider()
+    with g2:
+        st.write("### 📊 Fluxo de Caixa")
+        # Fazendo o mesmo aqui para o fluxo:
+        # df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
+        # df_f = df_f.sort_values('DT')
+        # df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
+        # if not df_f_grouped.empty: 
+        #     st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa Mensal"), use_container_width=True, config={'staticPlot': True})
+        st.info("Aguardando conexão com os dados...")
+       
+    if not df_base.empty:
+        # AQUI VOCÊ CRIA A VARIÁVEL
+        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+        
+        # Cálculo do saldo
+        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
+        
+        st.divider()
 
-    # 5. TABELA DE LANÇAMENTOS
-    st.subheader("🔍 Lançamentos")
+        # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
+        with st.expander("📊 RESUMO DOS MESES", expanded=False):
+            m1, m2, m3 = st.columns(3)
+            # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
+            m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+            m2.metric("📉 Despesa", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+            m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
+
+        # --- INDICADORES DO MÊS ---
+               
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
+        m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
+        m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
+        m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
+              
+      
+               
+    if 'df_m_limpo' in locals() or 'df_m_limpo' in globals():
     
-    c1, c2, c3 = st.columns(3)
-    b_desc = c3.text_input("Buscar Beneficiário:")
-    
-    df_v = df_base.copy()
-    if b_desc: 
-        df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-    
-    st.dataframe(df_v.iloc[::-1], use_container_width=True, hide_index=True)
+        # Só faz a conta se a variável existir
+        if df_m_limpo is not None and not df_m_limpo.empty:
+        
+            st.subheader("🎯 Metas vs Realizado")
+            df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            
+        if not df_metas_graph.empty:
+            # 1. GARANTIR QUE A COLUNA META EXISTE
+            if 'Meta' not in df_metas_graph.columns:
+                df_metas_graph['Meta'] = 0.0
+            
+            # 2. PREENCHER COM A LÓGICA DO SESSION_STATE
+            def buscar_meta(cat):
+                return st.session_state.get(f"m_{cat}", 0.0)
+            
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(buscar_meta)
 
-    # 2. SALDO GERAL (DESTAQUE)
-    saldo_geral = receita_total - gasto_total 
-    cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
-    
-    st.markdown(f"""
-        <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
-            <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
-            <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
-        </div>
-    """.replace(",", "X").replace(".", ",").replace("X", "."), unsafe_allow_html=True)
+            # 3. AGORA SIM, DESENHA O GRÁFICO
+            # Coloque isso logo antes da linha: fig_m = go.Figure()
+            st.write("Dados no session_state para Mercado:", st.session_state.get("m_Mercado", "NÃO ENCONTRADO"))
+            fig_m = go.Figure()
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
+            
+            fig_m.update_layout(barmode='group', height=350)
+            st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
+            st.divider()
+        else:
+            # Este else pertence ao 'if not df_metas_graph.empty'
+            st.info("Nenhuma despesa encontrada para esta categoria.")
+        
+        # O resto do código continua aqui fora, alinhado com o 'if' principal
+        st.subheader("🔍 Busca e Lançamentos")
+        
+        c_d1, c_d2 = st.columns(2)
+        s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
+        s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
+        
+        c1, c2, c3 = st.columns(3)
+        s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
+        s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
+        b_desc = c3.text_input("Buscar Beneficiário:")
+        
+        df_v = df_base.copy()
+        df_v = df_v[df_v['DT'].notna()]
+        df_v = df_v[(df_v['DT'].dt.date >= s_ini) & (df_v['DT'].dt.date <= s_fim)]
+        if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
+        if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
+        if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
+        
+        df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-    st.write("") 
-
-    # 3. BUSCA E LANÇAMENTOS (A ESTRELA DA TELA)
-    st.subheader("🔍 Lançamentos")
-# --- MANTENHA APENAS ESTE, DEPOIS DO SUBHEADER "Lançamentos" ---
-    st.subheader("🔍 Lançamentos")
-
-    c_d1, c_d2 = st.columns(2)
-    s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-    s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
-
-    c1, c2, c3 = st.columns(3)
-    s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
-    s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
-
-    # AQUI ESTÁ A CHAVE (key) PARA EVITAR A DUPLICIDADE:
-    b_desc = c3.text_input("Buscar Beneficiário:", key="campo_busca_unica")
-
-    # Agora sim, fazemos o filtro uma única vez com o valor dessa variável:
-    df_v = df_base.copy()
-    df_v = df_v[df_v['DT'].notna()]
-    df_v = df_v[(df_v['DT'].dt.date >= s_ini) & (df_v['DT'].dt.date <= s_fim)]
-    if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
-    if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
-    if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-
-    # E exibimos o dataframe logo abaixo, apenas uma vez:
-    st.dataframe(df_v.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
@@ -824,7 +900,7 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     col_rel3, col_rel4 = st.columns(2)
     with col_rel3:
-        busca_desc = st.text_input("🔍 Pesquisar por Descrição / Beneficiário:", "", key="input_filtro_busca")
+        busca_desc = st.text_input("🔍 Pesquisar por Descrição / Beneficiário:", "").strip()
         
     with col_rel4:
         busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
