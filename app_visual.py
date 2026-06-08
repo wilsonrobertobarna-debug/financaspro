@@ -424,7 +424,7 @@ if "💰" in aba:
     st.divider()
 
     # 3. BOTÃO GERAR PDF (A LÓGICA DEVE ESTAR AQUI)
-    if st.button("📄 Gerar Relatório PDF"):
+    if st.button("📄 Gerar Relatório PDF", key="btn_pdf_relatorio"):
         # Aqui dentro vai a função que gera o seu PDF
         st.write("Gerando PDF... (Verifique se sua função 'gerar_pdf' ou código está acessível aqui)")
 
