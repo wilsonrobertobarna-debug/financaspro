@@ -923,9 +923,9 @@ if aba == "📋 Relatório PDF":
     if st.button("📄 Gerar PDF"):
         # Verifica se o dado existe
         if 'df_relatorio' not in st.session_state:
-            st.error("Erro: Vá na aba de Finanças primeiro!")
+            st.error("Erro: Acesse a aba Finanças primeiro!")
         else:
-            # Pega os dados sem nenhum try/except por perto
+            # Pega os dados
             df_pdf = st.session_state.df_relatorio.copy()
             st.write(f"DEBUG: O PDF recebeu {len(df_pdf)} linhas.")
             
