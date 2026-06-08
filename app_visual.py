@@ -908,7 +908,7 @@ if aba == "📋 Relatório PDF":
     st.markdown("---")
 
     # Botão para processar e gerar o documento
-     if st.button("📄 Gerar PDF"):
+    if st.button("📄 Gerar PDF"):
         # 1. PEGA O DADO QUE JÁ ESTÁ NA TELA
         df_report = df_v.copy().iloc[::-1].reset_index(drop=True)
         df_report.index += 1
