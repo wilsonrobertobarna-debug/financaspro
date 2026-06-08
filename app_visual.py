@@ -920,27 +920,34 @@ if aba == "📋 Relatório PDF":
     st.markdown("---")
 
     # Botão para processar e gerar o documento
-    if st.button("📄 Gerar PDF"):
-        # Verificamos se os dados existem no cofre
+   if st.button("📄 Gerar PDF"):
+        # Verifica se o dado foi carregado na memória (session_state)
         if 'df_relatorio' not in st.session_state:
             st.error("Erro: Vá na aba de Finanças primeiro para carregar os dados!")
         else:
-            # 1. Pega os dados do cofre
+            # Pega os dados do cofre
             df_pdf = st.session_state.df_relatorio.copy()
             
-            # Exibe a contagem para conferência
+            # Debug para ver quantas linhas estamos pegando
             st.write(f"DEBUG: O PDF recebeu {len(df_pdf)} linhas do cofre.")
             
-            # 2. Gera o PDF
+            # Gera o PDF
             from fpdf import FPDF
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(200, 10, txt="Relatorio de Lancamentos", ln=True, align='C')
             
-            # 3. Loop de Impressão
-            contador = 0
+            # Cabeçalho da tabela
+            pdf.set_font("Arial", 'B', 8)
+            pdf.cell(10, 7, "ID", border=1)
+            pdf.cell(30, 7, "Data", border=1)
+            pdf.cell(80, 7, "Descricao", border=1)
+            pdf.cell(30, 7, "Valor", border=1, ln=True)
+            
+            # Loop de Impressão
             pdf.set_font("Arial", size=8)
+            contador = 0
             for index, row in df_pdf.iterrows():
                 contador += 1
                 pdf.cell(10, 7, str(contador), border=1)
@@ -948,7 +955,7 @@ if aba == "📋 Relatório PDF":
                 pdf.cell(80, 7, str(row['Descrição']), border=1)
                 pdf.cell(30, 7, str(row['Valor']), border=1, ln=True)
             
-            # 4. Finalização
+            # Finalização
             pdf.output("relatorio.pdf")
             st.success(f"PDF Gerado! Total de linhas processadas: {contador}")
                 
