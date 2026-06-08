@@ -921,8 +921,7 @@ if aba == "📋 Relatório PDF":
 
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
-        if st.button("📄 Gerar PDF"):
-         if 'df_relatorio' not in st.session_state:
+        if 'df_relatorio' not in st.session_state:
             st.error("Erro: Acesse a aba Finanças primeiro!")
         else:
             df_tela = st.session_state.df_relatorio.copy()
