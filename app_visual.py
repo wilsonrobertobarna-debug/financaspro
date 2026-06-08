@@ -917,7 +917,8 @@ if aba == "📋 Relatório PDF":
         try:
             # 1. Pega os dados que já foram filtrados na tela (df_v_display)
             # Usamos o iloc[::-1] para manter a ordem do mais recente para o mais antigo
-            df_pdf = df_v_display.iloc[::-1].copy()
+            df_pdf = st.session_state.df_relatorio.iloc[::-1].copy()
+            
             
             # 2. Reseta o índice para criar uma numeração sequencial (1, 2, 3...)
             df_pdf = df_pdf.reset_index(drop=True)
