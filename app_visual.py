@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
-from fpdf import FPDF
 
 # Definições iniciais de data
 agora_br = datetime.now() - timedelta(hours=3)
@@ -909,34 +908,20 @@ if aba == "📋 Relatório PDF":
     st.markdown("---")
 
     # Botão para processar e gerar o documento
-if st.button("📄 Gerar PDF"):
-        if st.button("📄 Gerar PDF"):
-        # O código abaixo está com recuo de 8 espaços
+    if st.button("📄 Gerar PDF"):
         try:
-            pdf = FPDF()
-            pdf.add_page()
-            
-            # Captura e prepara os dados
-            df_report = df_v.copy().iloc[::-1].reset_index(drop=True)
-            df_report.index += 1
-            
-            pdf.set_font("Arial", size=10)
-            pdf.cell(200, 10, txt="Relatório de Lançamentos", ln=True, align='C')
-            
-            for index, row in df_report.iterrows():
-                texto = f"ID: {index} | Desc: {str(row.get('Descrição', ''))} | Valor: {str(row.get('Valor', '0'))}"
-                pdf.cell(200, 10, txt=texto, ln=True)
-                
-            pdf.output("relatorio.pdf")
-            st.success("PDF Gerado!")
-            
-        except Exception as e:
-            st.error(f"Erro ao gerar: {e}")
+            if isinstance(periodo_pdf, (list, tuple)):
+                if len(periodo_pdf) == 2:
+                    b_ini, b_fim = periodo_pdf[0], periodo_pdf[1]
+                else:
+                    b_ini = b_fim = periodo_pdf[0]
+            else:
+                b_ini = b_fim = periodo_pdf
 
             # ========================================================
             # 1. INICIALIZAÇÃO DO PDF
             # ========================================================
-            
+            from fpdf import FPDF
             pdf = FPDF()
             pdf.add_page()
 
