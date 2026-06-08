@@ -402,27 +402,23 @@ rendimento = 0.19
 pendente = 6932.67
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
-    # 1. ESTILO (CSS) - Isso aqui "puxa" tudo para cima antes de desenhar o título
+    # 1. ESTILO (CSS) - Centralizado e organizado
     st.markdown("""
         <style>
-               .block-container {
-                    padding-top: 0rem; /* Zera o espaço no topo */
-                    padding-bottom: 0rem;
-                }
+            .block-container { padding-top: 0rem; padding-bottom: 0rem; }
         </style>
-        """, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     st.subheader("🛡️ FinançasPro Wilson")
-    # --- COLE AQUI (INÍCIO DA BARRINHA) ---
-    meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
-    # Isso cria a barra horizontal de meses
+    # 2. BARRINHA DE MESES
+    meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     st.pills("Período:", meses, selection_mode="single", default="Mai")
 
-    # --- 1. O SALDO GERAL (REI DA TELA) ---
-    # Usamos uma fonte maior e centralizada para ele ser "mais notado"
-    saldo_geral = receita_total - gasto_total
-    cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c" # Verde se positivo, Vermelho se negativo
+    # 3. SALDO GERAL (REI DA TELA)
+    # Certifique-se de que receita_total e gasto_total estejam calculados antes
+    saldo_geral = receita_total - gasto_total 
+    cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
     
     st.markdown(f"""
         <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
@@ -433,28 +429,14 @@ if "💰" in aba:
 
     st.write("") # Espaço de respiro
 
-    # --- 2. OS CARDS DE APOIO (MENORES) ---
-    # Aqui os valores ficam organizados em colunas, ocupando menos espaço vertical
+    # 4. OS CARDS DE APOIO
     c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.metric("📈 Receita", f"R$ {receita_total:,.2f}")
-    with c2:
-        st.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
-    with c3:
-        st.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
-    with c4:
-        st.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
-# ----------------------------------------------
-
-if "💰" in aba:
-    # ... seu código do CSS e Título ...
-    
-    saldo_geral = receita_total - gasto_total # Agora ele não trava mais!
-
-    
+    c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
+    c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
+    c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
+    c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
 
     st.divider()
-
     g1, g2 = st.columns(2)
     with g1:
         st.write("### 🍕 Gastos por Categoria")
