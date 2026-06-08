@@ -409,7 +409,7 @@ if "💰" in aba:
         </style>
     """, unsafe_allow_html=True)
     
-    st.subheader("🛡️ FinançasPro Wilson")
+    st.subheader("🛡️ TESTE DE ALTERAÇÃO - FINANÇAS")
     
     # 2. BARRINHA DE MESES
     meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
