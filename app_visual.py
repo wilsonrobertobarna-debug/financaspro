@@ -1023,7 +1023,7 @@ if aba == "📋 Relatório PDF":
                                 elif ',' in val_limpo:
                                     val_limpo = val_limpo.replace(',', '.')
                                 saldo_sistema_abril = float(val_limpo)
-                    except:
+                   
                         saldo_sistema_abril = 0.0
 
                     # 3.2 Agora, calculamos a movimentação que aconteceu desde o começo até o dia 17/05
@@ -1067,7 +1067,7 @@ if aba == "📋 Relatório PDF":
                     
                     # O saldo inicial real no dia 18 é o saldo base do sistema + as movimentações do passado!
                     base_inicial = saldo_sistema_abril + saldo_acumulado_passado
-                except:
+               
                     base_inicial = 0.0
 
             saldo_anterior = base_inicial
