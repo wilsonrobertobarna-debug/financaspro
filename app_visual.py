@@ -563,6 +563,14 @@ if "💰" in aba:
         # ----------------------------------------------
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
+        t.write("--- DEPURADOR ---")
+        st.write(f"Total de linhas filtradas: {len(df_v_display)}")
+        st.write(f"Status encontrados: {df_v_display['Status'].unique()}")
+        st.write("-----------------")
+
+        # Salva no cofre
+        st.session_state.df_relatorio = df_v_display
+
        
 
 elif "Pendências" in aba:
