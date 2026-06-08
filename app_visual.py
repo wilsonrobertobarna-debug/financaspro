@@ -932,8 +932,8 @@ if aba == "📋 Relatório PDF":
             # 1. INICIALIZAÇÃO DO PDF
             # ========================================================
             from fpdf import FPDF
-            pdf = FPDF()
-            pdf.add_page()
+                pdf = FPDF()
+                pdf.add_page()
 
             # ========================================================
             # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
