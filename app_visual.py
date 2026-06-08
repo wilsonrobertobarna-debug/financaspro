@@ -921,28 +921,32 @@ if aba == "📋 Relatório PDF":
 
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
-        if 'df_relatorio' not in st.session_state:
-            st.error("Erro: Acesse a aba Finanças primeiro!")
-        else:
-            df_tela = st.session_state.df_relatorio.copy()
-            # Se você ainda tiver o df_base ou o filtro que gera o PDF, 
-            # vamos verificar o que está chegando nele:
-            # df_pdf = [SEU CÓDIGO DE FILTRAGEM AQUI] 
-            
-            # MANTENHA SIMPLES POR AGORA:
-            df_pdf = df_tela.copy() 
-            
-            st.write(f"Total na Tela: {len(df_tela)}")
-            st.write(f"Total no PDF: {len(df_pdf)}")
-            
-            if len(df_tela) != len(df_pdf):
-                st.warning("DIVERGÊNCIA ENCONTRADA!")
-                # Isso mostra os itens que estão na tela mas não estão no PDF
-                # Assumindo que você tenha uma coluna 'ID' ou 'Descrição' única:
-                # st.write("Itens na tela mas não no PDF:")
-                # st.write(df_tela[~df_tela.index.isin(df_pdf.index)])
-            
-            # ... (seu código de gerar PDF segue aqui)
+        if st.button("📄 Gerar PDF"):
+    # 1. Verifica se os dados existem no cofre
+    if 'df_relatorio' not in st.session_state:
+        st.error("Erro: Vá na aba de Finanças primeiro para carregar os dados!")
+    else:
+        # 2. Pega os dados do cofre
+        df_pdf = st.session_state.df_relatorio.copy()
+        
+        # 3. Gera o PDF
+        from fpdf import FPDF
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(200, 10, txt="Relatorio de Lancamentos", ln=True, align='C')
+        
+        pdf.set_font("Arial", size=8)
+        contador = 0
+        for index, row in df_pdf.iterrows():
+            contador += 1
+            pdf.cell(10, 7, str(contador), border=1)
+            pdf.cell(30, 7, str(row.get('Vencimento', '')), border=1)
+            pdf.cell(80, 7, str(row.get('Descrição', '')), border=1)
+            pdf.cell(30, 7, str(row.get('Valor', '0')), border=1, ln=True)
+        
+        pdf.output("relatorio.pdf")
+        st.success(f"PDF Gerado! Total de linhas processadas: {contador}")
             # ========================================================
             # 1. INICIALIZAÇÃO DO PDF
             # ========================================================
