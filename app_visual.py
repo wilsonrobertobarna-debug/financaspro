@@ -459,28 +459,30 @@ if "💰" in aba:
 
     # 3. BUSCA E LANÇAMENTOS (A ESTRELA DA TELA)
     st.subheader("🔍 Lançamentos")
-    
+# --- MANTENHA APENAS ESTE, DEPOIS DO SUBHEADER "Lançamentos" ---
+    st.subheader("🔍 Lançamentos")
+
     c_d1, c_d2 = st.columns(2)
     s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
     s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
-    
+
     c1, c2, c3 = st.columns(3)
     s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
     s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
-    b_desc = c3.text_input("Buscar Beneficiário:")
-    
-    # Filtro dos dados
+
+    # AQUI ESTÁ A CHAVE (key) PARA EVITAR A DUPLICIDADE:
+    b_desc = c3.text_input("Buscar Beneficiário:", key="campo_busca_unica")
+
+    # Agora sim, fazemos o filtro uma única vez com o valor dessa variável:
     df_v = df_base.copy()
     df_v = df_v[df_v['DT'].notna()]
     df_v = df_v[(df_v['DT'].dt.date >= s_ini) & (df_v['DT'].dt.date <= s_fim)]
     if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
     if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
     if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-    
-    # Exibição do DataFrame (A Estrela!)
-    df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
-    df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+
+    # E exibimos o dataframe logo abaixo, apenas uma vez:
+    st.dataframe(df_v.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
