@@ -925,7 +925,7 @@ if st.button("📄 Gerar PDF"):
  else:
       df_pdf = st.session_state.df_relatorio.copy()
       from fpdf import FPDF
-     pdf = FPDF()
+    pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(200, 10, txt="Relatorio de Lancamentos", ln=True, align='C')
