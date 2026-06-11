@@ -931,7 +931,7 @@ if st.button("📄 Gerar PDF"):
       pdf.cell(200, 10, txt="Relatorio de Lancamentos", ln=True, align='C')
       pdf.set_font("Arial", size=8)
       contador = 0
-  for index, row in df_pdf.iterrows():
+      for index, row in df_pdf.iterrows():
       contador += 1
       pdf.cell(10, 7, str(contador), border=1)
       pdf.cell(30, 7, str(row.get('Vencimento', '')), border=1)
