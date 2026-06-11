@@ -939,9 +939,9 @@ if st.button("📄 Gerar PDF"):
             pdf.cell(30, 7, str(row.get('Valor', '0')), border=1, ln=True)
         pdf.output("relatorio.pdf")
         st.success(f"PDF Gerado! Total de linhas: {contador}")
-          pdf = FPDF()
-          pdf.add_page()
-
+            pdf = FPDF()
+            pdf.add_page()
+      
             # ========================================================
             # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
             # ========================================================
