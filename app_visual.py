@@ -9,18 +9,29 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 
+# --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
 
 if not st.session_state.login:
-    senha = st.text_input("🔑 Digite a senha de acesso:", type="password")
-    if st.button("Entrar"):
-        if senha == "Wilson123": # Troque pela sua senha
-            st.session_state.login = True
-            st.rerun()
-        else:
-            st.error("Senha incorreta!")
-    st.stop() # Trava o resto do app se não logar
+    # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
+    col1, col_centro, col2 = st.columns([1, 2, 1])
+    
+    with col_centro:
+        st.markdown("<br><br><br>", unsafe_allow_html=True) # Espaçamento superior
+        st.markdown("### 🔒 Acesso Seguro")
+        senha = st.text_input("Digite sua senha:", type="password")
+        
+        if st.button("🔓 Desbloquear Sistema"):
+            if senha == "Wilson123": # Troque aqui pela sua senha real
+                st.session_state.login = True
+                st.rerun()
+            else:
+                st.error("Senha incorreta, Wilson!")
+        
+        st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    st.stop() # Bloqueia o carregamento do restante do código abaixo
 
 # Definições iniciais de data
 agora_br = datetime.now() - timedelta(hours=3)
