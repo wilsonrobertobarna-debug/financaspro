@@ -381,48 +381,6 @@ if "💰" in aba:
         st.error("A base de dados está vazia.")
 # --- FIM DA ABA ---
 
-        # ÁREA DE CONTROLE (EDIÇÃO)
-        with st.expander("⚙️ Ajustar Lançamento"):
-            lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
-            escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
-            if escolha:
-                item = lista_edit[escolha]
-                ed_dat = st.date_input("Vencimento:", value=datetime.strptime(item['Vencimento'], "%d/%m/%Y"), format="DD/MM/YYYY")
-                ed_val = st.number_input("Valor:", value=float(item['V_Num']), step=0.01)
-                ed_desc = st.text_input("Descrição:", value=item['Descrição'])
-                ed_bnc = st.selectbox("Banco:", bancos_disponiveis, index=bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0)
-                ed_sta = st.selectbox("Status:", ["Pago", "Pendente"], index=["Pago", "Pendente"].index(item['Status']) if item['Status'] in ["Pago", "Pendente"] else 0)
-                
-                col1, col2 = st.columns(2)
-                if col1.button("💾 ATUALIZAR"):
-                    ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
-                    ws_base.update_cell(int(item['ID']), 2, f"{ed_val:.2f}".replace('.', ','))
-                    ws_base.update_cell(int(item['ID']), 3, ed_desc)
-                    ws_base.update_cell(int(item['ID']), 6, ed_bnc)
-                    ws_base.update_cell(int(item['ID']), 7, ed_sta)
-                    atualizar_sessao(); st.rerun()
-                if col2.button("🚨 EXCLUIR"):
-                    ws_base.delete_rows(int(item['ID']))
-                    atualizar_sessao(); st.rerun()
-
-        # GRÁFICOS E TABELA
-        g1, g2 = st.columns(2)
-        with g1:
-            st.write("### 🍕 Gastos por Categoria")
-            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-            if not df_p.empty: st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', hole=0.4), use_container_width=True)
-        with g2:
-            st.write("### 📊 Fluxo Mensal")
-            df_f = df_m_limpo.groupby(['Tipo'])['V_Num'].sum().reset_index()
-            if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo'), use_container_width=True)
-
-        st.subheader("🔍 Lançamentos")
-        st.dataframe(df_m[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
-    else:
-        st.warning("Base de dados indisponível.")
-# --- FIM DA ABA ---
-# --- FIM DA ABA ---
-
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     
