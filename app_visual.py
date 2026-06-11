@@ -334,7 +334,7 @@ if "💰" in aba:
 
     if not df_base.empty:
         # DEBUG: Mostra o que existe na coluna de meses
-    st.write("Meses disponíveis na base:", df_base['Mes_Ano'].unique())
+        st.write("Meses disponíveis na base:", df_base['Mes_Ano'].unique())
         # DEBUG: Isso vai te mostrar se o filtro está encontrando algo
         # st.write(f"Filtrando por: {mes_atual}") 
         
