@@ -920,9 +920,9 @@ if aba == "📋 Relatório PDF":
     st.markdown("---")
 
     # Botão para processar e gerar o documento
-    if st.button("📄 Gerar PDF"):
+if st.button("📄 Gerar PDF"):
     # 1. Verifica se os dados existem no cofre
-        if 'df_relatorio' not in st.session_state:
+    if 'df_relatorio' not in st.session_state:
         st.error("Erro: Vá na aba de Finanças primeiro para carregar os dados!")
     else:
         # 2. Pega os dados do cofre
