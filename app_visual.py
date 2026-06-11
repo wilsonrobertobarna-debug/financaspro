@@ -63,7 +63,14 @@ def conectar():
         st.error(f"Erro na conexão: {e}"); st.stop()
 
 client = conectar()
-sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+#sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+# sh = client.open_by_key(...)  <-- coloque o # aqui para desativar a conexão
+
+# CRIANDO DADOS FAKES PARA TESTAR SE O CÓDIGO RODA SEM ERRO
+receita_total = 1000.00
+gasto_total = 500.00
+rendimento = 10.00
+pendente = 200.00
 
 # 3. BLOCO DE CARREGAMENTO (Sincroniza Sheets com Session State)
 if 'metas_iniciadas' not in st.session_state:
