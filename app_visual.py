@@ -324,8 +324,10 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             atualizar_sessao()
             st.rerun()
 
-# --- INÍCIO DA ABA: 💰 Finanças & Bancos ---
+# --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in aba:
+    import plotly.graph_objects as go # Garante que o gráfico de metas funcione
+    
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
@@ -339,7 +341,7 @@ if "💰" in aba:
                    "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
         filtro_mes = f"{mes_map[mes_atual]}/26"
         
-        # Filtra os dados
+        # Filtra os dados do mês
         df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
@@ -367,30 +369,45 @@ if "💰" in aba:
 
         st.divider()
 
-        # 5. GRÁFICOS
+        # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
         g1, g2 = st.columns(2)
         with g1:
             st.write("### 🍕 Gastos por Categoria")
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             if not df_p.empty:
                 st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', hole=0.4), use_container_width=True)
-            else:
-                st.info("Sem dados de despesa.")
         with g2:
             st.write("### 📊 Fluxo Mensal")
             df_f = df_m_limpo.groupby(['Tipo'])['V_Num'].sum().reset_index()
             if not df_f.empty:
                 st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo'), use_container_width=True)
-            else:
-                st.info("Sem dados de fluxo.")
 
-        # 6. TABELA
+        # 6. NOVO: GRÁFICO DE METAS (O que estava faltando!)
+        st.subheader("🎯 Metas vs Realizado (Despesas)")
+        df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        
+        if not df_metas_graph.empty:
+            # Busca as metas no session_state (se não houver, assume 0)
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
+            
+            fig_m = go.Figure()
+            # Barra do Gasto Real (Vermelha)
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
+            # Barra da Meta (Verde Transparente)
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
+            
+            fig_m.update_layout(barmode='group', height=350, margin=dict(t=20, b=20, l=0, r=0))
+            st.plotly_chart(fig_m, use_container_width=True)
+        else:
+            st.info("Nenhuma despesa para comparar com as metas.")
+
+        # 7. TABELA FINAL
         st.subheader("🔍 Lançamentos do Mês")
         st.dataframe(df_m[['Vencimento', 'Descrição', 'Valor', 'Categoria', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+
     else:
         st.warning("Base de dados vazia.")
-# --- FIM DA ABA ---
-# --- FIM DA ABA ---
+# --- FIM DA ABA ---# --- FIM DA ABA ---
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
