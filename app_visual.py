@@ -524,7 +524,7 @@ if "💰" in aba:
 
         # 7. TABELA FINAL
         st.subheader("🔍 Lançamentos do Mês")
-        st.dataframe(df_m[['Vencimento', 'Descrição', 'Valor', 'Categoria', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+        st.dataframe(df_m[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
 
     else:
         st.warning("Base de dados vazia.")
