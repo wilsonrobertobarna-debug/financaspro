@@ -921,20 +921,15 @@ if aba == "📋 Relatório PDF":
 
     # Botão para processar e gerar o documento
 if st.button("📄 Gerar PDF"):
-    # 1. Verifica se os dados existem no cofre
     if 'df_relatorio' not in st.session_state:
-        st.error("Erro: Vá na aba de Finanças primeiro para carregar os dados!")
+        st.error("Erro: Acesse a aba Finanças primeiro!")
     else:
-        # 2. Pega os dados do cofre
         df_pdf = st.session_state.df_relatorio.copy()
-        
-        # 3. Gera o PDF
         from fpdf import FPDF
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(200, 10, txt="Relatorio de Lancamentos", ln=True, align='C')
-        
         pdf.set_font("Arial", size=8)
         contador = 0
         for index, row in df_pdf.iterrows():
@@ -943,9 +938,8 @@ if st.button("📄 Gerar PDF"):
             pdf.cell(30, 7, str(row.get('Vencimento', '')), border=1)
             pdf.cell(80, 7, str(row.get('Descrição', '')), border=1)
             pdf.cell(30, 7, str(row.get('Valor', '0')), border=1, ln=True)
-        
         pdf.output("relatorio.pdf")
-        st.success(f"PDF Gerado! Total de linhas processadas: {contador}")
+        st.success(f"PDF Gerado! Total de linhas: {contador}")
             # ========================================================
             # 1. INICIALIZAÇÃO DO PDF
             # ========================================================
