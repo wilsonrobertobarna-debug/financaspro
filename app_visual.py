@@ -9,6 +9,19 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 
+if 'login' not in st.session_state:
+    st.session_state.login = False
+
+if not st.session_state.login:
+    senha = st.text_input("🔑 Digite a senha de acesso:", type="password")
+    if st.button("Entrar"):
+        if senha == "Wilson123": # Troque pela sua senha
+            st.session_state.login = True
+            st.rerun()
+        else:
+            st.error("Senha incorreta!")
+    st.stop() # Trava o resto do app se não logar
+
 # Definições iniciais de data
 agora_br = datetime.now() - timedelta(hours=3)
 hoje_br = agora_br.date()
