@@ -557,20 +557,8 @@ if "💰" in aba:
         
         df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
         df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-
-        # --- COLOQUE A LINHA ABAIXO EXATAMENTE AQUI ---
-        st.session_state.df_relatorio = df_v_display
-        # ----------------------------------------------
         st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-        st.write("--- DEPURADOR ---")
-        st.write(f"Total de linhas filtradas: {len(df_v_display)}")
-        st.write(f"Status encontrados: {df_v_display['Status'].unique()}")
-        st.write("-----------------")
-        # Salva no cofre
-        st.session_state.df_relatorio = df_v_display
-
-       
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
@@ -919,29 +907,24 @@ if aba == "📋 Relatório PDF":
 
     st.markdown("---")
 
-if st.button("📄 Gerar PDF"):
-    if 'df_relatorio' not in st.session_state:
-        st.error("Erro: Acesse a aba Finanças primeiro!")
-    else:
-        df_pdf = st.session_state.df_relatorio.copy()
-        from fpdf import FPDF
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(200, 10, txt="Relatorio de Lancamentos", ln=True, align='C')
-        pdf.set_font("Arial", size=8)
-        contador = 0
-        for index, row in df_pdf.iterrows():
-            contador += 1
-            pdf.cell(10, 7, str(contador), border=1)
-            pdf.cell(30, 7, str(row.get('Vencimento', '')), border=1)
-            pdf.cell(80, 7, str(row.get('Descrição', '')), border=1)
-            pdf.cell(30, 7, str(row.get('Valor', '0')), border=1, ln=True)
-        pdf.output("relatorio.pdf")
-        st.success(f"PDF Gerado! Total de linhas: {contador}")
+    # Botão para processar e gerar o documento
+    if st.button("📄 Gerar PDF"):
+        try:
+            if isinstance(periodo_pdf, (list, tuple)):
+                if len(periodo_pdf) == 2:
+                    b_ini, b_fim = periodo_pdf[0], periodo_pdf[1]
+                else:
+                    b_ini = b_fim = periodo_pdf[0]
+            else:
+                b_ini = b_fim = periodo_pdf
+
+            # ========================================================
+            # 1. INICIALIZAÇÃO DO PDF
+            # ========================================================
+            from fpdf import FPDF
             pdf = FPDF()
             pdf.add_page()
-      
+
             # ========================================================
             # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
             # ========================================================
@@ -1012,7 +995,7 @@ if st.button("📄 Gerar PDF"):
                                 elif ',' in val_limpo:
                                     val_limpo = val_limpo.replace(',', '.')
                                 saldo_sistema_abril = float(val_limpo)
-                   
+                    except:
                         saldo_sistema_abril = 0.0
 
                     # 3.2 Agora, calculamos a movimentação que aconteceu desde o começo até o dia 17/05
@@ -1056,7 +1039,7 @@ if st.button("📄 Gerar PDF"):
                     
                     # O saldo inicial real no dia 18 é o saldo base do sistema + as movimentações do passado!
                     base_inicial = saldo_sistema_abril + saldo_acumulado_passado
-               
+                except:
                     base_inicial = 0.0
 
             saldo_anterior = base_inicial
