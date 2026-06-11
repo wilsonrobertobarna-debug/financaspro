@@ -920,26 +920,32 @@ if aba == "📋 Relatório PDF":
     st.markdown("---")
 
     # Botão para processar e gerar o documento
-if st.button("📄 Gerar PDF"):
+# Insira este bloco exatamente onde o botão deveria estar
+def gerar_relatorio_pdf():
     if 'df_relatorio' not in st.session_state:
         st.error("Erro: Acesse a aba Finanças primeiro!")
-    else:
-        df_pdf = st.session_state.df_relatorio.copy()
-        from fpdf import FPDF
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(200, 10, txt="Relatorio de Lancamentos", ln=True, align='C')
-        pdf.set_font("Arial", size=8)
-        contador = 0
-        for index, row in df_pdf.iterrows():
-            contador += 1
-            pdf.cell(10, 7, str(contador), border=1)
-            pdf.cell(30, 7, str(row.get('Vencimento', '')), border=1)
-            pdf.cell(80, 7, str(row.get('Descrição', '')), border=1)
-            pdf.cell(30, 7, str(row.get('Valor', '0')), border=1, ln=True)
-        pdf.output("relatorio.pdf")
-        st.success(f"PDF Gerado! Total de linhas: {contador}")
+        return
+    
+    df_pdf = st.session_state.df_relatorio.copy()
+    from fpdf import FPDF
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 10, txt="Relatorio de Lancamentos", ln=True, align='C')
+    pdf.set_font("Arial", size=8)
+    contador = 0
+    for index, row in df_pdf.iterrows():
+        contador += 1
+        pdf.cell(10, 7, str(contador), border=1)
+        pdf.cell(30, 7, str(row.get('Vencimento', '')), border=1)
+        pdf.cell(80, 7, str(row.get('Descrição', '')), border=1)
+        pdf.cell(30, 7, str(row.get('Valor', '0')), border=1, ln=True)
+    pdf.output("relatorio.pdf")
+    st.success(f"PDF Gerado! Total: {contador} linhas.")
+
+# Agora chamamos a função no botão
+if st.button("📄 Gerar PDF"):
+    gerar_relatorio_pdf()
             # ========================================================
             # 1. INICIALIZAÇÃO DO PDF
             # ========================================================
