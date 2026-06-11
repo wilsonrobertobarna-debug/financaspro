@@ -325,36 +325,31 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.rerun()
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos ---
+# --- INÍCIO DA ABA: 💰 Finanças & Bancos (VERSÃO COMPLETA) ---
 if "💰" in aba:
-    # --- CSS DE CONTROLE ---
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
-    # --- BARRINHA DE FILTRO DE MESES ---
     meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     mes_atual = st.pills("Período:", meses, selection_mode="single", default="Mai")
 
-    # --- CARGA E VALIDAÇÃO DOS DADOS ---
     if not df_base.empty:
-        # Filtro de mês e limpeza de dados
+        # LÓGICA DE FILTRAGEM
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-        # Cálculos de Performance
+        # CÁLCULOS PRINCIPAIS
         receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
         gasto_total = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
         pendente = get_valor_pendente(df_base)
         saldo_geral = (receita_total + rendimento) - gasto_total
 
-        # --- PAINEL DE SALDO (VISUAL) ---
+        # PAINEL DE METAS E SALDO
         cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
-        st.markdown(f"""
-            <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
-                <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
-                <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"""<div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
+                        <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
+                        <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1></div>""", unsafe_allow_html=True)
 
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
@@ -364,63 +359,46 @@ if "💰" in aba:
 
         st.divider()
 
-        # --- ÁREA DE EDIÇÃO E EXCLUSÃO (DETALHADA) ---
-        with st.expander("⚙️ Ajustar Lançamento", expanded=False):
+        # ÁREA DE CONTROLE (EDIÇÃO)
+        with st.expander("⚙️ Ajustar Lançamento"):
             lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
             escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
-            
             if escolha:
                 item = lista_edit[escolha]
-                # Formulário detalhado de edição
-                ed_dat = st.date_input("Alterar Vencimento:", value=datetime.strptime(item['Vencimento'], "%d/%m/%Y"), format="DD/MM/YYYY")
-                ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
-                ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
+                ed_dat = st.date_input("Vencimento:", value=datetime.strptime(item['Vencimento'], "%d/%m/%Y"), format="DD/MM/YYYY")
+                ed_val = st.number_input("Valor:", value=float(item['V_Num']), step=0.01)
+                ed_desc = st.text_input("Descrição:", value=item['Descrição'])
+                ed_bnc = st.selectbox("Banco:", bancos_disponiveis, index=bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0)
+                ed_sta = st.selectbox("Status:", ["Pago", "Pendente"], index=["Pago", "Pendente"].index(item['Status']) if item['Status'] in ["Pago", "Pendente"] else 0)
                 
-                idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
-                ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
-                
-                st_op = ["Pago", "Pendente"]
-                ed_sta = st.selectbox("Status:", st_op, index=st_op.index(item['Status']) if item['Status'] in st_op else 0)
-                
-                col_ed1, col_ed2 = st.columns(2)
-                if col_ed1.button("💾 ATUALIZAR"):
-                    # Aqui ligamos a atualização direta ao Google Sheets
+                col1, col2 = st.columns(2)
+                if col1.button("💾 ATUALIZAR"):
                     ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
                     ws_base.update_cell(int(item['ID']), 2, f"{ed_val:.2f}".replace('.', ','))
                     ws_base.update_cell(int(item['ID']), 3, ed_desc)
                     ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                     ws_base.update_cell(int(item['ID']), 7, ed_sta)
                     atualizar_sessao(); st.rerun()
-                
-                if col_ed2.button("🚨 EXCLUIR"):
+                if col2.button("🚨 EXCLUIR"):
                     ws_base.delete_rows(int(item['ID']))
                     atualizar_sessao(); st.rerun()
 
-        # --- FILTRO AVANÇADO E TABELA DE EXIBIÇÃO ---
-        st.subheader("🔍 Filtro de Lançamentos")
-        c_d1, c_d2 = st.columns(2)
-        s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-        s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
-        
-        c1, c2, c3 = st.columns(3)
-        s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
-        s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
-        b_desc = c3.text_input("Buscar Beneficiário:")
-        
-        # Lógica de filtro pesado
-        df_v = df_base.copy()
-        df_v = df_v[df_v['DT'].notna()]
-        df_v = df_v[(df_v['DT'].dt.date >= s_ini) & (df_v['DT'].dt.date <= s_fim)]
-        if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
-        if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
-        if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-        
-        df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
-        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+        # GRÁFICOS E TABELA
+        g1, g2 = st.columns(2)
+        with g1:
+            st.write("### 🍕 Gastos por Categoria")
+            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            if not df_p.empty: st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', hole=0.4), use_container_width=True)
+        with g2:
+            st.write("### 📊 Fluxo Mensal")
+            df_f = df_m_limpo.groupby(['Tipo'])['V_Num'].sum().reset_index()
+            if not df_f.empty: st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo'), use_container_width=True)
 
+        st.subheader("🔍 Lançamentos")
+        st.dataframe(df_m[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
     else:
-        st.warning("Base de dados indisponível no momento.")
+        st.warning("Base de dados indisponível.")
+# --- FIM DA ABA ---
 # --- FIM DA ABA ---
 
 elif "Pendências" in aba:
