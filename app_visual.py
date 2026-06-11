@@ -929,6 +929,7 @@ if st.button("📄 Gerar PDF"):
         pdf.add_page()
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(200, 10, txt="Relatorio de Lancamentos", ln=True, align='C')
+        
         pdf.set_font("Arial", size=8)
         contador = 0
         for index, row in df_pdf.iterrows():
@@ -937,6 +938,7 @@ if st.button("📄 Gerar PDF"):
             pdf.cell(30, 7, str(row.get('Vencimento', '')), border=1)
             pdf.cell(80, 7, str(row.get('Descrição', '')), border=1)
             pdf.cell(30, 7, str(row.get('Valor', '0')), border=1, ln=True)
+            
         pdf.output("relatorio.pdf")
         st.success(f"PDF Gerado! Total de linhas: {contador}")
      
