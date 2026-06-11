@@ -402,23 +402,22 @@ rendimento = 0.19
 pendente = 6932.67
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
-    # 1. ESTILO (CSS) - Isso aqui "puxa" tudo para cima antes de desenhar o título
+    # 1. CSS E TÍTULO
     st.markdown("""
         <style>
-               .block-container {
-                    padding-top: 0rem; /* Zera o espaço no topo */
-                    padding-bottom: 0rem;
-                }
+            .block-container { padding-top: 0rem; padding-bottom: 0rem; }
         </style>
-        """, unsafe_allow_html=True)
-    
+    """, unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
-    # --- COLE AQUI (INÍCIO DA BARRINHA) ---
-    meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    
-    # Isso cria a barra horizontal de meses
-    st.pills("Período:", meses, selection_mode="single", default="Mai")
 
+    # 2. A RÉGUA DE SELEÇÃO (O ELO)
+    meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    mes_escolhido = st.pills("Período:", meses, selection_mode="single", default="Jun", key="mes_escolhido")
+
+    # 3. CONEXÃO COM OS DADOS
+    # O sistema agora usa a variável 'mes_escolhido' para recalcular
+    # Se você quiser que o saldo mude ao clicar, o cálculo deve vir DEPOIS do pills
+    saldo_geral = receita_total - gasto_total
     # --- 1. O SALDO GERAL (REI DA TELA) ---
     # Usamos uma fonte maior e centralizada para ele ser "mais notado"
     saldo_geral = receita_total - gasto_total
