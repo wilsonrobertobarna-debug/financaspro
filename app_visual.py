@@ -941,10 +941,6 @@ if st.button("📄 Gerar PDF"):
             
         pdf.output("relatorio.pdf")
         st.success(f"PDF Gerado! Total de linhas: {contador}")
-     
-            # ========================================================
-            # 1. INICIALIZAÇÃO DO PDF
-            # ========================================================
           from fpdf import FPDF
           pdf = FPDF()
           pdf.add_page()
