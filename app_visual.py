@@ -63,31 +63,7 @@ def conectar():
         st.error(f"Erro na conexão: {e}"); st.stop()
 
 client = conectar()
-#sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-# sh = client.open_by_key(...)  <-- coloque o # aqui para desativar a conexão
-# ... (seus imports no topo)
-
-# 1. CONEXÃO (Desativada)
-client = conectar()
-# sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-
-# 2. DADOS (Usando o DataFrame)
-import pandas as pd
-
-dados_falsos = {
-    'Tipo': ['Receita', 'Despesa', 'Rendimento'],
-    'Valor': [7626.23, 3434.45, 0.19]
-}
-df = pd.DataFrame(dados_falsos)
-
-# Aqui nós calculamos usando o DataFrame, e NADA abaixo deve redefinir essas variáveis
-receita_total = df[df['Tipo'] == 'Receita']['Valor'].sum()
-gasto_total = df[df['Tipo'] == 'Despesa']['Valor'].sum()
-rendimento = df[df['Tipo'] == 'Rendimento']['Valor'].sum()
-pendente = 0.00
-
-# --- NÃO COLOQUE NENHUM OUTRO BLOCO DE RECEITA_TOTAL ABAIXO ---
-# O resto do seu código segue aqui...
+sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # 3. BLOCO DE CARREGAMENTO (Sincroniza Sheets com Session State)
 if 'metas_iniciadas' not in st.session_state:
@@ -426,22 +402,23 @@ rendimento = 0.19
 pendente = 6932.67
 # 5. TELAS PRINCIPAIS
 if "💰" in aba:
-    # 1. CSS E TÍTULO
+    # 1. ESTILO (CSS) - Isso aqui "puxa" tudo para cima antes de desenhar o título
     st.markdown("""
         <style>
-            .block-container { padding-top: 0rem; padding-bottom: 0rem; }
+               .block-container {
+                    padding-top: 0rem; /* Zera o espaço no topo */
+                    padding-bottom: 0rem;
+                }
         </style>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+    
     st.subheader("🛡️ FinançasPro Wilson")
-
-    # 2. A RÉGUA DE SELEÇÃO (O ELO)
+    # --- COLE AQUI (INÍCIO DA BARRINHA) ---
     meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    mes_escolhido = st.pills("Período:", meses, selection_mode="single", default="Jun", key="mes_escolhido")
+    
+    # Isso cria a barra horizontal de meses
+    st.pills("Período:", meses, selection_mode="single", default="Mai")
 
-    # 3. CONEXÃO COM OS DADOS
-    # O sistema agora usa a variável 'mes_escolhido' para recalcular
-    # Se você quiser que o saldo mude ao clicar, o cálculo deve vir DEPOIS do pills
-    saldo_geral = receita_total - gasto_total
     # --- 1. O SALDO GERAL (REI DA TELA) ---
     # Usamos uma fonte maior e centralizada para ele ser "mais notado"
     saldo_geral = receita_total - gasto_total
