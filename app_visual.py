@@ -413,6 +413,27 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             atualizar_sessao()
             st.rerun()
 
+            # --- BARRINHA 2: TRANSFERÊNCIA ---
+    with st.sidebar.expander("💸 Transferência", expanded=False):
+        with st.form("f_transf", clear_on_submit=True):
+            t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+            t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
+            t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
+            t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
+            t_desc = st.text_input("Nota")
+            if st.form_submit_button("TRANSFERIR"):
+                if t_orig == t_dest: 
+                    st.error("Escolha bancos diferentes!")
+                else:
+                    v_str = f"{t_val:.2f}".replace('.', ',')
+                    d_str = t_dat.strftime("%d/%m/%Y")
+                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", ""])
+                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", ""])
+                    atualizar_sessao()
+                    st.rerun()
+
+
+
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in aba:
     import plotly.graph_objects as go # Garante que o gráfico de metas funcione
