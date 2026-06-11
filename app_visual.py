@@ -67,7 +67,11 @@ client = conectar()
 # sh = client.open_by_key(...)  <-- coloque o # aqui para desativar a conexão
 # ... (seus imports no topo)
 
-# --- AQUI VOCÊ COLA O NOVO BLOCO ---
+# 1. CONEXÃO (Desativada)
+client = conectar()
+# sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+
+# 2. DADOS (Usando o DataFrame)
 import pandas as pd
 
 dados_falsos = {
@@ -76,18 +80,14 @@ dados_falsos = {
 }
 df = pd.DataFrame(dados_falsos)
 
+# Aqui nós calculamos usando o DataFrame, e NADA abaixo deve redefinir essas variáveis
 receita_total = df[df['Tipo'] == 'Receita']['Valor'].sum()
 gasto_total = df[df['Tipo'] == 'Despesa']['Valor'].sum()
 rendimento = df[df['Tipo'] == 'Rendimento']['Valor'].sum()
 pendente = 0.00
-# -----------------------------------
 
-# ... (o restante do seu código, onde você define as abas e o saldo_geral)
-# CRIANDO DADOS FAKES PARA TESTAR SE O CÓDIGO RODA SEM ERRO
-receita_total = 1000.00
-gasto_total = 500.00
-rendimento = 10.00
-pendente = 200.00
+# --- NÃO COLOQUE NENHUM OUTRO BLOCO DE RECEITA_TOTAL ABAIXO ---
+# O resto do seu código segue aqui...
 
 # 3. BLOCO DE CARREGAMENTO (Sincroniza Sheets com Session State)
 if 'metas_iniciadas' not in st.session_state:
