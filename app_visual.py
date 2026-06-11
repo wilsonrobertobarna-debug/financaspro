@@ -924,7 +924,7 @@ if st.button("📄 Gerar PDF"):
   st.error("Erro: Acesse a aba Finanças primeiro!")
  else:
       df_pdf = st.session_state.df_relatorio.copy()
-  from fpdf import FPDF
+      from fpdf import FPDF
       pdf = FPDF()
       pdf.add_page()
       pdf.set_font("Arial", 'B', 12)
