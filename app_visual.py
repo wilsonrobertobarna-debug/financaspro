@@ -65,7 +65,24 @@ def conectar():
 client = conectar()
 #sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 # sh = client.open_by_key(...)  <-- coloque o # aqui para desativar a conexão
+# ... (seus imports no topo)
 
+# --- AQUI VOCÊ COLA O NOVO BLOCO ---
+import pandas as pd
+
+dados_falsos = {
+    'Tipo': ['Receita', 'Despesa', 'Rendimento'],
+    'Valor': [7626.23, 3434.45, 0.19]
+}
+df = pd.DataFrame(dados_falsos)
+
+receita_total = df[df['Tipo'] == 'Receita']['Valor'].sum()
+gasto_total = df[df['Tipo'] == 'Despesa']['Valor'].sum()
+rendimento = df[df['Tipo'] == 'Rendimento']['Valor'].sum()
+pendente = 0.00
+# -----------------------------------
+
+# ... (o restante do seu código, onde você define as abas e o saldo_geral)
 # CRIANDO DADOS FAKES PARA TESTAR SE O CÓDIGO RODA SEM ERRO
 receita_total = 1000.00
 gasto_total = 500.00
