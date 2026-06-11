@@ -325,39 +325,61 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.rerun()
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos ---
-# --- INÍCIO DA ABA: 💰 Finanças & Bancos (VERSÃO COMPLETA) ---
 if "💰" in aba:
-    st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
+    # 1. BARRINHA DE MESES
     meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     mes_atual = st.pills("Período:", meses, selection_mode="single", default="Mai")
 
     if not df_base.empty:
-        # LÓGICA DE FILTRAGEM
+        # DEBUG: Isso vai te mostrar se o filtro está encontrando algo
+        # st.write(f"Filtrando por: {mes_atual}") 
+        
+        # O FILTRO REAL:
+        # Certifique-se que df_base['Mes_Ano'] tenha o mesmo formato da barrinha (ex: "Mai")
         df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+        
+        # Se df_m estiver vazio, o erro é no formato dos dados (ex: 'Maio' vs 'Mai')
+        if df_m.empty:
+            st.warning(f"Nenhum dado encontrado para o mês: {mes_atual}. Verifique se na sua planilha o mês está como '{mes_atual}'.")
+        
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-        # CÁLCULOS PRINCIPAIS
+        # CÁLCULOS
         receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
         gasto_total = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-        pendente = get_valor_pendente(df_base)
-        saldo_geral = (receita_total + rendimento) - gasto_total
+        saldo_geral = receita_total - gasto_total
 
-        # PAINEL DE METAS E SALDO
-        cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
-        st.markdown(f"""<div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
-                        <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
-                        <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1></div>""", unsafe_allow_html=True)
-
-        c1, c2, c3, c4 = st.columns(4)
+        # PAINEL
+        c1, c2, c3 = st.columns(3)
         c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
         c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
-        c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
-        c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
+        c3.metric("💰 Saldo", f"R$ {saldo_geral:,.2f}")
 
         st.divider()
+
+        # GRÁFICOS (Somente se houver dados)
+        if not df_m_limpo.empty:
+            g1, g2 = st.columns(2)
+            with g1:
+                st.write("### 🍕 Gastos por Categoria")
+                df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+                st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', hole=0.4), use_container_width=True)
+            with g2:
+                st.write("### 📊 Fluxo Mensal")
+                df_f = df_m_limpo.groupby(['Tipo'])['V_Num'].sum().reset_index()
+                st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo'), use_container_width=True)
+        else:
+            st.info("Não há dados suficientes para gerar os gráficos neste mês.")
+
+        # TABELA
+        st.subheader("🔍 Lançamentos")
+        st.dataframe(df_m[['Vencimento', 'Descrição', 'Valor', 'Categoria', 'Status']], use_container_width=True)
+        
+    else:
+        st.error("A base de dados está vazia.")
+# --- FIM DA ABA ---
 
         # ÁREA DE CONTROLE (EDIÇÃO)
         with st.expander("⚙️ Ajustar Lançamento"):
