@@ -33,6 +33,71 @@ if not st.session_state.login:
     
     st.stop() # Bloqueia o carregamento do restante do código abaixo
 
+    # --- BARRINHA 2: TRANSFERÊNCIA ---
+    with st.sidebar.expander("💸 Transferência", expanded=False):
+        with st.form("f_transf", clear_on_submit=True):
+            t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+            t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
+            t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
+            t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
+            t_desc = st.text_input("Nota")
+            if st.form_submit_button("TRANSFERIR"):
+                if t_orig == t_dest: 
+                    st.error("Escolha bancos diferentes!")
+                else:
+                    v_str = f"{t_val:.2f}".replace('.', ',')
+                    d_str = t_dat.strftime("%d/%m/%Y")
+                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", ""])
+                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", ""])
+                    atualizar_sessao()
+                    st.rerun()
+
+    # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
+    with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
+        if not df_base.empty:
+            lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
+            escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
+            if escolha:
+                item = lista_edit[escolha]
+                data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
+                ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
+                
+                ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+                ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
+                
+                idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
+                ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
+                
+                status_opcoes = ["Pago", "Pendente"]
+                index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
+                ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
+                
+                col_ed1, col_ed2 = st.columns(2)
+                if col_ed1.button("💾 ATUALIZAR"):
+                    v_str = f"{ed_val:.2f}".replace('.', ',')
+                    ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
+                    ws_base.update_cell(int(item['ID']), 2, v_str)
+                    ws_base.update_cell(int(item['ID']), 3, ed_desc)
+                    ws_base.update_cell(int(item['ID']), 6, ed_bnc)
+                    ws_base.update_cell(int(item['ID']), 7, ed_sta)
+                    atualizar_sessao()
+                    st.rerun()
+                if col_ed2.button("🚨 EXCLUIR"):
+                    if item['Categoria'] == 'Transferência':
+                        ids_para_excluir = []
+                        for idx, row in df_base.iterrows():
+                            if (row['Data'] == item['Data'] and 
+                                abs(row['V_Num'] - item['V_Num']) < 0.01 and 
+                                row['Descrição'] == item['Descrição'] and 
+                                row['Categoria'] == 'Transferência'):
+                                ids_para_excluir.append(int(row['ID']))
+                        for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
+                            ws_base.delete_rows(id_linha)
+                    else:
+                        ws_base.delete_rows(int(item['ID']))
+                    atualizar_sessao()
+                    st.rerun()
+
 # Definições iniciais de data
 agora_br = datetime.now() - timedelta(hours=3)
 hoje_br = agora_br.date()
