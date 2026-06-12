@@ -398,22 +398,28 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     ws_base.update_cell(int(item['ID']), 7, ed_sta)
                     atualizar_sessao()
                     st.rerun()
-                if col_ed2.button("🚨 EXCLUIR"):
+                    
+               if col_ed2.button("🚨 EXCLUIR"):
                     if item['Categoria'] == 'Transferência':
+                        # Filtra todas as linhas que correspondem à transferência
+                        # Usamos condições claras para pegar tanto a saída quanto a entrada
                         ids_para_excluir = []
                         for idx, row in df_base.iterrows():
-                            if (row['Vencimento'] == item['Vencimento'] and row['Valor'] == item['Valor'] and row['Descrição'] == item['Descrição']):
-                                abs(row['V_Num'] - item['V_Num']) < 0.01 and 
-                                row['Descrição'] == item['Descrição'] and 
-                                row['Categoria'] == 'Transferência'):
+                            # Comparação limpa e organizada
+                            mesma_data = (row['Vencimento'] == item['Vencimento'])
+                            mesmo_valor = (abs(row['V_Num'] - item['V_Num']) < 0.01)
+                            mesma_desc = (row['Descrição'] == item['Descrição'])
+                            eh_transf = (row['Categoria'] == 'Transferência')
+                            
+                            if mesma_data and mesmo_valor and mesma_desc and eh_transf:
                                 ids_para_excluir.append(int(row['ID']))
+                        
+                        # Deleta de trás para frente para não bagunçar os índices
                         for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
                             ws_base.delete_rows(id_linha)
                     else:
+                        # Exclusão normal para despesas comuns
                         ws_base.delete_rows(int(item['ID']))
-                        if item['Categoria'] == 'Transferência':
-                    atualizar_sessao()
-                    st.rerun()
 
 
 
