@@ -510,14 +510,21 @@ if "💰" in aba:
         else:
             st.success("✅ **Parabéns!** Seus gastos estão controlados e abaixo da sua média recente.")
 
-        # Identifica o maior vilão
-        df_vilao = df_atual[df_atual['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum()
+        
+        # Identifica o maior vilão (Excluindo Transferências e Ajustes)
+        # Filtramos 'Despesa' E que a categoria NÃO ESTEJA na lista de exclusão
+        categorias_para_ignorar = ['Transferência', 'Ajuste']
+        
+        df_filtrado = df_atual[(df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(categorias_para_ignorar))]
+        
+        df_vilao = df_filtrado.groupby('Categoria')['V_Num'].sum()
+        
         if not df_vilao.empty:
             maior_gasto = df_vilao.idxmax()
             valor_maior = df_vilao.max()
             st.info(f"💡 **Dica de Ouro:** Sua categoria de maior gasto este mês é '{maior_gasto}', totalizando R$ {valor_maior:,.2f}. Considere revisar esses custos para o próximo mês!")
-        
-        # --- FIM DO WILSONBOT ---
+        else:
+            st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
 
             
 
