@@ -402,7 +402,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     if item['Categoria'] == 'Transferência':
                         ids_para_excluir = []
                         for idx, row in df_base.iterrows():
-                            if (row['Data'] == item['Data'] and 
+                            if (row['Vencimento'] == item['Vencimento'] and row['Valor'] == item['Valor'] and row['Descrição'] == item['Descrição']):
                                 abs(row['V_Num'] - item['V_Num']) < 0.01 and 
                                 row['Descrição'] == item['Descrição'] and 
                                 row['Categoria'] == 'Transferência'):
