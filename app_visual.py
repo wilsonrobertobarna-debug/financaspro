@@ -497,7 +497,8 @@ if "💰" in aba:
         
         # Analisa o mês atual
         df_atual = df_m # Usamos o seu df filtrado que já está pronto
-        total_gasto = df_atual[df_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+        filtro_exclusao = (df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(['Transferência']))
+        total_gasto = df_atual[filtro_exclusao]['V_Num'].sum()
         
         # Analisa a média dos últimos 3 meses
         # Nota: Ajustei para filtrar só Despesas na média também, para ficar mais preciso
