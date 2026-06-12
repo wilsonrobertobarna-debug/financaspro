@@ -411,6 +411,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                             ws_base.delete_rows(id_linha)
                     else:
                         ws_base.delete_rows(int(item['ID']))
+                        if item['Categoria'] == 'Transferência':
                     atualizar_sessao()
                     st.rerun()
 
