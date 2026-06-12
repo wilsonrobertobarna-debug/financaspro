@@ -399,7 +399,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     atualizar_sessao()
                     st.rerun()
                     
-               if col_ed2.button("🚨 EXCLUIR"):
+                if col_ed2.button("🚨 EXCLUIR"):
                     if item['Categoria'] == 'Transferência':
                         # Filtra todas as linhas que correspondem à transferência
                         # Usamos condições claras para pegar tanto a saída quanto a entrada
