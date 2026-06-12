@@ -1163,7 +1163,26 @@ if aba == "📋 Relatório PDF":
     # Aplica Status na tela
     if busca_status != "Todos" and col_status_df:
         df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
+        # --- NOVO FILTRO DE CATEGORIA E TIPO ---
+    col_cat_df = next((c for c in df_tela.columns if c.upper() in ['CATEGORIA', 'GRUPO']), None)
+    col_tipo_df = next((c for c in df_tela.columns if c.upper() in ['TIPO', 'TIPO_LANC']), None)
 
+    # Filtro de Categoria
+    if col_cat_df:
+        busca_cat = st.selectbox("Filtrar Categoria:", ["Todos"] + sorted(df_tela[col_cat_df].dropna().unique().tolist()))
+        if busca_cat != "Todos":
+            df_tela = df_tela[df_tela[col_cat_df].str.upper().str.strip() == busca_cat.upper()]
+
+    # Filtro de Tipo (Receita/Despesa)
+    if col_tipo_df:
+        busca_tipo = st.selectbox("Filtrar Tipo:", ["Todos", "Receita", "Despesa"])
+        if busca_tipo != "Todos":
+            df_tela = df_tela[df_tela[col_tipo_df].str.upper().str.strip() == busca_tipo.upper()]
+
+
+
+
+    
     # Faxina das colunas internas para manter o visual limpo
     colunas_para_esconder = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
     colunas_visiveis = [c for c in df_tela.columns if c not in colunas_para_esconder]
