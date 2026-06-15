@@ -404,35 +404,35 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             
             # LÓGICA ATUALIZAR
             # LÓGICA ATUALIZAR
-if col_ed1.button("💾 ATUALIZAR"):
-    v_str = f"{ed_val:.2f}".replace('.', ',')
+            if col_ed1.button("💾 ATUALIZAR"):
+                v_str = f"{ed_val:.2f}".replace('.', ',')
     
-    # 1. Identifica quais IDs devem ser alterados
-    if ed_cat == 'Transferência':
-        # Busca a contraparte (mesma data, mesmo valor, mesma categoria)
-        ids_a_alterar = [int(item['ID'])]
-        for _, row in df_base.iterrows():
-            if row['ID'] != item['ID'] and row['Categoria'] == 'Transferência' and \
-               row['Vencimento'] == item['Vencimento'] and abs(row['V_Num'] - item['V_Num']) < 0.01:
-                ids_a_alterar.append(int(row['ID']))
-    else:
-        # Lançamento normal: altera apenas o que foi selecionado
-        ids_a_alterar = [int(item['ID'])]
+                # 1. Identifica quais IDs devem ser alterados
+                if ed_cat == 'Transferência':
+                    # Busca a contraparte (mesma data, mesmo valor, mesma categoria)
+                    ids_a_alterar = [int(item['ID'])]
+                    for _, row in df_base.iterrows():
+                        if row['ID'] != item['ID'] and row['Categoria'] == 'Transferência' and \
+                           row['Vencimento'] == item['Vencimento'] and abs(row['V_Num'] - item['V_Num']) < 0.01:
+                            ids_a_alterar.append(int(row['ID']))
+                else:
+                    # Lançamento normal: altera apenas o que foi selecionado
+                    ids_a_alterar = [int(item['ID'])]
     
-    # 2. Executa a atualização na planilha
-    for id_l in ids_a_alterar:
-        ws_base.update_cell(id_l, 1, ed_dat.strftime("%d/%m/%Y"))
-        ws_base.update_cell(id_l, 2, v_str)
-        ws_base.update_cell(id_l, 3, ed_desc)
-        # Atenção aqui: Certifique-se que a coluna 5 é a Categoria conforme seu layout
-        ws_base.update_cell(id_l, 5, ed_cat) 
-        ws_base.update_cell(id_l, 6, ed_bnc)
-        ws_base.update_cell(id_l, 7, ed_sta)
+                # 2. Executa a atualização na planilha
+                for id_l in ids_a_alterar:
+                    ws_base.update_cell(id_l, 1, ed_dat.strftime("%d/%m/%Y"))
+                    ws_base.update_cell(id_l, 2, v_str)
+                    ws_base.update_cell(id_l, 3, ed_desc)
+                    # Atenção aqui: Certifique-se que a coluna 5 é a Categoria conforme seu layout
+                    ws_base.update_cell(id_l, 5, ed_cat) 
+                    ws_base.update_cell(id_l, 6, ed_bnc)
+                    ws_base.update_cell(id_l, 7, ed_sta)
     
-    # 3. Feedback visual e limpeza (o st.rerun limpa os campos)
-    st.success("Lançamento alterado com sucesso!")
-    atualizar_sessao()
-    st.rerun()
+                # 3. Feedback visual e limpeza (o st.rerun limpa os campos)
+                st.success("Lançamento alterado com sucesso!")
+                atualizar_sessao()
+                st.rerun()
             
             # LÓGICA EXCLUIR
             if col_ed2.button("🚨 EXCLUIR"):
