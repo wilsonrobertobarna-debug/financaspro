@@ -420,16 +420,20 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     ids_a_alterar = [int(item['ID'])]
     
                 # 2. Executa a atualização na planilha
+                # 2. Executa a atualização na planilha
                 for id_l in ids_a_alterar:
-                    ws_base.update_cell(id_l, 1, ed_dat.strftime("%d/%m/%Y"))
-                    ws_base.update_cell(id_l, 2, v_str)
-                    ws_base.update_cell(id_l, 3, ed_desc)
-                    # Atenção aqui: Certifique-se que a coluna 5 é a Categoria conforme seu layout
-                    ws_base.update_cell(id_l, 5, ed_cat) 
-                    ws_base.update_cell(id_l, 6, ed_bnc)
-                    ws_base.update_cell(id_l, 7, ed_sta)
+                    ws_base.update_cell(id_l, 1, ed_dat.strftime("%d/%m/%Y")) # Data Vencimento
+                    ws_base.update_cell(id_l, 2, v_str)                      # Valor
+                    ws_base.update_cell(id_l, 3, ed_desc)                    # Descrição
+                    # A coluna 4 é o TIPO. Como o usuário não altera o tipo no seu formulário atual, 
+                    # mantemos o que já estava lá (item['Tipo']) para não corromper o dado.
+                    ws_base.update_cell(id_l, 4, item['Tipo'])              # Tipo (Receita/Despesa)
+                    ws_base.update_cell(id_l, 5, ed_cat)                    # Categoria
+                    ws_base.update_cell(id_l, 6, ed_bnc)                    # Banco
+                    ws_base.update_cell(id_l, 7, ed_sta)                    # Status
+                    # Colunas 8 e 9 (Data Compra e Vazia) não foram alteradas nesta rotina
     
-                # 3. Feedback visual e limpeza (o st.rerun limpa os campos)
+                # 3. Feedback visual e limpeza
                 st.success("Lançamento alterado com sucesso!")
                 atualizar_sessao()
                 st.rerun()
