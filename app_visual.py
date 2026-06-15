@@ -424,8 +424,9 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     ws_base.update_cell(id_l, 1, ed_dat.strftime("%d/%m/%Y"))
                     ws_base.update_cell(id_l, 2, v_str)
                     ws_base.update_cell(id_l, 3, ed_desc)
+                    f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação","Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
                     # Atenção aqui: Certifique-se que a coluna 5 é a Categoria conforme seu layout
-                    ws_base.update_cell(id_l, 5, ed_cat) 
+                    #ws_base.update_cell(id_l, 5, ed_cat) 
                     ws_base.update_cell(id_l, 6, ed_bnc)
                     ws_base.update_cell(id_l, 7, ed_sta)
     
