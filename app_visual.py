@@ -422,15 +422,17 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 # 2. Executa a atualização na planilha
                 # 2. Executa a atualização na planilha
                 for id_l in ids_a_alterar:
-                    ws_base.update_cell(id_l, 1, ed_dat.strftime("%d/%m/%Y")) # Data Vencimento
-                    ws_base.update_cell(id_l, 2, v_str)                      # Valor
-                    ws_base.update_cell(id_l, 3, ed_desc)                    # Descrição
-                    # A coluna 4 é o TIPO. Como o usuário não altera o tipo no seu formulário atual, 
-                    # mantemos o que já estava lá (item['Tipo']) para não corromper o dado.
-                    ws_base.update_cell(id_l, 4, item['Tipo'])              # Tipo (Receita/Despesa)
-                    ws_base.update_cell(id_l, 5, ed_cat)                    # Categoria
-                    ws_base.update_cell(id_l, 6, ed_bnc)                    # Banco
-                    ws_base.update_cell(id_l, 7, ed_sta)                    # Status
+                    # --- LINHAS DE TESTE (DEBUG) ---
+                    st.write(f"Gravando ID {id_l}: Tipo={item['Tipo']}, Cat={ed_cat}")
+                    # --------------------------------
+        
+                    ws_base.update_cell(id_l, 1, ed_dat.strftime("%d/%m/%Y"))
+                    ws_base.update_cell(id_l, 2, v_str)
+                    ws_base.update_cell(id_l, 3, ed_desc)
+                    ws_base.update_cell(id_l, 4, item['Tipo']) # Coluna 4 = Tipo
+                    ws_base.update_cell(id_l, 5, ed_cat)       # Coluna 5 = Categoria
+                    ws_base.update_cell(id_l, 6, ed_bnc)
+                    ws_base.update_cell(id_l, 7, ed_sta)
                     # Colunas 8 e 9 (Data Compra e Vazia) não foram alteradas nesta rotina
     
                 # 3. Feedback visual e limpeza
