@@ -404,7 +404,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             
             # LÓGICA ATUALIZAR
             if col_ed1.button("💾 ATUALIZAR"):
-            v_str = f"{ed_val:.2f}".replace('.', ',')
+        v_str = f"{ed_val:.2f}".replace('.', ',')
     
             # Se for transferência, a gente busca o par. Se for lançamento normal, altera só o atual.
             if ed_cat == 'Transferência':
