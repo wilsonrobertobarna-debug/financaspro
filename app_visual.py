@@ -10,12 +10,12 @@ from fpdf import FPDF
 import urllib.parse
 
 # DEFINIÇÃO DAS CATEGORIAS (No topo do arquivo)
-lista_de_categorias = ["Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", 
-                       "Vale Alimentação", "Aplicação", "Restaurante", "Celular", 
-                       "Anuidade", "Seguro", "Internet", "Vestuário", "Saque", 
-                       "Salário", "Reembolso", "Moradia", "Saúde", "Taxas", 
-                       "Depósito", "Plano Assistencial", "Transporte", "Previdência", 
-                       "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"]
+#lista_de_categorias = ["Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", 
+                      # "Vale Alimentação", "Aplicação", "Restaurante", "Celular", 
+                      # "Anuidade", "Seguro", "Internet", "Vestuário", "Saque", 
+                      # "Salário", "Reembolso", "Moradia", "Saúde", "Taxas", 
+                      # "Depósito", "Plano Assistencial", "Transporte", "Previdência", 
+                      # "Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"]
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
