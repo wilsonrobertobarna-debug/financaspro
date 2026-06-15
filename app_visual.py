@@ -427,7 +427,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     # --------------------------------
         
                    # 2. Executa a atualização na planilha - TESTE DE CÉLULA
-                  for id_l in ids_a_alterar:
+                for id_l in ids_a_alterar:
                   # Vamos forçar uma escrita de teste nas colunas 4 e 5
                   ws_base.update_cell(id_l, 4, "TESTE_TIPO") 
                   ws_base.update_cell(id_l, 5, "TESTE_CATEGORIA")
