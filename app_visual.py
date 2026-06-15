@@ -404,31 +404,31 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             
             # LÓGICA ATUALIZAR
             if col_ed1.button("💾 ATUALIZAR"):
-        v_str = f"{ed_val:.2f}".replace('.', ',')
+                v_str = f"{ed_val:.2f}".replace('.', ',')
     
-            # Se for transferência, a gente busca o par. Se for lançamento normal, altera só o atual.
-            if ed_cat == 'Transferência':
-            ids_a_alterar = [int(item['ID'])]
-            for _, row in df_base.iterrows():
-            if row['ID'] != item['ID'] and row['Categoria'] == 'Transferência' and \
-               row['Vencimento'] == item['Vencimento'] and abs(row['V_Num'] - item['V_Num']) < 0.01:
-                ids_a_alterar.append(int(row['ID']))
-    else:
-             # Lançamento normal: altera apenas o ID selecionado
-             ids_a_alterar = [int(item['ID'])]
+                # Se for transferência, a gente busca o par. Se for lançamento normal, altera só o atual.
+                if ed_cat == 'Transferência':
+                    ids_a_alterar = [int(item['ID'])]
+                    for _, row in df_base.iterrows():
+                        if row['ID'] != item['ID'] and row['Categoria'] == 'Transferência' and \
+                           row['Vencimento'] == item['Vencimento'] and abs(row['V_Num'] - item['V_Num']) < 0.01:
+                            ids_a_alterar.append(int(row['ID']))
+                else:
+                    # Lançamento normal: altera apenas o ID selecionado
+                    ids_a_alterar = [int(item['ID'])]
     
-             # Executa a atualização para os IDs definidos
-            for id_l in ids_a_alterar:
-            ws_base.update_cell(id_l, 1, ed_dat.strftime("%d/%m/%Y"))
-            ws_base.update_cell(id_l, 2, v_str)
-            ws_base.update_cell(id_l, 3, ed_desc)
-            ws_base.update_cell(id_l, 5, ed_cat) # Categoria
-            ws_base.update_cell(id_l, 6, ed_bnc)
-            ws_base.update_cell(id_l, 7, ed_sta)
+                # Executa a atualização para os IDs definidos
+                for id_l in ids_a_alterar:
+                    ws_base.update_cell(id_l, 1, ed_dat.strftime("%d/%m/%Y"))
+                    ws_base.update_cell(id_l, 2, v_str)
+                    ws_base.update_cell(id_l, 3, ed_desc)
+                    ws_base.update_cell(id_l, 5, ed_cat) # Categoria
+                    ws_base.update_cell(id_l, 6, ed_bnc)
+                    ws_base.update_cell(id_l, 7, ed_sta)
     
-            st.success("Lançamento atualizado com sucesso!")
-            atualizar_sessao()
-    st.rerun()
+                st.success("Lançamento atualizado com sucesso!")
+                atualizar_sessao()
+                st.rerun()
             
             # LÓGICA EXCLUIR
             if col_ed2.button("🚨 EXCLUIR"):
