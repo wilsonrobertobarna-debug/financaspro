@@ -428,7 +428,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         
                    # 2. Executa a atualização na planilha - TESTE DE CÉLULA
           
-                  for id_l in ids_a_alterar:
+                for id_l in ids_a_alterar:
                       ws_base.update_cell(id_l, 1, ed_dat.strftime("%d/%m/%Y")) # Col 1: Vencimento
                       ws_base.update_cell(id_l, 2, v_str)                      # Col 2: Valor
                       ws_base.update_cell(id_l, 3, ed_desc)                    # Col 3: Descrição
