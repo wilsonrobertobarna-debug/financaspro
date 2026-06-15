@@ -427,19 +427,17 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     # --------------------------------
         
                    # 2. Executa a atualização na planilha - TESTE DE CÉLULA
-                for id_l in ids_a_alterar:
-                  # Vamos forçar uma escrita de teste nas colunas 4 e 5
-                  ws_base.update_cell(id_l, 4, "TESTE_TIPO") 
-                  ws_base.update_cell(id_l, 5, "TESTE_CATEGORIA")
-        
-                  # O resto da atualização
-                  ws_base.update_cell(id_l, 1, ed_dat.strftime("%d/%m/%Y"))
-                  ws_base.update_cell(id_l, 2, v_str)
-                  ws_base.update_cell(id_l, 3, ed_desc)
-                  ws_base.update_cell(id_l, 6, ed_bnc)
-                  ws_base.update_cell(id_l, 7, ed_sta)
-                    # Colunas 8 e 9 (Data Compra e Vazia) não foram alteradas nesta rotina
+          
+                  for id_l in ids_a_alterar:
+                      ws_base.update_cell(id_l, 1, ed_dat.strftime("%d/%m/%Y")) # Col 1: Vencimento
+                      ws_base.update_cell(id_l, 2, v_str)                      # Col 2: Valor
+                      ws_base.update_cell(id_l, 3, ed_desc)                    # Col 3: Descrição
+                      ws_base.update_cell(id_l, 4, item['Tipo'])               # Col 4: Tipo (mantém o original)
+                      ws_base.update_cell(id_l, 5, ed_cat)                     # Col 5: Categoria (o novo valor)
+                      ws_base.update_cell(id_l, 6, ed_bnc)                     # Col 6: Banco
+                      ws_base.update_cell(id_l, 7, ed_sta)                     # Col 7: Status
     
+                         
                 # 3. Feedback visual e limpeza
                 st.success("Lançamento alterado com sucesso!")
                 atualizar_sessao()
