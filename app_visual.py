@@ -425,7 +425,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     ws_base.update_cell(id_l, 2, v_str)
                     ws_base.update_cell(id_l, 3, ed_desc)
                     # Atenção aqui: Certifique-se que a coluna 5 é a Categoria conforme seu layout
-                    ws_base.update_cell(id_l, 5, ed_cat) 
+                    ws_base.update_cell(id_l, 4, ed_cat) 
                     ws_base.update_cell(id_l, 6, ed_bnc)
                     ws_base.update_cell(id_l, 7, ed_sta)
     
