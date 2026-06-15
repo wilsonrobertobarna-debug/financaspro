@@ -421,21 +421,18 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     
                 # 2. Executa a atualização na planilha
                 # 2. Executa a atualização na planilha
-                for id_l in ids_a_alterar:
-                    # --- LINHAS DE TESTE (DEBUG) ---
-                    st.write(f"Gravando ID {id_l}: Tipo={item['Tipo']}, Cat={ed_cat}")
-                    # --------------------------------
-        
-                   # 2. Executa a atualização na planilha - TESTE DE CÉLULA
-          
-                for id_l in ids_a_alterar:
-                      ws_base.update_cell(id_l, 1, ed_dat.strftime("%d/%m/%Y")) # Col 1: Vencimento
-                      ws_base.update_cell(id_l, 2, v_str)                      # Col 2: Valor
-                      ws_base.update_cell(id_l, 3, ed_desc)                    # Col 3: Descrição
-                      ws_base.update_cell(id_l, 4, item['Tipo'])               # Col 4: Tipo (mantém o original)
-                      ws_base.update_cell(id_l, 5, ed_cat)                     # Col 5: Categoria (o novo valor)
-                      ws_base.update_cell(id_l, 6, ed_bnc)                     # Col 6: Banco
-                      ws_base.update_cell(id_l, 7, ed_sta)                     # Col 7: Status
+            for id_l in ids_a_alterar:
+                # Forçamos a definição das colunas fixas:
+                # Coluna 4 sempre será 'Despesa'
+                # Coluna 5 será a Categoria que você selecionou no selectbox
+                
+                ws_base.update_cell(id_l, 1, ed_dat.strftime("%d/%m/%Y")) 
+                ws_base.update_cell(id_l, 2, v_str)                      
+                ws_base.update_cell(id_l, 3, ed_desc)                    
+                ws_base.update_cell(id_l, 4, "Despesa") # <--- FORÇADO AQUI
+                ws_base.update_cell(id_l, 5, ed_cat)    # <--- A Categoria selecionada
+                ws_base.update_cell(id_l, 6, ed_bnc)
+                ws_base.update_cell(id_l, 7, ed_sta)
     
                          
                 # 3. Feedback visual e limpeza
