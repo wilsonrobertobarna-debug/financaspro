@@ -429,8 +429,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     ws_base.update_cell(id_l, 1, ed_dat.strftime("%d/%m/%Y"))
                     ws_base.update_cell(id_l, 2, v_str)
                     ws_base.update_cell(id_l, 3, ed_desc)
-                    ws_base.update_cell(id_l, 4, item['Tipo']) # Coluna 4 = Tipo
-                    ws_base.update_cell(id_l, 5, ed_cat)       # Coluna 5 = Categoria
+                    ws_base.update_cell(id_l, 4, "Despesa") # <--- ISSO VAI FORÇAR O TIPO PARA "Despesa"
+                    ws_base.update_cell(id_l, 5, ed_cat)    # A Categoria vai receber o valor novo que você escolheu            
                     ws_base.update_cell(id_l, 6, ed_bnc)
                     ws_base.update_cell(id_l, 7, ed_sta)
                     # Colunas 8 e 9 (Data Compra e Vazia) não foram alteradas nesta rotina
