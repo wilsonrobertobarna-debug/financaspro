@@ -428,8 +428,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
                 # Zera o seletor antes de recarregar
                
-                if "selectbox_ajuste" in st.session_state:
-                del st.session_state["selectbox_ajuste"]
+            if "selectbox_ajuste" in st.session_state:
+            del st.session_state["selectbox_ajuste"]
                 atualizar_sessao()
                 st.rerun()
 
