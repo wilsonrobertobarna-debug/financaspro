@@ -1242,29 +1242,48 @@ if aba == "📊 Análises & Configurações":
     st.divider()
     
 
-    # 2. COMPARATIVO: MARÇO VS ABRIL
-    with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
-        df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
-        df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
-        
-        rec_mar = df_mar[df_mar['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        desp_mar = df_mar[df_mar['Tipo'] == 'Despesa']['V_Num'].sum()
-        sobra_mar = rec_mar - desp_mar
-        
-        rec_abr = df_abr[df_abr['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        desp_abr = df_abr[df_abr['Tipo'] == 'Despesa']['V_Num'].sum()
-        sobra_abr = rec_abr - desp_abr
-        
-        var_valor = sobra_abr - sobra_mar
-        var_pct = ((sobra_abr - sobra_mar) / abs(sobra_mar) * 100) if sobra_mar != 0 else 0.0
-        
-        c_c1, c_c2, c_c3 = st.columns(3)
-        c_c1.metric("Sobra de Março", m_fmt(sobra_mar))
-        c_c2.metric("Sobra de Abril", m_fmt(sobra_abr))
-        c_c3.metric("Variação Líquida", m_fmt(var_valor), delta=f"{var_pct:.1f}%")
+    # 2. COMPARATIVO: MÊS ATUAL VS MÊS ANTERIOR
+    # Primeiro, criamos uma lista de meses únicos presentes na base (ordenados)
+    meses_unicos = sorted(df_base[df_base['Status'] == 'Pago']['Mes_Ano'].unique())
+    
+    # Pegamos os dois últimos meses da lista
+    if len(meses_unicos) >= 2:
+        mes_ant = meses_unicos[-2]
+        mes_atual = meses_unicos[-1]
+    elif len(meses_unicos) == 1:
+        mes_ant = None
+        mes_atual = meses_unicos[0]
+    else:
+        mes_ant, mes_atual = None, None
+
+    with st.expander(f"📊 Comparativo de Sobra Mensal ({mes_ant or 'N/A'} vs. {mes_atual or 'Atual'})", expanded=True):
+        if mes_atual:
+            # Filtra os dados dinamicamente
+            df_m1 = df_base[(df_base['Mes_Ano'] == mes_ant) & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')] if mes_ant else None
+            df_m2 = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
+            
+            # Função para calcular sobra
+            def calcular_sobra(df):
+                if df is None or df.empty: return 0.0
+                rec = df[df['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+                desp = df[df['Tipo'] == 'Despesa']['V_Num'].sum()
+                return rec - desp
+
+            sobra_m1 = calcular_sobra(df_m1)
+            sobra_m2 = calcular_sobra(df_m2)
+            
+            var_valor = sobra_m2 - sobra_m1
+            var_pct = ((sobra_m2 - sobra_m1) / abs(sobra_m1) * 100) if sobra_m1 != 0 else 0.0
+            
+            c_c1, c_c2, c_c3 = st.columns(3)
+            c_c1.metric(f"Sobra de {mes_ant or '---'}", m_fmt(sobra_m1))
+            c_c2.metric(f"Sobra de {mes_atual}", m_fmt(sobra_m2))
+            c_c3.metric("Variação Líquida", m_fmt(var_valor), delta=f"{var_pct:.1f}%")
+        else:
+            st.write("Sem dados suficientes para o comparativo.")
 
     st.divider()
-
+  
     # 3. DATAFRAME: BANCOS E CARTÕES
     st.subheader("🏦 Informações de Contas e Cartões")
     if not df_bancos_info.empty:
