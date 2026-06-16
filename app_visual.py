@@ -405,7 +405,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 
                 # Zera o seletor antes de recarregar
                 if "selectbox_ajuste" in st.session_state:
-                del st.session_state["selectbox_ajuste"]
+                    del st.session_state["selectbox_ajuste"]
                 #st.session_state["selectbox_ajuste"] = ""
                 atualizar_sessao()
                 st.rerun()
