@@ -369,7 +369,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     atualizar_sessao()
                     st.rerun()
 
-                # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
+               # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
         lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
@@ -427,9 +427,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 
                 st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
                 # Zera o seletor antes de recarregar
-               
-            if "selectbox_ajuste" in st.session_state:
-                del st.session_state["selectbox_ajuste"]
+                st.session_state["selectbox_ajuste"] = ""
                 atualizar_sessao()
                 st.rerun()
 
