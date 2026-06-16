@@ -418,8 +418,9 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                         # Deleta de trás para frente para não bagunçar os índices
                         for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
                             ws_base.delete_rows(id_linha)
+                            st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
                     else:
-                        st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
+                       
                         # Exclusão normal para despesas comuns
                         ws_base.delete_rows(int(item['ID']))
 
