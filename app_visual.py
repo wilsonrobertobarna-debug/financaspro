@@ -1191,21 +1191,54 @@ if aba == "📋 Relatório PDF":
 if aba == "📊 Análises & Configurações":
     st.markdown("## 📊 Painel de Análises & Configurações")
     
+   
     # 1. GRÁFICO: EVOLUÇÃO DO SALDO ACUMULADO
     st.subheader("📈 Evolução do Saldo Acumulado")
-    df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
-    if not df_saldo_dia.empty:
-        df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
-            lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
-        )
-        df_saldo_dia = df_saldo_dia.groupby('Vencimento')['Valor_Com_Sinal'].sum().reset_index()
-        df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
+    
+    # Certifique-se de que o df_base não está vazio
+    if not df_base.empty:
+        # CONVERSÃO ESSENCIAL: Garante que DT seja data e V_Num seja número
+        df_base['DT'] = pd.to_datetime(df_base['DT'], format='%d/%m/%Y', errors='coerce')
+        df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0)
         
-        fig_acum = px.line(df_saldo_dia, x='Vencimento', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
-        fig_acum.update_layout(height=350)
-        st.plotly_chart(fig_acum, use_container_width=True, config={'staticPlot': True})
+        # Filtra apenas o que está PAGO e ordena cronologicamente
+        df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
+        
+        if not df_saldo_dia.empty:
+            # Aplica o sinal positivo para receitas e negativo para despesas
+            df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
+                lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
+            )
+            
+            # Agrupa por data real (DT)
+            df_saldo_dia = df_saldo_dia.groupby('DT')['Valor_Com_Sinal'].sum().reset_index()
+            
+            # Calcula o Saldo Acumulado (soma cumulativa)
+            df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
+            
+            # Cria o gráfico
+            import plotly.express as px
+            fig_acum = px.line(
+                df_saldo_dia, 
+                x='DT', 
+                y='Saldo_Acumulado', 
+                title="Progresso do Patrimônio Acumulado no Tempo", 
+                markers=True
+            )
+            
+            # Ajusta layout para melhor leitura
+            fig_acum.update_layout(height=350, margin=dict(l=20, r=20, t=50, b=20))
+            fig_acum.update_xaxes(title="Data", tickformat="%d/%m/%Y")
+            fig_acum.update_yaxes(title="Saldo (R$)")
+            
+            st.plotly_chart(fig_acum, use_container_width=True)
+        else:
+            st.info("Não há lançamentos marcados como 'Pago' para exibir o gráfico.")
+    else:
+        st.warning("A base de dados está vazia.")
 
     st.divider()
+    
 
     # 2. COMPARATIVO: MARÇO VS ABRIL
     with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
