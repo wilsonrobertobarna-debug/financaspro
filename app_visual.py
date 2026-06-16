@@ -369,63 +369,67 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     atualizar_sessao()
                     st.rerun()
 
-                 # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
-    with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
-        if not df_base.empty:
-            lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
-            escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
-            if escolha:
-                item = lista_edit[escolha]
-                data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
-                ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
+                # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
+with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
+    if not df_base.empty:
+        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
+        
+        # Usamos uma key para o selectbox para podermos controlá-lo
+        escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
+        
+        if escolha:
+            item = lista_edit[escolha]
+            data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
+            ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
+            
+            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+            ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
+            
+            idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
+            ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
+            
+            status_opcoes = ["Pago", "Pendente"]
+            index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
+            ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
+            
+            col_ed1, col_ed2 = st.columns(2)
+            
+            if col_ed1.button("💾 ATUALIZAR"):
+                v_str = f"{ed_val:.2f}".replace('.', ',')
+                ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
+                ws_base.update_cell(int(item['ID']), 2, v_str)
+                ws_base.update_cell(int(item['ID']), 3, ed_desc)
+                ws_base.update_cell(int(item['ID']), 6, ed_bnc)
+                ws_base.update_cell(int(item['ID']), 7, ed_sta)
+                st.toast("✅ Lançamento Atualizado!", icon="💰")
                 
-                ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
-                ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
+                # Zera o seletor antes de recarregar
+                st.session_state["selectbox_ajuste"] = ""
+                atualizar_sessao()
+                st.rerun()
                 
-                idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
-                ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
-                
-                status_opcoes = ["Pago", "Pendente"]
-                index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
-                ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
-                
-                col_ed1, col_ed2 = st.columns(2)
-                if col_ed1.button("💾 ATUALIZAR"):
-                    v_str = f"{ed_val:.2f}".replace('.', ',')
-                    ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
-                    ws_base.update_cell(int(item['ID']), 2, v_str)
-                    ws_base.update_cell(int(item['ID']), 3, ed_desc)
-                    ws_base.update_cell(int(item['ID']), 6, ed_bnc)
-                    ws_base.update_cell(int(item['ID']), 7, ed_sta)
-                    st.toast("✅ Lançamento Atualizado!", icon="💰")
-                    atualizar_sessao()
-                    st.rerun()
-                    
-                if col_ed2.button("🚨 EXCLUIR"):
-                    if item['Categoria'] == 'Transferência':
-                        # Filtra todas as linhas que correspondem à transferência
-                        # Usamos condições claras para pegar tanto a saída quanto a entrada
-                        ids_para_excluir = []
-                        for idx, row in df_base.iterrows():
-                            # Comparação limpa e organizada
-                            mesma_data = (row['Vencimento'] == item['Vencimento'])
-                            mesmo_valor = (abs(row['V_Num'] - item['V_Num']) < 0.01)
-                            mesma_desc = (row['Descrição'] == item['Descrição'])
-                            eh_transf = (row['Categoria'] == 'Transferência')
-                            
-                            if mesma_data and mesmo_valor and mesma_desc and eh_transf:
-                                ids_para_excluir.append(int(row['ID']))
+            if col_ed2.button("🚨 EXCLUIR"):
+                if item['Categoria'] == 'Transferência':
+                    ids_para_excluir = []
+                    for idx, row in df_base.iterrows():
+                        mesma_data = (row['Vencimento'] == item['Vencimento'])
+                        mesmo_valor = (abs(row['V_Num'] - item['V_Num']) < 0.01)
+                        mesma_desc = (row['Descrição'] == item['Descrição'])
+                        eh_transf = (row['Categoria'] == 'Transferência')
                         
-                        # Deleta de trás para frente para não bagunçar os índices
-                        for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
-                            ws_base.delete_rows(id_linha)
-                            st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
-                    else:
-                       
-                        # Exclusão normal para despesas comuns
-                        ws_base.delete_rows(int(item['ID']))
-
-
+                        if mesma_data and mesmo_valor and mesma_desc and eh_transf:
+                            ids_para_excluir.append(int(row['ID']))
+                    
+                    for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
+                        ws_base.delete_rows(id_linha)
+                else:
+                    ws_base.delete_rows(int(item['ID']))
+                
+                st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
+                # Zera o seletor antes de recarregar
+                st.session_state["selectbox_ajuste"] = ""
+                atualizar_sessao()
+                st.rerun()
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in aba:
