@@ -397,6 +397,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     ws_base.update_cell(int(item['ID']), 3, ed_desc)
                     ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                     ws_base.update_cell(int(item['ID']), 7, ed_sta)
+                    st.toast("✅ Lançamento Atualizado!", icon="💰")
                     atualizar_sessao()
                     st.rerun()
                     
