@@ -442,44 +442,61 @@ if "💰" in aba:
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
-    # 1. BARRINHA DE MESES
-    meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    mes_atual = st.pills("Período:", meses, selection_mode="single", default="Jun")
+    # --- DEFINIÇÃO DO MÊS (DEVE FICAR ANTES DAS ABAS) ---
+if 'mes_selecionado' not in st.session_state:
+    st.session_state.mes_selecionado = "Jun"
 
-    if not df_base.empty:
-        # 2. TRADUÇÃO DO FILTRO (Converte "Jun" para "06/26")
-        mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
-                   "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
-        filtro_mes = f"{mes_map[mes_atual]}/26"
-        
-        # Filtra os dados do mês
-        df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
-        
-        # 3. CÁLCULOS
-        receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-        gasto_total = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-        pendente = get_valor_pendente(df_base)
-        saldo_geral = (receita_total + rendimento) - gasto_total
+# Criamos uma barra lateral para o filtro ser fixo em todas as abas
+meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+mes_atual = st.sidebar.pills("Selecione o Mês:", meses, selection_mode="single", default=st.session_state.mes_selecionado)
+st.session_state.mes_selecionado = mes_atual
 
-        # 4. EXIBIÇÃO DO SALDO
-        cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
-        st.markdown(f"""
-            <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
-                <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
-                <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
-            </div>
-        """, unsafe_allow_html=True)
+# Tradução do mês
+mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
+           "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
+filtro_mes = f"{mes_map[mes_atual]}/26"
 
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
-        c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
-        c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
-        c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
+# AQUI O DATAFRAME FILTRADO PARA TODO O SISTEMA
+df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
 
-        st.divider()
+# --- AGORA A ABA FINANÇAS USA O df_m QUE JÁ ESTÁ PRONTO ---
+if "💰" in aba:
+    import plotly.graph_objects as go
+    
+    st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
+    st.subheader(f"🛡️ FinançasPro Wilson - {mes_atual}/26")
 
+    # Filtros específicos para cálculos
+    df_m_pagos = df_m[df_m['Status'] == 'Pago']
+    
+    receita_total = df_m_pagos[df_m_pagos['Tipo'] == 'Receita']['V_Num'].sum()
+    gasto_total = df_m_pagos[df_m_pagos['Tipo'] == 'Despesa']['V_Num'].sum()
+    rendimento = df_m_pagos[df_m_pagos['Tipo'] == 'Rendimento']['V_Num'].sum()
+    
+    # PENDÊNCIAS: Aqui buscamos o que não foi pago no mês selecionado
+    df_pendentes_mes = df_m[df_m['Status'] != 'Pago']
+    pendente = df_pendentes_mes['V_Num'].sum()
+    
+    saldo_geral = (receita_total + rendimento) - gasto_total
+
+    # Exibição do Saldo e Métricas
+    cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
+    st.markdown(f"""
+        <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
+            <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
+            <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
+        </div>
+    """, unsafe_allow_html=True)
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
+    c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
+    c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
+    c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
+
+    st.divider()
+    
+    # ... (restante dos gráficos com df_m_pagos)
         # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
         g1, g2 = st.columns(2)
         with g1:
