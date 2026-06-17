@@ -9,6 +9,23 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 
+# 3. O BLOCO DO FILTRO (Cole aqui, logo abaixo do df_base)
+st.sidebar.subheader("Navegação")
+meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
+if 'mes_selecionado' not in st.session_state:
+    st.session_state.mes_selecionado = "Jun"
+
+mes_selecionado = st.sidebar.pills("Escolha o Mês:", meses_lista, selection_mode="single", default=st.session_state.mes_selecionado)
+st.session_state.mes_selecionado = mes_selecionado
+
+mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
+           "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
+filtro_mes = f"{mes_map[mes_selecionado]}/26"
+
+# AQUI O DATAFRAME FILTRADO QUE TODAS AS ABAS USARÃO
+df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
+
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
