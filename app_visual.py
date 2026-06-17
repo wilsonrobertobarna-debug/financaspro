@@ -9,23 +9,6 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 
-# 3. O BLOCO DO FILTRO (Cole aqui, logo abaixo do df_base)
-st.sidebar.subheader("Navegação")
-meses_lista = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-
-if 'mes_selecionado' not in st.session_state:
-    st.session_state.mes_selecionado = "Jun"
-
-mes_selecionado = st.sidebar.pills("Escolha o Mês:", meses_lista, selection_mode="single", default=st.session_state.mes_selecionado)
-st.session_state.mes_selecionado = mes_selecionado
-
-mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
-           "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
-filtro_mes = f"{mes_map[mes_selecionado]}/26"
-
-# AQUI O DATAFRAME FILTRADO QUE TODAS AS ABAS USARÃO
-df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
-
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
@@ -454,72 +437,124 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in aba:
-    import plotly.graph_objects as go
+    import plotly.graph_objects as go # Garante que o gráfico de metas funcione
     
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
-    st.subheader(f"🛡️ FinançasPro Wilson - {mes_selecionado}/26")
+    st.subheader("🛡️ FinançasPro Wilson")
 
-    # Filtros calculados a partir do df_m (que está definido no topo do arquivo)
-    df_pagos = df_m[df_m['Status'] == 'Pago'].copy()
-    
-    receita_total = df_pagos[df_pagos['Tipo'] == 'Receita']['V_Num'].sum()
-    gasto_total = df_pagos[df_pagos['Tipo'] == 'Despesa']['V_Num'].sum()
-    rendimento = df_pagos[df_pagos['Tipo'] == 'Rendimento']['V_Num'].sum()
-    
-    # Pendências do mês (o que não foi pago)
-    df_pendentes_mes = df_m[df_m['Status'] != 'Pago']
-    pendente = df_pendentes_mes['V_Num'].sum()
-    
-    saldo_geral = (receita_total + rendimento) - gasto_total
+    # 1. BARRINHA DE MESES
+    meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    mes_atual = st.pills("Período:", meses, selection_mode="single", default="Jun")
 
-    # Exibição do Saldo
-    cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
-    st.markdown(f"""
-        <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
-            <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
-            <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
-        </div>
-    """, unsafe_allow_html=True)
+    if not df_base.empty:
+        # 2. TRADUÇÃO DO FILTRO (Converte "Jun" para "06/26")
+        mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
+                   "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
+        filtro_mes = f"{mes_map[mes_atual]}/26"
+        
+        # Filtra os dados do mês
+        df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+        
+        # 3. CÁLCULOS
+        receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+        gasto_total = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        pendente = get_valor_pendente(df_base)
+        saldo_geral = (receita_total + rendimento) - gasto_total
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
-    c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
-    c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
-    c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
+        # 4. EXIBIÇÃO DO SALDO
+        cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
+        st.markdown(f"""
+            <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
+                <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
+                <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
+            </div>
+        """, unsafe_allow_html=True)
 
-    st.divider()
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
+        c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
+        c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
+        c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
 
-    # 5. GRÁFICOS DE APOIO
-    g1, g2 = st.columns(2)
-    with g1:
-        st.write("### 🍕 Gastos por Categoria")
-        df_p = df_pagos[df_pagos['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-        if not df_p.empty:
-            st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', hole=0.4), use_container_width=True)
-    with g2:
-        st.write("### 📊 Fluxo Mensal")
-        df_f = df_pagos.groupby(['Tipo'])['V_Num'].sum().reset_index()
-        if not df_f.empty:
-            st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo'), use_container_width=True)
+        st.divider()
 
-    # 6. GRÁFICO DE METAS
-    st.subheader("🎯 Metas vs Realizado (Despesas)")
-    df_metas_graph = df_pagos[df_pagos['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-    
-    if not df_metas_graph.empty:
-        df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
-        fig_m = go.Figure()
-        fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
-        fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
-        fig_m.update_layout(barmode='group', height=350, margin=dict(t=20, b=20, l=0, r=0))
-        st.plotly_chart(fig_m, use_container_width=True)
+        # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
+        g1, g2 = st.columns(2)
+        with g1:
+            st.write("### 🍕 Gastos por Categoria")
+            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            if not df_p.empty:
+                st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', hole=0.4), use_container_width=True)
+        with g2:
+            st.write("### 📊 Fluxo Mensal")
+            df_f = df_m_limpo.groupby(['Tipo'])['V_Num'].sum().reset_index()
+            if not df_f.empty:
+                st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo'), use_container_width=True)
 
-    # 7. WILSONBOT
-    st.subheader("🤖 Consultor WilsonBot")
-    if not df_pagos.empty:
-        df_vilao = df_pagos[(df_pagos['Tipo'] == 'Despesa') & (~df_pagos['Categoria'].isin(['Transferência', 'Ajuste']))].groupby('Categoria')['V_Num'].sum()
+        # 6. NOVO: GRÁFICO DE METAS (O que estava faltando!)
+        st.subheader("🎯 Metas vs Realizado (Despesas)")
+        df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        
+        if not df_metas_graph.empty:
+            # Busca as metas no session_state (se não houver, assume 0)
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
+            
+            fig_m = go.Figure()
+            # Barra do Gasto Real (Vermelha)
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
+            # Barra da Meta (Verde Transparente)
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
+            
+            fig_m.update_layout(barmode='group', height=350, margin=dict(t=20, b=20, l=0, r=0))
+            st.plotly_chart(fig_m, use_container_width=True)
+        else:
+            st.info("Nenhuma despesa para comparar com as metas.")
+            # --- AQUI COMEÇA O WILSONBOT ---
+        st.subheader("🤖 Consultor WilsonBot")
+        
+        # Analisa o mês atual
+        df_atual = df_m # Usamos o seu df filtrado que já está pronto
+        filtro_exclusao = (df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(['Transferência']))
+        total_gasto = df_atual[filtro_exclusao]['V_Num'].sum()
+        
+        # Analisa a média dos últimos 3 meses
+        # Nota: Ajustei para filtrar só Despesas na média também, para ficar mais preciso
+        df_despesas_totais = df_base[df_base['Tipo'] == 'Despesa']
+        meses_passados = df_despesas_totais.groupby('Mes_Ano')['V_Num'].sum().tail(3).mean()
+
+        if total_gasto > meses_passados:
+            st.warning(f"⚠️ **Atenção, Wilson!** Seus gastos este mês estão R$ {(total_gasto - meses_passados):,.2f} acima da sua média dos últimos 3 meses.")
+        else:
+            st.success("✅ **Parabéns!** Seus gastos estão controlados e abaixo da sua média recente.")
+
+        
+        # Identifica o maior vilão (Excluindo Transferências e Ajustes)
+        # Filtramos 'Despesa' E que a categoria NÃO ESTEJA na lista de exclusão
+        categorias_para_ignorar = ['Transferência', 'Ajuste']
+        
+        df_filtrado = df_atual[(df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(categorias_para_ignorar))]
+        
+        df_vilao = df_filtrado.groupby('Categoria')['V_Num'].sum()
+        
         if not df_vilao.empty:
-            st.info(f"💡 Dica de Ouro: Seu maior gasto este mês é '{df_vilao.idxmax()}', com R$ {df_vilao.max():,.2f}.")
+            maior_gasto = df_vilao.idxmax()
+            valor_maior = df_vilao.max()
+            st.info(f"💡 **Dica de Ouro:** Sua categoria de maior gasto este mês é '{maior_gasto}', totalizando R$ {valor_maior:,.2f}. Considere revisar esses custos para o próximo mês!")
+        else:
+            st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
+
+            
+
+            
+
+        # 7. TABELA FINAL
+        st.subheader("🔍 Lançamentos do Mês")
+        st.dataframe(df_m[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+
+    else:
+        st.warning("Base de dados vazia.")
 # --- FIM DA ABA ---# --- FIM DA ABA ---
 
 elif "Pendências" in aba:
