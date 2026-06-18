@@ -77,7 +77,8 @@ def atualizar_meta_sheets(nome):
         st.error(f"Erro ao salvar no Sheets: {e}")
 
 # --- TELA DE LOGIN ---
-if 'login' not in st.session_state: st.session_state.login = False
+if 'login' not in st.session_state:
+    st.session_state.login = False
 if not st.session_state.login:
     col1, col_centro, col2 = st.columns([1, 2, 1])
     with col_centro:
