@@ -2,73 +2,56 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-import plotly.express as px
-import plotly.graph_objects as go
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta # Importação garantida aqui
 
-agora_br = datetime.now() - timedelta(hours=3)
-hoje_br = agora_br.date()
-
-
-# --- CONFIGURAÇÃO INICIAL (APENAS UMA VEZ) ---
+# --- CONFIGURAÇÃO E CONEXÃO ÚNICA ---
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
-# --- FUNÇÕES DE CONEXÃO E DADOS ---
 @st.cache_resource
 def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
-    if not creds_dict:
-        st.error("⚠️ Wilson, verifique os Secrets no Streamlit Cloud!"); st.stop()
-    try:
-        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
-        final_creds = {
-            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
-            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
-            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs"
-        }
-        creds = Credentials.from_service_account_info(final_creds, scopes=[
-            "https://www.googleapis.com/auth/spreadsheets", 
-            "https://www.googleapis.com/auth/drive"
-        ])
-        return gspread.authorize(creds)
-    except Exception as e:
-        st.error(f"Erro na conexão: {e}"); st.stop()
+    if not creds_dict: st.error("Secrets não configurados!"); st.stop()
+    pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
+    final_creds = {
+        "type": creds_dict["type"], "project_id": creds_dict["project_id"],
+        "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
+        "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"]
+    }
+    creds = Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets"])
+    return gspread.authorize(creds)
 
-# --- INICIALIZAÇÃO DO CLIENTE ---
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-ws_base = sh.get_worksheet(0)
-try:
-    ws_bancos = sh.worksheet("Bancos")
-except:
-    ws_bancos = None
 
-# --- FUNÇÕES ---
+# --- FUNÇÕES DE APOIO ---
 def carregar_dados_gs():
-    dados = ws_base.get_all_values()
-    if len(dados) <= 1: return pd.DataFrame()
-    headers = [h.strip() for h in dados[0]]
-    df = pd.DataFrame(dados[1:], columns=headers)
-    if 'DTMes_Ano' in df.columns:
-        df = df.rename(columns={'DTMes_Ano': 'Mes_Ano'})
-    df['ID'] = range(2, len(df) + 2)
-    def p_float(v):
-        try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
-        except: return 0.0
-    df['V_Num'] = df['Valor'].apply(p_float)
-    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')
-    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
-    return df
+    try:
+        ws = sh.get_worksheet(0)
+        dados = ws.get_all_values()
+        if len(dados) <= 1: return pd.DataFrame()
+        df = pd.DataFrame(dados[1:], columns=[h.strip() for h in dados[0]])
+        # Correção forçada de nome de coluna
+        if 'DTMes_Ano' in df.columns: df = df.rename(columns={'DTMes_Ano': 'Mes_Ano'})
+        df['V_Num'] = pd.to_numeric(df['Valor'].str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False), errors='coerce').fillna(0)
+        df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')
+        return df
+    except Exception as e:
+        st.error(f"Erro ao carregar dados: {e}"); return pd.DataFrame()
 
-def carregar_bancos_manual_gs():
-    if ws_bancos:
-        dados = ws_bancos.get_all_values()
-        if len(dados) > 1:
-            return pd.DataFrame(dados[1:], columns=[h.strip() for h in dados[0]])
-    return pd.DataFrame()
+def get_valor_pendente(df):
+    if df.empty or 'Status' not in df.columns: return 0.0
+    now = datetime.now()
+    end_of_month = datetime(now.year, now.month, 1) + relativedelta(months=1, days=-1)
+    pendente = df[(df['Status'] == 'Pendente') & (df['DT'] <= end_of_month)]
+    return pendente['V_Num'].sum()
 
+# --- EXECUÇÃO ---
+df_base = carregar_dados_gs()
+pendente = get_valor_pendente(df_base)
+
+st.title("FinançasPro Wilson")
+st.metric("Valor Pendente", f"R$ {pendente:,.2f}")
 def atualizar_meta_sheets(nome):
     novo_valor = st.session_state[f"m_{nome}"]
     try:
