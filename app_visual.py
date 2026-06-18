@@ -451,6 +451,8 @@ if "💰" in aba:
         mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
                    "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
         filtro_mes = f"{mes_map[mes_atual]}/26"
+
+        st.write(df_base.columns)
         
         # A LINHA CIRÚRGICA QUE VAMOS USAR:
         df_filtrado = df_base[df_base['Mes'] == filtro_mes]
