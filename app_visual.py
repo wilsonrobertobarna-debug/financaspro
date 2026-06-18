@@ -288,6 +288,24 @@ def get_valor_pendente(df):
     df_p = df[(df['Status'] == 'Pendente') & (df['DT'].dt.date <= end_of_month.date())]
     return df_p['V_Num'].sum()
 
+# --- AJUSTE DE LIMPEZA E FILTRO ---
+# 1. Limpa os nomes das colunas (remove espaços invisíveis)
+df_base.columns = df_base.columns.str.strip()
+
+# 2. Definição do Filtro de Mês
+meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+mes_atual = st.sidebar.pills("Período:", meses, selection_mode="single", default="Jun")
+
+mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
+           "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
+filtro_mes = f"{mes_map[mes_atual]}/26"
+
+# 3. CRIAÇÃO DO DATAFRAME FILTRADO (O coração da sua nova função)
+if not df_base.empty:
+    df_filtrado = df_base[df_base['DTMes_Ano'] == filtro_mes]
+else:
+    df_filtrado = pd.DataFrame()
+
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 
