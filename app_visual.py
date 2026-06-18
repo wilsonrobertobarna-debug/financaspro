@@ -5,12 +5,43 @@ from google.oauth2.service_account import Credentials
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
-from fpdf import FPDF
-import urllib.parse
 
-# FUNÇÕES DE CARREGAMENTO DIRETO
-# --- 1. FUNÇÕES PRIMEIRO ---
+# --- CONFIGURAÇÃO INICIAL (APENAS UMA VEZ) ---
+st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
+
+# --- FUNÇÕES DE CONEXÃO E DADOS ---
+@st.cache_resource
+def conectar():
+    creds_dict = st.secrets.get("connections", {}).get("gsheets")
+    if not creds_dict:
+        st.error("⚠️ Wilson, verifique os Secrets no Streamlit Cloud!"); st.stop()
+    try:
+        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
+        final_creds = {
+            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
+            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
+            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs"
+        }
+        creds = Credentials.from_service_account_info(final_creds, scopes=[
+            "https://www.googleapis.com/auth/spreadsheets", 
+            "https://www.googleapis.com/auth/drive"
+        ])
+        return gspread.authorize(creds)
+    except Exception as e:
+        st.error(f"Erro na conexão: {e}"); st.stop()
+
+# --- INICIALIZAÇÃO DO CLIENTE ---
+client = conectar()
+sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+ws_base = sh.get_worksheet(0)
+try:
+    ws_bancos = sh.worksheet("Bancos")
+except:
+    ws_bancos = None
+
+# --- FUNÇÕES ---
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
@@ -28,134 +59,51 @@ def carregar_dados_gs():
     return df
 
 def carregar_bancos_manual_gs():
-    global ws_bancos
-    if 'ws_bancos' in globals() and ws_bancos:
+    if ws_bancos:
         dados = ws_bancos.get_all_values()
         if len(dados) > 1:
             return pd.DataFrame(dados[1:], columns=[h.strip() for h in dados[0]])
     return pd.DataFrame()
 
-# --- 2. CONFIGURAÇÃO E CONEXÃO ---
-st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
-
-@st.cache_resource
-def conectar():
-    # ... (seu código de conexão que você já tem)
-    return gspread.authorize(...)
-
-client = conectar()
-sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-ws_base = sh.get_worksheet(0)
-try:
-    ws_bancos = sh.worksheet("Bancos")
-except:
-    ws_bancos = None
-
-# --- TELA DE PROTEÇÃO (LOGIN) ---
-if 'login' not in st.session_state:
-    st.session_state.login = False
-
-if not st.session_state.login:
-    # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
-    col1, col_centro, col2 = st.columns([1, 2, 1])
-    
-    with col_centro:
-        st.markdown("<br><br><br>", unsafe_allow_html=True) # Espaçamento superior
-        st.markdown("### 🔒 Acesso Seguro")
-        senha = st.text_input("Digite sua senha:", type="password")
-        
-        if st.button("🔓 Desbloquear Sistema"):
-            if senha == "Wilson123": # Troque aqui pela sua senha real
-                st.session_state.login = True
-                st.rerun()
-            else:
-                st.error("Senha incorreta, Wilson!")
-        
-        st.markdown("<br><br>", unsafe_allow_html=True)
-    
-    st.stop() # Bloqueia o carregamento do restante do código abaixo
-   
-
-# Definições iniciais de data
-agora_br = datetime.now() - timedelta(hours=3)
-hoje_br = agora_br.date()
-
-# FUNÇÃO AJUSTADA: Nome correto e acesso global ao 'sh'
 def atualizar_meta_sheets(nome):
-    global sh 
     novo_valor = st.session_state[f"m_{nome}"]
-    
     try:
         ws_meta = sh.worksheet("Meta")
         celula = ws_meta.find(nome)
-        
         if celula:
-            # 1. A "Paulada": Apaga a memória antiga usando o parâmetro 'nome' correto
-            if f"m_{nome}" in st.session_state:
-                del st.session_state[f"m_{nome}"]
-            
-            # 2. Atualiza na planilha
             ws_meta.update_cell(celula.row, 2, novo_valor)
-            
-            # 3. Força a atualização do DataFrame de controle (para o gráfico ler o valor novo)
-            if 'df_metas_config' in st.session_state:
-                st.session_state['df_metas_config'].loc[st.session_state['df_metas_config']['Nome da Meta'] == nome, 'Valor Alvo'] = novo_valor
-            
-            # 4. Recarrega (O toast vai rodar logo após o rerun se você tirar o rerun daqui, 
-            # ou você pode usar o toast antes do rerun)
-            st.rerun() 
-            
+            st.rerun()
     except Exception as e:
         st.error(f"Erro ao salvar no Sheets: {e}")
 
-# 1. CONFIGURAÇÃO INICIAL
-st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
-st.caption("Versão 2.0.3")
+# --- TELA DE LOGIN ---
+if 'login' not in st.session_state: st.session_state.login = False
+if not st.session_state.login:
+    col1, col_centro, col2 = st.columns([1, 2, 1])
+    with col_centro:
+        st.markdown("### 🔒 Acesso Seguro")
+        senha = st.text_input("Digite sua senha:", type="password")
+        if st.button("🔓 Desbloquear Sistema"):
+            if senha == "Wilson123":
+                st.session_state.login = True
+                st.rerun()
+            else: st.error("Senha incorreta!")
+    st.stop()
 
-# 2. CONEXÃO (LIGA O MOTOR)
-@st.cache_resource
-def conectar():
-    creds_dict = st.secrets.get("connections", {}).get("gsheets")
-    if not creds_dict:
-        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
-    try:
-        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
-        final_creds = {
-            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
-            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
-            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
-        }
-        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
-    except Exception as e:
-        st.error(f"Erro na conexão: {e}"); st.stop()
-
-client = conectar()
-sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-
-# 3. BLOCO DE CARREGAMENTO (Sincroniza Sheets com Session State)
+# --- CARREGAMENTO DE METAS NO SESSION STATE ---
 if 'metas_iniciadas' not in st.session_state:
-    # Esta linha abaixo está recuada (indentada) para dentro do IF
     try:
         df_metas = pd.DataFrame(sh.worksheet("Meta").get_all_records())
-        for index, row in df_metas.iterrows():
-            nome = row['Nome da Meta']
-            valor_raw = row['Valor Alvo']
-            try:
-                valor = float(valor_raw) if str(valor_raw).strip() != '' else 0.0
-            except:
-                valor = 0.0
-            st.session_state[f"m_{nome}"] = valor
+        for _, row in df_metas.iterrows():
+            st.session_state[f"m_{row['Nome da Meta']}"] = float(row['Valor Alvo'])
         st.session_state['metas_iniciadas'] = True
-    except Exception as e:
-        st.error(f"Erro na planilha: {e}")
-# 4. ESTILIZAÇÃO
-st.markdown("""
-    <style>
-    [data-testid='stMetricLabel'], [data-testid='stMetricValue'] {
-        font-size: 1.1rem !important; font-weight: bold !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
+    except Exception as e: st.error(f"Erro ao carregar metas: {e}")
+
+# --- ESTILIZAÇÃO ---
+st.markdown("""<style>[data-testid='stMetricLabel'], [data-testid='stMetricValue'] { font-size: 1.1rem !important; }</style>""", unsafe_allow_html=True)
+
+st.title("FinançasPro Wilson")
+st.caption("Versão 2.0.3")
 # 2. CONEXÃO
 @st.cache_resource
 def conectar():
