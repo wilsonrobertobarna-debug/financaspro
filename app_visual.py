@@ -166,17 +166,26 @@ def carregar_dados_gs():
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
-    # --- AJUSTE DE SEGURANÇA NA LINHA 170 ---
-    # Verifica se a função existe antes de chamar
-    if 'carregar_bancos_manual_gs' in globals():
-        df_bancos = carregar_bancos_manual_gs()
-    else:
-        st.warning("Aguardando carregamento dos dados...")
-        df_bancos = pd.DataFrame() # Cria um dataframe vazio para o código não travar
-    # 1. Ajuste de Datas
+    # Carrega os dados
+    df = carregar_dados_gs()
+    df_bancos = carregar_bancos_manual_gs()
+    
+    # Verifica se os dados vieram corretamente
+    if not df.empty and 'DT' in df.columns:
+        # 1. Ajuste de Datas com segurança
         df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
         hoje = pd.Timestamp.today().normalize()
-    
+        
+        # 2. Garantir que V_Num seja numérico
+        df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
+        
+        if not df_bancos.empty:
+            # ... (o resto do seu código de exibir os bancos continua aqui) ...
+            st.write("Dados carregados com sucesso!") # Apenas para confirmar
+        else:
+            st.warning("Planilha de Bancos está vazia.")
+    else:
+        st.error("Erro ao carregar dados: Verifique se a planilha possui colunas e dados válidos.")
     # 2. Garantir que V_Num seja numérico
     df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
     
