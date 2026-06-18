@@ -166,6 +166,7 @@ except:
 
 
 
+
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
     # Carrega os dados
@@ -173,19 +174,40 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
     df_bancos = carregar_bancos_manual_gs()
     
     # Verifica se os dados vieram corretamente
-    if not df.empty and 'DT' in df.columns:
-        # 1. Ajuste de Datas com segurança
+    if not df.empty and 'DT' in df.columns and not df_bancos.empty:
+        # 1. Ajustes necessários
         df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
+        df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
         hoje = pd.Timestamp.today().normalize()
         
-        # 2. Garantir que V_Num seja numérico
-        df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
+        # 2. Definição da função de formatação
+        def formatar_moeda(valor):
+            try:
+                return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            except:
+                return "R$ 0,00"
         
-        if not df_bancos.empty:
-            # ... (o resto do seu código de exibir os bancos continua aqui) ...
-            st.write("Dados carregados com sucesso!") # Apenas para confirmar
-        else:
-            st.warning("Planilha de Bancos está vazia.")
+        # 3. Lógica dos Bancos
+        qtd_colunas = 4
+        for i in range(0, len(df_bancos), qtd_colunas):
+            cols = st.columns(qtd_colunas)
+            linha = df_bancos.iloc[i:i + qtd_colunas]
+            
+            for j, (index, row) in enumerate(linha.iterrows()):
+                with cols[j]:
+                    nome_banco = row['Nome do Banco']
+                    saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
+                    
+                    filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
+                    df_banco_atual = df[filtro]
+                    
+                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+                    
+                    saldo_atual = saldo_inicial + entradas - saidas
+                    st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
+    else:
+        st.warning("Dados não carregados ou planilhas vazias. Verifique a conexão com o Sheets.")
     else:
         st.error("Erro ao carregar dados: Verifique se a planilha possui colunas e dados válidos.")
     # 2. Garantir que V_Num seja numérico
