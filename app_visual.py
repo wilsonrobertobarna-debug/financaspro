@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
 agora_br = datetime.now() - timedelta(hours=3)
-    hoje_br = agora_br.date()
+hoje_br = agora_br.date()
 
 
 # --- CONFIGURAÇÃO INICIAL (APENAS UMA VEZ) ---
