@@ -466,7 +466,10 @@ if "💰" in aba:
         filtro_mes = f"{mes_map[mes_atual]}/26"
               
        # Substituindo a linha 469 pelo nome correto da coluna:
-        df_filtrado = df_base[df_base['DTMes_Ano'] == filtro_mes]
+        #df_filtrado = df_base[df_base['DTMes_Ano'] == filtro_mes]
+        # Correção cirúrgica:
+        df_base = df_base.rename(columns={'DTMes_Ano': 'Mes_Ano'})
+        df_filtrado = df_base[df_base['Mes_Ano'] == filtro_mes]
         
         # Filtra os dados do mês
         df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
