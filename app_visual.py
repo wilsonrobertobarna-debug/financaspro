@@ -146,7 +146,15 @@ except:
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
-    df = pd.DataFrame(dados[1:], columns=dados[0])
+    
+    # Limpa cabeçalhos de espaços em branco e garante o nome correto
+    headers = [h.strip() for h in dados[0]]
+    df = pd.DataFrame(dados[1:], columns=headers)
+    
+    # Se o nome antigo existir, renomeia para o novo imediatamente
+    if 'DTMes_Ano' in df.columns:
+        df = df.rename(columns={'DTMes_Ano': 'Mes_Ano'})
+        
     df['ID'] = range(2, len(df) + 2)
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
@@ -155,13 +163,6 @@ def carregar_dados_gs():
     df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
     return df
-
-def carregar_bancos_manual_gs():
-    if ws_bancos:
-        dados = ws_bancos.get_all_values()
-        if len(dados) > 1:
-            return pd.DataFrame(dados[1:], columns=dados[0])
-    return pd.DataFrame()
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
