@@ -324,6 +324,9 @@ st.sidebar.divider()
 if "expander_lancamento_aberto" not in st.session_state:
     st.session_state.expander_lancamento_aberto = False
 
+    agora_br = datetime.now() - timedelta(hours=3)
+    hoje_br = agora_br.date()
+
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
     with st.form("f_novo", clear_on_submit=True):
         # Usando a variável hoje_br que já corrige o fuso horário
