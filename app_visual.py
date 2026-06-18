@@ -327,6 +327,12 @@ if "expander_lancamento_aberto" not in st.session_state:
     agora_br = datetime.now() - timedelta(hours=3)
     hoje_br = agora_br.date()
 
+    f_compra = st.date_input(
+    "🛍️ Data da Compra", 
+    value=hoje_br if 'hoje_br' in locals() else datetime.now().date(), 
+    format="DD/MM/YYYY"
+)
+
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
     with st.form("f_novo", clear_on_submit=True):
         # Usando a variável hoje_br que já corrige o fuso horário
