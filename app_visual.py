@@ -6,6 +6,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
+agora_br = datetime.now() - timedelta(hours=3)
+    hoje_br = agora_br.date()
+
+
 # --- CONFIGURAÇÃO INICIAL (APENAS UMA VEZ) ---
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
 
@@ -324,9 +328,7 @@ st.sidebar.divider()
 if "expander_lancamento_aberto" not in st.session_state:
     st.session_state.expander_lancamento_aberto = False
 
-    agora_br = datetime.now() - timedelta(hours=3)
-    hoje_br = agora_br.date()
-
+    
     f_compra = st.date_input(
     "🛍️ Data da Compra", 
     value=hoje_br if 'hoje_br' in locals() else datetime.now().date(), 
