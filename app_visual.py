@@ -174,8 +174,8 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
         st.warning("Aguardando carregamento dos dados...")
         df_bancos = pd.DataFrame() # Cria um dataframe vazio para o código não travar
     # 1. Ajuste de Datas
-    df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
-    hoje = pd.Timestamp.today().normalize()
+        df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
+        hoje = pd.Timestamp.today().normalize()
     
     # 2. Garantir que V_Num seja numérico
     df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
