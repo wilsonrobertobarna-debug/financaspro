@@ -294,10 +294,20 @@ def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace(
 
 # FUNÇÃO PARA OBTER O VALOR PENDENTE ATUAL
 def get_valor_pendente(df):
+    # Correção: Garante que estamos usando 'Mes_Ano'
+    if 'DTMes_Ano' in df.columns:
+        df = df.rename(columns={'DTMes_Ano': 'Mes_Ano'})
+    
+    # Define o período atual com segurança
     now = datetime.now()
+    # Usa o relativedelta importado
     end_of_month = datetime(now.year, now.month, 1) + relativedelta(months=1, days=-1)
-    df_p = df[(df['Status'] == 'Pendente') & (df['DT'].dt.date <= end_of_month.date())]
-    return df_p['V_Num'].sum()
+    
+    # Filtra apenas o que está pendente
+    if 'Status' in df.columns and 'V_Num' in df.columns:
+        pendente = df[(df['Status'] == 'Pendente') & (df['DT'] <= end_of_month)]
+        return pendente['V_Num'].sum()
+    return 0.0
 
 # --- BLOCO DE SEGURANÇA PARA FILTRAR O MÊS ---
 if not df_base.empty:
