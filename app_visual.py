@@ -206,8 +206,8 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     
                     saldo_atual = saldo_inicial + entradas - saidas
                     st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
-    else:
-        st.warning("Dados não carregados ou planilhas vazias. Verifique a conexão com o Sheets.")
+        else:
+            st.warning("Dados não carregados ou planilhas vazias. Verifique a conexão com o Sheets.")
     else:
         st.error("Erro ao carregar dados: Verifique se a planilha possui colunas e dados válidos.")
     # 2. Garantir que V_Num seja numérico
