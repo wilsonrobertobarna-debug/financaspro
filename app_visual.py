@@ -9,6 +9,28 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 
+# FUNÇÕES DE CARREGAMENTO DIRETO
+def carregar_dados_gs():
+    dados = ws_base.get_all_values()
+    if len(dados) <= 1: return pd.DataFrame()
+    
+    # Limpa cabeçalhos de espaços em branco e garante o nome correto
+    headers = [h.strip() for h in dados[0]]
+    df = pd.DataFrame(dados[1:], columns=headers)
+    
+    # Se o nome antigo existir, renomeia para o novo imediatamente
+    if 'DTMes_Ano' in df.columns:
+        df = df.rename(columns={'DTMes_Ano': 'Mes_Ano'})
+        
+    df['ID'] = range(2, len(df) + 2)
+    def p_float(v):
+        try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
+        except: return 0.0
+    df['V_Num'] = df['Valor'].apply(p_float)
+    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
+    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+    return df
+
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
@@ -142,27 +164,7 @@ try:
 except:
     ws_bancos = None
 
-# FUNÇÕES DE CARREGAMENTO DIRETO
-def carregar_dados_gs():
-    dados = ws_base.get_all_values()
-    if len(dados) <= 1: return pd.DataFrame()
-    
-    # Limpa cabeçalhos de espaços em branco e garante o nome correto
-    headers = [h.strip() for h in dados[0]]
-    df = pd.DataFrame(dados[1:], columns=headers)
-    
-    # Se o nome antigo existir, renomeia para o novo imediatamente
-    if 'DTMes_Ano' in df.columns:
-        df = df.rename(columns={'DTMes_Ano': 'Mes_Ano'})
-        
-    df['ID'] = range(2, len(df) + 2)
-    def p_float(v):
-        try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
-        except: return 0.0
-    df['V_Num'] = df['Valor'].apply(p_float)
-    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
-    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
-    return df
+
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
