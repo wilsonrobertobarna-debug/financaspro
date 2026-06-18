@@ -465,11 +465,13 @@ if "💰" in aba:
                    "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
         filtro_mes = f"{mes_map[mes_atual]}/26"
               
-       # Substituindo a linha 469 pelo nome correto da coluna:
-        #df_filtrado = df_base[df_base['DTMes_Ano'] == filtro_mes]
-        # Correção cirúrgica:
-        df_base = df_base.rename(columns={'DTMes_Ano': 'Mes_Ano'})
-        df_filtrado = df_base[df_base['Mes_Ano'] == filtro_mes]
+       # Força o uso da coluna correta 'Mes_Ano'
+        # Se ela não existir, ele vai procurar a última coluna (que é onde ela estava na sua lista)
+        if 'Mes_Ano' in df_base.columns:
+            df_filtrado = df_base[df_base['Mes_Ano'] == filtro_mes]
+        else:
+            # Caso de emergência: pega a última coluna da planilha
+            df_filtrado = df_base[df_base.iloc[:, -1] == filtro_mes]
         
         # Filtra os dados do mês
         df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
