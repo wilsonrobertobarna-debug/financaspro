@@ -10,26 +10,46 @@ from fpdf import FPDF
 import urllib.parse
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
+# --- 1. FUNÇÕES PRIMEIRO ---
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
-    
-    # Limpa cabeçalhos de espaços em branco e garante o nome correto
     headers = [h.strip() for h in dados[0]]
     df = pd.DataFrame(dados[1:], columns=headers)
-    
-    # Se o nome antigo existir, renomeia para o novo imediatamente
     if 'DTMes_Ano' in df.columns:
         df = df.rename(columns={'DTMes_Ano': 'Mes_Ano'})
-        
     df['ID'] = range(2, len(df) + 2)
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
         except: return 0.0
     df['V_Num'] = df['Valor'].apply(p_float)
-    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
+    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
     return df
+
+def carregar_bancos_manual_gs():
+    global ws_bancos
+    if 'ws_bancos' in globals() and ws_bancos:
+        dados = ws_bancos.get_all_values()
+        if len(dados) > 1:
+            return pd.DataFrame(dados[1:], columns=[h.strip() for h in dados[0]])
+    return pd.DataFrame()
+
+# --- 2. CONFIGURAÇÃO E CONEXÃO ---
+st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
+
+@st.cache_resource
+def conectar():
+    # ... (seu código de conexão que você já tem)
+    return gspread.authorize(...)
+
+client = conectar()
+sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+ws_base = sh.get_worksheet(0)
+try:
+    ws_bancos = sh.worksheet("Bancos")
+except:
+    ws_bancos = None
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
