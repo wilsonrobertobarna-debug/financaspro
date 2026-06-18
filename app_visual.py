@@ -144,20 +144,13 @@ except:
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
-    df_bancos = carregar_bancos_manual_gs()
- except Exception as e:
-    # Aqui o código "segura" o erro antes que a tela fique rosa
-    st.warning("⚠️ O Google Sheets está demorando a responder ou a conexão falhou.")
-    st.info("Dica: Aguarde alguns segundos e dê um Reboot no app.")
-    st.stop() # Isso para a execução do resto do código para evitar erros de 'df' não definido
-    st.success("Dados carregados com sucesso!") # Opcional, para você saber que deu certo
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
     df = pd.DataFrame(dados[1:], columns=dados[0])
     df['ID'] = range(2, len(df) + 2)
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
-except: return 0.0
+        except: return 0.0
     df['V_Num'] = df['Valor'].apply(p_float)
     df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
