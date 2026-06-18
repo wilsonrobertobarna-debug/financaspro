@@ -166,9 +166,13 @@ def carregar_dados_gs():
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
-    df = carregar_dados_gs()
+    # --- AJUSTE DE SEGURANÇA NA LINHA 170 ---
+# Verifica se a função existe antes de chamar
+if 'carregar_bancos_manual_gs' in globals():
     df_bancos = carregar_bancos_manual_gs()
-    
+else:
+    st.warning("Aguardando carregamento dos dados...")
+    df_bancos = pd.DataFrame() # Cria um dataframe vazio para o código não travar
     # 1. Ajuste de Datas
     df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
     hoje = pd.Timestamp.today().normalize()
