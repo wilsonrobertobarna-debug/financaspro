@@ -2,96 +2,118 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+import plotly.express as px
+import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta # Importação garantida aqui
+from dateutil.relativedelta import relativedelta
+from fpdf import FPDF
+import urllib.parse
 
-# --- CONFIGURAÇÃO E CONEXÃO ÚNICA ---
+# --- TELA DE PROTEÇÃO (LOGIN) ---
+if 'login' not in st.session_state:
+    st.session_state.login = False
+
+if not st.session_state.login:
+    # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
+    col1, col_centro, col2 = st.columns([1, 2, 1])
+    
+    with col_centro:
+        st.markdown("<br><br><br>", unsafe_allow_html=True) # Espaçamento superior
+        st.markdown("### 🔒 Acesso Seguro")
+        senha = st.text_input("Digite sua senha:", type="password")
+        
+        if st.button("🔓 Desbloquear Sistema"):
+            if senha == "Wilson123": # Troque aqui pela sua senha real
+                st.session_state.login = True
+                st.rerun()
+            else:
+                st.error("Senha incorreta, Wilson!")
+        
+        st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    st.stop() # Bloqueia o carregamento do restante do código abaixo
+   
+
+# Definições iniciais de data
+agora_br = datetime.now() - timedelta(hours=3)
+hoje_br = agora_br.date()
+
+# FUNÇÃO AJUSTADA: Nome correto e acesso global ao 'sh'
+def atualizar_meta_sheets(nome):
+    global sh 
+    novo_valor = st.session_state[f"m_{nome}"]
+    
+    try:
+        ws_meta = sh.worksheet("Meta")
+        celula = ws_meta.find(nome)
+        
+        if celula:
+            # 1. A "Paulada": Apaga a memória antiga usando o parâmetro 'nome' correto
+            if f"m_{nome}" in st.session_state:
+                del st.session_state[f"m_{nome}"]
+            
+            # 2. Atualiza na planilha
+            ws_meta.update_cell(celula.row, 2, novo_valor)
+            
+            # 3. Força a atualização do DataFrame de controle (para o gráfico ler o valor novo)
+            if 'df_metas_config' in st.session_state:
+                st.session_state['df_metas_config'].loc[st.session_state['df_metas_config']['Nome da Meta'] == nome, 'Valor Alvo'] = novo_valor
+            
+            # 4. Recarrega (O toast vai rodar logo após o rerun se você tirar o rerun daqui, 
+            # ou você pode usar o toast antes do rerun)
+            st.rerun() 
+            
+    except Exception as e:
+        st.error(f"Erro ao salvar no Sheets: {e}")
+
+# 1. CONFIGURAÇÃO INICIAL
 st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
+st.caption("Versão 2.0.3")
 
+# 2. CONEXÃO (LIGA O MOTOR)
 @st.cache_resource
 def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
-    if not creds_dict: st.error("Secrets não configurados!"); st.stop()
-    pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
-    final_creds = {
-        "type": creds_dict["type"], "project_id": creds_dict["project_id"],
-        "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
-        "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"]
-    }
-    creds = Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets"])
-    return gspread.authorize(creds)
+    if not creds_dict:
+        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
+    try:
+        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
+        final_creds = {
+            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
+            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
+            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
+        }
+        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
+    except Exception as e:
+        st.error(f"Erro na conexão: {e}"); st.stop()
 
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# --- FUNÇÕES DE APOIO ---
-def carregar_dados_gs():
-    try:
-        ws = sh.get_worksheet(0)
-        dados = ws.get_all_values()
-        if len(dados) <= 1: return pd.DataFrame()
-        df = pd.DataFrame(dados[1:], columns=[h.strip() for h in dados[0]])
-        # Correção forçada de nome de coluna
-        if 'DTMes_Ano' in df.columns: df = df.rename(columns={'DTMes_Ano': 'Mes_Ano'})
-        df['V_Num'] = pd.to_numeric(df['Valor'].str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False), errors='coerce').fillna(0)
-        df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')
-        return df
-    except Exception as e:
-        st.error(f"Erro ao carregar dados: {e}"); return pd.DataFrame()
-
-def get_valor_pendente(df):
-    if df.empty or 'Status' not in df.columns: return 0.0
-    now = datetime.now()
-    end_of_month = datetime(now.year, now.month, 1) + relativedelta(months=1, days=-1)
-    pendente = df[(df['Status'] == 'Pendente') & (df['DT'] <= end_of_month)]
-    return pendente['V_Num'].sum()
-
-# --- EXECUÇÃO ---
-df_base = carregar_dados_gs()
-pendente = get_valor_pendente(df_base)
-
-st.title("FinançasPro Wilson")
-st.metric("Valor Pendente", f"R$ {pendente:,.2f}")
-def atualizar_meta_sheets(nome):
-    novo_valor = st.session_state[f"m_{nome}"]
-    try:
-        ws_meta = sh.worksheet("Meta")
-        celula = ws_meta.find(nome)
-        if celula:
-            ws_meta.update_cell(celula.row, 2, novo_valor)
-            st.rerun()
-    except Exception as e:
-        st.error(f"Erro ao salvar no Sheets: {e}")
-
-# --- TELA DE LOGIN ---
-if 'login' not in st.session_state:
-    st.session_state.login = False
-if not st.session_state.login:
-    col1, col_centro, col2 = st.columns([1, 2, 1])
-    with col_centro:
-        st.markdown("### 🔒 Acesso Seguro")
-        senha = st.text_input("Digite sua senha:", type="password")
-        if st.button("🔓 Desbloquear Sistema"):
-            if senha == "Wilson123":
-                st.session_state.login = True
-                st.rerun()
-            else: st.error("Senha incorreta!")
-    st.stop()
-
-# --- CARREGAMENTO DE METAS NO SESSION STATE ---
+# 3. BLOCO DE CARREGAMENTO (Sincroniza Sheets com Session State)
 if 'metas_iniciadas' not in st.session_state:
+    # Esta linha abaixo está recuada (indentada) para dentro do IF
     try:
         df_metas = pd.DataFrame(sh.worksheet("Meta").get_all_records())
-        for _, row in df_metas.iterrows():
-            st.session_state[f"m_{row['Nome da Meta']}"] = float(row['Valor Alvo'])
+        for index, row in df_metas.iterrows():
+            nome = row['Nome da Meta']
+            valor_raw = row['Valor Alvo']
+            try:
+                valor = float(valor_raw) if str(valor_raw).strip() != '' else 0.0
+            except:
+                valor = 0.0
+            st.session_state[f"m_{nome}"] = valor
         st.session_state['metas_iniciadas'] = True
-    except Exception as e: st.error(f"Erro ao carregar metas: {e}")
-
-# --- ESTILIZAÇÃO ---
-st.markdown("""<style>[data-testid='stMetricLabel'], [data-testid='stMetricValue'] { font-size: 1.1rem !important; }</style>""", unsafe_allow_html=True)
-
-st.title("FinançasPro Wilson")
-st.caption("Versão 2.0.3")
+    except Exception as e:
+        st.error(f"Erro na planilha: {e}")
+# 4. ESTILIZAÇÃO
+st.markdown("""
+    <style>
+    [data-testid='stMetricLabel'], [data-testid='stMetricValue'] {
+        font-size: 1.1rem !important; font-weight: bold !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 # 2. CONEXÃO
 @st.cache_resource
 def conectar():
@@ -120,52 +142,36 @@ try:
 except:
     ws_bancos = None
 
+# FUNÇÕES DE CARREGAMENTO DIRETO
+def carregar_dados_gs():
+    dados = ws_base.get_all_values()
+    if len(dados) <= 1: return pd.DataFrame()
+    df = pd.DataFrame(dados[1:], columns=dados[0])
+    df['ID'] = range(2, len(df) + 2)
+    def p_float(v):
+        try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
+        except: return 0.0
+    df['V_Num'] = df['Valor'].apply(p_float)
+    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
+    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+    return df
 
-
+def carregar_bancos_manual_gs():
+    if ws_bancos:
+        dados = ws_bancos.get_all_values()
+        if len(dados) > 1:
+            return pd.DataFrame(dados[1:], columns=dados[0])
+    return pd.DataFrame()
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
-    # Carrega os dados
     df = carregar_dados_gs()
     df_bancos = carregar_bancos_manual_gs()
     
-    # Verifica se os dados vieram corretamente
-    if not df.empty and 'DT' in df.columns and not df_bancos.empty:
-        # 1. Ajustes necessários
-        df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
-        df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
-        hoje = pd.Timestamp.today().normalize()
-        
-        # 2. Definição da função de formatação
-        def formatar_moeda(valor):
-            try:
-                return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            except:
-                return "R$ 0,00"
-        
-        # 3. Lógica dos Bancos
-        qtd_colunas = 4
-        for i in range(0, len(df_bancos), qtd_colunas):
-            cols = st.columns(qtd_colunas)
-            linha = df_bancos.iloc[i:i + qtd_colunas]
-            
-            for j, (index, row) in enumerate(linha.iterrows()):
-                with cols[j]:
-                    nome_banco = row['Nome do Banco']
-                    saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
-                    
-                    filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
-                    df_banco_atual = df[filtro]
-                    
-                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
-                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
-                    
-                    saldo_atual = saldo_inicial + entradas - saidas
-                    st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
-        else:
-            st.warning("Dados não carregados ou planilhas vazias. Verifique a conexão com o Sheets.")
-    else:
-        st.error("Erro ao carregar dados: Verifique se a planilha possui colunas e dados válidos.")
+    # 1. Ajuste de Datas
+    df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
+    hoje = pd.Timestamp.today().normalize()
+    
     # 2. Garantir que V_Num seja numérico
     df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
     
@@ -277,34 +283,11 @@ def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace(
 
 # FUNÇÃO PARA OBTER O VALOR PENDENTE ATUAL
 def get_valor_pendente(df):
-    # Correção: Garante que estamos usando 'Mes_Ano'
-    if 'DTMes_Ano' in df.columns:
-        df = df.rename(columns={'DTMes_Ano': 'Mes_Ano'})
-    
-    # Define o período atual com segurança
     now = datetime.now()
-    # Usa o relativedelta importado
     end_of_month = datetime(now.year, now.month, 1) + relativedelta(months=1, days=-1)
-    
-    # Filtra apenas o que está pendente
-    if 'Status' in df.columns and 'V_Num' in df.columns:
-        pendente = df[(df['Status'] == 'Pendente') & (df['DT'] <= end_of_month)]
-        return pendente['V_Num'].sum()
-    return 0.0
+    df_p = df[(df['Status'] == 'Pendente') & (df['DT'].dt.date <= end_of_month.date())]
+    return df_p['V_Num'].sum()
 
-# --- BLOCO DE SEGURANÇA PARA FILTRAR O MÊS ---
-if not df_base.empty:
-    # Remove espaços em branco de TODOS os nomes de colunas
-    df_base.columns = df_base.columns.str.strip()
-    
-    # Verifica se a coluna DTMes_Ano existe após a limpeza
-    if 'DTMes_Ano' in df_base.columns:
-        df_filtrado = df_base[df_base['DTMes_Ano'] == filtro_mes]
-    else:
-        st.error(f"Erro: A coluna 'DTMes_Ano' não foi encontrada. Colunas disponíveis: {list(df_base.columns)}")
-        df_filtrado = pd.DataFrame() # Cria um vazio para não travar o restante
-else:
-    df_filtrado = pd.DataFrame()
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 
@@ -320,13 +303,6 @@ st.sidebar.divider()
 # Inicializa a variável de estado para controlar a abertura se ela não existir
 if "expander_lancamento_aberto" not in st.session_state:
     st.session_state.expander_lancamento_aberto = False
-
-    
-    f_compra = st.date_input(
-    "🛍️ Data da Compra", 
-    value=hoje_br if 'hoje_br' in locals() else datetime.now().date(), 
-    format="DD/MM/YYYY"
-)
 
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
     with st.form("f_novo", clear_on_submit=True):
@@ -475,14 +451,6 @@ if "💰" in aba:
         mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
                    "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
         filtro_mes = f"{mes_map[mes_atual]}/26"
-              
-       # Força o uso da coluna correta 'Mes_Ano'
-        # Se ela não existir, ele vai procurar a última coluna (que é onde ela estava na sua lista)
-        if 'Mes_Ano' in df_base.columns:
-            df_filtrado = df_base[df_base['Mes_Ano'] == filtro_mes]
-        else:
-            # Caso de emergência: pega a última coluna da planilha
-            df_filtrado = df_base[df_base.iloc[:, -1] == filtro_mes]
         
         # Filtra os dados do mês
         df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
