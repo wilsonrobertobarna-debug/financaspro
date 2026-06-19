@@ -513,27 +513,27 @@ if "💰" in aba:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
        # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO) ---
-st.subheader("🔄 Comparativo de Gastos")
-
-df_comp = df_m.copy()
-df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True)
-
-# Cria a tabela dinâmica
-df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
-    index='Categoria', 
-    columns=df_comp['Vencimento'].dt.month, 
-    values='V_Num', 
-    aggfunc='sum'
-).fillna(0)
-
-# SEGURANÇA: Só calcula a variação se houver mais de uma coluna (mais de um mês)
-if df_pivot.shape[1] > 1:
-    col_atual = df_pivot.columns[-1]
-    col_anterior = df_pivot.columns[-2]
-    
-    df_pivot['Variação (%)'] = ((df_pivot[col_atual] - df_pivot[col_anterior]) / df_pivot[col_anterior] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
-
-st.dataframe(df_pivot, use_container_width=True)                    
+        st.subheader("🔄 Comparativo de Gastos")
+        
+        df_comp = df_m.copy()
+        df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True)
+        
+        # Cria a tabela dinâmica
+        df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
+            index='Categoria', 
+            columns=df_comp['Vencimento'].dt.month, 
+            values='V_Num', 
+            aggfunc='sum'
+        ).fillna(0)
+        
+        # SEGURANÇA: Só calcula a variação se houver mais de uma coluna (mais de um mês)
+        if df_pivot.shape[1] > 1:
+            col_atual = df_pivot.columns[-1]
+            col_anterior = df_pivot.columns[-2]
+            
+            df_pivot['Variação (%)'] = ((df_pivot[col_atual] - df_pivot[col_anterior]) / df_pivot[col_anterior] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
+        
+        st.dataframe(df_pivot, use_container_width=True)                    
         
             # --- AQUI COMEÇA O WILSONBOT ---
         st.subheader("🤖 Consultor WilsonBot")
