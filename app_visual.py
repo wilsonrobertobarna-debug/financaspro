@@ -512,36 +512,41 @@ if "💰" in aba:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-           # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO) ---
-        st.subheader("🔄 Comparativo de Gastos: Mês Anterior vs. Atual")
-        
-        # 1. PEGAR OS DOIS ÚLTIMOS MESES (ignorando o filtro do mês atual para este bloco)
-        import datetime
-        hoje = datetime.date.today()
-        mes_atual = hoje.month
-        mes_anterior = mes_atual - 1 if mes_atual > 1 else 12
-        
-        # Filtra o df_m original (não o df_m_limpo) para pegar os últimos 2 meses
-        df_comp = df_m[df_m['Vencimento'].dt.month.isin([mes_anterior, mes_atual])].copy()
-        
-        # 2. Cria a tabela dinâmica
-        df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
-            index='Categoria', 
-            columns=df_comp['Vencimento'].dt.month, 
-            values='V_Num', 
-            aggfunc='sum'
-        ).fillna(0)
-        
-        # Renomeia as colunas para ficar bonito (Ex: 5 para Maio, 6 para Junho)
-        nome_meses = {mes_anterior: "Mês Anterior", mes_atual: "Mês Atual"}
-        df_pivot = df_pivot.rename(columns=nome_meses)
-        
-        # 3. SEGURANÇA: Só calcula a variação se houver as duas colunas
-        if len(df_pivot.columns) > 1:
-            df_pivot['Variação (%)'] = ((df_pivot.iloc[:, 1] - df_pivot.iloc[:, 0]) / df_pivot.iloc[:, 0] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
-        
-        # Exibe a tabela formatada
-        st.dataframe(df_pivot.style.format("{:.2f}"), use_container_width=True)                 
+          # --- COMPARATIVO MENSAL EFICIENTE (BLINDADO) ---
+st.subheader("🔄 Comparativo de Gastos: Mês Anterior vs. Atual")
+
+# 1. Garantir que Vencimento seja data
+df_comp = df_m.copy()
+df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True)
+
+# 2. Pegar os meses (usando o mês atual e anterior)
+import datetime
+hoje = datetime.date.today()
+mes_atual = hoje.month
+mes_anterior = mes_atual - 1 if mes_atual > 1 else 12
+
+# Agora que convertemos para datetime, o .dt.month vai funcionar
+df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior, mes_atual])].copy()
+
+# 3. Cria a tabela dinâmica
+df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
+    index='Categoria', 
+    columns=df_comp['Vencimento'].dt.month, 
+    values='V_Num', 
+    aggfunc='sum'
+).fillna(0)
+
+# Renomeia as colunas (Ex: 5 para "Mês Anterior", 6 para "Mês Atual")
+# Criamos um mapeamento baseado nos meses encontrados
+mapeamento = {mes_anterior: "Mês Anterior", mes_atual: "Mês Atual"}
+df_pivot = df_pivot.rename(columns=mapeamento)
+
+# 4. Cálculo da variação com segurança
+if len(df_pivot.columns) > 1:
+    df_pivot['Variação (%)'] = ((df_pivot.iloc[:, 1] - df_pivot.iloc[:, 0]) / df_pivot.iloc[:, 0] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
+
+# Exibe a tabela
+st.dataframe(df_pivot.style.format("{:.2f}"), use_container_width=True)                 
         
             # --- AQUI COMEÇA O WILSONBOT ---
         st.subheader("🤖 Consultor WilsonBot")
