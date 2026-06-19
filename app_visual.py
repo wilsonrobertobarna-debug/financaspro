@@ -573,7 +573,7 @@ if "💰" in aba:
             st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
             
             # Exibe as pendências do mês
-            st.dataframe(df_pendente_mes[['Vencimento', 'Descrição', 'Valor', 'Categoria']], use_container_width=True)
+            st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','bancos','Valor', 'Categoria']], use_container_width=True)
         else:
             st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
         
