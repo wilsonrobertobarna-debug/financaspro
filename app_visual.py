@@ -460,7 +460,7 @@ if "💰" in aba:
         receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
         gasto_total = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-        pendente = get_valor_pendente(df_base)
+        pendente = df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()
         saldo_geral = (receita_total + rendimento) - gasto_total
 
         # 4. EXIBIÇÃO DO SALDO
