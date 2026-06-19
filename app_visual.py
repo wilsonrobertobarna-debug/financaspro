@@ -494,32 +494,23 @@ if "💰" in aba:
                 st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo'), use_container_width=True)
                 
 
-        # 6. NOVO: GRÁFICO DE METAS (O que estava faltando!)
+# 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
         st.subheader("🎯 Metas vs Realizado (Despesas)")
         
-        # Filtra apenas despesas e agrupa por categoria
-        df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        # Teste: use df_m em vez de df_m_limpo
+        df_metas_graph = df_m[df_m['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         
         if not df_metas_graph.empty:
-            # Busca as metas no session_state (se não houver, assume 0)
             df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
             
             fig_m = go.Figure()
-            # Barra do Gasto Real (Vermelha)
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
-            # Barra da Meta (Verde Transparente)
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
             
-            # Ajuste de layout para melhor visualização
-            fig_m.update_layout(
-                barmode='group', 
-                height=350, 
-                margin=dict(t=30, b=10, l=0, r=0),
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-            )
+            fig_m.update_layout(barmode='group', height=350, margin=dict(t=30, b=10, l=0, r=0))
             st.plotly_chart(fig_m, use_container_width=True)
         else:
-            st.info(f"Nenhuma despesa registrada em {mes_atual} para comparar com as metas.")
+            st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
             
         
             # --- AQUI COMEÇA O WILSONBOT ---
