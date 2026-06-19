@@ -533,7 +533,7 @@ if "💰" in aba:
             
             df_pivot['Variação (%)'] = ((df_pivot[col_atual] - df_pivot[col_anterior]) / df_pivot[col_anterior] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
         
-        st.table(df_pivot, use_container_width=True)                    
+            st.table(df_pivot, use_container_width=True)                    
         
             # --- AQUI COMEÇA O WILSONBOT ---
         st.subheader("🤖 Consultor WilsonBot")
