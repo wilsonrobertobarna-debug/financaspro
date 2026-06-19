@@ -521,9 +521,10 @@ if "💰" in aba:
         
         # 2. Define os meses com base no seu seletor (ajuste o nome da variável se a sua for diferente)
         # Se a sua variável do seletor for, por exemplo, 'mes_escolhido', troque abaixo:
-        mes_atual_num = mes_atual
-        
+        mes_atual_num = int(mes_atual) 
+
         mes_anterior_num = mes_atual_num - 1 if mes_atual_num > 1 else 12
+        
         
         # 3. Filtra o df_m
         df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].copy()
