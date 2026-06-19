@@ -547,7 +547,20 @@ if "💰" in aba:
             df_pivot['Variação (%)'] = ((df_pivot["Mês Atual"] - df_pivot["Mês Anterior"]) / df_pivot["Mês Anterior"] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
         
         # 6. Exibir
-        st.dataframe(df_pivot.style.format("{:.2f}"), use_container_width=True)                
+        #st.dataframe(df_pivot.style.format("{:.2f}"), use_container_width=True)
+
+
+        # --- EXIBIÇÃO FORMATADA ---
+
+        # Vamos criar um dicionário de formatação para aplicar estilos diferentes em colunas diferentes
+        formatacao = {
+            "Mês Anterior": "{:.2f}",
+            "Mês Atual": "{:.2f}",
+            "Variação (%)": "{:.2f}%"  # Adicionamos o símbolo de % aqui!
+        }
+        
+        # Aplicamos o estilo (o .style.format aplica o que definimos no dicionário)
+        st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         
             # --- AQUI COMEÇA O WILSONBOT ---
         st.subheader("🤖 Consultor WilsonBot")
