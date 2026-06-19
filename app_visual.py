@@ -512,13 +512,19 @@ if "💰" in aba:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-       # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO) ---
-        st.subheader("🔄 Comparativo de Gastos")
+           # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO) ---
+        st.subheader("🔄 Comparativo de Gastos: Mês Anterior vs. Atual")
         
-        df_comp = df_m.copy()
-        df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True)
+        # 1. PEGAR OS DOIS ÚLTIMOS MESES (ignorando o filtro do mês atual para este bloco)
+        import datetime
+        hoje = datetime.date.today()
+        mes_atual = hoje.month
+        mes_anterior = mes_atual - 1 if mes_atual > 1 else 12
         
-        # Cria a tabela dinâmica
+        # Filtra o df_m original (não o df_m_limpo) para pegar os últimos 2 meses
+        df_comp = df_m[df_m['Vencimento'].dt.month.isin([mes_anterior, mes_atual])].copy()
+        
+        # 2. Cria a tabela dinâmica
         df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
             index='Categoria', 
             columns=df_comp['Vencimento'].dt.month, 
@@ -526,15 +532,16 @@ if "💰" in aba:
             aggfunc='sum'
         ).fillna(0)
         
-        # SEGURANÇA: Só calcula a variação se houver mais de uma coluna (mais de um mês)
-        if df_pivot.shape[1] > 1:
-            col_atual = df_pivot.columns[-1]
-            col_anterior = df_pivot.columns[-2]
-            
-            df_pivot['Variação (%)'] = ((df_pivot[col_atual] - df_pivot[col_anterior]) / df_pivot[col_anterior] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
+        # Renomeia as colunas para ficar bonito (Ex: 5 para Maio, 6 para Junho)
+        nome_meses = {mes_anterior: "Mês Anterior", mes_atual: "Mês Atual"}
+        df_pivot = df_pivot.rename(columns=nome_meses)
         
-        df_exibicao = df_pivot.fillna(0)
-        st.table(df_exibicao)                    
+        # 3. SEGURANÇA: Só calcula a variação se houver as duas colunas
+        if len(df_pivot.columns) > 1:
+            df_pivot['Variação (%)'] = ((df_pivot.iloc[:, 1] - df_pivot.iloc[:, 0]) / df_pivot.iloc[:, 0] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
+        
+        # Exibe a tabela formatada
+        st.dataframe(df_pivot.style.format("{:.2f}"), use_container_width=True)                 
         
             # --- AQUI COMEÇA O WILSONBOT ---
         st.subheader("🤖 Consultor WilsonBot")
