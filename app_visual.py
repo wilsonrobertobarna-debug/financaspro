@@ -562,6 +562,22 @@ if "💰" in aba:
         # Aplicamos o estilo (o .style.format aplica o que definimos no dicionário)
         st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         
+
+                # --- FILTRO DE ALERTA: PENDÊNCIAS ---
+        st.subheader("🔔 Monitor de Pendências")
+        
+        # Filtra apenas o que está pendente
+        df_pendente = df_base[df_base['Status'] == 'Pendente']
+        
+        if not df_pendente.empty:
+            st.warning(f"⚠️ Atenção: Você tem {len(df_pendente)} lançamento(s) pendente(s)!")
+            
+            # Exibe as pendências de forma resumida
+            st.dataframe(df_pendente[['Vencimento', 'Descrição', 'Valor', 'Categoria']], use_container_width=True)
+        else:
+            st.success("✅ Tudo limpo! Não há pendências para este período.")
+        
+        
             # --- AQUI COMEÇA O WILSONBOT ---
         st.subheader("🤖 Consultor WilsonBot")
         
