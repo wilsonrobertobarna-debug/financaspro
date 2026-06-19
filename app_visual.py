@@ -512,21 +512,20 @@ if "💰" in aba:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-                  # --- COMPARATIVO MENSAL EFICIENTE (BLINDADO) ---
-        st.subheader("🔄 Comparativo de Gastos: Mês Anterior vs. Atual")
+                         # --- COMPARATIVO MENSAL EFICIENTE (DINÂMICO) ---
+        st.subheader(f"🔄 Comparativo de Gastos: {mes_anterior_nome} vs. {mes_atual}")
         
-        # 1. Garantir que Vencimento seja data
+        # 1. Garante o formato de data
         df_comp = df_m.copy()
         df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True)
         
-        # 2. Pegar os meses (usando o mês atual e anterior)
-        import datetime
-        hoje = datetime.date.today()
-        mes_atual = hoje.month
-        mes_anterior = mes_atual - 1 if mes_atual > 1 else 12
+        # 2. Define os meses com base no mês que você selecionou no seu filtro
+        # Supondo que 'mes_selecionado' seja o número do mês que você clicou (ex: 7 para Julho)
+        mes_atual_num = mes_selecionado 
+        mes_anterior_num = mes_atual_num - 1 if mes_atual_num > 1 else 12
         
-        # Agora que convertemos para datetime, o .dt.month vai funcionar
-        df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior, mes_atual])].copy()
+        # Filtra o df_m para pegar apenas esses dois meses
+        df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].copy()
         
         # 3. Cria a tabela dinâmica
         df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
@@ -536,16 +535,14 @@ if "💰" in aba:
             aggfunc='sum'
         ).fillna(0)
         
-        # Renomeia as colunas (Ex: 5 para "Mês Anterior", 6 para "Mês Atual")
-        # Criamos um mapeamento baseado nos meses encontrados
-        mapeamento = {mes_anterior: "Mês Anterior", mes_atual: "Mês Atual"}
-        df_pivot = df_pivot.rename(columns=mapeamento)
+        # Mapeia os números para o que está na tabela
+        df_pivot = df_pivot.rename(columns={mes_anterior_num: "Mês Anterior", mes_atual_num: "Mês Atual"})
         
         # 4. Cálculo da variação com segurança
         if len(df_pivot.columns) > 1:
             df_pivot['Variação (%)'] = ((df_pivot.iloc[:, 1] - df_pivot.iloc[:, 0]) / df_pivot.iloc[:, 0] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
         
-        # Exibe a tabela
+        # Exibe
         st.dataframe(df_pivot.style.format("{:.2f}"), use_container_width=True)                 
         
             # --- AQUI COMEÇA O WILSONBOT ---
