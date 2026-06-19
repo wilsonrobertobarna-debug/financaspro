@@ -512,30 +512,28 @@ if "💰" in aba:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-        # --- COMPARATIVO MENSAL EFICIENTE ---
-        st.subheader("🔄 Comparativo de Gastos: Mês Anterior vs. Mês Atual")
-        
-        # 1. Filtra os dados apenas para o mês selecionado e o mês anterior
-        # (Supondo que você já tenha o mês atual definido como 'mes_atual')
-        # Esta lógica assume que 'Vencimento' está no formato datetime
-        df_comp = df_m.copy()
-        df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True)
-        
-        # Cria a tabela dinâmica comparativa
-        df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
-            index='Categoria', 
-            columns=df_comp['Vencimento'].dt.month, 
-            values='V_Num', 
-            aggfunc='sum'
-        ).fillna(0)
-        
-        # Renomeia as colunas para facilitar a leitura (ex: Mês 5, Mês 6)
-        # Você pode estilizar ou formatar isso aqui conforme sua preferência
-        st.dataframe(df_pivot, use_container_width=True)
-        
-        # Dica: Se quiser destacar onde você gastou mais, podemos adicionar uma coluna de variação!
-        df_pivot['Variação (%)'] = ((df_pivot.iloc[:, -1] - df_pivot.iloc[:, -2]) / df_pivot.iloc[:, -2] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
-                    
+       # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO) ---
+st.subheader("🔄 Comparativo de Gastos")
+
+df_comp = df_m.copy()
+df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True)
+
+# Cria a tabela dinâmica
+df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
+    index='Categoria', 
+    columns=df_comp['Vencimento'].dt.month, 
+    values='V_Num', 
+    aggfunc='sum'
+).fillna(0)
+
+# SEGURANÇA: Só calcula a variação se houver mais de uma coluna (mais de um mês)
+if df_pivot.shape[1] > 1:
+    col_atual = df_pivot.columns[-1]
+    col_anterior = df_pivot.columns[-2]
+    
+    df_pivot['Variação (%)'] = ((df_pivot[col_atual] - df_pivot[col_anterior]) / df_pivot[col_anterior] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
+
+st.dataframe(df_pivot, use_container_width=True)                    
         
             # --- AQUI COMEÇA O WILSONBOT ---
         st.subheader("🤖 Consultor WilsonBot")
