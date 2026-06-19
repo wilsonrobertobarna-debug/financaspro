@@ -492,9 +492,12 @@ if "💰" in aba:
             df_f = df_m_limpo.groupby(['Tipo'])['V_Num'].sum().reset_index()
             if not df_f.empty:
                 st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo'), use_container_width=True)
+                
 
         # 6. NOVO: GRÁFICO DE METAS (O que estava faltando!)
         st.subheader("🎯 Metas vs Realizado (Despesas)")
+        
+        # Filtra apenas despesas e agrupa por categoria
         df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
         
         if not df_metas_graph.empty:
@@ -507,10 +510,18 @@ if "💰" in aba:
             # Barra da Meta (Verde Transparente)
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
             
-            fig_m.update_layout(barmode='group', height=350, margin=dict(t=20, b=20, l=0, r=0))
+            # Ajuste de layout para melhor visualização
+            fig_m.update_layout(
+                barmode='group', 
+                height=350, 
+                margin=dict(t=30, b=10, l=0, r=0),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
             st.plotly_chart(fig_m, use_container_width=True)
         else:
-            st.info("Nenhuma despesa para comparar com as metas.")
+            st.info(f"Nenhuma despesa registrada em {mes_atual} para comparar com as metas.")
+            
+        
             # --- AQUI COMEÇA O WILSONBOT ---
         st.subheader("🤖 Consultor WilsonBot")
         
