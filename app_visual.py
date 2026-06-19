@@ -523,7 +523,7 @@ if "💰" in aba:
         # Se a sua variável do seletor for, por exemplo, 'mes_escolhido', troque abaixo:
         mes_atual_num = int(mes_atual) 
 
-            mes_anterior_num = mes_atual_num - 1 if mes_atual_num > 1 else 12
+        mes_anterior_num = mes_atual_num - 1 if mes_atual_num > 1 else 12
         
         
         # 3. Filtra o df_m
