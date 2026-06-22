@@ -135,15 +135,18 @@ def conectar():
     except Exception as e:
         st.error(f"Erro: {e}"); st.stop()
 
-client = conectar()
-sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+# Mude para isso:
+sh = conectar()
+ws_base = sh.worksheet("Base")
 
-# IDENTIFICAÇÃO DAS ABAS
-ws_base = sh.get_worksheet(0)
-try:
-    ws_bancos = sh.worksheet("Bancos")
-except:
-    ws_bancos = None
+# Criamos o dataframe e garantimos que o índice seja limpo imediatamente
+data = ws_base.get_all_records()
+df_base = pd.DataFrame(data).reset_index(drop=True) 
+
+# Se você quer ter certeza que sua coluna de ID é a primeira:
+if 'ID' in df_base.columns:
+    cols = ['ID'] + [c for c in df_base.columns if c != 'ID']
+    df_base = df_base[cols]
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
