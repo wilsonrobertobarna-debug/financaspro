@@ -638,6 +638,7 @@ if "💰" in st.session_state.page:
         # 7. TABELA FINAL
         st.subheader("🔍 Lançamentos do Mês")
         st.dataframe(df_m[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+
     else:
         st.warning("Base de dados vazia.")
 # --- FIM DA ABA ---# --- FIM DA ABA ---
@@ -736,7 +737,6 @@ elif "Pendências" in aba:
     df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
-   
 
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
@@ -1263,7 +1263,7 @@ if aba == "📋 Relatório PDF":
         df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
     # Faxina das colunas internas para manter o visual limpo
-    colunas_para_esconder = ['id','V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'vnum', 'dt', 'mesa']
+    colunas_para_esconder = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
     colunas_visiveis = [c for c in df_tela.columns if c not in colunas_para_esconder]
     df_tela_limpo = df_tela[colunas_visiveis]
 
@@ -1370,15 +1370,14 @@ if aba == "📊 Análises & Configurações":
 
     st.divider()
   
-   # 3. DATAFRAME: BANCOS E CARTÕES
+    # 3. DATAFRAME: BANCOS E CARTÕES
     st.subheader("🏦 Informações de Contas e Cartões")
     if not df_bancos_info.empty:
-        # Criamos uma cópia limpa, sem o índice antigo da planilha
-        df_bancos_limpo = df_bancos_info.reset_index(drop=True)
-        # Exibimos a versão limpa
-        st.dataframe(df_bancos_limpo, use_container_width=True, hide_index=True)
+        st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
     else:
         st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
+        
+    st.divider()
     
    # 4. FORMULÁRIO: CONFIGURAR METAS
     with st.expander("🎯 Configurar Metas", expanded=False):
