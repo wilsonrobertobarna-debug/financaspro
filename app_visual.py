@@ -10,18 +10,6 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-def fechar_sidebar():
-    # Este é um pequeno script de navegador que "clica" no botão de fechar da sidebar
-    js = '''
-    <script>
-        var button = window.parent.document.querySelector('button[kind="header"]');
-        if (button) {
-            button.click();
-        }
-    </script>
-    '''
-    components.html(js, height=0)
-
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
@@ -318,12 +306,12 @@ if 'page' not in st.session_state:
 menu_itens = ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"]
 
 # Cria os botões na sidebar com a função de fechar
+# Seu loop de botões na sidebar agora fica assim:
 for item in menu_itens:
     if st.sidebar.button(item, use_container_width=True):
         st.session_state.page = item
-        fechar_sidebar() # <--- Aqui está a chamada da função que fecha a barra
-        st.rerun()
-
+        st.rerun() # Removemos o fechar_sidebar() daqui    
+ 
 st.sidebar.divider()
 
 aba = st.session_state.page
