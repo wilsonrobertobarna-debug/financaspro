@@ -1370,14 +1370,15 @@ if aba == "📊 Análises & Configurações":
 
     st.divider()
   
-    # 3. DATAFRAME: BANCOS E CARTÕES
+   # 3. DATAFRAME: BANCOS E CARTÕES
     st.subheader("🏦 Informações de Contas e Cartões")
     if not df_bancos_info.empty:
-       st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+        # Criamos uma cópia limpa, sem o índice antigo da planilha
+        df_bancos_limpo = df_bancos_info.reset_index(drop=True)
+        # Exibimos a versão limpa
+        st.dataframe(df_bancos_limpo, use_container_width=True, hide_index=True)
     else:
         st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
-        
-    st.divider()
     
    # 4. FORMULÁRIO: CONFIGURAR METAS
     with st.expander("🎯 Configurar Metas", expanded=False):
