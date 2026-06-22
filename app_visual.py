@@ -135,34 +135,15 @@ def conectar():
     except Exception as e:
         st.error(f"Erro: {e}"); st.stop()
 
-# Mude para isso:
-# 2. CONEXÃO
-@st.cache_resource
-def conectar():
-    creds_dict = st.secrets.get("connections", {}).get("gsheets")
-    if not creds_dict:
-        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
-    try:
-        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
-        if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
-        final_creds = {
-            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
-            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
-            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
-        }
-        # Adicionamos um print para ver se a conexão está acontecendo
-        client = gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
-        
-        # Tentamos abrir a planilha pelo NOME ou URL
-        # TENTE O NOME DA PLANILHA AQUI:
-        sh = client.open("NOME_EXATO_DA_SUA_PLANILHA_NO_DRIVE") 
-        return sh
-    except Exception as e:
-        st.error(f"Erro detalhado na conexão: {e}")
-        st.stop()
+client = conectar()
+sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# Agora chamamos a conexão
-sh = conectar()
+# IDENTIFICAÇÃO DAS ABAS
+ws_base = sh.get_worksheet(0)
+try:
+    ws_bancos = sh.worksheet("Bancos")
+except:
+    ws_bancos = None
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
@@ -650,14 +631,16 @@ if "💰" in st.session_state.page:
         else:
             st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
 
-                 
+            
+
+            
 
         # 7. TABELA FINAL
-            st.subheader("🔍 Lançamentos do Mês")
-            st.dataframe(df_m[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+        st.subheader("🔍 Lançamentos do Mês")
+        st.dataframe(df_m[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
 
     else:
-         st.warning("Base de dados vazia.")
+        st.warning("Base de dados vazia.")
 # --- FIM DA ABA ---# --- FIM DA ABA ---
 
 elif "Pendências" in aba:
