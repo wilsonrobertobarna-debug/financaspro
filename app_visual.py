@@ -242,7 +242,8 @@ if 'ID' in df_base.columns:
 
 # 2. Reseta o índice e cria a nova coluna ID baseada na posição atual (1, 2, 3...)
     df_base = df_base.reset_index(drop=True)
-    df_base.insert(0, 'ID', df_base.index + 1
+    df_base.insert(0, 'ID', df_base.index + 1) # <--- Agora está fechado corretamente!
+# ---------------------------
 
 # ---------------------------
 Teste de verificação
