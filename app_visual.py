@@ -1263,7 +1263,7 @@ if aba == "📋 Relatório PDF":
         df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
     # Faxina das colunas internas para manter o visual limpo
-    colunas_para_esconder = ['V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
+    colunas_para_esconder = ['id','V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'vnum', 'dt', 'mesa']
     colunas_visiveis = [c for c in df_tela.columns if c not in colunas_para_esconder]
     df_tela_limpo = df_tela[colunas_visiveis]
 
