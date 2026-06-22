@@ -637,7 +637,7 @@ if "💰" in st.session_state.page:
 
         # 7. TABELA FINAL
         st.subheader("🔍 Lançamentos do Mês")
-        st.dataframe(df_m[['ID', 'Vencimento', 'Descrição', 'Valor',', 'Categoria', 'Tipo', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+        st.dataframe(df_m[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Tipo', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
 
     else:
         st.warning("Base de dados vazia.")
