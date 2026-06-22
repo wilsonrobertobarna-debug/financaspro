@@ -471,20 +471,22 @@ if "💰" in st.session_state.page:
                    "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
         filtro_mes = f"{mes_map[mes_atual]}/26"
         
-        # Filtra os dados do mês
-        #df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
-        #df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
-        # Filtra os dados do mês
+      # Filtra os dados
         df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')].copy()
 
-        # AQUI É O LUGAR: Criamos a numeração baseada na quantidade de linhas filtradas
-        df_m_limpo['ID'] = range(1, len(df_m_limpo) + 1)
-
-        # Agora você exibe usando a sua coluna 'ID' que acabou de ser criada
-        st.dataframe(df_m_limpo[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
-                     use_container_width=True, hide_index=True)
-
+        # GARANTIA: Se o dataframe não estiver vazio, forçamos a criação da coluna #
+        if not df_m_limpo.empty:
+            df_m_limpo = df_m_limpo.reset_index(drop=True) # Reseta o índice para começar do 0
+            df_m_limpo.index = df_m_limpo.index + 1        # Soma 1 para começar do 1
+            df_m_limpo = df_m_limpo.reset_index().rename(columns={'index': '#'}) # Transforma o índice em coluna
+            
+            # Exibe a tabela
+            st.dataframe(df_m_limpo[['#', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
+                         use_container_width=True, 
+                         hide_index=True)
+        else:
+            st.write("Nenhum lançamento encontrado para este filtro.")
         
         
         # 3. CÁLCULOS
