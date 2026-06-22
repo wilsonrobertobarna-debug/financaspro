@@ -236,17 +236,15 @@ df_base = st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
 
 # --- AUTOMATIZAÇÃO DO ID ---
-# 1. Removemos a coluna 'ID' antiga da planilha, se ela existir, para não gerar duplicidade
-# --- AUTOMATIZAÇÃO DO ID ---
-# 1. Removemos a coluna 'ID' antiga da planilha, se ela existir, para não gerar duplicidade
+# 1. Removemos a coluna 'ID' antiga da planilha, se ela existir, para evitar duplicidade
 if 'ID' in df_base.columns:
     df_base = df_base.drop(columns=['ID'])
 
-# 2. Reseta o índice e cria a nova coluna ID baseada na posição atual (1, 2, 3...)
-    df_base = df_base.reset_index(drop=True)
-    df_base.insert(0, 'ID', df_base.index + 1) # <--- Agora está fechado corretamente!
-# ---------------------------
-               
+# 2. Resetamos o índice para garantir que não haja 'buracos' e criamos o ID sequencial (1, 2, 3...)
+# Estas linhas devem estar alinhadas com o 'if' acima, NÃO dentro dele
+df_base = df_base.reset_index(drop=True)
+df_base.insert(0, 'ID', df_base.index + 1)
+# ---------------------------               
                
 # INTEGRAÇÃO DE AVISOS NO WHATSAPP VIA TWILIO
 def enviar_whatsapp_pendencias(df):
