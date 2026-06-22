@@ -472,8 +472,20 @@ if "💰" in st.session_state.page:
         filtro_mes = f"{mes_map[mes_atual]}/26"
         
         # Filtra os dados do mês
+        #df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
+        #df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+        # Filtra os dados do mês
         df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')].copy()
+
+        # AQUI É O LUGAR: Criamos a numeração baseada na quantidade de linhas filtradas
+        df_m_limpo['ID'] = range(1, len(df_m_limpo) + 1)
+
+        # Agora você exibe usando a sua coluna 'ID' que acabou de ser criada
+        st.dataframe(df_m_limpo[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
+                     use_container_width=True, hide_index=True)
+
+        
         
         # 3. CÁLCULOS
         receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
