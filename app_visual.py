@@ -746,7 +746,9 @@ elif "Pendências" in aba:
     if isinstance(periodo, tuple) and len(periodo) == 2:
         df_v = df_v[(df_v['DT_Obj'].dt.date >= periodo[0]) & (df_v['DT_Obj'].dt.date <= periodo[1])]
         
-    df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+    df_v = df_v.reset_index(drop=True)
+    df_v['ID'] = df_v.index + 1
+    df_v_display = df_v[['ID', ...]].copy()
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
