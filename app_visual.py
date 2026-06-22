@@ -631,29 +631,14 @@ if "💰" in st.session_state.page:
         else:
             st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
 
-          # 7. TABELA FINAL
-        st.subheader("🔍 Lançamentos do Mês")
-        
-        # 1. Preparamos os dados
-        df_exibicao = df_m[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']].iloc[::-1].copy()
-        
-        # 2. Definimos o seu ID como o índice oficial
-        df_exibicao = df_exibicao.set_index('ID')
-        
-        # 3. RENOMEAMOS o índice para "#"
-        df_exibicao.index.name = '#'
-        
-        # 4. Exibimos a tabela
-        st.dataframe(df_exibicao, use_container_width=True, hide_index=False)  
-
-            
+                 
 
         # 7. TABELA FINAL
-       # st.subheader("🔍 Lançamentos do Mês")
-       # st.dataframe(df_m[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
+            st.subheader("🔍 Lançamentos do Mês")
+            st.dataframe(df_m[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
 
-   # else:
-        #st.warning("Base de dados vazia.")
+    else:
+         st.warning("Base de dados vazia.")
 # --- FIM DA ABA ---# --- FIM DA ABA ---
 
 elif "Pendências" in aba:
