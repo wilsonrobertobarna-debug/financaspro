@@ -736,6 +736,7 @@ elif "Pendências" in aba:
     df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+   
 
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
