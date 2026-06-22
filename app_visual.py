@@ -8,6 +8,19 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
+import streamlit.components.v1 as components
+
+def fechar_sidebar():
+    # Este é um pequeno script de navegador que "clica" no botão de fechar da sidebar
+    js = '''
+    <script>
+        var button = window.parent.document.querySelector('button[kind="header"]');
+        if (button) {
+            button.click();
+        }
+    </script>
+    '''
+    components.html(js, height=0)
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
