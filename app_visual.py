@@ -295,10 +295,22 @@ if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     atualizar_sessao()
     st.rerun()
 
-aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"])
-
 st.sidebar.divider()
 
+# Inicializa a página se não existir
+if 'page' not in st.session_state:
+    st.session_state.page = "💰 Finanças & Bancos"
+
+# Define os itens do menu
+menu_itens = ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"]
+
+# Cria os botões na sidebar
+for item in menu_itens:
+    if st.sidebar.button(item, use_container_width=True): # use_container_width faz o botão ocupar a largura toda, fica bem limpo
+        st.session_state.page = item
+        st.rerun()
+
+st.sidebar.divider()
 # BARRINHA 1: NOVO LANÇAMENTO
 # Inicializa a variável de estado para controlar a abertura se ela não existir
 if "expander_lancamento_aberto" not in st.session_state:
