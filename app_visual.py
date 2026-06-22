@@ -12,6 +12,23 @@ import urllib.parse
 if 'page' not in st.session_state:
     st.session_state.page = 'Dashboard' # Ou sua página inicialwith st.sidebar:
     st.title("Menu")
+
+with st.sidebar:
+    st.title("Menu")
+    
+    # Criamos botões. Cada clique altera a variável 'page' no session_state
+    if st.button("Dashboard"):
+        st.session_state.page = 'Dashboard'
+        st.rerun() # O rerun força o Streamlit a recarregar mostrando a página escolhida
+        
+    if st.button("Lançamentos"):
+        st.session_state.page = 'Lançamentos'
+        st.rerun()
+        
+    if st.button("Relatórios"):
+        st.session_state.page = 'Relatórios'
+        st.rerun()
+        
     
     # Corpo do app
 if st.session_state.page == 'Dashboard':
