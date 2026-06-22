@@ -67,13 +67,11 @@ def atualizar_meta_sheets(nome):
     except Exception as e:
         st.error(f"Erro ao salvar no Sheets: {e}")
 
-# 1. CONFIGURAÇÃO INICIAL
 st.set_page_config(
     page_title="FinançasPro",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed" # Isso fará a barra vir fechada por padrão
 )
-st.caption("Versão 2.0.3")
 
 # 2. CONEXÃO (LIGA O MOTOR)
 @st.cache_resource
@@ -228,6 +226,9 @@ def atualizar_sessao():
     st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
 
 # A "MÉCÂNICA" DE SEGURANÇA:
+# Se o programa acabou de abrir e não tem nada na memória, ele carrega.
+# Se já tem algo na memória (mesmo que você tenha fechado e aberto), 
+# ele NÃO limpa, ele mantém o que está lá até que você aperte o botão de atualizar.
 if 'df_base' not in st.session_state:
     atualizar_sessao()
 
@@ -235,17 +236,6 @@ if 'df_base' not in st.session_state:
 df_base = st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
 
-# --- AUTOMATIZAÇÃO DO ID ---
-# 1. Removemos a coluna 'ID' antiga da planilha, se ela existir, para evitar duplicidade
-if 'ID' in df_base.columns:
-    df_base = df_base.drop(columns=['ID'])
-
-# 2. Resetamos o índice para garantir que não haja 'buracos' e criamos o ID sequencial (1, 2, 3...)
-# Estas linhas devem estar alinhadas com o 'if' acima, NÃO dentro dele
-df_base = df_base.reset_index(drop=True)
-df_base.insert(0, 'ID', df_base.index + 1)
-# ---------------------------               
-               
 # INTEGRAÇÃO DE AVISOS NO WHATSAPP VIA TWILIO
 def enviar_whatsapp_pendencias(df):
     now = datetime.now()
@@ -641,9 +631,7 @@ if "💰" in st.session_state.page:
         else:
             st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
 
-            df_m = df_m.reset_index(drop=True)
-            df_m['ID'] = df_m.index + 1
-            st.dataframe(df_m[['ID', ...]], ...)
+            
 
             
 
@@ -746,9 +734,7 @@ elif "Pendências" in aba:
     if isinstance(periodo, tuple) and len(periodo) == 2:
         df_v = df_v[(df_v['DT_Obj'].dt.date >= periodo[0]) & (df_v['DT_Obj'].dt.date <= periodo[1])]
         
-    df_v = df_v.reset_index(drop=True)
-    df_v['ID'] = df_v.index + 1
-    df_v_display = df_v[['ID', ...]].copy()
+    df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
@@ -844,9 +830,7 @@ elif "🚗" in aba:
     st.divider()
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
     if not df_car.empty:
-        df_car = df_car.reset_index(drop=True)
-        df_car['ID'] = df_car.index + 1
-        df_car_display = df_car[['ID', ...]].copy()
+        df_car_display = df_car[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']].copy()
         df_car_display['Valor'] = df_car['V_Num'].apply(m_fmt)
         st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
