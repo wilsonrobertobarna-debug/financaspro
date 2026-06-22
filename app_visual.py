@@ -137,6 +137,7 @@ def conectar():
 
 # Mude para isso:
 sh = conectar()
+st.write("Planilhas disponíveis:", [ws.title for ws in sh.worksheets()])
 ws_base = sh.worksheet("Base")
 
 # Criamos o dataframe e garantimos que o índice seja limpo imediatamente
