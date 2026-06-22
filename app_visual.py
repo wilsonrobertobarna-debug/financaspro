@@ -302,7 +302,6 @@ def get_valor_pendente(df):
     return df_p['V_Num'].sum()
 
 # 4. SIDEBAR - NAVEGAÇÃO
-# 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 
 if st.sidebar.button("🔄 Atualizar dados do Sheets"):
