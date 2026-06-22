@@ -832,7 +832,7 @@ elif "🚗" in aba:
     if not df_car.empty:
         df_car_display = df_car[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']].copy()
         df_car_display['Valor'] = df_car['V_Num'].apply(m_fmt)
-        st.dataframe(df_show_display.iloc[::-1], use_container_width=True, hide_index=True)
+        st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "📄" in aba:
     st.title("📄 WhatsApp")
