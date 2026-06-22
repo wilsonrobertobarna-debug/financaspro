@@ -242,8 +242,14 @@ if 'ID' in df_base.columns:
 
 # 2. Reseta o índice e cria a nova coluna ID baseada na posição atual (1, 2, 3...)
 df_base = df_base.reset_index(drop=True)
-df_base.insert(0, 'ID', df_base.index + 1)
+df_base.insert(0, 'ID', df_base.index + 1
+
 # ---------------------------
+Teste de verificação
+st.write("Colunas atuais do df_base:", df_base.columns.tolist())
+st.dataframe(df_base.head(5)) # Mostra apenas as 5 primeiras linhas
+               
+               
 # INTEGRAÇÃO DE AVISOS NO WHATSAPP VIA TWILIO
 def enviar_whatsapp_pendencias(df):
     now = datetime.now()
