@@ -302,6 +302,7 @@ def get_valor_pendente(df):
     return df_p['V_Num'].sum()
 
 # 4. SIDEBAR - NAVEGAÇÃO
+# 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 
 if st.sidebar.button("🔄 Atualizar dados do Sheets"):
@@ -317,10 +318,11 @@ if 'page' not in st.session_state:
 # Define os itens do menu
 menu_itens = ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"]
 
-# Cria os botões na sidebar
+# Cria os botões na sidebar com a função de fechar
 for item in menu_itens:
-    if st.sidebar.button(item, use_container_width=True): # use_container_width faz o botão ocupar a largura toda, fica bem limpo
+    if st.sidebar.button(item, use_container_width=True):
         st.session_state.page = item
+        fechar_sidebar() # <--- Aqui está a chamada da função que fecha a barra
         st.rerun()
 
 st.sidebar.divider()
