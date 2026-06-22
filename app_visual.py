@@ -641,7 +641,9 @@ if "💰" in st.session_state.page:
         else:
             st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
 
-            
+            df_m = df_m.reset_index(drop=True)
+            df_m['ID'] = df_m.index + 1
+            st.dataframe(df_m[['ID', ...]], ...)
 
             
 
