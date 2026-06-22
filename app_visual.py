@@ -1373,7 +1373,7 @@ if aba == "📊 Análises & Configurações":
     # 3. DATAFRAME: BANCOS E CARTÕES
     st.subheader("🏦 Informações de Contas e Cartões")
     if not df_bancos_info.empty:
-        st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+       st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
     else:
         st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
         
