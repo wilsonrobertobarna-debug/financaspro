@@ -67,9 +67,11 @@ def atualizar_meta_sheets(nome):
     except Exception as e:
         st.error(f"Erro ao salvar no Sheets: {e}")
 
-# 1. CONFIGURAÇÃO INICIAL
-st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
-st.caption("Versão 2.0.3")
+st.set_page_config(
+    page_title="FinançasPro",
+    layout="wide",
+    initial_sidebar_state="collapsed" # Isso fará a barra vir fechada por padrão
+)
 
 # 2. CONEXÃO (LIGA O MOTOR)
 @st.cache_resource
