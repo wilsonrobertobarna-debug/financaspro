@@ -9,6 +9,22 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 
+if 'page' not in st.session_state:
+    st.session_state.page = 'Dashboard' # Ou sua página inicialwith st.sidebar:
+    st.title("Menu")
+    
+    # Corpo do app
+if st.session_state.page == 'Dashboard':
+    # Coloque aqui todo o código do seu Dashboard
+    st.header("Dashboard")
+    
+elif st.session_state.page == 'Lançamentos':
+    # Coloque aqui o código de Lançamentos
+    st.header("Lançamentos")
+
+elif st.session_state.page == 'Relatórios':
+    st.header("Relatórios")
+
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
