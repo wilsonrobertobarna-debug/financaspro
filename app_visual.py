@@ -228,9 +228,6 @@ def atualizar_sessao():
     st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
 
 # A "MÉCÂNICA" DE SEGURANÇA:
-# Se o programa acabou de abrir e não tem nada na memória, ele carrega.
-# Se já tem algo na memória (mesmo que você tenha fechado e aberto), 
-# ele NÃO limpa, ele mantém o que está lá até que você aperte o botão de atualizar.
 if 'df_base' not in st.session_state:
     atualizar_sessao()
 
@@ -238,6 +235,15 @@ if 'df_base' not in st.session_state:
 df_base = st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
 
+# --- AUTOMATIZAÇÃO DO ID ---
+# 1. Removemos a coluna 'ID' antiga da planilha, se ela existir, para não gerar duplicidade
+if 'ID' in df_base.columns:
+    df_base = df_base.drop(columns=['ID'])
+
+# 2. Reseta o índice e cria a nova coluna ID baseada na posição atual (1, 2, 3...)
+df_base = df_base.reset_index(drop=True)
+df_base.insert(0, 'ID', df_base.index + 1)
+# ---------------------------
 # INTEGRAÇÃO DE AVISOS NO WHATSAPP VIA TWILIO
 def enviar_whatsapp_pendencias(df):
     now = datetime.now()
