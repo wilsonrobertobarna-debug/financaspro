@@ -311,6 +311,9 @@ for item in menu_itens:
         st.rerun()
 
 st.sidebar.divider()
+
+aba = st.session_state.page
+
 # BARRINHA 1: NOVO LANÇAMENTO
 # Inicializa a variável de estado para controlar a abertura se ela não existir
 if "expander_lancamento_aberto" not in st.session_state:
