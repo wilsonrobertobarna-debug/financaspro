@@ -498,7 +498,7 @@ if "💰" in aba:
         st.subheader("🎯 Metas vs Realizado (Despesas)")
         
         # Teste: use df_m em vez de df_m_limpo
-        df_metas_graph = df_m[df_m['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
         
         if not df_metas_graph.empty:
             df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
