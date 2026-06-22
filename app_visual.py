@@ -237,6 +237,8 @@ df_bancos_info = st.session_state['df_bancos_info']
 
 # --- AUTOMATIZAÇÃO DO ID ---
 # 1. Removemos a coluna 'ID' antiga da planilha, se ela existir, para não gerar duplicidade
+# --- AUTOMATIZAÇÃO DO ID ---
+# 1. Removemos a coluna 'ID' antiga da planilha, se ela existir, para não gerar duplicidade
 if 'ID' in df_base.columns:
     df_base = df_base.drop(columns=['ID'])
 
@@ -244,11 +246,6 @@ if 'ID' in df_base.columns:
     df_base = df_base.reset_index(drop=True)
     df_base.insert(0, 'ID', df_base.index + 1) # <--- Agora está fechado corretamente!
 # ---------------------------
-
-# ---------------------------
-Teste de verificação
-st.write("Colunas atuais do df_base:", df_base.columns.tolist())
-st.dataframe(df_base.head(5)) # Mostra apenas as 5 primeiras linhas
                
                
 # INTEGRAÇÃO DE AVISOS NO WHATSAPP VIA TWILIO
