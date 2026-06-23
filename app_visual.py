@@ -169,14 +169,10 @@ def carregar_bancos_manual_gs():
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo", expanded=False, key="relatorio_bancario"):
 
-        df = carregar_dados_gs()
-        df_bancos = carregar_bancos_manual_gs()
-        
-        if 'df_base' not in st.session_state:
-        atualizar_sessao()
+    atualizar_sessao()
 
-        df_base = st.session_state['df_base']
-        df_bancos_info = st.session_state['df_bancos_info']
+    df_base = st.session_state['df_base']
+    df_bancos_info = st.session_state['df_bancos_info']
         
         # --- 2. PAINEL DE RESUMO (FIXO NO TOPO) ---
         st.subheader("🏦 Resumo Bancário")
