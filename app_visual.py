@@ -167,8 +167,10 @@ def carregar_bancos_manual_gs():
     return pd.DataFrame()
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
-if st.session_state.get('page') == 'Home': # Verifique se 'Home' é o nome da sua página principal
-with st.expander("📊 Clique aqui para ver o Painel e Relatório Bancário", expanded=False):
+with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
+    df = carregar_dados_gs()
+    df_bancos = carregar_bancos_manual_gs()
+
     df = carregar_dados_gs()
     df_bancos = carregar_bancos_manual_gs()
     
