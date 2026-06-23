@@ -633,10 +633,28 @@ if "💰" in st.session_state.page:
             st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
 
             
-
-            
-
         # 7. TABELA FINAL
+        st.subheader("🔍 Lançamentos do Mês")
+        
+        # 1. Remove qualquer 'ID' antigo da planilha para não duplicar
+        if 'ID' in df_m_limpo.columns:
+            df_m_limpo = df_m_limpo.drop(columns=['ID'])
+        
+        # 2. Reseta o índice e cria a nossa coluna "Seq."
+        df_m_limpo = df_m_limpo.reset_index(drop=True)
+        df_m_limpo.index = df_m_limpo.index + 1
+        df_exibicao = df_m_limpo.reset_index().rename(columns={'index': 'Seq.'})
+        
+        # 3. Inverte a tabela (mais novos no topo)
+        df_exibicao = df_exibicao.iloc[::-1]
+        
+        # 4. Exibe a tabela final organizada
+        st.dataframe(df_exibicao[['Seq.', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
+                     use_container_width=True, 
+                     hide_index=True)
+
+    else:
+        st.warning("Base de dados vazia.")
         st.subheader("🔍 Lançamentos do Mês")
         st.dataframe(df_m[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']].iloc[::-1], use_container_width=True, hide_index=True)
 
