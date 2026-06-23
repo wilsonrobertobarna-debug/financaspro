@@ -371,16 +371,15 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 nova_data = t_dat + relativedelta(months=i)
                 
                 ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"), # A: Vencimento
-                    v_str,                          # B: Valor
-                    f_des,                          # C: Descrição
-                    f_cat,                          # D: Categoria
-                    f_tip,                          # E: Tipo
-                    f_bnc,                          # F: Banco
-                    f_sta,                          # G: Status
-                    f_compra_str,                   # H: Data da Compra
-                    "",                             # I: (Coluna reservada se houver)
-                    proximo_id + i                  # J: ID (Agora na posição correta!)
+                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
+                    v_str,                          # Coluna B: Valor
+                    f_des,                          # Coluna C: Descrição
+                    f_cat,                          # Coluna D: Categoria
+                    f_tip,                          # Coluna E: Tipo
+                    f_bnc,                          # Coluna F: Banco
+                    f_sta,                          # Coluna G: Status
+                    f_compra_str,                   # Coluna H: Data da Compra
+                    proximo_id + i                  # Coluna I: ID (Agora sem pular coluna!)
                 ])
             
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
