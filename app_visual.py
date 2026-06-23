@@ -167,7 +167,7 @@ def carregar_bancos_manual_gs():
     return pd.DataFrame()
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
-with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
+with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo", expanded=False, key="relatorio_bancario"):
     df = carregar_dados_gs()
     df_bancos = carregar_bancos_manual_gs()
     
