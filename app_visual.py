@@ -334,9 +334,25 @@ with st.expander("📊 Clique aqui para ver o Painel e Relatório Bancário", ex
 
     st.divider() # Uma linha para separar
 
-    # 2. Relatório Bancário (o que você já tinha)
+   # 2. Relatório Bancário (Dentro do mesmo expander)
     st.markdown("### 🏦 Saldos por Banco")
-    # ... aqui você mantém aquele seu loop das colunas dos bancos ...
+    
+    # Criamos colunas para listar os bancos
+    if not df_bancos_info.empty:
+        # Usamos uma lista para exibir os bancos de forma mais organizada
+        for _, row in df_bancos_info.iterrows():
+            nome_banco = row['Nome do Banco']
+            # O cálculo que você já usa:
+            filtro = (df_base['Banco'] == nome_banco)
+            entradas = df_base[(filtro) & (df_base['Tipo'] != 'Despesa')]['V_Num'].sum()
+            saidas = df_base[(filtro) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
+            
+            # Aqui ajustamos o cálculo considerando seu saldo inicial da planilha
+            saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
+            saldo_final_banco = saldo_inicial + entradas - saidas
+            
+            # Exibição
+            st.write(f"**{nome_banco}:** R$ {saldo_final_banco:,.2f}")
 
 # BARRINHA 1: NOVO LANÇAMENTO
 # Inicializa a variável de estado para controlar a abertura se ela não existir
