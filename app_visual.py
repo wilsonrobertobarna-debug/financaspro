@@ -168,7 +168,7 @@ def carregar_bancos_manual_gs():
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 # --- 1. CARGA DE DADOS (FORA DE QUALQUER EXPANDER) ---
-with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo", expanded=False, key="meu_relatorio_bancario"):
+with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo", expanded=True, key="meu_relatorio_bancario"):
     # ... aqui entra todo o seu código de cálculo que você já tem
     if 'df_base' not in st.session_state:
         atualizar_sessao()
