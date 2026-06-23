@@ -637,29 +637,26 @@ if "💰" in st.session_state.page:
         # 7. TABELA FINAL
         st.subheader("🔍 Lançamentos do Mês")
         
-        # Primeiro, garantimos que o dataframe não está vazio
+        # 1. Garantir que temos um dataframe válido
         if not df_m_limpo.empty:
-            # 1. Limpeza: Remove 'ID' antigo da planilha
-            if 'ID' in df_m_limpo.columns:
-                df_m_limpo = df_m_limpo.drop(columns=['ID'])
             
-            # 2. Reseta o índice e cria a numeração sequencial (1, 2, 3...)
-            # Fazemos isso ANTES de qualquer inversão para garantir a ordem correta
-            df_m_limpo = df_m_limpo.reset_index(drop=True)
-            df_m_limpo.index = df_m_limpo.index + 1
+            # 2. Vamos capturar o índice real da planilha. 
+            # O Pandas geralmente lê o cabeçalho na linha 0, então 
+            # o seu lançamento na linha 2 da planilha será o índice 1 no Pandas.
+            # Por isso, somamos 1 ao índice do Pandas (índice 1 + 1 = linha 2 da planilha)
+            df_exibicao = df_m_limpo.copy()
+            df_exibicao['Seq.'] = df_exibicao.index + 2 
             
-            # 3. Criamos a coluna "Seq." baseada no índice organizado
-            df_exibicao = df_m_limpo.reset_index().rename(columns={'index': 'Seq.'})
-            
-            # 4. Agora sim, invertemos para mostrar os mais novos no topo
+            # 3. Inverte a tabela (mais novos no topo)
             df_exibicao = df_exibicao.iloc[::-1]
             
-            # 5. Exibe a tabela final
+            # 4. Exibe a tabela final
             st.dataframe(df_exibicao[['Seq.', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
                          use_container_width=True, 
                          hide_index=True)
         else:
             st.warning("Base de dados vazia.")
+
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
