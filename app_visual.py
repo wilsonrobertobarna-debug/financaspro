@@ -634,29 +634,29 @@ if "💰" in st.session_state.page:
 
             
         # 7. TABELA FINAL
-        # 7. TABELA FINAL
         st.subheader("🔍 Lançamentos do Mês")
         
-        # 1. Garantir que temos um dataframe válido
         if not df_m_limpo.empty:
+            # Não vamos criar índice novo. 
+            # Vamos garantir que a coluna 'ID' que já existe na sua planilha 
+            # seja a primeira da fila e que ela seja o nosso guia.
             
-            # 2. Vamos capturar o índice real da planilha. 
-            # O Pandas geralmente lê o cabeçalho na linha 0, então 
-            # o seu lançamento na linha 2 da planilha será o índice 1 no Pandas.
-            # Por isso, somamos 1 ao índice do Pandas (índice 1 + 1 = linha 2 da planilha)
-            df_exibicao = df_m_limpo.copy()
-            df_exibicao['Seq.'] = df_exibicao.index + 2 
-            
-            # 3. Inverte a tabela (mais novos no topo)
-            df_exibicao = df_exibicao.iloc[::-1]
-            
-            # 4. Exibe a tabela final
-            st.dataframe(df_exibicao[['Seq.', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
-                         use_container_width=True, 
-                         hide_index=True)
+            # 1. Verifica se a coluna 'ID' existe
+            if 'ID' in df_m_limpo.columns:
+                # Se ela existe, usamos ela como nossa referência principal
+                df_exibicao = df_m_limpo.copy()
+                
+                # 2. Inverte a tabela (mais novos no topo)
+                df_exibicao = df_exibicao.iloc[::-1]
+                
+                # 3. Exibe usando a coluna 'ID' vinda da planilha
+                st.dataframe(df_exibicao[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
+                             use_container_width=True, 
+                             hide_index=True)
+            else:
+                st.error("Erro: A coluna 'ID' não foi encontrada na sua planilha!")
         else:
             st.warning("Base de dados vazia.")
-
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
