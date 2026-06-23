@@ -344,39 +344,45 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         # ... (após todos os st.selectbox e inputs do formulário)
 
         if st.form_submit_button("Salvar Lançamento"):
-            # 1. CARREGAR OS DADOS NO MOMENTO DO CLIQUE
-            # Isso garante que o Python sempre enxergue a base atualizada
-            df_atualizado = ler_dados_do_sheets() # Certifique-se de usar a função que lê sua planilha
+            # 1. BUSCAR O MAIOR ID DIRETO NA PLANILHA (Sem depender de variáveis externas)
+            # Pegamos todos os valores da aba
+            todos_dados = ws_base.get_all_records()
             
-            # 2. PEGAR O PRÓXIMO ID (o "cérebro" calculando a sequência)
-            if not df_atualizado.empty and 'ID' in df_atualizado.columns:
-                proximo_id = int(df_atualizado['ID'].max()) + 1
+            if todos_dados:
+                # Transformamos em um DataFrame temporário só para achar o maior ID
+                import pandas as pd
+                df_temp = pd.DataFrame(todos_dados)
+                
+                # Se a coluna ID existir, pegamos o maior + 1, senão começa em 1
+                if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
+                    proximo_id = int(df_temp['ID'].max()) + 1
+                else:
+                    proximo_id = 1
             else:
                 proximo_id = 1
-            # 2. Formatações necessárias
+
+            # 2. Formatações
             v_str = f"{f_val:.2f}".replace('.', ',')
             t_dat_str = t_dat.strftime("%d/%m/%Y")
             f_compra_str = f_compra.strftime("%d/%m/%Y")
             
-            # 3. Loop de parcelas (agora numerando cada uma)
+            # 3. Salvar as parcelas
             for i in range(f_par):
                 nova_data = t_dat + relativedelta(months=i)
                 
-                # Adicionamos o 'proximo_id' + i no início da lista
                 ws_base.append_row([
-                    proximo_id + i,     # Coluna A: ID (Automático!)
-                    nova_data.strftime("%d/%m/%Y"), # Coluna B: Vencimento
-                    v_str,              # Coluna C: Valor
-                    f_des,              # Coluna D: Descrição
-                    f_cat,              # Coluna E: Categoria
-                    f_tip,              # Coluna F: Tipo
-                    f_bnc,              # Coluna G: Banco
-                    f_sta,              # Coluna H: Status
-                    f_compra_str        # Coluna I: Data da Compra
+                    proximo_id + i,     # ID Automático
+                    nova_data.strftime("%d/%m/%Y"), 
+                    v_str,              
+                    f_des,              
+                    f_cat,              
+                    f_tip,              
+                    f_bnc,              
+                    f_sta,              
+                    f_compra_str        
                 ])
             
-            # 4. Finalização
-            st.toast(f"✅ Lançamentos salvos a partir do ID {proximo_id}!", icon="💰")
+            st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
             atualizar_sessao()
             st.rerun()
             # --- BARRINHA 2: TRANSFERÊNCIA ---
