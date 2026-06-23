@@ -296,6 +296,7 @@ st.sidebar.title("🎮 Painel Wilson")
 
 if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     atualizar_sessao()
+    st.cache_data.clear() # <--- ADICIONE ESTA LINHA AQUI!
     st.rerun()
 
 st.sidebar.divider()
