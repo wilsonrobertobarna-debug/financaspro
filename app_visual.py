@@ -318,20 +318,25 @@ for item in menu_itens:
 st.sidebar.divider()
 aba = st.session_state.page
 
-# --- PAINEL DE RESUMO (Ficará sempre fixo no topo, antes de carregar a aba) ---
-st.markdown("### 🏦 Painel Financeiro")
-entradas_totais = df_base[df_base['Tipo'].isin(['Receita', 'Rendimentos'])]['V_Num'].sum()
-saidas_totais = df_base[df_base['Tipo'].isin(['Despesa', 'Pendências'])]['V_Num'].sum()
-saldo_real = entradas_totais - saidas_totais
+# --- PAINEL MESTRE (DOIS EM UM) ---
+with st.expander("📊 Clique aqui para ver o Painel e Relatório Bancário", expanded=False):
+    
+    # 1. Painel Financeiro
+    st.markdown("### 🏦 Painel Financeiro")
+    entradas_totais = df_base[df_base['Tipo'].isin(['Receita', 'Rendimentos'])]['V_Num'].sum()
+    saidas_totais = df_base[df_base['Tipo'].isin(['Despesa', 'Pendências'])]['V_Num'].sum()
+    saldo_real = entradas_totais - saidas_totais
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Entradas + Rendimentos", f"R$ {entradas_totais:,.2f}")
-col2.metric("Despesas + Pendências", f"R$ {saidas_totais:,.2f}")
-col3.metric("SALDO REAL", f"R$ {saldo_real:,.2f}")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Entradas", f"R$ {entradas_totais:,.2f}")
+    c2.metric("Saídas", f"R$ {saidas_totais:,.2f}")
+    c3.metric("SALDO REAL", f"R$ {saldo_real:,.2f}", delta_color="inverse")
 
-# --- AQUI COMEÇA O SEU CÓDIGO DAS ABAS ---
-if "Pendências" in aba:
-    st.title("📋 Lançamentos Pendentes")
+    st.divider() # Uma linha para separar
+
+    # 2. Relatório Bancário (o que você já tinha)
+    st.markdown("### 🏦 Saldos por Banco")
+    # ... aqui você mantém aquele seu loop das colunas dos bancos ...
 
 # BARRINHA 1: NOVO LANÇAMENTO
 # Inicializa a variável de estado para controlar a abertura se ela não existir
