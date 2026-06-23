@@ -322,7 +322,7 @@ st.sidebar.divider()
 aba = st.session_state.page
 
 # --- PAINEL MESTRE (DOIS EM UM) ---
-if st.session_state.get('page') == 'Home': # Verifique se 'Home' é o nome da sua página principal
+    if st.session_state.get('page') == 'Home': # Verifique se 'Home' é o nome da sua página principal
 with st.expander("📊 Clique aqui para ver o Painel e Relatório Bancário", expanded=False):
         
     # 1. Painel Financeiro
