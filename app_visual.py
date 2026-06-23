@@ -167,64 +167,74 @@ def carregar_bancos_manual_gs():
     return pd.DataFrame()
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
-# --- 1. CARGA DE DADOS (FORA DE QUALQUER EXPANDER) ---
-with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo", expanded=False, key="meu_relatorio_bancario"):
-    # ... aqui entra todo o seu código de cálculo que você já tem
-    if 'df_base' not in st.session_state:
-        atualizar_sessao()
+with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
+    df = carregar_dados_gs()
+    df_bancos = carregar_bancos_manual_gs()
     
-        df_base = st.session_state['df_base']
-        df_bancos_info = st.session_state['df_bancos_info']
-        
-        # --- 2. PAINEL DE RESUMO (FIXO NO TOPO) ---
-        st.subheader("🏦 Resumo Bancário")
-        
+    # 1. Ajuste de Datas
+    df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
+    hoje = pd.Timestamp.today().normalize()
+    
+    # 2. Garantir que V_Num seja numérico
+    df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
+    
+    if not df_bancos.empty:
         qtd_colunas = 4
-        # Definimos as colunas
-        cols = st.columns(qtd_colunas)
         
-        # Loop para exibir os saldos
-        for i, (index, row) in enumerate(df_bancos_info.iterrows()):
-            nome_banco = row['Nome do Banco']
-            # Certifique-se de que o nome da coluna de saldo inicial na planilha seja exatamente 'Saldo Inicial'
-            saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
+        def formatar_moeda(valor):
+            try:
+                return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            except:
+                return "R$ 0,00"
+
+        for i in range(0, len(df_bancos), qtd_colunas):
+            cols = st.columns(qtd_colunas)
+            linha = df_bancos.iloc[i:i + qtd_colunas]
             
-            # Cálculo do saldo usando df_base
-            hoje = pd.Timestamp.today().normalize()
-            filtro = (df_base['Banco'] == nome_banco) & (pd.to_datetime(df_base['DT'], errors='coerce') <= hoje)
-            df_banco_atual = df_base[filtro]
-            
-            entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
-            saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
-            saldo_atual = saldo_inicial + entradas - saidas
-            
-            # Exibe nas colunas (usando o módulo da coluna para o loop funcionar bem)
-            with cols[i % qtd_colunas]:
-                st.metric(label=nome_banco, value=f"R$ {saldo_atual:,.2f}")# INICIALIZA O CACHE NA SESSÃO
-        if 'df_base' not in st.session_state:
-            st.session_state['df_base'] = carregar_dados_gs()
-        if 'df_bancos_info' not in st.session_state:
-            st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
-        
-        # 2. Agora criamos as variáveis locais para usar nas barras
-        df_base = st.session_state['df_base']
-        df_bancos_info = st.session_state['df_bancos_info']
-        
-        # FUNÇÃO PARA ATUALIZAR O ESTADO
-        def atualizar_sessao():
-            st.session_state['df_base'] = carregar_dados_gs()
-            st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
-        
-        # A "MÉCÂNICA" DE SEGURANÇA:
-        # Se o programa acabou de abrir e não tem nada na memória, ele carrega.
-        # Se já tem algo na memória (mesmo que você tenha fechado e aberto), 
-        # ele NÃO limpa, ele mantém o que está lá até que você aperte o botão de atualizar.
-        if 'df_base' not in st.session_state:
-            atualizar_sessao()
-        
-        # Agora, as variáveis sempre terão o conteúdo que foi carregado
-        df_base = st.session_state['df_base']
-        df_bancos_info = st.session_state['df_bancos_info']
+            for j, (index, row) in enumerate(linha.iterrows()):
+                with cols[j]:
+                    nome_banco = row['Nome do Banco']
+                    saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
+                    
+                    # 3. Filtrar transações deste banco até hoje
+                    filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
+                    df_banco_atual = df[filtro]
+                    
+                    # 4. Cálculo inteligente: 
+                    # Soma tudo se for 'Receita' ou 'Transferência' (entrada)
+                    # Subtrai se for 'Despesa'
+                    # Verifique na sua planilha se o nome na coluna 'Tipo' é exatamente 'Despesa'
+                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+                    
+                    saldo_atual = saldo_inicial + entradas - saidas
+                    
+                    st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
+# INICIALIZA O CACHE NA SESSÃO
+if 'df_base' not in st.session_state:
+    st.session_state['df_base'] = carregar_dados_gs()
+if 'df_bancos_info' not in st.session_state:
+    st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
+
+# 2. Agora criamos as variáveis locais para usar nas barras
+df_base = st.session_state['df_base']
+df_bancos_info = st.session_state['df_bancos_info']
+
+# FUNÇÃO PARA ATUALIZAR O ESTADO
+def atualizar_sessao():
+    st.session_state['df_base'] = carregar_dados_gs()
+    st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
+
+# A "MÉCÂNICA" DE SEGURANÇA:
+# Se o programa acabou de abrir e não tem nada na memória, ele carrega.
+# Se já tem algo na memória (mesmo que você tenha fechado e aberto), 
+# ele NÃO limpa, ele mantém o que está lá até que você aperte o botão de atualizar.
+if 'df_base' not in st.session_state:
+    atualizar_sessao()
+
+# Agora, as variáveis sempre terão o conteúdo que foi carregado
+df_base = st.session_state['df_base']
+df_bancos_info = st.session_state['df_bancos_info']
 
 # INTEGRAÇÃO DE AVISOS NO WHATSAPP VIA TWILIO
 def enviar_whatsapp_pendencias(df):
@@ -262,7 +272,7 @@ def enviar_whatsapp_pendencias(df):
                 except Exception as e:
                     pass
 
-    enviar_whatsapp_pendencias(df_base)
+enviar_whatsapp_pendencias(df_base)
 
 # CARREGA OS BANCOS DINAMICAMENTE DA PLANILHA OU USA OS PADRÕES
 if not df_bancos_info.empty:
