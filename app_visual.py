@@ -634,30 +634,26 @@ if "💰" in st.session_state.page:
 
             
         # 7. TABELA FINAL
+        # 7. TABELA FINAL
         st.subheader("🔍 Lançamentos do Mês")
         
         if not df_m_limpo.empty:
-            # Não vamos criar índice novo. 
-            # Vamos garantir que a coluna 'ID' que já existe na sua planilha 
-            # seja a primeira da fila e que ela seja o nosso guia.
+            df_exibicao = df_m_limpo.copy()
             
-            # 1. Verifica se a coluna 'ID' existe
-            if 'ID' in df_m_limpo.columns:
-                # Se ela existe, usamos ela como nossa referência principal
-                df_exibicao = df_m_limpo.copy()
-                
-                # 2. Inverte a tabela (mais novos no topo)
-                df_exibicao = df_exibicao.iloc[::-1]
-                
-                # 3. Exibe usando a coluna 'ID' vinda da planilha
-                st.dataframe(df_exibicao[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
-                             use_container_width=True, 
-                             hide_index=True)
-            else:
-                st.error("Erro: A coluna 'ID' não foi encontrada na sua planilha!")
+            # AJUSTE DE MENTOR: 
+            # Se você sente que a diferença é de 2, mudamos aqui.
+            # Se precisar ajustar para mais ou para menos, é só mudar este número '2'.
+            ajuste = 2 
+            df_exibicao['Seq.'] = df_exibicao.index + ajuste 
+            
+            # Inverte para mostrar os mais novos no topo
+            df_exibicao = df_exibicao.iloc[::-1]
+            
+            st.dataframe(df_exibicao[['Seq.', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
+                         use_container_width=True, 
+                         hide_index=True)
         else:
             st.warning("Base de dados vazia.")
-
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     
