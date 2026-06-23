@@ -344,31 +344,40 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         # ... (após todos os st.selectbox e inputs do formulário)
 
         if st.form_submit_button("Salvar Lançamento"):
-            # 1. Formatações necessárias
+           #if st.form_submit_button("Salvar Lançamento"):
+            # 1. PEGAR O PRÓXIMO ID (o "cérebro" calculando a sequência)
+            # Pegamos o maior ID atual e começamos a contar a partir dele
+            if not df_m_limpo.empty and 'ID' in df_m_limpo.columns:
+                proximo_id = int(df_m_limpo['ID'].max()) + 1
+            else:
+                proximo_id = 1
+
+            # 2. Formatações necessárias
             v_str = f"{f_val:.2f}".replace('.', ',')
             t_dat_str = t_dat.strftime("%d/%m/%Y")
             f_compra_str = f_compra.strftime("%d/%m/%Y")
             
-            # 2. Loop usando 't_dat' (a variável correta do seu formulário)
+            # 3. Loop de parcelas (agora numerando cada uma)
             for i in range(f_par):
                 nova_data = t_dat + relativedelta(months=i)
                 
+                # Adicionamos o 'proximo_id' + i no início da lista
                 ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
-                    v_str,                          # Coluna B: Valor
-                    f_des,                          # Coluna C: Descrição
-                    f_cat,                          # Coluna D: Categoria
-                    f_tip,                          # Coluna E: Tipo
-                    f_bnc,                          # Coluna F: Banco
-                    f_sta,                          # Coluna G: Status
-                    f_compra_str                    # Coluna H: Data da Compra
+                    proximo_id + i,     # Coluna A: ID (Automático!)
+                    nova_data.strftime("%d/%m/%Y"), # Coluna B: Vencimento
+                    v_str,              # Coluna C: Valor
+                    f_des,              # Coluna D: Descrição
+                    f_cat,              # Coluna E: Categoria
+                    f_tip,              # Coluna F: Tipo
+                    f_bnc,              # Coluna G: Banco
+                    f_sta,              # Coluna H: Status
+                    f_compra_str        # Coluna I: Data da Compra
                 ])
             
-            # 3. Finalização
-            st.toast("✅ Lançamento salvo com sucesso!", icon="💰")
+            # 4. Finalização
+            st.toast(f"✅ Lançamentos salvos a partir do ID {proximo_id}!", icon="💰")
             atualizar_sessao()
             st.rerun()
-
             # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
         with st.form("f_transf", clear_on_submit=True):
