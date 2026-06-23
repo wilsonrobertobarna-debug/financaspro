@@ -344,14 +344,15 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         # ... (após todos os st.selectbox e inputs do formulário)
 
         if st.form_submit_button("Salvar Lançamento"):
-           #if st.form_submit_button("Salvar Lançamento"):
-            # 1. PEGAR O PRÓXIMO ID (o "cérebro" calculando a sequência)
-            # Pegamos o maior ID atual e começamos a contar a partir dele
-            if not df_m_limpo.empty and 'ID' in df_m_limpo.columns:
-                proximo_id = int(df_m_limpo['ID'].max()) + 1
+            # 1. CARREGAR OS DADOS NO MOMENTO DO CLIQUE
+            # Isso garante que o Python sempre enxergue a base atualizada
+            df_atualizado = ler_dados_do_sheets() # Certifique-se de usar a função que lê sua planilha
+            
+            # 2. PEGAR O PRÓXIMO ID (o "cérebro" calculando a sequência)
+            if not df_atualizado.empty and 'ID' in df_atualizado.columns:
+                proximo_id = int(df_atualizado['ID'].max()) + 1
             else:
                 proximo_id = 1
-
             # 2. Formatações necessárias
             v_str = f"{f_val:.2f}".replace('.', ',')
             t_dat_str = t_dat.strftime("%d/%m/%Y")
