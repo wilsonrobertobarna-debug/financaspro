@@ -262,7 +262,7 @@ def enviar_whatsapp_pendencias(df):
                 except Exception as e:
                     pass
 
-enviar_whatsapp_pendencias(df_base)
+    enviar_whatsapp_pendencias(df_base)
 
 # CARREGA OS BANCOS DINAMICAMENTE DA PLANILHA OU USA OS PADRÕES
 if not df_bancos_info.empty:
