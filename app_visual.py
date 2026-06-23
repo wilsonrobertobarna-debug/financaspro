@@ -170,61 +170,61 @@ def carregar_bancos_manual_gs():
 # --- 1. CARGA DE DADOS (FORA DE QUALQUER EXPANDER) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo", expanded=False, key="meu_relatorio_bancario"):
     # ... aqui entra todo o seu código de cálculo que você já tem
-if 'df_base' not in st.session_state:
-    atualizar_sessao()
-
-    df_base = st.session_state['df_base']
-    df_bancos_info = st.session_state['df_bancos_info']
-    
-    # --- 2. PAINEL DE RESUMO (FIXO NO TOPO) ---
-    st.subheader("🏦 Resumo Bancário")
-    
-    qtd_colunas = 4
-    # Definimos as colunas
-    cols = st.columns(qtd_colunas)
-    
-    # Loop para exibir os saldos
-    for i, (index, row) in enumerate(df_bancos_info.iterrows()):
-        nome_banco = row['Nome do Banco']
-        # Certifique-se de que o nome da coluna de saldo inicial na planilha seja exatamente 'Saldo Inicial'
-        saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
-        
-        # Cálculo do saldo usando df_base
-        hoje = pd.Timestamp.today().normalize()
-        filtro = (df_base['Banco'] == nome_banco) & (pd.to_datetime(df_base['DT'], errors='coerce') <= hoje)
-        df_banco_atual = df_base[filtro]
-        
-        entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
-        saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
-        saldo_atual = saldo_inicial + entradas - saidas
-        
-        # Exibe nas colunas (usando o módulo da coluna para o loop funcionar bem)
-        with cols[i % qtd_colunas]:
-            st.metric(label=nome_banco, value=f"R$ {saldo_atual:,.2f}")# INICIALIZA O CACHE NA SESSÃO
-    if 'df_base' not in st.session_state:
-        st.session_state['df_base'] = carregar_dados_gs()
-    if 'df_bancos_info' not in st.session_state:
-        st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
-    
-    # 2. Agora criamos as variáveis locais para usar nas barras
-    df_base = st.session_state['df_base']
-    df_bancos_info = st.session_state['df_bancos_info']
-    
-    # FUNÇÃO PARA ATUALIZAR O ESTADO
-    def atualizar_sessao():
-        st.session_state['df_base'] = carregar_dados_gs()
-        st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
-    
-    # A "MÉCÂNICA" DE SEGURANÇA:
-    # Se o programa acabou de abrir e não tem nada na memória, ele carrega.
-    # Se já tem algo na memória (mesmo que você tenha fechado e aberto), 
-    # ele NÃO limpa, ele mantém o que está lá até que você aperte o botão de atualizar.
     if 'df_base' not in st.session_state:
         atualizar_sessao()
     
-    # Agora, as variáveis sempre terão o conteúdo que foi carregado
-    df_base = st.session_state['df_base']
-    df_bancos_info = st.session_state['df_bancos_info']
+        df_base = st.session_state['df_base']
+        df_bancos_info = st.session_state['df_bancos_info']
+        
+        # --- 2. PAINEL DE RESUMO (FIXO NO TOPO) ---
+        st.subheader("🏦 Resumo Bancário")
+        
+        qtd_colunas = 4
+        # Definimos as colunas
+        cols = st.columns(qtd_colunas)
+        
+        # Loop para exibir os saldos
+        for i, (index, row) in enumerate(df_bancos_info.iterrows()):
+            nome_banco = row['Nome do Banco']
+            # Certifique-se de que o nome da coluna de saldo inicial na planilha seja exatamente 'Saldo Inicial'
+            saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
+            
+            # Cálculo do saldo usando df_base
+            hoje = pd.Timestamp.today().normalize()
+            filtro = (df_base['Banco'] == nome_banco) & (pd.to_datetime(df_base['DT'], errors='coerce') <= hoje)
+            df_banco_atual = df_base[filtro]
+            
+            entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+            saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+            saldo_atual = saldo_inicial + entradas - saidas
+            
+            # Exibe nas colunas (usando o módulo da coluna para o loop funcionar bem)
+            with cols[i % qtd_colunas]:
+                st.metric(label=nome_banco, value=f"R$ {saldo_atual:,.2f}")# INICIALIZA O CACHE NA SESSÃO
+        if 'df_base' not in st.session_state:
+            st.session_state['df_base'] = carregar_dados_gs()
+        if 'df_bancos_info' not in st.session_state:
+            st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
+        
+        # 2. Agora criamos as variáveis locais para usar nas barras
+        df_base = st.session_state['df_base']
+        df_bancos_info = st.session_state['df_bancos_info']
+        
+        # FUNÇÃO PARA ATUALIZAR O ESTADO
+        def atualizar_sessao():
+            st.session_state['df_base'] = carregar_dados_gs()
+            st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
+        
+        # A "MÉCÂNICA" DE SEGURANÇA:
+        # Se o programa acabou de abrir e não tem nada na memória, ele carrega.
+        # Se já tem algo na memória (mesmo que você tenha fechado e aberto), 
+        # ele NÃO limpa, ele mantém o que está lá até que você aperte o botão de atualizar.
+        if 'df_base' not in st.session_state:
+            atualizar_sessao()
+        
+        # Agora, as variáveis sempre terão o conteúdo que foi carregado
+        df_base = st.session_state['df_base']
+        df_bancos_info = st.session_state['df_bancos_info']
 
 # INTEGRAÇÃO DE AVISOS NO WHATSAPP VIA TWILIO
 def enviar_whatsapp_pendencias(df):
