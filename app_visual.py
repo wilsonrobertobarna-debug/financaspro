@@ -717,6 +717,11 @@ elif "Pendências" in aba:
 
     # 2. Processamento e Filtros
     df_filtrado = df_base.copy()
+
+    # DEBUG: Diagnóstico de Colunas
+    st.write("--- Diagnóstico das Colunas ---")
+    st.write("Colunas presentes no df_base:", df_base.columns.tolist())
+    st.write("Colunas presentes no df_filtrado:", df_filtrado.columns.tolist())
     
     # Filtro de Status
     df_filtrado['Status_Limpo'] = df_filtrado['Status'].astype(str).str.strip().str.lower()
