@@ -697,6 +697,7 @@ if "💰" in st.session_state.page:
         else:
             st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
+    st.header("TESTE: SE ISSO APARECER, ESTOU NO LUGAR CERTO")
     #st.title("📋 Lançamentos Pendentes")
     
     # 1. Filtros
