@@ -338,7 +338,11 @@ for item in menu_itens:
  
 st.sidebar.divider()
 
-aba = st.session_state.page
+# --- BLOCO DE SEGURANÇA ---
+if 'page' not in st.session_state:
+    st.session_state['page'] = 'Home'  # Define o valor inicial se não existir
+
+aba = st.session_state['page'] # Agora ele não vai mais dar erro, pois garantimos que existe
 
 # BARRINHA 1: NOVO LANÇAMENTO
 # Inicializa a variável de estado para controlar a abertura se ela não existir
