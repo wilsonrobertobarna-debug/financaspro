@@ -733,20 +733,22 @@ elif "Pendências" in aba:
                 (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
             ]
             
-   # 4. Filtro de Descrição e Beneficiário
-    if busca_desc:
-        # Cria uma máscara que busca nas duas colunas
-        # Usamos .astype(str) para garantir que o filtro não quebre se houver dados vazios
-        mask_desc = df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)
-        
-        # Verifica se a coluna Beneficiário existe para evitar erro
-        if 'Beneficiário' in df_filtrado.columns:
-            mask_ben = df_filtrado['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False)
-            df_filtrado = df_filtrado[mask_desc | mask_ben] # O símbolo | significa "OU"
-        else:
-            df_filtrado = df_filtrado[mask_desc]
+   # 4. Filtro de Descrição e Beneficiário (TESTE)
+    st.write("Colunas detectadas na planilha:", df_filtrado.columns.tolist())
     
-    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
+    if busca_desc:
+        # Verifica se o texto de busca está sendo encontrado
+        st.write(f"Buscando por: '{busca_desc}'")
+        
+        # Filtro (sem aplicar ainda, só para testar)
+        mask_desc = df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)
+        mask_ben = df_filtrado['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False)
+        
+        # MOSTRAR O QUE ELE ENCONTROU ANTES DE FILTRAR
+        st.write("Linhas que contêm o termo na Descrição:", mask_desc.sum())
+        st.write("Linhas que contêm o termo no Beneficiário:", mask_ben.sum())
+        
+        df_filtrado = df_filtrado[mask_desc | mask_ben]
     
     # Lista de colunas para exibir
     colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor'] 
