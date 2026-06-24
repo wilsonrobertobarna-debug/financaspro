@@ -733,22 +733,26 @@ elif "Pendências" in aba:
                 (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
             ]
             
-   # 4. Filtro de Descrição e Beneficiário (TESTE)
-    st.write("Colunas detectadas na planilha:", df_filtrado.columns.tolist())
-    
+   # 4. Filtro de Descrição / Beneficiário
     if busca_desc:
-        # Verifica se o texto de busca está sendo encontrado
-        st.write(f"Buscando por: '{busca_desc}'")
+        # Criamos uma máscara que busca no campo 'Descrição' OU no campo 'Beneficiário'
+        # .astype(str) garante que ele não reclame se encontrar células vazias
+        mask = (df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)) | \
+               (df_filtrado['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False))
         
-        # Filtro (sem aplicar ainda, só para testar)
-        mask_desc = df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)
-        mask_ben = df_filtrado['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False)
-        
-        # MOSTRAR O QUE ELE ENCONTROU ANTES DE FILTRAR
-        st.write("Linhas que contêm o termo na Descrição:", mask_desc.sum())
-        st.write("Linhas que contêm o termo no Beneficiário:", mask_ben.sum())
-        
-        df_filtrado = df_filtrado[mask_desc | mask_ben]
+        df_filtrado = df_filtrado[mask]
+    
+    # Exibe o número de resultados encontrados após o filtro
+    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
+    
+    # Lista de colunas para exibir (agora com Beneficiário!)
+    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor'] 
+    
+    # Filtra apenas as colunas que existem no DataFrame
+    cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
+    
+    # Exibe a tabela final
+    st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
     
     # Lista de colunas para exibir
     colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor'] 
