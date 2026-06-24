@@ -738,7 +738,7 @@ elif "Pendências" in aba:
         cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
         
             # Exibe a tabela
-            st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
+        st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
 
             # 4. Botão de Baixa (Funcionalidade de Baixa)
         if not df_filtrado.empty:
