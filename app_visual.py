@@ -305,7 +305,7 @@ st.sidebar.divider()
 #if 'page' not in st.session_state:    
     
     # --- PAINEL MESTRE (DOIS EM UM) --- 
-    with st.expander("📊 Clique aqui para ver o Painel e Relatório Bancário", expanded=False):
+        with st.expander("📊 Clique aqui para ver o Painel e Relatório Bancário", expanded=False):
     
         # 1. Painel Financeiro
         st.markdown("### 🏦 Painel Financeiro")
