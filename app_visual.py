@@ -407,6 +407,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     f_sta,                          # Coluna G: Status
                     f_compra_str,                   # Coluna H: Data da Compra
                     proximo_id + i                  # Coluna I: ID (Agora sem pular coluna!)
+                    f_ben,                          # Coluna J: Beneficiário
                 ])
             
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
