@@ -1246,6 +1246,8 @@ if aba == "📋 Relatório PDF":
                 if pd.isna(valor_val): valor_val = 0.0
                 saldo_val = row.get('Saldo_Acum', 0.0)
                 status_val = str(row.get('Status', '-'))
+                ben_val = str(row.get('Beneficiario', '---'))[:20] # Pega até 20 caracteres
+                bnc_val = str(row.get('Banco', '---'))[:15]        # Pega até 15 caracteres
 
                 if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper():
                     texto_valor = f"- R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
