@@ -697,7 +697,7 @@ if "💰" in st.session_state.page:
         else:
             st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
-        # 1. Filtros
+        # 1. Filtros (Tudo com recuo uniforme de 8 espaços)
         col_b, col_d, col_t = st.columns(3)
         with col_b:
             filtro_banco = st.multiselect("Filtrar Banco/Cartão:", df_base['Banco'].unique(), key="banco_pend")
