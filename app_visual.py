@@ -699,15 +699,17 @@ if "💰" in st.session_state.page:
 elif "Pendências" in aba:
     #st.title("📋 Lançamentos Pendentes")
     
-    # 1. Filtros
-    col_b, col_d = st.columns(2)
-    with col_b:
-        filtro_banco = st.multiselect("Filtrar Banco/Cartão:", df_base['Banco'].unique(), key="banco_pend")
-    with col_d:
-        busca_desc = st.text_input("Buscar Descrição:", key="desc_pend")
+   # 1. Filtros
+   col_b, col_d, col_t = st.columns(3) # Aumentei para 3 colunas para caber o novo filtro
+   with col_b:
+       filtro_banco = st.multiselect("Filtrar Banco/Cartão:", df_base['Banco'].unique(), key="banco_pend")
+   with col_d:
+       busca_desc = st.text_input("Buscar Descrição:", key="desc_pend")
+   with col_t:
+       # ADICIONE ESTA LINHA AQUI:
+       busca_tipo = st.selectbox("Filtrar Tipo:", ["Todos", "Receita", "Despesa"], key="tipo_pend")
 
-    periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
-
+   periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
    # 2. Processamento e Filtros (Ordem Correta)
     df_filtrado = df_base.copy()
     
