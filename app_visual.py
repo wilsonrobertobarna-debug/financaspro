@@ -709,16 +709,11 @@ elif "Pendências" in aba:
        # ADICIONE ESTA LINHA AQUI:
        busca_tipo = st.selectbox("Filtrar Tipo:", ["Todos", "Receita", "Despesa"], key="tipo_pend")
 
-   periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
-   # 2. Processamento e Filtros (Ordem Correta)
-    df_filtrado = df_base.copy()
+       periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
+       # 2. Processamento e Filtros (Ordem Correta)
+        df_filtrado = df_base.copy()
     
-    # 1. Filtro de Status (garante que apenas Pendentes apareçam)
-    df_filtrado['Status_Limpo'] = df_filtrado['Status'].astype(str).str.strip().str.lower()
-    df_filtrado = df_filtrado[df_filtrado['Status_Limpo'] == 'pendente'].copy()
-    
-    # 2. Filtro de Banco (se selecionado, filtra agora)
-    if filtro_banco:
+        
         df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
         
     # 3. Conversão de Data e Filtro de Período
