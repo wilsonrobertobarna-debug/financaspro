@@ -316,7 +316,7 @@ if 'page' not in st.session_state:
     col3.metric("SALDO REAL", f"R$ {saldo_real:,.2f}")
 
 # --- AQUI COMEÇA O SEU CÓDIGO DAS ABAS ---
-if "Pendências" in aba:
+ if "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
 
 
