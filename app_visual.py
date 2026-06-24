@@ -170,9 +170,6 @@ def carregar_bancos_manual_gs():
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
     df = carregar_dados_gs()
     df_bancos = carregar_bancos_manual_gs()
-
-    df = carregar_dados_gs()
-    df_bancos = carregar_bancos_manual_gs()
     
     # 1. Ajuste de Datas
     df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
@@ -319,44 +316,8 @@ for item in menu_itens:
         st.rerun() # Removemos o fechar_sidebar() daqui    
  
 st.sidebar.divider()
-aba = st.session_state.page
 
-# --- PAINEL MESTRE (DOIS EM UM) ---
-if st.session_state.get('page') == 'Home': # Verifique se 'Home' é o nome da sua página principal
-  with st.expander("📊 Clique aqui para ver o Painel e Relatório Bancário", expanded=False):
-        
-        # 1. Painel Financeiro
-        st.markdown("### 🏦 Painel Financeiro")
-        entradas_totais = df_base[df_base['Tipo'].isin(['Receita', 'Rendimentos'])]['V_Num'].sum()
-        saidas_totais = df_base[df_base['Tipo'].isin(['Despesa', 'Pendências'])]['V_Num'].sum()
-        saldo_real = entradas_totais - saidas_totais
-    
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Entradas", f"R$ {entradas_totais:,.2f}")
-        c2.metric("Saídas", f"R$ {saidas_totais:,.2f}")
-        c3.metric("SALDO REAL", f"R$ {saldo_real:,.2f}", delta_color="inverse")
-    
-        st.divider() # Uma linha para separar
-    
-       # 2. Relatório Bancário (Dentro do mesmo expander)
-        st.markdown("### 🏦 Saldos por Banco")
-        
-        # Criamos colunas para listar os bancos
-        if not df_bancos_info.empty:
-            # Usamos uma lista para exibir os bancos de forma mais organizada
-            for _, row in df_bancos_info.iterrows():
-                nome_banco = row['Nome do Banco']
-                # O cálculo que você já usa:
-                filtro = (df_base['Banco'] == nome_banco)
-                entradas = df_base[(filtro) & (df_base['Tipo'] != 'Despesa')]['V_Num'].sum()
-                saidas = df_base[(filtro) & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
-                
-                # Aqui ajustamos o cálculo considerando seu saldo inicial da planilha
-                saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
-                saldo_final_banco = saldo_inicial + entradas - saidas
-                
-                # Exibição
-                st.write(f"**{nome_banco}:** R$ {saldo_final_banco:,.2f}")
+aba = st.session_state.page
 
 # BARRINHA 1: NOVO LANÇAMENTO
 # Inicializa a variável de estado para controlar a abertura se ela não existir
