@@ -734,7 +734,9 @@ elif "Pendências" in aba:
     # 4. Filtro de Descrição (Por último, para refinar)
     if busca_desc:
         df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
-    
+    if busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
+        df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
+        
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
     colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
@@ -1096,9 +1098,13 @@ if aba == "📋 Relatório PDF":
 
             if busca_desc and col_desc_df:
                 df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
+            if busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
+                df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
+            if busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
+                df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
             df_report = df_report.sort_values(by='DT_FILTRO')
 
@@ -1313,10 +1319,14 @@ if aba == "📋 Relatório PDF":
     # Aplica Descrição na tela
     if busca_desc and col_desc_df:
         df_tela = df_tela[df_tela[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
+    if busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
+        df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
     # Aplica Status na tela
     if busca_status != "Todos" and col_status_df:
         df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
+    if busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
+        df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
     # Faxina das colunas internas para manter o visual limpo
     colunas_para_esconder = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
