@@ -694,7 +694,7 @@ if "💰" in st.session_state.page:
             # Inverte para mostrar os mais novos no topo
             df_exibicao = df_exibicao.iloc[::-1]
             
-            st.dataframe(df_exibicao[['Seq.', 'Vencimento', 'Descrição', 'Beneficiário', 'Valor', 'Categoria', 'Banco', 'Status']], 
+            st.dataframe(df_exibicao[['Seq.', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
                          use_container_width=True, 
                          hide_index=True)
         else:
