@@ -1059,16 +1059,12 @@ if aba == "📋 Relatório PDF":
             else:
                 b_ini = b_fim = periodo_pdf
 
-            # ========================================================
             # 1. INICIALIZAÇÃO DO PDF
-            # ========================================================
             from fpdf import FPDF
             pdf = FPDF()
             pdf.add_page()
 
-            # ========================================================
             # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
-            # ========================================================
             df_report = df_base.copy()
 
             col_banco_df = next((c for c in df_report.columns if c.upper() in ['BANCO', 'CONTA']), None)
@@ -1076,7 +1072,7 @@ if aba == "📋 Relatório PDF":
             col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
             col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
 
-            # Tratamento e filtro de Data
+            # Tratamento de Data
             if col_data_df:
                 df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
             else:
@@ -1085,26 +1081,21 @@ if aba == "📋 Relatório PDF":
             t_ini = pd.to_datetime(b_ini)
             t_fim = pd.to_datetime(b_fim)
 
-            # Guardamos uma cópia completa para calcular o saldo retroativo do Banco antes de filtrar o período final
-            df_retroativo = df_report.copy()
-
-            # Aplica os filtros na tabela que vai de fato para o PDF
+            # Aplica filtros
             df_report = df_report[(df_report['DT_FILTRO'] >= t_ini) & (df_report['DT_FILTRO'] <= t_fim)]
 
-            banco_nome = "Todos os Bancos"
             if banco_relatorio != "Todos" and col_banco_df:
-                banco_nome = banco_relatorio
-                df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_nome).upper()]
+                df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_relatorio).upper()]
 
             if busca_desc and col_desc_df:
                 df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
-            if busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
-                df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
-            if busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
-                df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
+            
+            # Filtro de Tipo (Corrigido)
+            if busca_tipo != "Todos" and 'Tipo' in df_report.columns:
+                df_report = df_report[df_report['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
             df_report = df_report.sort_values(by='DT_FILTRO')
 
