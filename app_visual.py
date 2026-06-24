@@ -733,12 +733,16 @@ elif "Pendências" in aba:
                 (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
             ]
             
-    # 4. Filtro de Descrição (Por último, para refinar)
+   # 4. Filtro de Descrição (Por último, para refinar)
     if busca_desc:
         df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
     
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
-    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
+    
+    # Adicionamos 'Beneficiário' na lista abaixo:
+    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor'] 
+    
+    # O código abaixo já cuida de verificar se a coluna existe para não dar erro
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
     
     # Exibe a tabela
