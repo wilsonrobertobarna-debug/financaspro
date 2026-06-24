@@ -732,11 +732,11 @@ elif "Pendências" in aba:
                 (df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
                 (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
             ]
-         
+    st.write("--- O código chegou até aqui ---")      
   # 4. Filtros Dedicados
     st.subheader("Filtros de Busca")
 
-    st.write("--- O código chegou até aqui ---")
+   
     col1, col2 = st.columns(2)
     
     with col1:
