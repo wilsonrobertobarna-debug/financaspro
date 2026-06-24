@@ -303,8 +303,7 @@ st.sidebar.divider()
 
 # Inicializa a página se não existir
 if 'page' not in st.session_state:    
-    st.session_state.page = "💰 Finanças & Bancos"
-
+    
 # --- PAINEL DE RESUMO (Ficará sempre fixo no topo, antes de carregar a aba) ---
 st.markdown("### 🏦 Painel Financeiro")
 entradas_totais = df_base[df_base['Tipo'].isin(['Receita', 'Rendimentos'])]['V_Num'].sum()
