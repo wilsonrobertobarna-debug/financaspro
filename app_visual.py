@@ -699,15 +699,16 @@ if "💰" in st.session_state.page:
 elif "Pendências" in aba:
     st.header("📋 Lançamentos Pendentes")
     
-    # 1. Nossos novos filtros
-    col1, col2, col3 = st.columns(3)
+    # CRIANDO AS CAIXAS DE FILTRO
+    filtro_tipo = st.selectbox("Filtrar por Tipo:", ["Todos", "Receita", "Despesa"])
+    busca_desc = st.text_input("Buscar Descrição:")
+    busca_ben = st.text_input("Buscar Beneficiário:")
     
-    with col1:
-        filtro_tipo = st.selectbox("Filtrar por Tipo:", ["Todos", "Receita", "Despesa"])
-    with col2:
-        busca_desc = st.text_input("Buscar Descrição:")
-    with col3:
-        busca_ben = st.text_input("Buscar Beneficiário:")
+    st.write("---") # Linha separadora
+    st.write("Se você está vendo isso, o filtro está carregado.")
+    
+    # ISSO VAI PARAR O CÓDIGO AQUI
+    st.stop()
 
     # 2. Lógica (usando df_base como fonte)
     df_filtrado = df_base.copy()
