@@ -1225,13 +1225,15 @@ if aba == "📋 Relatório PDF":
             pdf.set_font("Arial", 'B', 9)
             pdf.cell(20, 7, "Data", 1)
             pdf.cell(18, 7, "Tipo", 1)
-            pdf.cell(35, 7, "Categoria", 1)
-            pdf.cell(45, 7, "Descricao", 1)
-            pdf.cell(25, 7, "Valor", 1)
-            pdf.cell(32, 7, "Saldo Acum.", 1)
-            pdf.cell(20, 7, "Status", 1)
+            pdf.cell(30, 7, "Categoria", 1)    # Ajustado de 35 para 30
+            pdf.cell(30, 7, "Descricao", 1)    # Ajustado de 45 para 30
+            pdf.cell(25, 7, "Benefic.", 1)     # NOVO: Beneficiário
+            pdf.cell(20, 7, "Banco", 1)        # NOVO: Banco
+            pdf.cell(22, 7, "Valor", 1)        # Ajustado de 25 para 22
+            pdf.cell(25, 7, "Saldo Acum.", 1)  # Ajustado de 32 para 25
+            pdf.cell(15, 7, "Status", 1)       # Ajustado de 20 para 15
             pdf.ln()
-
+            
             # ========================================================
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
