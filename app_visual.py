@@ -713,7 +713,7 @@ elif "Pendências" in aba:
         df_filtrado = df_base.copy()
         
         st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
-            df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
+           
         
         # 3. Filtro de Data
         col_data = 'Vencimento' 
