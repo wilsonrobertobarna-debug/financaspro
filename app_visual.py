@@ -717,8 +717,8 @@ elif "Pendências" in aba:
        df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
         
        # 3. Conversão de Data e Filtro de Período
-        col_data = 'Vencimento' 
-        if col_data in df_filtrado.columns:
+       col_data = 'Vencimento' 
+       if col_data in df_filtrado.columns:
             df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
             
             # Filtra o período se uma tupla válida for selecionada
