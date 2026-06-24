@@ -734,8 +734,8 @@ elif "Pendências" in aba:
             df_filtrado = df_filtrado[df_filtrado['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
             
         st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
-                colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
-            cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
+        colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
+        cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
         
             # Exibe a tabela
             st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
