@@ -1034,12 +1034,15 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     # LINHA 2 DE FILTROS: DESCRIÇÃO E STATUS 
     # -------------------------------------------------------------------------
-    col_rel3, col_rel4 = st.columns(2)
+    # LINHA 2 DE FILTROS: DESCRIÇÃO, STATUS E TIPO
+    col_rel3, col_rel4, col_rel5 = st.columns(3)
     with col_rel3:
         busca_desc = st.text_input("🔍 Pesquisar por Descrição / Beneficiário:", "").strip()
-        
     with col_rel4:
         busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
+    with col_rel5:
+        # Nova caixa para o Tipo
+        busca_tipo = st.selectbox("💰 Filtrar Tipo:", ["Todos", "Receita", "Despesa"])
 
     st.markdown("---")
 
