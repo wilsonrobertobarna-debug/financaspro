@@ -744,6 +744,8 @@ elif "Pendências" in aba:
     with col2:
         busca_ben = st.text_input("👤 Pesquisar por Beneficiário:")
 
+    st.write("--- O código passou pelas caixas ---")
+
     # Filtro de Descrição
     if busca_desc:
         df_filtrado = df_filtrado[df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)]
