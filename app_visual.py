@@ -697,8 +697,9 @@ if "💰" in st.session_state.page:
         else:
             st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
-        # 1. Filtros (O recuo abaixo é de 8 espaços)
+        # Tudo abaixo tem que ter exatamente 8 espaços de recuo
         col_b, col_d, col_t = st.columns(3)
+        
         with col_b:
             filtro_banco = st.multiselect("Filtrar Banco/Cartão:", df_base['Banco'].unique(), key="banco_pend")
         with col_d:
@@ -708,10 +709,8 @@ elif "Pendências" in aba:
 
         periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
         
-        # 2. Processamento
+        # Processamento
         df_filtrado = df_base.copy()
-        
-        # 3. Exibição
         st.write(f"### Lançamentos: {len(df_filtrado)}")
            
         
