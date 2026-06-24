@@ -10,7 +10,6 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
@@ -360,7 +359,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         f_des = st.text_input("Descrição / Beneficiário")
-        f_ben = st.text_input("Beneficiário") # Novo campo adicionado
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação","Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
@@ -407,8 +405,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     f_bnc,                          # Coluna F: Banco
                     f_sta,                          # Coluna G: Status
                     f_compra_str,                   # Coluna H: Data da Compra
-                    proximo_id + i,                  # Coluna I: ID (Agora sem pular coluna!)
-                    f_ben,                          # Coluna J: Beneficiário
+                    proximo_id + i                  # Coluna I: ID (Agora sem pular coluna!)
                 ])
             
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
@@ -733,36 +730,18 @@ elif "Pendências" in aba:
                 (df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
                 (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
             ]
-# 4. Filtro de Busca (Descrição ou Beneficiário)
-    busca_desc = st.text_input("🔍 Pesquisar por Descrição / Beneficiário:")
-
+            
+    # 4. Filtro de Descrição (Por último, para refinar)
     if busca_desc:
-        df_filtrado = df_filtrado.copy()
-        
-        # Vamos padronizar os nomes das colunas para evitar erros de acentuação/espaço
-        # Isso garante que mesmo que haja um erro de digitação no cabeçalho, ele tente buscar
-        colunas_map = {c.strip(): c for c in df_filtrado.columns}
-        
-        # Prepara a busca
-        busca_desc = busca_desc.lower()
-        
-        # Filtro: Busca em 'Descrição' OU em 'Beneficiário' (se existir)
-        # O .astype(str).str.lower() converte tudo para minúsculo antes de comparar
-        mask = (df_filtrado['Descrição'].astype(str).str.lower().str.contains(busca_desc, na=False))
-        
-        if 'Beneficiário' in df_filtrado.columns:
-            mask = mask | (df_filtrado['Beneficiário'].astype(str).str.lower().str.contains(busca_desc, na=False))
-        
-        df_filtrado = df_filtrado[mask]
-
-    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
+        df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
     
-    # Exibe a tabela
-    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor']
+    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
+    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
     
+    # Exibe a tabela
     st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
-    
+
     # 4. Botão de Baixa (Funcionalidade de Baixa)
     if not df_filtrado.empty:
         nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
@@ -1091,7 +1070,6 @@ if aba == "📋 Relatório PDF":
             col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
             col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
-            col_ben_df = next((c for c in df_report.columns if c.upper() in ['BENEFICIARIO', 'BENEFICIÁRIO']), None)
 
             # Tratamento e filtro de Data
             if col_data_df:
@@ -1244,15 +1222,13 @@ if aba == "📋 Relatório PDF":
             pdf.set_font("Arial", 'B', 9)
             pdf.cell(20, 7, "Data", 1)
             pdf.cell(18, 7, "Tipo", 1)
-            pdf.cell(30, 7, "Categoria", 1)    # Ajustado de 35 para 30
-            pdf.cell(30, 7, "Descricao", 1)    # Ajustado de 45 para 30
-            pdf.cell(25, 7, "Benefic.", 1)     # NOVO: Beneficiário
-            pdf.cell(20, 7, "Banco", 1)        # NOVO: Banco
-            pdf.cell(22, 7, "Valor", 1)        # Ajustado de 25 para 22
-            pdf.cell(25, 7, "Saldo Acum.", 1)  # Ajustado de 32 para 25
-            pdf.cell(15, 7, "Status", 1)       # Ajustado de 20 para 15
+            pdf.cell(35, 7, "Categoria", 1)
+            pdf.cell(45, 7, "Descricao", 1)
+            pdf.cell(25, 7, "Valor", 1)
+            pdf.cell(32, 7, "Saldo Acum.", 1)
+            pdf.cell(20, 7, "Status", 1)
             pdf.ln()
-            
+
             # ========================================================
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
@@ -1267,8 +1243,6 @@ if aba == "📋 Relatório PDF":
                 if pd.isna(valor_val): valor_val = 0.0
                 saldo_val = row.get('Saldo_Acum', 0.0)
                 status_val = str(row.get('Status', '-'))
-                ben_val = str(row.get('Beneficiário', '---'))[:20] # Pega até 20 caracteres
-                bnc_val = str(row.get('Banco', '---'))[:15]        # Pega até 15 caracteres
 
                 if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper():
                     texto_valor = f"- R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
