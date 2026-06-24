@@ -10,7 +10,6 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-st.title("TESTE DE FUNCIONAMENTO: SE VOCÊ VÊ ISSO, ESTAMOS NO ARQUIVO CERTO")
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
