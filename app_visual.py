@@ -700,47 +700,59 @@ elif "Pendências" in aba:
     #st.title("📋 Lançamentos Pendentes")
     
     # 1. Filtros
-    col_b, col_d = st.columns(2)
+# 1. Filtros (Agora incluindo Tipo e Beneficiário)
+    col_a, col_b, col_c = st.columns(3)
+    
+    with col_a:
+        # Filtro de Tipo (Receita/Despesa)
+        filtro_tipo = st.selectbox("Filtrar por Tipo:", ["Todos", "Receita", "Despesa"], key="tipo_pend")
     with col_b:
+        # Filtro de Banco
         filtro_banco = st.multiselect("Filtrar Banco/Cartão:", df_base['Banco'].unique(), key="banco_pend")
-    with col_d:
-        busca_desc = st.text_input("Buscar Descrição:", key="desc_pend")
+    with col_c:
+        # Busca unificada (Descrição + Beneficiário)
+        busca_desc = st.text_input("🔍 Buscar (Desc. ou Benef.):", key="desc_pend")
 
     periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
 
-   # 2. Processamento e Filtros (Ordem Correta)
+    # 2. Processamento e Filtros
     df_filtrado = df_base.copy()
     
-    # 1. Filtro de Status (garante que apenas Pendentes apareçam)
+    # Filtro de Status
     df_filtrado['Status_Limpo'] = df_filtrado['Status'].astype(str).str.strip().str.lower()
     df_filtrado = df_filtrado[df_filtrado['Status_Limpo'] == 'pendente'].copy()
     
-    # 2. Filtro de Banco (se selecionado, filtra agora)
+    # Filtro de Tipo (Novo)
+    if filtro_tipo != "Todos":
+        df_filtrado = df_filtrado[df_filtrado['Tipo'] == filtro_tipo]
+    
+    # Filtro de Banco
     if filtro_banco:
         df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
         
-    # 3. Conversão de Data e Filtro de Período
+    # Filtro de Data
     col_data = 'Vencimento' 
     if col_data in df_filtrado.columns:
         df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
-        
-        # Filtra o período se uma tupla válida for selecionada
         if isinstance(periodo, tuple) and len(periodo) == 2:
-            df_filtrado = df_filtrado[
-                (df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
-                (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
-            ]
+            df_filtrado = df_filtrado[(df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
+                                      (df_filtrado['Data_Formatada'].dt.date <= periodo[1])]
             
-    # 4. Filtro de Descrição (Por último, para refinar)
+    # Filtro de Texto (Descrição OU Beneficiário)
     if busca_desc:
-        df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
+        mask = (df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)) | \
+               (df_filtrado['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False))
+        df_filtrado = df_filtrado[mask]
     
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
-    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
+    
+    # Exibe a tabela (incluindo as colunas novas)
+    colunas_visiveis = ['Vencimento', 'Tipo', 'Banco', 'Descrição', 'Beneficiário', 'Valor']
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
     
-    # Exibe a tabela
     st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
+
+    
 
     # 4. Botão de Baixa (Funcionalidade de Baixa)
     if not df_filtrado.empty:
