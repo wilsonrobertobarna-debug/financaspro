@@ -716,17 +716,17 @@ elif "Pendências" in aba:
         
        df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
         
-    # 3. Conversão de Data e Filtro de Período
-    col_data = 'Vencimento' 
-    if col_data in df_filtrado.columns:
-        df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
-        
-        # Filtra o período se uma tupla válida for selecionada
-        if isinstance(periodo, tuple) and len(periodo) == 2:
-            df_filtrado = df_filtrado[
-                (df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
-                (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
-            ]
+       # 3. Conversão de Data e Filtro de Período
+        col_data = 'Vencimento' 
+        if col_data in df_filtrado.columns:
+            df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
+            
+            # Filtra o período se uma tupla válida for selecionada
+            if isinstance(periodo, tuple) and len(periodo) == 2:
+                df_filtrado = df_filtrado[
+                    (df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
+                    (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
+                ]
             
     # 4. Filtro de Descrição (Por último, para refinar)
     if busca_desc:
