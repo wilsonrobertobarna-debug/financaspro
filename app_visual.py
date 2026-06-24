@@ -1048,53 +1048,34 @@ if aba == "📋 Relatório PDF":
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
-            if isinstance(periodo_pdf, (list, tuple)):
-                if len(periodo_pdf) == 2:
-                    b_ini, b_fim = periodo_pdf[0], periodo_pdf[1]
-                else:
-                    b_ini = b_fim = periodo_pdf[0]
-            else:
-                b_ini = b_fim = periodo_pdf
-
+            # ... (código do periodo) ...
+            
             # 1. INICIALIZAÇÃO DO PDF
             from fpdf import FPDF
             pdf = FPDF()
             pdf.add_page()
 
-            # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
+            # 2. CAPTURA E FILTRAGEM
             df_report = df_base.copy()
+            # ... (seu código de colunas) ...
 
-            col_banco_df = next((c for c in df_report.columns if c.upper() in ['BANCO', 'CONTA']), None)
-            col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
-            col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
-            col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
-
-            # Tratamento de Data
-            if col_data_df:
-                df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
-            else:
-                df_report['DT_FILTRO'] = pd.to_datetime(df_report.index, errors='coerce')
-
-            t_ini = pd.to_datetime(b_ini)
-            t_fim = pd.to_datetime(b_fim)
-
-            # Aplica filtros
-            df_report = df_report[(df_report['DT_FILTRO'] >= t_ini) & (df_report['DT_FILTRO'] <= t_fim)]
-
-            if banco_relatorio != "Todos" and col_banco_df:
-                df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_relatorio).upper()]
-
+            # -- AQUI COMEÇA O ALINHAMENTO CORRETO --
             if busca_desc and col_desc_df:
                 df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
-
+            
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
             
-            # Filtro de Tipo (Corrigido)
-            if busca_tipo != "Todos" and 'Tipo' in df_report.columns:
-                df_report = df_report[df_report['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
+            # Usando o st.session_state para pegar o valor do filtro que criamos
+            val_tipo = st.session_state.tipo_pend
+            if val_tipo != "Todos" and 'Tipo' in df_report.columns:
+                df_report = df_report[df_report['Tipo'].str.upper().str.strip() == str(val_tipo).upper()]
 
             df_report = df_report.sort_values(by='DT_FILTRO')
+            # -- AQUI TERMINA O ALINHAMENTO --
+            
+        except Exception as e:
+            st.error(f"Erro ao gerar PDF: {e}")
 
 # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
