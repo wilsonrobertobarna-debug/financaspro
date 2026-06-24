@@ -711,10 +711,10 @@ elif "Pendências" in aba:
 
        periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
        # 2. Processamento e Filtros (Ordem Correta)
-        df_filtrado = df_base.copy()
+       df_filtrado = df_base.copy()
     
         
-        df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
+       df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
         
     # 3. Conversão de Data e Filtro de Período
     col_data = 'Vencimento' 
