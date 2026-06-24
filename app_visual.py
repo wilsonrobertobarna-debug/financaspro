@@ -1072,6 +1072,7 @@ if aba == "📋 Relatório PDF":
             col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
             col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
+            col_ben_df = next((c for c in df_report.columns if c.upper() in ['BENEFICIARIO', 'BENEFICIÁRIO']), None)
 
             # Tratamento e filtro de Data
             if col_data_df:
