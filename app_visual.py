@@ -759,10 +759,10 @@ elif "Pendências" in aba:
             st.toast(f"✅ {sucessos} itens baixados!", icon="💰")
             atualizar_sessao()
             st.rerun()
-    else:
-        st.info("Nenhum lançamento encontrado neste período.")
-    st.divider()
-    st.subheader("🔔 Avisos: Vencimentos Próximos")
+     else:
+         st.info("Nenhum lançamento encontrado neste período.")
+         st.divider()
+         st.subheader("🔔 Avisos: Vencimentos Próximos")
        # ... (aqui você mantém a lógica original dos alertas de vencimento se desejar) ...
         
     
