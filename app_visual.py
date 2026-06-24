@@ -708,49 +708,32 @@ elif "Pendências" in aba:
 
         periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
         
-        # 2. Processamento e Filtros
+        # 2. Processamento
         df_filtrado = df_base.copy()
-        
         if filtro_banco:
             df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
         
-        # 3. Conversão de Data e Filtro de Período
+        # 3. Data
         col_data = 'Vencimento' 
         if col_data in df_filtrado.columns:
             df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
-            
             if isinstance(periodo, tuple) and len(periodo) == 2:
-                df_filtrado = df_filtrado[
-                    (df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
-                    (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
-                ]
+                df_filtrado = df_filtrado[(df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & (df_filtrado['Data_Formatada'].dt.date <= periodo[1])]
             
-        # 4. Filtro de Descrição (Corrigido o alinhamento)
+        # 4. Filtros finais
         if busca_desc:
             df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
-        
-        # 5. Filtro de Tipo (Corrigido: usando df_filtrado e não df_tela)
         if busca_tipo != "Todos" and 'Tipo' in df_filtrado.columns:
             df_filtrado = df_filtrado[df_filtrado['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
             
         st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
-        colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
-        cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
         
-            # Exibe a tabela
-        st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
-
-            # 4. Botão de Baixa (Funcionalidade de Baixa)
-        # --- BLOCO CORRIGIDO E ALINHADO ---
-        st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
-        
-        # O IF e o ELSE precisam estar na mesma coluna
         if not df_filtrado.empty:
             colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
             cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
             st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
         else:
-            st.warning("Nenhum lançamento encontrado para os filtros selecionados.")
+            st.warning("Nenhum lançamento encontrado.")
        # ... (aqui você mantém a lógica original dos alertas de vencimento se desejar) ...
         
     
