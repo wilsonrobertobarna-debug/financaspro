@@ -738,24 +738,31 @@ elif "Pendências" in aba:
     busca_desc = st.text_input("🔍 Pesquisar por Descrição / Beneficiário:")
 
     if busca_desc:
-        # Cria uma cópia para filtrar
         df_filtrado = df_filtrado.copy()
         
-        # Converte tudo para string para evitar erros e busca nas duas colunas
-        mask = (df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)) | \
-               (df_filtrado['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False))
+        # Vamos padronizar os nomes das colunas para evitar erros de acentuação/espaço
+        # Isso garante que mesmo que haja um erro de digitação no cabeçalho, ele tente buscar
+        colunas_map = {c.strip(): c for c in df_filtrado.columns}
+        
+        # Prepara a busca
+        busca_desc = busca_desc.lower()
+        
+        # Filtro: Busca em 'Descrição' OU em 'Beneficiário' (se existir)
+        # O .astype(str).str.lower() converte tudo para minúsculo antes de comparar
+        mask = (df_filtrado['Descrição'].astype(str).str.lower().str.contains(busca_desc, na=False))
+        
+        if 'Beneficiário' in df_filtrado.columns:
+            mask = mask | (df_filtrado['Beneficiário'].astype(str).str.lower().str.contains(busca_desc, na=False))
         
         df_filtrado = df_filtrado[mask]
 
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
     
-    # Lista de colunas para exibir
+    # Exibe a tabela
     colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor']
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
     
-    # Exibe a tabela
     st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
-
     
     # 4. Botão de Baixa (Funcionalidade de Baixa)
     if not df_filtrado.empty:
