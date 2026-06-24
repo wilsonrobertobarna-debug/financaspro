@@ -302,8 +302,24 @@ if st.sidebar.button("🔄 Atualizar dados do Sheets"):
 st.sidebar.divider()
 
 # Inicializa a página se não existir
-if 'page' not in st.session_state:
+if 'page' not in st.session_state:    
     st.session_state.page = "💰 Finanças & Bancos"
+
+# --- PAINEL DE RESUMO (Ficará sempre fixo no topo, antes de carregar a aba) ---
+st.markdown("### 🏦 Painel Financeiro")
+entradas_totais = df_base[df_base['Tipo'].isin(['Receita', 'Rendimentos'])]['V_Num'].sum()
+saidas_totais = df_base[df_base['Tipo'].isin(['Despesa', 'Pendências'])]['V_Num'].sum()
+saldo_real = entradas_totais - saidas_totais
+
+col1, col2, col3 = st.columns(3)
+col1.metric("Entradas + Rendimentos", f"R$ {entradas_totais:,.2f}")
+col2.metric("Despesas + Pendências", f"R$ {saidas_totais:,.2f}")
+col3.metric("SALDO REAL", f"R$ {saldo_real:,.2f}")
+
+# --- AQUI COMEÇA O SEU CÓDIGO DAS ABAS ---
+if "Pendências" in aba:
+    st.title("📋 Lançamentos Pendentes")
+
 
 # Define os itens do menu
 menu_itens = ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"]
