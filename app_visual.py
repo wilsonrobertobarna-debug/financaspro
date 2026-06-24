@@ -713,25 +713,23 @@ elif "Pendências" in aba:
         if filtro_banco:
             df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
         
-        # 3. Data
+        # 3. Filtro de Data
         col_data = 'Vencimento' 
         if col_data in df_filtrado.columns:
             df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
             if isinstance(periodo, tuple) and len(periodo) == 2:
                 df_filtrado = df_filtrado[(df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & (df_filtrado['Data_Formatada'].dt.date <= periodo[1])]
             
-        # 4. Filtros finais
+        # 4. Filtros Adicionais
         if busca_desc:
             df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
-        if busca_tipo != "Todos" and 'Tipo' in df_filtrado.columns:
-            df_filtrado = df_filtrado[df_filtrado['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
+        if st.session_state.tipo_pend != "Todos" and 'Tipo' in df_filtrado.columns:
+            df_filtrado = df_filtrado[df_filtrado['Tipo'].str.upper().str.strip() == str(st.session_state.tipo_pend).upper()]
             
+        # 5. Exibição
         st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
-        
         if not df_filtrado.empty:
-            colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
-            cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
-            st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
+            st.dataframe(df_filtrado, use_container_width=True)
         else:
             st.warning("Nenhum lançamento encontrado.")
        # ... (aqui você mantém a lógica original dos alertas de vencimento se desejar) ...
