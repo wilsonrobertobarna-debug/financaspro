@@ -743,28 +743,46 @@ elif "Pendências" in aba:
             df_filtrado = df_filtrado[(df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
                                       (df_filtrado['Data_Formatada'].dt.date <= periodo[1])]
             
-   # 4. Filtro de Texto (Descrição OU Beneficiário) - MANTENHA COMO ESTÁ
+# 4. Novos Filtros Dedicados
+    st.subheader("🔍 Filtros de Busca")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        # Caixa dedicada para o Tipo
+        filtro_tipo = st.selectbox("Filtrar por Tipo:", ["Todos", "Receita", "Despesa"])
+    
+    with col2:
+        # Busca específica para Descrição
+        busca_desc = st.text_input("Buscar Descrição:")
+        
+    with col3:
+        # Busca específica para Beneficiário
+        busca_ben = st.text_input("Buscar Beneficiário:")
+
+    # --- LÓGICA DE FILTRAGEM ---
+    df_filtrado = df_base.copy() # Garante que começamos com a base limpa
+    
+    # Filtro de Status (mantendo sua regra de pendentes)
+    df_filtrado = df_filtrado[df_filtrado['Status'].astype(str).str.strip().str.lower() == 'pendente']
+
+    # Filtro de Tipo (se selecionado)
+    if filtro_tipo != "Todos":
+        df_filtrado = df_filtrado[df_filtrado['Tipo'] == filtro_tipo]
+
+    # Filtro de Descrição (se algo for digitado)
     if busca_desc:
-        mask = (df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)) | \
-               (df_filtrado['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False))
-        df_filtrado = df_filtrado[mask]
+        df_filtrado = df_filtrado[df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)]
+
+    # Filtro de Beneficiário (se algo for digitado)
+    if busca_ben:
+        df_filtrado = df_filtrado[df_filtrado['Beneficiário'].astype(str).str.contains(busca_ben, case=False, na=False)]
+
+    # Exibição
+    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
     
-    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
-    
-    # --- AJUSTE FORÇADO PARA EXIBIR COLUNAS ---
-    # Vamos listar explicitamente o que queremos
-    colunas_desejadas = ['Vencimento', 'Tipo', 'Banco', 'Descrição', 'Beneficiário', 'Valor']
-    
-    # Verifica quais dessas colunas REALMENTE existem no seu df_filtrado
-    colunas_para_mostrar = [c for c in colunas_desejadas if c in df_filtrado.columns]
-    
-    # Se alguma coluna que você quer não estiver aparecendo, 
-    # o st.write abaixo vai te mostrar o porquê (ele lista as colunas que o dataframe tem)
-    if len(colunas_para_mostrar) < 4:
-        st.write("Colunas disponíveis para exibir:", df_filtrado.columns.tolist())
-    
-    # Exibe a tabela forçando as colunas escolhidas
-    st.dataframe(df_filtrado[colunas_para_mostrar], use_container_width=True, hide_index=True)
+    colunas_exibicao = ['Vencimento', 'Tipo', 'Banco', 'Descrição', 'Beneficiário', 'Valor']
+    st.dataframe(df_filtrado[colunas_exibicao], use_container_width=True, hide_index=True)
 
     
 
