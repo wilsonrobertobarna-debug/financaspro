@@ -697,93 +697,44 @@ if "💰" in st.session_state.page:
         else:
             st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
-    st.header("TESTE: SE ISSO APARECER, ESTOU NO LUGAR CERTO")
-    #st.title("📋 Lançamentos Pendentes")
+    st.header("📋 Lançamentos Pendentes")
     
-    # 1. Filtros
-# 1. Filtros (Agora incluindo Tipo e Beneficiário)
-    col_a, col_b, col_c = st.columns(3)
-    
-    with col_a:
-        # Filtro de Tipo (Receita/Despesa)
-        filtro_tipo = st.selectbox("Filtrar por Tipo:", ["Todos", "Receita", "Despesa"], key="tipo_pend")
-    with col_b:
-        # Filtro de Banco
-        filtro_banco = st.multiselect("Filtrar Banco/Cartão:", df_base['Banco'].unique(), key="banco_pend")
-    with col_c:
-        # Busca unificada (Descrição + Beneficiário)
-        busca_desc = st.text_input("🔍 Buscar (Desc. ou Benef.):", key="desc_pend")
-
-    periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
-
-    # 2. Processamento e Filtros
-    df_filtrado = df_base.copy()
-
-    # DEBUG: Diagnóstico de Colunas
-    st.write("--- Diagnóstico das Colunas ---")
-    st.write("Colunas presentes no df_base:", df_base.columns.tolist())
-    st.write("Colunas presentes no df_filtrado:", df_filtrado.columns.tolist())
-    
-    # Filtro de Status
-    df_filtrado['Status_Limpo'] = df_filtrado['Status'].astype(str).str.strip().str.lower()
-    df_filtrado = df_filtrado[df_filtrado['Status_Limpo'] == 'pendente'].copy()
-    
-    # Filtro de Tipo (Novo)
-    if filtro_tipo != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['Tipo'] == filtro_tipo]
-    
-    # Filtro de Banco
-    if filtro_banco:
-        df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
-        
-    # Filtro de Data
-    col_data = 'Vencimento' 
-    if col_data in df_filtrado.columns:
-        df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
-        if isinstance(periodo, tuple) and len(periodo) == 2:
-            df_filtrado = df_filtrado[(df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
-                                      (df_filtrado['Data_Formatada'].dt.date <= periodo[1])]
-            
-# 4. Novos Filtros Dedicados
-    st.subheader("🔍 Filtros de Busca")
-    
+    # 1. Nossos novos filtros
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        # Caixa dedicada para o Tipo
         filtro_tipo = st.selectbox("Filtrar por Tipo:", ["Todos", "Receita", "Despesa"])
-    
     with col2:
-        # Busca específica para Descrição
         busca_desc = st.text_input("Buscar Descrição:")
-        
     with col3:
-        # Busca específica para Beneficiário
         busca_ben = st.text_input("Buscar Beneficiário:")
 
-    # --- LÓGICA DE FILTRAGEM ---
-    df_filtrado = df_base.copy() # Garante que começamos com a base limpa
+    # 2. Lógica (usando df_base como fonte)
+    df_filtrado = df_base.copy()
     
-    # Filtro de Status (mantendo sua regra de pendentes)
-    df_filtrado = df_filtrado[df_filtrado['Status'].astype(str).str.strip().str.lower() == 'pendente']
-
-    # Filtro de Tipo (se selecionado)
+    # Filtro de Status
+    df_filtrado['Status_Limpo'] = df_filtrado['Status'].astype(str).str.strip().str.lower()
+    df_filtrado = df_filtrado[df_filtrado['Status_Limpo'] == 'pendente']
+    
+    # Filtro de Tipo
     if filtro_tipo != "Todos":
         df_filtrado = df_filtrado[df_filtrado['Tipo'] == filtro_tipo]
-
-    # Filtro de Descrição (se algo for digitado)
+        
+    # Filtro de Descrição
     if busca_desc:
         df_filtrado = df_filtrado[df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)]
-
-    # Filtro de Beneficiário (se algo for digitado)
+        
+    # Filtro de Beneficiário
     if busca_ben:
         df_filtrado = df_filtrado[df_filtrado['Beneficiário'].astype(str).str.contains(busca_ben, case=False, na=False)]
-
-    # Exibição
+    
+    # 3. Exibição
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
     
-    colunas_exibicao = ['Vencimento', 'Tipo', 'Banco', 'Descrição', 'Beneficiário', 'Valor']
-    st.dataframe(df_filtrado[colunas_exibicao], use_container_width=True, hide_index=True)
+    colunas_visiveis = ['Vencimento', 'Tipo', 'Banco', 'Descrição', 'Beneficiário', 'Valor']
+    cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
+    
+    st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
 
     
 
