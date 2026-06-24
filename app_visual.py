@@ -734,14 +734,14 @@ elif "Pendências" in aba:
             df_filtrado = df_filtrado[df_filtrado['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
             
         st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
-        colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
-        cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
+            colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
+            cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
         
-        # Exibe a tabela
-        st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
+            # Exibe a tabela
+            st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
 
-    # 4. Botão de Baixa (Funcionalidade de Baixa)
-    if not df_filtrado.empty:
+            # 4. Botão de Baixa (Funcionalidade de Baixa)
+        if not df_filtrado.empty:
         nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
         if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_final"):
             sucessos = 0
