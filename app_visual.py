@@ -734,38 +734,29 @@ elif "Pendências" in aba:
                 (df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
                 (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
             ]
-    st.write("--- O código chegou até aqui ---")      
-  # 4. Filtros Dedicados
-    st.subheader("Filtros de Busca")
+# 4. Filtro de Busca (Descrição ou Beneficiário)
+    busca_desc = st.text_input("🔍 Pesquisar por Descrição / Beneficiário:")
 
-   
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        busca_desc = st.text_input("🔍 Pesquisar por Descrição:")
-    with col2:
-        busca_ben = st.text_input("👤 Pesquisar por Beneficiário:")
-
-    st.write("--- O código passou pelas caixas ---")
-
-    # Filtro de Descrição
     if busca_desc:
-        df_filtrado = df_filtrado[df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)]
-    
-    # Filtro de Beneficiário (Com verificação de segurança)
-    if busca_ben:
-        if 'Beneficiário' in df_filtrado.columns:
-            df_filtrado = df_filtrado[df_filtrado['Beneficiário'].astype(str).str.contains(busca_ben, case=False, na=False)]
-        else:
-            st.error("ERRO: O sistema não encontrou a coluna 'Beneficiário' na planilha!")
-            st.write("Colunas detectadas:", df_filtrado.columns.tolist())
+        # Cria uma cópia para filtrar
+        df_filtrado = df_filtrado.copy()
+        
+        # Converte tudo para string para evitar erros e busca nas duas colunas
+        mask = (df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)) | \
+               (df_filtrado['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False))
+        
+        df_filtrado = df_filtrado[mask]
 
-    # Exibição
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
+    
+    # Lista de colunas para exibir
     colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor']
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
     
+    # Exibe a tabela
     st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
+
+    
     # 4. Botão de Baixa (Funcionalidade de Baixa)
     if not df_filtrado.empty:
         nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
