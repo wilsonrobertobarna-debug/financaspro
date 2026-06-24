@@ -733,31 +733,32 @@ elif "Pendências" in aba:
                 (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
             ]
             
-   # 4. Filtro de Descrição / Beneficiário
+  # 4. Filtro de Descrição / Beneficiário (VERSÃO CORRIGIDA)
+    
+    # GARANTIA: Se a coluna 'Beneficiário' não estiver no DF, o código ignora o filtro de beneficiário
+    # para evitar erro, mas tenta buscar na Descrição.
+    
     if busca_desc:
-        # Criamos uma máscara que busca no campo 'Descrição' OU no campo 'Beneficiário'
-        # .astype(str) garante que ele não reclame se encontrar células vazias
-        mask = (df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)) | \
-               (df_filtrado['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False))
+        # Prepara a busca: transforma tudo em texto minúsculo para garantir que vai achar
+        termo = busca_desc.lower()
         
-        df_filtrado = df_filtrado[mask]
+        # Cria uma "máscara" (um filtro)
+        # Verifica se o termo está na 'Descrição' OU no 'Beneficiário' (se a coluna existir)
+        mask_desc = df_filtrado['Descrição'].astype(str).str.lower().str.contains(termo, na=False)
+        
+        if 'Beneficiário' in df_filtrado.columns:
+            mask_ben = df_filtrado['Beneficiário'].astype(str).str.lower().str.contains(termo, na=False)
+            df_filtrado = df_filtrado[mask_desc | mask_ben]
+        else:
+            # Se a coluna não existir, filtra só pela Descrição
+            df_filtrado = df_filtrado[mask_desc]
     
-    # Exibe o número de resultados encontrados após o filtro
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
-    
-    # Lista de colunas para exibir (agora com Beneficiário!)
-    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor'] 
-    
-    # Filtra apenas as colunas que existem no DataFrame
-    cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
-    
-    # Exibe a tabela final
-    st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
     
     # Lista de colunas para exibir
     colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor'] 
     
-    # Garante que só tentamos mostrar as colunas que realmente existem
+    # Filtra apenas as colunas que existem no DataFrame
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
     
     # Exibe a tabela
