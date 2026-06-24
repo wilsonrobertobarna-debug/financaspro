@@ -696,7 +696,7 @@ if "💰" in st.session_state.page:
         else:
             st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
-    st.title("📋 Lançamentos Pendentes")
+    #st.title("📋 Lançamentos Pendentes")
     
     # 1. Filtros
     col_b, col_d = st.columns(2)
