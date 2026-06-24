@@ -321,7 +321,8 @@ if 'page' not in st.session_state:
         st.divider() # Uma linha para separar
 
 # --- AQUI COMEÇA O SEU CÓDIGO DAS ABAS ---
-if "Pendências" in aba:
+# Em vez de usar "if "Pendências" in aba:", use:
+if st.session_state.get('page') == 'Pendências':
     st.title("📋 Lançamentos Pendentes")
 
 
