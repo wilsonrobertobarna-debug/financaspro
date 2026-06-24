@@ -1045,37 +1045,34 @@ if aba == "📋 Relatório PDF":
 
     st.markdown("---")
 
-    # Botão para processar e gerar o documento
-    if st.button("📄 Gerar PDF"):
-        try:
-            # ... (código do periodo) ...
-            
-            # 1. INICIALIZAÇÃO DO PDF
-            from fpdf import FPDF
-            pdf = FPDF()
-            pdf.add_page()
+   # --- COLOCAR ISSO FORA DO BOTÃO DO PDF (Lá no topo da aba Relatório) ---
+# Aqui você cria a variável de estado que o PDF vai usar
+if 'busca_tipo' not in st.session_state:
+    st.session_state.busca_tipo = "Todos"
 
-            # 2. CAPTURA E FILTRAGEM
-            df_report = df_base.copy()
-            # ... (seu código de colunas) ...
+busca_tipo = st.selectbox("💰 Filtrar Tipo:", ["Todos", "Receita", "Despesa"], key="busca_tipo")
 
-            # -- AQUI COMEÇA O ALINHAMENTO CORRETO --
-            if busca_desc and col_desc_df:
-                df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
-            
-            if busca_status != "Todos" and col_status_df:
-                df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
-            
-            # Usando o st.session_state para pegar o valor do filtro que criamos
-            val_tipo = st.session_state.tipo_pend
-            if val_tipo != "Todos" and 'Tipo' in df_report.columns:
-                df_report = df_report[df_report['Tipo'].str.upper().str.strip() == str(val_tipo).upper()]
+# --- O BOTÃO DO PDF FICA ASSIM (Mais simples e sem erros de indentação) ---
+if st.button("📄 Gerar PDF"):
+    # 1. Copia a base original
+    df_report = df_base.copy()
+    
+    # 2. Filtro de Data (já existente no seu código)
+    # [Aqui você mantém o seu código atual de filtro de datas]
 
-            df_report = df_report.sort_values(by='DT_FILTRO')
-            # -- AQUI TERMINA O ALINHAMENTO --
-            
-        except Exception as e:
-            st.error(f"Erro ao gerar PDF: {e}")
+    # 3. Filtros Dinâmicos (AGORA ALINHADOS CORRETAMENTE)
+    if banco_relatorio != "Todos":
+        df_report = df_report[df_report['Banco'] == banco_relatorio]
+        
+    if busca_desc:
+        df_report = df_report[df_report['Descrição'].str.contains(busca_desc, case=False, na=False)]
+        
+    if st.session_state.busca_tipo != "Todos":
+        df_report = df_report[df_report['Tipo'] == st.session_state.busca_tipo]
+
+    # 4. GERAÇÃO DO PDF
+    # [Aqui entra o seu código do FPDF]
+    st.success(f"Gerando PDF com {len(df_report)} registros...")
 
 # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
