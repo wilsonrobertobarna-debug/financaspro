@@ -302,7 +302,7 @@ if st.sidebar.button("🔄 Atualizar dados do Sheets"):
 st.sidebar.divider()
 
 # Inicializa a página se não existir
-if 'page' not in st.session_state:    
+#if 'page' not in st.session_state:    
     
     # --- PAINEL MESTRE (DOIS EM UM) ---
     with st.expander("📊 Clique aqui para ver o Painel e Relatório Bancário", expanded=False):
