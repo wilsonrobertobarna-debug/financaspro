@@ -742,7 +742,7 @@ elif "Pendências" in aba:
 
             # 4. Botão de Baixa (Funcionalidade de Baixa)
         if not df_filtrado.empty:
-        nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
+            nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
         if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_final"):
             sucessos = 0
             headers = ws_base.row_values(1)
