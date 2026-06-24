@@ -738,7 +738,7 @@ elif "Pendências" in aba:
             df_filtrado = df_filtrado[(df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
                                       (df_filtrado['Data_Formatada'].dt.date <= periodo[1])]
             
-    # Filtro de Texto (Descrição OU Beneficiário)
+   # 4. Filtro de Texto (Descrição OU Beneficiário) - MANTENHA COMO ESTÁ
     if busca_desc:
         mask = (df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)) | \
                (df_filtrado['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False))
@@ -746,11 +746,20 @@ elif "Pendências" in aba:
     
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
     
-    # Exibe a tabela (incluindo as colunas novas)
-    colunas_visiveis = ['Vencimento', 'Tipo', 'Banco', 'Descrição', 'Beneficiário', 'Valor']
-    cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
+    # --- AJUSTE FORÇADO PARA EXIBIR COLUNAS ---
+    # Vamos listar explicitamente o que queremos
+    colunas_desejadas = ['Vencimento', 'Tipo', 'Banco', 'Descrição', 'Beneficiário', 'Valor']
     
-    st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
+    # Verifica quais dessas colunas REALMENTE existem no seu df_filtrado
+    colunas_para_mostrar = [c for c in colunas_desejadas if c in df_filtrado.columns]
+    
+    # Se alguma coluna que você quer não estiver aparecendo, 
+    # o st.write abaixo vai te mostrar o porquê (ele lista as colunas que o dataframe tem)
+    if len(colunas_para_mostrar) < 4:
+        st.write("Colunas disponíveis para exibir:", df_filtrado.columns.tolist())
+    
+    # Exibe a tabela forçando as colunas escolhidas
+    st.dataframe(df_filtrado[colunas_para_mostrar], use_container_width=True, hide_index=True)
 
     
 
