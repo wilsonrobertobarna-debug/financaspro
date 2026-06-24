@@ -732,16 +732,11 @@ elif "Pendências" in aba:
                 (df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
                 (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
             ]
-   st.write("--- O código chegou até aqui ---")
-
-# Coloque as suas caixas de busca logo abaixo:
-col1, col2 = st.columns(2)
-with col1:
-    busca_desc = st.text_input("🔍 Pesquisar por Descrição:")
-with col2:
-    busca_ben = st.text_input("👤 Pesquisar por Beneficiário:")         
+         
   # 4. Filtros Dedicados
     st.subheader("Filtros de Busca")
+
+    st.write("--- O código chegou até aqui ---")
     col1, col2 = st.columns(2)
     
     with col1:
