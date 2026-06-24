@@ -697,38 +697,74 @@ if "💰" in st.session_state.page:
         else:
             st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
-        # 1. Filtros (Apenas 4 espaços de recuo aqui)
-        col_b, col_d, col_t = st.columns(3)
-        
-        with col_b:
-            filtro_banco = st.multiselect("Filtrar Banco:", df_base['Banco'].unique(), key="banco_pend")
-        with col_d:
-            busca_desc = st.text_input("Buscar Descrição:", key="desc_pend")
-        with col_t:
-            busca_tipo = st.selectbox("Filtrar Tipo:", ["Todos", "Receita", "Despesa"], key="tipo_pend")
+    #st.title("📋 Lançamentos Pendentes")
+    
+    # 1. Filtros
+    col_b, col_d = st.columns(2)
+    with col_b:
+        filtro_banco = st.multiselect("Filtrar Banco/Cartão:", df_base['Banco'].unique(), key="banco_pend")
+    with col_d:
+        busca_desc = st.text_input("Buscar Descrição:", key="desc_pend")
 
-        # 2. Período
-        periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")           
+    periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
+
+   # 2. Processamento e Filtros (Ordem Correta)
+    df_filtrado = df_base.copy()
+    
+    # 1. Filtro de Status (garante que apenas Pendentes apareçam)
+    df_filtrado['Status_Limpo'] = df_filtrado['Status'].astype(str).str.strip().str.lower()
+    df_filtrado = df_filtrado[df_filtrado['Status_Limpo'] == 'pendente'].copy()
+    
+    # 2. Filtro de Banco (se selecionado, filtra agora)
+    if filtro_banco:
+        df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
         
-        # 3. Filtro de Data
-        col_data = 'Vencimento' 
-        if col_data in df_filtrado.columns:
-            df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
-            if isinstance(periodo, tuple) and len(periodo) == 2:
-                df_filtrado = df_filtrado[(df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & (df_filtrado['Data_Formatada'].dt.date <= periodo[1])]
+    # 3. Conversão de Data e Filtro de Período
+    col_data = 'Vencimento' 
+    if col_data in df_filtrado.columns:
+        df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
+        
+        # Filtra o período se uma tupla válida for selecionada
+        if isinstance(periodo, tuple) and len(periodo) == 2:
+            df_filtrado = df_filtrado[
+                (df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
+                (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
+            ]
             
-        # 4. Filtros Adicionais
-        if busca_desc:
-            df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
-        if st.session_state.tipo_pend != "Todos" and 'Tipo' in df_filtrado.columns:
-            df_filtrado = df_filtrado[df_filtrado['Tipo'].str.upper().str.strip() == str(st.session_state.tipo_pend).upper()]
+    # 4. Filtro de Descrição (Por último, para refinar)
+    if busca_desc:
+        df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
+    
+    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
+    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
+    cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
+    
+    # Exibe a tabela
+    st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
+
+    # 4. Botão de Baixa (Funcionalidade de Baixa)
+    if not df_filtrado.empty:
+        nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
+        if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_final"):
+            sucessos = 0
+            headers = ws_base.row_values(1)
+            idx_status = headers.index('Status') + 1
+            # Ajuste dinâmico para a coluna de Vencimento/Data
+            idx_venc = [i for i, h in enumerate(headers) if 'VENC' in h.upper() or 'DATA' in h.upper()][0] + 1
             
-        # 5. Exibição
-        st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
-        if not df_filtrado.empty:
-            st.dataframe(df_filtrado, use_container_width=True)
-        else:
-            st.warning("Nenhum lançamento encontrado.")
+            for idx_df, row in df_filtrado.iterrows():
+                linha_sheets = int(idx_df) + 2
+                ws_base.update_cell(linha_sheets, idx_status, "Pago")
+                ws_base.update_cell(linha_sheets, idx_venc, nova_data.strftime("%d/%m/%Y"))
+                sucessos += 1
+            
+            st.toast(f"✅ {sucessos} itens baixados!", icon="💰")
+            atualizar_sessao()
+            st.rerun()
+    else:
+        st.info("Nenhum lançamento encontrado neste período.")
+    st.divider()
+    st.subheader("🔔 Avisos: Vencimentos Próximos")
        # ... (aqui você mantém a lógica original dos alertas de vencimento se desejar) ...
         
     
@@ -998,46 +1034,70 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     # LINHA 2 DE FILTROS: DESCRIÇÃO E STATUS 
     # -------------------------------------------------------------------------
-    # LINHA 2 DE FILTROS: DESCRIÇÃO, STATUS E TIPO
-    col_rel3, col_rel4, col_rel5 = st.columns(3)
+    col_rel3, col_rel4 = st.columns(2)
     with col_rel3:
         busca_desc = st.text_input("🔍 Pesquisar por Descrição / Beneficiário:", "").strip()
+        
     with col_rel4:
         busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
-    with col_rel5:
-        # Nova caixa para o Tipo
-        busca_tipo = st.selectbox("💰 Filtrar Tipo:", ["Todos", "Receita", "Despesa"])
 
     st.markdown("---")
 
-   # --- COLOCAR ISSO FORA DO BOTÃO DO PDF (Lá no topo da aba Relatório) ---
-# Aqui você cria a variável de estado que o PDF vai usar
-if 'busca_tipo' not in st.session_state:
-    st.session_state.busca_tipo = "Todos"
+    # Botão para processar e gerar o documento
+    if st.button("📄 Gerar PDF"):
+        try:
+            if isinstance(periodo_pdf, (list, tuple)):
+                if len(periodo_pdf) == 2:
+                    b_ini, b_fim = periodo_pdf[0], periodo_pdf[1]
+                else:
+                    b_ini = b_fim = periodo_pdf[0]
+            else:
+                b_ini = b_fim = periodo_pdf
 
-busca_tipo = st.selectbox("💰 Filtrar Tipo:", ["Todos", "Receita", "Despesa"], key="busca_tipo")
+            # ========================================================
+            # 1. INICIALIZAÇÃO DO PDF
+            # ========================================================
+            from fpdf import FPDF
+            pdf = FPDF()
+            pdf.add_page()
 
-# --- O BOTÃO DO PDF FICA ASSIM (Mais simples e sem erros de indentação) ---
-if st.button("📄 Gerar PDF"):
-    # 1. Copia a base original
-    df_report = df_base.copy()
-    
-    # 2. Filtro de Data (já existente no seu código)
-    # [Aqui você mantém o seu código atual de filtro de datas]
+            # ========================================================
+            # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
+            # ========================================================
+            df_report = df_base.copy()
 
-    # 3. Filtros Dinâmicos (AGORA ALINHADOS CORRETAMENTE)
-    if banco_relatorio != "Todos":
-        df_report = df_report[df_report['Banco'] == banco_relatorio]
-        
-    if busca_desc:
-        df_report = df_report[df_report['Descrição'].str.contains(busca_desc, case=False, na=False)]
-        
-    if st.session_state.busca_tipo != "Todos":
-        df_report = df_report[df_report['Tipo'] == st.session_state.busca_tipo]
+            col_banco_df = next((c for c in df_report.columns if c.upper() in ['BANCO', 'CONTA']), None)
+            col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+            col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
+            col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
 
-    # 4. GERAÇÃO DO PDF
-    # [Aqui entra o seu código do FPDF]
-    st.success(f"Gerando PDF com {len(df_report)} registros...")
+            # Tratamento e filtro de Data
+            if col_data_df:
+                df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
+            else:
+                df_report['DT_FILTRO'] = pd.to_datetime(df_report.index, errors='coerce')
+
+            t_ini = pd.to_datetime(b_ini)
+            t_fim = pd.to_datetime(b_fim)
+
+            # Guardamos uma cópia completa para calcular o saldo retroativo do Banco antes de filtrar o período final
+            df_retroativo = df_report.copy()
+
+            # Aplica os filtros na tabela que vai de fato para o PDF
+            df_report = df_report[(df_report['DT_FILTRO'] >= t_ini) & (df_report['DT_FILTRO'] <= t_fim)]
+
+            banco_nome = "Todos os Bancos"
+            if banco_relatorio != "Todos" and col_banco_df:
+                banco_nome = banco_relatorio
+                df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_nome).upper()]
+
+            if busca_desc and col_desc_df:
+                df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
+
+            if busca_status != "Todos" and col_status_df:
+                df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
+
+            df_report = df_report.sort_values(by='DT_FILTRO')
 
 # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
@@ -1250,14 +1310,10 @@ if st.button("📄 Gerar PDF"):
     # Aplica Descrição na tela
     if busca_desc and col_desc_df:
         df_tela = df_tela[df_tela[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
-    if busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
-        df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
     # Aplica Status na tela
     if busca_status != "Todos" and col_status_df:
         df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
-    if busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
-        df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
     # Faxina das colunas internas para manter o visual limpo
     colunas_para_esconder = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
