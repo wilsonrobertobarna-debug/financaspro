@@ -10,7 +10,117 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 import os
-print(f"DEBUG: O arquivo está rodando aqui: {os.getcwd()}")
+import streamlit as st
+import pandas as pd
+import gspread
+from google.oauth2.service_account import Credentials
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+from fpdf import FPDF
+import urllib.parse
+import streamlit.components.v1 as components
+
+# --- 1. CONFIGURAÇÕES E FUNÇÕES ---
+def get_data():
+   # 1. Define o caminho da pasta onde este arquivo .py está
+pasta_atual = os.path.dirname(os.path.abspath(__file__))
+
+# 2. Constrói o caminho completo do arquivo .json
+caminho_chave = os.path.join(C:\FinançasPro, "service_account.json")
+
+# Agora usamos a variável 'caminho_chave' no seu código
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+
+# Usamos a variável aqui:
+creds = Credentials.from_service_account_file(caminho_chave, scopes=scope)
+
+client = gspread.authorize(creds)
+sheet = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4").sheet1 
+data = sheet.get_all_records()
+return pd.DataFrame(data
+
+@st.cache_data(ttl=600)
+def carregar_dados_do_sheets():
+    return get_data()
+
+st.set_page_config(
+    page_title="Finanças Pro",
+    page_icon="img/FinançasPro - Wilson.ico",
+    layout="wide"
+)
+
+# --- 2. LOGIN ---
+if 'login' not in st.session_state:
+    st.session_state.login = False
+
+if not st.session_state.login:
+    col1, col_centro, col2 = st.columns([1, 2, 1])
+    with col_centro:
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        st.markdown("### 🔒 Acesso Seguro")
+        senha = st.text_input("Digite sua senha:", type="password")
+        if st.button("🔓 Desbloquear Sistema"):
+            if senha == "Wilson123":
+                st.session_state.login = True
+                st.rerun()
+            else:
+                st.error("Senha incorreta, Wilson!")
+    st.stop() 
+
+# --- 3. CARREGAMENTO DE DADOS PÓS-LOGIN ---
+try:
+    df_base = carregar_dados_do_sheets()
+except Exception as e:
+    st.error(f"Erro ao conectar na planilha: {e}")
+    st.stop()
+
+# --- 4. INTERFACE ---
+st.image("img/FinançasPro - Wilson.png", use_container_width=True)
+st.write("---")
+
+col_n1, col_n2, col_n3 = st.columns(3)
+with col_n1:
+    if st.button("📊 Ir para Resumo"):
+        st.session_state.pagina = "Resumo"
+        st.rerun()
+with col_n2:
+    if st.button("📋 Ir para Pendências"):
+        st.session_state.pagina = "Pendências"
+        st.rerun()
+
+# --- 5. LÓGICA DE NAVEGAÇÃO ---
+if 'pagina' not in st.session_state:
+    st.info("Selecione uma opção no menu acima para começar.")
+else:
+    if st.session_state.pagina == "Resumo":
+        st.title("📊 Resumo Financeiro")
+        
+    elif st.session_state.pagina == "Pendências":
+        st.title("📋 Lançamentos Pendentes")
+        
+        # Filtros
+        col_b, col_d, col_t = st.columns(3)
+        with col_b:
+            bancos = df_base['Banco'].unique()
+            filtro_banco = st.multiselect("Filtrar Banco:", bancos)
+        with col_d:
+            busca_desc = st.text_input("Buscar Descrição:")
+        with col_t:
+            busca_tipo = st.selectbox("Filtrar Tipo:", ["Todos", "Receita", "Despesa"])
+
+        # Lógica de Filtro
+        df_filtrado = df_base.copy()
+        if filtro_banco:
+            df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
+        if busca_desc:
+            df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
+        if busca_tipo != "Todos":
+            df_filtrado = df_filtrado[df_filtrado['Tipo'] == busca_tipo]
+
+        st.write(f"### Registros encontrados: {len(df_filtrado)}")
+        st.dataframe(df_filtrado, use_container_width=True)
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
