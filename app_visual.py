@@ -11,23 +11,7 @@ import urllib.parse
 import streamlit.components.v1 as components
 
 # --- 1. CONFIGURAÇÕES E FUNÇÕES ---
-def get_data():
-   # 1. Define o caminho da pasta onde este arquivo .py está
-pasta_atual = os.path.dirname(os.path.abspath(__file__))
-
-# 2. Constrói o caminho completo do arquivo .json
-caminho_chave = os.path.join(C:\FinançasPro, "service_account.json")
-
-# Agora usamos a variável 'caminho_chave' no seu código
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-
-# Usamos a variável aqui:
-creds = Credentials.from_service_account_file(caminho_chave, scopes=scope)
-
-client = gspread.authorize(creds)
-sheet = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4").sheet1 
-data = sheet.get_all_records()
-return pd.DataFrame(data
+      
 
 @st.cache_data(ttl=600)
 def carregar_dados_do_sheets():
