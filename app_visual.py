@@ -37,6 +37,8 @@ def get_data():
     sheet = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4").sheet1 
     data = sheet.get_all_records()
     return pd.DataFrame(data)    
+
+
 @st.cache_data(ttl=600)
 def carregar_dados_do_sheets():
     return get_data()
