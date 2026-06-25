@@ -9,6 +9,7 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
+import os
 
 # --- 1. CONFIGURAÇÕES E FUNÇÕES ---
 def get_data():
