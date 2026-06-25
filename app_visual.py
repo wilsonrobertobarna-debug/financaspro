@@ -10,29 +10,35 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
+# 1. Configuração Global (Ícone na aba do navegador)
+st.set_page_config(
+    page_title="Finanças Pro",
+    page_icon="img/FinançasPro - Wilson.ico", # Ajuste o caminho conforme criamos
+    layout="wide"
+)
+
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
 
 if not st.session_state.login:
-    # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
     col1, col_centro, col2 = st.columns([1, 2, 1])
-    
     with col_centro:
-        st.markdown("<br><br><br>", unsafe_allow_html=True) # Espaçamento superior
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
         st.markdown("### 🔒 Acesso Seguro")
         senha = st.text_input("Digite sua senha:", type="password")
-        
         if st.button("🔓 Desbloquear Sistema"):
-            if senha == "Wilson123": # Troque aqui pela sua senha real
+            if senha == "Wilson123":
                 st.session_state.login = True
                 st.rerun()
             else:
                 st.error("Senha incorreta, Wilson!")
-        
-        st.markdown("<br><br>", unsafe_allow_html=True)
-    
-    st.stop() # Bloqueia o carregamento do restante do código abaixo
+    st.stop() 
+
+# --- SE O CÓDIGO CHEGOU AQUI, O LOGIN FOI FEITO ---
+# 2. Exibição da Imagem (Agora que o sistema está liberado)
+st.image("img/FinançasPro - Wilson.png", use_container_width=True)
+st.write("---")
    
 
 # Definições iniciais de data
