@@ -15,13 +15,20 @@ import os
 def get_data():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
-    # Isso puxa a chave direto da nuvem, sem precisar de arquivo na pasta
-    creds_dict = st.secrets["gcp_service_account"] 
+    # O arquivo está na mesma pasta do código, então basta o nome
+    caminho_json = "financaspro-wilson-723758e211e3.json"
     
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+    # Adicionamos uma verificação simples apenas para garantir
+    if not os.path.exists(caminho_json):
+        st.error(f"O arquivo {caminho_json} não foi encontrado na pasta do projeto.")
+        st.stop()
+    
+    creds = Credentials.from_service_account_file(caminho_json, scopes=scope)
     client = gspread.authorize(creds)
+    
     sheet = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4").sheet1 
-    return pd.DataFrame(sheet.get_all_records())
+    data = sheet.get_all_records()
+    return pd.DataFrame(data)
 
 
 @st.cache_data(ttl=600)
