@@ -1467,3 +1467,6 @@ if aba == "📊 Análises & Configurações":
                 on_change=atualizar_meta_sheets, 
                 args=(nome,) 
             )
+
+cd
+
