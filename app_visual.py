@@ -10,6 +10,18 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
+# --- CARREGAMENTO DE DADOS (CACHE) ---
+@st.cache_data(ttl=600) # O sistema vai lembrar dos dados por 10 minutos
+def carregar_dados_do_sheets():
+    return get_data()
+
+# Chamamos a função uma única vez
+try:
+    df_base = carregar_dados_do_sheets()
+except Exception as e:
+    st.error(f"Erro ao conectar na planilha: {e}")
+    st.stop()
+
 # --- CONFIGURAÇÃO GOOGLE SHEETS ---
 def get_data():
     # Carrega suas credenciais do segredo do Streamlit ou arquivo
