@@ -9,18 +9,6 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
-import os
-import streamlit as st
-import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
-from fpdf import FPDF
-import urllib.parse
-import streamlit.components.v1 as components
 
 # --- 1. CONFIGURAÇÕES E FUNÇÕES ---
 def get_data():
