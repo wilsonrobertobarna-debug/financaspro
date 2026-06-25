@@ -13,10 +13,14 @@ import streamlit.components.v1 as components
 # --- 1. CONFIGURAÇÕES E FUNÇÕES ---
 def get_data():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    # Para isto (use o caminho completo, mas com barras duplas \\ para o Windows não se confundir):
-    caminho_json = r"C:\Users\wil_r\OneDrive\Área de Trabalho\FinançasPro\service_account.json"
+    
+    # Usamos o caminho completo com o nome correto do arquivo que você encontrou:
+    caminho_json = r"C:\Users\wil_r\OneDrive\Área de Trabalho\FinançasPro\financaspro-wilson-723758e211e3.json"
+    
     creds = Credentials.from_service_account_file(caminho_json, scopes=scope)
     client = gspread.authorize(creds)
+    
+    # ID da sua planilha (confirmado)
     sheet = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4").sheet1 
     data = sheet.get_all_records()
     return pd.DataFrame(data)
