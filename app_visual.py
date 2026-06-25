@@ -15,17 +15,28 @@ import os
 def get_data():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
-    # Busca o caminho do arquivo dentro da subpasta 'config'
-    caminho_json = os.path.join(os.path.dirname(__file__), "config", "financaspro-wilson-723758e211e3.json")
+    # 1. Caminho onde o código espera que o arquivo esteja (config/arquivo.json)
+    caminho_tentativa_1 = os.path.join(os.getcwd(), "config", "financaspro-wilson-723758e211e3.json")
     
-    # Conecta usando o arquivo encontrado
-    creds = Credentials.from_service_account_file(caminho_json, scopes=scope)
+    # 2. Caminho caso o arquivo esteja direto na raiz (caso o servidor não veja a pasta config)
+    caminho_tentativa_2 = os.path.join(os.getcwd(), "financaspro-wilson-723758e211e3.json")
+    
+    # Define qual caminho usar
+    if os.path.exists(caminho_tentativa_1):
+        caminho_final = caminho_tentativa_1
+    elif os.path.exists(caminho_tentativa_2):
+        caminho_final = caminho_tentativa_2
+    else:
+        # Se não achar em nenhum dos dois, avisa onde ele procurou
+        st.error(f"Erro: Arquivo não encontrado em:\n{caminho_tentativa_1}\nOU\n{caminho_tentativa_2}")
+        st.stop()
+    
+    creds = Credentials.from_service_account_file(caminho_final, scopes=scope)
     client = gspread.authorize(creds)
     
     sheet = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4").sheet1 
     data = sheet.get_all_records()
-    return pd.DataFrame(data)
-    
+    return pd.DataFrame(data)    
 @st.cache_data(ttl=600)
 def carregar_dados_do_sheets():
     return get_data()
