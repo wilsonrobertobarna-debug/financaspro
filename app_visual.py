@@ -14,20 +14,21 @@ import streamlit.components.v1 as components
 def get_data():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
-    # Como o arquivo está na mesma pasta, não precisamos do caminho "C:/..."
-    caminho_json = "financaspro-wilson-723758e211e3.json"
+    # Isso encontra automaticamente a pasta onde seu app_visual.py está salvo
+    pasta_atual = os.path.dirname(os.path.abspath(__file__))
+    caminho_json = os.path.join(pasta_atual, "financaspro-wilson-723758e211e3.json")
+    
+    # Teste de segurança para você ver o caminho real que ele está procurando
+    if not os.path.exists(caminho_json):
+        st.error(f"Erro: O arquivo não foi encontrado em: {caminho_json}")
+        st.stop()
     
     creds = Credentials.from_service_account_file(caminho_json, scopes=scope)
     client = gspread.authorize(creds)
     
-    # ID da planilha
     sheet = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4").sheet1 
     data = sheet.get_all_records()
     return pd.DataFrame(data)
-        
-    # Se existir, continua o código normalmente
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = Credentials.from_service_account_file(caminho_json, scopes=scope)
     
 @st.cache_data(ttl=600)
 def carregar_dados_do_sheets():
