@@ -9,6 +9,8 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
+import os
+print(f"DEBUG: O arquivo está rodando aqui: {os.getcwd()}")
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
