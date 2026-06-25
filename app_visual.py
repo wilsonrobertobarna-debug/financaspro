@@ -15,15 +15,16 @@ import os
 def get_data():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
-    # Isso encontra automaticamente a pasta onde seu app_visual.py está salvo
-    pasta_atual = os.path.dirname(os.path.abspath(__file__))
-    caminho_json = os.path.join(pasta_atual, "financaspro-wilson-723758e211e3.json")
+    # Nome do arquivo que já está lá
+    nome_arquivo = "financaspro-wilson-723758e211e3.json"
     
-    # Teste de segurança para você ver o caminho real que ele está procurando
+    # Tenta achar o arquivo na pasta onde o script está rodando (funciona em qualquer lugar)
+    caminho_json = os.path.join(os.path.dirname(__file__), nome_arquivo)
+    
+    # Se ainda assim não achar, ele tenta procurar na raiz do servidor (ajuste para a nuvem)
     if not os.path.exists(caminho_json):
-        st.error(f"Erro: O arquivo não foi encontrado em: {caminho_json}")
-        st.stop()
-    
+        caminho_json = nome_arquivo
+        
     creds = Credentials.from_service_account_file(caminho_json, scopes=scope)
     client = gspread.authorize(creds)
     
