@@ -39,6 +39,33 @@ if not st.session_state.login:
 # 2. Exibição da Imagem (Agora que o sistema está liberado)
 st.image("img/FinançasPro - Wilson.png", use_container_width=True)
 st.write("---")
+
+# --- MENU DE NAVEGAÇÃO ---
+# Criamos colunas para os botões ficarem lado a lado
+col_n1, col_n2, col_n3 = st.columns(3)
+
+with col_n1:
+    if st.button("📊 Ir para Resumo"):
+        st.session_state.pagina = "Resumo"
+        st.rerun()
+
+with col_n2:
+    if st.button("📋 Ir para Pendências"):
+        st.session_state.pagina = "Pendências"
+        st.rerun()
+
+# --- LÓGICA DE CARREGAMENTO DAS TELAS ---
+# Se o usuário ainda não escolheu uma página, mostramos uma mensagem de boas-vindas
+if 'pagina' not in st.session_state:
+    st.info("Selecione uma opção no menu acima para começar.")
+else:
+    if st.session_state.pagina == "Resumo":
+        st.title("📊 Resumo Financeiro")
+        # Aqui entra o seu código de Resumo
+        
+    elif st.session_state.pagina == "Pendências":
+        st.title("📋 Lançamentos Pendentes")
+        # Aqui vamos colar aquele código de filtros que corrigimos antes
    
 
 # Definições iniciais de data
