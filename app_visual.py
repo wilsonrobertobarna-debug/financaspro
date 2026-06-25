@@ -40,6 +40,17 @@ if not st.session_state.login:
 st.image("img/FinançasPro - Wilson.png", use_container_width=True)
 st.write("---")
 
+# --- FUNÇÃO PARA CARREGAR DADOS ---
+@st.cache_data(ttl=600) # O sistema "guarda" os dados por 10 minutos
+def carregar_dados():
+    # Aqui entraria a sua lógica de conexão (gspread/service_account)
+    # Por enquanto, vamos usar um dataframe vazio ou de exemplo
+    df = pd.DataFrame({'Banco': ['Nubank', 'Itaú'], 'Valor': [100, 200]})
+    return df
+
+# Carregamos os dados aqui
+df_base = carregar_dados()
+
 # --- MENU DE NAVEGAÇÃO ---
 # Criamos colunas para os botões ficarem lado a lado
 col_n1, col_n2, col_n3 = st.columns(3)
