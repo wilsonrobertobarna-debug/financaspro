@@ -1468,5 +1468,4 @@ if aba == "📊 Análises & Configurações":
                 args=(nome,) 
             )
 
-cd
 
