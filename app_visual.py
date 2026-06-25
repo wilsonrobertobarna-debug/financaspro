@@ -101,6 +101,35 @@ else:
         
     elif st.session_state.pagina == "Pendências":
         st.title("📋 Lançamentos Pendentes")
+        
+        # 1. Filtros
+        col_b, col_d, col_t = st.columns(3)
+        with col_b:
+            # Certifique-se que 'Banco' existe na sua planilha
+            bancos = df_base['Banco'].unique()
+            filtro_banco = st.multiselect("Filtrar Banco:", bancos)
+        with col_d:
+            busca_desc = st.text_input("Buscar Descrição:")
+        with col_t:
+            busca_tipo = st.selectbox("Filtrar Tipo:", ["Todos", "Receita", "Despesa"])
+
+        # 2. Lógica de Filtro
+        df_filtrado = df_base.copy()
+        
+        if filtro_banco:
+            df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
+        if busca_desc:
+            # Substitua 'Descrição' pelo nome exato da coluna na sua planilha
+            df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
+        if busca_tipo != "Todos":
+            df_filtrado = df_filtrado[df_filtrado['Tipo'] == busca_tipo]
+
+        # 3. Tabela
+        st.write(f"### Registros encontrados: {len(df_filtrado)}")
+        st.dataframe(df_filtrado, use_container_width=True)
+
+        
+        st.title("📋 Lançamentos Pendentes")
         # Aqui vamos colar aquele código de filtros que corrigimos antes
    
 
