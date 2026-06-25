@@ -12,18 +12,18 @@ import streamlit.components.v1 as components
 
 # --- 1. CONFIGURAÇÕES E FUNÇÕES ---
 def get_data():
-    caminho_json = "C:/Users/wil_r/OneDrive/Área de Trabalho/FinançasPro/financaspro-wilson-723758e211e3.json"
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
-    # 1. Verifica se o arquivo existe
-    existe = os.path.exists(caminho_json)
+    # Como o arquivo está na mesma pasta, não precisamos do caminho "C:/..."
+    caminho_json = "financaspro-wilson-723758e211e3.json"
     
-    # 2. Se não existir, lista o que tem na pasta para a gente ver o erro
-    if not existe:
-        st.error(f"Arquivo não encontrado em: {caminho_json}")
-        pasta = "C:/Users/wil_r/OneDrive/Área de Trabalho/FinançasPro"
-        arquivos_na_pasta = os.listdir(pasta)
-        st.write("Arquivos encontrados na pasta:", arquivos_na_pasta)
-        st.stop()
+    creds = Credentials.from_service_account_file(caminho_json, scopes=scope)
+    client = gspread.authorize(creds)
+    
+    # ID da planilha
+    sheet = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4").sheet1 
+    data = sheet.get_all_records()
+    return pd.DataFrame(data)
         
     # Se existir, continua o código normalmente
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
