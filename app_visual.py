@@ -10,6 +10,19 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
+# --- CONFIGURAÇÃO GOOGLE SHEETS ---
+def get_data():
+    # Carrega suas credenciais do segredo do Streamlit ou arquivo
+    # Certifique-se de que o arquivo 'service_account.json' esteja na pasta raiz
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = Credentials.from_service_account_file("service_account.json", scopes=scope)
+    client = gspread.authorize(creds)
+    
+    # Substitua pelo ID da sua planilha
+    sheet = client.open_by_key("SEU_ID_DA_PLANILHA_AQUI").sheet1 
+    data = sheet.get_all_records()
+    return pd.DataFrame(data)
+
 # 1. Configuração Global (Ícone na aba do navegador)
 st.set_page_config(
     page_title="Finanças Pro",
