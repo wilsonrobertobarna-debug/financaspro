@@ -15,7 +15,7 @@ def get_data():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds = Credentials.from_service_account_file("service_account.json", scopes=scope)
     client = gspread.authorize(creds)
-    sheet = client.open_by_key(147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4).sheet1 
+    sheet = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4").sheet1 
     data = sheet.get_all_records()
     return pd.DataFrame(data)
 
