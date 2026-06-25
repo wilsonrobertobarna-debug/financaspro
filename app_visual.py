@@ -15,19 +15,15 @@ import os
 def get_data():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
-    # Nome do arquivo que já está lá
-    nome_arquivo = "financaspro-wilson-723758e211e3.json"
+    # Usamos apenas o nome do arquivo. 
+    # Como ele está no mesmo repositório do seu código no GitHub, 
+    # o servidor o encontrará automaticamente.
+    caminho_json = "financaspro-wilson-723758e211e3.json"
     
-    # Tenta achar o arquivo na pasta onde o script está rodando (funciona em qualquer lugar)
-    caminho_json = os.path.join(os.path.dirname(__file__), nome_arquivo)
-    
-    # Se ainda assim não achar, ele tenta procurar na raiz do servidor (ajuste para a nuvem)
-    if not os.path.exists(caminho_json):
-        caminho_json = nome_arquivo
-        
     creds = Credentials.from_service_account_file(caminho_json, scopes=scope)
     client = gspread.authorize(creds)
     
+    # ID da sua planilha (permanece igual)
     sheet = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4").sheet1 
     data = sheet.get_all_records()
     return pd.DataFrame(data)
