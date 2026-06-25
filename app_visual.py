@@ -10,39 +10,26 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-# --- CARREGAMENTO DE DADOS (CACHE) ---
-@st.cache_data(ttl=600) # O sistema vai lembrar dos dados por 10 minutos
-def carregar_dados_do_sheets():
-    return get_data()
-
-# Chamamos a função uma única vez
-try:
-    df_base = carregar_dados_do_sheets()
-except Exception as e:
-    st.error(f"Erro ao conectar na planilha: {e}")
-    st.stop()
-
-# --- CONFIGURAÇÃO GOOGLE SHEETS ---
+# --- 1. CONFIGURAÇÕES E FUNÇÕES ---
 def get_data():
-    # Carrega suas credenciais do segredo do Streamlit ou arquivo
-    # Certifique-se de que o arquivo 'service_account.json' esteja na pasta raiz
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds = Credentials.from_service_account_file("service_account.json", scopes=scope)
     client = gspread.authorize(creds)
-    
-    # Substitua pelo ID da sua planilha
     sheet = client.open_by_key("SEU_ID_DA_PLANILHA_AQUI").sheet1 
     data = sheet.get_all_records()
     return pd.DataFrame(data)
 
-# 1. Configuração Global (Ícone na aba do navegador)
+@st.cache_data(ttl=600)
+def carregar_dados_do_sheets():
+    return get_data()
+
 st.set_page_config(
     page_title="Finanças Pro",
-    page_icon="img/FinançasPro - Wilson.ico", # Ajuste o caminho conforme criamos
+    page_icon="img/FinançasPro - Wilson.ico",
     layout="wide"
 )
 
-# --- TELA DE PROTEÇÃO (LOGIN) ---
+# --- 2. LOGIN ---
 if 'login' not in st.session_state:
     st.session_state.login = False
 
@@ -60,52 +47,40 @@ if not st.session_state.login:
                 st.error("Senha incorreta, Wilson!")
     st.stop() 
 
-# --- SE O CÓDIGO CHEGOU AQUI, O LOGIN FOI FEITO ---
-# 2. Exibição da Imagem (Agora que o sistema está liberado)
+# --- 3. CARREGAMENTO DE DADOS PÓS-LOGIN ---
+try:
+    df_base = carregar_dados_do_sheets()
+except Exception as e:
+    st.error(f"Erro ao conectar na planilha: {e}")
+    st.stop()
+
+# --- 4. INTERFACE ---
 st.image("img/FinançasPro - Wilson.png", use_container_width=True)
 st.write("---")
 
-# --- FUNÇÃO PARA CARREGAR DADOS ---
-@st.cache_data(ttl=600) # O sistema "guarda" os dados por 10 minutos
-def carregar_dados():
-    # Aqui entraria a sua lógica de conexão (gspread/service_account)
-    # Por enquanto, vamos usar um dataframe vazio ou de exemplo
-    df = pd.DataFrame({'Banco': ['Nubank', 'Itaú'], 'Valor': [100, 200]})
-    return df
-
-# Carregamos os dados aqui
-df_base = carregar_dados()
-
-# --- MENU DE NAVEGAÇÃO ---
-# Criamos colunas para os botões ficarem lado a lado
 col_n1, col_n2, col_n3 = st.columns(3)
-
 with col_n1:
     if st.button("📊 Ir para Resumo"):
         st.session_state.pagina = "Resumo"
         st.rerun()
-
 with col_n2:
     if st.button("📋 Ir para Pendências"):
         st.session_state.pagina = "Pendências"
         st.rerun()
 
-# --- LÓGICA DE CARREGAMENTO DAS TELAS ---
-# Se o usuário ainda não escolheu uma página, mostramos uma mensagem de boas-vindas
+# --- 5. LÓGICA DE NAVEGAÇÃO ---
 if 'pagina' not in st.session_state:
     st.info("Selecione uma opção no menu acima para começar.")
 else:
     if st.session_state.pagina == "Resumo":
         st.title("📊 Resumo Financeiro")
-        # Aqui entra o seu código de Resumo
         
     elif st.session_state.pagina == "Pendências":
         st.title("📋 Lançamentos Pendentes")
         
-        # 1. Filtros
+        # Filtros
         col_b, col_d, col_t = st.columns(3)
         with col_b:
-            # Certifique-se que 'Banco' existe na sua planilha
             bancos = df_base['Banco'].unique()
             filtro_banco = st.multiselect("Filtrar Banco:", bancos)
         with col_d:
@@ -113,18 +88,15 @@ else:
         with col_t:
             busca_tipo = st.selectbox("Filtrar Tipo:", ["Todos", "Receita", "Despesa"])
 
-        # 2. Lógica de Filtro
+        # Lógica de Filtro
         df_filtrado = df_base.copy()
-        
         if filtro_banco:
             df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
         if busca_desc:
-            # Substitua 'Descrição' pelo nome exato da coluna na sua planilha
             df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
         if busca_tipo != "Todos":
             df_filtrado = df_filtrado[df_filtrado['Tipo'] == busca_tipo]
 
-        # 3. Tabela
         st.write(f"### Registros encontrados: {len(df_filtrado)}")
         st.dataframe(df_filtrado, use_container_width=True)
 
