@@ -1265,22 +1265,20 @@ if aba == "📋 Relatório PDF":
             # ========================================================
             # PASSO 1: FILTRAR E PREPARAR O DF PARA O PDF
             # ========================================================
+           # ========================================================
+            # PASSO 1: DIAGNÓSTICO E FILTRO (O SEGREDO)
+            # ========================================================
             df_report = df_base.copy()
             
-            # Filtro de Beneficiário
+            # DEBUG: Isso vai mostrar na tela o que está sendo filtrado
+            st.write(f"Buscando por: {busca_beneficiario}")
+            st.write(f"Coluna 9 (J) tem estes valores únicos: {df_report.iloc[:, 9].unique()[:5]}") 
+
             if busca_beneficiario:
-                df_report = df_report[df_report.iloc[:, 9].astype(str).str.contains(busca_beneficiario, case=False, na=False)]
-            
-            # Conversões necessárias para o PDF não quebrar
-            df_report['DT'] = pd.to_datetime(df_report['DT'], format='%d/%m/%Y', errors='coerce')
-            df_report = df_report.sort_values('DT')
-            df_report['V_Num'] = pd.to_numeric(df_report['V_Num'], errors='coerce').fillna(0)
-            
-            # Recálculo do Saldo Acumulado (para não vir zerado no PDF)
-            df_report['Valor_Com_Sinal'] = df_report.apply(
-                lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
-            )
-            df_report['Saldo_Acum'] = df_report['Valor_Com_Sinal'].cumsum()
+                # Vamos forçar a conversão para string e comparar
+                df_report = df_report[df_report.iloc[:, 9].astype(str).str.contains(str(busca_beneficiario), case=False, na=False)]
+                
+            st.write(f"Linhas restantes após filtro: {len(df_report)}")
 
             # ========================================================
             # PASSO 2: LOOP DA TABELA
