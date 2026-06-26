@@ -1279,7 +1279,7 @@ if aba == "📋 Relatório PDF":
                 
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
-            pdf.set_font("Arial", '', 9)
+                pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
                 data_str = row['DT_FILTRO'].strftime('%d/%m/%Y') if not pd.isna(row['DT_FILTRO']) else str(row.get(col_data_df, '---'))
                 
