@@ -1292,18 +1292,25 @@ if aba == "📋 Relatório PDF":
             )
             df_report['Saldo_Acum'] = valor_inicial + df_report['Valor_Com_Sinal'].cumsum()
                 
-            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
+           
             # ========================================================
-           # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
+            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF (ATUALIZADO)
             # ========================================================
             
-            # --- IMPRIME O CABEÇALHO DA TABELA (PARA NÃO FICAR SEM TÍTULOS) ---
-            pdf.set_font("Arial", 'B', 9)
-            pdf.cell(20, 7, "DATA", 1); pdf.cell(18, 7, "TIPO", 1); pdf.cell(35, 7, "CATEGORIA", 1)
-            pdf.cell(45, 7, "DESCRIÇÃO", 1); pdf.cell(25, 7, "VALOR", 1); pdf.cell(32, 7, "SALDO", 1); pdf.cell(20, 7, "STATUS", 1)
+            # Cabeçalho da Tabela - Adicionamos a coluna "BANCO"
+            pdf.set_font("Arial", 'B', 8) # Fonte ligeiramente menor para caber tudo
+            pdf.cell(20, 7, "DATA", 1)
+            pdf.cell(25, 7, "BANCO", 1)  # <--- NOVA COLUNA AQUI
+            pdf.cell(18, 7, "TIPO", 1)
+            pdf.cell(30, 7, "CATEGORIA", 1)
+            pdf.cell(35, 7, "DESCRIÇÃO", 1)
+            pdf.cell(22, 7, "VALOR", 1)
+            pdf.cell(25, 7, "SALDO", 1)
+            pdf.cell(15, 7, "STATUS", 1)
             pdf.ln()
 
-           # --- LOOP DE IMPRESSÃO DAS LINHAS ---
+            
+            # --- LOOP DE IMPRESSÃO DAS LINHAS ---
             pdf.set_font("Arial", '', 8) # Reduzi um pouco a fonte para caber a nova coluna
             for index, row in df_report.iterrows():
                 # Formatações
