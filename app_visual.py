@@ -1131,6 +1131,9 @@ if aba == "📋 Relatório PDF":
 
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
+                # --- FILTRO DE TIPO NO PDF (ADICIONAR ISSO) ---
+            if st.session_state.get('busca_tipo') != "Todos":
+                df_report = df_report[df_report['Tipo'].str.upper().str.strip() == st.session_state.busca_tipo.upper()
 
             df_report = df_report.sort_values(by='DT_FILTRO')
 
