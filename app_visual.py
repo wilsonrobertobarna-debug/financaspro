@@ -1347,7 +1347,7 @@ if aba == "📋 Relatório PDF":
                 pdf.cell(25, 6, banco_str, 1) # <--- NOVA COLUNA BANCO
                 pdf.cell(18, 6, tipo_str, 1)
                 pdf.cell(30, 6, cat_val, 1)
-                pdf.cell(35, 6, desc_val, 1)
+                pdf.cell(32, 6, desc_val, 1)
                 
                 pdf.set_text_color(*cor_valor)
                 pdf.cell(22, 6, texto_valor, 1)
@@ -1356,7 +1356,7 @@ if aba == "📋 Relatório PDF":
                 pdf.cell(28, 6, texto_saldo, 1)
                 
                 pdf.set_text_color(0, 0, 0)
-                pdf.cell(15, 6, status_val, 1)
+                pdf.cell(18, 6, status_val, 1)
                 pdf.ln()
 
             # Finalização e Download
