@@ -1273,7 +1273,7 @@ if aba == "📋 Relatório PDF":
             # PASSO 2: O LOOP DA TABELA AGORA USA 'df_report'
             # ========================================================
             # Certifique-se de que o seu loop abaixo esteja assim:
-            #for index, row in df_report.iterrows():
+            for index, row in df_report.iterrows():
             # ========================================================
 
                 
@@ -1281,7 +1281,7 @@ if aba == "📋 Relatório PDF":
             # ========================================================
                 pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
-                data_str = row['DT_FILTRO'].strftime('%d/%m/%Y') if not pd.isna(row['DT_FILTRO']) else str(row.get(col_data_df, '---'))
+                data_str = row['DT'].strftime('%d/%m/%Y') if 'DT' in row and not pd.isna(row['DT']) else str(row.get('DT', '---'))
                 
                 tipo_str = str(row.get('Tipo', '---')).strip()
                 cat_val = str(row.get('Categoria', 'Geral'))[:18]
