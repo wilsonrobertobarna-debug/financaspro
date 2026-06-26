@@ -1135,7 +1135,7 @@ if aba == "📋 Relatório PDF":
             if st.session_state.get('busca_tipo') != "Todos":
                 df_report = df_report[df_report['Tipo'].str.upper().str.strip() == st.session_state.busca_tipo.upper()
 
-            df_report = df_report.sort_values(by='DT_FILTRO')
+                df_report = df_report.sort_values(by='DT_FILTRO')
 
 # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
