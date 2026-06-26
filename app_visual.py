@@ -1038,10 +1038,7 @@ if aba == "📋 Relatório PDF":
         data_padrao_fim = datetime(2026, 5, 20)
         periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
 
-    # -------------------------------------------------------------------------
-    # LINHA 2 DE FILTROS: DESCRIÇÃO, BENEFICIÁRIO E STATUS 
-    # -------------------------------------------------------------------------
-    # ========================================================
+   
     # 2. FILTRAGEM (INCLUINDO NOVOS FILTROS)
     # ========================================================
     # ... (seu código de data e banco continua igual aqui em cima) ...
