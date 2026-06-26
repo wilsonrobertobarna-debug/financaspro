@@ -1060,19 +1060,20 @@ if aba == "📋 Relatório PDF":
     busca_status = col_rel5.selectbox("📌 Status:", opcoes_status, index=idx_status, key="sel_status")
     st.session_state.busca_status = busca_status
     
-    # Linha do Tipo
+    # -------------------------------------------------------------------------
+    # LINHA DE FILTRO: TIPO (ÚNICA E CORRETA)
+    # -------------------------------------------------------------------------
     col_rel6, col_rel7 = st.columns([1, 2])
+    
     opcoes_tipo = ["Todos", "Receita", "Despesa", "Rendimento"]
-    idx_tipo = opcoes_tipo.index(st.session_state.get('busca_tipo', "Todos"))
+    # Se o valor não estiver no estado, ele usa "Todos" como padrão
+    valor_atual = st.session_state.get('busca_tipo', "Todos")
+    
+    # Garantia para o index não quebrar se o valor mudar
+    idx_tipo = opcoes_tipo.index(valor_atual) if valor_atual in opcoes_tipo else 0
+    
     busca_tipo = col_rel6.selectbox("🏷️ Filtrar por Tipo:", opcoes_tipo, index=idx_tipo, key="sel_tipo")
     st.session_state.busca_tipo = busca_tipo
-    
-    st.markdown("---")
-        
-    # LINHA 3 DE FILTROS: TIPO
-    col_rel6, col_rel7 = st.columns([1, 2]) # Ajuste de tamanho para o tipo não ficar gigante
-    with col_rel6:
-        busca_tipo = st.selectbox("🏷️ Filtrar por Tipo:", ["Todos", "Receita", "Despesa", "Rendimento"])
         
     st.markdown("---")    
 
