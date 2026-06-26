@@ -1200,7 +1200,7 @@ if aba == "📋 Relatório PDF":
             df_report['Saldo_Acum'] = saldos_lista
 
             # ========================================================
-            # 5. MONTAGEM DO CABEÇALHO DO PDF (Mantido padrão limpo)
+            # 5. MONTAGEM DO CABEÇALHO DO PDF (ATUALIZADO)
             # ========================================================
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
@@ -1214,21 +1214,16 @@ if aba == "📋 Relatório PDF":
             pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {str(banco_nome).upper()}", ln=1, align="L")
             pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
             
+            # --- LINHAS NOVAS PARA FILTROS ---
+            if busca_beneficiario:
+                pdf.cell(200, 6, txt=f"BENEFICIARIO FILTRADO: {str(busca_beneficiario).upper()}", ln=1, align="L")
+            if busca_tipo:
+                pdf.cell(200, 6, txt=f"TIPO FILTRADO: {str(busca_tipo).upper()}", ln=1, align="L")
+            # ---------------------------------
+            
             txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
             pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
             pdf.ln(5)
-
-            # Cabeçalho da Tabela
-            pdf.set_font("Arial", 'B', 9)
-            pdf.cell(20, 7, "Data", 1)
-            pdf.cell(18, 7, "Tipo", 1)
-            pdf.cell(35, 7, "Categoria", 1)
-            pdf.cell(45, 7, "Descricao", 1)
-            pdf.cell(25, 7, "Valor", 1)
-            pdf.cell(32, 7, "Saldo Acum.", 1)
-            pdf.cell(20, 7, "Status", 1)
-            pdf.ln()
-
             # ========================================================
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
