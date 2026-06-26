@@ -1254,16 +1254,16 @@ if aba == "📋 Relatório PDF":
             pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {str(banco_nome).upper()}", ln=1, align="L")
             pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
             
-            # --- LINHAS NOVAS PARA FILTROS ---
+           # --- LOGICA DE FILTROS DO CABEÇALHO ---
             if busca_beneficiario:
+                # Se filtrar por Beneficiário, imprime SÓ ele e ignora o resto
+                pdf.set_font("Arial", 'B', 10)
                 pdf.cell(200, 6, txt=f"BENEFICIARIO FILTRADO: {str(busca_beneficiario).upper()}", ln=1, align="L")
-            if busca_tipo:
-                pdf.cell(200, 6, txt=f"TIPO FILTRADO: {str(busca_tipo).upper()}", ln=1, align="L")
-            # ---------------------------------
-            
-            txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-            pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
-            pdf.ln(5)
+            else:
+                # Se NÃO filtrar por Beneficiário, imprime o resumo padrão
+                pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {str(banco_nome).upper()}", ln=1, align="L")
+                if busca_tipo:
+                    pdf.cell(200, 6, txt=f"TIPO FILTRADO: {str(busca_tipo).upper()}", ln=1, align="L")
             # ========================================================
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
