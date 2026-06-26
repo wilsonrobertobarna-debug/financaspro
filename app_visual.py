@@ -9,6 +9,22 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
+import streamlit as st
+
+def aba_financas_bancos():
+    st.title("Finanças e Bancos")
+
+    # Exibe uma imagem no topo da aba
+    st.image(
+        "assets/logo_financas.png",   # caminho da imagem local ou URL
+        caption="FinançasPro",
+        use_column_width=True
+    )
+
+    # Aqui você continua com os elementos da aba
+    st.write("Bem-vindo à seção de Finanças e Bancos!")
+    # ... restante do seu código
+
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
