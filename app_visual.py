@@ -1263,38 +1263,42 @@ if aba == "📋 Relatório PDF":
             pdf.ln(5)
 
 
-        # ========================================================
-            # FILTRO E PREPARAÇÃO TOTAL (COPIE ESTE BLOCO TODO)
+           # ========================================================
+            # FILTRO E PREPARAÇÃO TOTAL
             # ========================================================
             df_report = df_base.copy()
             
-            # 1. Aplicar o Filtro do Beneficiário
+            # 1. Conversão inicial para poder filtrar por data
+            df_report['DT'] = pd.to_datetime(df_report['DT'], format='%d/%m/%Y', errors='coerce')
+            
+            # 2. Aplicar Filtro de PERÍODO (01 a 30 de Junho, etc)
+            # b_ini e b_fim são suas variáveis de data
+            df_report = df_report[(df_report['DT'] >= pd.to_datetime(b_ini)) & (df_report['DT'] <= pd.to_datetime(b_fim))]
+            
+            # 3. Aplicar o Filtro do Beneficiário
             if busca_beneficiario:
                 df_report = df_report[df_report.iloc[:, 9].astype(str).str.strip().str.lower() == str(busca_beneficiario).strip().lower()]
             
-            # 2. Conversão Blindada das colunas (Resolve o problema do "1900")
-            df_report['DT'] = pd.to_datetime(df_report['DT'], format='%d/%m/%Y', errors='coerce')
+            # 4. Ajustes de valores e ordenação
             df_report['V_Num'] = pd.to_numeric(df_report['V_Num'], errors='coerce').fillna(0)
-            
-            # 3. Ordenar por Data (Essencial para o acumulado)
             df_report = df_report.sort_values(by='DT')
             
-            # 4. Recalcular o Saldo Acumulado corretamente
+            # 5. Recalcular o Saldo Acumulado
             df_report['Valor_Com_Sinal'] = df_report.apply(
                 lambda x: x['V_Num'] if str(x['Tipo']).strip() in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
             )
             df_report['Saldo_Acum'] = df_report['Valor_Com_Sinal'].cumsum()
 
             # ========================================================
-            # LOOP DA TABELA (Use exatamente este)
+            # LOOP DA TABELA
             # ========================================================
-            pdf.set_font("Arial", 'B', 9) # Títulos em negrito
+            pdf.set_font("Arial", 'B', 9) 
             # Cabeçalho da Tabela
             pdf.cell(20, 7, "DATA", 1); pdf.cell(18, 7, "TIPO", 1); pdf.cell(35, 7, "CATEGORIA", 1)
             pdf.cell(45, 7, "DESCRIÇÃO", 1); pdf.cell(25, 7, "VALOR", 1); pdf.cell(32, 7, "SALDO", 1); pdf.cell(20, 7, "STATUS", 1)
             pdf.ln()
             
-            pdf.set_font("Arial", '', 9) # Texto normal
+            pdf.set_font("Arial", '', 9) 
             for index, row in df_report.iterrows():
                 data_str = row['DT'].strftime('%d/%m/%Y') if pd.notna(row['DT']) else '---'
                 tipo_str = str(row.get('Tipo', '---'))
@@ -1304,7 +1308,7 @@ if aba == "📋 Relatório PDF":
                 saldo_val = row['Saldo_Acum']
                 status_val = str(row.get('Status', '-'))
 
-                # Lógica de cores e formatação
+                # Lógica de formatação de valores
                 texto_valor = f"{valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                 texto_saldo = f"{saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                 
@@ -1316,7 +1320,6 @@ if aba == "📋 Relatório PDF":
                 pdf.cell(32, 6, texto_saldo, 1)
                 pdf.cell(20, 6, status_val, 1)
                 pdf.ln()
-
                 
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
