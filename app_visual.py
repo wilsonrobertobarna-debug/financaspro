@@ -1345,6 +1345,21 @@ if aba == "📋 Relatório PDF":
     if busca_status != "Todos" and col_status_df:
         df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
+    # ... (seu código atual de filtros de Data, Banco, Descrição e Status continua aqui) ...
+
+    # --- INSERIR ESTES FILTROS AQUI (APÓS O FILTRO DE STATUS) ---
+    
+    # Filtra Beneficiário (Coluna J = índice 9)
+    if st.session_state.get('busca_beneficiario'):
+        # Verifica se tem pelo menos 10 colunas para não dar erro de índice
+        if df_tela.shape[1] > 9:
+            df_tela = df_tela[df_tela.iloc[:, 9].astype(str).str.contains(st.session_state.busca_beneficiario, case=False, na=False)]
+
+    # Filtra Tipo
+    if st.session_state.get('busca_tipo') != "Todos":
+        df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == st.session_state.busca_tipo.upper()]
+
+    # --- (A PARTIR DAQUI SEGUE A FAXINA DAS COLUNAS) ---
     # Faxina das colunas internas para manter o visual limpo
     colunas_para_esconder = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
     colunas_visiveis = [c for c in df_tela.columns if c not in colunas_para_esconder]
