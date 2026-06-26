@@ -1268,7 +1268,15 @@ if aba == "📋 Relatório PDF":
             df_report = df_base.copy()
             if busca_beneficiario:
                 df_report = df_report[df_report.iloc[:, 9].astype(str).str.contains(busca_beneficiario, case=False, na=False)]
+
             # ========================================================
+            # PASSO 2: O LOOP DA TABELA AGORA USA 'df_report'
+            # ========================================================
+            # Certifique-se de que o seu loop abaixo esteja assim:
+            for index, row in df_report.iterrows():
+            # ========================================================
+
+                
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
             pdf.set_font("Arial", '', 9)
