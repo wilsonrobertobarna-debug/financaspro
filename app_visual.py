@@ -1266,37 +1266,27 @@ if aba == "📋 Relatório PDF":
            # ========================================================
             # FILTRO E PREPARAÇÃO TOTAL
             # ========================================================
-            # ========================================================
-            # FILTRO COM MODO DE SEGURANÇA (DIAGNÓSTICO)
+         # ========================================================
+            # FILTRO CORRIGIDO (MAIS TOLERANTE)
             # ========================================================
             df_report = df_base.copy()
             
-            # 1. Filtro de Data (Obrigatório)
+            # 1. Filtro de Data
             df_report['DT'] = pd.to_datetime(df_report['DT'], format='%d/%m/%Y', errors='coerce')
             df_report = df_report[(df_report['DT'] >= pd.to_datetime(b_ini)) & (df_report['DT'] <= pd.to_datetime(b_fim))]
             
-            # DEBUG: Quantas linhas restaram após a data?
-            st.write(f"Linhas após data: {len(df_report)}")
-
-            # 2. Filtro de Banco (Apenas se não for "Todos")
+            # 2. Filtro de Banco (Usando .contains para ignorar pequenas diferenças)
             if banco_nome and str(banco_nome).lower() != "todos os bancos":
-                # Tente comparar sem o .lower() se o filtro falhar
-                df_report = df_report[df_report.iloc[:, 0].astype(str).str.strip().str.lower() == str(banco_nome).strip().lower()]
+                # Filtra se o banco contiver o nome (ignora maiúsculas e espaços extras)
+                df_report = df_report[df_report.iloc[:, 0].astype(str).str.contains(str(banco_nome).strip(), case=False, na=False)]
             
-            # DEBUG: Quantas linhas restaram após o banco?
-            st.write(f"Linhas após banco: {len(df_report)}")
-
-            # 3. Filtro de Beneficiário
-            if busca_beneficiario:
-                # Usamos .contains para ser menos rigoroso que o ==
-                df_report = df_report[df_report.iloc[:, 9].astype(str).str.contains(str(busca_beneficiario), case=False, na=False)]
+            # 3. Filtro de Beneficiário (Só aplica se algo foi digitado)
+            if busca_beneficiario and str(busca_beneficiario).strip() != "":
+                df_report = df_report[df_report.iloc[:, 9].astype(str).str.contains(str(busca_beneficiario).strip(), case=False, na=False)]
             
-            # DEBUG: Quantas linhas restaram após o beneficiário?
-            st.write(f"Linhas após beneficiário: {len(df_report)}")
-            
-            # Se ainda assim chegar aqui com 0 linhas, o código não vai quebrar
+            # DEBUG: Checagem final
             if len(df_report) == 0:
-                st.warning("O filtro resultou em zero lançamentos. Verifique se o nome do Banco/Beneficiário está escrito exatamente como na planilha.")
+                st.error("Nenhum lançamento encontrado com esses filtros. Verifique o nome do Banco ou Beneficiário.")
             # ========================================================
             # LOOP DA TABELA
             # ========================================================
