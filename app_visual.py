@@ -1080,14 +1080,7 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     # FILTRO: BENEFICIÁRIO (NA LATERAL)
     # -------------------------------------------------------------------------
-    with st.sidebar:
-        st.session_state.busca_beneficiario = st.text_input(
-            "👤 Filtrar por Beneficiário:", 
-            value=st.session_state.get('busca_beneficiario', ""),
-            key="input_beneficiario"
-        )
-        st.markdown("---")
-    
+     
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
