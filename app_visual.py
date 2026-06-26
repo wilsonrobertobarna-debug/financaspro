@@ -1355,11 +1355,16 @@ if aba == "📋 Relatório PDF":
                 file_name="relatorio_financaspro.pdf",
                 mime="application/pdf"
             )
-            st.success(f"PDF pronto! Relatório atualizado.")
+           st.success(f"PDF pronto! Relatório atualizado.")
+
+        # FECHAMENTO DO BLOCO TRY
+        except Exception as e:
+            st.error(f"Erro ao gerar o PDF: {e}")
+
     # =========================================================================
-    # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS 4 FILTROS (VISUAL LIMPO)
+    # 7. EXIBIÇÃO DA TABELA NA TELA (Fora do bloco try)
     # =========================================================================
-        st.markdown("### 🔍 Lançamentos Filtrados")
+    st.markdown("### 🔍 Lançamentos Filtrados")
 
     df_tela = df_base.copy()
     
