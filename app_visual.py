@@ -1370,21 +1370,22 @@ if aba == "📋 Relatório PDF":
     colunas_visiveis = [c for c in df_tela.columns if c not in colunas_para_esconder]
     df_tela_limpo = df_tela[colunas_visiveis]
 
-    # Exibe os dados
-    # 1. Caixa de busca (o usuário digita aqui)
-        busca_beneficiario = st.text_input("🔍 Pesquisar por Beneficiário:")
-
+        # Exibe os dados
+       # 1. Caixa de busca (o usuário digita aqui)
+    busca_beneficiario = st.text_input("🔍 Pesquisar por Beneficiário:")
+    
     # 2. Se algo foi digitado, filtramos o df_tela_limpo antes de exibir
     if busca_beneficiario:
-    # Lembre-se: o 9 é a coluna J (Beneficiário)
+        # Lembre-se: o 9 é a coluna J (Beneficiário)
         df_tela_limpo = df_tela_limpo[df_tela_limpo.iloc[:, 9].astype(str).str.contains(busca_beneficiario, case=False, na=False)]
-
- 
+    
+    # 3. AGORA SIM, o código que você já tinha:
     if not df_tela_limpo.empty:
         st.dataframe(df_tela_limpo, use_container_width=True)
     else:
         st.info("Nenhum lançamento encontrado para os filtros aplicados.")
-# =========================================================================
+
+# --- O RESTO DO SEU CÓDIGO (ABA DE ANÁLISES) CONTINUA IGUAL ---# =========================================================================
 # NOVA ABA: 📊 ANÁLISES & CONFIGURAÇÕES (Criada no final do arquivo)
 # =========================================================================
 # ATENÇÃO: Essa linha abaixo tem que começar encostada no canto esquerdo!
