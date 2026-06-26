@@ -1294,7 +1294,7 @@ if aba == "📋 Relatório PDF":
                 
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
-          # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
+            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
             
             # --- IMPRIME O CABEÇALHO DA TABELA (PARA NÃO FICAR SEM TÍTULOS) ---
@@ -1359,7 +1359,7 @@ if aba == "📋 Relatório PDF":
     # =========================================================================
     # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS 4 FILTROS (VISUAL LIMPO)
     # =========================================================================
-            st.markdown("### 🔍 Lançamentos Filtrados")
+        st.markdown("### 🔍 Lançamentos Filtrados")
 
     df_tela = df_base.copy()
     
