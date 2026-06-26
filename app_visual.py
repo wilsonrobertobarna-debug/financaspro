@@ -1031,26 +1031,25 @@ if aba == "📋 Relatório PDF":
         data_padrao_fim = datetime(2026, 5, 20)
         periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
 
+  # -------------------------------------------------------------------------
+    # LINHA 2 DE FILTROS: DESCRIÇÃO, BENEFICIÁRIO E STATUS 
     # -------------------------------------------------------------------------
-    # LINHA 2 DE FILTROS: DESCRIÇÃO E STATUS 
-    # -------------------------------------------------------------------------
-    col_rel3, col_rel4 = st.columns(2)
-    with col_rel3:
-        busca_desc = st.text_input("🔍 Pesquisar por Descrição / Beneficiário:", "").strip()
-        
-    with col_rel4:
-        busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
-
-    st.markdown("---")
+    col_rel3, col_rel4, col_rel5 = st.columns(3)
     
-
-    # LINHA 3 DE FILTROS: TIPO (AGORA COM SELEÇÃO AUTOMÁTICA)
-    col_rel5, col_rel6 = st.columns(2)
+    with col_rel3:
+        busca_desc = st.text_input("📝 Descrição:", "").strip()
+    with col_rel4:
+        busca_beneficiario = st.text_input("👤 Beneficiário:", "").strip()
     with col_rel5:
-        # Aqui ele já cria o seletor com as suas opções
-        busca_tipo = st.selectbox("🏷️ Filtrar por Tipo:", ["Todos", "Receita", "Despesa", "Rendimento"])
+        busca_status = st.selectbox("📌 Status:", ["Todos", "Pago", "Pendente"])
+
+    # LINHA 3 DE FILTROS: TIPO
+    col_rel6, col_rel7 = st.columns([1, 2]) # Ajuste de tamanho para o tipo não ficar gigante
     with col_rel6:
-        st.write("")
+        busca_tipo = st.selectbox("🏷️ Filtrar por Tipo:", ["Todos", "Receita", "Despesa", "Rendimento"])
+        
+    st.markdown("---")    
+
     
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
