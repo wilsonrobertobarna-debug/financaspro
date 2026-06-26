@@ -1180,7 +1180,7 @@ if aba == "📋 Relatório PDF":
 
             saldo_anterior = base_inicial
 
-            saldo_anterior = base_inicial            # ========================================================
+            # ========================================================
             # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO
             # ========================================================
             corrente = saldo_anterior 
