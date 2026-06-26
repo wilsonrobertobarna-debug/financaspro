@@ -1355,14 +1355,15 @@ if aba == "📋 Relatório PDF":
                 file_name="relatorio_financaspro.pdf",
                 mime="application/pdf"
             )
-           st.success(f"PDF pronto! Relatório atualizado.")
+            st.success(f"PDF pronto! Relatório atualizado.")
 
-        # FECHAMENTO DO BLOCO TRY
+        # (Este except deve estar alinhado com o 'try' lá de cima, geralmente com 8 espaços)
         except Exception as e:
             st.error(f"Erro ao gerar o PDF: {e}")
 
+    # (Este código abaixo fica FORA de qualquer bloco de erro, alinhado à esquerda)
     # =========================================================================
-    # 7. EXIBIÇÃO DA TABELA NA TELA (Fora do bloco try)
+    # 7. EXIBIÇÃO DA TABELA NA TELA
     # =========================================================================
     st.markdown("### 🔍 Lançamentos Filtrados")
 
