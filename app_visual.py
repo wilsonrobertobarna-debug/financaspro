@@ -1034,15 +1034,28 @@ if aba == "📋 Relatório PDF":
   # -------------------------------------------------------------------------
     # LINHA 2 DE FILTROS: DESCRIÇÃO, BENEFICIÁRIO E STATUS 
     # -------------------------------------------------------------------------
-    col_rel3, col_rel4, col_rel5 = st.columns(3)
-    
-    with col_rel3:
-        busca_desc = st.text_input("📝 Descrição:", "").strip()
-    with col_rel4:
-        busca_beneficiario = st.text_input("👤 Beneficiário:", "").strip()
-    with col_rel5:
-        busca_status = st.selectbox("📌 Status:", ["Todos", "Pago", "Pendente"])
+    # ========================================================
+    # 2. FILTRAGEM (INCLUINDO NOVOS FILTROS)
+    # ========================================================
+    # ... (seu código de data e banco continua igual aqui em cima) ...
 
+    # Filtro de Descrição
+    if busca_desc and col_desc_df:
+        df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
+            
+    # FILTRO NOVO: Beneficiário (Coluna J = índice 9)
+    if busca_beneficiario:
+        df_report = df_report[df_report.iloc[:, 9].astype(str).str.contains(busca_beneficiario, case=False, na=False)]
+
+    # FILTRO NOVO: Tipo
+    if busca_tipo != "Todos":
+        df_report = df_report[df_report['Tipo'].str.upper().str.strip() == busca_tipo.upper()]
+
+    if busca_status != "Todos" and col_status_df:
+        df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
+
+        df_report = df_report.sort_values(by='DT_FILTRO')
+        
     # LINHA 3 DE FILTROS: TIPO
     col_rel6, col_rel7 = st.columns([1, 2]) # Ajuste de tamanho para o tipo não ficar gigante
     with col_rel6:
