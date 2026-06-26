@@ -1305,7 +1305,7 @@ if aba == "📋 Relatório PDF":
             pdf.cell(30, 7, "CATEGORIA", 1)
             pdf.cell(32, 7, "DESCRIÇÃO", 1)
             pdf.cell(22, 7, "VALOR", 1)
-            pdf.cell(30, 7, "SALDO", 1)
+            pdf.cell(26, 7, "SALDO", 1)
             pdf.cell(18, 7, "STATUS", 1)
             pdf.ln()
 
