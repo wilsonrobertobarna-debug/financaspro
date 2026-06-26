@@ -1250,20 +1250,24 @@ if aba == "📋 Relatório PDF":
             p_inicio = b_ini.strftime('%d/%m/%Y')
             p_fim = b_fim.strftime('%d/%m/%Y')
             
+            # --- LOGICA DE FILTROS DO CABEÇALHO ---
             pdf.set_font("Arial", 'B', 10)
-            pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {str(banco_nome).upper()}", ln=1, align="L")
-            pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
-            
-           # --- LOGICA DE FILTROS DO CABEÇALHO ---
             if busca_beneficiario:
-                # Se filtrar por Beneficiário, imprime SÓ ele e ignora o resto
-                pdf.set_font("Arial", 'B', 10)
                 pdf.cell(200, 6, txt=f"BENEFICIARIO FILTRADO: {str(busca_beneficiario).upper()}", ln=1, align="L")
             else:
-                # Se NÃO filtrar por Beneficiário, imprime o resumo padrão
                 pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {str(banco_nome).upper()}", ln=1, align="L")
                 if busca_tipo:
                     pdf.cell(200, 6, txt=f"TIPO FILTRADO: {str(busca_tipo).upper()}", ln=1, align="L")
+            
+            pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
+            pdf.ln(5)
+
+            # ========================================================
+            # PASSO 1: FILTRAR OS DADOS ANTES DE MOSTRAR (O SEGREDO)
+            # ========================================================
+            df_report = df_base.copy()
+            if busca_beneficiario:
+                df_report = df_report[df_report.iloc[:, 9].astype(str).str.contains(busca_beneficiario, case=False, na=False)]
             # ========================================================
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
