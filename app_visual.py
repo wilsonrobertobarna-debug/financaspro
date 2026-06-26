@@ -1042,7 +1042,16 @@ if aba == "📋 Relatório PDF":
         busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
 
     st.markdown("---")
+    
 
+    # LINHA 3 DE FILTROS: TIPO
+    col_rel5, col_rel6 = st.columns(2)
+    with col_rel5:
+        busca_tipo = st.text_input("🏷️ Filtrar por Tipo (Ex: Entrada, Saída):", "").strip()
+    with col_rel6:
+        st.write("") # Apenas para alinhar visualmente, se precisar
+
+    
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
