@@ -10,12 +10,11 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-# --- INICIALIZAÇÃO DE ESTADO ---
-if 'busca_desc' not in st.session_state: st.session_state.busca_desc = ""
-if 'busca_beneficiario' not in st.session_state: st.session_state.busca_beneficiario = ""
-if 'busca_status' not in st.session_state: st.session_state.busca_status = "Todos"
-if 'busca_tipo' not in st.session_state: st.session_state.busca_tipo = "Todos"
-
+# --- INICIALIZAÇÃO DE VARIÁVEIS (Para evitar o NameError) ---
+if 'busca_desc' not in locals(): busca_desc = ""
+if 'busca_beneficiario' not in locals(): busca_beneficiario = ""
+if 'busca_status' not in locals(): busca_status = "Todos"
+if 'busca_tipo' not in locals(): busca_tipo = "Todos"
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
