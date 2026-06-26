@@ -1262,11 +1262,8 @@ if aba == "📋 Relatório PDF":
             pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
             pdf.ln(5)
 
-
-           # ========================================================
-            # FILTRO E PREPARAÇÃO TOTAL
+      
             # ========================================================
-       # ========================================================
             # FILTRO CORRIGIDO (USANDO NOMES DAS COLUNAS)
             # ========================================================
             df_report = df_base.copy()
@@ -1297,8 +1294,19 @@ if aba == "📋 Relatório PDF":
                 
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
+          # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
+            # ========================================================
+            
+            # --- IMPRIME O CABEÇALHO DA TABELA (PARA NÃO FICAR SEM TÍTULOS) ---
+            pdf.set_font("Arial", 'B', 9)
+            pdf.cell(20, 7, "DATA", 1); pdf.cell(18, 7, "TIPO", 1); pdf.cell(35, 7, "CATEGORIA", 1)
+            pdf.cell(45, 7, "DESCRIÇÃO", 1); pdf.cell(25, 7, "VALOR", 1); pdf.cell(32, 7, "SALDO", 1); pdf.cell(20, 7, "STATUS", 1)
+            pdf.ln()
+
+            # --- LOOP DE IMPRESSÃO DAS LINHAS ---
             pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
+                # Formatações de Data
                 data_str = row['DT'].strftime('%d/%m/%Y') if 'DT' in row and not pd.isna(row['DT']) else str(row.get('DT', '---'))
                 
                 tipo_str = str(row.get('Tipo', '---')).strip()
@@ -1309,6 +1317,7 @@ if aba == "📋 Relatório PDF":
                 saldo_val = row.get('Saldo_Acum', 0.0)
                 status_val = str(row.get('Status', '-'))
 
+                # Lógica de cores
                 if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper():
                     texto_valor = f"- R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                     cor_valor = (255, 0, 0)
@@ -1319,6 +1328,7 @@ if aba == "📋 Relatório PDF":
                 texto_saldo = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                 cor_saldo = (255, 0, 0) if saldo_val < 0 else (0, 0, 0)
 
+                # Impressão das colunas
                 pdf.cell(20, 6, data_str, 1)
                 pdf.cell(18, 6, tipo_str, 1)
                 pdf.cell(35, 6, cat_val, 1)
@@ -1334,6 +1344,7 @@ if aba == "📋 Relatório PDF":
                 pdf.cell(20, 6, status_val, 1)
                 pdf.ln()
 
+            # Finalização e Download
             pdf_output = pdf.output(dest='S')
             if isinstance(pdf_output, str):
                 pdf_output = pdf_output.encode('latin-1')
@@ -1345,10 +1356,6 @@ if aba == "📋 Relatório PDF":
                 mime="application/pdf"
             )
             st.success(f"PDF pronto! Relatório atualizado.")
-
-        except Exception as e:
-            st.error(f"Erro ao gerar o PDF: {e}")
-
     # =========================================================================
     # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS 4 FILTROS (VISUAL LIMPO)
     # =========================================================================
