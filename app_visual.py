@@ -1273,7 +1273,7 @@ if aba == "📋 Relatório PDF":
             # PASSO 2: O LOOP DA TABELA AGORA USA 'df_report'
             # ========================================================
             # Certifique-se de que o seu loop abaixo esteja assim:
-            for index, row in df_report.iterrows():
+            #for index, row in df_report.iterrows():
             # ========================================================
 
                 
