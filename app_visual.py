@@ -1266,49 +1266,34 @@ if aba == "📋 Relatório PDF":
            # ========================================================
             # FILTRO E PREPARAÇÃO TOTAL
             # ========================================================
-        # ========================================================
-            # DEBUG: O QUE TEM NA MINHA PLANILHA?
+       # ========================================================
+            # FILTRO CORRIGIDO (USANDO NOMES DAS COLUNAS)
             # ========================================================
             df_report = df_base.copy()
             
-            # Mostra as primeiras 5 linhas de todas as colunas
-            st.write("Colunas da planilha:", df_report.columns.tolist())
-            st.write("Exemplo de dados na coluna 0:", df_report.iloc[:, 0].unique()[:5])
-            st.write("Exemplo de dados na coluna 9:", df_report.iloc[:, 9].unique()[:5])
+            # 1. Filtro de Data (Coluna 'DT')
+            df_report['DT'] = pd.to_datetime(df_report['DT'], format='%d/%m/%Y', errors='coerce')
+            df_report = df_report[(df_report['DT'] >= pd.to_datetime(b_ini)) & (df_report['DT'] <= pd.to_datetime(b_fim))]
             
-            # Pare a execução aqui para você ler os dados
-            st.stop()
-            # ========================================================
-            # LOOP DA TABELA
-            # ========================================================
-            pdf.set_font("Arial", 'B', 9) 
-            # Cabeçalho da Tabela
-            pdf.cell(20, 7, "DATA", 1); pdf.cell(18, 7, "TIPO", 1); pdf.cell(35, 7, "CATEGORIA", 1)
-            pdf.cell(45, 7, "DESCRIÇÃO", 1); pdf.cell(25, 7, "VALOR", 1); pdf.cell(32, 7, "SALDO", 1); pdf.cell(20, 7, "STATUS", 1)
-            pdf.ln()
+            # 2. Filtro de Banco (Coluna 'Banco' é a número 5)
+            if banco_nome and str(banco_nome).lower() != "todos os bancos":
+                # Filtra pela coluna 'Banco' usando .contains
+                df_report = df_report[df_report['Banco'].astype(str).str.contains(str(banco_nome).strip(), case=False, na=False)]
             
-            pdf.set_font("Arial", '', 9) 
-            for index, row in df_report.iterrows():
-                data_str = row['DT'].strftime('%d/%m/%Y') if pd.notna(row['DT']) else '---'
-                tipo_str = str(row.get('Tipo', '---'))
-                cat_val = str(row.get('Categoria', 'Geral'))[:18]
-                desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))[:24]
-                valor_val = row['V_Num']
-                saldo_val = row['Saldo_Acum']
-                status_val = str(row.get('Status', '-'))
-
-                # Lógica de formatação de valores
-                texto_valor = f"{valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                texto_saldo = f"{saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                
-                pdf.cell(20, 6, data_str, 1)
-                pdf.cell(18, 6, tipo_str, 1)
-                pdf.cell(35, 6, cat_val, 1)
-                pdf.cell(45, 6, desc_val, 1)
-                pdf.cell(25, 6, texto_valor, 1)
-                pdf.cell(32, 6, texto_saldo, 1)
-                pdf.cell(20, 6, status_val, 1)
-                pdf.ln()
+            # 3. Filtro de Beneficiário (Coluna 'Beneficiário' é a número 9)
+            if busca_beneficiario and str(busca_beneficiario).strip() != "":
+                df_report = df_report[df_report['Beneficiário'].astype(str).str.contains(str(busca_beneficiario).strip(), case=False, na=False)]
+            
+            # 4. Ajustes de valores e ordenação
+            df_report['V_Num'] = pd.to_numeric(df_report['V_Num'], errors='coerce').fillna(0)
+            df_report = df_report.sort_values(by='DT')
+            
+            # 5. Saldo Acumulado (usando o valor inicial + cumsum)
+            valor_inicial = float(saldo_anterior) 
+            df_report['Valor_Com_Sinal'] = df_report.apply(
+                lambda x: x['V_Num'] if str(x['Tipo']).strip() in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
+            )
+            df_report['Saldo_Acum'] = valor_inicial + df_report['Valor_Com_Sinal'].cumsum()
                 
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
