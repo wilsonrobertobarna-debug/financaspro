@@ -1044,13 +1044,13 @@ if aba == "📋 Relatório PDF":
     st.markdown("---")
     
 
-    # LINHA 3 DE FILTROS: TIPO
+    # LINHA 3 DE FILTROS: TIPO (AGORA COM SELEÇÃO AUTOMÁTICA)
     col_rel5, col_rel6 = st.columns(2)
     with col_rel5:
-        busca_tipo = st.text_input("🏷️ Filtrar por Tipo (Ex: Entrada, Saída):", "").strip()
+        # Aqui ele já cria o seletor com as suas opções
+        busca_tipo = st.selectbox("🏷️ Filtrar por Tipo:", ["Todos", "Receita", "Despesa", "Rendimento"])
     with col_rel6:
-        st.write("") # Apenas para alinhar visualmente, se precisar
-
+        st.write("")
     
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
