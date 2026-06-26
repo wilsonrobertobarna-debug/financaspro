@@ -1266,37 +1266,37 @@ if aba == "📋 Relatório PDF":
            # ========================================================
             # FILTRO E PREPARAÇÃO TOTAL
             # ========================================================
+            # ========================================================
+            # FILTRO COM MODO DE SEGURANÇA (DIAGNÓSTICO)
+            # ========================================================
             df_report = df_base.copy()
             
-            # 1. Converter DT para data e filtrar o PERÍODO
+            # 1. Filtro de Data (Obrigatório)
             df_report['DT'] = pd.to_datetime(df_report['DT'], format='%d/%m/%Y', errors='coerce')
             df_report = df_report[(df_report['DT'] >= pd.to_datetime(b_ini)) & (df_report['DT'] <= pd.to_datetime(b_fim))]
             
-            # 2. Filtrar pelo BANCO (Ajuste o índice se o banco não for na coluna 1 ou 2)
-            # Supondo que a coluna do Banco seja a índice 0 ou 1, verifique na sua base.
-            if banco_nome and banco_nome.lower() != "todos os bancos":
-                # Exemplo: se o Banco estiver na coluna 0:
-                df_report = df_report[df_report.iloc[:, 0].astype(str).str.strip().str.lower() == banco_nome.strip().lower()]
+            # DEBUG: Quantas linhas restaram após a data?
+            st.write(f"Linhas após data: {len(df_report)}")
+
+            # 2. Filtro de Banco (Apenas se não for "Todos")
+            if banco_nome and str(banco_nome).lower() != "todos os bancos":
+                # Tente comparar sem o .lower() se o filtro falhar
+                df_report = df_report[df_report.iloc[:, 0].astype(str).str.strip().str.lower() == str(banco_nome).strip().lower()]
             
-            # 3. Filtrar pelo BENEFICIÁRIO
+            # DEBUG: Quantas linhas restaram após o banco?
+            st.write(f"Linhas após banco: {len(df_report)}")
+
+            # 3. Filtro de Beneficiário
             if busca_beneficiario:
-                df_report = df_report[df_report.iloc[:, 9].astype(str).str.strip().str.lower() == str(busca_beneficiario).strip().lower()]
+                # Usamos .contains para ser menos rigoroso que o ==
+                df_report = df_report[df_report.iloc[:, 9].astype(str).str.contains(str(busca_beneficiario), case=False, na=False)]
             
-            # 4. SALDO ANTERIOR: precisamos calcular o acumulado da base inteira ATÉ a data inicial
-            # Isso garante que o saldo não comece do zero, mas sim com o valor acumulado passado
-            df_tudo_antes = df_base[pd.to_datetime(df_base['DT'], format='%d/%m/%Y') < pd.to_datetime(b_ini)]
-            # (Aqui você somaria os valores anteriores para compor o saldo inicial)
+            # DEBUG: Quantas linhas restaram após o beneficiário?
+            st.write(f"Linhas após beneficiário: {len(df_report)}")
             
-            # 5. Ordenação e Acumulado
-            df_report = df_report.sort_values(by='DT')
-            df_report['V_Num'] = pd.to_numeric(df_report['V_Num'], errors='coerce').fillna(0)
-            
-            # Recálculo do Saldo Acumulado (considerando o saldo anterior)
-            # Use o saldo_anterior que você já calculou no seu sistema:
-            valor_inicial = float(saldo_anterior) 
-            df_report['Saldo_Acum'] = valor_inicial + df_report.apply(
-                lambda x: x['V_Num'] if str(x['Tipo']).strip() in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
-            ).cumsum()
+            # Se ainda assim chegar aqui com 0 linhas, o código não vai quebrar
+            if len(df_report) == 0:
+                st.warning("O filtro resultou em zero lançamentos. Verifique se o nome do Banco/Beneficiário está escrito exatamente como na planilha.")
             # ========================================================
             # LOOP DA TABELA
             # ========================================================
