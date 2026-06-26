@@ -1042,23 +1042,29 @@ if aba == "📋 Relatório PDF":
     # ========================================================
     # ... (seu código de data e banco continua igual aqui em cima) ...
 
-    # --- BLOCO DE FILTROS SEGURO ---
+    # --- BLOCO DE FILTROS SEGURO E COM CHAVES ÚNICAS ---
     st.subheader("Filtros")
     col_rel3, col_rel4, col_rel5 = st.columns(3)
     
-    # Usamos o .get para evitar o erro, se não existir ele assume ""
-    busca_desc = col_rel3.text_input("📝 Descrição:", value=st.session_state.get('busca_desc', ""))
+    # Descrição
+    busca_desc = col_rel3.text_input("📝 Descrição:", value=st.session_state.get('busca_desc', ""), key="input_desc")
     st.session_state.busca_desc = busca_desc
     
-    busca_beneficiario = col_rel4.text_input("👤 Beneficiário:", value=st.session_state.get('busca_beneficiario', ""))
+    # Beneficiário
+    busca_beneficiario = col_rel4.text_input("👤 Beneficiário:", value=st.session_state.get('busca_beneficiario', ""), key="input_benef")
     st.session_state.busca_beneficiario = busca_beneficiario
     
-    busca_status = col_rel5.selectbox("📌 Status:", ["Todos", "Pago", "Pendente"], index=["Todos", "Pago", "Pendente"].index(st.session_state.get('busca_status', "Todos")))
+    # Status
+    opcoes_status = ["Todos", "Pago", "Pendente"]
+    idx_status = opcoes_status.index(st.session_state.get('busca_status', "Todos"))
+    busca_status = col_rel5.selectbox("📌 Status:", opcoes_status, index=idx_status, key="sel_status")
     st.session_state.busca_status = busca_status
     
     # Linha do Tipo
     col_rel6, col_rel7 = st.columns([1, 2])
-    busca_tipo = col_rel6.selectbox("🏷️ Filtrar por Tipo:", ["Todos", "Receita", "Despesa", "Rendimento"], index=["Todos", "Receita", "Despesa", "Rendimento"].index(st.session_state.get('busca_tipo', "Todos")))
+    opcoes_tipo = ["Todos", "Receita", "Despesa", "Rendimento"]
+    idx_tipo = opcoes_tipo.index(st.session_state.get('busca_tipo', "Todos"))
+    busca_tipo = col_rel6.selectbox("🏷️ Filtrar por Tipo:", opcoes_tipo, index=idx_tipo, key="sel_tipo")
     st.session_state.busca_tipo = busca_tipo
     
     st.markdown("---")
