@@ -1041,26 +1041,26 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     # LINHA 2 DE FILTROS: DESCRIÇÃO, BENEFICIÁRIO E STATUS 
     # -------------------------------------------------------------------------
-    # ========================================================
-    # 2. FILTRAGEM (INCLUINDO NOVOS FILTROS)
-    # ========================================================
-    # ... (seu código de data e banco continua igual aqui em cima) ...
+  # ========================================================
+            # 2. FILTRAGEM (INCLUINDO NOVOS FILTROS)
+            # ========================================================
+            # ... (seu código de data e banco continua igual aqui em cima) ...
 
-    # Filtro de Descrição
-        if busca_desc and col_desc_df:
-            df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
-                
-        # FILTRO NOVO: Beneficiário (Coluna J = índice 9)
-        if busca_beneficiario:
-            df_report = df_report[df_report.iloc[:, 9].astype(str).str.contains(busca_beneficiario, case=False, na=False)]
-    
-        # FILTRO NOVO: Tipo
-        if busca_tipo != "Todos":
-            df_report = df_report[df_report['Tipo'].str.upper().str.strip() == busca_tipo.upper()]
-    
-        if busca_status != "Todos" and col_status_df:
-            df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
-    
+            # Filtro de Descrição
+            if busca_desc and col_desc_df:
+                df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
+            
+            # FILTRO NOVO: Beneficiário (Coluna J = índice 9)
+            if busca_beneficiario:
+                df_report = df_report[df_report.iloc[:, 9].astype(str).str.contains(busca_beneficiario, case=False, na=False)]
+
+            # FILTRO NOVO: Tipo
+            if busca_tipo != "Todos":
+                df_report = df_report[df_report['Tipo'].str.upper().str.strip() == busca_tipo.upper()]
+
+            if busca_status != "Todos" and col_status_df:
+                df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
+
             df_report = df_report.sort_values(by='DT_FILTRO')
         
     # LINHA 3 DE FILTROS: TIPO
