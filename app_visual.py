@@ -1042,22 +1042,26 @@ if aba == "📋 Relatório PDF":
     # ========================================================
     # ... (seu código de data e banco continua igual aqui em cima) ...
 
-    # Filtro de Descrição
-    if busca_desc and col_desc_df:
-        df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
-            
-    # FILTRO NOVO: Beneficiário (Coluna J = índice 9)
-    if busca_beneficiario:
-        df_report = df_report[df_report.iloc[:, 9].astype(str).str.contains(busca_beneficiario, case=False, na=False)]
-
-    # FILTRO NOVO: Tipo
-    if busca_tipo != "Todos":
-        df_report = df_report[df_report['Tipo'].str.upper().str.strip() == busca_tipo.upper()]
-
-    if busca_status != "Todos" and col_status_df:
-        df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
-
-        df_report = df_report.sort_values(by='DT_FILTRO')
+    # --- BLOCO DE FILTROS SEGURO ---
+    st.subheader("Filtros")
+    col_rel3, col_rel4, col_rel5 = st.columns(3)
+    
+    # Usamos o .get para evitar o erro, se não existir ele assume ""
+    busca_desc = col_rel3.text_input("📝 Descrição:", value=st.session_state.get('busca_desc', ""))
+    st.session_state.busca_desc = busca_desc
+    
+    busca_beneficiario = col_rel4.text_input("👤 Beneficiário:", value=st.session_state.get('busca_beneficiario', ""))
+    st.session_state.busca_beneficiario = busca_beneficiario
+    
+    busca_status = col_rel5.selectbox("📌 Status:", ["Todos", "Pago", "Pendente"], index=["Todos", "Pago", "Pendente"].index(st.session_state.get('busca_status', "Todos")))
+    st.session_state.busca_status = busca_status
+    
+    # Linha do Tipo
+    col_rel6, col_rel7 = st.columns([1, 2])
+    busca_tipo = col_rel6.selectbox("🏷️ Filtrar por Tipo:", ["Todos", "Receita", "Despesa", "Rendimento"], index=["Todos", "Receita", "Despesa", "Rendimento"].index(st.session_state.get('busca_tipo', "Todos")))
+    st.session_state.busca_tipo = busca_tipo
+    
+    st.markdown("---")
         
     # LINHA 3 DE FILTROS: TIPO
     col_rel6, col_rel7 = st.columns([1, 2]) # Ajuste de tamanho para o tipo não ficar gigante
