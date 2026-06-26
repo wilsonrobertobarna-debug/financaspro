@@ -1262,23 +1262,17 @@ if aba == "📋 Relatório PDF":
             pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
             pdf.ln(5)
 
+
             # ========================================================
-            # PASSO 1: FILTRAR E PREPARAR O DF PARA O PDF
-            # ========================================================
-           # ========================================================
             # PASSO 1: DIAGNÓSTICO E FILTRO (O SEGREDO)
             # ========================================================
+           
             df_report = df_base.copy()
             
-            # DEBUG: Isso vai mostrar na tela o que está sendo filtrado
-            st.write(f"Buscando por: {busca_beneficiario}")
-            st.write(f"Coluna 9 (J) tem estes valores únicos: {df_report.iloc[:, 9].unique()[:5]}") 
-
             if busca_beneficiario:
-                # Vamos forçar a conversão para string e comparar
-                df_report = df_report[df_report.iloc[:, 9].astype(str).str.contains(str(busca_beneficiario), case=False, na=False)]
-                
-            st.write(f"Linhas restantes após filtro: {len(df_report)}")
+                # O filtro precisa ser aplicado e o df_report substituído pelo resultado
+                # .str.strip() remove espaços vazios acidentais
+                df_report = df_report[df_report.iloc[:, 9].astype(str).str.strip().str.lower() == str(busca_beneficiario).strip().lower()]
 
             # ========================================================
             # PASSO 2: LOOP DA TABELA
