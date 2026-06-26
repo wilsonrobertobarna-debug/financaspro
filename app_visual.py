@@ -1266,27 +1266,18 @@ if aba == "📋 Relatório PDF":
            # ========================================================
             # FILTRO E PREPARAÇÃO TOTAL
             # ========================================================
-         # ========================================================
-            # FILTRO CORRIGIDO (MAIS TOLERANTE)
+        # ========================================================
+            # DEBUG: O QUE TEM NA MINHA PLANILHA?
             # ========================================================
             df_report = df_base.copy()
             
-            # 1. Filtro de Data
-            df_report['DT'] = pd.to_datetime(df_report['DT'], format='%d/%m/%Y', errors='coerce')
-            df_report = df_report[(df_report['DT'] >= pd.to_datetime(b_ini)) & (df_report['DT'] <= pd.to_datetime(b_fim))]
+            # Mostra as primeiras 5 linhas de todas as colunas
+            st.write("Colunas da planilha:", df_report.columns.tolist())
+            st.write("Exemplo de dados na coluna 0:", df_report.iloc[:, 0].unique()[:5])
+            st.write("Exemplo de dados na coluna 9:", df_report.iloc[:, 9].unique()[:5])
             
-            # 2. Filtro de Banco (Usando .contains para ignorar pequenas diferenças)
-            if banco_nome and str(banco_nome).lower() != "todos os bancos":
-                # Filtra se o banco contiver o nome (ignora maiúsculas e espaços extras)
-                df_report = df_report[df_report.iloc[:, 0].astype(str).str.contains(str(banco_nome).strip(), case=False, na=False)]
-            
-            # 3. Filtro de Beneficiário (Só aplica se algo foi digitado)
-            if busca_beneficiario and str(busca_beneficiario).strip() != "":
-                df_report = df_report[df_report.iloc[:, 9].astype(str).str.contains(str(busca_beneficiario).strip(), case=False, na=False)]
-            
-            # DEBUG: Checagem final
-            if len(df_report) == 0:
-                st.error("Nenhum lançamento encontrado com esses filtros. Verifique o nome do Banco ou Beneficiário.")
+            # Pare a execução aqui para você ler os dados
+            st.stop()
             # ========================================================
             # LOOP DA TABELA
             # ========================================================
