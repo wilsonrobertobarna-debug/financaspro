@@ -1075,17 +1075,15 @@ if aba == "📋 Relatório PDF":
     busca_tipo = col_rel6.selectbox("🏷️ Filtrar por Tipo:", opcoes_tipo, index=idx_tipo, key="sel_tipo")
     st.session_state.busca_tipo = busca_tipo    
     # -------------------------------------------------------------------------
-    # LINHA DE FILTRO: BENEFICIÁRIO
+    # FILTRO: BENEFICIÁRIO (NA LATERAL)
     # -------------------------------------------------------------------------
-    st.session_state.busca_beneficiario = st.text_input(
-        "👤 Filtrar por Beneficiário:", 
-        value=st.session_state.get('busca_beneficiario', ""),
-        key="input_beneficiario"
-    )
-    
-    st.markdown("---")
-    
-
+    with st.sidebar:
+        st.session_state.busca_beneficiario = st.text_input(
+            "👤 Filtrar por Beneficiário:", 
+            value=st.session_state.get('busca_beneficiario', ""),
+            key="input_beneficiario"
+        )
+        st.markdown("---")
     
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
