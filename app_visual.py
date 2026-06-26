@@ -1314,7 +1314,13 @@ if aba == "📋 Relatório PDF":
             pdf.set_font("Arial", '', 8) # Reduzi um pouco a fonte para caber a nova coluna
             for index, row in df_report.iterrows():
                 # Formatações
-                data_str = row['DT_FILTRO'].strftime('%d/%m/%Y')
+                # Tenta pegar a data de DT_FILTRO, se não existir, tenta pegar de DT
+                if 'DT_FILTRO' in row and not pd.isna(row['DT_FILTRO']):
+                    data_str = row['DT_FILTRO'].strftime('%d/%m/%Y')
+                elif 'DT' in row and not pd.isna(row['DT']):
+                    data_str = pd.to_datetime(row['DT']).strftime('%d/%m/%Y')
+                else:
+                    data_str = '---'
                 # AQUI ESTÁ O BANCO: buscamos no dicionário da linha 'row'
                 banco_str = str(row.get('Banco', '-'))[:12] 
                 tipo_str = str(row.get('Tipo', '---')).strip()
