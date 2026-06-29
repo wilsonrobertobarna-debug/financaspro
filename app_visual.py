@@ -1091,6 +1091,7 @@ if aba == "📋 Relatório PDF":
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
+            df_report = df_tela.copy()
             if isinstance(periodo_pdf, (list, tuple)):
                 if len(periodo_pdf) == 2:
                     b_ini, b_fim = periodo_pdf[0], periodo_pdf[1]
