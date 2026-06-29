@@ -428,14 +428,21 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
             t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
             t_desc = st.text_input("Nota")
-            if st.form_submit_button("TRANSFERIR"):
+           if st.form_submit_button("TRANSFERIR"):
                 if t_orig == t_dest: 
                     st.error("Escolha bancos diferentes!")
                 else:
+                    # 1. Calcula o próximo ID
+                    # Se df existir, pega o maior ID atual + 1, senão começa em 1
+                    novo_id = int(df['ID'].max()) + 1 if not df.empty and 'ID' in df.columns else 1
+                    
                     v_str = f"{t_val:.2f}".replace('.', ',')
                     d_str = t_dat.strftime("%d/%m/%Y")
-                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", ""])
-                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", ""])
+                    
+                    # 2. Adiciona o novo_id na lista (o último item da lista agora é o novo_id)
+                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", "", novo_id])
+                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", "", novo_id])
+                    
                     st.toast("✅ Transferencia realizada com sucesso!", icon="💰")
                     atualizar_sessao()
                     st.rerun()
