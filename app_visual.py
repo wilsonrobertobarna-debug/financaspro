@@ -428,7 +428,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
             t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
             t_desc = st.text_input("Nota")
-           if st.form_submit_button("TRANSFERIR"):
+        if st.form_submit_button("TRANSFERIR"):
                 if t_orig == t_dest: 
                     st.error("Escolha bancos diferentes!")
                 else:
