@@ -1094,17 +1094,15 @@ if aba == "📋 Relatório PDF":
             # 1. Pega os dados já filtrados
             df_report = df_tela.copy()
             
-            # 2. GARANTIA: Se a coluna DT_FILTRO não existir, criamos ela agora
-            # Isso evita o erro de "KeyError: 'DT_FILTRO'"
+            # ADICIONE ESTA LINHA AQUI:
+            # Isso garante que a variável exista, mesmo que você não esteja filtrando por banco específico
+            banco_nome = banco_relatorio if 'banco_relatorio' in locals() else "Todos os Bancos"
+            
+            # 2. Garantia da coluna de data (que corrigimos anteriormente)
             if 'DT_FILTRO' not in df_report.columns:
-                col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
-                if col_data_df:
-                    df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
-                else:
-                    # Se não achar nenhuma coluna de data, coloca uma data padrão para não travar
-                    df_report['DT_FILTRO'] = pd.to_datetime('1900-01-01')
-
-            # 3. Agora podemos ordenar com segurança
+                # ... (o código de segurança que te passei antes)
+            
+            # 3. Ordena
             df_report = df_report.sort_values(by='DT_FILTRO')
           
             # ========================================================
