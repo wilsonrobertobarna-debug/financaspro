@@ -1094,6 +1094,14 @@ if aba == "📋 Relatório PDF":
         try:
             # 1. Pega os dados já filtrados
             df_report = df_tela.copy()
+
+            # 2. CONVERSÃO FORÇADA: Isso resolve todos os erros de strftime de uma vez
+            # Se forem strings, transforma em datas reais. Se já forem datas, mantém.
+            import pandas as pd
+            if 'b_ini' in globals() or 'b_ini' in locals():
+                b_ini = pd.to_datetime(b_ini)
+            if 'b_fim' in globals() or 'b_fim' in locals():
+                b_fim = pd.to_datetime(b_fim)
             
             # 2. Definição segura das datas
             # Se elas não existirem, usamos a data de hoje como padrão
