@@ -1087,7 +1087,7 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     # FILTRO: BENEFICIÁRIO (NA LATERAL)
     # -------------------------------------------------------------------------
-    #df_tela = df_base.copy()
+    df_tela = df_base.copy()
    
    # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
@@ -1095,9 +1095,12 @@ if aba == "📋 Relatório PDF":
             # 1. Dados Prontos
             df_report = df_tela.copy()
             
-            # 2. Definição do Nome do Banco (para evitar o erro "not defined")
-            # Se a variável banco_relatorio existir, usamos. Se não, usamos "Todos os Bancos".
+            # 2. Definições de segurança (evita erros se as variáveis não existirem)
             banco_nome = banco_relatorio if 'banco_relatorio' in locals() else "Todos os Bancos"
+            
+            # Define datas padrões caso o usuário não tenha selecionado nada
+            b_ini = b_ini if 'b_ini' in locals() else "Início"
+            b_fim = b_fim if 'b_fim' in locals() else "Fim"
             
             # 3. Garantia da Data (corrigindo o erro 'DT_FILTRO')
             col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
