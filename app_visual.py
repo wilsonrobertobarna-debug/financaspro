@@ -1089,21 +1089,29 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     df_tela = df_base.copy()
     # Botão para processar e gerar o documento
+   # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
             # 1. Pega os dados já filtrados
             df_report = df_tela.copy()
+
+            # 2. GARANTIA TOTAL DA COLUNA DE DATA
+            # Procuramos qualquer coluna de data e forçamos a criação da DT_FILTRO
+            col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             
-            # ADICIONE ESTA LINHA AQUI:
-            # Isso garante que a variável exista, mesmo que você não esteja filtrando por banco específico
-            banco_nome = banco_relatorio if 'banco_relatorio' in locals() else "Todos os Bancos"
-            
-            # 2. Garantia da coluna de data (que corrigimos anteriormente)
-            if 'DT_FILTRO' not in df_report.columns:
-                # ... (o código de segurança que te passei antes)
-            
-                # 3. Ordena
-                df_report = df_report.sort_values(by='DT_FILTRO')
+            if col_data_df:
+                df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
+            else:
+                # Se não encontrar nenhuma coluna de data, criamos uma data vazia para evitar erro
+                df_report['DT_FILTRO'] = pd.to_datetime('1900-01-01')
+
+            # 3. Agora podemos ordenar com segurança
+            df_report = df_report.sort_values(by='DT_FILTRO')
+
+            # 4. Inicializa o PDF
+            from fpdf import FPDF
+            pdf = FPDF()
+            pdf.add_page()
           
             # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
