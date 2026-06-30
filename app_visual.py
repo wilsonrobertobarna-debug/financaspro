@@ -1094,6 +1094,9 @@ if aba == "📋 Relatório PDF":
         try:
             # 1. Pega os dados já filtrados
             df_report = df_tela.copy()
+            # Garante que a variável exista para o PDF não reclamar
+            if 'banco_nome' not in locals():
+                banco_nome = "Todos os Bancos"
 
             # 2. CONVERSÃO FORÇADA: Isso resolve todos os erros de strftime de uma vez
             # Se forem strings, transforma em datas reais. Se já forem datas, mantém.
