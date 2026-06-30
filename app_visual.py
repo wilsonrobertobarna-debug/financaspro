@@ -1092,25 +1092,29 @@ if aba == "📋 Relatório PDF":
    # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
-            # 1. Dados Prontos
+            # 1. Pega os dados já filtrados
             df_report = df_tela.copy()
             
-            # 2. Definições de segurança (evita erros se as variáveis não existirem)
-            banco_nome = banco_relatorio if 'banco_relatorio' in locals() else "Todos os Bancos"
+            # 2. Definição segura das datas
+            # Se elas não existirem, usamos a data de hoje como padrão
+            from datetime import datetime
             
-            # Define datas padrões caso o usuário não tenha selecionado nada
-            b_ini = b_ini if 'b_ini' in locals() else "Início"
-            b_fim = b_fim if 'b_fim' in locals() else "Fim"
+            # Tenta pegar as datas reais, se não existir, usa a data atual
+            data_referencia = datetime.now()
             
-            # 3. Garantia da Data (corrigindo o erro 'DT_FILTRO')
-            col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
-            if col_data_df:
-                df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
+            if 'b_ini' in locals():
+                b_ini_dt = pd.to_datetime(b_ini)
             else:
-                df_report['DT_FILTRO'] = pd.to_datetime('1900-01-01')
-            
-            df_report = df_report.sort_values(by='DT_FILTRO')
+                b_ini_dt = data_referencia
+                
+            if 'b_fim' in locals():
+                b_fim_dt = pd.to_datetime(b_fim)
+            else:
+                b_fim_dt = data_referencia
 
+            # Agora, ao invés de usar b_ini e b_fim direto, 
+            # use b_ini_dt.strftime('%d/%m/%Y') no seu código do PDF.
+            # Isso vai funcionar sem dar erro de 'str'!
             # 4. Inicializa o PDF
             from fpdf import FPDF
             pdf = FPDF()
