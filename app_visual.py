@@ -1088,24 +1088,24 @@ if aba == "📋 Relatório PDF":
     # FILTRO: BENEFICIÁRIO (NA LATERAL)
     # -------------------------------------------------------------------------
     df_tela = df_base.copy()
-    # Botão para processar e gerar o documento
+   
    # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
-            # 1. Pega os dados já filtrados
+            # 1. Dados Prontos
             df_report = df_tela.copy()
-
-            # 2. GARANTIA TOTAL DA COLUNA DE DATA
-            # Procuramos qualquer coluna de data e forçamos a criação da DT_FILTRO
-            col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             
+            # 2. Definição do Nome do Banco (para evitar o erro "not defined")
+            # Se a variável banco_relatorio existir, usamos. Se não, usamos "Todos os Bancos".
+            banco_nome = banco_relatorio if 'banco_relatorio' in locals() else "Todos os Bancos"
+            
+            # 3. Garantia da Data (corrigindo o erro 'DT_FILTRO')
+            col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             if col_data_df:
                 df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
             else:
-                # Se não encontrar nenhuma coluna de data, criamos uma data vazia para evitar erro
                 df_report['DT_FILTRO'] = pd.to_datetime('1900-01-01')
-
-            # 3. Agora podemos ordenar com segurança
+            
             df_report = df_report.sort_values(by='DT_FILTRO')
 
             # 4. Inicializa o PDF
