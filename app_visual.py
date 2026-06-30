@@ -1102,8 +1102,8 @@ if aba == "📋 Relatório PDF":
             if 'DT_FILTRO' not in df_report.columns:
                 # ... (o código de segurança que te passei antes)
             
-            # 3. Ordena
-            df_report = df_report.sort_values(by='DT_FILTRO')
+                # 3. Ordena
+                df_report = df_report.sort_values(by='DT_FILTRO')
           
             # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
