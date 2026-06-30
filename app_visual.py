@@ -1091,16 +1091,21 @@ if aba == "📋 Relatório PDF":
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
-            # 1. Pega os dados já filtrados e prontos
+            # 1. Pega os dados já filtrados
             df_report = df_tela.copy()
             
-            # 2. Ordena pela data (se o seu PDF precisar disso)
-            df_report = df_report.sort_values(by='DT_FILTRO')
+            # 2. GARANTIA: Se a coluna DT_FILTRO não existir, criamos ela agora
+            # Isso evita o erro de "KeyError: 'DT_FILTRO'"
+            if 'DT_FILTRO' not in df_report.columns:
+                col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+                if col_data_df:
+                    df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
+                else:
+                    # Se não achar nenhuma coluna de data, coloca uma data padrão para não travar
+                    df_report['DT_FILTRO'] = pd.to_datetime('1900-01-01')
 
-            # 3. Inicializa o PDF
-            from fpdf import FPDF
-            pdf = FPDF()
-            pdf.add_page()
+            # 3. Agora podemos ordenar com segurança
+            df_report = df_report.sort_values(by='DT_FILTRO')
           
             # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
