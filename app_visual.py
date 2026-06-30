@@ -1087,7 +1087,7 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     # FILTRO: BENEFICIÁRIO (NA LATERAL)
     # -------------------------------------------------------------------------
-    df_tela = df_base.copy()
+    #df_tela = df_base.copy()
    
    # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
