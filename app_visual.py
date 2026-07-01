@@ -1209,13 +1209,12 @@ if aba == "📋 Relatório PDF":
             st.error(f"Erro ao processar: {e}")
            
             
-          # Substitua todo aquele bloco anterior por esta lógica simples:
+            # Substitua todo aquele bloco anterior por esta lógica simples:
             # Cálculo de Saldo (Separando Receitas e Despesas)
-            hist_anterior = df_rep[df_rep['Vencimento'] < pd.to_datetime(b_ini)]
-            
-            receitas = hist_anterior[hist_anterior['Tipo'] != "Despesa"]['Valor'].sum()
-            despesas = hist_anterior[hist_anterior['Tipo'] == "Despesa"]['Valor'].sum()
-            saldo_acumulado = receitas - despesas
+                    hist_anterior = df_rep[df_rep['Vencimento'] < pd.to_datetime(b_ini)]
+                    receitas = hist_anterior[hist_anterior['Tipo'] != "Despesa"]['Valor'].sum()
+                    despesas = hist_anterior[hist_anterior['Tipo'] == "Despesa"]['Valor'].sum()
+                    saldo_acumulado = receitas - despesas
 
                     # 3.2 Agora, calculamos a movimentação que aconteceu desde o começo até o dia 17/05
                     df_historico = df_base.copy()
