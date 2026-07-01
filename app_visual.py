@@ -1091,36 +1091,31 @@ if aba == "📋 Relatório PDF":
    
     if st.button("📄 Gerar PDF"):
         try:
+            # 1. Recupera as variáveis que já existem na sua tela
+            # Se elas não existirem no 'locals', usamos o valor atual (o que está na tela)
+            # Dica: Substitua 'b_ini' e 'b_fim' pelos nomes exatos que você usa nos seus date_inputs
+            # Se o seu filtro se chama 'data_inicio', use b_ini = data_inicio
+            
+            # Aqui estamos garantindo que usamos o valor que você selecionou:
+            data_ini_final = b_ini if 'b_ini' in locals() else pd.to_datetime('today')
+            data_fim_final = b_fim if 'b_fim' in locals() else pd.to_datetime('today')
+
+            # 2. Copia os dados
             df_report = df_tela.copy()
             import pandas as pd
             
-            # --- PEGA AS DATAS DA MEMÓRIA ---
-            # Aqui usamos o que está no session_state (o que você escolheu no filtro)
-            b_ini = pd.to_datetime(st.session_state.data_inicio)
-            b_fim = pd.to_datetime(st.session_state.data_fim)
-            
-            # --- CRIA A COLUNA DE DATA ---
+            # 3. Garante a coluna DT_FILTRO
             col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             if col_data_df:
-                df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
+                df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], errors='coerce')
             else:
                 df_report['DT_FILTRO'] = pd.to_datetime('1900-01-01')
 
-            # --- FILTRAGEM ---
-            df_report = df_report.dropna(subset=['DT_FILTRO'])
+            # 4. FILTRAGEM USANDO AS DATAS CORRETAS
             df_report = df_report[
-                (df_report['DT_FILTRO'] >= b_ini) & 
-                (df_report['DT_FILTRO'] <= b_fim)
+                (df_report['DT_FILTRO'] >= pd.to_datetime(data_ini_final)) & 
+                (df_report['DT_FILTRO'] <= pd.to_datetime(data_fim_final))
             ]
-
-            # Teste: se o PDF sair vazio, é porque o filtro acima removeu tudo
-            if len(df_report) == 0:
-                st.error("Nenhum dado encontrado para este período! Verifique as datas.")
-            else:
-                # 5. Inicializa o PDF...
-                from fpdf import FPDF
-                pdf = FPDF()
-                pdf.add_page()
           
             # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
