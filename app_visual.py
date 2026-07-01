@@ -1042,7 +1042,7 @@ if aba == "📋 Relatório PDF":
         opcoes_banco_rel = ["Todos"] + list(bancos_disponiveis)
         banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel)
         
-   with col_rel2:
+    with col_rel2:
         data_padrao_ini = datetime(2026, 4, 20)
         data_padrao_fim = datetime(2026, 5, 20)
         # Adicione o key="periodo_pdf" aqui
