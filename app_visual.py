@@ -1133,6 +1133,16 @@ if aba == "📋 Relatório PDF":
             pdf.cell(200, 10, txt=f"Periodo: {b_ini_atual.strftime('%d/%m/%Y')} a {b_fim_atual.strftime('%d/%m/%Y')}", ln=True)
             pdf.ln(5)
 
+# TÍTULO BONITO
+            pdf.set_font("Arial", 'B', 16)
+            pdf.cell(0, 15, "RELATÓRIO FINANCEIRO DETALHADO", ln=True, align='C')
+            pdf.line(10, 25, 290, 25) # Linha horizontal
+            pdf.ln(5)
+
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(0, 10, f"Banco: {banco_relatorio} | Período: {b_ini_atual.strftime('%d/%m/%Y')} a {b_fim_atual.strftime('%d/%m/%Y')}", ln=True, align='C')
+            pdf.ln(10)
+
             # Cabeçalho da Tabela
             pdf.set_font("Arial", 'B', 9)
             colunas = [("Venc.", 25), ("Benefic.", 45), ("Descricao", 50), ("Banco", 30), ("Tipo", 20), ("Status", 20), ("Valor", 25), ("Acumul.", 25)]
@@ -1140,32 +1150,29 @@ if aba == "📋 Relatório PDF":
                 pdf.cell(larg, 8, col, border=1)
             pdf.ln()
 
-            # Processamento das Linhas
+            # Processamento
             pdf.set_font("Arial", size=9)
             acumulado = saldo_inicial
             
             for index, row in df_report.iterrows():
+                # LIMPEZA DA DATA (Sem horário)
+                data_obj = pd.to_datetime(row.get('Vencimento'), errors='coerce')
+                venc_str = data_obj.strftime('%d/%m/%Y') if pd.notnull(data_obj) else ""
+                
+                # LIMPEZA DO VALOR
                 val_raw = row.get('Valor', 0)
-                valor_float = float(str(val_raw).replace(',', '.')) if val_raw else 0.0
+                valor_float = float(str(val_raw).replace(',', '')) # Remove vírgula de milhar
                 acumulado += valor_float
                 
-                # Cor: Vermelho se for Despesa OU Valor < 0
+                # Lógica de cor
                 is_negativo = valor_float < 0 or "Despesa" in str(row.get('Tipo', ''))
                 pdf.set_text_color(255, 0, 0) if is_negativo else pdf.set_text_color(0, 0, 0)
 
-                # Coordenadas para o multi_cell
-                x_antes = pdf.get_x()
-                y_antes = pdf.get_y()
-
-                pdf.cell(25, 8, str(row.get('Vencimento', '')), border=1)
+                x, y = pdf.get_x(), pdf.get_y()
+                pdf.cell(25, 8, venc_str, border=1)
                 pdf.cell(45, 8, str(row.get('Beneficiário', '')), border=1)
-                
-                # Descrição com quebra de linha (multi_cell)
                 pdf.multi_cell(50, 8, str(row.get('Descrição', '')), border=1)
-                
-                # Volta o cursor para o lado da Descrição para continuar
-                pdf.set_xy(x_antes + 25 + 45 + 50, y_antes)
-                
+                pdf.set_xy(x + 120, y)
                 pdf.cell(30, 8, str(row.get('Banco', '')), border=1)
                 pdf.cell(20, 8, str(row.get('Tipo', '')), border=1)
                 pdf.cell(20, 8, str(row.get('Status', '')), border=1)
