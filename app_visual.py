@@ -1089,7 +1089,7 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     df_tela = df_base.copy()
    
-   if st.button("📄 Gerar PDF"):
+    if st.button("📄 Gerar PDF"):
         try:
             # --- PROTEÇÃO PARA NÃO DAR ERRO DE VARIÁVEL ---
             # Se a variável não existir, criamos um valor padrão para ela
