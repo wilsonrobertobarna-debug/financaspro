@@ -1134,25 +1134,31 @@ if aba == "📋 Relatório PDF":
             pdf.cell(200, 10, txt=f"Periodo: {pd.to_datetime(b_ini_atual).strftime('%d/%m/%Y')} a {pd.to_datetime(b_fim_atual).strftime('%d/%m/%Y')}", ln=True, align='C')
             pdf.ln(10)
 
-            # Tabela: Cabeçalho da Tabela
-            pdf.set_font("Arial", 'B', 12)
-            pdf.cell(40, 10, "Data", border=1)
-            pdf.cell(100, 10, "Detalhes/Valor", border=1)
-            pdf.ln() 
-
-            # Tabela: Linhas de dados
-            pdf.set_font("Arial", size=12)
-            for index, row in df_report.iterrows():
-                # Formata a data (se existir)
-                data_val = row.get(col_data_df)
-                data_str = data_val.strftime('%d/%m/%Y') if isinstance(data_val, pd.Timestamp) else str(data_val)
-                
-                # Pega o valor da segunda coluna
-                valor_str = str(row.iloc[1] if len(row) > 1 else '')
-                
-            pdf.cell(40, 10, data_str, border=1, align='C') # 'C' centraliza a data
-            pdf.cell(100, 10, valor_str, border=1, align='R') # 'R' alinha o valor à direita
+          # Cabeçalho da Tabela - Ajustado para mais colunas
+            pdf.set_font("Arial", 'B', 10) # Fonte menor para caber tudo
+            pdf.cell(25, 10, "Data", border=1)
+            pdf.cell(50, 10, "Beneficiario", border=1)
+            pdf.cell(40, 10, "Banco", border=1)
+            pdf.cell(30, 10, "Valor", border=1)
             pdf.ln()
+
+            # Linhas de dados
+            pdf.set_font("Arial", size=10)
+            for index, row in df_report.iterrows():
+                # Tente ajustar os nomes 'DATA', 'BENEFICIARIO', 'BANCO', 'VALOR' 
+                # para exatamente como estão escritos no seu DataFrame (df_tela)
+                data_str = str(row.get('DATA', '')) 
+                benef_str = str(row.get('BENEFICIARIO', ''))
+                banco_str = str(row.get('BANCO', ''))
+                valor_str = str(row.get('VALOR', ''))
+
+                pdf.cell(25, 10, data_str, border=1)
+                pdf.cell(50, 10, benef_str, border=1)
+                pdf.cell(40, 10, banco_str, border=1)
+                pdf.cell(30, 10, valor_str, border=1)
+                pdf.ln()
+
+            
             # 5. GERAR O DOWNLOAD
             pdf_bytes = pdf.output(dest='S').encode('latin-1')
             
