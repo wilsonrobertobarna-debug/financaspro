@@ -1092,44 +1092,36 @@ if aba == "📋 Relatório PDF":
    # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
-            # 1. Pega os dados já filtrados
+            # 1. Pega os dados
             df_report = df_tela.copy()
-            # Garante que a variável exista para o PDF não reclamar
-            if 'banco_nome' not in locals():
-                banco_nome = "Todos os Bancos"
-
-            # 2. CONVERSÃO FORÇADA: Isso resolve todos os erros de strftime de uma vez
-            # Se forem strings, transforma em datas reais. Se já forem datas, mantém.
             import pandas as pd
-            if 'b_ini' in globals() or 'b_ini' in locals():
-                b_ini = pd.to_datetime(b_ini)
-            if 'b_fim' in globals() or 'b_fim' in locals():
-                b_fim = pd.to_datetime(b_fim)
-            
-            # 2. Definição segura das datas
-            # Se elas não existirem, usamos a data de hoje como padrão
             from datetime import datetime
             
-            # Tenta pegar as datas reais, se não existir, usa a data atual
-            data_referencia = datetime.now()
+            # 2. DEFINIÇÃO DE SEGURANÇA (O segredo está aqui)
+            # Criamos b_ini e b_fim com valores padrão e já formatados como data
+            # Assim, qualquer código abaixo que chame b_ini ou b_fim vai funcionar.
             
-            if 'b_ini' in locals():
-                b_ini_dt = pd.to_datetime(b_ini)
-            else:
-                b_ini_dt = data_referencia
-                
-            if 'b_fim' in locals():
-                b_fim_dt = pd.to_datetime(b_fim)
-            else:
-                b_fim_dt = data_referencia
+            banco_nome = banco_relatorio if 'banco_relatorio' in locals() else "Todos os Bancos"
+            
+            b_ini = pd.to_datetime(b_ini) if 'b_ini' in locals() else datetime.now()
+            b_fim = pd.to_datetime(b_fim) if 'b_fim' in locals() else datetime.now()
 
-            # Agora, ao invés de usar b_ini e b_fim direto, 
-            # use b_ini_dt.strftime('%d/%m/%Y') no seu código do PDF.
-            # Isso vai funcionar sem dar erro de 'str'!
+            # 3. GARANTIA DA DATA DA TABELA (DT_FILTRO)
+            col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+            if col_data_df:
+                df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
+            else:
+                df_report['DT_FILTRO'] = pd.to_datetime('1900-01-01')
+            
+            df_report = df_report.sort_values(by='DT_FILTRO')
+
             # 4. Inicializa o PDF
             from fpdf import FPDF
             pdf = FPDF()
             pdf.add_page()
+            
+            # AGORA, quando você usar b_ini.strftime(...) lá embaixo, vai funcionar, 
+            # porque b_ini já é uma data real e não uma string!
           
             # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
