@@ -1089,24 +1089,22 @@ if aba == "📋 Relatório PDF":
     # FILTRO: BENEFICIÁRIO (NA LATERAL)
     # -------------------------------------------------------------------------
 
-    # --- DEFINIÇÃO DOS FILTROS (FORA DO BOTÃO) ---
-    st.subheader("Filtros para Relatório")
-    col1, col2, col3, col4 = st.columns(4)
+      # 1. Filtros no topo (Defina as variáveis aqui)
+    st.subheader("Filtros")
+    filtro_banco = st.selectbox("Banco", ["Todos", "Inter", "Bradesco", "Nu"])
+    filtro_beneficiario = st.text_input("Buscar Beneficiário")
+    # ... (outros filtros)
     
-    with col1:
-        filtro_banco = st.selectbox("Banco", ["Todos", "Inter", "Bradesco", "Nu"])
-    with col2:
-        filtro_beneficiario = st.text_input("Buscar Beneficiário")
-    with col3:
-        filtro_tipo = st.selectbox("Tipo", ["Todos", "Receita", "Despesa"])
-    with col4:
-        filtro_status = st.selectbox("Status", ["Todos", "Pago", "Pendente"])
-
-
+    # 2. Lógica que filtra o que aparece na TELA
+    df_exibicao = df_tela.copy()
+    if filtro_banco != "Todos":
+        df_exibicao = df_exibicao[df_exibicao['Banco'] == filtro_banco]
+    # ... (aplique todos os filtros aqui no df_exibicao)
     
+    st.dataframe(df_exibicao) # Isso mostra na tela o que foi filtrado
+            
     df_tela = df_base.copy()
-    
-   
+       
     if st.button("📄 Gerar PDF"):
         try:
             import pandas as pd
