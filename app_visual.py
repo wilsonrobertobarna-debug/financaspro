@@ -1089,41 +1089,61 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     df_tela = df_base.copy()
    
+# Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
-            # --- PROTEÇÃO PARA NÃO DAR ERRO DE VARIÁVEL ---
-            # Se a variável não existir, criamos um valor padrão para ela
-            if 'banco_nome' not in locals(): banco_nome = "Todos os Bancos"
-            if 'b_ini' not in locals(): b_ini = pd.to_datetime('today')
-            if 'b_fim' not in locals(): b_fim = pd.to_datetime('today')
-            # -----------------------------------------------
-
-            # 1. Copia os dados
-            df_report = df_tela.copy()
+            # 1. Configurações iniciais e proteção de variáveis
             import pandas as pd
+            from fpdf import FPDF
+            from datetime import datetime
+
+            # Garante que as variáveis existam, caso contrário usa a data atual
+            # Se 'b_ini' e 'b_fim' vierem dos seus date_input, eles serão usados aqui
+            b_ini_atual = b_ini if 'b_ini' in locals() else datetime.now()
+            b_fim_atual = b_fim if 'b_fim' in locals() else datetime.now()
+            b_nome_exibir = banco_nome if 'banco_nome' in locals() else "Todos os Bancos"
+
+            # 2. Prepara os dados
+            df_report = df_tela.copy()
             
-            # 2. Garante a coluna DT_FILTRO
+            # Garante a coluna de data para o filtro
             col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             if col_data_df:
-                df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], errors='coerce')
+                df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
             else:
                 df_report['DT_FILTRO'] = pd.to_datetime('1900-01-01')
 
-            # 3. FILTRAGEM SEGURA
-            # Converte as datas de filtro para garantir comparação
-            b_ini_dt = pd.to_datetime(b_ini)
-            b_fim_dt = pd.to_datetime(b_fim)
-            
+            # 3. Filtra os dados conforme o período escolhido
             df_report = df_report.dropna(subset=['DT_FILTRO'])
             df_report = df_report[
-                (df_report['DT_FILTRO'] >= b_ini_dt) & 
-                (df_report['DT_FILTRO'] <= b_fim_dt)
+                (df_report['DT_FILTRO'] >= pd.to_datetime(b_ini_atual)) & 
+                (df_report['DT_FILTRO'] <= pd.to_datetime(b_fim_atual))
             ]
 
             # 4. Inicializa o PDF
-            from fpdf import FPDF
             pdf = FPDF()
             pdf.add_page()
+            pdf.set_font("Arial", size=12)
+
+            # Cabeçalho do PDF
+            pdf.cell(200, 10, txt=f"Relatório: {b_nome_exibir}", ln=True, align='C')
+            pdf.cell(200, 10, txt=f"Periodo: {pd.to_datetime(b_ini_atual).strftime('%d/%m/%Y')} a {pd.to_datetime(b_fim_atual).strftime('%d/%m/%Y')}", ln=True, align='C')
+            pdf.ln(10)
+
+            # Exemplo de como adicionar os dados da tabela ao PDF
+            for index, row in df_report.iterrows():
+                # Ajuste conforme as colunas do seu df_report
+                texto_linha = f"{row.get(col_data_df, 'Data')} | {row.iloc[1] if len(row) > 1 else 'Valor'}"
+                pdf.cell(200, 10, txt=texto_linha, ln=True)
+
+            # Salva ou disponibiliza o arquivo
+            output_file = "relatorio.pdf"
+            pdf.output(output_file)
+            
+            st.success(f"PDF gerado com sucesso! Período: {pd.to_datetime(b_ini_atual).strftime('%d/%m/%Y')} a {pd.to_datetime(b_fim_atual).strftime('%d/%m/%Y')}")
+
+        except Exception as e:
+            st.error(f"Erro ao gerar o PDF: {e}")
             
             # ... (o resto do seu código de preenchimento do PDF continua aqui)
             # ========================================================
