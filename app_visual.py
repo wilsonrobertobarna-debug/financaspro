@@ -1209,11 +1209,10 @@ if aba == "📋 Relatório PDF":
             st.error(f"Erro ao processar: {e}")
            
             
-            # REGRA 1: Se for Cartão de Crédito, o saldo inicial DEVE vir zerado
-                  # Substitua todo aquele bloco anterior por esta lógica simples:
-                    # Cálculo de Saldo (Separando Receitas e Despesas)
+          # Substitua todo aquele bloco anterior por esta lógica simples:
+            # Cálculo de Saldo (Separando Receitas e Despesas)
             hist_anterior = df_rep[df_rep['Vencimento'] < pd.to_datetime(b_ini)]
-                    
+            
             receitas = hist_anterior[hist_anterior['Tipo'] != "Despesa"]['Valor'].sum()
             despesas = hist_anterior[hist_anterior['Tipo'] == "Despesa"]['Valor'].sum()
             saldo_acumulado = receitas - despesas
