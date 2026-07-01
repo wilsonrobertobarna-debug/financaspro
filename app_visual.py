@@ -1220,10 +1220,13 @@ if aba == "📋 Relatório PDF":
             # Substitua todo aquele bloco anterior por esta lógica simples:
             # Cálculo de Saldo (Separando Receitas e Despesas)
                     
+            # Certifique-se de que este bloco está alinhado com o código acima dele
+            df_historico = df_base.copy()
             if col_data_h:
-                        df_historico['DT_HIST'] = pd.to_datetime(df_historico[col_data_h], format="%d/%m/%Y", errors='coerce')
-                    else:
-                        df_historico['DT_HIST'] = pd.to_datetime(df_historico.index, errors='coerce')
+                df_historico['Vencimento'] = pd.to_datetime(df_historico['Vencimento'], format="%d/%m/%Y", errors='coerce')
+            else:
+                # O else deve estar na mesma coluna que o 'if' acima
+                df_historico['Vencimento'] = pd.to_datetime(df_historico['Data'], format="%d/%m/%Y", errors='coerce')
                         
                     if banco_nome != "Todos os Bancos" and col_banco_h:
                         df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == str(banco_nome).upper()]
