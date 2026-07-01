@@ -1093,7 +1093,7 @@ if aba == "📋 Relatório PDF":
              
     df_tela = df_base.copy()
        
-    if st.button("📄 Gerar PDF"):
+  if st.button("📄 Gerar PDF"):
         try:
             import pandas as pd
             from fpdf import FPDF
@@ -1207,6 +1207,62 @@ if aba == "📋 Relatório PDF":
 
         except Exception as e:
             st.error(f"Erro ao processar: {e}")
+           
+            
+            # Substitua todo aquele bloco anterior por esta lógica simples:
+            # Cálculo de Saldo (Separando Receitas e Despesas)
+            hist_anterior = df_rep[df_rep['Vencimento'] < pd.to_datetime(b_ini)]
+            receitas = hist_anterior[hist_anterior['Tipo'] != "Despesa"]['Valor'].sum()
+            despesas = hist_anterior[hist_anterior['Tipo'] == "Despesa"]['Valor'].sum()
+            saldo_acumulado = receitas - despesas
+
+            # 3.2 Agora, calculamos a movimentação que aconteceu desde o começo até o dia 17/05
+            # Substitua todo aquele bloco anterior por esta lógica simples:
+            # Cálculo de Saldo (Separando Receitas e Despesas)
+                    
+            # Certifique-se de que este bloco está alinhado com o código acima dele
+            try:
+            df_historico = df_base.copy()
+            
+            if col_data_h:
+                df_historico['Vencimento'] = pd.to_datetime(df_historico['Vencimento'], format="%d/%m/%Y", errors='coerce')
+            else:
+                df_historico['Vencimento'] = pd.to_datetime(df_historico['Data'], format="%d/%m/%Y", errors='coerce')
+            
+            if banco_nome != "Todos os Bancos" and col_banco_h:
+                df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == banco_nome.upper()]                    
+                    # Filtra tudo o que aconteceu estritamente ANTES do dia de início do relatório (antes do dia 18)
+                    df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
+                    
+                    saldo_acumulado_passado = 0.0
+                    for _, r_pass in df_antes_do_periodo.iterrows():
+                        val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
+                        
+                        if isinstance(val_p_cru, str):
+                            import re
+                            val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
+                            if '.' in val_p_limpo and ',' in val_p_limpo:
+                                val_p_limpo = val_p_limpo.replace('.', '').replace(',', '.')
+                            elif ',' in val_p_limpo:
+                                val_p_limpo = val_p_limpo.replace(',', '.')
+                            val_p = pd.to_numeric(val_p_limpo, errors='coerce')
+                        else:
+                            val_p = pd.to_numeric(val_p_cru, errors='coerce')
+                            
+                        if pd.isna(val_p): val_p = 0.0
+                        
+                        tipo_p = str(r_pass.get('Tipo', '')).upper().strip()
+                        if "DESPESA" in tipo_p or "GASTO" in tipo_p:
+                            saldo_acumulado_passado -= val_p
+                        else:
+                            saldo_acumulado_passado += val_p
+                    
+                    # O saldo inicial real no dia 18 é o saldo base do sistema + as movimentações do passado!
+                    base_inicial = saldo_sistema_abril + saldo_acumulado_passado
+                except:
+                    base_inicial = 0.0
+
+            saldo_anterior = base_inicial
            
             
             # Substitua todo aquele bloco anterior por esta lógica simples:
