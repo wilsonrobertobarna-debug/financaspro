@@ -1221,16 +1221,16 @@ if aba == "📋 Relatório PDF":
             # Cálculo de Saldo (Separando Receitas e Despesas)
                     
             # Certifique-se de que este bloco está alinhado com o código acima dele
+           try:
             df_historico = df_base.copy()
+            
             if col_data_h:
                 df_historico['Vencimento'] = pd.to_datetime(df_historico['Vencimento'], format="%d/%m/%Y", errors='coerce')
             else:
-                # O else deve estar na mesma coluna que o 'if' acima
                 df_historico['Vencimento'] = pd.to_datetime(df_historico['Data'], format="%d/%m/%Y", errors='coerce')
-                        
-                    if banco_nome != "Todos os Bancos" and col_banco_h:
-                        df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == str(banco_nome).upper()]
-                    
+            
+            if banco_nome != "Todos os Bancos" and col_banco_h:
+                df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == banco_nome.upper()]                    
                     # Filtra tudo o que aconteceu estritamente ANTES do dia de início do relatório (antes do dia 18)
                     df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
                     
