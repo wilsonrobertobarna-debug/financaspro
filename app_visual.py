@@ -1042,10 +1042,11 @@ if aba == "📋 Relatório PDF":
         opcoes_banco_rel = ["Todos"] + list(bancos_disponiveis)
         banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel)
         
-    with col_rel2:
+   with col_rel2:
         data_padrao_ini = datetime(2026, 4, 20)
         data_padrao_fim = datetime(2026, 5, 20)
-        periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
+        # Adicione o key="periodo_pdf" aqui
+        periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY", key="periodo_pdf")
 
    
     # 2. FILTRAGEM (INCLUINDO NOVOS FILTROS)
@@ -1096,13 +1097,16 @@ if aba == "📋 Relatório PDF":
             from fpdf import FPDF
             from datetime import datetime
 
-            # 1. CAPTURA SEGURA DAS DATAS
-            # Se você usa st.date_input, ele provavelmente está fora daqui.
-            # Se os nomes forem 'b_ini' e 'b_fim', usamos eles.
-            # Adicionei uma verificação para garantir que o Streamlit pegue o valor atual.
-            b_ini_atual = b_ini if 'b_ini' in locals() else datetime.now()
-            b_fim_atual = b_fim if 'b_fim' in locals() else datetime.now()
-            b_nome_exibir = banco_nome if 'banco_nome' in locals() else "Todos os Bancos"
+            # 1. CAPTURA SEGURA DAS DATAS (Lendo a lista periodo_pdf)
+            # Se 'periodo_pdf' existir no session_state, usamos ele. 
+            # Caso contrário, usamos a data de hoje.
+            datas = st.session_state.get('periodo_pdf', [datetime.now(), datetime.now()])
+            
+            # Garantir que temos início e fim (mesmo que o usuário selecione apenas um dia)
+            b_ini_atual = datas[0] if isinstance(datas, (list, tuple)) else datas
+            b_fim_atual = datas[1] if isinstance(datas, (list, tuple)) else datas
+            
+            b_nome_exibir = banco_relatorio if 'banco_relatorio' in locals() else "Todos os Bancos"
 
             # 2. Prepara os dados
             df_report = df_tela.copy()
@@ -1133,7 +1137,7 @@ if aba == "📋 Relatório PDF":
                 texto_linha = f"{row.get(col_data_df, 'Data')} | {row.iloc[1] if len(row) > 1 else 'Valor'}"
                 pdf.cell(200, 10, txt=texto_linha, ln=True)
 
-            # 5. GERAR O DOWNLOAD (O comando que faltava)
+            # 5. GERAR O DOWNLOAD
             pdf_bytes = pdf.output(dest='S').encode('latin-1')
             
             st.success("PDF gerado com sucesso!")
