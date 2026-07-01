@@ -1144,35 +1144,51 @@ if aba == "📋 Relatório PDF":
                 pdf.cell(larg, 8, col, border=1)
             pdf.ln()
 
-            # Processamento
             pdf.set_font("Arial", size=9)
             acumulado = saldo_inicial
             
             for index, row in df_report.iterrows():
-                # LIMPEZA DA DATA (Sem horário)
+                # LIMPEZA DA DATA
                 data_obj = pd.to_datetime(row.get('Vencimento'), errors='coerce')
                 venc_str = data_obj.strftime('%d/%m/%Y') if pd.notnull(data_obj) else ""
                 
-                # LIMPEZA DO VALOR
+                # LIMPEZA E LÓGICA DO VALOR
                 val_raw = row.get('Valor', 0)
-                valor_float = float(str(val_raw).replace(',', '')) # Remove vírgula de milhar
-                acumulado += valor_float
+                valor_float = float(str(val_raw).replace('.', '').replace(',', '.'))
                 
-                # Lógica de cor
-                is_negativo = valor_float < 0 or "Despesa" in str(row.get('Tipo', ''))
-                pdf.set_text_color(255, 0, 0) if is_negativo else pdf.set_text_color(0, 0, 0)
+                # AQUI A CORREÇÃO DO ACUMULADO:
+                # Se for Despesa, subtraímos do acumulado.
+                if "Despesa" in str(row.get('Tipo', '')):
+                    acumulado -= valor_float
+                    valor_exibicao = -valor_float # Para mostrar negativo no PDF
+                else:
+                    acumulado += valor_float
+                    valor_exibicao = valor_float
 
-                x, y = pdf.get_x(), pdf.get_y()
+                # Lógica de cor (Vermelho se for Despesa)
+                is_despesa = "Despesa" in str(row.get('Tipo', ''))
+                pdf.set_text_color(255, 0, 0) if is_despesa else pdf.set_text_color(0, 0, 0)
+
+                # SALVAR POSIÇÃO PARA DESENHAR AS CÉLULAS
+                x_inicio = pdf.get_x()
+                y_inicio = pdf.get_y()
+                
                 pdf.cell(25, 8, venc_str, border=1)
                 pdf.cell(45, 8, str(row.get('Beneficiário', '')), border=1)
-                pdf.multi_cell(50, 8, str(row.get('Descrição', '')), border=1)
-                pdf.set_xy(x + 120, y)
+                
+                # DESCRICAO COM MULTI_CELL (Largura maior: 70)
+                pdf.multi_cell(70, 8, str(row.get('Descrição', '')), border=1)
+                
+                # VOLTAR PARA A POSIÇÃO APÓS A DESCRIÇÃO
+                pdf.set_xy(x_inicio + 25 + 45 + 70, y_inicio)
+                
                 pdf.cell(30, 8, str(row.get('Banco', '')), border=1)
                 pdf.cell(20, 8, str(row.get('Tipo', '')), border=1)
                 pdf.cell(20, 8, str(row.get('Status', '')), border=1)
-                pdf.cell(25, 8, f"{valor_float:,.2f}", border=1)
+                pdf.cell(25, 8, f"{valor_exibicao:,.2f}", border=1)
                 pdf.cell(25, 8, f"{acumulado:,.2f}", border=1)
-                pdf.ln(8)
+                
+                pdf.ln(8) # Pula para a próxima linha
                 pdf.set_text_color(0, 0, 0)
 
            # Download
