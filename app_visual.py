@@ -429,20 +429,13 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
             t_desc = st.text_input("Nota")
             if st.form_submit_button("TRANSFERIR"):
-                if t_orig == t_dest:
+                if t_orig == t_dest: 
                     st.error("Escolha bancos diferentes!")
                 else:
-                    # 1. Calcula o próximo ID
-                    # Se df existir, pega o maior ID atual + 1, senão começa em 1
-                    novo_id = int(df['ID'].max()) + 1 if not df.empty and 'ID' in df.columns else 1
-                    
                     v_str = f"{t_val:.2f}".replace('.', ',')
                     d_str = t_dat.strftime("%d/%m/%Y")
-                    
-                    # 2. Adiciona o novo_id na lista (o último item da lista agora é o novo_id)
-                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", "", novo_id])
-                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", "", novo_id])
-                    
+                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", ""])
+                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", ""])
                     st.toast("✅ Transferencia realizada com sucesso!", icon="💰")
                     atualizar_sessao()
                     st.rerun()
@@ -1045,8 +1038,7 @@ if aba == "📋 Relatório PDF":
     with col_rel2:
         data_padrao_ini = datetime(2026, 4, 20)
         data_padrao_fim = datetime(2026, 5, 20)
-        # Adicione o key="periodo_pdf" aqui
-        periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY", key="periodo_pdf")
+        periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
 
    
     # 2. FILTRAGEM (INCLUINDO NOVOS FILTROS)
@@ -1088,205 +1080,113 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     # FILTRO: BENEFICIÁRIO (NA LATERAL)
     # -------------------------------------------------------------------------
-
-      # 1. Filtros no topo (Defina as variáveis aqui)
-             
-    df_tela = df_base.copy()
-       
+     
+    # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
-            import pandas as pd
-            from fpdf import FPDF
-            from datetime import datetime
-
-            # 1. Preparação dos dados
-            df_rep = df_tela.copy()
-            
-            # Garante que a coluna de data seja tipo DATA (essencial para ordenar)
-            df_rep['Vencimento'] = pd.to_datetime(df_rep['Vencimento'], format="%d/%m/%Y", errors='coerce')  
-            # --- ADICIONE ESTES NOVOS FILTROS AQUI ---
-            if filtro_tipo != "Todos": # <--- A VARIÁVEL QUE VOCÊ USA NA TELA
-                df_rep = df_rep[df_rep['Tipo'] == filtro_tipo]
-
-            
-            # --- ORDENAÇÃO ---
-            # Ordena pela data de vencimento
-            df_rep = df_rep.sort_values(by='Vencimento')
-
-            # 1. Definições Iniciais
-            datas = st.session_state.get('periodo_pdf', [datetime.now(), datetime.now()])
-            b_ini = datas[0] if isinstance(datas, (list, tuple)) else datas
-            b_fim = datas[1] if isinstance(datas, (list, tuple)) else datas
-            
-            # Limpeza do DataFrame original
-            def limpar_valor(val):
-                return float(str(val).replace('.', '').replace(',', '.')) if val else 0.0
-
-            df_base = df_tela.copy()
-            df_base['Vencimento'] = pd.to_datetime(df_base['Vencimento'], format="%d/%m/%Y", errors='coerce')
-            df_base['Valor'] = df_base['Valor'].apply(limpar_valor)
-
-            # Filtro do Banco
-            if banco_relatorio != "Todos":
-                df_base = df_base[df_base['Banco'].astype(str) == str(banco_relatorio)]
-
-            # Cálculo de Saldo (Separando Receitas e Despesas para não errar)
-            hist_anterior = df_base[df_base['Vencimento'] < pd.to_datetime(b_ini)]
-            
-            receitas = hist_anterior[hist_anterior['Tipo'] != "Despesa"]['Valor'].sum()
-            despesas = hist_anterior[hist_anterior['Tipo'] == "Despesa"]['Valor'].sum()
-            saldo_acumulado = receitas - despesas
-            
-            # Filtro do período do relatório
-            df_rep = df_base[(df_base['Vencimento'] >= pd.to_datetime(b_ini)) & 
-                             (df_base['Vencimento'] <= pd.to_datetime(b_fim))]
-
-            # 2. Geração do PDF
-            pdf = FPDF('L', 'mm', 'A4')
-            pdf.add_page()
-            
-            pdf.set_font("Arial", 'B', 16)
-            pdf.cell(0, 10, "RELATÓRIO FINANCEIRO", ln=True, align='C')
-            pdf.set_font("Arial", '', 10)
-            pdf.cell(0, 10, f"Banco: {banco_relatorio} | Saldo Inicial: {saldo_acumulado:,.2f}", ln=True, align='C')
-            pdf.ln(5)
-
-            # Cabeçalho da tabela
-            pdf.set_font("Arial", 'B', 8)
-            colunas = [("Venc.", 20), ("Benefic.", 40), ("Descricao", 70), ("Banco", 25), ("Tipo", 20), ("Status", 20), ("Valor", 25), ("Saldo", 25)]
-            for col, larg in colunas:
-                pdf.cell(larg, 7, col, border=1)
-            pdf.ln()
-
-            # Loop de dados
-            pdf.set_font("Arial", '', 8)
-            
-            # Definimos um limite de altura antes de pular página (200mm é seguro para A4 Paisagem)
-            LIMITE_PAGINA = 180 
-
-            for _, row in df_rep.iterrows():
-                # 1. VERIFICAÇÃO DE ESPAÇO: Se estiver perto do fim, pula a página
-                if pdf.get_y() > LIMITE_PAGINA:
-                    pdf.add_page()
-                    # Repete o cabeçalho na nova página para facilitar a leitura
-                    pdf.set_font("Arial", 'B', 8)
-                    colunas = [("Venc.", 20), ("Benefic.", 40), ("Descricao", 70), ("Banco", 25), ("Tipo", 20), ("Status", 20), ("Valor", 25), ("Saldo", 25)]
-                    for col, larg in colunas:
-                        pdf.cell(larg, 7, col, border=1)
-                    pdf.ln()
-                    pdf.set_font("Arial", '', 8)
-
-                # 2. SEU CÁLCULO E LÓGICA DE LINHA
-                val_limpo = row['Valor']
-                if "Despesa" in str(row.get('Tipo', '')):
-                    saldo_acumulado -= val_limpo
-                    val_exibir = -val_limpo
-                    pdf.set_text_color(255, 0, 0)
+            if isinstance(periodo_pdf, (list, tuple)):
+                if len(periodo_pdf) == 2:
+                    b_ini, b_fim = periodo_pdf[0], periodo_pdf[1]
                 else:
-                    saldo_acumulado += val_limpo
-                    val_exibir = val_limpo
-                    pdf.set_text_color(0, 0, 0)
-
-                # 3. IMPRESSÃO DA LINHA
-                x, y = pdf.get_x(), pdf.get_y()
-                pdf.cell(20, 6, row['Vencimento'].strftime('%d/%m/%Y'), border=1)
-                pdf.cell(40, 6, str(row.get('Beneficiário', '')), border=1)
-                pdf.multi_cell(70, 6, str(row.get('Descrição', '')), border=1)
-                pdf.set_xy(x + 130, y)
-                pdf.cell(25, 6, str(row.get('Banco', '')), border=1)
-                pdf.cell(20, 6, str(row.get('Tipo', '')), border=1)
-                pdf.cell(20, 6, str(row.get('Status', '')), border=1)
-                pdf.cell(25, 6, f"{val_exibir:,.2f}", border=1)
-                pdf.cell(25, 6, f"{saldo_acumulado:,.2f}", border=1)
-                pdf.ln(6)
-                pdf.set_text_color(0, 0, 0)
-
-            # Botão de Download
-            st.download_button("📥 Baixar PDF", data=pdf.output(dest='S').encode('latin-1'), file_name="relatorio.pdf", mime="application/pdf")
-            st.success("PDF gerado!")
-
-        except Exception as e:
-            st.error(f"Erro ao processar: {e}")
-           
-            
-            # Substitua todo aquele bloco anterior por esta lógica simples:
-            # Cálculo de Saldo (Separando Receitas e Despesas)
-            hist_anterior = df_rep[df_rep['Vencimento'] < pd.to_datetime(b_ini)]
-            receitas = hist_anterior[hist_anterior['Tipo'] != "Despesa"]['Valor'].sum()
-            despesas = hist_anterior[hist_anterior['Tipo'] == "Despesa"]['Valor'].sum()
-            saldo_acumulado = receitas - despesas
-
-            # 3.2 Agora, calculamos a movimentação que aconteceu desde o começo até o dia 17/05
-            # Substitua todo aquele bloco anterior por esta lógica simples:
-            # Cálculo de Saldo (Separando Receitas e Despesas)
-                    
-            # Certifique-se de que este bloco está alinhado com o código acima dele
-            try:
-            df_historico = df_base.copy()
-            
-            if col_data_h:
-                df_historico['Vencimento'] = pd.to_datetime(df_historico['Vencimento'], format="%d/%m/%Y", errors='coerce')
+                    b_ini = b_fim = periodo_pdf[0]
             else:
-                df_historico['Vencimento'] = pd.to_datetime(df_historico['Data'], format="%d/%m/%Y", errors='coerce')
-            
-            if banco_nome != "Todos os Bancos" and col_banco_h:
-                df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == banco_nome.upper()]                    
-                    # Filtra tudo o que aconteceu estritamente ANTES do dia de início do relatório (antes do dia 18)
-                df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
-                    
-                    saldo_acumulado_passado = 0.0
-                    for _, r_pass in df_antes_do_periodo.iterrows():
-                        val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
-                        
-                        if isinstance(val_p_cru, str):
-                            import re
-                            val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
-                            if '.' in val_p_limpo and ',' in val_p_limpo:
-                                val_p_limpo = val_p_limpo.replace('.', '').replace(',', '.')
-                            elif ',' in val_p_limpo:
-                                val_p_limpo = val_p_limpo.replace(',', '.')
-                            val_p = pd.to_numeric(val_p_limpo, errors='coerce')
-                        else:
-                            val_p = pd.to_numeric(val_p_cru, errors='coerce')
-                            
-                        if pd.isna(val_p): val_p = 0.0
-                        
-                        tipo_p = str(r_pass.get('Tipo', '')).upper().strip()
-                        if "DESPESA" in tipo_p or "GASTO" in tipo_p:
-                            saldo_acumulado_passado -= val_p
-                        else:
-                            saldo_acumulado_passado += val_p
-                    
-                    # O saldo inicial real no dia 18 é o saldo base do sistema + as movimentações do passado!
-                    base_inicial = saldo_sistema_abril + saldo_acumulado_passado
-                except:
-                    base_inicial = 0.0
+                b_ini = b_fim = periodo_pdf
 
-            saldo_anterior = base_inicial
-           
-            
-            # Substitua todo aquele bloco anterior por esta lógica simples:
-            # Cálculo de Saldo (Separando Receitas e Despesas)
-            hist_anterior = df_rep[df_rep['Vencimento'] < pd.to_datetime(b_ini)]
-            receitas = hist_anterior[hist_anterior['Tipo'] != "Despesa"]['Valor'].sum()
-            despesas = hist_anterior[hist_anterior['Tipo'] == "Despesa"]['Valor'].sum()
-            saldo_acumulado = receitas - despesas
+            # ========================================================
+            # 1. INICIALIZAÇÃO DO PDF
+            # ========================================================
+            from fpdf import FPDF
+            pdf = FPDF()
+            pdf.add_page()
 
-            # 3.2 Agora, calculamos a movimentação que aconteceu desde o começo até o dia 17/05
-            # Substitua todo aquele bloco anterior por esta lógica simples:
-            # Cálculo de Saldo (Separando Receitas e Despesas)
-                    
-            # Certifique-se de que este bloco está alinhado com o código acima dele
-            try:
-            df_historico = df_base.copy()
-            
-            if col_data_h:
-                df_historico['Vencimento'] = pd.to_datetime(df_historico['Vencimento'], format="%d/%m/%Y", errors='coerce')
+            # ========================================================
+            # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
+            # ========================================================
+            df_report = df_base.copy()
+
+            col_banco_df = next((c for c in df_report.columns if c.upper() in ['BANCO', 'CONTA']), None)
+            col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+            col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
+            col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
+
+            # Tratamento e filtro de Data
+            if col_data_df:
+                df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
             else:
-                df_historico['Vencimento'] = pd.to_datetime(df_historico['Data'], format="%d/%m/%Y", errors='coerce')
+                df_report['DT_FILTRO'] = pd.to_datetime(df_report.index, errors='coerce')
+
+            t_ini = pd.to_datetime(b_ini)
+            t_fim = pd.to_datetime(b_fim)
+
+            # Guardamos uma cópia completa para calcular o saldo retroativo do Banco antes de filtrar o período final
+            df_retroativo = df_report.copy()
+
+            # Aplica os filtros na tabela que vai de fato para o PDF
+            df_report = df_report[(df_report['DT_FILTRO'] >= t_ini) & (df_report['DT_FILTRO'] <= t_fim)]
+
+            banco_nome = "Todos os Bancos"
+            if banco_relatorio != "Todos" and col_banco_df:
+                banco_nome = banco_relatorio
+                df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_nome).upper()]
+
+            if busca_desc and col_desc_df:
+                df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
+
+            if busca_status != "Todos" and col_status_df:
+                df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
+            if st.session_state.get('busca_tipo') != "Todos":
+                df_report = df_report[df_report['Tipo'].str.upper().str.strip() == st.session_state.busca_tipo.upper()]
+
+            df_report = df_report.sort_values(by='DT_FILTRO')
+
+# ========================================================
+            # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
+            # ========================================================
+            base_inicial = 0.0
             
-            if banco_nome != "Todos os Bancos" and col_banco_h:
-                df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == banco_nome.upper()]                    
+            # REGRA 1: Se for Cartão de Crédito, o saldo inicial DEVE vir zerado
+            if "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper():
+                base_inicial = 0.0
+            else:
+                # REGRA 2: Banco - Pega o Saldo Inicial do Sistema e aplica as movimentações até o dia 17
+                try:
+                    # 3.1 Primeiro, buscamos o Saldo Inicial de Cadastro (Aquele de Abril, ex: R$ 17,07)
+                    saldo_sistema_abril = 0.0
+                    try:
+                        ws_bancos = sh.worksheet("Bancos")
+                        dados_bancos = ws_bancos.get_all_values()
+                        df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
+                        
+                        col_banco_cad = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
+                        col_saldo_cad = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
+                        
+                        if banco_nome != "Todos os Bancos":
+                            linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome.upper()]
+                            if not linha_banco.empty:
+                                val_cru = str(linha_banco.iloc[0][col_saldo_cad]).strip()
+                                import re
+                                val_limpo = re.sub(r'[^\d.,-]', '', val_cru)
+                                if '.' in val_limpo and ',' in val_limpo:
+                                    val_limpo = val_limpo.replace('.', '').replace(',', '.')
+                                elif ',' in val_limpo:
+                                    val_limpo = val_limpo.replace(',', '.')
+                                saldo_sistema_abril = float(val_limpo)
+                    except:
+                        saldo_sistema_abril = 0.0
+
+                    # 3.2 Agora, calculamos a movimentação que aconteceu desde o começo até o dia 17/05
+                    df_historico = df_base.copy()
+                    col_data_h = next((c for c in df_historico.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+                    col_banco_h = next((c for c in df_historico.columns if c.upper() in ['BANCO', 'CONTA']), None)
+                    
+                    if col_data_h:
+                        df_historico['DT_HIST'] = pd.to_datetime(df_historico[col_data_h], format="%d/%m/%Y", errors='coerce')
+                    else:
+                        df_historico['DT_HIST'] = pd.to_datetime(df_historico.index, errors='coerce')
+                        
+                    if banco_nome != "Todos os Bancos" and col_banco_h:
+                        df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == str(banco_nome).upper()]
+                    
                     # Filtra tudo o que aconteceu estritamente ANTES do dia de início do relatório (antes do dia 18)
                     df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
                     
