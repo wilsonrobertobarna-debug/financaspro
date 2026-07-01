@@ -1138,38 +1138,48 @@ if aba == "📋 Relatório PDF":
             # 1. Cabeçalho da Tabela (Ajustado para mais colunas)
             pdf.set_font("Arial", 'B', 8) # Fonte menor para caber na página
             # Larguras: Data(20), Benef(40), Banco(30), Tipo(20), Status(20), Valor(25), Acum(25) = 180 total
-            pdf.cell(20, 8, "Data", border=1)
-            pdf.cell(40, 8, "Benefic.", border=1)
-            pdf.cell(30, 8, "Banco", border=1)
+            # 1. Cabeçalho da Tabela
+            pdf.set_font("Arial", 'B', 8)
+            # Definimos as larguras das colunas para caber na página
+            pdf.cell(20, 8, "Vencimento", border=1)
+            pdf.cell(30, 8, "Beneficiário", border=1)
+            pdf.cell(25, 8, "Banco", border=1)
             pdf.cell(20, 8, "Tipo", border=1)
             pdf.cell(20, 8, "Status", border=1)
-            pdf.cell(25, 8, "Valor", border=1)
-            pdf.cell(25, 8, "Acumul.", border=1)
+            pdf.cell(20, 8, "Valor", border=1)
+            pdf.cell(20, 8, "Acumul.", border=1)
             pdf.ln()
 
             # 2. Linhas de dados
             pdf.set_font("Arial", size=8)
             acumulado = 0
             for index, row in df_report.iterrows():
-                # AJUSTE OS NOMES ABAIXO PARA OS NOMES EXATOS DO SEU DATAFRAME
-                data_str = str(row.get('DATA', '')) 
-                benef_str = str(row.get('BENEFICIARIO', ''))
-                banco_str = str(row.get('BANCO', ''))
-                tipo_str = str(row.get('TIPO', ''))
-                status_str = str(row.get('STATUS', ''))
-                valor_float = float(row.get('VALOR', 0))
+                # --- AQUI ESTÁ O SEGREDO: OS NOMES EXATOS ---
+                # Se o nome da coluna tem acento, tem que pôr o acento aqui!
+                venc_str = str(row.get('Vencimento', ''))
+                benef_str = str(row.get('Beneficiário', ''))
+                banco_str = str(row.get('Banco', ''))
+                tipo_str = str(row.get('Tipo', ''))
+                status_str = str(row.get('Status', ''))
                 
-                acumulado += valor_float # Soma o valor acumulado
+                # Tratamento do valor (tentar converter para número)
+                val_raw = row.get('Valor', 0)
+                try:
+                    valor_float = float(str(val_raw).replace(',', '.'))
+                except:
+                    valor_float = 0.0
                 
-                pdf.cell(20, 8, data_str, border=1)
-                pdf.cell(40, 8, benef_str, border=1)
-                pdf.cell(30, 8, banco_str, border=1)
+                acumulado += valor_float
+                
+                # Imprimir na tabela
+                pdf.cell(20, 8, venc_str, border=1)
+                pdf.cell(30, 8, benef_str, border=1)
+                pdf.cell(25, 8, banco_str, border=1)
                 pdf.cell(20, 8, tipo_str, border=1)
                 pdf.cell(20, 8, status_str, border=1)
-                pdf.cell(25, 8, f"{valor_float:,.2f}", border=1)
-                pdf.cell(25, 8, f"{acumulado:,.2f}", border=1)
+                pdf.cell(20, 8, f"{valor_float:,.2f}", border=1)
+                pdf.cell(20, 8, f"{acumulado:,.2f}", border=1)
                 pdf.ln()
-
             
             # 5. GERAR O DOWNLOAD
             pdf_bytes = pdf.output(dest='S').encode('latin-1')
