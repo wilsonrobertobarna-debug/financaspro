@@ -1175,18 +1175,14 @@ if aba == "📋 Relatório PDF":
                 pdf.ln(8)
                 pdf.set_text_color(0, 0, 0)
 
-            # Download
+           # Download
             pdf_bytes = pdf.output(dest='S').encode('latin-1')
             st.success("PDF gerado com sucesso!")
             st.download_button("📥 Baixar PDF", data=pdf_bytes, file_name="relatorio.pdf", mime="application/pdf")
 
         except Exception as e:
-            st.error(f"Erro ao gerar o PDF: {e}")            
-            # ... (o resto do seu código de preenchimento do PDF continua aqui)
-            # ========================================================
-            # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
-            # ========================================================
-            base_inicial = 0.0
+            st.error(f"Erro ao gerar o PDF: {e}")
+           
             
             # REGRA 1: Se for Cartão de Crédito, o saldo inicial DEVE vir zerado
             if "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper():
