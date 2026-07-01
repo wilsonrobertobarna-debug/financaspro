@@ -9,6 +9,7 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
+import uuid
 
 # --- INICIALIZAÇÃO DE VARIÁVEIS (Para evitar o NameError) ---
 if 'busca_desc' not in locals(): busca_desc = ""
