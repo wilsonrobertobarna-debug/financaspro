@@ -1217,7 +1217,7 @@ if aba == "📋 Relatório PDF":
             saldo_acumulado = receitas - despesas
 
                     # 3.2 Agora, calculamos a movimentação que aconteceu desde o começo até o dia 17/05
-                    df_historico = df_base.copy()
+                df_historico = df_base.copy()
                     col_data_h = next((c for c in df_historico.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
                     col_banco_h = next((c for c in df_historico.columns if c.upper() in ['BANCO', 'CONTA']), None)
                     
