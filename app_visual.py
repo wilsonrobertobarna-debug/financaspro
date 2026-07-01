@@ -1210,34 +1210,13 @@ if aba == "📋 Relatório PDF":
            
             
             # REGRA 1: Se for Cartão de Crédito, o saldo inicial DEVE vir zerado
-            if "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper():
-                base_inicial = 0.0
-            else:
-                # REGRA 2: Banco - Pega o Saldo Inicial do Sistema e aplica as movimentações até o dia 17
-                try:
-                    # 3.1 Primeiro, buscamos o Saldo Inicial de Cadastro (Aquele de Abril, ex: R$ 17,07)
-                    saldo_sistema_abril = 0.0
-                    try:
-                        ws_bancos = sh.worksheet("Bancos")
-                        dados_bancos = ws_bancos.get_all_values()
-                        df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
-                        
-                        col_banco_cad = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
-                        col_saldo_cad = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
-                        
-                        if banco_nome != "Todos os Bancos":
-                            linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome.upper()]
-                            if not linha_banco.empty:
-                                val_cru = str(linha_banco.iloc[0][col_saldo_cad]).strip()
-                                import re
-                                val_limpo = re.sub(r'[^\d.,-]', '', val_cru)
-                                if '.' in val_limpo and ',' in val_limpo:
-                                    val_limpo = val_limpo.replace('.', '').replace(',', '.')
-                                elif ',' in val_limpo:
-                                    val_limpo = val_limpo.replace(',', '.')
-                                saldo_sistema_abril = float(val_limpo)
-                    except:
-                        saldo_sistema_abril = 0.0
+                  # Substitua todo aquele bloco anterior por esta lógica simples:
+                    # Cálculo de Saldo (Separando Receitas e Despesas)
+                    hist_anterior = df_rep[df_rep['Vencimento'] < pd.to_datetime(b_ini)]
+                    
+                    receitas = hist_anterior[hist_anterior['Tipo'] != "Despesa"]['Valor'].sum()
+                    despesas = hist_anterior[hist_anterior['Tipo'] == "Despesa"]['Valor'].sum()
+                    saldo_acumulado = receitas - despesas
 
                     # 3.2 Agora, calculamos a movimentação que aconteceu desde o começo até o dia 17/05
                     df_historico = df_base.copy()
