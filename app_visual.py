@@ -1089,34 +1089,43 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     df_tela = df_base.copy()
    
-    if st.button("📄 Gerar PDF"):
+   if st.button("📄 Gerar PDF"):
         try:
-            # 1. Recupera as variáveis que já existem na sua tela
-            # Se elas não existirem no 'locals', usamos o valor atual (o que está na tela)
-            # Dica: Substitua 'b_ini' e 'b_fim' pelos nomes exatos que você usa nos seus date_inputs
-            # Se o seu filtro se chama 'data_inicio', use b_ini = data_inicio
-            
-            # Aqui estamos garantindo que usamos o valor que você selecionou:
-            data_ini_final = b_ini if 'b_ini' in locals() else pd.to_datetime('today')
-            data_fim_final = b_fim if 'b_fim' in locals() else pd.to_datetime('today')
+            # --- PROTEÇÃO PARA NÃO DAR ERRO DE VARIÁVEL ---
+            # Se a variável não existir, criamos um valor padrão para ela
+            if 'banco_nome' not in locals(): banco_nome = "Todos os Bancos"
+            if 'b_ini' not in locals(): b_ini = pd.to_datetime('today')
+            if 'b_fim' not in locals(): b_fim = pd.to_datetime('today')
+            # -----------------------------------------------
 
-            # 2. Copia os dados
+            # 1. Copia os dados
             df_report = df_tela.copy()
             import pandas as pd
             
-            # 3. Garante a coluna DT_FILTRO
+            # 2. Garante a coluna DT_FILTRO
             col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             if col_data_df:
                 df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], errors='coerce')
             else:
                 df_report['DT_FILTRO'] = pd.to_datetime('1900-01-01')
 
-            # 4. FILTRAGEM USANDO AS DATAS CORRETAS
+            # 3. FILTRAGEM SEGURA
+            # Converte as datas de filtro para garantir comparação
+            b_ini_dt = pd.to_datetime(b_ini)
+            b_fim_dt = pd.to_datetime(b_fim)
+            
+            df_report = df_report.dropna(subset=['DT_FILTRO'])
             df_report = df_report[
-                (df_report['DT_FILTRO'] >= pd.to_datetime(data_ini_final)) & 
-                (df_report['DT_FILTRO'] <= pd.to_datetime(data_fim_final))
+                (df_report['DT_FILTRO'] >= b_ini_dt) & 
+                (df_report['DT_FILTRO'] <= b_fim_dt)
             ]
-          
+
+            # 4. Inicializa o PDF
+            from fpdf import FPDF
+            pdf = FPDF()
+            pdf.add_page()
+            
+            # ... (o resto do seu código de preenchimento do PDF continua aqui)
             # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
             # ========================================================
