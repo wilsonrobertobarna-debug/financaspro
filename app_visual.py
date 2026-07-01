@@ -1091,36 +1091,36 @@ if aba == "📋 Relatório PDF":
    
     if st.button("📄 Gerar PDF"):
         try:
-            # 1. Copia os dados
             df_report = df_tela.copy()
             import pandas as pd
             
-            # 2. Garante a coluna DT_FILTRO (procura qualquer coluna de data)
+            # --- PEGA AS DATAS DA MEMÓRIA ---
+            # Aqui usamos o que está no session_state (o que você escolheu no filtro)
+            b_ini = pd.to_datetime(st.session_state.data_inicio)
+            b_fim = pd.to_datetime(st.session_state.data_fim)
+            
+            # --- CRIA A COLUNA DE DATA ---
             col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             if col_data_df:
                 df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
             else:
                 df_report['DT_FILTRO'] = pd.to_datetime('1900-01-01')
 
-            # 3. Definição das datas (Segurança)
-            b_ini = pd.to_datetime(b_ini) if 'b_ini' in locals() else pd.to_datetime('today')
-            b_fim = pd.to_datetime(b_fim) if 'b_fim' in locals() else pd.to_datetime('today')
-            banco_nome = banco_relatorio if 'banco_relatorio' in locals() else "Todos os Bancos"
-
-            # 4. FILTRAGEM SEGURA (Aqui garantimos que os dados batem com a data)
-            # Remove linhas onde a data é nula para não dar erro no filtro
+            # --- FILTRAGEM ---
             df_report = df_report.dropna(subset=['DT_FILTRO'])
             df_report = df_report[
                 (df_report['DT_FILTRO'] >= b_ini) & 
                 (df_report['DT_FILTRO'] <= b_fim)
             ]
 
-            # 5. Inicializa o PDF
-            from fpdf import FPDF
-            pdf = FPDF()
-            pdf.add_page()            
-            # AGORA, quando você usar b_ini.strftime(...) lá embaixo, vai funcionar, 
-            # porque b_ini já é uma data real e não uma string!
+            # Teste: se o PDF sair vazio, é porque o filtro acima removeu tudo
+            if len(df_report) == 0:
+                st.error("Nenhum dado encontrado para este período! Verifique as datas.")
+            else:
+                # 5. Inicializa o PDF...
+                from fpdf import FPDF
+                pdf = FPDF()
+                pdf.add_page()
           
             # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
