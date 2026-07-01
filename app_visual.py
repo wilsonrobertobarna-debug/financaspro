@@ -1124,19 +1124,35 @@ if aba == "📋 Relatório PDF":
                 (df_report['DT_FILTRO'] <= pd.to_datetime(b_fim_atual))
             ]
 
-            # 4. Inicializa o PDF
+         # 4. Inicializa o PDF
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("Arial", size=12)
 
+            # Cabeçalhos
             pdf.cell(200, 10, txt=f"Relatorio: {b_nome_exibir}", ln=True, align='C')
             pdf.cell(200, 10, txt=f"Periodo: {pd.to_datetime(b_ini_atual).strftime('%d/%m/%Y')} a {pd.to_datetime(b_fim_atual).strftime('%d/%m/%Y')}", ln=True, align='C')
             pdf.ln(10)
 
-            for index, row in df_report.iterrows():
-                texto_linha = f"{row.get(col_data_df, 'Data')} | {row.iloc[1] if len(row) > 1 else 'Valor'}"
-                pdf.cell(200, 10, txt=texto_linha, ln=True)
+            # Tabela: Cabeçalho da Tabela
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(40, 10, "Data", border=1)
+            pdf.cell(100, 10, "Detalhes/Valor", border=1)
+            pdf.ln() 
 
+            # Tabela: Linhas de dados
+            pdf.set_font("Arial", size=12)
+            for index, row in df_report.iterrows():
+                # Formata a data (se existir)
+                data_val = row.get(col_data_df)
+                data_str = data_val.strftime('%d/%m/%Y') if isinstance(data_val, pd.Timestamp) else str(data_val)
+                
+                # Pega o valor da segunda coluna
+                valor_str = str(row.iloc[1] if len(row) > 1 else '')
+                
+                pdf.cell(40, 10, data_str, border=1)
+                pdf.cell(100, 10, valor_str, border=1)
+                pdf.ln()
             # 5. GERAR O DOWNLOAD
             pdf_bytes = pdf.output(dest='S').encode('latin-1')
             
