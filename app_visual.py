@@ -421,7 +421,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
             atualizar_sessao()
             st.rerun()
-            # --- BARRINHA 2: TRANSFERÊNCIA ---
+           # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
         with st.form("f_transf", clear_on_submit=True):
             t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -435,12 +435,17 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 else:
                     v_str = f"{t_val:.2f}".replace('.', ',')
                     d_str = t_dat.strftime("%d/%m/%Y")
-                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", ""])
-                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", ""])
+                    
+                    # Gera um ID único para este par de transação
+                    id_transacao = str(uuid.uuid4())[:8]
+                    
+                    # Agora incluímos o id_transacao como o 9º elemento (Coluna I)
+                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", "", id_transacao])
+                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", "", id_transacao])
+                    
                     st.toast("✅ Transferencia realizada com sucesso!", icon="💰")
                     atualizar_sessao()
                     st.rerun()
-
                # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
