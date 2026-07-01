@@ -1127,19 +1127,18 @@ if aba == "📋 Relatório PDF":
             pdf.cell(0, 10, f"Banco: {banco_relatorio} | Saldo Inicial: {saldo_acumulado:,.2f}", ln=True, align='C')
             pdf.ln(5)
 
-            # Cabeçalho
-            pdf.set_font("Arial", 'B', 8)
-            colunas = [("Venc.", 20), ("Benefic.", 40), ("Descricao", 70), ("Banco", 25), ("Tipo", 20), ("Status", 20), ("Valor", 25), ("Saldo", 25)]
-            for col, larg in colunas:
-                pdf.cell(larg, 7, col, border=1)
-            pdf.ln()
-
-            # Linhas
-            pdf.set_font("Arial", '', 8)
+           pdf.set_font("Arial", '', 8)
             for _, row in df_rep.iterrows():
-                val_limpo = limpar_valor(row.get('Valor', 0))
+                # Tenta converter o valor com segurança
+                val_raw = row.get('Valor', 0)
+                # Remove pontos de milhar, garante que vírgula é ponto decimal
+                str_val = str(val_raw).replace('.', '').replace(',', '.')
+                try:
+                    val_limpo = float(str_val)
+                except:
+                    val_limpo = 0.0
                 
-                # Regra de Saldo: Se for despesa, subtrai
+                # Regra de Saldo: Subtrai se for despesa
                 if "Despesa" in str(row.get('Tipo', '')):
                     saldo_acumulado -= val_limpo
                     val_exibir = -val_limpo
@@ -1149,19 +1148,22 @@ if aba == "📋 Relatório PDF":
                     val_exibir = val_limpo
                     pdf.set_text_color(0, 0, 0)
 
+                # Verifica se ainda cabe na página
+                if pdf.get_y() > 180: # Se chegar perto do fim da página
+                    pdf.add_page()
+                    # (Repetir aqui o cabeçalho da tabela se quiser que ele apareça na nova página)
+                
                 x, y = pdf.get_x(), pdf.get_y()
-                pdf.cell(20, 7, row['Vencimento'].strftime('%d/%m/%Y'), border=1)
-                pdf.cell(40, 7, str(row.get('Beneficiário', '')), border=1)
-                pdf.multi_cell(70, 7, str(row.get('Descrição', '')), border=1)
-                pdf.set_xy(x + 130, y) # 20+40+70
-                pdf.cell(25, 7, str(row.get('Banco', '')), border=1)
-                pdf.cell(20, 7, str(row.get('Tipo', '')), border=1)
-                pdf.cell(20, 7, str(row.get('Status', '')), border=1)
-                pdf.cell(25, 7, f"{val_exibir:,.2f}", border=1)
-                pdf.cell(25, 7, f"{saldo_acumulado:,.2f}", border=1)
-                pdf.ln(7)
-                pdf.set_text_color(0, 0, 0)
-
+                pdf.cell(20, 6, row['Vencimento'].strftime('%d/%m/%Y'), border=1)
+                pdf.cell(40, 6, str(row.get('Beneficiário', '')), border=1)
+                pdf.multi_cell(70, 6, str(row.get('Descrição', '')), border=1)
+                pdf.set_xy(x + 130, y)
+                pdf.cell(25, 6, str(row.get('Banco', '')), border=1)
+                pdf.cell(20, 6, str(row.get('Tipo', '')), border=1)
+                pdf.cell(20, 6, str(row.get('Status', '')), border=1)
+                pdf.cell(25, 6, f"{val_exibir:,.2f}", border=1)
+                pdf.cell(25, 6, f"{saldo_acumulado:,.2f}", border=1)
+                pdf.ln(6)
             # Download - Único lugar que tem comando de escrita para o usuário
             st.download_button("📥 Baixar PDF", data=pdf.output(dest='S').encode('latin-1'), file_name="relatorio.pdf", mime="application/pdf")
             st.success("PDF pronto!")
