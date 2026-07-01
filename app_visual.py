@@ -1097,25 +1097,31 @@ if aba == "📋 Relatório PDF":
             from fpdf import FPDF
             from datetime import datetime
 
-            # 1. CAPTURA SEGURA DAS DATAS
+            # 1. CAPTURA SEGURA DAS DATAS E BANCOS
             datas = st.session_state.get('periodo_pdf', [datetime.now(), datetime.now()])
             b_ini_atual = datas[0] if isinstance(datas, (list, tuple)) else datas
             b_fim_atual = datas[1] if isinstance(datas, (list, tuple)) else datas
             
+            # USAMOS APENAS A VARIÁVEL QUE VOCÊ JÁ TEM NO SELECTBOX
+            nome_banco_atual = str(banco_relatorio) 
+
             # 2. PREPARAÇÃO DOS DADOS
             df_report = df_tela.copy()
-            if banco_relatorio != "Todos":
-                df_report = df_report[df_report['Banco'] == banco_relatorio]
             
-            # Converte data para filtro
-            df_report['DT_FILTRO'] = pd.to_datetime(df_report['Vencimento'], format="%d/%m/%Y", errors='coerce')
+            # FILTRO DE BANCO
+            if nome_banco_atual != "Todos":
+                df_report = df_report[df_report['Banco'].astype(str) == nome_banco_atual]
             
-            # SALDO INICIAL: Soma tudo anterior ao período de início
-            saldo_inicial = df_report[df_report['DT_FILTRO'] < pd.to_datetime(b_ini_atual)]['Valor'].sum()
+            # GARANTIR QUE VALORES SEJAM NÚMEROS E DATA SEJA DATA
+            df_report['Vencimento'] = pd.to_datetime(df_report['Vencimento'], format="%d/%m/%Y", errors='coerce')
+            df_report['Valor'] = pd.to_numeric(df_report['Valor'].replace(r'[^\d,-]', '', regex=True).str.replace(',', '.'), errors='coerce').fillna(0)
             
-            # Filtra o relatório apenas para o período desejado
-            df_report = df_report[(df_report['DT_FILTRO'] >= pd.to_datetime(b_ini_atual)) & 
-                                  (df_report['DT_FILTRO'] <= pd.to_datetime(b_fim_atual))]
+            # SALDO INICIAL
+            saldo_inicial = df_report[df_report['Vencimento'] < pd.to_datetime(b_ini_atual)]['Valor'].sum()
+            
+            # FILTRO PERÍODO
+            df_report = df_report[(df_report['Vencimento'] >= pd.to_datetime(b_ini_atual)) & 
+                                  (df_report['Vencimento'] <= pd.to_datetime(b_fim_atual))]
             
             # Inicializa PDF Paisagem
             pdf = FPDF('L', 'mm', 'A4')
