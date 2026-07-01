@@ -1216,11 +1216,11 @@ if aba == "📋 Relatório PDF":
             despesas = hist_anterior[hist_anterior['Tipo'] == "Despesa"]['Valor'].sum()
             saldo_acumulado = receitas - despesas
 
-                    # 3.2 Agora, calculamos a movimentação que aconteceu desde o começo até o dia 17/05
-           # Substitua todo aquele bloco anterior por esta lógica simples:
+            # 3.2 Agora, calculamos a movimentação que aconteceu desde o começo até o dia 17/05
+            # Substitua todo aquele bloco anterior por esta lógica simples:
             # Cálculo de Saldo (Separando Receitas e Despesas)
                     
-                    if col_data_h:
+            if col_data_h:
                         df_historico['DT_HIST'] = pd.to_datetime(df_historico[col_data_h], format="%d/%m/%Y", errors='coerce')
                     else:
                         df_historico['DT_HIST'] = pd.to_datetime(df_historico.index, errors='coerce')
