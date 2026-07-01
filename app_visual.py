@@ -1221,7 +1221,7 @@ if aba == "📋 Relatório PDF":
             # Cálculo de Saldo (Separando Receitas e Despesas)
                     
             # Certifique-se de que este bloco está alinhado com o código acima dele
-        try:
+            try:
             df_historico = df_base.copy()
             
             if col_data_h:
