@@ -1222,7 +1222,7 @@ if aba == "📋 Relatório PDF":
                     
             # Certifique-se de que este bloco está alinhado com o código acima dele
             try:
-            df_historico = df_base.copy()
+                df_historico = df_base.copy()
             
             if col_data_h:
                 df_historico['Vencimento'] = pd.to_datetime(df_historico['Vencimento'], format="%d/%m/%Y", errors='coerce')
