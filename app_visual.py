@@ -1092,13 +1092,14 @@ if aba == "📋 Relatório PDF":
 # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
-            # 1. Configurações iniciais e proteção de variáveis
             import pandas as pd
             from fpdf import FPDF
             from datetime import datetime
 
-            # Garante que as variáveis existam, caso contrário usa a data atual
-            # Se 'b_ini' e 'b_fim' vierem dos seus date_input, eles serão usados aqui
+            # 1. CAPTURA SEGURA DAS DATAS
+            # Se você usa st.date_input, ele provavelmente está fora daqui.
+            # Se os nomes forem 'b_ini' e 'b_fim', usamos eles.
+            # Adicionei uma verificação para garantir que o Streamlit pegue o valor atual.
             b_ini_atual = b_ini if 'b_ini' in locals() else datetime.now()
             b_fim_atual = b_fim if 'b_fim' in locals() else datetime.now()
             b_nome_exibir = banco_nome if 'banco_nome' in locals() else "Todos os Bancos"
@@ -1106,14 +1107,13 @@ if aba == "📋 Relatório PDF":
             # 2. Prepara os dados
             df_report = df_tela.copy()
             
-            # Garante a coluna de data para o filtro
             col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             if col_data_df:
                 df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
             else:
                 df_report['DT_FILTRO'] = pd.to_datetime('1900-01-01')
 
-            # 3. Filtra os dados conforme o período escolhido
+            # 3. Filtra os dados
             df_report = df_report.dropna(subset=['DT_FILTRO'])
             df_report = df_report[
                 (df_report['DT_FILTRO'] >= pd.to_datetime(b_ini_atual)) & 
@@ -1125,22 +1125,25 @@ if aba == "📋 Relatório PDF":
             pdf.add_page()
             pdf.set_font("Arial", size=12)
 
-            # Cabeçalho do PDF
-            pdf.cell(200, 10, txt=f"Relatório: {b_nome_exibir}", ln=True, align='C')
+            pdf.cell(200, 10, txt=f"Relatorio: {b_nome_exibir}", ln=True, align='C')
             pdf.cell(200, 10, txt=f"Periodo: {pd.to_datetime(b_ini_atual).strftime('%d/%m/%Y')} a {pd.to_datetime(b_fim_atual).strftime('%d/%m/%Y')}", ln=True, align='C')
             pdf.ln(10)
 
-            # Exemplo de como adicionar os dados da tabela ao PDF
             for index, row in df_report.iterrows():
-                # Ajuste conforme as colunas do seu df_report
                 texto_linha = f"{row.get(col_data_df, 'Data')} | {row.iloc[1] if len(row) > 1 else 'Valor'}"
                 pdf.cell(200, 10, txt=texto_linha, ln=True)
 
-            # Salva ou disponibiliza o arquivo
-            output_file = "relatorio.pdf"
-            pdf.output(output_file)
+            # 5. GERAR O DOWNLOAD (O comando que faltava)
+            pdf_bytes = pdf.output(dest='S').encode('latin-1')
             
-            st.success(f"PDF gerado com sucesso! Período: {pd.to_datetime(b_ini_atual).strftime('%d/%m/%Y')} a {pd.to_datetime(b_fim_atual).strftime('%d/%m/%Y')}")
+            st.success("PDF gerado com sucesso!")
+            
+            st.download_button(
+                label="📥 Clique aqui para baixar o PDF",
+                data=pdf_bytes,
+                file_name="relatorio_financas.pdf",
+                mime="application/pdf"
+            )
 
         except Exception as e:
             st.error(f"Erro ao gerar o PDF: {e}")
