@@ -1089,49 +1089,36 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     df_tela = df_base.copy()
    
-   # Botão para processar e gerar o documento
-    if st.button("📄 Gerar PDF"):
+  if st.button("📄 Gerar PDF"):
         try:
-            # 1. Pega os dados
+            # 1. Copia os dados
             df_report = df_tela.copy()
-
-            # --- FILTRO DO PERÍODO NO PDF ---
-            # Converte a coluna de data para o formato datetime, se não estiver
-            df_report['DT_FILTRO'] = pd.to_datetime(df_report['DT_FILTRO'], errors='coerce')
-            
-            # Filtra o DataFrame para pegar apenas o que está entre b_ini e b_fim
-            df_report = df_report[
-                (df_report['DT_FILTRO'] >= pd.to_datetime(b_ini)) & 
-                (df_report['DT_FILTRO'] <= pd.to_datetime(b_fim))
-            ]
-            # ---------------------------------
-            
             import pandas as pd
-            from datetime import datetime
             
-            # 2. DEFINIÇÃO DE SEGURANÇA (O segredo está aqui)
-            # Criamos b_ini e b_fim com valores padrão e já formatados como data
-            # Assim, qualquer código abaixo que chame b_ini ou b_fim vai funcionar.
-            
-            banco_nome = banco_relatorio if 'banco_relatorio' in locals() else "Todos os Bancos"
-            
-            b_ini = pd.to_datetime(b_ini) if 'b_ini' in locals() else datetime.now()
-            b_fim = pd.to_datetime(b_fim) if 'b_fim' in locals() else datetime.now()
-
-            # 3. GARANTIA DA DATA DA TABELA (DT_FILTRO)
+            # 2. Garante a coluna DT_FILTRO (procura qualquer coluna de data)
             col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             if col_data_df:
                 df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
             else:
                 df_report['DT_FILTRO'] = pd.to_datetime('1900-01-01')
-            
-            df_report = df_report.sort_values(by='DT_FILTRO')
 
-            # 4. Inicializa o PDF
+            # 3. Definição das datas (Segurança)
+            b_ini = pd.to_datetime(b_ini) if 'b_ini' in locals() else pd.to_datetime('today')
+            b_fim = pd.to_datetime(b_fim) if 'b_fim' in locals() else pd.to_datetime('today')
+            banco_nome = banco_relatorio if 'banco_relatorio' in locals() else "Todos os Bancos"
+
+            # 4. FILTRAGEM SEGURA (Aqui garantimos que os dados batem com a data)
+            # Remove linhas onde a data é nula para não dar erro no filtro
+            df_report = df_report.dropna(subset=['DT_FILTRO'])
+            df_report = df_report[
+                (df_report['DT_FILTRO'] >= b_ini) & 
+                (df_report['DT_FILTRO'] <= b_fim)
+            ]
+
+            # 5. Inicializa o PDF
             from fpdf import FPDF
             pdf = FPDF()
-            pdf.add_page()
-            
+            pdf.add_page()            
             # AGORA, quando você usar b_ini.strftime(...) lá embaixo, vai funcionar, 
             # porque b_ini já é uma data real e não uma string!
           
