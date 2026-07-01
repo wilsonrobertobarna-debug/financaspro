@@ -1123,26 +1123,20 @@ if aba == "📋 Relatório PDF":
             df_report = df_report[(df_report['Vencimento'] >= pd.to_datetime(b_ini_atual)) & 
                                   (df_report['Vencimento'] <= pd.to_datetime(b_fim_atual))]
             
-            # Inicializa PDF Paisagem
             pdf = FPDF('L', 'mm', 'A4')
             pdf.add_page()
             
-            # Cabeçalho
-            #pdf.set_font("Arial", 'B', 14)
-            #pdf.cell(200, 10, txt=f"Relatorio: {banco_relatorio}", ln=True)
-            #pdf.cell(200, 10, txt=f"Periodo: {b_ini_atual.strftime('%d/%m/%Y')} a {b_fim_atual.strftime('%d/%m/%Y')}", ln=True)
-            #pdf.ln(5)
-
             # TÍTULO BONITO (Este é o único que deve ficar)
             pdf.set_font("Arial", 'B', 16)
             pdf.cell(0, 15, "RELATÓRIO FINANCEIRO DETALHADO", ln=True, align='C')
             pdf.line(10, 25, 280, 25) # Linha horizontal
             pdf.ln(5)
 
+            # SUBTÍTULO
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(0, 10, f"Banco: {banco_relatorio} | Período: {b_ini_atual.strftime('%d/%m/%Y')} a {b_fim_atual.strftime('%d/%m/%Y')}", ln=True, align='C')
             pdf.ln(10)
-            
+        
             # Cabeçalho da Tabela
             pdf.set_font("Arial", 'B', 9)
             colunas = [("Venc.", 25), ("Benefic.", 45), ("Descricao", 50), ("Banco", 30), ("Tipo", 20), ("Status", 20), ("Valor", 25), ("Acumul.", 25)]
