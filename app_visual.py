@@ -1070,7 +1070,7 @@ if aba == "📋 Relatório PDF":
     
     # Status
     opcoes_status = ["Todos", "Pago", "Pendente"]
-    #idx_status = opcoes_status.index(st.session_state.get('busca_status', "Todos"))
+    idx_status = opcoes_status.index(st.session_state.get('busca_status', "Todos"))
     busca_status = col_rel5.selectbox("📌 Status:", opcoes_status, index=idx_status, key="sel_status")
     st.session_state.busca_status = busca_status
     
