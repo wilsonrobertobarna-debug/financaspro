@@ -1088,6 +1088,22 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     # FILTRO: BENEFICIÁRIO (NA LATERAL)
     # -------------------------------------------------------------------------
+
+    # --- DEFINIÇÃO DOS FILTROS (FORA DO BOTÃO) ---
+    st.subheader("Filtros para Relatório")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        filtro_banco = st.selectbox("Banco", ["Todos", "Inter", "Bradesco", "Nu"])
+    with col2:
+        filtro_beneficiario = st.text_input("Buscar Beneficiário")
+    with col3:
+        filtro_tipo = st.selectbox("Tipo", ["Todos", "Receita", "Despesa"])
+    with col4:
+        filtro_status = st.selectbox("Status", ["Todos", "Pago", "Pendente"])
+
+
+    
     df_tela = df_base.copy()
     
    
@@ -1101,20 +1117,7 @@ if aba == "📋 Relatório PDF":
             df_rep = df_tela.copy()
             
             # Garante que a coluna de data seja tipo DATA (essencial para ordenar)
-            df_rep['Vencimento'] = pd.to_datetime(df_rep['Vencimento'], format="%d/%m/%Y", errors='coerce')
-            
-            # --- FILTROS ---
-            if filtro_banco != "Todos":
-                df_rep = df_rep[df_rep['Banco'].astype(str) == str(filtro_banco)]
-            
-            if filtro_beneficiario:
-                df_rep = df_rep[df_rep['Beneficiário'].astype(str).str.contains(filtro_beneficiario, case=False, na=False)]
-            
-            if filtro_tipo != "Todos":
-                df_rep = df_rep[df_rep['Tipo'].astype(str) == str(filtro_tipo)]
-            
-            if filtro_status != "Todos":
-                df_rep = df_rep[df_rep['Status'].astype(str) == str(filtro_status)]
+            df_rep['Vencimento'] = pd.to_datetime(df_rep['Vencimento'], format="%d/%m/%Y", errors='coerce')            
             
             # --- ORDENAÇÃO ---
             # Ordena pela data de vencimento
