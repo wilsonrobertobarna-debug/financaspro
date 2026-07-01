@@ -1091,7 +1091,6 @@ if aba == "📋 Relatório PDF":
     df_tela = df_base.copy()
    
 # Botão para processar e gerar o documento
-    st.write(df_tela.columns)
     if st.button("📄 Gerar PDF"):
         try:
             import pandas as pd
@@ -1110,86 +1109,62 @@ if aba == "📋 Relatório PDF":
             b_nome_exibir = banco_relatorio if 'banco_relatorio' in locals() else "Todos os Bancos"
 
             # 2. Prepara os dados
+            # 1. FILTRAGEM CORRETA (Isso resolve o problema de vir tudo)
             df_report = df_tela.copy()
+            # Filtra pelo banco, se não for "Todos"
+            if banco_relatorio != "Todos":
+                df_report = df_report[df_report['Banco'] == banco_relatorio]
             
-            col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
-            if col_data_df:
-                df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
-            else:
-                df_report['DT_FILTRO'] = pd.to_datetime('1900-01-01')
+            # Filtra data
+            df_report['DT_FILTRO'] = pd.to_datetime(df_report['Vencimento'], format="%d/%m/%Y", errors='coerce')
+            df_report = df_report[(df_report['DT_FILTRO'] >= pd.to_datetime(b_ini_atual)) & 
+                                  (df_report['DT_FILTRO'] <= pd.to_datetime(b_fim_atual))]
 
-            # 3. Filtra os dados
-            df_report = df_report.dropna(subset=['DT_FILTRO'])
-            df_report = df_report[
-                (df_report['DT_FILTRO'] >= pd.to_datetime(b_ini_atual)) & 
-                (df_report['DT_FILTRO'] <= pd.to_datetime(b_fim_atual))
-            ]
-
-         # 4. Inicializa o PDF
-            pdf = FPDF()
+            # 2. PDF em PAISAGEM (Isso resolve a sobreposição de colunas)
+            pdf = FPDF('L', 'mm', 'A4') # 'L' = Landscape (Paisagem)
             pdf.add_page()
-            pdf.set_font("Arial", size=12)
-
-            # Cabeçalhos
-            pdf.cell(200, 10, txt=f"Relatorio: {b_nome_exibir}", ln=True, align='C')
-            pdf.cell(200, 10, txt=f"Periodo: {pd.to_datetime(b_ini_atual).strftime('%d/%m/%Y')} a {pd.to_datetime(b_fim_atual).strftime('%d/%m/%Y')}", ln=True, align='C')
-            pdf.ln(10)
+            
+            # Títulos à esquerda
+            pdf.set_font("Arial", 'B', 14)
+            pdf.cell(200, 10, txt=f"Relatorio: {banco_relatorio}", ln=True)
+            pdf.cell(200, 10, txt=f"Periodo: {b_ini_atual.strftime('%d/%m/%Y')} a {b_fim_atual.strftime('%d/%m/%Y')}", ln=True)
+            pdf.ln(5)
 
             # Cabeçalho da Tabela
-            pdf.set_font("Arial", 'B', 8)
-            # Títulos alinhados à esquerda (ajustado para caber Descrição)
-            pdf.cell(20, 8, "Vencimento", border=1)
-            pdf.cell(30, 8, "Beneficiário", border=1)
-            pdf.cell(35, 8, "Descrição", border=1) # Coluna nova
-            pdf.cell(20, 8, "Banco", border=1)
-            pdf.cell(15, 8, "Tipo", border=1)
-            pdf.cell(15, 8, "Status", border=1)
-            pdf.cell(20, 8, "Valor", border=1)
-            pdf.cell(20, 8, "Acumul.", border=1)
+            pdf.set_font("Arial", 'B', 9)
+            # Aumentamos as larguras para dar espaço e não sobrepor
+            colunas = [("Venc.", 25), ("Benefic.", 45), ("Descricao", 50), ("Banco", 30), ("Tipo", 20), ("Status", 20), ("Valor", 25), ("Acumul.", 25)]
+            for col, larg in colunas:
+                pdf.cell(larg, 8, col, border=1)
             pdf.ln()
 
-            pdf.set_font("Arial", size=8)
+            # 3. Linhas com cor vermelha para "Despesa" E valor negativo
+            pdf.set_font("Arial", size=9)
             acumulado = 0
             for index, row in df_report.iterrows():
-                # Obter dados (Ajuste o nome das colunas se necessário)
-                venc_str = str(row.get('Vencimento', ''))
-                benef_str = str(row.get('Beneficiário', ''))
-                desc_str = str(row.get('Descrição', ''))
-                banco_str = str(row.get('Banco', ''))
-                tipo_str = str(row.get('Tipo', ''))
-                status_str = str(row.get('Status', ''))
-                
-                # Conversão segura do valor
                 val_raw = row.get('Valor', 0)
                 try:
                     valor_float = float(str(val_raw).replace(',', '.'))
                 except:
                     valor_float = 0.0
-                
                 acumulado += valor_float
                 
-                # Função interna para cor
-                def get_color(val):
-                    return (255, 0, 0) if val < 0 else (0, 0, 0)
+                # Cor: Vermelho se for Despesa OU Valor < 0
+                tipo = str(row.get('Tipo', ''))
+                is_negativo = valor_float < 0 or "Despesa" in tipo
+                cor = (255, 0, 0) if is_negativo else (0, 0, 0)
+                pdf.set_text_color(*cor)
 
-                # Imprimir Linha
-                pdf.cell(20, 8, venc_str, border=1)
-                pdf.cell(30, 8, benef_str, border=1)
-                pdf.cell(35, 8, desc_str, border=1)
-                pdf.cell(20, 8, banco_str, border=1)
-                pdf.cell(15, 8, tipo_str, border=1)
-                pdf.cell(15, 8, status_str, border=1)
-                
-                # Valor com cor
-                pdf.set_text_color(*get_color(valor_float))
-                pdf.cell(20, 8, f"{valor_float:,.2f}", border=1)
-                
-                # Acumulado com cor
-                pdf.set_text_color(*get_color(acumulado))
-                pdf.cell(20, 8, f"{acumulado:,.2f}", border=1)
-                
-                pdf.set_text_color(0, 0, 0) # Reset para preto
+                pdf.cell(25, 8, str(row.get('Vencimento', '')), border=1)
+                pdf.cell(45, 8, str(row.get('Beneficiário', '')), border=1)
+                pdf.cell(50, 8, str(row.get('Descrição', '')), border=1)
+                pdf.cell(30, 8, str(row.get('Banco', '')), border=1)
+                pdf.cell(20, 8, tipo, border=1)
+                pdf.cell(20, 8, str(row.get('Status', '')), border=1)
+                pdf.cell(25, 8, f"{valor_float:,.2f}", border=1)
+                pdf.cell(25, 8, f"{acumulado:,.2f}", border=1)
                 pdf.ln()
+                pdf.set_text_color(0, 0, 0) # Reset para preto
             
             # 5. GERAR O DOWNLOAD
             pdf_bytes = pdf.output(dest='S').encode('latin-1')
