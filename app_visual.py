@@ -1091,6 +1091,7 @@ if aba == "📋 Relatório PDF":
     df_tela = df_base.copy()
    
 # Botão para processar e gerar o documento
+    st.write(df_tela.columns)
     if st.button("📄 Gerar PDF"):
         try:
             import pandas as pd
@@ -1134,28 +1135,39 @@ if aba == "📋 Relatório PDF":
             pdf.cell(200, 10, txt=f"Periodo: {pd.to_datetime(b_ini_atual).strftime('%d/%m/%Y')} a {pd.to_datetime(b_fim_atual).strftime('%d/%m/%Y')}", ln=True, align='C')
             pdf.ln(10)
 
-          # Cabeçalho da Tabela - Ajustado para mais colunas
-            pdf.set_font("Arial", 'B', 10) # Fonte menor para caber tudo
-            pdf.cell(25, 10, "Data", border=1)
-            pdf.cell(50, 10, "Beneficiario", border=1)
-            pdf.cell(40, 10, "Banco", border=1)
-            pdf.cell(30, 10, "Valor", border=1)
+            # 1. Cabeçalho da Tabela (Ajustado para mais colunas)
+            pdf.set_font("Arial", 'B', 8) # Fonte menor para caber na página
+            # Larguras: Data(20), Benef(40), Banco(30), Tipo(20), Status(20), Valor(25), Acum(25) = 180 total
+            pdf.cell(20, 8, "Data", border=1)
+            pdf.cell(40, 8, "Benefic.", border=1)
+            pdf.cell(30, 8, "Banco", border=1)
+            pdf.cell(20, 8, "Tipo", border=1)
+            pdf.cell(20, 8, "Status", border=1)
+            pdf.cell(25, 8, "Valor", border=1)
+            pdf.cell(25, 8, "Acumul.", border=1)
             pdf.ln()
 
-            # Linhas de dados
-            pdf.set_font("Arial", size=10)
+            # 2. Linhas de dados
+            pdf.set_font("Arial", size=8)
+            acumulado = 0
             for index, row in df_report.iterrows():
-                # Tente ajustar os nomes 'DATA', 'BENEFICIARIO', 'BANCO', 'VALOR' 
-                # para exatamente como estão escritos no seu DataFrame (df_tela)
+                # AJUSTE OS NOMES ABAIXO PARA OS NOMES EXATOS DO SEU DATAFRAME
                 data_str = str(row.get('DATA', '')) 
                 benef_str = str(row.get('BENEFICIARIO', ''))
                 banco_str = str(row.get('BANCO', ''))
-                valor_str = str(row.get('VALOR', ''))
-
-                pdf.cell(25, 10, data_str, border=1)
-                pdf.cell(50, 10, benef_str, border=1)
-                pdf.cell(40, 10, banco_str, border=1)
-                pdf.cell(30, 10, valor_str, border=1)
+                tipo_str = str(row.get('TIPO', ''))
+                status_str = str(row.get('STATUS', ''))
+                valor_float = float(row.get('VALOR', 0))
+                
+                acumulado += valor_float # Soma o valor acumulado
+                
+                pdf.cell(20, 8, data_str, border=1)
+                pdf.cell(40, 8, benef_str, border=1)
+                pdf.cell(30, 8, banco_str, border=1)
+                pdf.cell(20, 8, tipo_str, border=1)
+                pdf.cell(20, 8, status_str, border=1)
+                pdf.cell(25, 8, f"{valor_float:,.2f}", border=1)
+                pdf.cell(25, 8, f"{acumulado:,.2f}", border=1)
                 pdf.ln()
 
             
