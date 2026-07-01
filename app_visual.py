@@ -1128,10 +1128,10 @@ if aba == "📋 Relatório PDF":
             pdf.add_page()
             
             # Cabeçalho
-            pdf.set_font("Arial", 'B', 14)
+            #pdf.set_font("Arial", 'B', 14)
             #pdf.cell(200, 10, txt=f"Relatorio: {banco_relatorio}", ln=True)
             #pdf.cell(200, 10, txt=f"Periodo: {b_ini_atual.strftime('%d/%m/%Y')} a {b_fim_atual.strftime('%d/%m/%Y')}", ln=True)
-            pdf.ln(5)
+            #pdf.ln(5)
 
             # TÍTULO BONITO (Este é o único que deve ficar)
             pdf.set_font("Arial", 'B', 16)
