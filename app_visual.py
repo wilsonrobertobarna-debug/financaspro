@@ -1103,7 +1103,10 @@ if aba == "📋 Relatório PDF":
             df_rep = df_tela.copy()
             
             # Garante que a coluna de data seja tipo DATA (essencial para ordenar)
-            df_rep['Vencimento'] = pd.to_datetime(df_rep['Vencimento'], format="%d/%m/%Y", errors='coerce')            
+            df_rep['Vencimento'] = pd.to_datetime(df_rep['Vencimento'], format="%d/%m/%Y", errors='coerce')  
+            # --- ADICIONE ESTES NOVOS FILTROS AQUI ---
+            if filtro_tipo != "Todos": # <--- A VARIÁVEL QUE VOCÊ USA NA TELA
+            df_rep = df_rep[df_rep['Tipo'] == filtro_tipo]
             
             # --- ORDENAÇÃO ---
             # Ordena pela data de vencimento
