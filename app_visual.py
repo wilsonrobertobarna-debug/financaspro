@@ -1127,7 +1127,7 @@ if aba == "📋 Relatório PDF":
             pdf.cell(0, 10, f"Banco: {banco_relatorio} | Saldo Inicial: {saldo_acumulado:,.2f}", ln=True, align='C')
             pdf.ln(5)
 
-           pdf.set_font("Arial", '', 8)
+            pdf.set_font("Arial", '', 8)
             for _, row in df_rep.iterrows():
                 # Tenta converter o valor com segurança
                 val_raw = row.get('Valor', 0)
