@@ -1093,7 +1093,7 @@ if aba == "📋 Relatório PDF":
              
     df_tela = df_base.copy()
        
-  if st.button("📄 Gerar PDF"):
+    if st.button("📄 Gerar PDF"):
         try:
             import pandas as pd
             from fpdf import FPDF
