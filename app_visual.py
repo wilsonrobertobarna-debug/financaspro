@@ -1094,6 +1094,18 @@ if aba == "📋 Relatório PDF":
         try:
             # 1. Pega os dados
             df_report = df_tela.copy()
+
+            # --- FILTRO DO PERÍODO NO PDF ---
+            # Converte a coluna de data para o formato datetime, se não estiver
+            df_report['DT_FILTRO'] = pd.to_datetime(df_report['DT_FILTRO'], errors='coerce')
+            
+            # Filtra o DataFrame para pegar apenas o que está entre b_ini e b_fim
+            df_report = df_report[
+                (df_report['DT_FILTRO'] >= pd.to_datetime(b_ini)) & 
+                (df_report['DT_FILTRO'] <= pd.to_datetime(b_fim))
+            ]
+            # ---------------------------------
+            
             import pandas as pd
             from datetime import datetime
             
