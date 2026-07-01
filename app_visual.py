@@ -1125,7 +1125,7 @@ if aba == "📋 Relatório PDF":
             #saldo_acumulado = df_base[df_base['Vencimento'] < pd.to_datetime(b_ini)]['Valor'].sum()
             saldo_acumulado = 0.0
             # Isso vai escrever no topo do seu PDF o total de registros somados
-            pdf.cell(0, 10, f"Total de registros no histórico: {len(df_base[df_base['Vencimento'] < pd.to_datetime(b_ini)])}", ln=True, align='C')
+            #pdf.cell(0, 10, f"Total de registros no histórico: {len(df_base[df_base['Vencimento'] < pd.to_datetime(b_ini)])}", ln=True, align='C')
             
             # 3. Filtro do período para o relatório
             df_rep = df_base[(df_base['Vencimento'] >= pd.to_datetime(b_ini)) & 
