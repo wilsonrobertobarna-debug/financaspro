@@ -1142,10 +1142,25 @@ if aba == "📋 Relatório PDF":
             pdf.ln()
 
             # Loop de dados
-            pdf.set_font("Arial", '', 8)
+pdf.set_font("Arial", '', 8)
+            
+            # Definimos um limite de altura antes de pular página (200mm é seguro para A4 Paisagem)
+            LIMITE_PAGINA = 180 
+
             for _, row in df_rep.iterrows():
+                # 1. VERIFICAÇÃO DE ESPAÇO: Se estiver perto do fim, pula a página
+                if pdf.get_y() > LIMITE_PAGINA:
+                    pdf.add_page()
+                    # Repete o cabeçalho na nova página para facilitar a leitura
+                    pdf.set_font("Arial", 'B', 8)
+                    colunas = [("Venc.", 20), ("Benefic.", 40), ("Descricao", 70), ("Banco", 25), ("Tipo", 20), ("Status", 20), ("Valor", 25), ("Saldo", 25)]
+                    for col, larg in colunas:
+                        pdf.cell(larg, 7, col, border=1)
+                    pdf.ln()
+                    pdf.set_font("Arial", '', 8)
+
+                # 2. SEU CÁLCULO E LÓGICA DE LINHA
                 val_limpo = row['Valor']
-                
                 if "Despesa" in str(row.get('Tipo', '')):
                     saldo_acumulado -= val_limpo
                     val_exibir = -val_limpo
@@ -1155,7 +1170,7 @@ if aba == "📋 Relatório PDF":
                     val_exibir = val_limpo
                     pdf.set_text_color(0, 0, 0)
 
-                # Desenho das células
+                # 3. IMPRESSÃO DA LINHA
                 x, y = pdf.get_x(), pdf.get_y()
                 pdf.cell(20, 6, row['Vencimento'].strftime('%d/%m/%Y'), border=1)
                 pdf.cell(40, 6, str(row.get('Beneficiário', '')), border=1)
