@@ -1150,9 +1150,9 @@ if aba == "📋 Relatório PDF":
                 # Pega o valor da segunda coluna
                 valor_str = str(row.iloc[1] if len(row) > 1 else '')
                 
-               pdf.cell(40, 10, data_str, border=1, align='C') # 'C' centraliza a data
-               pdf.cell(100, 10, valor_str, border=1, align='R') # 'R' alinha o valor à direita
-               pdf.ln()
+            pdf.cell(40, 10, data_str, border=1, align='C') # 'C' centraliza a data
+            pdf.cell(100, 10, valor_str, border=1, align='R') # 'R' alinha o valor à direita
+            pdf.ln()
             # 5. GERAR O DOWNLOAD
             pdf_bytes = pdf.output(dest='S').encode('latin-1')
             
