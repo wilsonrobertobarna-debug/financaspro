@@ -1096,65 +1096,56 @@ if aba == "📋 Relatório PDF":
             from fpdf import FPDF
             from datetime import datetime
 
-            # 1. PREPARAÇÃO
+            # 1. Definições Iniciais
             datas = st.session_state.get('periodo_pdf', [datetime.now(), datetime.now()])
             b_ini = datas[0] if isinstance(datas, (list, tuple)) else datas
             b_fim = datas[1] if isinstance(datas, (list, tuple)) else datas
             
-            # Limpeza do DF
-            df_rep = df_tela.copy()
-            if banco_relatorio != "Todos":
-                df_rep = df_rep[df_rep['Banco'].astype(str) == str(banco_relatorio)]
-            
-            df_rep['Vencimento'] = pd.to_datetime(df_rep['Vencimento'], format="%d/%m/%Y", errors='coerce')
-            
-            # Função interna para limpar valores
+            # Limpeza do DataFrame original
             def limpar_valor(val):
                 return float(str(val).replace('.', '').replace(',', '.')) if val else 0.0
 
-            # 1. Filtro base para o cálculo (usando o df original df_tela)
             df_base = df_tela.copy()
             df_base['Vencimento'] = pd.to_datetime(df_base['Vencimento'], format="%d/%m/%Y", errors='coerce')
-            df_base['Valor'] = df_base['Valor'].apply(limpar_valor) 
+            df_base['Valor'] = df_base['Valor'].apply(limpar_valor)
 
-            # Filtra o histórico apenas para o banco selecionado (se não for "Todos")
+            # Filtro do Banco
             if banco_relatorio != "Todos":
                 df_base = df_base[df_base['Banco'].astype(str) == str(banco_relatorio)]
 
-            # 2. Saldo Inicial: Soma tudo ANTES da data de início (b_ini)
-            #saldo_acumulado = df_base[df_base['Vencimento'] < pd.to_datetime(b_ini)]['Valor'].sum()
-            saldo_acumulado = 0.0
-            # Isso vai escrever no topo do seu PDF o total de registros somados
-            pdf.cell(0, 10, f"Total de registros no histórico: {len(df_base[df_base['Vencimento'] < pd.to_datetime(b_ini)])}", ln=True, align='C')
+            # Cálculo de Saldo (Separando Receitas e Despesas para não errar)
+            hist_anterior = df_base[df_base['Vencimento'] < pd.to_datetime(b_ini)]
             
-            # 3. Filtro do período para o relatório
+            receitas = hist_anterior[hist_anterior['Tipo'] != "Despesa"]['Valor'].sum()
+            despesas = hist_anterior[hist_anterior['Tipo'] == "Despesa"]['Valor'].sum()
+            saldo_acumulado = receitas - despesas
+            
+            # Filtro do período do relatório
             df_rep = df_base[(df_base['Vencimento'] >= pd.to_datetime(b_ini)) & 
                              (df_base['Vencimento'] <= pd.to_datetime(b_fim))]
-            
-            # 4. Geração do PDF
+
+            # 2. Geração do PDF
             pdf = FPDF('L', 'mm', 'A4')
             pdf.add_page()
             
-            # Título e Subtítulo
             pdf.set_font("Arial", 'B', 16)
             pdf.cell(0, 10, "RELATÓRIO FINANCEIRO", ln=True, align='C')
-            
             pdf.set_font("Arial", '', 10)
             pdf.cell(0, 10, f"Banco: {banco_relatorio} | Saldo Inicial: {saldo_acumulado:,.2f}", ln=True, align='C')
             pdf.ln(5)
 
+            # Cabeçalho da tabela
+            pdf.set_font("Arial", 'B', 8)
+            colunas = [("Venc.", 20), ("Benefic.", 40), ("Descricao", 70), ("Banco", 25), ("Tipo", 20), ("Status", 20), ("Valor", 25), ("Saldo", 25)]
+            for col, larg in colunas:
+                pdf.cell(larg, 7, col, border=1)
+            pdf.ln()
+
+            # Loop de dados
             pdf.set_font("Arial", '', 8)
             for _, row in df_rep.iterrows():
-                # Tenta converter o valor com segurança
-                val_raw = row.get('Valor', 0)
-                # Remove pontos de milhar, garante que vírgula é ponto decimal
-                str_val = str(val_raw).replace('.', '').replace(',', '.')
-                try:
-                    val_limpo = float(str_val)
-                except:
-                    val_limpo = 0.0
+                val_limpo = row['Valor']
                 
-                # Regra de Saldo: Subtrai se for despesa
                 if "Despesa" in str(row.get('Tipo', '')):
                     saldo_acumulado -= val_limpo
                     val_exibir = -val_limpo
@@ -1164,11 +1155,7 @@ if aba == "📋 Relatório PDF":
                     val_exibir = val_limpo
                     pdf.set_text_color(0, 0, 0)
 
-                # Verifica se ainda cabe na página
-                if pdf.get_y() > 180: # Se chegar perto do fim da página
-                    pdf.add_page()
-                    # (Repetir aqui o cabeçalho da tabela se quiser que ele apareça na nova página)
-                
+                # Desenho das células
                 x, y = pdf.get_x(), pdf.get_y()
                 pdf.cell(20, 6, row['Vencimento'].strftime('%d/%m/%Y'), border=1)
                 pdf.cell(40, 6, str(row.get('Beneficiário', '')), border=1)
@@ -1180,12 +1167,14 @@ if aba == "📋 Relatório PDF":
                 pdf.cell(25, 6, f"{val_exibir:,.2f}", border=1)
                 pdf.cell(25, 6, f"{saldo_acumulado:,.2f}", border=1)
                 pdf.ln(6)
-            # Download - Único lugar que tem comando de escrita para o usuário
+                pdf.set_text_color(0, 0, 0)
+
+            # Botão de Download
             st.download_button("📥 Baixar PDF", data=pdf.output(dest='S').encode('latin-1'), file_name="relatorio.pdf", mime="application/pdf")
-            st.success("PDF pronto!")
+            st.success("PDF gerado!")
 
         except Exception as e:
-            st.error(f"Erro: {e}")
+            st.error(f"Erro ao processar: {e}")
            
             
             # REGRA 1: Se for Cartão de Crédito, o saldo inicial DEVE vir zerado
