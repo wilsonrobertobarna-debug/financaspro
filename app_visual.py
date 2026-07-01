@@ -1097,34 +1097,31 @@ if aba == "📋 Relatório PDF":
             from fpdf import FPDF
             from datetime import datetime
 
-            # 1. CAPTURA SEGURA DAS DATAS (Lendo a lista periodo_pdf)
-            # Se 'periodo_pdf' existir no session_state, usamos ele. 
-            # Caso contrário, usamos a data de hoje.
+            # 1. CAPTURA SEGURA DAS DATAS
             datas = st.session_state.get('periodo_pdf', [datetime.now(), datetime.now()])
-            
-            # Garantir que temos início e fim (mesmo que o usuário selecione apenas um dia)
             b_ini_atual = datas[0] if isinstance(datas, (list, tuple)) else datas
             b_fim_atual = datas[1] if isinstance(datas, (list, tuple)) else datas
             
-            b_nome_exibir = banco_relatorio if 'banco_relatorio' in locals() else "Todos os Bancos"
-
-            # 2. Prepara os dados
-            # 1. FILTRAGEM CORRETA (Isso resolve o problema de vir tudo)
+            # 2. PREPARAÇÃO DOS DADOS
             df_report = df_tela.copy()
-            # Filtra pelo banco, se não for "Todos"
             if banco_relatorio != "Todos":
                 df_report = df_report[df_report['Banco'] == banco_relatorio]
             
-            # Filtra data
+            # Converte data para filtro
             df_report['DT_FILTRO'] = pd.to_datetime(df_report['Vencimento'], format="%d/%m/%Y", errors='coerce')
+            
+            # SALDO INICIAL: Soma tudo anterior ao período de início
+            saldo_inicial = df_report[df_report['DT_FILTRO'] < pd.to_datetime(b_ini_atual)]['Valor'].sum()
+            
+            # Filtra o relatório apenas para o período desejado
             df_report = df_report[(df_report['DT_FILTRO'] >= pd.to_datetime(b_ini_atual)) & 
                                   (df_report['DT_FILTRO'] <= pd.to_datetime(b_fim_atual))]
-
-            # 2. PDF em PAISAGEM (Isso resolve a sobreposição de colunas)
-            pdf = FPDF('L', 'mm', 'A4') # 'L' = Landscape (Paisagem)
+            
+            # Inicializa PDF Paisagem
+            pdf = FPDF('L', 'mm', 'A4')
             pdf.add_page()
             
-            # Títulos à esquerda
+            # Cabeçalho
             pdf.set_font("Arial", 'B', 14)
             pdf.cell(200, 10, txt=f"Relatorio: {banco_relatorio}", ln=True)
             pdf.cell(200, 10, txt=f"Periodo: {b_ini_atual.strftime('%d/%m/%Y')} a {b_fim_atual.strftime('%d/%m/%Y')}", ln=True)
@@ -1132,55 +1129,52 @@ if aba == "📋 Relatório PDF":
 
             # Cabeçalho da Tabela
             pdf.set_font("Arial", 'B', 9)
-            # Aumentamos as larguras para dar espaço e não sobrepor
             colunas = [("Venc.", 25), ("Benefic.", 45), ("Descricao", 50), ("Banco", 30), ("Tipo", 20), ("Status", 20), ("Valor", 25), ("Acumul.", 25)]
             for col, larg in colunas:
                 pdf.cell(larg, 8, col, border=1)
             pdf.ln()
 
-            # 3. Linhas com cor vermelha para "Despesa" E valor negativo
+            # Processamento das Linhas
             pdf.set_font("Arial", size=9)
-            acumulado = 0
+            acumulado = saldo_inicial
+            
             for index, row in df_report.iterrows():
                 val_raw = row.get('Valor', 0)
-                try:
-                    valor_float = float(str(val_raw).replace(',', '.'))
-                except:
-                    valor_float = 0.0
+                valor_float = float(str(val_raw).replace(',', '.')) if val_raw else 0.0
                 acumulado += valor_float
                 
                 # Cor: Vermelho se for Despesa OU Valor < 0
-                tipo = str(row.get('Tipo', ''))
-                is_negativo = valor_float < 0 or "Despesa" in tipo
-                cor = (255, 0, 0) if is_negativo else (0, 0, 0)
-                pdf.set_text_color(*cor)
+                is_negativo = valor_float < 0 or "Despesa" in str(row.get('Tipo', ''))
+                pdf.set_text_color(255, 0, 0) if is_negativo else pdf.set_text_color(0, 0, 0)
+
+                # Coordenadas para o multi_cell
+                x_antes = pdf.get_x()
+                y_antes = pdf.get_y()
 
                 pdf.cell(25, 8, str(row.get('Vencimento', '')), border=1)
                 pdf.cell(45, 8, str(row.get('Beneficiário', '')), border=1)
-                pdf.cell(50, 8, str(row.get('Descrição', '')), border=1)
+                
+                # Descrição com quebra de linha (multi_cell)
+                pdf.multi_cell(50, 8, str(row.get('Descrição', '')), border=1)
+                
+                # Volta o cursor para o lado da Descrição para continuar
+                pdf.set_xy(x_antes + 25 + 45 + 50, y_antes)
+                
                 pdf.cell(30, 8, str(row.get('Banco', '')), border=1)
-                pdf.cell(20, 8, tipo, border=1)
+                pdf.cell(20, 8, str(row.get('Tipo', '')), border=1)
                 pdf.cell(20, 8, str(row.get('Status', '')), border=1)
                 pdf.cell(25, 8, f"{valor_float:,.2f}", border=1)
                 pdf.cell(25, 8, f"{acumulado:,.2f}", border=1)
-                pdf.ln()
-                pdf.set_text_color(0, 0, 0) # Reset para preto
-            
-            # 5. GERAR O DOWNLOAD
+                pdf.ln(8)
+                pdf.set_text_color(0, 0, 0)
+
+            # Download
             pdf_bytes = pdf.output(dest='S').encode('latin-1')
-            
             st.success("PDF gerado com sucesso!")
-            
-            st.download_button(
-                label="📥 Clique aqui para baixar o PDF",
-                data=pdf_bytes,
-                file_name="relatorio_financas.pdf",
-                mime="application/pdf"
-            )
+            st.download_button("📥 Baixar PDF", data=pdf_bytes, file_name="relatorio.pdf", mime="application/pdf")
 
         except Exception as e:
-            st.error(f"Erro ao gerar o PDF: {e}")
-            
+            st.error(f"Erro ao gerar o PDF: {e}")            
             # ... (o resto do seu código de preenchimento do PDF continua aqui)
             # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
