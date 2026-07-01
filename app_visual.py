@@ -1089,6 +1089,20 @@ if aba == "📋 Relatório PDF":
     # FILTRO: BENEFICIÁRIO (NA LATERAL)
     # -------------------------------------------------------------------------
     df_tela = df_base.copy()
+
+        # --- COLOCAR ESSA PARTE ANTES DO BOTÃO DE PDF ---
+    st.subheader("Filtros para Relatório")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        filtro_banco = st.selectbox("Banco", ["Todos", "Inter", "Bradesco", "Nu"]) # Ajuste conforme seus bancos
+    with col2:
+        filtro_beneficiario = st.text_input("Buscar Beneficiário")
+    with col3:
+        filtro_tipo = st.selectbox("Tipo", ["Todos", "Receita", "Despesa"])
+    with col4:
+        filtro_status = st.selectbox("Status", ["Todos", "Pago", "Pendente"])
+    
    
     if st.button("📄 Gerar PDF"):
         try:
