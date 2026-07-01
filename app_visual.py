@@ -1090,19 +1090,7 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
 
       # 1. Filtros no topo (Defina as variáveis aqui)
-    st.subheader("Filtros")
-    filtro_banco = st.selectbox("Banco", ["Todos", "Inter", "Bradesco", "Nu"])
-    filtro_beneficiario = st.text_input("Buscar Beneficiário")
-    # ... (outros filtros)
-    
-    # 2. Lógica que filtra o que aparece na TELA
-    df_exibicao = df_tela.copy()
-    if filtro_banco != "Todos":
-        df_exibicao = df_exibicao[df_exibicao['Banco'] == filtro_banco]
-    # ... (aplique todos os filtros aqui no df_exibicao)
-    
-    st.dataframe(df_exibicao) # Isso mostra na tela o que foi filtrado
-            
+             
     df_tela = df_base.copy()
        
     if st.button("📄 Gerar PDF"):
