@@ -1405,7 +1405,7 @@ if aba == "📋 Relatório PDF":
     # =========================================================================
     # 7. EXIBIÇÃO DA TABELA NA TELA
     # =========================================================================
-     st.markdown("### 🔍 Lançamentos Filtrados")
+    st.markdown("### 🔍 Lançamentos Filtrados")
 
     df_tela = df_base.copy()
     
