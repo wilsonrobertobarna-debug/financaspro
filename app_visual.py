@@ -1139,7 +1139,7 @@ if aba == "📋 Relatório PDF":
         
             # Cabeçalho da Tabela
             pdf.set_font("Arial", 'B', 9)
-            colunas = [("Venc.", 25), ("Benefic.", 45), ("Descricao", 50), ("Banco", 30), ("Tipo", 20), ("Status", 20), ("Valor", 25), ("Acumul.", 25)]
+            colunas = [("Venc.", 25), ("Benefic.", 45), ("Descricao", 70), ("Banco", 30), ("Tipo", 20), ("Status", 20), ("Valor", 25), ("Acumul.", 25)]
             for col, larg in colunas:
                 pdf.cell(larg, 8, col, border=1)
             pdf.ln()
