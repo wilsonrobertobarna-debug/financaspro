@@ -1142,7 +1142,7 @@ if aba == "📋 Relatório PDF":
             pdf.ln()
 
             # Loop de dados
-pdf.set_font("Arial", '', 8)
+            pdf.set_font("Arial", '', 8)
             
             # Definimos um limite de altura antes de pular página (200mm é seguro para A4 Paisagem)
             LIMITE_PAGINA = 180 
