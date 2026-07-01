@@ -1090,114 +1090,84 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     df_tela = df_base.copy()
    
-# Botão para processar e gerar o documento
-    if st.button("📄 Gerar PDF"):
+if st.button("📄 Gerar PDF"):
         try:
             import pandas as pd
             from fpdf import FPDF
             from datetime import datetime
 
-            # 1. CAPTURA SEGURA DAS DATAS E BANCOS
+            # 1. PREPARAÇÃO
             datas = st.session_state.get('periodo_pdf', [datetime.now(), datetime.now()])
-            b_ini_atual = datas[0] if isinstance(datas, (list, tuple)) else datas
-            b_fim_atual = datas[1] if isinstance(datas, (list, tuple)) else datas
+            b_ini = datas[0] if isinstance(datas, (list, tuple)) else datas
+            b_fim = datas[1] if isinstance(datas, (list, tuple)) else datas
             
-            # USAMOS APENAS A VARIÁVEL QUE VOCÊ JÁ TEM NO SELECTBOX
-            nome_banco_atual = str(banco_relatorio) 
+            # Limpeza do DF
+            df_rep = df_tela.copy()
+            if banco_relatorio != "Todos":
+                df_rep = df_rep[df_rep['Banco'].astype(str) == str(banco_relatorio)]
+            
+            df_rep['Vencimento'] = pd.to_datetime(df_rep['Vencimento'], format="%d/%m/%Y", errors='coerce')
+            
+            # Função interna para limpar valores
+            def limpar_valor(val):
+                return float(str(val).replace('.', '').replace(',', '.')) if val else 0.0
 
-            # 2. PREPARAÇÃO DOS DADOS
-            df_report = df_tela.copy()
+            # Saldo Inicial: Soma tudo antes da data inicial
+            saldo_acumulado = df_rep[df_rep['Vencimento'] < pd.to_datetime(b_ini)]['Valor'].apply(limpar_valor).sum()
             
-            # FILTRO DE BANCO
-            if nome_banco_atual != "Todos":
-                df_report = df_report[df_report['Banco'].astype(str) == nome_banco_atual]
+            # Filtro do período
+            df_rep = df_rep[(df_rep['Vencimento'] >= pd.to_datetime(b_ini)) & (df_rep['Vencimento'] <= pd.to_datetime(b_fim))]
             
-            # GARANTIR QUE VALORES SEJAM NÚMEROS E DATA SEJA DATA
-            df_report['Vencimento'] = pd.to_datetime(df_report['Vencimento'], format="%d/%m/%Y", errors='coerce')
-            df_report['Valor'] = pd.to_numeric(df_report['Valor'].replace(r'[^\d,-]', '', regex=True).str.replace(',', '.'), errors='coerce').fillna(0)
-            
-            # SALDO INICIAL
-            saldo_inicial = df_report[df_report['Vencimento'] < pd.to_datetime(b_ini_atual)]['Valor'].sum()
-            
-            # FILTRO PERÍODO
-            df_report = df_report[(df_report['Vencimento'] >= pd.to_datetime(b_ini_atual)) & 
-                                  (df_report['Vencimento'] <= pd.to_datetime(b_fim_atual))]
-            
+            # 2. PDF
             pdf = FPDF('L', 'mm', 'A4')
             pdf.add_page()
-            
-            # TÍTULO BONITO (Este é o único que deve ficar)
             pdf.set_font("Arial", 'B', 16)
-            pdf.cell(0, 15, "RELATÓRIO FINANCEIRO DETALHADO", ln=True, align='C')
-            pdf.line(10, 25, 280, 25) # Linha horizontal
+            pdf.cell(0, 10, "RELATÓRIO FINANCEIRO", ln=True, align='C')
+            pdf.set_font("Arial", '', 10)
+            pdf.cell(0, 10, f"Banco: {banco_relatorio} | Saldo Inicial: {saldo_acumulado:,.2f}", ln=True, align='C')
             pdf.ln(5)
 
-            # SUBTÍTULO
-            pdf.set_font("Arial", 'B', 12)
-            pdf.cell(0, 10, f"Banco: {banco_relatorio} | Período: {b_ini_atual.strftime('%d/%m/%Y')} a {b_fim_atual.strftime('%d/%m/%Y')}", ln=True, align='C')
-            pdf.ln(10)
-        
-            # Cabeçalho da Tabela
-            pdf.set_font("Arial", 'B', 9)
-            colunas = [("Venc.", 25), ("Benefic.", 45), ("Descricao", 70), ("Banco", 30), ("Tipo", 20), ("Status", 20), ("Valor", 25), ("Acumul.", 25)]
+            # Cabeçalho
+            pdf.set_font("Arial", 'B', 8)
+            colunas = [("Venc.", 20), ("Benefic.", 40), ("Descricao", 70), ("Banco", 25), ("Tipo", 20), ("Status", 20), ("Valor", 25), ("Saldo", 25)]
             for col, larg in colunas:
-                pdf.cell(larg, 8, col, border=1)
+                pdf.cell(larg, 7, col, border=1)
             pdf.ln()
 
-            pdf.set_font("Arial", size=9)
-            acumulado = saldo_inicial
-            
-            for index, row in df_report.iterrows():
-                # LIMPEZA DA DATA
-                data_obj = pd.to_datetime(row.get('Vencimento'), errors='coerce')
-                venc_str = data_obj.strftime('%d/%m/%Y') if pd.notnull(data_obj) else ""
+            # Linhas
+            pdf.set_font("Arial", '', 8)
+            for _, row in df_rep.iterrows():
+                val_limpo = limpar_valor(row.get('Valor', 0))
                 
-                # LIMPEZA E LÓGICA DO VALOR
-                val_raw = row.get('Valor', 0)
-                valor_float = float(str(val_raw).replace('.', '').replace(',', '.'))
-                
-                # AQUI A CORREÇÃO DO ACUMULADO:
-                # Se for Despesa, subtraímos do acumulado.
+                # Regra de Saldo: Se for despesa, subtrai
                 if "Despesa" in str(row.get('Tipo', '')):
-                    acumulado -= valor_float
-                    valor_exibicao = -valor_float # Para mostrar negativo no PDF
+                    saldo_acumulado -= val_limpo
+                    val_exibir = -val_limpo
+                    pdf.set_text_color(255, 0, 0)
                 else:
-                    acumulado += valor_float
-                    valor_exibicao = valor_float
+                    saldo_acumulado += val_limpo
+                    val_exibir = val_limpo
+                    pdf.set_text_color(0, 0, 0)
 
-                # Lógica de cor (Vermelho se for Despesa)
-                is_despesa = "Despesa" in str(row.get('Tipo', ''))
-                pdf.set_text_color(255, 0, 0) if is_despesa else pdf.set_text_color(0, 0, 0)
-
-                # SALVAR POSIÇÃO PARA DESENHAR AS CÉLULAS
-                x_inicio = pdf.get_x()
-                y_inicio = pdf.get_y()
-                
-                pdf.cell(25, 8, venc_str, border=1)
-                pdf.cell(45, 8, str(row.get('Beneficiário', '')), border=1)
-                
-                # DESCRICAO COM MULTI_CELL (Largura maior: 70)
-                pdf.multi_cell(70, 8, str(row.get('Descrição', '')), border=1)
-                
-                # VOLTAR PARA A POSIÇÃO APÓS A DESCRIÇÃO
-                pdf.set_xy(x_inicio + 25 + 45 + 70, y_inicio)
-                
-                pdf.cell(30, 8, str(row.get('Banco', '')), border=1)
-                pdf.cell(20, 8, str(row.get('Tipo', '')), border=1)
-                pdf.cell(20, 8, str(row.get('Status', '')), border=1)
-                pdf.cell(25, 8, f"{valor_exibicao:,.2f}", border=1)
-                pdf.cell(25, 8, f"{acumulado:,.2f}", border=1)
-                
-                pdf.ln(8) # Pula para a próxima linha
+                x, y = pdf.get_x(), pdf.get_y()
+                pdf.cell(20, 7, row['Vencimento'].strftime('%d/%m/%Y'), border=1)
+                pdf.cell(40, 7, str(row.get('Beneficiário', '')), border=1)
+                pdf.multi_cell(70, 7, str(row.get('Descrição', '')), border=1)
+                pdf.set_xy(x + 130, y) # 20+40+70
+                pdf.cell(25, 7, str(row.get('Banco', '')), border=1)
+                pdf.cell(20, 7, str(row.get('Tipo', '')), border=1)
+                pdf.cell(20, 7, str(row.get('Status', '')), border=1)
+                pdf.cell(25, 7, f"{val_exibir:,.2f}", border=1)
+                pdf.cell(25, 7, f"{saldo_acumulado:,.2f}", border=1)
+                pdf.ln(7)
                 pdf.set_text_color(0, 0, 0)
 
-           # Download
-            pdf_bytes = pdf.output(dest='S').encode('latin-1')
-            st.success("PDF gerado com sucesso!")
-            st.download_button("📥 Baixar PDF", data=pdf_bytes, file_name="relatorio.pdf", mime="application/pdf")
+            # Download - Único lugar que tem comando de escrita para o usuário
+            st.download_button("📥 Baixar PDF", data=pdf.output(dest='S').encode('latin-1'), file_name="relatorio.pdf", mime="application/pdf")
+            st.success("PDF pronto!")
 
         except Exception as e:
-            st.error(f"Erro ao gerar o PDF: {e}")
+            st.error(f"Erro: {e}")
            
             
             # REGRA 1: Se for Cartão de Crédito, o saldo inicial DEVE vir zerado
