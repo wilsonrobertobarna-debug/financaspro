@@ -1112,17 +1112,30 @@ if aba == "📋 Relatório PDF":
             def limpar_valor(val):
                 return float(str(val).replace('.', '').replace(',', '.')) if val else 0.0
 
-            # Saldo Inicial: Soma tudo antes da data inicial
-            saldo_acumulado = df_rep[df_rep['Vencimento'] < pd.to_datetime(b_ini)]['Valor'].apply(limpar_valor).sum()
+            # 1. Filtro base para o cálculo (usando o df original df_tela)
+            df_base = df_tela.copy()
+            df_base['Vencimento'] = pd.to_datetime(df_base['Vencimento'], format="%d/%m/%Y", errors='coerce')
+            df_base['Valor'] = df_base['Valor'].apply(limpar_valor) 
+
+            # Filtra o histórico apenas para o banco selecionado (se não for "Todos")
+            if banco_relatorio != "Todos":
+                df_base = df_base[df_base['Banco'].astype(str) == str(banco_relatorio)]
+
+            # 2. Saldo Inicial: Soma tudo ANTES da data de início (b_ini)
+            saldo_acumulado = df_base[df_base['Vencimento'] < pd.to_datetime(b_ini)]['Valor'].sum()
             
-            # Filtro do período
-            df_rep = df_rep[(df_rep['Vencimento'] >= pd.to_datetime(b_ini)) & (df_rep['Vencimento'] <= pd.to_datetime(b_fim))]
+            # 3. Filtro do período para o relatório
+            df_rep = df_base[(df_base['Vencimento'] >= pd.to_datetime(b_ini)) & 
+                             (df_base['Vencimento'] <= pd.to_datetime(b_fim))]
             
-            # 2. PDF
+            # 4. Geração do PDF
             pdf = FPDF('L', 'mm', 'A4')
             pdf.add_page()
+            
+            # Título e Subtítulo
             pdf.set_font("Arial", 'B', 16)
             pdf.cell(0, 10, "RELATÓRIO FINANCEIRO", ln=True, align='C')
+            
             pdf.set_font("Arial", '', 10)
             pdf.cell(0, 10, f"Banco: {banco_relatorio} | Saldo Inicial: {saldo_acumulado:,.2f}", ln=True, align='C')
             pdf.ln(5)
