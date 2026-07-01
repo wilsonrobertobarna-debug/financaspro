@@ -1089,7 +1089,7 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     df_tela = df_base.copy()
    
-  if st.button("📄 Gerar PDF"):
+    if st.button("📄 Gerar PDF"):
         try:
             # 1. Copia os dados
             df_report = df_tela.copy()
