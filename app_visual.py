@@ -516,6 +516,10 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
             # Armazena na sessão
             st.session_state['saldo_calculado'] = saldo
+
+            # --- COLE AQUI O EXPANDER DE DETALHES ---
+        with st.expander("Ver detalhe dos lançamentos"):
+            st.write(dados_filtrados)
         
         if st.button("💬 Enviar WhatsApp"):
             if 'saldo_calculado' in st.session_state:
