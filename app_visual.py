@@ -448,12 +448,12 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 if t_orig == t_dest: 
                     st.error("Escolha bancos diferentes!")
                 else:
-                    # O novo bloco com o tratamento de valor integrado
-                    valor_num = float(t_val) 
-                    v_str = f"{valor_num:.2f}".replace('.', ',')
+                    # Substitua a sua linha de v_str por esta aqui:
+                    v_str = f"{t_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    
                     d_str = t_dat.strftime("%d/%m/%Y")
                     
-                    # Geração do ID (mantendo o seu cálculo atual)
+                    # Geração do ID
                     total_linhas = len(ws_base.get_all_values())
                     id_transacao = total_linhas + 1
                     
