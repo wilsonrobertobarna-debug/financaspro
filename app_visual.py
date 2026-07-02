@@ -436,32 +436,45 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.rerun()
 
     
-       # --- BARRINHA 2: TRANSFERÊNCIA ---
+           # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
+        
+        # 1. Preparação da lista de beneficiários (lendo da Coluna J = índice 9)
+        dados_planilha = ws_base.get_all_values()
+        # Pega apenas a coluna J, remove vazios, tira duplicados e ordena
+        lista_beneficiarios = sorted(list(set([linha[9] for linha in dados_planilha[1:] if len(linha) > 9 and linha[9]])))
+    
         with st.form("f_transf", clear_on_submit=True):
             t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
             t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
             t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
             t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
-            t_desc = st.text_input("Nota")
+            
+            # 2. O seu novo campo de Autocomplete
+            t_desc = st.selectbox(
+                "Beneficiário/Descrição", 
+                options=lista_beneficiarios, 
+                index=None, 
+                placeholder="Selecione ou busque..."
+            )
+            
             if st.form_submit_button("TRANSFERIR"):
                 if t_orig == t_dest: 
                     st.error("Escolha bancos diferentes!")
                 else:
-                    # Substitua a sua linha de v_str por esta aqui:
-                    v_str = f"{t_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                    
+                    # 3. Tratamento e Gravação
+                    valor_num = float(t_val)
+                    v_str = f"{valor_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                     d_str = t_dat.strftime("%d/%m/%Y")
                     
-                    # Geração do ID
                     total_linhas = len(ws_base.get_all_values())
                     id_transacao = total_linhas + 1
                     
-                    # Gravação dos dados
+                    # Gravação (o t_desc agora vem do selectbox)
                     ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", "", id_transacao])
                     ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", "", id_transacao])
                     
-                    st.toast("✅ Transferencia realizada com sucesso!", icon="💰")
+                    st.toast("✅ Transferência realizada!", icon="💰")
                     atualizar_sessao()
                     st.rerun()
 
