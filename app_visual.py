@@ -478,6 +478,53 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     atualizar_sessao()
                     st.rerun()
 
+                    # --- BARRINHA 3: RELATÓRIO & WHATSAPP ---
+    with st.sidebar.expander("🔍 Relatório & WhatsApp", expanded=True):
+        col_m, col_a = st.columns(2)
+        
+        meses = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]
+        anos = ["2026", "2027"] 
+        
+        sel_mes = col_m.selectbox("Mês", meses, index=datetime.now().month - 1)
+        sel_ano = col_a.selectbox("Ano", anos, index=0)
+        
+        if st.button("📊 Calcular Saldo"):
+            # 1. Filtra os dados da planilha
+            dados = ws_base.get_all_values()
+            periodo = f"{sel_mes}/{sel_ano}"
+            
+            # Filtra linhas onde a data contém o mês/ano selecionado
+            dados_filtrados = [linha for linha in dados[1:] if len(linha) > 4 and periodo in linha[0]]
+            
+            # 2. Calcula o Saldo (soma das receitas - despesas)
+            # Converte valor para float tratando a vírgula/ponto
+            def converter_valor(v):
+                try:
+                    # Remove pontos de milhar, troca vírgula por ponto
+                    return float(v.replace('.', '').replace(',', '.'))
+                except:
+                    return 0.0
+
+            total_receita = sum([converter_valor(l[1]) for l in dados_filtrados if l[4] == 'Receita'])
+            total_despesa = sum([converter_valor(l[1]) for l in dados_filtrados if l[4] == 'Despesa'])
+            saldo = total_receita - total_despesa
+            
+            st.write(f"**Receitas:** R$ {total_receita:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+            st.write(f"**Despesas:** R$ {total_despesa:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+            st.metric("Saldo do Período", f"R$ {saldo:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+            
+            # Armazena na sessão
+            st.session_state['saldo_calculado'] = saldo
+        
+        if st.button("💬 Enviar WhatsApp"):
+            if 'saldo_calculado' in st.session_state:
+                mensagem = f"Resumo {sel_mes}/{sel_ano}: Saldo de R$ {st.session_state['saldo_calculado']:,.2f}"
+                st.info(f"Enviando: {mensagem}")
+                # Aqui você poderá inserir a chamada da função Twilio depois
+            else:
+                st.warning("Calcule o saldo antes de enviar!")
+                    
+
                # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
