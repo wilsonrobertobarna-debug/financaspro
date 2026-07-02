@@ -11,6 +11,16 @@ import urllib.parse
 import streamlit.components.v1 as components
 import uuid
 
+# --- FUNÇÃO PARA TRATAR VALORES ---
+def tratar_valor(valor):
+    try:
+        # Se for string (texto), removemos pontos de milhar e trocamos vírgula por ponto
+        if isinstance(valor, str):
+            valor = valor.replace('.', '').replace(',', '.')
+        return float(valor)
+    except:
+        return 0.0 # Caso algo dê errado, retorna zero para não travar o sistema
+
 # --- INICIALIZAÇÃO DE VARIÁVEIS (Para evitar o NameError) ---
 if 'busca_desc' not in locals(): busca_desc = ""
 if 'busca_beneficiario' not in locals(): busca_beneficiario = ""
