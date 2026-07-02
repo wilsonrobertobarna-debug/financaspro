@@ -11,15 +11,18 @@ import urllib.parse
 import streamlit.components.v1 as components
 import uuid
 
-# --- FUNÇÃO PARA TRATAR VALORES ---
+# --- FUNÇÃO DE LIMPEZA AVANÇADA ---
 def tratar_valor(valor):
-    try:
-        # Se for string (texto), removemos pontos de milhar e trocamos vírgula por ponto
-        if isinstance(valor, str):
-            valor = valor.replace('.', '').replace(',', '.')
+    if isinstance(valor, (int, float)):
         return float(valor)
+    
+    # Remove o 'R$', espaços, pontos de milhar e troca vírgula por ponto
+    valor_limpo = str(valor).replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.')
+    
+    try:
+        return float(valor_limpo)
     except:
-        return 0.0 # Caso algo dê errado, retorna zero para não travar o sistema
+        return 0.0
 
 # --- INICIALIZAÇÃO DE VARIÁVEIS (Para evitar o NameError) ---
 if 'busca_desc' not in locals(): busca_desc = ""
