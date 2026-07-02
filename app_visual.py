@@ -518,7 +518,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.session_state['saldo_calculado'] = saldo
 
             # --- COLE AQUI O EXPANDER DE DETALHES ---
-        with st.expander("Ver detalhe dos lançamentos"):
+            with st.expander("Ver detalhe dos lançamentos"):
             st.write(dados_filtrados)
         
         if st.button("💬 Enviar WhatsApp"):
