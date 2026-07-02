@@ -445,21 +445,22 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 if t_orig == t_dest: 
                     st.error("Escolha bancos diferentes!")
                 else:
-                    v_str = f"{t_val:.2f}".replace('.', ',')
+                    # O novo bloco com o tratamento de valor integrado
+                    valor_num = float(t_val) 
+                    v_str = f"{valor_num:.2f}".replace('.', ',')
                     d_str = t_dat.strftime("%d/%m/%Y")
                     
-                    # --- AQUI ESTÁ O AJUSTE ---
+                    # Geração do ID (mantendo o seu cálculo atual)
                     total_linhas = len(ws_base.get_all_values())
                     id_transacao = total_linhas + 1
                     
-                    # Gravação mantendo o ID na coluna I
+                    # Gravação dos dados
                     ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", "", id_transacao])
                     ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", "", id_transacao])
                     
                     st.toast("✅ Transferencia realizada com sucesso!", icon="💰")
                     atualizar_sessao()
                     st.rerun()
-
 
                # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
