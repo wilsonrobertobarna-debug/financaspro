@@ -493,15 +493,12 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             dados = ws_base.get_all_values()
             periodo = f"{sel_mes}/{sel_ano}"
             
-            # Filtra linhas onde a data contém o mês/ano selecionado
+            # Filtra linhas
             dados_filtrados = [linha for linha in dados[1:] if len(linha) > 4 and periodo in linha[0]]
-            st.write(f"Total de lançamentos encontrados: {len(dados_filtrados)}")
             
-            # 2. Calcula o Saldo (soma das receitas - despesas)
-            # Converte valor para float tratando a vírgula/ponto
+            # 2. Calcula o Saldo
             def converter_valor(v):
                 try:
-                    # Remove pontos de milhar, troca vírgula por ponto
                     return float(v.replace('.', '').replace(',', '.'))
                 except:
                     return 0.0
@@ -516,10 +513,10 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
             # Armazena na sessão
             st.session_state['saldo_calculado'] = saldo
-
-            # --- COLE AQUI O EXPANDER DE DETALHES ---
-    with st.expander("Ver detalhe dos lançamentos"):
-            st.write(dados_filtrados)
+            
+            # --- AQUI É O LUGAR CORRETO PARA O EXPANDER ---
+            with st.expander("Ver detalhe dos lançamentos"):
+                st.write(dados_filtrados)
         
         if st.button("💬 Enviar WhatsApp"):
             if 'saldo_calculado' in st.session_state:
