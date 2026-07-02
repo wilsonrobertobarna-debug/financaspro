@@ -495,6 +495,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
             # Filtra linhas onde a data contém o mês/ano selecionado
             dados_filtrados = [linha for linha in dados[1:] if len(linha) > 4 and periodo in linha[0]]
+            st.write(f"Total de lançamentos encontrados: {len(dados_filtrados)}")
             
             # 2. Calcula o Saldo (soma das receitas - despesas)
             # Converte valor para float tratando a vírgula/ponto
