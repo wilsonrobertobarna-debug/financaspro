@@ -479,7 +479,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     st.rerun()
 
                     # --- BARRINHA 3: RELATÓRIO & WHATSAPP ---
-    with st.sidebar.expander("🔍 Relatório & WhatsApp", expanded=True):
+    with st.sidebar.expander("🔍 Relatório & WhatsApp", expanded=False):
         col_m, col_a = st.columns(2)
         
         meses = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]
