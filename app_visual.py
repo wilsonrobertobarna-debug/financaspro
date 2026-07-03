@@ -608,15 +608,26 @@ if "💰" in st.session_state.page:
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
-    # 1. BARRINHA DE MESES
+   # 1. BARRINHA DE MESES
     meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    mes_atual = st.pills("Período:", meses, selection_mode="single", default="Jun")
+    
+    # Define o mês atual baseado na data do sistema (Julho = "Jul")
+    mes_atual_sistema = meses[datetime.now().month - 1] 
+
+    mes_selecionado = st.pills(
+        "Período:", 
+        meses, 
+        selection_mode="single", 
+        default=mes_atual_sistema,
+        key="filtro_mes_selecionado" # Isso mantém o estado
+    )
 
     if not df_base.empty:
-        # 2. TRADUÇÃO DO FILTRO (Converte "Jun" para "06/26")
+        # 2. TRADUÇÃO DO FILTRO
         mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
                    "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
-        filtro_mes = f"{mes_map[mes_atual]}/26"
+        
+        filtro_mes = f"{mes_map[mes_selecionado]}/26"
         
         # Filtra os dados do mês
         df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
