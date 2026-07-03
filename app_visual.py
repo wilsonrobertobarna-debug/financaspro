@@ -561,8 +561,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             
             if col_ed1.button("💾 ATUALIZAR"):
                 v_str = f"{ed_val:.2f}".replace('.', ',')
-                ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
-                ws_base.update_cell(int(item['ID']), 2, v_str)
+                ws_base.update_cell(int(item['ID']), 1, f"'{ed_dat.strftime('%d/%m/%Y')}")
+                ws_base.update_cell(int(item['ID']), 2, f"'{v_str}")
                 ws_base.update_cell(int(item['ID']), 3, ed_desc)
                 ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
