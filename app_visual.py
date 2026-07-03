@@ -523,8 +523,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
             st.session_state['saldo_calculado'] = saldo
             
-            with st.expander("Ver detalhe dos pagamentos (Excluindo Transferências)"):
-                st.write(dados_filtrados)
+            #with st.expander("Ver detalhe dos pagamentos (Excluindo Transferências)"):
+                #st.write(dados_filtrados)
         
         if st.button("💬 Enviar WhatsApp"):
             if 'saldo_calculado' in st.session_state:
