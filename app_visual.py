@@ -754,12 +754,14 @@ if "💰" in st.session_state.page:
         df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == filtro_mes)]
         
         if not df_pendente_mes.empty:
-            st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
+            # Usando o filtro_mes que já está no formato correto (ex: 07/2026)
+            st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {filtro_mes}!")
             
             # Exibe as pendências do mês
             st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','Banco','Valor', 'Categoria']], use_container_width=True)
         else:
-            st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
+            # O mesmo aqui para o sucesso
+            st.success(f"✅ Tudo limpo! Nenhuma pendência para {filtro_mes}.")
         
         
             # --- AQUI COMEÇA O WILSONBOT ---
