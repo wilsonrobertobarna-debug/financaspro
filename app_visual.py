@@ -493,10 +493,20 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             dados = ws_base.get_all_values()
             periodo = f"{sel_mes}/{sel_ano}"
             
-            # Filtra linhas
-            dados_filtrados = [linha for linha in dados[1:] if len(linha) > 4 and periodo in linha[0]]
+            # Filtra linhas: 
+            # - Pega apenas as do período
+            # - Ignora categoria 'Transferência'
+            # - Pega apenas o que estiver 'Pago' na coluna G (índice 6)
+            # Obs: Verifique se o texto na sua coluna G é exatamente "Pago"
+            dados_filtrados = [
+                l for l in dados[1:] 
+                if len(l) > 6 
+                and periodo in l[0] 
+                and l[3] != 'Transferência' 
+                and l[6] == 'Pago'
+            ]
             
-            # 2. Calcula o Saldo
+            # 2. Função de conversão ajustada
             def converter_valor(v):
                 try:
                     return float(v.replace('.', '').replace(',', '.'))
@@ -509,13 +519,11 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
             st.write(f"**Receitas:** R$ {total_receita:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
             st.write(f"**Despesas:** R$ {total_despesa:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-            st.metric("Saldo do Período", f"R$ {saldo:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
+            st.metric("Saldo Real (Pago)", f"R$ {saldo:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
             
-            # Armazena na sessão
             st.session_state['saldo_calculado'] = saldo
             
-            # --- AQUI É O LUGAR CORRETO PARA O EXPANDER ---
-            with st.expander("Ver detalhe dos lançamentos"):
+            with st.expander("Ver detalhe dos pagamentos (Excluindo Transferências)"):
                 st.write(dados_filtrados)
         
         if st.button("💬 Enviar WhatsApp"):
