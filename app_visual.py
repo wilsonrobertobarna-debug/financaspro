@@ -418,19 +418,18 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             for i in range(f_par):
                 nova_data = t_dat + relativedelta(months=i)
                 
-                ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
-                    v_str,                          # Coluna B: Valor
-                    f_des,                          # Coluna C: Descrição  
-                    f_cat,                          # Coluna D: Categoria
-                    f_tip,                          # Coluna E: Tipo
-                    f_bnc,                          # Coluna F: Banco
-                    f_sta,                          # Coluna G: Status
-                    f_compra_str,                   # Coluna H: Data da Compra
-                    proximo_id + i,                 # Coluna I: ID (Agora sem pular coluna!)
-                    f_ben                           # Coluna J: Beneficiário 
+                ws_base.append_row([                  
+                    f"'{nova_data.strftime('%d/%m/%Y')}", # Coluna A: Vencimento com apóstrofo
+                    f"'{v_str}",                          # Coluna B: Valor com apóstrofo
+                    f_des,                                # Coluna C: Descrição
+                    f_cat,                                # Coluna D: Categoria
+                    f_tip,                                # Coluna E: Tipo
+                    f_bnc,                                # Coluna F: Banco
+                    f_sta,                                # Coluna G: Status
+                    f"'{f_compra_str}",                   # Coluna H: Data da Compra com apóstrofo
+                    proximo_id + i,                       # Coluna I: ID (mantém número)
+                    f_ben                                 # Coluna J: Beneficiário
                 ])
-            
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
             atualizar_sessao()
             st.rerun()
