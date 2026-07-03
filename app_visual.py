@@ -1366,7 +1366,9 @@ if aba == "📋 Relatório PDF":
             p_fim = b_fim.strftime('%d/%m/%Y')
             
             # --- LOGICA DE FILTROS DO CABEÇALHO ---
+            # --- LOGICA DE FILTROS DO CABEÇALHO ---
             pdf.set_font("Arial", 'B', 10)
+            
             if busca_beneficiario:
                 pdf.cell(200, 6, txt=f"BENEFICIARIO FILTRADO: {str(busca_beneficiario).upper()}", ln=1, align="L")
             else:
@@ -1374,7 +1376,17 @@ if aba == "📋 Relatório PDF":
                 if busca_tipo:
                     pdf.cell(200, 6, txt=f"TIPO FILTRADO: {str(busca_tipo).upper()}", ln=1, align="L")
             
-            pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
+            # A mágica acontece aqui: usamos datetime para garantir que o ano seja 4 dígitos (YYYY)
+            # Se p_inicio e p_fim forem strings 'MM/YY', vamos garantir o formato 20YY
+            def formatar_data_completa(data_str):
+                try:
+                    # Tenta converter de MM/YY para algo legível
+                    data_obj = datetime.strptime(data_str, "%m/%y")
+                    return data_obj.strftime("%d/%m/%Y")
+                except:
+                    return data_str # Se já estiver formatado ou der erro, retorna o original
+            
+            pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {formatar_data_completa(p_inicio)} ate {formatar_data_completa(p_fim)}", ln=1, align="L")
             pdf.ln(5)
 
       
