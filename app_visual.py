@@ -747,21 +747,25 @@ if "💰" in st.session_state.page:
         st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         
         # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
+       # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
         st.subheader("🔔 Monitor de Pendências do Período")
         
         # Filtra apenas o que está pendente E pertence ao mês selecionado
-        # Usamos 'filtro_mes' que você já definiu no seu código anterior!
         df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == filtro_mes)]
         
+        # Lógica profissional para data
+        hoje = datetime.now()
+        mes_formatado = hoje.strftime("%m")
+        ano_formatado = hoje.strftime("%Y")
+        
         if not df_pendente_mes.empty:
-            # Usando o filtro_mes que já está no formato correto (ex: 07/2026)
-            st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {filtro_mes}!")
+            # Texto forçando ano com 4 dígitos
+            st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_formatado}/{ano_formatado}!")
             
             # Exibe as pendências do mês
             st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','Banco','Valor', 'Categoria']], use_container_width=True)
         else:
-            # O mesmo aqui para o sucesso
-            st.success(f"✅ Tudo limpo! Nenhuma pendência para {filtro_mes}.")
+            st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_formatado}/{ano_formatado}.")
         
         
             # --- AQUI COMEÇA O WILSONBOT ---
