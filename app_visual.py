@@ -868,8 +868,8 @@ if "💰" in st.session_state.page:
             .to_html(escape=False, index=False),
             unsafe_allow_html=True
         )
-    # Este else está alinhado com o if not df_exibicao.empty: lá de cima
-    else:
+        # Este else está alinhado com o if not df_exibicao.empty: lá de cima
+        else:
         st.warning("Base de dados vazia.")
 
 
