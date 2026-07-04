@@ -10,9 +10,7 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 import uuid
-st.title("ESTE É O ARQUIVO QUE EU ESTOU EDITANDO")
-import sys
-st.write("Caminho do arquivo:", sys.argv[0])
+
 
 # --- FUNÇÃO DE LIMPEZA AVANÇADA ---
 def tratar_valor(valor):
