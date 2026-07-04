@@ -826,14 +826,16 @@ if "💰" in st.session_state.page:
             
      # 7. TABELA FINAL - REVISADA PARA GARANTIR VALORES CORRETOS
         
-        if not df_m_limpo.empty:
-            # 1. Garantimos que estamos trabalhando com uma cópia limpa
-            df_final = df_m_limpo.copy()
+       if not df_m_limpo.empty:
+            # --- DEBUG DE SEGURANÇA ---
+            total_sum = df_m_limpo['V_Num'].sum()
+            st.write(f"DEBUG: Soma total dos valores na base: R$ {total_sum:,.2f}")
             
-            # --- CORREÇÃO DE SEGURANÇA: REMOVA DUPLICATAS ---
-            # Se o saldo estourou, talvez existam linhas duplicadas que a 'Descrição' escondia
-            df_final = df_final.drop_duplicates()
+            # Removemos duplicatas para garantir que o cálculo não duplique valores
+            df_final = df_m_limpo.drop_duplicates().sort_values(by='DT').copy()
             
+            # Recalculamos o saldo acumulado apenas aqui, para ter certeza absoluta
+            df_final['Saldo_Acumulado'] = df_final['V_Num'].cumsum()
             # 2. Selecionamos apenas as colunas necessárias
             colunas_iniciais = ['Seq.', 'DT', 'V_Num', 'Saldo_Acumulado', 'Categoria', 'Banco', 'Status']
             df_final = df_final[colunas_iniciais].copy()
