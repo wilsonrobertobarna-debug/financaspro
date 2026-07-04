@@ -302,30 +302,8 @@ if st.sidebar.button("🔄 Atualizar dados do Sheets"):
 st.sidebar.divider()
 
 # Inicializa a página se não existir
-#if 'page' not in st.session_state:    
-    
-    # --- PAINEL MESTRE (DOIS EM UM) --- 
-#with st.expander("📊 Clique aqui para ver o Painel e Relatório Bancário", expanded=False):
-with st.expander("📊 Painel Financeiro", expanded=False):
-    
-        # 1. Painel Financeiro
-        st.markdown("### 🏦 Painel Financeiro")
-        entradas_totais = df_base[df_base['Tipo'].isin(['Receita', 'Rendimentos'])]['V_Num'].sum()
-        saidas_totais = df_base[df_base['Tipo'].isin(['Despesa', 'Pendências'])]['V_Num'].sum()
-        saldo_real = entradas_totais - saidas_totais
-    
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Entradas", f"R$ {entradas_totais:,.2f}")
-        c2.metric("Saídas", f"R$ {saidas_totais:,.2f}")
-        c3.metric("SALDO REAL", f"R$ {saldo_real:,.2f}", delta_color="inverse")
-    
-        st.divider() # Uma linha para separar
-
-# --- AQUI COMEÇA O SEU CÓDIGO DAS ABAS ---
-# Em vez de usar "if "Pendências" in aba:", use:
-if st.session_state.get('page') == 'Pendências':
-    st.title("📋 Lançamentos Pendentes")
-
+if 'page' not in st.session_state:
+    st.session_state.page = "💰 Finanças & Bancos"
 
 # Define os itens do menu
 menu_itens = ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"]
@@ -339,11 +317,7 @@ for item in menu_itens:
  
 st.sidebar.divider()
 
-# --- BLOCO DE SEGURANÇA ---
-if 'page' not in st.session_state:
-    st.session_state['page'] = 'Home'  # Define o valor inicial se não existir
-
-aba = st.session_state['page'] # Agora ele não vai mais dar erro, pois garantimos que existe
+aba = st.session_state.page
 
 # BARRINHA 1: NOVO LANÇAMENTO
 # Inicializa a variável de estado para controlar a abertura se ela não existir
@@ -697,7 +671,7 @@ if "💰" in st.session_state.page:
         else:
             st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
-    #st.title("📋 Lançamentos Pendentes")
+    st.title("📋 Lançamentos Pendentes")
     
     # 1. Filtros
     col_b, col_d = st.columns(2)
