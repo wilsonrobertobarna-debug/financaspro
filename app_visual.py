@@ -845,11 +845,21 @@ if "💰" in st.session_state.page:
                     df_exibicao[col] = df_exibicao[col].astype(str).str.replace("'", "").str.replace('"', '')
             
             # Agora exibimos
-            st.dataframe(df_exibicao[['Seq.', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
-                         use_container_width=True, 
-                         hide_index=True)
-        else:
-            st.warning("Base de dados vazia.")
+            # Agora exibimos com Saldo Acumulado e visual otimizado
+        st.subheader("Auditoria de Saldo")
+        st.data_editor(
+            df_exibicao[['Seq.', 'DT', 'Descrição', 'V_Num', 'Saldo_Acumulado', 'Categoria', 'Banco', 'Status']], 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "V_Num": st.column_config.NumberColumn("Valor (R$)", format="R$ %.2f"),
+                "Saldo_Acumulado": st.column_config.NumberColumn("Saldo Acum. (R$)", format="R$ %.2f")
+            }
+        )
+    else:
+        st.warning("Base de dados vazia.")
+
+
 elif "Pendências" in aba:
     #st.title("📋 Lançamentos Pendentes")
     
