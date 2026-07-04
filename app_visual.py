@@ -846,8 +846,8 @@ if "💰" in st.session_state.page:
             
             # Agora exibimos
             # Agora exibimos com Saldo Acumulado e visual otimizado
-        st.subheader("Auditoria de Saldo")
-        st.data_editor(
+            st.subheader("Auditoria de Saldo")
+            st.data_editor(
             df_exibicao[['Seq.', 'DT', 'Descrição', 'V_Num', 'Saldo_Acumulado', 'Categoria', 'Banco', 'Status']], 
             use_container_width=True, 
             hide_index=True,
