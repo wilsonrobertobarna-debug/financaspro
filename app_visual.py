@@ -171,12 +171,26 @@ def carregar_dados_gs():
     if len(dados) <= 1: return pd.DataFrame()
     df = pd.DataFrame(dados[1:], columns=dados[0])
     df['ID'] = range(2, len(df) + 2)
+    
+    # Função blindada para remover aspas e limpar valores
     def p_float(v):
-        try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
-        except: return 0.0
+        try:
+            # Remove aspas simples, duplas, R$, pontos e troca vírgula por ponto
+            v_limpo = str(v).replace("'", "").replace('"', '').replace('R$', '').replace('.', '').replace(',', '.').strip()
+            return float(v_limpo)
+        except: 
+            return 0.0
+
     df['V_Num'] = df['Valor'].apply(p_float)
+    
+    # LIMPEZA EXTRA PARA DATAS: Removemos aspas antes de tentar converter
+    df['Vencimento'] = df['Vencimento'].astype(str).str.replace("'", "").str.replace('"', '').str.strip()
+    
     df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
+    
+    # Se a data falhar, vamos colocar um aviso ou uma data padrão para você identificar na conferência
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+    
     return df
 
 def carregar_bancos_manual_gs():
