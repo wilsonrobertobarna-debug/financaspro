@@ -823,48 +823,41 @@ if "💰" in st.session_state.page:
         else:
             st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
 
-            
-     # 7. TABELA FINAL - REVISADA PARA GARANTIR VALORES CORRETOS
+        # 7. TABELA FINAL (Versão de Diagnóstico)
         
         if not df_m_limpo.empty:
-            # --- DEBUG DE SEGURANÇA ---
-            total_sum = df_m_limpo['V_Num'].sum()
-            st.write(f"DEBUG: Soma total dos valores na base: R$ {total_sum:,.2f}")
+            # Diagnóstico: Vamos ver o que está acontecendo antes de exibir
+            st.write(f"Linhas na base atual: {len(df_m_limpo)}")
+            st.write(f"Total de registros na base: {df_m_limpo['V_Num'].count()}")
             
-            # Removemos duplicatas para garantir que o cálculo não duplique valores
-            df_final = df_m_limpo.drop_duplicates().sort_values(by='DT').copy()
+            # ATENÇÃO: Se o saldo estourou, é provável que df_m_limpo 
+            # não esteja filtrado apenas pelo mês que você vê na tela.
             
-            # Recalculamos o saldo acumulado apenas aqui, para ter certeza absoluta
+            # Limpeza de segurança
+            df_final = df_m_limpo.copy()
+            df_final = df_final.sort_values(by='DT')
+            
+            # Recálculo forçado do saldo para ver se bate com o que você espera
+            # Aqui estamos garantindo que o saldo seja apenas desta lista filtrada
             df_final['Saldo_Acumulado'] = df_final['V_Num'].cumsum()
-            # 2. Selecionamos apenas as colunas necessárias
-            colunas_iniciais = ['Seq.', 'DT', 'V_Num', 'Saldo_Acumulado', 'Categoria', 'Banco', 'Status']
-            df_final = df_final[colunas_iniciais].copy()
             
-            # 3. Formatação dos valores
+            # --- SE ESTE SALDO FICAR ALTO, É PORQUE O df_m_limpo ESTÁ VAZANDO DADOS ---
+            
+            # Formatação
             df_final['Valor | Saldo'] = (
                 "V: " + df_final['V_Num'].apply(lambda x: f"R$ {x:,.2f}") + 
                 "<br>S: " + df_final['Saldo_Acumulado'].apply(lambda x: f"R$ {x:,.2f}")
             )
-            
-            # 4. Formata a Data
             df_final['Data e Mês'] = df_final['DT'].dt.strftime('%d/%m')
             
-            # 5. Define a ordem final
+            # Exibição
             df_final = df_final[['Seq.', 'Data e Mês', 'Valor | Saldo', 'Categoria', 'Banco', 'Status']]
-            
-            # 6. Renomeia
             df_final = df_final.rename(columns={'Seq.': 'ID'})
             
-            # --- DEBUG RÁPIDO ---
-            # Se o valor estiver errado, descomente a linha abaixo para ver o total na tela
-            # st.write(f"Totalizador debug: R$ {df_final['Valor | Saldo'].count()}") 
-            
-            # 7. Exibe
             st.subheader("Auditoria de Saldo")
             st.write(df_final.to_html(escape=False, index=False), unsafe_allow_html=True)
-            
-        else:
-            st.warning("Base de dados vazia.")
+
+
 elif "Pendências" in aba:
     #st.title("📋 Lançamentos Pendentes")
     
