@@ -855,19 +855,19 @@ if "💰" in st.session_state.page:
             )
             
             # Exibição otimizada
-           # Renomeia as colunas do DataFrame original para garantir que o título mude
-            df_final = df_exibicao.rename(columns={
+          # Removemos a Descrição e focamos no que importa
+            colunas_selecionadas = ['Seq.', 'Data / Mês', 'V / S', 'Categoria', 'Banco', 'Status']
+            
+            # Criamos o dataframe final filtrando as colunas e renomeando
+            df_final = df_exibicao[colunas_selecionadas].rename(columns={
                 'Seq.': 'ID',
                 'Data / Mês': 'Data e Mês',
                 'V / S': 'Valor | Saldo'
             })
+            
+            # Exibe a tabela
+            st.write(df_final.to_html(escape=False, index=False), unsafe_allow_html=True)
 
-            # Exibe usando apenas as colunas que você quer, na ordem certa
-            st.write(
-                df_final[['ID', 'Data e Mês', 'Descrição', 'Valor | Saldo', 'Categoria', 'Banco', 'Status']]
-                .to_html(escape=False, index=False), 
-                unsafe_allow_html=True
-            )
         else:
             st.warning("Base de dados vazia.")
             
