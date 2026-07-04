@@ -871,8 +871,8 @@ if "💰" in st.session_state.page:
     # Este else está alinhado com o if not df_exibicao.empty: lá de cima
     else:
         st.warning("Base de dados vazia.")
-            
-        )
+
+
 elif "Pendências" in aba:
     #st.title("📋 Lançamentos Pendentes")
     
