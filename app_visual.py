@@ -836,11 +836,16 @@ if "💰" in st.session_state.page:
             # Inverte para mostrar os mais novos no topo
             df_exibicao = df_exibicao.iloc[::-1]
             
-            # Vamos usar as colunas que processamos e limpamos (DT e V_Num)
-            # O st.dataframe vai exibir os dados limpos sem as aspas
-            st.dataframe(df_exibicao[['Seq.', 'DT', 'Descrição', 'V_Num', 'Categoria', 'Banco', 'Status']], 
-             use_container_width=True, 
-             hide_index=True)
+            # LIMPEZA DIRETA PARA EXIBIÇÃO: garante que não sobre nenhuma aspa nas colunas de texto
+            colunas_texto = ['Vencimento', 'Data da Compra', 'Descrição', 'Categoria', 'Banco', 'Status']
+            for col in colunas_texto:
+                if col in df_exibicao.columns:
+                    df_exibicao[col] = df_exibicao[col].astype(str).str.replace("'", "").str.replace('"', '')
+            
+            # Agora exibimos
+            st.dataframe(df_exibicao[['Seq.', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
+                         use_container_width=True, 
+                         hide_index=True)
         else:
             st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
