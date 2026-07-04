@@ -842,7 +842,8 @@ if "💰" in st.session_state.page:
                     df_exibicao[col] = df_exibicao[col].astype(str).str.replace("'", "").str.replace('"', '')
             
             # Agora exibimos de forma compacta (valores empilhados)
-            st.subheader("Auditoria de Saldo")
+            #st.subheader("Auditoria de Saldo")
+            st.subheader("TESTE DE MUDANÇA - SE ISSO NÃO APARECER, O ARQUIVO ESTÁ ERRADO")
         
             # Prepara a exibição com quebra de linha (HTML) - ALINHADO
             df_exibicao['V / S'] = (
