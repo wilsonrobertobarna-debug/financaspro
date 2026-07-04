@@ -826,31 +826,25 @@ if "💰" in st.session_state.page:
         st.subheader("🔍 Lançamentos do Mês")
         
         if not df_m_limpo.empty:
-            df_exibicao = df_m_limpo.copy()
+           if not df_m_limpo.empty:
+            # 1. Cria uma cópia limpa e reduzida direto da fonte
+            df_final = df_m_limpo[['Seq.', 'DT', 'V_Num', 'Saldo_Acumulado', 'Categoria', 'Banco', 'Status']].copy()
             
-            # Ajustes
-            ajuste = 2 
-            df_exibicao['Seq.'] = df_exibicao.index + ajuste 
-            df_exibicao = df_exibicao.iloc[::-1]
-            
-            # Prepara colunas
-            df_exibicao['V / S'] = (
-                "V: " + df_exibicao['V_Num'].apply(lambda x: f"R$ {x:,.2f}") + 
-                "<br>S: " + df_exibicao['Saldo_Acumulado'].apply(lambda x: f"R$ {x:,.2f}")
+            # 2. Formata as colunas (criando as que você quer)
+            df_final['Valor | Saldo'] = (
+                "V: " + df_final['V_Num'].apply(lambda x: f"R$ {x:,.2f}") + 
+                "<br>S: " + df_final['Saldo_Acumulado'].apply(lambda x: f"R$ {x:,.2f}")
             )
-            df_exibicao['Data / Mês'] = (
-                df_exibicao['DT'].dt.strftime('%d/%m') + 
-                "<br>" + df_exibicao['Mes_Ano']
-            )
+            df_final['Data e Mês'] = df_final['DT'].dt.strftime('%d/%m')
             
-            # --- CRIAÇÃO DO DF_FINAL E RENOMEAÇÃO ---
-            # Filtra apenas as colunas que você quer (SEM DESCRIÇÃO)
-            df_final = df_exibicao[['Seq.', 'Data / Mês', 'V / S', 'Categoria', 'Banco', 'Status']].copy()
+            # 3. Mantém apenas as colunas que você quer exibir
+            colunas_finais = ['Seq.', 'Data e Mês', 'Valor | Saldo', 'Categoria', 'Banco', 'Status']
+            df_final = df_final[colunas_finais]
             
-            # Renomeia as colunas agora que o df_final existe
-            df_final.columns = ['ID', 'Data e Mês', 'Valor | Saldo', 'Categoria', 'Banco', 'Status']
+            # 4. Renomeia a coluna 'Seq.' para 'ID'
+            df_final = df_final.rename(columns={'Seq.': 'ID'})
             
-            # --- EXIBIÇÃO ÚNICA ---
+            # 5. Exibe APENAS este dataframe
             st.subheader("Auditoria de Saldo")
             st.write(df_final.to_html(escape=False, index=False), unsafe_allow_html=True)
             
