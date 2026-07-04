@@ -855,19 +855,22 @@ if "💰" in st.session_state.page:
             )
             
             # Exibição otimizada
+           # Renomeia as colunas do DataFrame original para garantir que o título mude
+            df_final = df_exibicao.rename(columns={
+                'Seq.': 'ID',
+                'Data / Mês': 'Data e Mês',
+                'V / S': 'Valor | Saldo'
+            })
+
+            # Exibe usando apenas as colunas que você quer, na ordem certa
             st.write(
-                df_exibicao[['Seq.', 'Data / Mês', 'Descrição', 'V / S', 'Categoria', 'Banco', 'Status']]
-                .rename(columns={
-                    'Seq.': 'ID',
-                    'Data / Mês': 'Data e Mês',
-                    'V / S': 'Valor | Saldo'
-                })
-                .to_html(escape=False, index=False),
+                df_final[['ID', 'Data e Mês', 'Descrição', 'Valor | Saldo', 'Categoria', 'Banco', 'Status']]
+                .to_html(escape=False, index=False), 
                 unsafe_allow_html=True
             )
         else:
             st.warning("Base de dados vazia.")
-
+            
 elif "Pendências" in aba:
     #st.title("📋 Lançamentos Pendentes")
     
