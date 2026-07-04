@@ -993,7 +993,8 @@ elif "🐾" in aba:
             
         df_show_display = df_show[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']].copy()
         df_show_display['Valor'] = df_show['V_Num'].apply(m_fmt)
-        st.dataframe(df_show_display.iloc[::-1], use_container_width=True, hide_index=True)
+        #st.dataframe(df_show_display.iloc[::-1], use_container_width=True, hide_index=True)
+        st.dataframe(df_v_display.iloc[::-1][['ID', 'Vencimento', 'Tipo', 'Valor', 'Categoria', 'Banco', 'Status']], use_container_width=True, hide_index=True)
     else:
         st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
 
