@@ -824,6 +824,9 @@ if "💰" in st.session_state.page:
             st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
 
         # 7. TABELA FINAL (Versão de Diagnóstico)
+
+        df_m_limpo = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
+        st.write(f"DEBUG: Registros encontrados para {filtro_mes}: {len(df_m_limpo)}")
         
         if not df_m_limpo.empty:
             # Diagnóstico: Vamos ver o que está acontecendo antes de exibir
