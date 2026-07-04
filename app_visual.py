@@ -170,17 +170,23 @@ def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
     df = pd.DataFrame(dados[1:], columns=dados[0])
+    
+    # LIMPEZA AGRESSIVA: Varre todas as colunas e remove aspas de tudo
+    for col in df.columns:
+        df[col] = df[col].astype(str).str.replace("'", "").str.replace('"', '').str.strip()
+    
     df['ID'] = range(2, len(df) + 2)
     
-    # Função blindada para remover aspas e limpar valores
+    # Agora a conversão de números e datas funciona porque não há mais aspas
     def p_float(v):
-        try:
-            # Remove aspas simples, duplas, R$, pontos e troca vírgula por ponto
-            v_limpo = str(v).replace("'", "").replace('"', '').replace('R$', '').replace('.', '').replace(',', '.').strip()
-            return float(v_limpo)
-        except: 
-            return 0.0
+        try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
+        except: return 0.0
 
+    df['V_Num'] = df['Valor'].apply(p_float)
+    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
+    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+    
+    return df
     df['V_Num'] = df['Valor'].apply(p_float)
     
     # LIMPEZA EXTRA PARA DATAS: Removemos aspas antes de tentar converter
