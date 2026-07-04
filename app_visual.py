@@ -1292,40 +1292,26 @@ if aba == "📋 Relatório PDF":
             )
             df_report['Saldo_Acum'] = valor_inicial + df_report['Valor_Com_Sinal'].cumsum()
                 
-           
+            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
-            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF (ATUALIZADO)
+           # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
             
-            # Cabeçalho da Tabela - Adicionamos a coluna "BANCO"
-            pdf.set_font("Arial", 'B', 8) # Fonte ligeiramente menor para caber tudo
-            pdf.cell(20, 7, "DATA", 1)
-            pdf.cell(25, 7, "BANCO", 1)  # <--- NOVA COLUNA AQUI
-            pdf.cell(18, 7, "TIPO", 1)
-            pdf.cell(30, 7, "CATEGORIA", 1)
-            pdf.cell(32, 7, "DESCRIÇÃO", 1)
-            pdf.cell(22, 7, "VALOR", 1)
-            pdf.cell(30, 7, "SALDO", 1)
-            pdf.cell(18, 7, "STATUS", 1)
+            # --- IMPRIME O CABEÇALHO DA TABELA (PARA NÃO FICAR SEM TÍTULOS) ---
+            pdf.set_font("Arial", 'B', 9)
+            pdf.cell(20, 7, "DATA", 1); pdf.cell(18, 7, "TIPO", 1); pdf.cell(35, 7, "CATEGORIA", 1)
+            pdf.cell(45, 7, "DESCRIÇÃO", 1); pdf.cell(25, 7, "VALOR", 1); pdf.cell(32, 7, "SALDO", 1); pdf.cell(20, 7, "STATUS", 1)
             pdf.ln()
 
-            
             # --- LOOP DE IMPRESSÃO DAS LINHAS ---
-            pdf.set_font("Arial", '', 8) # Reduzi um pouco a fonte para caber a nova coluna
+            pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
-                # Formatações
-                # Tenta pegar a data de DT_FILTRO, se não existir, tenta pegar de DT
-                if 'DT_FILTRO' in row and not pd.isna(row['DT_FILTRO']):
-                    data_str = row['DT_FILTRO'].strftime('%d/%m/%Y')
-                elif 'DT' in row and not pd.isna(row['DT']):
-                    data_str = pd.to_datetime(row['DT']).strftime('%d/%m/%Y')
-                else:
-                    data_str = '---'
-                # AQUI ESTÁ O BANCO: buscamos no dicionário da linha 'row'
-                banco_str = str(row.get('Banco', '-'))[:12] 
+                # Formatações de Data
+                data_str = row['DT'].strftime('%d/%m/%Y') if 'DT' in row and not pd.isna(row['DT']) else str(row.get('DT', '---'))
+                
                 tipo_str = str(row.get('Tipo', '---')).strip()
-                cat_val = str(row.get('Categoria', 'Geral'))[:15]
-                desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))[:20]
+                cat_val = str(row.get('Categoria', 'Geral'))[:18]
+                desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))[:24]
                 valor_val = pd.to_numeric(row.get('V_Num', row.get('Valor', 0)), errors='coerce')
                 if pd.isna(valor_val): valor_val = 0.0
                 saldo_val = row.get('Saldo_Acum', 0.0)
@@ -1342,21 +1328,20 @@ if aba == "📋 Relatório PDF":
                 texto_saldo = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                 cor_saldo = (255, 0, 0) if saldo_val < 0 else (0, 0, 0)
 
-                # Impressão das colunas (ADICIONAMOS A CÉLULA DO BANCO AQUI)
+                # Impressão das colunas
                 pdf.cell(20, 6, data_str, 1)
-                pdf.cell(25, 6, banco_str, 1) # <--- NOVA COLUNA BANCO
                 pdf.cell(18, 6, tipo_str, 1)
-                pdf.cell(30, 6, cat_val, 1)
-                pdf.cell(32, 6, desc_val, 1)
+                pdf.cell(35, 6, cat_val, 1)
+                pdf.cell(45, 6, desc_val, 1)
                 
                 pdf.set_text_color(*cor_valor)
-                pdf.cell(22, 6, texto_valor, 1)
+                pdf.cell(25, 6, texto_valor, 1)
                 
                 pdf.set_text_color(*cor_saldo)
-                pdf.cell(30, 6, texto_saldo, 1)
+                pdf.cell(32, 6, texto_saldo, 1)
                 
                 pdf.set_text_color(0, 0, 0)
-                pdf.cell(18, 6, status_val, 1)
+                pdf.cell(20, 6, status_val, 1)
                 pdf.ln()
 
             # Finalização e Download
@@ -1372,6 +1357,7 @@ if aba == "📋 Relatório PDF":
             )
             st.success(f"PDF pronto! Relatório atualizado.")
 
+        # (Este except deve estar alinhado com o 'try' lá de cima, geralmente com 8 espaços)
         except Exception as e:
             st.error(f"Erro ao gerar o PDF: {e}")
 
