@@ -10,6 +10,7 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 import uuid
+st.error("ESTOU EDITANDO O ARQUIVO CORRETO!")
 
 # --- FUNÇÃO DE LIMPEZA AVANÇADA ---
 def tratar_valor(valor):
