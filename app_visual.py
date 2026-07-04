@@ -864,8 +864,8 @@ if "💰" in st.session_state.page:
             unsafe_allow_html=True
         )
     # Este else fecha o if que verifica se a base está vazia
-    else:
-        st.warning("Base de dados vazia.")
+        else:
+            st.warning("Base de dados vazia.")
 
 
 elif "Pendências" in aba:
