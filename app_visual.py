@@ -827,35 +827,40 @@ if "💰" in st.session_state.page:
         
         if not df_m_limpo.empty:
             # Diagnóstico: Vamos ver o que está acontecendo antes de exibir
-            st.write(f"Linhas na base atual: {len(df_m_limpo)}")
-            st.write(f"Total de registros na base: {df_m_limpo['V_Num'].count()}")
+            st.write(f"**DEBUG:** Linhas na base atual: {len(df_m_limpo)}")
+            st.write(f"**DEBUG:** Total de registros (V_Num): {df_m_limpo['V_Num'].count()}")
             
-            # ATENÇÃO: Se o saldo estourou, é provável que df_m_limpo 
-            # não esteja filtrado apenas pelo mês que você vê na tela.
+            # Limpeza de segurança: Remove duplicatas e ordena por data
+            df_final = df_m_limpo.drop_duplicates().sort_values(by='DT').copy()
             
-            # Limpeza de segurança
-            df_final = df_m_limpo.copy()
-            df_final = df_final.sort_values(by='DT')
+            # RECÁLCULO DO SALDO: 
+            # Consideramos que DESPESA subtrai e RECEITA/RENDIMENTO soma
+            # Ajuste o 'Tipo' caso a sua coluna tenha nomes diferentes (ex: 'Gasto' em vez de 'Despesa')
+            df_final['Valor_Ajustado'] = df_final.apply(
+                lambda row: -abs(row['V_Num']) if str(row['Tipo']).lower() in ['despesa', 'gasto'] else abs(row['V_Num']), 
+                axis=1
+            )
+            df_final['Saldo_Acumulado'] = df_final['Valor_Ajustado'].cumsum()
             
-            # Recálculo forçado do saldo para ver se bate com o que você espera
-            # Aqui estamos garantindo que o saldo seja apenas desta lista filtrada
-            df_final['Saldo_Acumulado'] = df_final['V_Num'].cumsum()
-            
-            # --- SE ESTE SALDO FICAR ALTO, É PORQUE O df_m_limpo ESTÁ VAZANDO DADOS ---
-            
-            # Formatação
+            # Formatação dos Valores
             df_final['Valor | Saldo'] = (
                 "V: " + df_final['V_Num'].apply(lambda x: f"R$ {x:,.2f}") + 
                 "<br>S: " + df_final['Saldo_Acumulado'].apply(lambda x: f"R$ {x:,.2f}")
             )
+            
+            # Formata a Data
             df_final['Data e Mês'] = df_final['DT'].dt.strftime('%d/%m')
             
-            # Exibição
-            df_final = df_final[['Seq.', 'Data e Mês', 'Valor | Saldo', 'Categoria', 'Banco', 'Status']]
-            df_final = df_final.rename(columns={'Seq.': 'ID'})
+            # Seleção e Renomeação de colunas
+            df_exibir = df_final[['Seq.', 'Data e Mês', 'Valor | Saldo', 'Categoria', 'Banco', 'Status']].copy()
+            df_exibir = df_exibir.rename(columns={'Seq.': 'ID'})
             
+            # Exibição
             st.subheader("Auditoria de Saldo")
-            st.write(df_final.to_html(escape=False, index=False), unsafe_allow_html=True)
+            st.write(df_exibir.to_html(escape=False, index=False), unsafe_allow_html=True)
+            
+        else:
+            st.warning("Base de dados vazia para o período selecionado.")
 
 
 elif "Pendências" in aba:
