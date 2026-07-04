@@ -823,34 +823,34 @@ if "💰" in st.session_state.page:
             st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
 
             
-        # 7. TABELA FINAL
-        st.subheader("🔍 Lançamentos do Mês")
+        # 7. TABELA FINAL (Substitua todo o seu bloco atual por este)
         
         if not df_m_limpo.empty:
-            # 1. Cria uma cópia limpa e reduzida direto da fonte
-            df_final = df_m_limpo[['Seq.', 'DT', 'V_Num', 'Saldo_Acumulado', 'Categoria', 'Banco', 'Status']].copy()
+            # Seleciona apenas as colunas base, garantindo que 'Descrição' NÃO esteja aqui
+            colunas_iniciais = ['Seq.', 'DT', 'V_Num', 'Saldo_Acumulado', 'Categoria', 'Banco', 'Status']
+            df_final = df_m_limpo[colunas_iniciais].copy()
             
-            # 2. Formata as colunas (criando as que você quer)
+            # Cria a coluna formatada de Valores
             df_final['Valor | Saldo'] = (
                 "V: " + df_final['V_Num'].apply(lambda x: f"R$ {x:,.2f}") + 
                 "<br>S: " + df_final['Saldo_Acumulado'].apply(lambda x: f"R$ {x:,.2f}")
             )
+            
+            # Formata a Data
             df_final['Data e Mês'] = df_final['DT'].dt.strftime('%d/%m')
             
-            # 3. Mantém apenas as colunas que você quer exibir
-            colunas_finais = ['Seq.', 'Data e Mês', 'Valor | Saldo', 'Categoria', 'Banco', 'Status']
-            df_final = df_final[colunas_finais]
+            # Define a ordem final e as colunas que serão exibidas
+            df_final = df_final[['Seq.', 'Data e Mês', 'Valor | Saldo', 'Categoria', 'Banco', 'Status']]
             
-            # 4. Renomeia a coluna 'Seq.' para 'ID'
+            # Renomeia para o título que você deseja
             df_final = df_final.rename(columns={'Seq.': 'ID'})
             
-            # 5. Exibe APENAS este dataframe
+            # EXIBIÇÃO ÚNICA (Limpa e sem a coluna Descrição)
             st.subheader("Auditoria de Saldo")
             st.write(df_final.to_html(escape=False, index=False), unsafe_allow_html=True)
             
         else:
-            st.warning("Base de dados vazia.")
-            
+            st.warning("Base de dados vazia.")            
 elif "Pendências" in aba:
     #st.title("📋 Lançamentos Pendentes")
     
