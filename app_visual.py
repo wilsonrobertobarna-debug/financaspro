@@ -846,26 +846,26 @@ if "💰" in st.session_state.page:
             
             # Agora exibimos
             # Agora exibimos de forma compacta (valores empilhados)
-        st.subheader("Auditoria de Saldo")
-        
-        # Prepara a exibição com quebra de linha (HTML)
-        df_exibicao['V / S'] = (
-            "V: " + df_exibicao['V_Num'].apply(lambda x: f"R$ {x:,.2f}") + 
-            "<br>S: " + df_exibicao['Saldo_Acumulado'].apply(lambda x: f"R$ {x:,.2f}")
-        )
-        
-        df_exibicao['Data / Mês'] = (
-            df_exibicao['DT'].dt.strftime('%d/%m') + 
-            "<br>" + df_exibicao['Mes_Ano']
-        )
-
-        # Exibição otimizada usando HTML
-        st.write(
-            df_exibicao[['Seq.', 'Data / Mês', 'Descrição', 'V / S', 'Categoria', 'Banco', 'Status']].to_html(escape=False, index=False),
-            unsafe_allow_html=True
-        )
-    # Este else fecha o if que verifica se a base está vazia
-    else:
+            st.subheader("Auditoria de Saldo")
+            
+            # Prepara a exibição com quebra de linha (HTML)
+            df_exibicao['V / S'] = (
+                "V: " + df_exibicao['V_Num'].apply(lambda x: f"R$ {x:,.2f}") + 
+                "<br>S: " + df_exibicao['Saldo_Acumulado'].apply(lambda x: f"R$ {x:,.2f}")
+            )
+            
+            df_exibicao['Data / Mês'] = (
+                df_exibicao['DT'].dt.strftime('%d/%m') + 
+                "<br>" + df_exibicao['Mes_Ano']
+            )
+    
+            # Exibição otimizada usando HTML
+            st.write(
+                df_exibicao[['Seq.', 'Data / Mês', 'Descrição', 'V / S', 'Categoria', 'Banco', 'Status']].to_html(escape=False, index=False),
+                unsafe_allow_html=True
+            )
+        # Este else fecha o if que verifica se a base está vazia
+        else:
         st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
     #st.title("📋 Lançamentos Pendentes")
