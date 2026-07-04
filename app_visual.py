@@ -826,7 +826,7 @@ if "💰" in st.session_state.page:
             
      # 7. TABELA FINAL - REVISADA PARA GARANTIR VALORES CORRETOS
         
-       if not df_m_limpo.empty:
+        if not df_m_limpo.empty:
             # --- DEBUG DE SEGURANÇA ---
             total_sum = df_m_limpo['V_Num'].sum()
             st.write(f"DEBUG: Soma total dos valores na base: R$ {total_sum:,.2f}")
