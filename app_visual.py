@@ -828,49 +828,45 @@ if "💰" in st.session_state.page:
         if not df_m_limpo.empty:
             df_exibicao = df_m_limpo.copy()
             
-            # AJUSTE DE MENTOR: 
-            # Se você sente que a diferença é de 2, mudamos aqui.
-            # Se precisar ajustar para mais ou para menos, é só mudar este número '2'.
+            # AJUSTE DE MENTOR
             ajuste = 2 
             df_exibicao['Seq.'] = df_exibicao.index + ajuste 
             
             # Inverte para mostrar os mais novos no topo
             df_exibicao = df_exibicao.iloc[::-1]
             
-            # LIMPEZA DIRETA PARA EXIBIÇÃO: garante que não sobre nenhuma aspa nas colunas de texto
+            # LIMPEZA DIRETA
             colunas_texto = ['Vencimento', 'Data da Compra', 'Descrição', 'Categoria', 'Banco', 'Status']
             for col in colunas_texto:
                 if col in df_exibicao.columns:
                     df_exibicao[col] = df_exibicao[col].astype(str).str.replace("'", "").str.replace('"', '')
             
-           # Agora exibimos de forma compacta (valores empilhados)
+            # Agora exibimos de forma compacta (valores empilhados)
             st.subheader("Auditoria de Saldo")
         
-        # Prepara a exibição com quebra de linha (HTML)
+            # Prepara a exibição com quebra de linha (HTML) - ALINHADO
             df_exibicao['V / S'] = (
-            "V: " + df_exibicao['V_Num'].apply(lambda x: f"R$ {x:,.2f}") + 
-            "<br>S: " + df_exibicao['Saldo_Acumulado'].apply(lambda x: f"R$ {x:,.2f}")
-        )
+                "V: " + df_exibicao['V_Num'].apply(lambda x: f"R$ {x:,.2f}") + 
+                "<br>S: " + df_exibicao['Saldo_Acumulado'].apply(lambda x: f"R$ {x:,.2f}")
+            )
             df_exibicao['Data / Mês'] = (
-            df_exibicao['DT'].dt.strftime('%d/%m') + 
-            "<br>" + df_exibicao['Mes_Ano']
-        )
-        
-        # Exibição otimizada com títulos renomeados
-        st.write(
-            df_exibicao[['Seq.', 'Data / Mês', 'Descrição', 'V / S', 'Categoria', 'Banco', 'Status']]
-            .rename(columns={
-                'Seq.': 'ID',
-                'Data / Mês': 'Data e Mês',
-                'V / S': 'Valor | Saldo'
-            })
-            .to_html(escape=False, index=False),
-            unsafe_allow_html=True
-        )
-        # Este else está alinhado com o if not df_exibicao.empty: lá de cima
-    else:
-        st.warning("Base de dados vazia.")
-
+                df_exibicao['DT'].dt.strftime('%d/%m') + 
+                "<br>" + df_exibicao['Mes_Ano']
+            )
+            
+            # Exibição otimizada
+            st.write(
+                df_exibicao[['Seq.', 'Data / Mês', 'Descrição', 'V / S', 'Categoria', 'Banco', 'Status']]
+                .rename(columns={
+                    'Seq.': 'ID',
+                    'Data / Mês': 'Data e Mês',
+                    'V / S': 'Valor | Saldo'
+                })
+                .to_html(escape=False, index=False),
+                unsafe_allow_html=True
+            )
+        else:
+            st.warning("Base de dados vazia.")
 
 elif "Pendências" in aba:
     #st.title("📋 Lançamentos Pendentes")
