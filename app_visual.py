@@ -766,7 +766,6 @@ if "💰" in st.session_state.page:
         st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         
         # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
-       # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
         st.subheader("🔔 Monitor de Pendências do Período")
         
         # Filtra apenas o que está pendente E pertence ao mês selecionado
@@ -826,7 +825,6 @@ if "💰" in st.session_state.page:
         st.subheader("🔍 Lançamentos do Mês")
         
         if not df_m_limpo.empty:
-           if not df_m_limpo.empty:
             # 1. Cria uma cópia limpa e reduzida direto da fonte
             df_final = df_m_limpo[['Seq.', 'DT', 'V_Num', 'Saldo_Acumulado', 'Categoria', 'Banco', 'Status']].copy()
             
