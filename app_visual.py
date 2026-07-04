@@ -859,13 +859,18 @@ if "💰" in st.session_state.page:
             )
 
             # Exibição otimizada usando HTML
-            st.write(
-                df_exibicao[['Seq.', 'Data / Mês', 'Descrição', 'V / S', 'Categoria', 'Banco', 'Status']].to_html(escape=False, index=False),
-                unsafe_allow_html=True
-            )
-        else: # <--- O 'else' deve estar alinhado exatamente com o 'if' acima
-            st.warning("Base de dados vazia.")
-
+            # Exibição otimizada com títulos renomeados
+        st.write(
+            df_exibicao[['Seq.', 'Data / Mês', 'Descrição', 'V / S', 'Categoria', 'Banco', 'Status']]
+            .rename(columns={
+                'Seq.': 'ID',
+                'Data / Mês': 'Data e Mês',
+                'V / S': 'Valor | Saldo'
+            })
+            .to_html(escape=False, index=False),
+            unsafe_allow_html=True
+            
+        )
 elif "Pendências" in aba:
     #st.title("📋 Lançamentos Pendentes")
     
