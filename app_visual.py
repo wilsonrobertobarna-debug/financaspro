@@ -9,21 +9,6 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
-import uuid
-
-
-# --- FUNÇÃO DE LIMPEZA AVANÇADA ---
-def tratar_valor(valor):
-    if isinstance(valor, (int, float)):
-        return float(valor)
-    
-    # Remove o 'R$', espaços, pontos de milhar e troca vírgula por ponto
-    valor_limpo = str(valor).replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.')
-    
-    try:
-        return float(valor_limpo)
-    except:
-        return 0.0
 
 # --- INICIALIZAÇÃO DE VARIÁVEIS (Para evitar o NameError) ---
 if 'busca_desc' not in locals(): busca_desc = ""
@@ -167,33 +152,17 @@ except:
     ws_bancos = None
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
-# FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
     df = pd.DataFrame(dados[1:], columns=dados[0])
-    
-    # 1. LIMPEZA AGRESSIVA: Remove aspas de todas as células
-    for col in df.columns:
-        df[col] = df[col].astype(str).str.replace("'", "").str.replace('"', '').str.strip()
-    
     df['ID'] = range(2, len(df) + 2)
-    
-    # 2. Conversão de Valor
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
         except: return 0.0
-    
     df['V_Num'] = df['Valor'].apply(p_float)
-    
-    # 3. Conversão de Data
-    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')
+    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
-    
-    # 4. Cálculo do Saldo Acumulado (Para você auditar fácil)
-    df = df.sort_values(by='DT')
-    df['Saldo_Acumulado'] = df['V_Num'].cumsum()
-    
     return df
 
 def carregar_bancos_manual_gs():
@@ -435,121 +404,41 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             for i in range(f_par):
                 nova_data = t_dat + relativedelta(months=i)
                 
-                ws_base.append_row([                  
-                    f"'{nova_data.strftime('%d/%m/%Y')}", # Coluna A: Vencimento com apóstrofo
-                    f"'{v_str}",                          # Coluna B: Valor com apóstrofo
-                    f_des,                                # Coluna C: Descrição
-                    f_cat,                                # Coluna D: Categoria
-                    f_tip,                                # Coluna E: Tipo
-                    f_bnc,                                # Coluna F: Banco
-                    f_sta,                                # Coluna G: Status
-                    f"'{f_compra_str}",                   # Coluna H: Data da Compra com apóstrofo
-                    proximo_id + i,                       # Coluna I: ID (mantém número)
-                    f_ben                                 # Coluna J: Beneficiário
+                ws_base.append_row([
+                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
+                    v_str,                          # Coluna B: Valor
+                    f_des,                          # Coluna C: Descrição  
+                    f_cat,                          # Coluna D: Categoria
+                    f_tip,                          # Coluna E: Tipo
+                    f_bnc,                          # Coluna F: Banco
+                    f_sta,                          # Coluna G: Status
+                    f_compra_str,                   # Coluna H: Data da Compra
+                    proximo_id + i,                 # Coluna I: ID (Agora sem pular coluna!)
+                    f_ben                           # Coluna J: Beneficiário 
                 ])
+            
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
             atualizar_sessao()
             st.rerun()
-
-    
-           # --- BARRINHA 2: TRANSFERÊNCIA ---
+            # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
-        
-        # 1. Preparação da lista de beneficiários (lendo da Coluna J = índice 9)
-        dados_planilha = ws_base.get_all_values()
-        # Pega apenas a coluna J, remove vazios, tira duplicados e ordena
-        lista_beneficiarios = sorted(list(set([linha[9] for linha in dados_planilha[1:] if len(linha) > 9 and linha[9]])))
-    
         with st.form("f_transf", clear_on_submit=True):
             t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
             t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
             t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
             t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
-            
-            # 2. O seu novo campo de Autocomplete
-            t_desc = st.selectbox(
-                "Beneficiário/Descrição", 
-                options=lista_beneficiarios, 
-                index=None, 
-                placeholder="Selecione ou busque..."
-            )
-            
+            t_desc = st.text_input("Nota")
             if st.form_submit_button("TRANSFERIR"):
                 if t_orig == t_dest: 
                     st.error("Escolha bancos diferentes!")
                 else:
-                    # 3. Tratamento e Gravação
-                    valor_num = float(t_val)
-                    v_str = f"{valor_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    v_str = f"{t_val:.2f}".replace('.', ',')
                     d_str = t_dat.strftime("%d/%m/%Y")
-                    
-                    total_linhas = len(ws_base.get_all_values())
-                    id_transacao = total_linhas + 1
-                    
-                    # Gravação (o t_desc agora vem do selectbox)
-                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", "", id_transacao])
-                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", "", id_transacao])
-                    
-                    st.toast("✅ Transferência realizada!", icon="💰")
+                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", ""])
+                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", ""])
+                    st.toast("✅ Transferencia realizada com sucesso!", icon="💰")
                     atualizar_sessao()
                     st.rerun()
-
-                    # --- BARRINHA 3: RELATÓRIO & WHATSAPP ---
-    with st.sidebar.expander("🔍 Relatório & WhatsApp", expanded=False):
-        col_m, col_a = st.columns(2)
-        
-        meses = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]
-        anos = ["2026", "2027"] 
-        
-        sel_mes = col_m.selectbox("Mês", meses, index=datetime.now().month - 1)
-        sel_ano = col_a.selectbox("Ano", anos, index=0)
-        
-        if st.button("📊 Calcular Saldo"):
-            # 1. Filtra os dados da planilha
-            dados = ws_base.get_all_values()
-            periodo = f"{sel_mes}/{sel_ano}"
-            
-            # Filtra linhas: 
-            # - Pega apenas as do período
-            # - Ignora categoria 'Transferência'
-            # - Pega apenas o que estiver 'Pago' na coluna G (índice 6)
-            # Obs: Verifique se o texto na sua coluna G é exatamente "Pago"
-            dados_filtrados = [
-                l for l in dados[1:] 
-                if len(l) > 6 
-                and periodo in l[0] 
-                and l[3] != 'Transferência' 
-                and l[6] == 'Pago'
-            ]
-            
-            # 2. Função de conversão ajustada
-            def converter_valor(v):
-                try:
-                    return float(v.replace('.', '').replace(',', '.'))
-                except:
-                    return 0.0
-
-            total_receita = sum([converter_valor(l[1]) for l in dados_filtrados if l[4] == 'Receita'])
-            total_despesa = sum([converter_valor(l[1]) for l in dados_filtrados if l[4] == 'Despesa'])
-            saldo = total_receita - total_despesa
-            
-            st.write(f"**Receitas:** R$ {total_receita:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-            st.write(f"**Despesas:** R$ {total_despesa:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-            st.metric("Saldo Real (Pago)", f"R$ {saldo:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-            
-            st.session_state['saldo_calculado'] = saldo
-            
-            #with st.expander("Ver detalhe dos pagamentos (Excluindo Transferências)"):
-                #st.write(dados_filtrados)
-        
-        if st.button("💬 Enviar WhatsApp"):
-            if 'saldo_calculado' in st.session_state:
-                mensagem = f"Resumo {sel_mes}/{sel_ano}: Saldo de R$ {st.session_state['saldo_calculado']:,.2f}"
-                st.info(f"Enviando: {mensagem}")
-                # Aqui você poderá inserir a chamada da função Twilio depois
-            else:
-                st.warning("Calcule o saldo antes de enviar!")
-                    
 
                # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
@@ -578,8 +467,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             
             if col_ed1.button("💾 ATUALIZAR"):
                 v_str = f"{ed_val:.2f}".replace('.', ',')
-                ws_base.update_cell(int(item['ID']), 1, f"'{ed_dat.strftime('%d/%m/%Y')}")
-                ws_base.update_cell(int(item['ID']), 2, f"'{v_str}")
+                ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
+                ws_base.update_cell(int(item['ID']), 2, v_str)
                 ws_base.update_cell(int(item['ID']), 3, ed_desc)
                 ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
@@ -624,26 +513,15 @@ if "💰" in st.session_state.page:
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
-   # 1. BARRINHA DE MESES
+    # 1. BARRINHA DE MESES
     meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    
-    # Define o mês atual baseado na data do sistema (Julho = "Jul")
-    mes_atual_sistema = meses[datetime.now().month - 1] 
-
-    mes_selecionado = st.pills(
-        "Período:", 
-        meses, 
-        selection_mode="single", 
-        default=mes_atual_sistema,
-        key="filtro_mes_selecionado" # Isso mantém o estado
-    )
+    mes_atual = st.pills("Período:", meses, selection_mode="single", default="Jun")
 
     if not df_base.empty:
-        # 2. TRADUÇÃO DO FILTRO
+        # 2. TRADUÇÃO DO FILTRO (Converte "Jun" para "06/26")
         mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
                    "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
-        
-        filtro_mes = f"{mes_map[mes_selecionado]}/26"
+        filtro_mes = f"{mes_map[mes_atual]}/26"
         
         # Filtra os dados do mês
         df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
@@ -713,23 +591,12 @@ if "💰" in st.session_state.page:
         mes_map = {"Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6, 
                    "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12}
         
-        # Em vez de apenas mes_map[mes_atual], vamos limpar o valor antes de procurar
-    mes_limpo = mes_atual.strip().capitalize() # Remove espaços e deixa a primeira letra maiúscula
-    
-    if mes_limpo in mes_map:
-        mes_atual_num = mes_map[mes_limpo]
-    else:
-        # Se não encontrar, assume que é o mês atual do sistema para não quebrar
-        st.warning(f"Atenção: Mês '{mes_atual}' não encontrado no mapa. Usando valor padrão.")
-        mes_atual_num = 1 # Ou o número que você preferir como fallback
+        mes_atual_num = mes_map[mes_atual]
         mes_anterior_num = mes_atual_num - 1 if mes_atual_num > 1 else 12
         
         # 2. Preparar os dados (convertendo a coluna de vencimento para data)
         df_comp = df_base.copy()
-            # Mantenha este formato exato:
-        # Substitua o trecho problemático (linhas 712 a 726) por apenas isto:
-        df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
-        df_comp['Vencimento'] = df_comp['Vencimento'].fillna(pd.to_datetime('1900-01-01'))
+        df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True)
         
         # 3. Filtrar apenas os dois meses necessários
         df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].copy()
@@ -770,23 +637,16 @@ if "💰" in st.session_state.page:
         st.subheader("🔔 Monitor de Pendências do Período")
         
         # Filtra apenas o que está pendente E pertence ao mês selecionado
+        # Usamos 'filtro_mes' que você já definiu no seu código anterior!
         df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == filtro_mes)]
         
-        # Lógica profissional para data
-        hoje = datetime.now()
-        mes_formatado = hoje.strftime("%m")
-        ano_formatado = hoje.strftime("%Y")
-        
         if not df_pendente_mes.empty:
-            # Texto forçando ano com 4 dígitos
-            st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_formatado}/{ano_formatado}!")
+            st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
             
             # Exibe as pendências do mês
-            #st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','Banco','Valor', 'Categoria']], use_container_width=True)
-            st.write("--- TABELA DE PENDÊNCIAS ABAIXO ---")
-            st.dataframe(df_pendente_mes[['Vencimento', 'Banco', 'Valor', 'Categoria']], use_container_width=True)
+            st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','Banco','Valor', 'Categoria']], use_container_width=True)
         else:
-            st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_formatado}/{ano_formatado}.")
+            st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
         
         
             # --- AQUI COMEÇA O WILSONBOT ---
@@ -823,49 +683,28 @@ if "💰" in st.session_state.page:
         else:
             st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
 
-        # 7. TABELA FINAL (Versão de Diagnóstico)
-
-        df_m_limpo = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
-        st.write(f"DEBUG: Registros encontrados para {filtro_mes}: {len(df_m_limpo)}")
+            
+        # 7. TABELA FINAL
+        # 7. TABELA FINAL
+        st.subheader("🔍 Lançamentos do Mês")
         
         if not df_m_limpo.empty:
-            # Diagnóstico: Vamos ver o que está acontecendo antes de exibir
-            st.write(f"**DEBUG:** Linhas na base atual: {len(df_m_limpo)}")
-            st.write(f"**DEBUG:** Total de registros (V_Num): {df_m_limpo['V_Num'].count()}")
+            df_exibicao = df_m_limpo.copy()
             
-            # Limpeza de segurança: Remove duplicatas e ordena por data
-            df_final = df_m_limpo.drop_duplicates().sort_values(by='DT').copy()
+            # AJUSTE DE MENTOR: 
+            # Se você sente que a diferença é de 2, mudamos aqui.
+            # Se precisar ajustar para mais ou para menos, é só mudar este número '2'.
+            ajuste = 2 
+            df_exibicao['Seq.'] = df_exibicao.index + ajuste 
             
-            # RECÁLCULO DO SALDO: 
-            # Consideramos que DESPESA subtrai e RECEITA/RENDIMENTO soma
-            # Ajuste o 'Tipo' caso a sua coluna tenha nomes diferentes (ex: 'Gasto' em vez de 'Despesa')
-            df_final['Valor_Ajustado'] = df_final.apply(
-                lambda row: -abs(row['V_Num']) if str(row['Tipo']).lower() in ['despesa', 'gasto'] else abs(row['V_Num']), 
-                axis=1
-            )
-            df_final['Saldo_Acumulado'] = df_final['Valor_Ajustado'].cumsum()
+            # Inverte para mostrar os mais novos no topo
+            df_exibicao = df_exibicao.iloc[::-1]
             
-            # Formatação dos Valores
-            df_final['Valor | Saldo'] = (
-                "V: " + df_final['V_Num'].apply(lambda x: f"R$ {x:,.2f}") + 
-                "<br>S: " + df_final['Saldo_Acumulado'].apply(lambda x: f"R$ {x:,.2f}")
-            )
-            
-            # Formata a Data
-            df_final['Data e Mês'] = df_final['DT'].dt.strftime('%d/%m')
-            
-            # Seleção e Renomeação de colunas
-            df_exibir = df_final[['Seq.', 'Data e Mês', 'Valor | Saldo', 'Categoria', 'Banco', 'Status']].copy()
-            df_exibir = df_exibir.rename(columns={'Seq.': 'ID'})
-            
-            # Exibição
-            st.subheader("Auditoria de Saldo")
-            st.write(df_exibir.to_html(escape=False, index=False), unsafe_allow_html=True)
-            
+            st.dataframe(df_exibicao[['Seq.', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
+                         use_container_width=True, 
+                         hide_index=True)
         else:
-            st.warning("Base de dados vazia para o período selecionado.")
-
-
+            st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
     #st.title("📋 Lançamentos Pendentes")
     
@@ -1008,8 +847,7 @@ elif "🐾" in aba:
             
         df_show_display = df_show[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']].copy()
         df_show_display['Valor'] = df_show['V_Num'].apply(m_fmt)
-        #st.dataframe(df_show_display.iloc[::-1], use_container_width=True, hide_index=True)
-        st.dataframe(df_v_display.iloc[::-1][['ID', 'Vencimento', 'Tipo', 'Valor', 'Categoria', 'Banco', 'Status']], use_container_width=True, hide_index=True)
+        st.dataframe(df_show_display.iloc[::-1], use_container_width=True, hide_index=True)
     else:
         st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
 
@@ -1413,9 +1251,7 @@ if aba == "📋 Relatório PDF":
             p_fim = b_fim.strftime('%d/%m/%Y')
             
             # --- LOGICA DE FILTROS DO CABEÇALHO ---
-            # --- LOGICA DE FILTROS DO CABEÇALHO ---
             pdf.set_font("Arial", 'B', 10)
-            
             if busca_beneficiario:
                 pdf.cell(200, 6, txt=f"BENEFICIARIO FILTRADO: {str(busca_beneficiario).upper()}", ln=1, align="L")
             else:
@@ -1423,17 +1259,7 @@ if aba == "📋 Relatório PDF":
                 if busca_tipo:
                     pdf.cell(200, 6, txt=f"TIPO FILTRADO: {str(busca_tipo).upper()}", ln=1, align="L")
             
-            # A mágica acontece aqui: usamos datetime para garantir que o ano seja 4 dígitos (YYYY)
-            # Se p_inicio e p_fim forem strings 'MM/YY', vamos garantir o formato 20YY
-            def formatar_data_completa(data_str):
-                try:
-                    # Tenta converter de MM/YY para algo legível
-                    data_obj = datetime.strptime(data_str, "%m/%y")
-                    return data_obj.strftime("%d/%m/%Y")
-                except:
-                    return data_str # Se já estiver formatado ou der erro, retorna o original
-            
-            pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {formatar_data_completa(p_inicio)} ate {formatar_data_completa(p_fim)}", ln=1, align="L")
+            pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
             pdf.ln(5)
 
       
