@@ -166,36 +166,32 @@ except:
     ws_bancos = None
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
+# FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
     df = pd.DataFrame(dados[1:], columns=dados[0])
     
-    # LIMPEZA AGRESSIVA: Varre todas as colunas e remove aspas de tudo
+    # 1. LIMPEZA AGRESSIVA: Remove aspas de todas as células
     for col in df.columns:
         df[col] = df[col].astype(str).str.replace("'", "").str.replace('"', '').str.strip()
     
     df['ID'] = range(2, len(df) + 2)
     
-    # Agora a conversão de números e datas funciona porque não há mais aspas
+    # 2. Conversão de Valor
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
         except: return 0.0
-
-    df['V_Num'] = df['Valor'].apply(p_float)
-    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
-    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
     
-    return df
     df['V_Num'] = df['Valor'].apply(p_float)
     
-    # LIMPEZA EXTRA PARA DATAS: Removemos aspas antes de tentar converter
-    df['Vencimento'] = df['Vencimento'].astype(str).str.replace("'", "").str.replace('"', '').str.strip()
-    
-    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
-    
-    # Se a data falhar, vamos colocar um aviso ou uma data padrão para você identificar na conferência
+    # 3. Conversão de Data
+    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+    
+    # 4. Cálculo do Saldo Acumulado (Para você auditar fácil)
+    df = df.sort_values(by='DT')
+    df['Saldo_Acumulado'] = df['V_Num'].cumsum()
     
     return df
 
