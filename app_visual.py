@@ -859,14 +859,13 @@ if "💰" in st.session_state.page:
           # Removemos a Descrição e focamos no que importa
             colunas_selecionadas = ['Seq.', 'Data / Mês', 'V / S', 'Categoria', 'Banco', 'Status']
             
+            
             # Criamos o dataframe final filtrando as colunas e renomeando
-            df_final = df_exibicao[colunas_selecionadas].rename(columns={
-                'Seq.': 'ID',
-                'Data / Mês': 'Data e Mês',
-                'V / S': 'Valor | Saldo'
-            })
+           df_final.columns = ['ID', 'Data e Mês', 'Valor | Saldo', 'Categoria', 'Banco', 'Status']
             
             # Exibe a tabela
+            st.write(df_final.to_html(escape=False, index=False), unsafe_allow_html=True)
+            st.subheader("Auditoria de Saldo")
             st.write(df_final.to_html(escape=False, index=False), unsafe_allow_html=True)
 
         else:
