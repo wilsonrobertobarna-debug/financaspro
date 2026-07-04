@@ -10,12 +10,6 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-# --- INICIALIZAÇÃO DE VARIÁVEIS (Para evitar o NameError) ---
-if 'busca_desc' not in locals(): busca_desc = ""
-if 'busca_beneficiario' not in locals(): busca_beneficiario = ""
-if 'busca_status' not in locals(): busca_status = "Todos"
-if 'busca_tipo' not in locals(): busca_tipo = "Todos"
-
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
@@ -360,17 +354,15 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
     with st.form("f_novo", clear_on_submit=True):
         # Usando a variável hoje_br que já corrige o fuso horário
         f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
-        t_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY") 
+        t_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
         
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
-        f_des = st.text_input("Descrição")
-        f_ben = st.text_input("Beneficiário") # Nova caixa dedicada
+        f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação","Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
-        
         
         # Garante que a variável exista para evitar o NameError
         f_venc_cartao = None 
@@ -407,14 +399,13 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 ws_base.append_row([
                     nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
                     v_str,                          # Coluna B: Valor
-                    f_des,                          # Coluna C: Descrição  
+                    f_des,                          # Coluna C: Descrição
                     f_cat,                          # Coluna D: Categoria
                     f_tip,                          # Coluna E: Tipo
                     f_bnc,                          # Coluna F: Banco
                     f_sta,                          # Coluna G: Status
                     f_compra_str,                   # Coluna H: Data da Compra
-                    proximo_id + i,                 # Coluna I: ID (Agora sem pular coluna!)
-                    f_ben                           # Coluna J: Beneficiário 
+                    proximo_id + i                  # Coluna I: ID (Agora sem pular coluna!)
                 ])
             
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
@@ -1040,47 +1031,18 @@ if aba == "📋 Relatório PDF":
         data_padrao_fim = datetime(2026, 5, 20)
         periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
 
-   
-    # 2. FILTRAGEM (INCLUINDO NOVOS FILTROS)
-    # ========================================================
-    # ... (seu código de data e banco continua igual aqui em cima) ...
+    # -------------------------------------------------------------------------
+    # LINHA 2 DE FILTROS: DESCRIÇÃO E STATUS 
+    # -------------------------------------------------------------------------
+    col_rel3, col_rel4 = st.columns(2)
+    with col_rel3:
+        busca_desc = st.text_input("🔍 Pesquisar por Descrição / Beneficiário:", "").strip()
+        
+    with col_rel4:
+        busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
 
-    # --- BLOCO DE FILTROS SEGURO E COM CHAVES ÚNICAS ---
-    st.subheader("Filtros")
-    col_rel3, col_rel4, col_rel5 = st.columns(3)
-    
-    # Descrição
-    busca_desc = col_rel3.text_input("📝 Descrição:", value=st.session_state.get('busca_desc', ""), key="input_desc")
-    st.session_state.busca_desc = busca_desc
-    
-    # Beneficiário
-    busca_beneficiario = col_rel4.text_input("👤 Beneficiário:", value=st.session_state.get('busca_beneficiario', ""), key="input_benef")
-    st.session_state.busca_beneficiario = busca_beneficiario
-    
-    # Status
-    opcoes_status = ["Todos", "Pago", "Pendente"]
-    idx_status = opcoes_status.index(st.session_state.get('busca_status', "Todos"))
-    busca_status = col_rel5.selectbox("📌 Status:", opcoes_status, index=idx_status, key="sel_status")
-    st.session_state.busca_status = busca_status
-    
-    # -------------------------------------------------------------------------
-    # LINHA DE FILTRO: TIPO (ÚNICA E CORRETA)
-    # -------------------------------------------------------------------------
-    col_rel6, col_rel7 = st.columns([1, 2])
-    
-    opcoes_tipo = ["Todos", "Receita", "Despesa", "Rendimento"]
-    # Se o valor não estiver no estado, ele usa "Todos" como padrão
-    valor_atual = st.session_state.get('busca_tipo', "Todos")
-    
-    # Garantia para o index não quebrar se o valor mudar
-    idx_tipo = opcoes_tipo.index(valor_atual) if valor_atual in opcoes_tipo else 0
-    
-    busca_tipo = col_rel6.selectbox("🏷️ Filtrar por Tipo:", opcoes_tipo, index=idx_tipo, key="sel_tipo")
-    st.session_state.busca_tipo = busca_tipo    
-    # -------------------------------------------------------------------------
-    # FILTRO: BENEFICIÁRIO (NA LATERAL)
-    # -------------------------------------------------------------------------
-     
+    st.markdown("---")
+
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
@@ -1134,8 +1096,6 @@ if aba == "📋 Relatório PDF":
 
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
-            if st.session_state.get('busca_tipo') != "Todos":
-                df_report = df_report[df_report['Tipo'].str.upper().str.strip() == st.session_state.busca_tipo.upper()]
 
             df_report = df_report.sort_values(by='DT_FILTRO')
 
@@ -1220,7 +1180,7 @@ if aba == "📋 Relatório PDF":
 
             saldo_anterior = base_inicial
 
-            # ========================================================
+            saldo_anterior = base_inicial            # ========================================================
             # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO
             # ========================================================
             corrente = saldo_anterior 
@@ -1240,7 +1200,7 @@ if aba == "📋 Relatório PDF":
             df_report['Saldo_Acum'] = saldos_lista
 
             # ========================================================
-            # 5. MONTAGEM DO CABEÇALHO DO PDF (ATUALIZADO)
+            # 5. MONTAGEM DO CABEÇALHO DO PDF (Mantido padrão limpo)
             # ========================================================
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
@@ -1250,64 +1210,31 @@ if aba == "📋 Relatório PDF":
             p_inicio = b_ini.strftime('%d/%m/%Y')
             p_fim = b_fim.strftime('%d/%m/%Y')
             
-            # --- LOGICA DE FILTROS DO CABEÇALHO ---
             pdf.set_font("Arial", 'B', 10)
-            if busca_beneficiario:
-                pdf.cell(200, 6, txt=f"BENEFICIARIO FILTRADO: {str(busca_beneficiario).upper()}", ln=1, align="L")
-            else:
-                pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {str(banco_nome).upper()}", ln=1, align="L")
-                if busca_tipo:
-                    pdf.cell(200, 6, txt=f"TIPO FILTRADO: {str(busca_tipo).upper()}", ln=1, align="L")
-            
+            pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {str(banco_nome).upper()}", ln=1, align="L")
             pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
+            
+            txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+            pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
             pdf.ln(5)
 
-      
-            # ========================================================
-            # FILTRO CORRIGIDO (USANDO NOMES DAS COLUNAS)
-            # ========================================================
-            df_report = df_base.copy()
-            
-            # 1. Filtro de Data (Coluna 'DT')
-            df_report['DT'] = pd.to_datetime(df_report['DT'], format='%d/%m/%Y', errors='coerce')
-            df_report = df_report[(df_report['DT'] >= pd.to_datetime(b_ini)) & (df_report['DT'] <= pd.to_datetime(b_fim))]
-            
-            # 2. Filtro de Banco (Coluna 'Banco' é a número 5)
-            if banco_nome and str(banco_nome).lower() != "todos os bancos":
-                # Filtra pela coluna 'Banco' usando .contains
-                df_report = df_report[df_report['Banco'].astype(str).str.contains(str(banco_nome).strip(), case=False, na=False)]
-            
-            # 3. Filtro de Beneficiário (Coluna 'Beneficiário' é a número 9)
-            if busca_beneficiario and str(busca_beneficiario).strip() != "":
-                df_report = df_report[df_report['Beneficiário'].astype(str).str.contains(str(busca_beneficiario).strip(), case=False, na=False)]
-            
-            # 4. Ajustes de valores e ordenação
-            df_report['V_Num'] = pd.to_numeric(df_report['V_Num'], errors='coerce').fillna(0)
-            df_report = df_report.sort_values(by='DT')
-            
-            # 5. Saldo Acumulado (usando o valor inicial + cumsum)
-            valor_inicial = float(saldo_anterior) 
-            df_report['Valor_Com_Sinal'] = df_report.apply(
-                lambda x: x['V_Num'] if str(x['Tipo']).strip() in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
-            )
-            df_report['Saldo_Acum'] = valor_inicial + df_report['Valor_Com_Sinal'].cumsum()
-                
-            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
-            # ========================================================
-           # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
-            # ========================================================
-            
-            # --- IMPRIME O CABEÇALHO DA TABELA (PARA NÃO FICAR SEM TÍTULOS) ---
+            # Cabeçalho da Tabela
             pdf.set_font("Arial", 'B', 9)
-            pdf.cell(20, 7, "DATA", 1); pdf.cell(18, 7, "TIPO", 1); pdf.cell(35, 7, "CATEGORIA", 1)
-            pdf.cell(45, 7, "DESCRIÇÃO", 1); pdf.cell(25, 7, "VALOR", 1); pdf.cell(32, 7, "SALDO", 1); pdf.cell(20, 7, "STATUS", 1)
+            pdf.cell(20, 7, "Data", 1)
+            pdf.cell(18, 7, "Tipo", 1)
+            pdf.cell(35, 7, "Categoria", 1)
+            pdf.cell(45, 7, "Descricao", 1)
+            pdf.cell(25, 7, "Valor", 1)
+            pdf.cell(32, 7, "Saldo Acum.", 1)
+            pdf.cell(20, 7, "Status", 1)
             pdf.ln()
 
-            # --- LOOP DE IMPRESSÃO DAS LINHAS ---
+            # ========================================================
+            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
+            # ========================================================
             pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
-                # Formatações de Data
-                data_str = row['DT'].strftime('%d/%m/%Y') if 'DT' in row and not pd.isna(row['DT']) else str(row.get('DT', '---'))
+                data_str = row['DT_FILTRO'].strftime('%d/%m/%Y') if not pd.isna(row['DT_FILTRO']) else str(row.get(col_data_df, '---'))
                 
                 tipo_str = str(row.get('Tipo', '---')).strip()
                 cat_val = str(row.get('Categoria', 'Geral'))[:18]
@@ -1317,7 +1244,6 @@ if aba == "📋 Relatório PDF":
                 saldo_val = row.get('Saldo_Acum', 0.0)
                 status_val = str(row.get('Status', '-'))
 
-                # Lógica de cores
                 if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper():
                     texto_valor = f"- R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                     cor_valor = (255, 0, 0)
@@ -1328,7 +1254,6 @@ if aba == "📋 Relatório PDF":
                 texto_saldo = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                 cor_saldo = (255, 0, 0) if saldo_val < 0 else (0, 0, 0)
 
-                # Impressão das colunas
                 pdf.cell(20, 6, data_str, 1)
                 pdf.cell(18, 6, tipo_str, 1)
                 pdf.cell(35, 6, cat_val, 1)
@@ -1344,7 +1269,6 @@ if aba == "📋 Relatório PDF":
                 pdf.cell(20, 6, status_val, 1)
                 pdf.ln()
 
-            # Finalização e Download
             pdf_output = pdf.output(dest='S')
             if isinstance(pdf_output, str):
                 pdf_output = pdf_output.encode('latin-1')
@@ -1357,13 +1281,11 @@ if aba == "📋 Relatório PDF":
             )
             st.success(f"PDF pronto! Relatório atualizado.")
 
-        # (Este except deve estar alinhado com o 'try' lá de cima, geralmente com 8 espaços)
         except Exception as e:
             st.error(f"Erro ao gerar o PDF: {e}")
 
-    # (Este código abaixo fica FORA de qualquer bloco de erro, alinhado à esquerda)
     # =========================================================================
-    # 7. EXIBIÇÃO DA TABELA NA TELA
+    # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS 4 FILTROS (VISUAL LIMPO)
     # =========================================================================
     st.markdown("### 🔍 Lançamentos Filtrados")
 
@@ -1393,42 +1315,17 @@ if aba == "📋 Relatório PDF":
     if busca_status != "Todos" and col_status_df:
         df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
-    # ... (seu código atual de filtros de Data, Banco, Descrição e Status continua aqui) ...
-
-    # --- INSERIR ESTES FILTROS AQUI (APÓS O FILTRO DE STATUS) ---
-    
-    # Filtra Beneficiário (Coluna J = índice 9)
-    if st.session_state.get('busca_beneficiario'):
-        # Verifica se tem pelo menos 10 colunas para não dar erro de índice
-        if df_tela.shape[1] > 9:
-            df_tela = df_tela[df_tela.iloc[:, 9].astype(str).str.contains(st.session_state.busca_beneficiario, case=False, na=False)]
-
-    # Filtra Tipo
-    if st.session_state.get('busca_tipo') != "Todos":
-        df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == st.session_state.busca_tipo.upper()]
-
-    # --- (A PARTIR DAQUI SEGUE A FAXINA DAS COLUNAS) ---
     # Faxina das colunas internas para manter o visual limpo
     colunas_para_esconder = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
     colunas_visiveis = [c for c in df_tela.columns if c not in colunas_para_esconder]
     df_tela_limpo = df_tela[colunas_visiveis]
 
-        # Exibe os dados
-       # 1. Caixa de busca (o usuário digita aqui)
-    busca_beneficiario = st.text_input("🔍 Pesquisar por Beneficiário:")
-    
-    # 2. Se algo foi digitado, filtramos o df_tela_limpo antes de exibir
-    if busca_beneficiario:
-        # Lembre-se: o 9 é a coluna J (Beneficiário)
-        df_tela_limpo = df_tela_limpo[df_tela_limpo.iloc[:, 9].astype(str).str.contains(busca_beneficiario, case=False, na=False)]
-    
-    # 3. AGORA SIM, o código que você já tinha:
+    # Exibe os dados
     if not df_tela_limpo.empty:
         st.dataframe(df_tela_limpo, use_container_width=True)
     else:
         st.info("Nenhum lançamento encontrado para os filtros aplicados.")
-
-# --- O RESTO DO SEU CÓDIGO (ABA DE ANÁLISES) CONTINUA IGUAL ---# =========================================================================
+# =========================================================================
 # NOVA ABA: 📊 ANÁLISES & CONFIGURAÇÕES (Criada no final do arquivo)
 # =========================================================================
 # ATENÇÃO: Essa linha abaixo tem que começar encostada no canto esquerdo!
