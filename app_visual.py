@@ -844,19 +844,18 @@ if "💰" in st.session_state.page:
                     df_exibicao[col] = df_exibicao[col].astype(str).str.replace("'", "").str.replace('"', '')
             
            # Agora exibimos de forma compacta (valores empilhados)
-        st.subheader("Auditoria de Saldo")
+            st.subheader("Auditoria de Saldo")
         
         # Prepara a exibição com quebra de linha (HTML)
-        df_exibicao['V / S'] = (
+            df_exibicao['V / S'] = (
             "V: " + df_exibicao['V_Num'].apply(lambda x: f"R$ {x:,.2f}") + 
             "<br>S: " + df_exibicao['Saldo_Acumulado'].apply(lambda x: f"R$ {x:,.2f}")
         )
-        
-        df_exibicao['Data / Mês'] = (
+            df_exibicao['Data / Mês'] = (
             df_exibicao['DT'].dt.strftime('%d/%m') + 
             "<br>" + df_exibicao['Mes_Ano']
         )
-
+        
         # Exibição otimizada com títulos renomeados
         st.write(
             df_exibicao[['Seq.', 'Data / Mês', 'Descrição', 'V / S', 'Categoria', 'Banco', 'Status']]
@@ -869,8 +868,8 @@ if "💰" in st.session_state.page:
             unsafe_allow_html=True
         )
         # Este else está alinhado com o if not df_exibicao.empty: lá de cima
-        else:
-            st.warning("Base de dados vazia.")
+    else:
+        st.warning("Base de dados vazia.")
 
 
 elif "Pendências" in aba:
