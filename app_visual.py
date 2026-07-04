@@ -783,7 +783,9 @@ if "💰" in st.session_state.page:
             st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_formatado}/{ano_formatado}!")
             
             # Exibe as pendências do mês
-            st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','Banco','Valor', 'Categoria']], use_container_width=True)
+            #st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','Banco','Valor', 'Categoria']], use_container_width=True)
+            st.write("--- TABELA DE PENDÊNCIAS ABAIXO ---")
+            st.dataframe(df_pendente_mes[['Vencimento', 'Banco', 'Valor', 'Categoria']], use_container_width=True)
         else:
             st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_formatado}/{ano_formatado}.")
         
