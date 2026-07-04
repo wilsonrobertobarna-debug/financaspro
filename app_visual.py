@@ -828,24 +828,12 @@ if "💰" in st.session_state.page:
         if not df_m_limpo.empty:
             df_exibicao = df_m_limpo.copy()
             
-            # AJUSTE DE MENTOR
+            # Ajustes
             ajuste = 2 
             df_exibicao['Seq.'] = df_exibicao.index + ajuste 
-            
-            # Inverte para mostrar os mais novos no topo
             df_exibicao = df_exibicao.iloc[::-1]
             
-            # LIMPEZA DIRETA
-            colunas_texto = ['Vencimento', 'Data da Compra', 'Descrição', 'Categoria', 'Banco', 'Status']
-            for col in colunas_texto:
-                if col in df_exibicao.columns:
-                    df_exibicao[col] = df_exibicao[col].astype(str).str.replace("'", "").str.replace('"', '')
-            
-            # Agora exibimos de forma compacta (valores empilhados)
-            #st.subheader("Auditoria de Saldo")
-            st.subheader("TESTE DE MUDANÇA - SE ISSO NÃO APARECER, O ARQUIVO ESTÁ ERRADO")
-        
-            # Prepara a exibição com quebra de linha (HTML) - ALINHADO
+            # Prepara colunas
             df_exibicao['V / S'] = (
                 "V: " + df_exibicao['V_Num'].apply(lambda x: f"R$ {x:,.2f}") + 
                 "<br>S: " + df_exibicao['Saldo_Acumulado'].apply(lambda x: f"R$ {x:,.2f}")
@@ -855,19 +843,17 @@ if "💰" in st.session_state.page:
                 "<br>" + df_exibicao['Mes_Ano']
             )
             
-            # Exibição otimizada
-          # Removemos a Descrição e focamos no que importa
-            colunas_selecionadas = ['Seq.', 'Data / Mês', 'V / S', 'Categoria', 'Banco', 'Status']
+            # --- CRIAÇÃO DO DF_FINAL E RENOMEAÇÃO ---
+            # Filtra apenas as colunas que você quer (SEM DESCRIÇÃO)
+            df_final = df_exibicao[['Seq.', 'Data / Mês', 'V / S', 'Categoria', 'Banco', 'Status']].copy()
             
-            
-            # Criamos o dataframe final filtrando as colunas e renomeando
+            # Renomeia as colunas agora que o df_final existe
             df_final.columns = ['ID', 'Data e Mês', 'Valor | Saldo', 'Categoria', 'Banco', 'Status']
             
-         # Exibe a tabela
-            st.write(df_final.to_html(escape=False, index=False), unsafe_allow_html=True)
+            # --- EXIBIÇÃO ÚNICA ---
             st.subheader("Auditoria de Saldo")
             st.write(df_final.to_html(escape=False, index=False), unsafe_allow_html=True)
-
+            
         else:
             st.warning("Base de dados vazia.")
             
