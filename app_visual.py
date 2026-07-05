@@ -480,7 +480,13 @@ if "💰" in st.session_state.page:
 
     # 1. BARRINHA DE MESES
     meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    mes_atual = st.pills("Período:", meses, selection_mode="single", default="Jun")
+   # Pega o mês atual em inglês (ex: 'Jul') e ajusta para o nosso formato
+    meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    mes_atual_hoje = datetime.datetime.now().strftime("%b") # Retorna o mês atual (ex: 'Jul')
+    
+    # Se o sistema retornar o mês em inglês, garantimos que ele bate com a lista
+    # Como 'Jul' em inglês é 'Jul', funciona direto.
+    mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=mes_atual_hoje)
 
     if not df_base.empty:
         # 2. TRADUÇÃO DO FILTRO (Converte "Jun" para "06/26")
