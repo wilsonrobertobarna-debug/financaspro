@@ -1296,9 +1296,17 @@ if aba == "📋 Relatório PDF":
     if busca_status != "Todos" and col_status_df:
         df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
-    # Faxina das colunas internas para manter o visual limpo
-    colunas_para_esconder = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
-    colunas_visiveis = [c for c in df_tela.columns if c not in colunas_para_esconder]
+   # --- FAXINA RIGOROSA ---
+    # Lista de colunas proibidas
+    colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
+    
+    # Filtra mantendo apenas colunas que NÃO estão na lista proibida 
+    # E que NÃO começam com "DT_" (isso mata o dt_ que está aparecendo)
+    colunas_visiveis = [
+        c for c in df_tela.columns 
+        if c not in colunas_proibidas and not c.upper().startswith('DT_')
+    ]
+    
     df_tela_limpo = df_tela[colunas_visiveis]
 
     # Exibe os dados
