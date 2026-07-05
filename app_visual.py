@@ -562,11 +562,10 @@ if "💰" in st.session_state.page:
         # 2. Preparar os dados (convertendo a coluna de vencimento para data)
         df_comp = df_base.copy()
         # Substitua a linha do pd.to_datetime por este bloco de segurança:
-        df_comp['Vencimento'] = pd.to_datetime(
-            df_comp['Vencimento'], 
-            dayfirst=True, 
-            errors='coerce' # Isso evita o erro: se algo for inválido, vira um valor nulo (NaN)
-        
+df_comp['Vencimento'] = pd.to_datetime(
+    df_comp['Vencimento'], 
+    dayfirst=True, 
+    errors='coerce' # Isso evita o erro: se algo for inválido, vira um valor nulo (NaN)
         # 3. Filtrar apenas os dois meses necessários
         df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].copy()
         
