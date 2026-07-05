@@ -560,42 +560,30 @@ if "💰" in st.session_state.page:
         mes_anterior_num = mes_atual_num - 1 if mes_atual_num > 1 else 12
         
         # 2. Preparar os dados (convertendo a coluna de vencimento para data)
+
         df_comp = df_base.copy()
-       # --- BLOCO DE SEGURANÇA PARA DATAS ---
-        # Verifique se este bloco está alinhado com o comando anterior
+        
+        # --- BLOCO DE SEGURANÇA PARA DATAS ---
         df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
         
-        df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].co
+        # Correção aqui: era .co e agora é .copy()
+        df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].copy()
         
-        # 4. Tabela dinâmica
-    df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
+       # 4. Tabela dinâmica
+        df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
             index='Categoria', 
             columns=df_comp['Vencimento'].dt.month, 
             values='V_Num', 
             aggfunc='sum'
         ).fillna(0)
         
-        # Renomeia as colunas para o que aparece na tela
+        # 5. Renomeia as colunas
         colunas_renomeadas = {mes_anterior_num: "Mês Anterior", mes_atual_num: "Mês Atual"}
         df_pivot = df_pivot.rename(columns=colunas_renomeadas)
         
-        # 5. Cálculo da variação (seguro)
+        # 6. Cálculo da variação
         if "Mês Anterior" in df_pivot.columns and "Mês Atual" in df_pivot.columns:
-            df_pivot['Variação (%)'] = ((df_pivot["Mês Atual"] - df_pivot["Mês Anterior"]) / df_pivot["Mês Anterior"] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
-        
-        # 6. Exibir
-        #st.dataframe(df_pivot.style.format("{:.2f}"), use_container_width=True)
-
-
-        # --- EXIBIÇÃO FORMATADA ---
-
-        # Vamos criar um dicionário de formatação para aplicar estilos diferentes em colunas diferentes
-        formatacao = {
-            "Mês Anterior": "{:.2f}",
-            "Mês Atual": "{:.2f}",
-            "Variação (%)": "{:.2f}%"  # Adicionamos o símbolo de % aqui!
-        }
-        
+            df_pivot['Variação (%)'] = ((df_pivot["Mês Atual"] - df_pivot["Mês Anterior"]) / df_pivot["Mês Anterior"] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)        
         # Aplicamos o estilo (o .style.format aplica o que definimos no dicionário)
         st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         
