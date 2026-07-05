@@ -583,8 +583,20 @@ if "💰" in st.session_state.page:
         
         # 6. Cálculo da variação
         if "Mês Anterior" in df_pivot.columns and "Mês Atual" in df_pivot.columns:
-            df_pivot['Variação (%)'] = ((df_pivot["Mês Atual"] - df_pivot["Mês Anterior"]) / df_pivot["Mês Anterior"] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)        
+            df_pivot['Variação (%)'] = ((df_pivot["Mês Atual"] - df_pivot["Mês Anterior"]) / df_pivot["Mês Anterior"] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
+
+        # --- DEFINIÇÃO DA FORMATAÇÃO (Para resolver o NameError) ---
+        formatacao = {
+            "Mês Anterior": "{:.2f}",
+            "Mês Atual": "{:.2f}",
+            "Variação (%)": "{:.2f}%"
+        }
+
+        # Agora o st.dataframe vai encontrar a variável formatacao
+        st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         # Aplicamos o estilo (o .style.format aplica o que definimos no dicionário)
+
+        
         st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         
         # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
