@@ -568,7 +568,7 @@ df_comp['Vencimento'] = pd.to_datetime(
     errors='coerce'
 )
         # 3. Filtrar apenas os dois meses necessários
-        df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].copy()
+    df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].copy()
         
         # 4. Tabela dinâmica
         df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
