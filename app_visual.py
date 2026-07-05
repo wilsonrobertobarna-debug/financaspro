@@ -562,13 +562,13 @@ if "💰" in st.session_state.page:
         # 2. Preparar os dados (convertendo a coluna de vencimento para data)
         df_comp = df_base.copy()
        # --- BLOCO DE SEGURANÇA PARA DATAS ---
-# Verifique se este bloco está alinhado com o comando anterior
-df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
-
-df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].co
+        # Verifique se este bloco está alinhado com o comando anterior
+        df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
+        
+        df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].co
         
         # 4. Tabela dinâmica
-        df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
+    df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
             index='Categoria', 
             columns=df_comp['Vencimento'].dt.month, 
             values='V_Num', 
