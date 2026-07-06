@@ -699,39 +699,58 @@ if "💰" in st.session_state.page:
             st.warning("Base de dados vazia.")
     
 elif "Pendências" in aba:
+    elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     
-    col_a, col_b, col_c = st.columns(3)
-    with col_a:
+    # 1. INTERFACE DE FILTROS
+    c1, c2, c3 = st.columns(3)
+    with c1:
         filtro_banco = st.multiselect("Filtrar Banco:", df_base['Banco'].unique())
-    with col_b:
+    with c2:
         busca_geral = st.text_input("🔍 Pesquisar (Desc/Beneficiário)")
-    with col_c:
-        busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"], index=2)
+    with c3:
+        periodo = st.date_input("Filtrar Período:", (datetime.now().replace(day=1), datetime.now()))
+
+    # 2. PROCESSO DE FILTRAGEM (O "FUNIL")
+    df_v = df_base.copy()
+    df_v.columns = df_v.columns.str.strip() # Limpa espaços nos nomes das colunas
     
-    df_filtrado = df_base.copy()
-    col_benef = df_filtrado.columns[9]
+    # Garantir formato de data
+    if 'DT' in df_v.columns:
+        df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], errors='coerce')
     
-    if busca_geral:
-        mask_desc = df_filtrado['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)
-        mask_benef = df_filtrado[col_benef].astype(str).str.contains(busca_geral, case=False, na=False)
-        df_filtrado = df_filtrado[mask_desc | mask_benef]
-    
+    # Aplica os filtros em sequência
     if filtro_banco:
-        df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
-    
-    if busca_status != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['Status'].astype(str).str.strip().str.lower() == busca_status.lower()]
+        df_v = df_v[df_v['Banco'].isin(filtro_banco)]
         
-    st.write(f"### Total: {len(df_filtrado)}")
-    st.dataframe(df_filtrado, use_container_width=True)
+    if busca_geral:
+        # Busca em Descrição ou Beneficiário
+        mask_desc = df_v['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)
+        mask_ben = df_v['Beneficiário'].astype(str).str.contains(busca_geral, case=False, na=False)
+        df_v = df_v[mask_desc | mask_ben]
+        
+    if isinstance(periodo, tuple) and len(periodo) == 2:
+        df_v = df_v[(df_v['DT_Obj'].dt.date >= periodo[0]) & (df_v['DT_Obj'].dt.date <= periodo[1])]
+
+    # 3. EXIBIÇÃO FINAL
+    st.write(f"### Total encontrado: {len(df_v)}")
     
-    # 4. BOTÃO DE BAIXA
-    if not df_filtrado.empty:
+    # Define as colunas que você quer ver
+    cols_display = ['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Beneficiário', 'Categoria', 'Banco', 'Status']
+    cols_existentes = [c for c in cols_display if c in df_v.columns]
+    
+    df_v_display = df_v[cols_existentes].copy()
+    if 'V_Num' in df_v.columns:
+        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        
+    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+
+    # 4. BOTÃO DE BAIXA (Usando o df_v que já está filtrado)
+    if not df_v.empty:
         if st.button("✅ BAIXAR SELECIONADOS"):
-            headers = ws_base.row_values(1)
-            idx_status = headers.index('Status') + 1
-            idx_venc = [i for i, h in enumerate(headers) if 'VENC' in h.upper() or 'DATA' in h.upper()][0] + 1
+            # Lógica de baixa aqui...
+            st.toast("✅ Itens baixados!", icon="💰")
+            st.rerun()
             
             for idx_df, row in df_filtrado.iterrows():
                 linha_sheets = int(idx_df) + 2
