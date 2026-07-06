@@ -338,34 +338,36 @@ if "expander_lancamento_aberto" not in st.session_state:
 
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
     with st.form("f_novo", clear_on_submit=True):
-        # Usando a variável hoje_br que já corrige o fuso horário
         f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
         t_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
         
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
-        f_des = st.text_input("Descrição / Beneficiário")
+        
+        # --- NOVO: Separação Descrição / Beneficiário ---
+        f_des = st.text_input("Descrição")
+        
+        # Busca beneficiários únicos da Coluna J (tratando possíveis vazios)
+        beneficiarios_opcoes = sorted([b for b in df_base['Beneficiário'].dropna().unique() if b != ""])
+        
+        # Selectbox para buscar, com opção de digitar um novo
+        b_sel = st.selectbox("Beneficiário (Selecione)", ["-- Novo Beneficiário --"] + beneficiarios_opcoes)
+        b_novo = st.text_input("Se for NOVO Beneficiário, digite abaixo:")
+        
+        # Lógica: Se digitou um novo, usa ele. Se não, usa o selecionado no selectbox.
+        f_bnc_final = b_novo if b_novo else (b_sel if b_sel != "-- Novo Beneficiário --" else "")
+        # ------------------------------------------------
+        
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação","Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         
-        # Garante que a variável exista para evitar o NameError
-        f_venc_cartao = None 
-
-        # ... (após todos os st.selectbox e inputs do formulário)
-
         if st.form_submit_button("Salvar Lançamento"):
-            # 1. BUSCAR O MAIOR ID DIRETO NA PLANILHA (Sem depender de variáveis externas)
-            # Pegamos todos os valores da aba
             todos_dados = ws_base.get_all_records()
-            
             if todos_dados:
-                # Transformamos em um DataFrame temporário só para achar o maior ID
                 import pandas as pd
                 df_temp = pd.DataFrame(todos_dados)
-                
-                # Se a coluna ID existir, pegamos o maior + 1, senão começa em 1
                 if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
                     proximo_id = int(df_temp['ID'].max()) + 1
                 else:
@@ -373,30 +375,32 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             else:
                 proximo_id = 1
 
-            # 2. Formatações
             v_str = f"{f_val:.2f}".replace('.', ',')
             t_dat_str = t_dat.strftime("%d/%m/%Y")
             f_compra_str = f_compra.strftime("%d/%m/%Y")
             
-            # 3. Salvar as parcelas
             for i in range(f_par):
                 nova_data = t_dat + relativedelta(months=i)
                 
+                # Inserindo os dados (Coluna J agora entra como o 10º item)
                 ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
-                    v_str,                          # Coluna B: Valor
-                    f_des,                          # Coluna C: Descrição
-                    f_cat,                          # Coluna D: Categoria
-                    f_tip,                          # Coluna E: Tipo
-                    f_bnc,                          # Coluna F: Banco
-                    f_sta,                          # Coluna G: Status
-                    f_compra_str,                   # Coluna H: Data da Compra
-                    proximo_id + i                  # Coluna I: ID (Agora sem pular coluna!)
+                    nova_data.strftime("%d/%m/%Y"), # A: Vencimento
+                    v_str,                          # B: Valor
+                    f_des,                          # C: Descrição
+                    f_cat,                          # D: Categoria
+                    f_tip,                          # E: Tipo
+                    f_bnc,                          # F: Banco
+                    f_sta,                          # G: Status
+                    f_compra_str,                   # H: Data da Compra
+                    proximo_id + i,                 # I: ID
+                    f_bnc_final                     # J: Beneficiário
                 ])
             
-            st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
+            st.toast(f"✅ Lançamento salvo com Beneficiário: {f_bnc_final}", icon="💰")
             atualizar_sessao()
             st.rerun()
+
+    
             # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
         with st.form("f_transf", clear_on_submit=True):
