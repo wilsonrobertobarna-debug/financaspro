@@ -738,19 +738,16 @@ elif "Pendências" in aba:
             
    
     # 4. Filtros de Busca (Separados e Limpos)
- 
-    # 4. Campo Único de Busca (Blindado)
+    # 4. Campo Único de Busca (BUSCA POR POSIÇÃO - A prova de erros)
     busca_geral = st.text_input("🔍 Pesquisar por Descrição / Beneficiário")
     
     if busca_geral:
-        # Usamos o df_base.copy() para garantir que todas as colunas estejam lá
-        df_busca = df_base.copy()
+        # A coluna Descrição é a 3ª (índice 2) e a de Beneficiário é a 10ª (índice 9)
+        # Convertemos o dataframe para uma estrutura que nos permite buscar por número de coluna
+        mask_desc = df_filtrado.iloc[:, 2].astype(str).str.contains(busca_geral, case=False, na=False)
+        mask_bnc = df_filtrado.iloc[:, 9].astype(str).str.contains(busca_geral, case=False, na=False)
         
-        # Filtra a base completa
-        mask = (df_busca['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)) | \
-               (df_busca['Beneficiário'].astype(str).str.contains(busca_geral, case=False, na=False))
-        
-        df_filtrado = df_busca[mask]
+        df_filtrado = df_filtrado[mask_desc | mask_bnc]
         
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
     
