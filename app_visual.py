@@ -711,7 +711,10 @@ if "💰" in st.session_state.page:
         else:
             st.warning("Base de dados vazia.")
     
-#elif "Pendências" in aba:
+if aba == "Pendências":
+    st.markdown("---")
+    st.subheader("⚠️ ABA DE PENDÊNCIAS COM BUSCA")
+    st.markdown("---")
 
     st.title("📋 Lançamentos Pendentes")
     
