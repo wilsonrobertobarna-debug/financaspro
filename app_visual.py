@@ -701,33 +701,32 @@ elif "Pendências" in aba:
         busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"], index=2)
 
     # 2. FILTRAGEM (EM CASCATA)
+   # 2. FILTRAGEM (APENAS BUSCA - PARA TESTE)
     df_filtrado = df_base.copy()
-
-    # Aplica Banco
-    if filtro_banco:
-        df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
     
-    # Aplica Status
-    if busca_status != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['Status'].astype(str).str.strip().str.lower() == busca_status.lower()]
-
-    # Aplica Busca (Descrição ou Beneficiário)
-   # 4. Aplica Busca (A prova de falhas para a Coluna J)
+    # FORÇAMOS A COLUNA J (ÍNDICE 9)
+    col_benef = df_filtrado.columns[9]
+    
+    # TESTE: Apenas a busca, sem banco nem status
     if busca_geral:
-        # Pega a lista de todas as colunas
-        cols = df_filtrado.columns.tolist()
+        busca_limpa = busca_geral.strip().lower()
+        mask_desc = df_filtrado['Descrição'].astype(str).str.lower().str.contains(busca_limpa, na=False)
+        mask_benef = df_filtrado[col_benef].astype(str).str.lower().str.contains(busca_limpa, na=False)
         
-        # Tenta identificar a coluna de Beneficiário ou usa a posição 9 (Coluna J)
-        # Se a coluna 'Beneficiário' existir, usa ela; se não, usa a coluna na posição 9
-        col_benef = 'Beneficiário' if 'Beneficiário' in cols else cols[9]
-        
-        # Debug: Isso vai mostrar na tela qual coluna ele está usando de verdade
-        st.write(f"DEBUG: Buscando em Descrição e na coluna: {col_benef}")
+        df_filtrado = df_filtrado[mask_desc | mask_benef]
+        st.write(f"DEBUG: Buscando '{busca_geral}' na Descrição e em '{col_benef}'")
+        st.write(f"DEBUG: Linhas encontradas após busca: {len(df_filtrado)}")
+    
+    # 3. EXIBIÇÃO
+    st.write(f"### Total de linhas na base agora: {len(df_filtrado)}")
+    st.dataframe(df_filtrado, use_container_width=True)
         
         mask_desc = df_filtrado['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)
         mask_benef = df_filtrado[col_benef].astype(str).str.contains(busca_geral, case=False, na=False)
         
         df_filtrado = df_filtrado[mask_desc | mask_benef]
+
+    
     # 3. EXIBIÇÃO FINAL
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
     
