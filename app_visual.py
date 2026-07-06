@@ -713,7 +713,7 @@ if "💰" in st.session_state.page:
     
 #elif "Pendências" in aba:
 
-    st.title("NOVA DE PAGINA NOVA")
+    st.title("📋 Lançamentos Pendentes")
     
     # Criando as colunas para os filtros ficarem lado a lado
     c1, c2, c3 = st.columns(3)
@@ -723,7 +723,7 @@ if "💰" in st.session_state.page:
     with c2:
         busca_desc = st.text_input("🔍 Buscar por Descrição", key="d_pend")
     with c3:
-        # A nova caixa que você queria
+        # A CAIXA QUE VOCÊ QUERIA:
         busca_benef = st.text_input("👤 Buscar por Beneficiário", key="n_pend")
 
     # Filtro de dados
@@ -734,7 +734,7 @@ if "💰" in st.session_state.page:
     if busca_desc:
         df_v = df_v[df_v['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)]
     
-    # Filtro do Beneficiário (Independente)
+    # Filtro do Beneficiário (O "NÓ" QUE ESTÁVAMOS DESATANDO)
     if busca_benef and 'Beneficiário' in df_v.columns:
         df_v = df_v[df_v['Beneficiário'].astype(str).str.contains(busca_benef, case=False, na=False)]
 
