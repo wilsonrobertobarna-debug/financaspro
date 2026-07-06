@@ -738,6 +738,7 @@ elif "Pendências" in aba:
             
    
     # 4. Filtros de Busca (Separados e Limpos)
+    
     col1, col2 = st.columns(2)
     with col1:
         busca_desc = st.text_input("🔍 Pesquisar por Descrição")
@@ -752,7 +753,8 @@ elif "Pendências" in aba:
     if busca_bnc:
         # Nota: Certifique-se que na sua planilha o cabeçalho é exatamente "Beneficiário"
         df_filtrado = df_filtrado[df_filtrado['Beneficiário'].astype(str).str.contains(busca_bnc, case=False, na=False)]
-
+        
+    st.write("Colunas disponíveis no DataFrame:", df_filtrado.columns.tolist())
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
     
     # Exibe a tabela
