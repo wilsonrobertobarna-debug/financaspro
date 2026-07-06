@@ -397,11 +397,19 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 if t_orig == t_dest: 
                     st.error("Escolha bancos diferentes!")
                 else:
+                    # 1. CALCULA O PRÓXIMO ID (Igual ao que fizemos no outro)
+                    coluna_i = ws_base.col_values(9)
+                    ids_numericos = [int(v) for v in coluna_i[1:] if v and v.isdigit()]
+                    proximo_id = max(ids_numericos) + 1 if ids_numericos else 1
+                    
                     v_str = f"{t_val:.2f}".replace('.', ',')
                     d_str = t_dat.strftime("%d/%m/%Y")
-                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", ""])
-                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", ""])
-                    st.toast("✅ Transferencia realizada com sucesso!", icon="💰")
+                    
+                    # 2. SALVA AS DUAS LINHAS JÁ COM OS IDs (proximo_id e proximo_id + 1)
+                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", d_str, proximo_id])
+                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", d_str, proximo_id + 1])
+                    
+                    st.toast("✅ Transferência realizada com sucesso!", icon="💰")
                     atualizar_sessao()
                     st.rerun()
 
