@@ -26,14 +26,6 @@ def aplicar_filtros(df, banco=None, desc=None, benef=None, status=None):
     
     return df_f
 
-if aba == "Pendências":
-    # Aqui você chama a função com uma linha só:
-    df_final = aplicar_filtros(df_base, banco=..., desc=..., benef=...)
-    st.dataframe(df_final)
-
-
-
-
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
