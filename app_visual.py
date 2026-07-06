@@ -688,7 +688,10 @@ if "💰" in st.session_state.page:
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     
-   # 1. DEFINIÇÃO DOS FILTROS
+  elif "Pendências" in aba:
+    st.title("📋 Lançamentos Pendentes")
+    
+    # 1. DEFINIÇÃO DOS FILTROS
     col_a, col_b, col_c = st.columns(3)
     with col_a:
         filtro_banco = st.multiselect("Filtrar Banco:", df_base['Banco'].unique())
@@ -709,56 +712,41 @@ elif "Pendências" in aba:
         df_filtrado = df_filtrado[df_filtrado['Status'].astype(str).str.strip().str.lower() == busca_status.lower()]
 
     # Aplica Busca (Descrição ou Beneficiário)
-      # 4. Busca com detecção automática do nome da coluna
-    # 4. Filtro de Busca Robusto
     if busca_geral:
-        # Criamos versões limpas das colunas para busca
-        # .str.strip() remove espaços antes/depois, .fillna('') garante que células vazias não deem erro
-        desc_limpa = df_filtrado['Descrição'].astype(str).str.strip().str.lower()
-        benef_limpa = df_filtrado['Beneficiário'].astype(str).str.strip().str.lower()
-        busca_limpa = busca_geral.strip().lower()
+        # Criamos máscaras separadas para garantir que ambos sejam pesquisados
+        mask_desc = df_filtrado['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)
+        mask_benef = df_filtrado['Beneficiário'].astype(str).str.contains(busca_geral, case=False, na=False)
         
-        # Filtramos onde a busca existe em qualquer uma das duas
-        mask = (desc_limpa.str.contains(busca_limpa, na=False)) | \
-               (benef_limpa.str.contains(busca_limpa, na=False))
-        
-        df_filtrado = df_filtrado[mask]
-        # Encontra o nome real da coluna que contém 'Beneficiário' (ignora espaços ou acentos extras)
-        coluna_beneficiario = next((col for col in df_filtrado.columns if 'Beneficiário' in col), None)
-        
-        if coluna_beneficiario:
-            mask = (df_filtrado['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)) | \
-                   (df_filtrado[coluna_beneficiario].astype(str).str.contains(busca_geral, case=False, na=False))
-            df_filtrado = df_filtrado[mask]
-        else:
-            # Se não achar, ele avisa na tela o que está enxergando
-            st.error(f"Coluna 'Beneficiário' não encontrada. Colunas existentes: {df_filtrado.columns.tolist()}")
-            # Busca apenas na Descrição caso a outra coluna falhe
-            df_filtrado = df_filtrado[df_filtrado['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)]
-        # Usamos .astype(str) para garantir segurança e 'Beneficiário' com o nome exato da planilha
-        mask = (df_filtrado['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)) | \
-               (df_filtrado['Beneficiário'].astype(str).str.contains(busca_geral, case=False, na=False))
-        df_filtrado = df_filtrado[mask]
+        # Filtra onde o termo aparece na Descrição OU no Beneficiário
+        df_filtrado = df_filtrado[mask_desc | mask_benef]
 
     # 3. EXIBIÇÃO FINAL
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
     
-    # Exibe a tabela apenas com as colunas que você quer ver
     colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor', 'Status']
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
     
     st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
     
-    # Se precisar do botão de Baixa, coloque-o logo após a exibição
-    if not df_filtrado.empty and st.button("✅ BAIXAR SELECIONADOS"):
-        # ... (Sua lógica de atualização de planilha aqui) ...
-        st.toast("✅ Itens baixados!", icon="💰")
-        st.rerun()
+    # 4. BOTÃO DE BAIXA
+    if not df_filtrado.empty:
+        if st.button("✅ BAIXAR SELECIONADOS"):
+            headers = ws_base.row_values(1)
+            idx_status = headers.index('Status') + 1
+            idx_venc = [i for i, h in enumerate(headers) if 'VENC' in h.upper() or 'DATA' in h.upper()][0] + 1
+            
+            for idx_df, row in df_filtrado.iterrows():
+                linha_sheets = int(idx_df) + 2
+                ws_base.update_cell(linha_sheets, idx_status, "Pago")
+                ws_base.update_cell(linha_sheets, idx_venc, datetime.now().strftime("%d/%m/%Y"))
+            
+            st.toast("✅ Itens baixados!", icon="💰")
+            st.rerun()
     else:
         st.info("Nenhum lançamento encontrado neste período.")
+        
     st.divider()
-    st.subheader("🔔 Avisos: Vencimentos Próximos")
-       # ... (aqui você mantém a lógica original dos alertas de vencimento se desejar) ...
+    st.subheader("🔔 Avisos: Vencimentos Próximos")      # ... (aqui você mantém a lógica original dos alertas de vencimento se desejar) ...
         
     
     c1, c2, c3 = st.columns(3) # Aumentei para 3 colunas para caber o filtro de data
