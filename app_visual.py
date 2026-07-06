@@ -736,20 +736,23 @@ elif "Pendências" in aba:
                 (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
             ]
             
-    # 4. Filtro de Descrição (Por último, para refinar)
-    # 4. Filtro de Descrição (Agora busca em Descrição OU Beneficiário)
-    if busca_desc:
-        # Cria uma máscara que verifica se o termo está na Descrição OU no Beneficiário
-        mask_desc = df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)
-        mask_bnc = df_filtrado['Beneficiário'].str.contains(busca_desc, case=False, na=False)
-        
-        # Filtra o dataframe usando o operador OR (|)
-        df_filtrado = df_filtrado[mask_desc | mask_bnc]
+    # 4. Filtro de Busca (Corrigido e Blindado)
+    # Primeiro, garantimos que trabalhamos com o df_base (que tem todas as colunas)
+    df_busca = df_base.copy() 
     
+    if busca_desc:
+        # Busca nas duas colunas, garantindo que o texto seja comparado como string
+        mask = (df_busca['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)) | \
+               (df_busca['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False))
+        
+        df_filtrado = df_busca[mask]
+    else:
+        df_filtrado = df_busca # Se não buscou nada, mostra tudo
+
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
     
-    # Adicionamos 'Beneficiário' na lista de colunas visíveis para você conferir
-    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor']
+    # Colunas visíveis com verificação de existência
+    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor', 'Status', 'Categoria', 'Tipo']
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
     
     # Exibe a tabela
