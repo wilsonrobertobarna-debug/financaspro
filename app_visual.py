@@ -229,11 +229,8 @@ if 'df_base' not in st.session_state:
 # 2. Só depois de carregar, você define a variável local
 df_base = st.session_state['df_base']
 
-# 3. Só agora, com a variável já existente, você pode usar o st.write
-st.write("Colunas disponíveis no sistema:", df_base.columns.tolist())
-
 # 2. Agora criamos as variáveis locais para usar nas barras
-df_base = st.session_state['df_base']
+# df_base = st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
 
 # FUNÇÃO PARA ATUALIZAR O ESTADO
