@@ -709,7 +709,20 @@ elif "Pendências" in aba:
         df_filtrado = df_filtrado[df_filtrado['Status'].astype(str).str.strip().str.lower() == busca_status.lower()]
 
     # Aplica Busca (Descrição ou Beneficiário)
+  # 4. Busca com detecção automática do nome da coluna
     if busca_geral:
+        # Encontra o nome real da coluna que contém 'Beneficiário' (ignora espaços ou acentos extras)
+        coluna_beneficiario = next((col for col in df_filtrado.columns if 'Beneficiário' in col), None)
+        
+        if coluna_beneficiario:
+            mask = (df_filtrado['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)) | \
+                   (df_filtrado[coluna_beneficiario].astype(str).str.contains(busca_geral, case=False, na=False))
+            df_filtrado = df_filtrado[mask]
+        else:
+            # Se não achar, ele avisa na tela o que está enxergando
+            st.error(f"Coluna 'Beneficiário' não encontrada. Colunas existentes: {df_filtrado.columns.tolist()}")
+            # Busca apenas na Descrição caso a outra coluna falhe
+            df_filtrado = df_filtrado[df_filtrado['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)]
         # Usamos .astype(str) para garantir segurança e 'Beneficiário' com o nome exato da planilha
         mask = (df_filtrado['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)) | \
                (df_filtrado['Beneficiário'].astype(str).str.contains(busca_geral, case=False, na=False))
