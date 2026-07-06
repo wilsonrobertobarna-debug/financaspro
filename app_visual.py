@@ -701,16 +701,18 @@ elif "Pendências" in aba:
    #elif "Pendências" in aba:
     #st.title("📋 Lançamentos Pendentes")
     
-    # NOVOS FILTROS SEPARADOS
+    # FORÇANDO A CRIAÇÃO DA NOVA CAIXA
     col1, col2, col3 = st.columns(3)
+    
     with col1:
-        filtro_banco = st.multiselect("Filtrar Banco:", df_base['Banco'].unique())
+        filtro_banco = st.multiselect("Filtrar Banco:", df_base['Banco'].unique(), key="banco_pendencia")
     with col2:
-        busca_desc = st.text_input("🔍 Buscar por Descrição")
+        busca_desc = st.text_input("🔍 Buscar por Descrição", key="busca_desc_pendencia")
     with col3:
-        busca_benef = st.text_input("👤 Buscar por Beneficiário") # A SUA NOVA CAIXA!
+        # Esta é a caixa que você quer criar
+        busca_benef = st.text_input("👤 Buscar por Beneficiário", key="busca_benef_pendencia")
 
-    # FUNIL DE FILTRAGEM INDEPENDENTE
+    # RESTO DO CÓDIGO DE FILTRAGEM...
     df_v = df_base[df_base['Status'].astype(str).str.strip() == 'Pendente'].copy()
     
     if filtro_banco:
@@ -719,17 +721,14 @@ elif "Pendências" in aba:
     if busca_desc:
         df_v = df_v[df_v['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)]
         
-    # FILTRO DO BENEFICIÁRIO (Agora isolado)
     if busca_benef:
-        # AQUI verificamos se a coluna existe antes de filtrar
         if 'Beneficiário' in df_v.columns:
             df_v = df_v[df_v['Beneficiário'].astype(str).str.contains(busca_benef, case=False, na=False)]
-        else:
-            st.warning("A coluna 'Beneficiário' não foi encontrada nos dados.")
 
-    # Exibição Final
     st.write(f"### Total: {len(df_v)}")
     st.dataframe(df_v, use_container_width=True)
+
+       
     # 4. BOTÃO DE BAIXA (Usando o df_v que já está filtrado)
     if not df_v.empty:
         if st.button("✅ BAIXAR SELECIONADOS"):
