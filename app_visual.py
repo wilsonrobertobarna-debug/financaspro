@@ -736,25 +736,24 @@ elif "Pendências" in aba:
                 (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
             ]
             
-    # 4. Filtro de Busca (Corrigido e Blindado)
-   # --- BLOCO DE BUSCA COM DEBUG ---
+   
+    # 4. Filtros de Busca (Separados e Limpos)
+    col1, col2 = st.columns(2)
+    with col1:
+        busca_desc = st.text_input("🔍 Pesquisar por Descrição")
+    with col2:
+        busca_bnc = st.text_input("🔍 Pesquisar por Beneficiário")
+        
+    # Aplica o filtro de Descrição se algo for digitado
     if busca_desc:
-        # TESTE: Vamos ver se o Beneficiário realmente existe no df_filtrado
-        # st.write(f"DEBUG: Colunas disponíveis: {df_filtrado.columns.tolist()}")
+        df_filtrado = df_filtrado[df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)]
         
-        # Filtro em cascata forçado
-        mask_desc = df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)
-        mask_bnc = df_filtrado['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False)
-        
-        # Filtra o dataframe
-        df_filtrado = df_filtrado[mask_desc | mask_bnc]
-        
-        # SE AINDA ASSIM NÃO APARECER NADA, vamos ver o que tem na coluna Beneficiário
-        if df_filtrado.empty:
-            st.warning("⚠️ O filtro não encontrou nada. Verifique se o termo digitado existe na coluna 'Beneficiário'.")
-            # st.write("Valores únicos na coluna Beneficiário atual:", df_base['Beneficiário'].unique())
-    
-    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
+    # Aplica o filtro de Beneficiário se algo for digitado
+    if busca_bnc:
+        # Nota: Certifique-se que na sua planilha o cabeçalho é exatamente "Beneficiário"
+        df_filtrado = df_filtrado[df_filtrado['Beneficiário'].astype(str).str.contains(busca_bnc, case=False, na=False)]
+
+    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
     
     # Exibe a tabela
     colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor']
