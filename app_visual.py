@@ -685,11 +685,16 @@ if "💰" in st.session_state.page:
                          hide_index=True)
         else:
             st.warning("Base de dados vazia.")
-#elif "Pendências" in aba:
-    #st.title("📋 Lançamentos Pendentes")
     
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
+    # TESTE DE DADOS
+    st.write("---")
+    st.write("🔍 **Diagnóstico da Coluna J (Beneficiário):**")
+    # Mostra os 5 primeiros valores reais da coluna J
+    valores_reais = df_base.iloc[:, 9].astype(str).unique()[:5]
+    st.write(f"Valores encontrados na coluna J: {valores_reais}")
+    st.write("---")
     
     # 1. DEFINIÇÃO DOS FILTROS
     col_a, col_b, col_c = st.columns(3)
