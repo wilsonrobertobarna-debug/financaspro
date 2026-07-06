@@ -778,13 +778,22 @@ elif "Pendências" in aba:
         # Aplica a máscara no dataframe
         df_v = df_v[mask_desc | mask_ben]
 
-    # 3. CRIAÇÃO DO DISPLAY (Incluindo a coluna Beneficiário)
-    df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Beneficiário', 'Categoria', 'Banco', 'Status']].copy()
-    
-    # 4. Formatação de valor e exibição
-    df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+   # 1. REMOVE ESPAÇOS E AJEITA OS NOMES DAS COLUNAS (isso evita erros de digitação)
+    df_v.columns = df_v.columns.str.strip() 
 
+    # 2. CRIAÇÃO DO DISPLAY
+    # Usamos o nome da coluna sem espaços extras para garantir
+    colunas_exibicao = ['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Beneficiário', 'Categoria', 'Banco', 'Status']
+    
+    # Filtra apenas colunas que realmente existem no seu DataFrame
+    colunas_existentes = [c for c in colunas_exibicao if c in df_v.columns]
+    
+    df_v_display = df_v[colunas_existentes].copy()
+    
+    # 3. Formatação
+    df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+    
+    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
