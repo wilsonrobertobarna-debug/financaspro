@@ -698,30 +698,38 @@ if "💰" in st.session_state.page:
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     
-    # 1. Filtros simples
-    c1, c2 = st.columns(2)
-    with c1:
+   elif "Pendências" in aba:
+    st.title("📋 Lançamentos Pendentes")
+    
+    # NOVOS FILTROS SEPARADOS
+    col1, col2, col3 = st.columns(3)
+    with col1:
         filtro_banco = st.multiselect("Filtrar Banco:", df_base['Banco'].unique())
-    with c2:
-        busca_desc = st.text_input("🔍 Pesquisar na Descrição")
+    with col2:
+        busca_desc = st.text_input("🔍 Buscar por Descrição")
+    with col3:
+        busca_benef = st.text_input("👤 Buscar por Beneficiário") # A SUA NOVA CAIXA!
 
-    # 2. Funil de Dados (Foco apenas em Descrição + Banco)
-    df_v = df_base[df_base['Status'] == 'Pendente'].copy()
+    # FUNIL DE FILTRAGEM INDEPENDENTE
+    df_v = df_base[df_base['Status'].astype(str).str.strip() == 'Pendente'].copy()
     
     if filtro_banco:
         df_v = df_v[df_v['Banco'].isin(filtro_banco)]
     
     if busca_desc:
-        # Busca SOMENTE na descrição, sem complicar com outras colunas
-        df_v = df_v[df_v['Descrição'].str.contains(busca_desc, case=False, na=False)]
+        df_v = df_v[df_v['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)]
+        
+    # FILTRO DO BENEFICIÁRIO (Agora isolado)
+    if busca_benef:
+        # AQUI verificamos se a coluna existe antes de filtrar
+        if 'Beneficiário' in df_v.columns:
+            df_v = df_v[df_v['Beneficiário'].astype(str).str.contains(busca_benef, case=False, na=False)]
+        else:
+            st.warning("A coluna 'Beneficiário' não foi encontrada nos dados.")
 
-    # 3. Exibição limpa
+    # Exibição Final
     st.write(f"### Total: {len(df_v)}")
-    
-    # Exibe colunas básicas garantindo que não quebre
-    colunas_finais = ['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Banco', 'Status']
-    st.dataframe(df_v[colunas_finais], use_container_width=True, hide_index=True)
-
+    st.dataframe(df_v, use_container_width=True)
     # 4. BOTÃO DE BAIXA (Usando o df_v que já está filtrado)
     if not df_v.empty:
         if st.button("✅ BAIXAR SELECIONADOS"):
