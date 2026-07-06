@@ -368,28 +368,29 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             f_compra_str = f_compra.strftime("%d/%m/%Y")
             
             # 3. Salvar as parcelas
-            for i in range(f_par):
-                nova_data = t_dat + relativedelta(months=i)
-                
-                ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
-                    v_str,                          # Coluna B: Valor
-                    f_des,                          # Coluna C: Descrição
-                    f_cat,                          # Coluna D: Categoria
-                    f_tip,                          # Coluna E: Tipo
-                    f_bnc,                          # Coluna F: Banco
-                    f_sta,                          # Coluna G: Status
-                    f_compra_str,                   # Coluna H: Data da Compra
-                    proximo_id + i,                  # Coluna I: ID (Agora sem pular coluna!)
-                    f_ben                           # O BENEFICIÁRIO ENTRA AQUI!
-                ])
+          if st.form_submit_button("Salvar Lançamento"):
+            # 1. Definir a variável aqui dentro (para garantir que ela exista)
+            novo_registro = [
+                proximo_id, 
+                str(f_compra), 
+                str(t_dat), 
+                f_val, 
+                f_par, 
+                f_des,       # Descrição
+                f_tip, 
+                f_cat, 
+                f_bnc, 
+                f_sta, 
+                f_ben        # Beneficiário
+            ]
             
-            st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
+            # 2. Executar o comando de salvar usando a variável criada acima
             ws_base.append_row(novo_registro)
-            st.success("Lançamento salvo com sucesso!")
             
-            atualizar_sessao()
-            st.rerun()
+            st.success("Lançamento salvo com sucesso!")
+            st.rerun() # Atualiza a página para mostrar o novo dado
+
+    
             # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
         with st.form("f_transf", clear_on_submit=True):
