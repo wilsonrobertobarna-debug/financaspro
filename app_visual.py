@@ -737,25 +737,24 @@ elif "Pendências" in aba:
             ]
             
     # 4. Filtro de Busca (Corrigido e Blindado)
-    # Primeiro, garantimos que trabalhamos com o df_base (que tem todas as colunas)
-    df_busca = df_base.copy() 
+    # 1. Filtros iniciais (Banco, Mês, etc...) - Isso já deve estar funcionando
+    # Certifique-se de que o df_filtrado resultante aqui seja a sua base de trabalho atual
     
+    # 2. Agora aplicamos a busca sobre o que já foi filtrado anteriormente
     if busca_desc:
-        # Busca nas duas colunas, garantindo que o texto seja comparado como string
-        mask = (df_busca['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)) | \
-               (df_busca['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False))
+        # Garantimos que estamos buscando no df_filtrado atual
+        # Convertemos para string para evitar erro se houver valores vazios (NaN)
+        mask_desc = df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)
+        mask_bnc = df_filtrado['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False)
         
-        df_filtrado = df_busca[mask]
-    else:
-        df_filtrado = df_busca # Se não buscou nada, mostra tudo
-
-    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
+        # Filtra o df_filtrado mantendo o que já estava filtrado antes
+        df_filtrado = df_filtrado[mask_desc | mask_bnc]
     
-    # Colunas visíveis com verificação de existência
+    # Exibição
+    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
     colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor', 'Status', 'Categoria', 'Tipo']
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
     
-    # Exibe a tabela
     st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
     
     # 4. Botão de Baixa (Funcionalidade de Baixa)
