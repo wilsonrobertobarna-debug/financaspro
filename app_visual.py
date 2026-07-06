@@ -737,26 +737,29 @@ elif "Pendências" in aba:
             ]
             
     # 4. Filtro de Busca (Corrigido e Blindado)
-    # 1. Filtros iniciais (Banco, Mês, etc...) - Isso já deve estar funcionando
-    # Certifique-se de que o df_filtrado resultante aqui seja a sua base de trabalho atual
-    
-    # 2. Agora aplicamos a busca sobre o que já foi filtrado anteriormente
+   # --- BLOCO DE BUSCA COM DEBUG ---
     if busca_desc:
-        # Garantimos que estamos buscando no df_filtrado atual
-        # Convertemos para string para evitar erro se houver valores vazios (NaN)
+        # TESTE: Vamos ver se o Beneficiário realmente existe no df_filtrado
+        # st.write(f"DEBUG: Colunas disponíveis: {df_filtrado.columns.tolist()}")
+        
+        # Filtro em cascata forçado
         mask_desc = df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)
         mask_bnc = df_filtrado['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False)
         
-        # Filtra o df_filtrado mantendo o que já estava filtrado antes
+        # Filtra o dataframe
         df_filtrado = df_filtrado[mask_desc | mask_bnc]
+        
+        # SE AINDA ASSIM NÃO APARECER NADA, vamos ver o que tem na coluna Beneficiário
+        if df_filtrado.empty:
+            st.warning("⚠️ O filtro não encontrou nada. Verifique se o termo digitado existe na coluna 'Beneficiário'.")
+            # st.write("Valores únicos na coluna Beneficiário atual:", df_base['Beneficiário'].unique())
     
-    # Exibição
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
-    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor', 'Status', 'Categoria', 'Tipo']
+    
+    # Exibe a tabela
+    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor']
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
-    
-    st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
-    
+    st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)    
     # 4. Botão de Baixa (Funcionalidade de Baixa)
     if not df_filtrado.empty:
         nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
