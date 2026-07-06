@@ -750,14 +750,29 @@ elif "Pendências" in aba:
         df_v = df_v[df_v['Banco'].isin(s_bnc)]
     if b_desc:
         df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
+        
     
     # Aplicação do filtro de data
+   # 1. Aplicação do filtro de data (seu código original)
     if isinstance(periodo, tuple) and len(periodo) == 2:
         df_v = df_v[(df_v['DT_Obj'].dt.date >= periodo[0]) & (df_v['DT_Obj'].dt.date <= periodo[1])]
+
+    # 2. FILTRO DE BUSCA (AQUI ENTRA A MÁGICA DO BENEFICIÁRIO)
+    if b_desc:
+        # Cria uma máscara que busca em Descrição OU em Beneficiário
+        mask_desc = df_v['Descrição'].str.contains(b_desc, case=False, na=False)
+        mask_ben  = df_v['Beneficiário'].str.contains(b_desc, case=False, na=False)
         
-    df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+        # Aplica a máscara no dataframe
+        df_v = df_v[mask_desc | mask_ben]
+
+    # 3. CRIAÇÃO DO DISPLAY (Incluindo a coluna Beneficiário)
+    df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Beneficiário', 'Categoria', 'Banco', 'Status']].copy()
+    
+    # 4. Formatação de valor e exibição
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+
 
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
