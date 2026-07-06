@@ -792,18 +792,26 @@ elif "Pendências" in aba:
             mask_ben = df_v['Beneficiário'].astype(str).str.contains(b_desc, case=False, na=False)
             filtro_mask = mask_ben if filtro_mask is None else (filtro_mask | mask_ben)
         
-        if filtro_mask is not None:
-            df_v = df_v[filtro_mask]
+       # 1. FILTRO (Onde você filtra o df_v)
+    if b_desc:
+        mask_desc = df_v['Descrição'].astype(str).str.contains(b_desc, case=False, na=False)
+        mask_ben = df_v['Beneficiário'].astype(str).str.contains(b_desc, case=False, na=False)
+        df_v = df_v[mask_desc | mask_ben]
 
-    # 3. Exibição (ignora colunas que não existirem para não dar erro)
-    colunas_ok = [c for c in ['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Beneficiário', 'Categoria', 'Banco', 'Status'] if c in df_v.columns]
-    
-    df_v_display = df_v[colunas_ok].copy()
-    if 'V_Num' in df_v.columns:
-        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-        
-    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+    # 2. EXIBIÇÃO
+    st.dataframe(df_v, use_container_width=True)
 
+    # 3. AÇÃO DE BAIXA (O SEGREDO ESTÁ AQUI)
+    # Certifique-se de que o botão usa o 'df_v' (que já está filtrado pelo Beneficiário)
+    if not df_v.empty:
+        if st.button("✅ BAIXAR SELECIONADOS"):
+            # O código aqui vai baixar APENAS o que restou no df_v após o seu filtro
+            for idx, row in df_v.iterrows():
+                linha_sheets = int(row['ID']) + 1 # Ou a lógica que você usa para achar a linha
+                ws_base.update_cell(linha_sheets, coluna_status, "Pago")
+            st.success("Baixa realizada nos itens filtrados!")
+    else:
+        st.warning("Nenhum item filtrado para baixar.")
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
     
