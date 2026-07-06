@@ -380,7 +380,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     f_bnc,                          # Coluna F: Banco
                     f_sta,                          # Coluna G: Status
                     f_compra_str,                   # Coluna H: Data da Compra
-                    proximo_id + i                  # Coluna I: ID (Agora sem pular coluna!)
+                    proximo_id + i,                  # Coluna I: ID (Agora sem pular coluna!)
                     f_ben                           # O BENEFICIÁRIO ENTRA AQUI!
                 ])
             
