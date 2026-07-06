@@ -778,21 +778,30 @@ elif "Pendências" in aba:
         # Aplica a máscara no dataframe
         df_v = df_v[mask_desc | mask_ben]
 
-   # 1. REMOVE ESPAÇOS E AJEITA OS NOMES DAS COLUNAS (isso evita erros de digitação)
+  # 1. Limpeza básica dos nomes das colunas (remove espaços extras)
     df_v.columns = df_v.columns.str.strip() 
 
-    # 2. CRIAÇÃO DO DISPLAY
-    # Usamos o nome da coluna sem espaços extras para garantir
-    colunas_exibicao = ['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Beneficiário', 'Categoria', 'Banco', 'Status']
+    # 2. Filtro de busca (agora busca automaticamente em 'Descrição' OU 'Beneficiário')
+    if b_desc:
+        # Cria a busca se as colunas existirem
+        filtro_mask = None
+        if 'Descrição' in df_v.columns:
+            filtro_mask = df_v['Descrição'].astype(str).str.contains(b_desc, case=False, na=False)
+        
+        if 'Beneficiário' in df_v.columns:
+            mask_ben = df_v['Beneficiário'].astype(str).str.contains(b_desc, case=False, na=False)
+            filtro_mask = mask_ben if filtro_mask is None else (filtro_mask | mask_ben)
+        
+        if filtro_mask is not None:
+            df_v = df_v[filtro_mask]
+
+    # 3. Exibição (ignora colunas que não existirem para não dar erro)
+    colunas_ok = [c for c in ['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Beneficiário', 'Categoria', 'Banco', 'Status'] if c in df_v.columns]
     
-    # Filtra apenas colunas que realmente existem no seu DataFrame
-    colunas_existentes = [c for c in colunas_exibicao if c in df_v.columns]
-    
-    df_v_display = df_v[colunas_existentes].copy()
-    
-    # 3. Formatação
-    df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-    
+    df_v_display = df_v[colunas_ok].copy()
+    if 'V_Num' in df_v.columns:
+        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "🐾" in aba:
