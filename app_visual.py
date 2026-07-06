@@ -720,15 +720,19 @@ elif "Pendências" in aba:
                 (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
             ]
             
-    # 4. Filtro de Busca (Descrição OU Beneficiário)
+  
+    # 4. Filtro de Busca (Forçando a busca em Descrição E Beneficiário)
     if busca_desc:
-        # Criamos máscaras para ambas as colunas
+        # Pega a coluna Descrição (pelo nome, como você já fazia)
         mask_desc = df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)
-        mask_bnc = df_filtrado['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False)
         
-        # Filtramos onde pelo menos um dos dois for verdadeiro
-        df_filtrado = df_filtrado[mask_desc | mask_bnc]
-    
+        # Pega a coluna da 10ª posição (Coluna J - Beneficiário) usando o índice 9
+        # Isso ignora qualquer erro de nome/acento no cabeçalho
+        mask_bnc = df_filtrado.iloc[:, 9].astype(str).str.contains(busca_desc, case=False, na=False)
+        
+        # Filtra o dataframe se o termo aparecer em qualquer uma das duas
+        df_filtrado = df_filtrado[mask_desc | mask_bnc]    
+        
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
     
     # Adicionamos 'Beneficiário' aqui também para você visualizar o que foi encontrado
