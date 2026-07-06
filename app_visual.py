@@ -166,6 +166,17 @@ def carregar_bancos_manual_gs():
             return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
 
+df_base = st.session_state.get('df_base', None)
+df_bancos_info = st.session_state.get('df_bancos_info', None)
+
+if df_base is None:
+    st.session_state['df_base'] = carregar_dados_gs()
+    df_base = st.session_state['df_base']
+
+if df_bancos_info is None:
+    st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
+    df_bancos_info = st.session_state['df_bancos_info']
+
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
     df = carregar_dados_gs()
