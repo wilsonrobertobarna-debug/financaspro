@@ -1394,9 +1394,9 @@ if aba == "📊 Análises & Configurações":
     # Primeiro, criamos uma lista de meses únicos presentes na base (ordenados)
     #meses_unicos = sorted(df_base[df_base['Status'] == 'Pago']['Mes_Ano'].unique())
     if 'Status' in df_base.columns and 'Mes_Ano' in df_base.columns:
-    meses_unicos = sorted(df_base[df_base['Status'] == 'Pago']['Mes_Ano'].dropna().unique())
-else:
-    meses_unicos = [] # Retorna uma lista vazia se as colunas não existirem    
+        meses_unicos = sorted(df_base[df_base['Status'] == 'Pago']['Mes_Ano'].dropna().unique())
+    else:
+        meses_unicos = [] # Retorna uma lista vazia se as colunas não existirem    
     
     # Pegamos os dois últimos meses da lista
     if len(meses_unicos) >= 2:
