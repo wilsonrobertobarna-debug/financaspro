@@ -753,6 +753,7 @@ elif "Pendências" in aba:
         
     
     # Aplicação do filtro de data
+    # 1. Aplicação do filtro de data (seu código original)
    # 1. Aplicação do filtro de data (seu código original)
     if isinstance(periodo, tuple) and len(periodo) == 2:
         df_v = df_v[(df_v['DT_Obj'].dt.date >= periodo[0]) & (df_v['DT_Obj'].dt.date <= periodo[1])]
