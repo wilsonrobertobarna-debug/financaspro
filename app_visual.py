@@ -712,14 +712,22 @@ elif "Pendências" in aba:
         df_filtrado = df_filtrado[df_filtrado['Status'].astype(str).str.strip().str.lower() == busca_status.lower()]
 
     # Aplica Busca (Descrição ou Beneficiário)
+   # 4. Aplica Busca (A prova de falhas para a Coluna J)
     if busca_geral:
-        # Criamos máscaras separadas para garantir que ambos sejam pesquisados
-        mask_desc = df_filtrado['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)
-        mask_benef = df_filtrado['Beneficiário'].astype(str).str.contains(busca_geral, case=False, na=False)
+        # Pega a lista de todas as colunas
+        cols = df_filtrado.columns.tolist()
         
-        # Filtra onde o termo aparece na Descrição OU no Beneficiário
+        # Tenta identificar a coluna de Beneficiário ou usa a posição 9 (Coluna J)
+        # Se a coluna 'Beneficiário' existir, usa ela; se não, usa a coluna na posição 9
+        col_benef = 'Beneficiário' if 'Beneficiário' in cols else cols[9]
+        
+        # Debug: Isso vai mostrar na tela qual coluna ele está usando de verdade
+        st.write(f"DEBUG: Buscando em Descrição e na coluna: {col_benef}")
+        
+        mask_desc = df_filtrado['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)
+        mask_benef = df_filtrado[col_benef].astype(str).str.contains(busca_geral, case=False, na=False)
+        
         df_filtrado = df_filtrado[mask_desc | mask_benef]
-
     # 3. EXIBIÇÃO FINAL
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
     
