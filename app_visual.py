@@ -10,6 +10,30 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
+# ---------------------------------------------------------
+# AQUI É O "TOPO" - ONDE VOCÊ COLOCA A FUNÇÃO
+# ---------------------------------------------------------
+def aplicar_filtros(df, banco=None, desc=None, benef=None, status=None):
+    # Lógica centralizada: se não houver filtro, ele ignora
+    df_f = df.copy()
+    
+    if banco and len(banco) > 0:
+        df_f = df_f[df_f['Banco'].isin(banco)]
+    if desc:
+        df_f = df_f[df_f['Descrição'].astype(str).str.contains(desc, case=False, na=False)]
+    if benef and 'Beneficiário' in df_f.columns:
+        df_f = df_f[df_f['Beneficiário'].astype(str).str.contains(benef, case=False, na=False)]
+    
+    return df_f
+
+if aba == "Pendências":
+    # Aqui você chama a função com uma linha só:
+    df_final = aplicar_filtros(df_base, banco=..., desc=..., benef=...)
+    st.dataframe(df_final)
+
+
+
+
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
@@ -695,38 +719,38 @@ if "💰" in st.session_state.page:
         else:
             st.warning("Base de dados vazia.")
     
-elif "Pendências" in aba:
-    st.title("📋 Lançamentos Pendentes")
-    
-   #elif "Pendências" in aba:
+#elif "Pendências" in aba:
     #st.title("📋 Lançamentos Pendentes")
     
-    # FORÇANDO A CRIAÇÃO DA NOVA CAIXA
-    col1, col2, col3 = st.columns(3)
+# COPIE ESTE BLOCO E SUBSTITUA O DA ABA "PENDÊNCIAS" NO SEU ARQUIVO
+if aba == "Pendências":
+    st.title("📋 Lançamentos Pendentes")
     
-    with col1:
-        filtro_banco = st.multiselect("Filtrar Banco:", df_base['Banco'].unique(), key="banco_pendencia")
-    with col2:
-        busca_desc = st.text_input("🔍 Buscar por Descrição", key="busca_desc_pendencia")
-    with col3:
-        # Esta é a caixa que você quer criar
-        busca_benef = st.text_input("👤 Buscar por Beneficiário", key="busca_benef_pendencia")
+    # Criando as colunas para os filtros ficarem lado a lado
+    c1, c2, c3 = st.columns(3)
+    
+    with c1:
+        filtro_banco = st.multiselect("Filtrar Banco:", df_base['Banco'].unique(), key="b_pend")
+    with c2:
+        busca_desc = st.text_input("🔍 Buscar por Descrição", key="d_pend")
+    with c3:
+        # A nova caixa que você queria
+        busca_benef = st.text_input("👤 Buscar por Beneficiário", key="n_pend")
 
-    # RESTO DO CÓDIGO DE FILTRAGEM...
+    # Filtro de dados
     df_v = df_base[df_base['Status'].astype(str).str.strip() == 'Pendente'].copy()
     
     if filtro_banco:
         df_v = df_v[df_v['Banco'].isin(filtro_banco)]
-    
     if busca_desc:
         df_v = df_v[df_v['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)]
-        
-    if busca_benef:
-        if 'Beneficiário' in df_v.columns:
-            df_v = df_v[df_v['Beneficiário'].astype(str).str.contains(busca_benef, case=False, na=False)]
+    
+    # Filtro do Beneficiário (Independente)
+    if busca_benef and 'Beneficiário' in df_v.columns:
+        df_v = df_v[df_v['Beneficiário'].astype(str).str.contains(busca_benef, case=False, na=False)]
 
     st.write(f"### Total: {len(df_v)}")
-    st.dataframe(df_v, use_container_width=True)
+    st.dataframe(df_v, use_container_width=True, hide_index=True)
 
        
     # 4. BOTÃO DE BAIXA (Usando o df_v que já está filtrado)
