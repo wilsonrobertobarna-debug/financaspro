@@ -716,7 +716,7 @@ if "💰" in st.session_state.page:
     
 # COPIE ESTE BLOCO E SUBSTITUA O DA ABA "PENDÊNCIAS" NO SEU ARQUIVO
 #if aba == "Pendências":
-st.title("TESTE DE PÁGINA NOVA
+#st.title("TESTE DE PÁGINA NOVA
     st.title("📋 Lançamentos Pendentes")
     
     # Criando as colunas para os filtros ficarem lado a lado
