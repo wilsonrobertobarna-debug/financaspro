@@ -702,7 +702,6 @@ if "💰" in st.session_state.page:
         else:
             st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
-  elif "Pendências" in aba:
     else:
         st.info("Nenhum lançamento encontrado neste período.")
     st.divider()
