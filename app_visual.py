@@ -712,12 +712,8 @@ if "💰" in st.session_state.page:
             st.warning("Base de dados vazia.")
     
 #elif "Pendências" in aba:
-    #st.title("📋 Lançamentos Pendentes")
-    
-# COPIE ESTE BLOCO E SUBSTITUA O DA ABA "PENDÊNCIAS" NO SEU ARQUIVO
-#if aba == "Pendências":
-#st.title("TESTE DE PÁGINA NOVA
-    st.title("📋 Lançamentos Pendentes")
+
+    st.title("NOVA DE PAGINA NOVA")
     
     # Criando as colunas para os filtros ficarem lado a lado
     c1, c2, c3 = st.columns(3)
