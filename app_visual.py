@@ -688,15 +688,7 @@ if "💰" in st.session_state.page:
     
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
-    # TESTE DE DADOS
-    st.write("---")
-    st.write("🔍 **Diagnóstico da Coluna J (Beneficiário):**")
-    # Mostra os 5 primeiros valores reais da coluna J
-    valores_reais = df_base.iloc[:, 9].astype(str).unique()[:5]
-    st.write(f"Valores encontrados na coluna J: {valores_reais}")
-    st.write("---")
     
-    # 1. DEFINIÇÃO DOS FILTROS
     col_a, col_b, col_c = st.columns(3)
     with col_a:
         filtro_banco = st.multiselect("Filtrar Banco:", df_base['Banco'].unique())
@@ -704,41 +696,23 @@ elif "Pendências" in aba:
         busca_geral = st.text_input("🔍 Pesquisar (Desc/Beneficiário)")
     with col_c:
         busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"], index=2)
-
-    # 2. FILTRAGEM (EM CASCATA)
-   # 2. FILTRAGEM (APENAS BUSCA - PARA TESTE)
-    df_filtrado = df_base.copy()
     
-    # FORÇAMOS A COLUNA J (ÍNDICE 9)
+    df_filtrado = df_base.copy()
     col_benef = df_filtrado.columns[9]
     
-    # TESTE: Apenas a busca, sem banco nem status
     if busca_geral:
-        busca_limpa = busca_geral.strip().lower()
-        mask_desc = df_filtrado['Descrição'].astype(str).str.lower().str.contains(busca_limpa, na=False)
-        mask_benef = df_filtrado[col_benef].astype(str).str.lower().str.contains(busca_limpa, na=False)
-        
-        df_filtrado = df_filtrado[mask_desc | mask_benef]
-        st.write(f"DEBUG: Buscando '{busca_geral}' na Descrição e em '{col_benef}'")
-        st.write(f"DEBUG: Linhas encontradas após busca: {len(df_filtrado)}")
-    
-    # 3. EXIBIÇÃO
-    st.write(f"### Total de linhas na base agora: {len(df_filtrado)}")
-    st.dataframe(df_filtrado, use_container_width=True)
-        
         mask_desc = df_filtrado['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)
         mask_benef = df_filtrado[col_benef].astype(str).str.contains(busca_geral, case=False, na=False)
-        
         df_filtrado = df_filtrado[mask_desc | mask_benef]
-
     
-    # 3. EXIBIÇÃO FINAL
-    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
+    if filtro_banco:
+        df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
     
-    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor', 'Status']
-    cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
-    
-    st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
+    if busca_status != "Todos":
+        df_filtrado = df_filtrado[df_filtrado['Status'].astype(str).str.strip().str.lower() == busca_status.lower()]
+        
+    st.write(f"### Total: {len(df_filtrado)}")
+    st.dataframe(df_filtrado, use_container_width=True)
     
     # 4. BOTÃO DE BAIXA
     if not df_filtrado.empty:
