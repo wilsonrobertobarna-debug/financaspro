@@ -709,8 +709,20 @@ elif "Pendências" in aba:
         df_filtrado = df_filtrado[df_filtrado['Status'].astype(str).str.strip().str.lower() == busca_status.lower()]
 
     # Aplica Busca (Descrição ou Beneficiário)
-  # 4. Busca com detecção automática do nome da coluna
+      # 4. Busca com detecção automática do nome da coluna
+    # 4. Filtro de Busca Robusto
     if busca_geral:
+        # Criamos versões limpas das colunas para busca
+        # .str.strip() remove espaços antes/depois, .fillna('') garante que células vazias não deem erro
+        desc_limpa = df_filtrado['Descrição'].astype(str).str.strip().str.lower()
+        benef_limpa = df_filtrado['Beneficiário'].astype(str).str.strip().str.lower()
+        busca_limpa = busca_geral.strip().lower()
+        
+        # Filtramos onde a busca existe em qualquer uma das duas
+        mask = (desc_limpa.str.contains(busca_limpa, na=False)) | \
+               (benef_limpa.str.contains(busca_limpa, na=False))
+        
+        df_filtrado = df_filtrado[mask]
         # Encontra o nome real da coluna que contém 'Beneficiário' (ignora espaços ou acentos extras)
         coluna_beneficiario = next((col for col in df_filtrado.columns if 'Beneficiário' in col), None)
         
