@@ -720,16 +720,24 @@ elif "Pendências" in aba:
                 (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
             ]
             
-    # 4. Filtro de Descrição (Por último, para refinar)
+    # 4. Filtro de Busca (Descrição OU Beneficiário)
     if busca_desc:
-        df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
+        # Criamos máscaras para ambas as colunas
+        mask_desc = df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)
+        mask_bnc = df_filtrado['Beneficiário'].astype(str).str.contains(busca_desc, case=False, na=False)
+        
+        # Filtramos onde pelo menos um dos dois for verdadeiro
+        df_filtrado = df_filtrado[mask_desc | mask_bnc]
     
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
-    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
+    
+    # Adicionamos 'Beneficiário' aqui também para você visualizar o que foi encontrado
+    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor']
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
     
     # Exibe a tabela
     st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
+    
 
     # 4. Botão de Baixa (Funcionalidade de Baixa)
     if not df_filtrado.empty:
