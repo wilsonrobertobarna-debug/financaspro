@@ -688,7 +688,7 @@ if "💰" in st.session_state.page:
 #elif "Pendências" in aba:
     #st.title("📋 Lançamentos Pendentes")
     
-  elif "Pendências" in aba:
+elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     
     # 1. DEFINIÇÃO DOS FILTROS
