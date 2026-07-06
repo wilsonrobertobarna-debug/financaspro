@@ -739,22 +739,17 @@ elif "Pendências" in aba:
    
     # 4. Filtros de Busca (Separados e Limpos)
     
-    col1, col2 = st.columns(2)
-    with col1:
-        busca_desc = st.text_input("🔍 Pesquisar por Descrição")
-    with col2:
-        busca_bnc = st.text_input("🔍 Pesquisar por Beneficiário")
+    # 4. Campo Único de Busca (Refinado)
+    busca_geral = st.text_input("🔍 Pesquisar por Descrição / Beneficiário")
+    
+    if busca_geral:
+        # Criamos uma máscara que olha na coluna de Descrição E na coluna de Beneficiário
+        # Usamos .astype(str) para garantir que funcione mesmo com campos vazios
+        mask = (df_filtrado['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)) | \
+               (df_filtrado['Beneficiário'].astype(str).str.contains(busca_geral, case=False, na=False))
         
-    # Aplica o filtro de Descrição se algo for digitado
-    if busca_desc:
-        df_filtrado = df_filtrado[df_filtrado['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)]
+        df_filtrado = df_filtrado[mask]
         
-    # Aplica o filtro de Beneficiário se algo for digitado
-    if busca_bnc:
-        # Nota: Certifique-se que na sua planilha o cabeçalho é exatamente "Beneficiário"
-        df_filtrado = df_filtrado[df_filtrado['Beneficiário'].astype(str).str.contains(busca_bnc, case=False, na=False)]
-        
-    st.write("Colunas disponíveis no DataFrame:", df_filtrado.columns.tolist())
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
     
     # Exibe a tabela
