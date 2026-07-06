@@ -344,17 +344,13 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
         # ... (após todos os st.selectbox e inputs do formulário)
 
+        # O botão de salvar deve aparecer APENAS UMA VEZ
         if st.form_submit_button("Salvar Lançamento"):
-            # 1. BUSCAR O MAIOR ID DIRETO NA PLANILHA (Sem depender de variáveis externas)
-            # Pegamos todos os valores da aba
+            # 1. Busca do ID (seu código original)
             todos_dados = ws_base.get_all_records()
-            
             if todos_dados:
-                # Transformamos em um DataFrame temporário só para achar o maior ID
                 import pandas as pd
                 df_temp = pd.DataFrame(todos_dados)
-                
-                # Se a coluna ID existir, pegamos o maior + 1, senão começa em 1
                 if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
                     proximo_id = int(df_temp['ID'].max()) + 1
                 else:
@@ -362,33 +358,27 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             else:
                 proximo_id = 1
 
-            # 2. Formatações
-            v_str = f"{f_val:.2f}".replace('.', ',')
-            t_dat_str = t_dat.strftime("%d/%m/%Y")
-            f_compra_str = f_compra.strftime("%d/%m/%Y")
-            
-            # 3. Salvar as parcelas
-          if st.form_submit_button("Salvar Lançamento"):
-            # 1. Definir a variável aqui dentro (para garantir que ela exista)
+            # 2. Lista de dados para a planilha
+            # Mantenha a ordem exata das colunas da sua planilha!
             novo_registro = [
                 proximo_id, 
                 str(f_compra), 
                 str(t_dat), 
                 f_val, 
                 f_par, 
-                f_des,       # Descrição
+                f_des, 
                 f_tip, 
                 f_cat, 
                 f_bnc, 
                 f_sta, 
-                f_ben        # Beneficiário
+                f_ben
             ]
             
-            # 2. Executar o comando de salvar usando a variável criada acima
+            # 3. SALVAR E LIMPAR CACHE (Aqui é onde o dado realmente vai pro Sheets)
             ws_base.append_row(novo_registro)
-            
+            st.session_state.pop('df_base', None)
             st.success("Lançamento salvo com sucesso!")
-            st.rerun() # Atualiza a página para mostrar o novo dado
+            st.rerun()
 
     
             # --- BARRINHA 2: TRANSFERÊNCIA ---
