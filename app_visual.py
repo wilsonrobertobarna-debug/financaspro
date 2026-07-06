@@ -737,16 +737,24 @@ elif "Pendências" in aba:
             ]
             
     # 4. Filtro de Descrição (Por último, para refinar)
+    # 4. Filtro de Descrição (Agora busca em Descrição OU Beneficiário)
     if busca_desc:
-        df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
+        # Cria uma máscara que verifica se o termo está na Descrição OU no Beneficiário
+        mask_desc = df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)
+        mask_bnc = df_filtrado['Beneficiário'].str.contains(busca_desc, case=False, na=False)
+        
+        # Filtra o dataframe usando o operador OR (|)
+        df_filtrado = df_filtrado[mask_desc | mask_bnc]
     
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
-    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
+    
+    # Adicionamos 'Beneficiário' na lista de colunas visíveis para você conferir
+    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor']
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
     
     # Exibe a tabela
     st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
-
+    
     # 4. Botão de Baixa (Funcionalidade de Baixa)
     if not df_filtrado.empty:
         nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
