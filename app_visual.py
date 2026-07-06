@@ -738,24 +738,27 @@ elif "Pendências" in aba:
             
    
     # 4. Filtros de Busca (Separados e Limpos)
-    
-    # 4. Campo Único de Busca (Refinado)
+ 
+    # 4. Campo Único de Busca (Blindado)
     busca_geral = st.text_input("🔍 Pesquisar por Descrição / Beneficiário")
     
     if busca_geral:
-        # Criamos uma máscara que olha na coluna de Descrição E na coluna de Beneficiário
-        # Usamos .astype(str) para garantir que funcione mesmo com campos vazios
-        mask = (df_filtrado['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)) | \
-               (df_filtrado['Beneficiário'].astype(str).str.contains(busca_geral, case=False, na=False))
+        # Usamos o df_base.copy() para garantir que todas as colunas estejam lá
+        df_busca = df_base.copy()
         
-        df_filtrado = df_filtrado[mask]
+        # Filtra a base completa
+        mask = (df_busca['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)) | \
+               (df_busca['Beneficiário'].astype(str).str.contains(busca_geral, case=False, na=False))
+        
+        df_filtrado = df_busca[mask]
         
     st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")
     
-    # Exibe a tabela
+    
+    # Exibição da Tabela
     colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor']
     cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
-    st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)    
+    st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
     # 4. Botão de Baixa (Funcionalidade de Baixa)
     if not df_filtrado.empty:
         nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
