@@ -215,6 +215,7 @@ if 'df_base' not in st.session_state:
     st.session_state['df_base'] = carregar_dados_gs()
 if 'df_bancos_info' not in st.session_state:
     st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
+    st.write("Colunas disponíveis no sistema:", df_base.columns.tolist())
 
 # 2. Agora criamos as variáveis locais para usar nas barras
 df_base = st.session_state['df_base']
