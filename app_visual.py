@@ -698,8 +698,8 @@ if "💰" in st.session_state.page:
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     
-   elif "Pendências" in aba:
-    st.title("📋 Lançamentos Pendentes")
+   #elif "Pendências" in aba:
+    #st.title("📋 Lançamentos Pendentes")
     
     # NOVOS FILTROS SEPARADOS
     col1, col2, col3 = st.columns(3)
