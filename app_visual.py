@@ -701,48 +701,29 @@ if "💰" in st.session_state.page:
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     
-    # 1. INTERFACE DE FILTROS
-    c1, c2, c3 = st.columns(3)
+    # 1. Filtros simples
+    c1, c2 = st.columns(2)
     with c1:
         filtro_banco = st.multiselect("Filtrar Banco:", df_base['Banco'].unique())
     with c2:
-        busca_geral = st.text_input("🔍 Pesquisar (Desc/Beneficiário)")
-    with c3:
-        periodo = st.date_input("Filtrar Período:", (datetime.now().replace(day=1), datetime.now()))
+        busca_desc = st.text_input("🔍 Pesquisar na Descrição")
 
-    # 2. PROCESSO DE FILTRAGEM (O "FUNIL")
-    df_v = df_base.copy()
-    df_v.columns = df_v.columns.str.strip() # Limpa espaços nos nomes das colunas
+    # 2. Funil de Dados (Foco apenas em Descrição + Banco)
+    df_v = df_base[df_base['Status'] == 'Pendente'].copy()
     
-    # Garantir formato de data
-    if 'DT' in df_v.columns:
-        df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], errors='coerce')
-    
-    # Aplica os filtros em sequência
     if filtro_banco:
         df_v = df_v[df_v['Banco'].isin(filtro_banco)]
-        
-    if busca_geral:
-        # Busca em Descrição ou Beneficiário
-        mask_desc = df_v['Descrição'].astype(str).str.contains(busca_geral, case=False, na=False)
-        mask_ben = df_v['Beneficiário'].astype(str).str.contains(busca_geral, case=False, na=False)
-        df_v = df_v[mask_desc | mask_ben]
-        
-    if isinstance(periodo, tuple) and len(periodo) == 2:
-        df_v = df_v[(df_v['DT_Obj'].dt.date >= periodo[0]) & (df_v['DT_Obj'].dt.date <= periodo[1])]
+    
+    if busca_desc:
+        # Busca SOMENTE na descrição, sem complicar com outras colunas
+        df_v = df_v[df_v['Descrição'].str.contains(busca_desc, case=False, na=False)]
 
-    # 3. EXIBIÇÃO FINAL
-    st.write(f"### Total encontrado: {len(df_v)}")
+    # 3. Exibição limpa
+    st.write(f"### Total: {len(df_v)}")
     
-    # Define as colunas que você quer ver
-    cols_display = ['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Beneficiário', 'Categoria', 'Banco', 'Status']
-    cols_existentes = [c for c in cols_display if c in df_v.columns]
-    
-    df_v_display = df_v[cols_existentes].copy()
-    if 'V_Num' in df_v.columns:
-        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-        
-    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+    # Exibe colunas básicas garantindo que não quebre
+    colunas_finais = ['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Banco', 'Status']
+    st.dataframe(df_v[colunas_finais], use_container_width=True, hide_index=True)
 
     # 4. BOTÃO DE BAIXA (Usando o df_v que já está filtrado)
     if not df_v.empty:
