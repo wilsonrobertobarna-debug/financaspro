@@ -10,21 +10,21 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-# ---------------------------------------------------------
-# AQUI É O "TOPO" - ONDE VOCÊ COLOCA A FUNÇÃO
-# ---------------------------------------------------------
-def aplicar_filtros(df, banco=None, desc=None, benef=None, status=None):
-    # Lógica centralizada: se não houver filtro, ele ignora
-    df_f = df.copy()
-    
-    if banco and len(banco) > 0:
-        df_f = df_f[df_f['Banco'].isin(banco)]
-    if desc:
-        df_f = df_f[df_f['Descrição'].astype(str).str.contains(desc, case=False, na=False)]
-    if benef and 'Beneficiário' in df_f.columns:
-        df_f = df_f[df_f['Beneficiário'].astype(str).str.contains(benef, case=False, na=False)]
-    
-    return df_f
+"""
+===========================================================================
+REGISTRO DE ATUALIZAÇÕES DO SISTEMA (FinançasPro)
+===========================================================================
+
+Data da última atualização importante: 05/07/2026
+
+Resumo da nossa missão hoje:
+1. Filtro: Eliminamos o erro visual 'dt_' da tela através de uma faxina rigorosa.
+2. PDF: Relatório normalizado e limpo, garantindo compatibilidade.
+3. Automação: IDs automáticos (coluna I) funcionando perfeitamente tanto 
+   para lançamentos individuais quanto para transferências (sequencial).
+
+===========================================================================
+"""
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
@@ -182,17 +182,6 @@ def carregar_bancos_manual_gs():
             return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
 
-df_base = st.session_state.get('df_base', None)
-df_bancos_info = st.session_state.get('df_bancos_info', None)
-
-if df_base is None:
-    st.session_state['df_base'] = carregar_dados_gs()
-    df_base = st.session_state['df_base']
-
-if df_bancos_info is None:
-    st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
-    df_bancos_info = st.session_state['df_bancos_info']
-
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
     df = carregar_dados_gs()
@@ -238,15 +227,13 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     
                     st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
 # INICIALIZA O CACHE NA SESSÃO
-# 1. Carrega os dados primeiro (Certifique-se de que isso esteja no topo do seu código)
 if 'df_base' not in st.session_state:
-    st.session_state['df_base'] = carregar_dados_gs() # Certifique-se que essa função existe
-
-# 2. Só depois de carregar, você define a variável local
-df_base = st.session_state['df_base']
+    st.session_state['df_base'] = carregar_dados_gs()
+if 'df_bancos_info' not in st.session_state:
+    st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
 
 # 2. Agora criamos as variáveis locais para usar nas barras
-# df_base = st.session_state['df_base']
+df_base = st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
 
 # FUNÇÃO PARA ATUALIZAR O ESTADO
@@ -361,8 +348,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
-        f_des = st.text_input("Descrição") 
-        f_ben = st.text_input("Beneficiário") # NOVO CAMPO
+        f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação","Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
@@ -373,13 +359,17 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
         # ... (após todos os st.selectbox e inputs do formulário)
 
-        # O botão de salvar deve aparecer APENAS UMA VEZ
         if st.form_submit_button("Salvar Lançamento"):
-            # 1. Busca do ID (seu código original)
+            # 1. BUSCAR O MAIOR ID DIRETO NA PLANILHA (Sem depender de variáveis externas)
+            # Pegamos todos os valores da aba
             todos_dados = ws_base.get_all_records()
+            
             if todos_dados:
+                # Transformamos em um DataFrame temporário só para achar o maior ID
                 import pandas as pd
                 df_temp = pd.DataFrame(todos_dados)
+                
+                # Se a coluna ID existir, pegamos o maior + 1, senão começa em 1
                 if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
                     proximo_id = int(df_temp['ID'].max()) + 1
                 else:
@@ -387,29 +377,30 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             else:
                 proximo_id = 1
 
-            # 2. Lista de dados para a planilha
-            # Mantenha a ordem exata das colunas da sua planilha!
-            novo_registro = [
-                proximo_id, 
-                str(f_compra), 
-                str(t_dat), 
-                f_val, 
-                f_par, 
-                f_des, 
-                f_tip, 
-                f_cat, 
-                f_bnc, 
-                f_sta, 
-                f_ben
-            ]
+            # 2. Formatações
+            v_str = f"{f_val:.2f}".replace('.', ',')
+            t_dat_str = t_dat.strftime("%d/%m/%Y")
+            f_compra_str = f_compra.strftime("%d/%m/%Y")
             
-            # 3. SALVAR E LIMPAR CACHE (Aqui é onde o dado realmente vai pro Sheets)
-            ws_base.append_row(novo_registro)
-            st.session_state.pop('df_base', None)
-            st.success("Lançamento salvo com sucesso!")
+            # 3. Salvar as parcelas
+            for i in range(f_par):
+                nova_data = t_dat + relativedelta(months=i)
+                
+                ws_base.append_row([
+                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
+                    v_str,                          # Coluna B: Valor
+                    f_des,                          # Coluna C: Descrição
+                    f_cat,                          # Coluna D: Categoria
+                    f_tip,                          # Coluna E: Tipo
+                    f_bnc,                          # Coluna F: Banco
+                    f_sta,                          # Coluna G: Status
+                    f_compra_str,                   # Coluna H: Data da Compra
+                    proximo_id + i                  # Coluna I: ID (Agora sem pular coluna!)
+                ])
+            
+            st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
+            atualizar_sessao()
             st.rerun()
-
-    
             # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
         with st.form("f_transf", clear_on_submit=True):
@@ -710,60 +701,76 @@ if "💰" in st.session_state.page:
                          hide_index=True)
         else:
             st.warning("Base de dados vazia.")
-    
-if aba == "Pendências":
-    st.markdown("---")
-    st.subheader("⚠️ ABA DE PENDÊNCIAS COM BUSCA")
-    st.markdown("---")
-
+elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     
-    # Criando as colunas para os filtros ficarem lado a lado
-    c1, c2, c3 = st.columns(3)
-    
-    with c1:
-        filtro_banco = st.multiselect("Filtrar Banco:", df_base['Banco'].unique(), key="b_pend")
-    with c2:
-        busca_desc = st.text_input("🔍 Buscar por Descrição", key="d_pend")
-    with c3:
-        # A CAIXA QUE VOCÊ QUERIA:
-        busca_benef = st.text_input("👤 Buscar por Beneficiário", key="n_pend")
+    # 1. Filtros
+    col_b, col_d = st.columns(2)
+    with col_b:
+        filtro_banco = st.multiselect("Filtrar Banco/Cartão:", df_base['Banco'].unique(), key="banco_pend")
+    with col_d:
+        busca_desc = st.text_input("Buscar Descrição:", key="desc_pend")
 
-    # Filtro de dados
-    df_v = df_base[df_base['Status'].astype(str).str.strip() == 'Pendente'].copy()
+    periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
+
+   # 2. Processamento e Filtros (Ordem Correta)
+    df_filtrado = df_base.copy()
     
+    # 1. Filtro de Status (garante que apenas Pendentes apareçam)
+    df_filtrado['Status_Limpo'] = df_filtrado['Status'].astype(str).str.strip().str.lower()
+    df_filtrado = df_filtrado[df_filtrado['Status_Limpo'] == 'pendente'].copy()
+    
+    # 2. Filtro de Banco (se selecionado, filtra agora)
     if filtro_banco:
-        df_v = df_v[df_v['Banco'].isin(filtro_banco)]
+        df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
+        
+    # 3. Conversão de Data e Filtro de Período
+    col_data = 'Vencimento' 
+    if col_data in df_filtrado.columns:
+        df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
+        
+        # Filtra o período se uma tupla válida for selecionada
+        if isinstance(periodo, tuple) and len(periodo) == 2:
+            df_filtrado = df_filtrado[
+                (df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
+                (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
+            ]
+            
+    # 4. Filtro de Descrição (Por último, para refinar)
     if busca_desc:
-        df_v = df_v[df_v['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)]
+        df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
     
-    # Filtro do Beneficiário (O "NÓ" QUE ESTÁVAMOS DESATANDO)
-    if busca_benef and 'Beneficiário' in df_v.columns:
-        df_v = df_v[df_v['Beneficiário'].astype(str).str.contains(busca_benef, case=False, na=False)]
+    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
+    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
+    cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
+    
+    # Exibe a tabela
+    st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
 
-    st.write(f"### Total: {len(df_v)}")
-    st.dataframe(df_v, use_container_width=True, hide_index=True)
-
-       
-    # 4. BOTÃO DE BAIXA (Usando o df_v que já está filtrado)
-    if not df_v.empty:
-        if st.button("✅ BAIXAR SELECIONADOS"):
-            # Lógica de baixa aqui...
-            st.toast("✅ Itens baixados!", icon="💰")
-            st.rerun()
+    # 4. Botão de Baixa (Funcionalidade de Baixa)
+    if not df_filtrado.empty:
+        nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
+        if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_final"):
+            sucessos = 0
+            headers = ws_base.row_values(1)
+            idx_status = headers.index('Status') + 1
+            # Ajuste dinâmico para a coluna de Vencimento/Data
+            idx_venc = [i for i, h in enumerate(headers) if 'VENC' in h.upper() or 'DATA' in h.upper()][0] + 1
             
             for idx_df, row in df_filtrado.iterrows():
                 linha_sheets = int(idx_df) + 2
                 ws_base.update_cell(linha_sheets, idx_status, "Pago")
-                ws_base.update_cell(linha_sheets, idx_venc, datetime.now().strftime("%d/%m/%Y"))
+                ws_base.update_cell(linha_sheets, idx_venc, nova_data.strftime("%d/%m/%Y"))
+                sucessos += 1
             
-            st.toast("✅ Itens baixados!", icon="💰")
+            st.toast(f"✅ {sucessos} itens baixados!", icon="💰")
+            atualizar_sessao()
             st.rerun()
     else:
         st.info("Nenhum lançamento encontrado neste período.")
-        
     st.divider()
-    st.subheader("🔔 Avisos: Vencimentos Próximos")      # ... (aqui você mantém a lógica original dos alertas de vencimento se desejar) ...
+    st.subheader("🔔 Avisos: Vencimentos Próximos")
+       # ... (aqui você mantém a lógica original dos alertas de vencimento se desejar) ...
         
     
     c1, c2, c3 = st.columns(3) # Aumentei para 3 colunas para caber o filtro de data
@@ -780,57 +787,15 @@ if aba == "Pendências":
         df_v = df_v[df_v['Banco'].isin(s_bnc)]
     if b_desc:
         df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-        
     
     # Aplicação do filtro de data
-    # 1. Aplicação do filtro de data (seu código original)
-   # 1. Aplicação do filtro de data (seu código original)
     if isinstance(periodo, tuple) and len(periodo) == 2:
         df_v = df_v[(df_v['DT_Obj'].dt.date >= periodo[0]) & (df_v['DT_Obj'].dt.date <= periodo[1])]
-
-    # 2. FILTRO DE BUSCA (AQUI ENTRA A MÁGICA DO BENEFICIÁRIO)
-    if b_desc:
-        # Cria uma máscara que busca em Descrição OU em Beneficiário
-        mask_desc = df_v['Descrição'].str.contains(b_desc, case=False, na=False)
-        mask_ben  = df_v['Beneficiário'].str.contains(b_desc, case=False, na=False)
         
-        # Aplica a máscara no dataframe
-        df_v = df_v[mask_desc | mask_ben]
+    df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+    df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+    st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-  # 1. Limpeza básica dos nomes das colunas (remove espaços extras)
-    df_v.columns = df_v.columns.str.strip() 
-
-    # 2. Filtro de busca (agora busca automaticamente em 'Descrição' OU 'Beneficiário')
-    if b_desc:
-        # Cria a busca se as colunas existirem
-        filtro_mask = None
-        if 'Descrição' in df_v.columns:
-            filtro_mask = df_v['Descrição'].astype(str).str.contains(b_desc, case=False, na=False)
-        
-        if 'Beneficiário' in df_v.columns:
-            mask_ben = df_v['Beneficiário'].astype(str).str.contains(b_desc, case=False, na=False)
-            filtro_mask = mask_ben if filtro_mask is None else (filtro_mask | mask_ben)
-        
-       # 1. FILTRO (Onde você filtra o df_v)
-    if b_desc:
-        mask_desc = df_v['Descrição'].astype(str).str.contains(b_desc, case=False, na=False)
-        mask_ben = df_v['Beneficiário'].astype(str).str.contains(b_desc, case=False, na=False)
-        df_v = df_v[mask_desc | mask_ben]
-
-    # 2. EXIBIÇÃO
-    st.dataframe(df_v, use_container_width=True)
-
-    # 3. AÇÃO DE BAIXA (O SEGREDO ESTÁ AQUI)
-    # Certifique-se de que o botão usa o 'df_v' (que já está filtrado pelo Beneficiário)
-    if not df_v.empty:
-        if st.button("✅ BAIXAR SELECIONADOS"):
-            # O código aqui vai baixar APENAS o que restou no df_v após o seu filtro
-            for idx, row in df_v.iterrows():
-                linha_sheets = int(row['ID']) + 1 # Ou a lógica que você usa para achar a linha
-                ws_base.update_cell(linha_sheets, coluna_status, "Pago")
-            st.success("Baixa realizada nos itens filtrados!")
-    else:
-        st.warning("Nenhum item filtrado para baixar.")
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
     
