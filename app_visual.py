@@ -72,7 +72,7 @@ def atualizar_meta_sheets(nome):
 st.set_page_config(
     page_title="FinançasPro",
     layout="wide",
-    initial_sidebar_state="collapsed" # Isso fará a barra vir fechada por padrão
+    initial_sidebar_state="expanded" # Isso fará a barra vir fechada por padrão
 )
 
 # 2. CONEXÃO (LIGA O MOTOR)
