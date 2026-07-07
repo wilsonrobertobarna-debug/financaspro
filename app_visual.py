@@ -1378,12 +1378,13 @@ if aba == "📊 Análises & Configurações":
         st.warning("A base de dados está vazia.")
 
     st.divider()
-    
 
     # 2. COMPARATIVO: MÊS ATUAL VS MÊS ANTERIOR
-    # Primeiro, criamos uma lista de meses únicos presentes na base (ordenados)
-    meses_unicos = sorted(df_base[df_base['Status'] == 'Pago']['Mes_Ano'].unique())
-    
+    # Tratamento de segurança para evitar erro de dados vazios ou corrompidos
+    df_pagos = df_base[df_base['Status'] == 'Pago'].copy()
+    df_pagos = df_pagos[df_pagos['Mes_Ano'].notna()]
+    meses_unicos = sorted(df_pagos['Mes_Ano'].astype(str).unique())
+
     # Pegamos os dois últimos meses da lista
     if len(meses_unicos) >= 2:
         mes_ant = meses_unicos[-2]
@@ -1396,6 +1397,7 @@ if aba == "📊 Análises & Configurações":
 
     with st.expander(f"📊 Comparativo de Sobra Mensal ({mes_ant or 'N/A'} vs. {mes_atual or 'Atual'})", expanded=True):
         if mes_atual:
+  
             # Filtra os dados dinamicamente
             df_m1 = df_base[(df_base['Mes_Ano'] == mes_ant) & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')] if mes_ant else None
             df_m2 = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
