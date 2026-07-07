@@ -1382,9 +1382,9 @@ if aba == "📊 Análises & Configurações":
 
     # 2. COMPARATIVO: MÊS ATUAL VS MÊS ANTERIOR
     # Primeiro, criamos uma lista de meses únicos presentes na base (ordenados)
-   df_pagos = df_base[df_base['Status'] == 'Pago'].copy()
-df_pagos = df_pagos[df_pagos['Mes_Ano'].notna()] # Remove valores vazios
-meses_unicos = sorted(df_pagos['Mes_Ano'].astype(str).unique())
+            df_pagos = df_base[df_base['Status'] == 'Pago'].copy()
+            df_pagos = df_pagos[df_pagos['Mes_Ano'].notna()] # Remove valores vazios
+            meses_unicos = sorted(df_pagos['Mes_Ano'].astype(str).unique())
     
     # Pegamos os dois últimos meses da lista
     if len(meses_unicos) >= 2:
