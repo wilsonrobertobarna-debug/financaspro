@@ -181,22 +181,17 @@ ano_filtro = st.sidebar.selectbox("Filtrar por Ano:", [2025, 2026], index=1)
 
 if termo_benef:
     # Filtra o dataframe (verifique se os nomes abaixo batem com sua planilha)
-    df_busca = df_base[
-        (df_base['Beneficiario'].str.contains(termo_benef, case=False, na=False)) & 
-        (df_base['DT'].dt.year == ano_filtro)
-    ]
+    # Filtro
+    df_busca = df_base[df_base['Beneficiario'].str.contains(termo_benef, case=False, na=False)]
     
     if not df_busca.empty:
-        st.sidebar.write(f"Encontrados: {len(df_busca)}")
-        # Mostra os resultados na tela principal para facilitar a leitura
-        st.subheader("Resultados da Busca")
-        st.dataframe(df_busca[['Vencimento', 'Beneficiario', 'Valor', 'Descricao', 'Banco']])
+        st.sidebar.write(f"Encontrei {len(df_busca)} registros.")
         
-        # Seleção para montar o cartão
-        idx_escolhido = st.selectbox("Selecione o ID da linha para enviar:", df_busca.index)
+        # Seleção da linha na lateral
+        idx_escolhido = st.sidebar.selectbox("Escolha a linha para enviar:", df_busca.index)
         
-        # Botão para gerar o texto do cartão
-        if st.button("Gerar Cartão para Fabiana"):
+        # Botão na lateral para enviar
+        if st.sidebar.button("Gerar Cartão para Fabiana"):
             linha = df_busca.loc[idx_escolhido]
             cartao = (f"📄 *Comprovante de Lançamento*\n\n"
                       f"*Beneficiário:* {linha['Beneficiario']}\n"
@@ -205,13 +200,13 @@ if termo_benef:
                       f"*Descrição:* {linha['Descricao']}\n"
                       f"*Banco:* {linha['Banco']}")
             
-            st.info(cartao)
+            st.sidebar.info(cartao)
             
             # Link para o WhatsApp (substitua pelo número da Fabiana)
             link_zap = f"https://wa.me/5519999999999?text={urllib.parse.quote(cartao)}"
-            st.link_button("Abrir WhatsApp 📱", link_zap)
+            st.sidebar.link_button("Abrir WhatsApp 📱", link_zap)
     else:
-        st.sidebar.warning("Nenhum lançamento encontrado.")
+        st.sidebar.warning("Nenhum registro encontrado.")
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
