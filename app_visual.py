@@ -10,21 +10,7 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-"""
-===========================================================================
-REGISTRO DE ATUALIZAÇÕES DO SISTEMA (FinançasPro)
-===========================================================================
 
-Data da última atualização importante: 05/07/2026
-
-Resumo da nossa missão hoje:
-1. Filtro: Eliminamos o erro visual 'dt_' da tela através de uma faxina rigorosa.
-2. PDF: Relatório normalizado e limpo, garantindo compatibilidade.
-3. Automação: IDs automáticos (coluna I) funcionando perfeitamente tanto 
-   para lançamentos individuais quanto para transferências (sequencial).
-
-===========================================================================
-"""
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
