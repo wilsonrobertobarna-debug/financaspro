@@ -10,6 +10,14 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
+
+# --- DEBUG PARA VERIFICAR SECRETS ---
+st.write("Chaves disponíveis no secrets:", st.secrets.keys())
+if "gcp_service_account" in st.secrets:
+    st.write("A chave 'gcp_service_account' foi encontrada!")
+else:
+    st.error("A chave 'gcp_service_account' NÃO foi encontrada. Verifique o nome no painel Secrets.")
+
 # --- 1. AUTENTICAÇÃO (Sempre no topo, fora de qualquer bloco 'if') ---
 gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
 sh = gc.open("FinançasPro") # Coloque o nome real aqui!
