@@ -1137,7 +1137,7 @@ if aba == "📋 Relatório PDF":
 
             df_report = df_report.sort_values(by='DT_FILTRO')
 
-# ========================================================
+            # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
             # ========================================================
             base_inicial = 0.0
@@ -1333,7 +1333,7 @@ if aba == "📋 Relatório PDF":
     col_banco_df = next((c for c in df_tela.columns if c.upper() in ['BANCO', 'CONTA']), None)
     col_desc_df = next((c for c in df_tela.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
     col_status_df = next((c for c in df_tela.columns if c.upper() in ['STATUS']), None)
-    col_ben_df = next((c for c in df_tela.columns if c.upper() in ['BENEFICIÁRIO', 'BENEFICIARIO']), None)
+    col_ben_df = next((c for c in df_tela.columns if c.upper() in ['BENEFICIÁRIO', 'BENEFICIARIO', 'NOTA']), None)
 
     # Aplica Data na tela
     if col_data_df:
