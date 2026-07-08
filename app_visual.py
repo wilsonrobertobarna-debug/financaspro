@@ -96,11 +96,11 @@ sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # 1. BLOCO DE CARREGAMENTO DA BASE PRINCIPAL (Lançamentos)
 
-dados = ws_base.get_all_values()
+#dados = ws_base.get_all_values()
 # O cabeçalho é a linha 0 (linha 1 da planilha)
-header = dados[0] 
+#header = dados[0] 
 # Os dados começam exatamente na linha 1 (que é a linha 2 da planilha, onde começa o '2')
-df_base = pd.DataFrame(dados[1:], columns=header)
+#df_base = pd.DataFrame(dados[1:], columns=header)
 
 # 2. RASTREAMENTO DO CARREGAMENTO (Para você ver que agora funciona)
 st.write("Total de linhas carregadas na Base:", len(df_base))
