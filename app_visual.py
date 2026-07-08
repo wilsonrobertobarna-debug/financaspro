@@ -1071,14 +1071,7 @@ if aba == "📋 Relatório PDF":
             # TESTE RÁPIDO: Verifique se o nome está exatamente assim
             st.write("Colunas detectadas:", df_base.columns.tolist())
         
-            # Filtro de Beneficiário (usando o índice 9, que é a 10ª coluna)
-            if busca_ben:
-            # Vamos forçar a filtragem pelo índice 9
-                df_report = df_base[df_base.iloc[:, 9].astype(str).str.contains(busca_ben, case=False, na=False)]
-            else:
-                df_report = df_base.copy()
-            
-            
+                    
             # --- RASTREADOR DE SEGURANÇA ---
             st.write("Colunas disponíveis no sistema:", df_report.columns.tolist())
             st.write("Valor na Coluna 9 (Linha 0):", df_report.iloc[0, 9] if len(df_report) > 0 else "Sem dados")
