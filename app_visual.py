@@ -96,16 +96,12 @@ client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # 1. BLOCO DE CARREGAMENTO DA BASE PRINCIPAL (Lançamentos)
-try:
-    ws_base = sh.get_worksheet(0)
-    dados = ws_base.get_all_values()
-    if len(dados) > 1:
-        df_base = pd.DataFrame(dados[1:], columns=dados[0])
-    else:
-        df_base = pd.DataFrame()
-except Exception as e:
-    st.error(f"Erro ao carregar a base de lançamentos: {e}")
-    df_base = pd.DataFrame()
+
+dados = ws_base.get_all_values()
+# O cabeçalho é a linha 0 (linha 1 da planilha)
+header = dados[0] 
+# Os dados começam exatamente na linha 1 (que é a linha 2 da planilha, onde começa o '2')
+df_base = pd.DataFrame(dados[1:], columns=header)
 
 # 2. RASTREAMENTO DO CARREGAMENTO (Para você ver que agora funciona)
 st.write("Total de linhas carregadas na Base:", len(df_base))
