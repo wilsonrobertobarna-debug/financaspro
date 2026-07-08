@@ -1059,15 +1059,14 @@ if aba == "📋 Relatório PDF":
             # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
             # ========================================================
             df_report = df_base.copy()
-            st.write("Colunas que o sistema está lendo:", df_report.columns.tolist())
-
+            
             col_banco_df = next((c for c in df_report.columns if c.upper() in ['BANCO', 'CONTA']), None)
             col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
             col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
             # Adicione esta linha abaixo para achar a Coluna J
             col_ben_df = 'Beneficiário' # Coluna J que você criou
-            
+            st.write("Colunas que o sistema está lendo:", df_report.columns.tolist())
 
             # Tratamento e filtro de Data
             if col_data_df:
