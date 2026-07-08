@@ -10,33 +10,32 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-    # 1. FUNÇÕES DE APOIO (Aqui você coloca a lógica de carregar os dados)
-    def carregar_dados():
-        # Seu código que carrega o CSV ou Google Sheets vai aqui
-        return df
-    
-    # 2. FUNÇÃO DA BARRA LATERAL (Filtros)
-    def renderizar_sidebar(df):
-        # O código dos filtros que te passei ontem
-        return beneficiario, descricao, ano
-    
-    # 3. FUNÇÃO DO PAINEL PRINCIPAL (Onde os dados aparecem)
-    def renderizar_painel_principal(df, beneficiario, descricao, ano):
-        # A lógica de filtrar o df e mostrar o cartão
-        # E o seu código de enviar para o WhatsApp
-    
-    # 4. EXECUÇÃO (O ponto de partida do app)
-    def main():
-        st.set_page_config(layout="wide")
-        
-        # IMPORTANTE: Essas linhas precisam estar com um recuo (espaço) para a direita
-        df = carregar_dados() 
-        beneficiario, descricao, ano = renderizar_sidebar(df)
-        renderizar_painel_principal(df, beneficiario, descricao, ano)
-    
-    if __name__ == "__main__":
-        main()
+# 1. FUNÇÕES DE APOIO (Aqui você coloca a lógica de carregar os dados)
+def carregar_dados():
+    # Seu código que carrega o CSV ou Google Sheets vai aqui
+    return df
 
+# 2. FUNÇÃO DA BARRA LATERAL (Filtros)
+def renderizar_sidebar(df):
+    # O código dos filtros que te passei ontem
+    return beneficiario, descricao, ano
+
+# 3. FUNÇÃO DO PAINEL PRINCIPAL (Onde os dados aparecem)
+def renderizar_painel_principal(df, beneficiario, descricao, ano):
+    # A lógica de filtrar o df e mostrar o cartão
+    # E o seu código de enviar para o WhatsApp
+
+# 4. EXECUÇÃO (O ponto de partida do app)
+def main():
+    st.set_page_config(layout="wide")
+    df = carregar_dados() # Carrega os dados uma vez só
+    
+    # Chama as funções que criamos
+    filtros = renderizar_sidebar(df)
+    renderizar_painel_principal(df, *filtros)
+
+if __name__ == "__main__":
+    main()
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
