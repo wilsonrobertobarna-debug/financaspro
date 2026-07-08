@@ -141,19 +141,22 @@ client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # IDENTIFICAÇÃO DAS ABAS
-try:
+# Início do bloco de carregamento
+        try:
             dados_brutos = ws_base.get_all_values()
             
-            # Verifica se a lista não está vazia
+            # Verificação de segurança
             if dados_brutos and len(dados_brutos) > 1:
                 df_base = pd.DataFrame(dados_brutos[1:], columns=dados_brutos[0])
             else:
-                st.error("A planilha parece estar vazia ou não foi carregada.")
-                st.stop() # Para a execução aqui para não dar erro
+                st.error("A planilha parece estar vazia.")
+                st.stop()
                 
         except Exception as e:
-            st.error(f"Erro ao carregar dados da planilha: {e}")
+            st.error(f"Erro ao carregar dados: {e}")
             st.stop()
+        
+        # Agora o código continua aqui, já com o df_base carregado corretamente
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
