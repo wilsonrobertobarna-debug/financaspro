@@ -141,16 +141,21 @@ client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # IDENTIFICAÇÃO DAS ABAS
-def carregar_dados_gs(ws):
+def carregar_dados_gs():
+    # O comando 'global' diz ao Python: "Procure o ws_base lá fora, no início do arquivo"
+    global ws_base
+    
     try:
-        # Use o 'ws' que passamos como argumento
-        dados = ws.get_all_values()
+        # Agora o Python sabe que ws_base existe
+        dados = ws_base.get_all_values()
+        
         if dados and len(dados) > 1:
             df = pd.DataFrame(dados[1:], columns=dados[0])
             return df
-        return pd.DataFrame()
+        else:
+            return pd.DataFrame()
     except Exception as e:
-        st.error(f"Erro ao carregar: {e}")
+        st.error(f"Erro ao carregar dados: {e}")
         return pd.DataFrame()
         
         # Agora o código continua aqui, já com o df_base carregado corretamente
