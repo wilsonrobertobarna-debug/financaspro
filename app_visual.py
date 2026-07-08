@@ -28,11 +28,11 @@ def renderizar_painel_principal(df, beneficiario, descricao, ano):
 # 4. EXECUÇÃO (O ponto de partida do app)
 def main():
     st.set_page_config(layout="wide")
-    df = carregar_dados() # Carrega os dados uma vez só
     
-    # Chama as funções que criamos
-    filtros = renderizar_sidebar(df)
-    renderizar_painel_principal(df, *filtros)
+    # IMPORTANTE: Essas linhas precisam estar com um recuo (espaço) para a direita
+    df = carregar_dados() 
+    beneficiario, descricao, ano = renderizar_sidebar(df)
+    renderizar_painel_principal(df, beneficiario, descricao, ano)
 
 if __name__ == "__main__":
     main()
