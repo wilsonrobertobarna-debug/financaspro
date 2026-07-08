@@ -1079,7 +1079,7 @@ if aba == "📋 Relatório PDF":
             # -------------------------------
             
             # FILTRO DE DESCRIÇÃO (Coluna 2)
-            iif busca_ben:
+            if busca_ben:
                 st.write(f"--- Rastreando busca: '{busca_ben}' ---")
                 # Exibe o que existe na coluna 9 de todas as linhas
                 st.write("Valores encontrados na coluna 9:", df_report.iloc[:, 9].tolist())
