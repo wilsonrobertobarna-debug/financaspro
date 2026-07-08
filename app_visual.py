@@ -103,7 +103,7 @@ sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 #df_base = pd.DataFrame(dados[1:], columns=header)
 
 # 2. RASTREAMENTO DO CARREGAMENTO (Para você ver que agora funciona)
-st.write("Total de linhas carregadas na Base:", len(df_base))
+#st.write("Total de linhas carregadas na Base:", len(df_base))
 
 # 4. ESTILIZAÇÃO
 st.markdown("""
