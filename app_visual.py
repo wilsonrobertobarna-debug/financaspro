@@ -10,55 +10,6 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-# --- FUNÇÕES DE CADA TELA ---
-def tela_veiculo():
-    st.header("🚗 Módulo: Veículo")
-    # Seu código do veículo entra aqui
-
-def tela_milo():
-    st.header("🐶 Módulo: Milo")
-    # Seu código do Milo entra aqui
-
-def tela_pendencias():
-    st.header("⚠️ Módulo: Pendências")
-    # Seu código das pendências entra aqui
-
-def tela_busca():
-    st.header("🔍 Busca de Beneficiário")
-    # Aqui vamos colocar apenas a busca e o resultado do cartão
-    st.sidebar.subheader("Filtros de Busca")
-    nome = st.sidebar.text_input("Beneficiário")
-    if st.sidebar.button("Buscar"):
-        st.write(f"Exibindo resultados para: {nome}")
-        # Aqui entra seu container do cartão e botão WhatsApp
-
-# --- MENU LATERAL (Sempre visível ou colapsável) ---
-def main():
-    st.set_page_config(layout="wide")
-    
-    # Este menu na sidebar é o que você vai usar para alternar as telas
-    with st.sidebar:
-        st.title("FinançasPro")
-        menu = st.radio(
-            "Navegação:",
-            ["Busca de Beneficiário", "Veículo", "Milo", "Pendências"]
-        )
-        st.divider()
-        st.write("Configurações do Milo e outros...")
-
-    # Lógica de seleção (O conteúdo muda, a lateral permanece)
-    if menu == "Busca de Beneficiário":
-        tela_busca()
-    elif menu == "Veículo":
-        tela_veiculo()
-    elif menu == "Milo":
-        tela_milo()
-    elif menu == "Pendências":
-        tela_pendencias()
-
-if __name__ == "__main__":
-    main()
-
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
