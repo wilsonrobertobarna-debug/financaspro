@@ -1079,16 +1079,15 @@ if aba == "📋 Relatório PDF":
             # -------------------------------
             
             # FILTRO DE DESCRIÇÃO (Coluna 2)
-            if busca_desc:
-                df_report = df_report[df_report.iloc[:, 2].astype(str).str.contains(busca_desc, case=False, na=False)]
-            
-            # FILTRO DE BENEFICIÁRIO (Coluna 9 - A 10ª coluna da planilha)
-            if busca_ben:
+            iif busca_ben:
+                st.write(f"--- Rastreando busca: '{busca_ben}' ---")
+                # Exibe o que existe na coluna 9 de todas as linhas
+                st.write("Valores encontrados na coluna 9:", df_report.iloc[:, 9].tolist())
+                
+                # Filtra e mostra o que sobrou
                 df_report = df_report[df_report.iloc[:, 9].astype(str).str.contains(busca_ben, case=False, na=False)]
-            
-            # FILTRO DE STATUS (Coluna 6)
-            if busca_status != "Todos":
-                df_report = df_report[df_report.iloc[:, 6].astype(str).str.upper() == busca_status.upper()]
+                
+                st.write("Linhas após o filtro:", len(df_report))
 
         
             # Filtro de Data
