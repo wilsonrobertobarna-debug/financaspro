@@ -1062,30 +1062,26 @@ if aba == "📋 Relatório PDF":
             # ========================================================
             # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
             # ========================================================
+           # ========================================================
+            # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
+            # ========================================================
             df_report = df_base.copy()
             
-            # --- TESTE DE DETETIVE ---
-            colunas_encontradas = df_report.columns.tolist()
-            st.write("Colunas encontradas:", colunas_encontradas)
-            
-            # Vamos achar o beneficiário de forma inteligente
-            # Se não achar com acento, tenta sem acento
-            if 'Beneficiário' in colunas_encontradas:
-                col_ben_df = 'Beneficiário'
-            elif 'Beneficiario' in colunas_encontradas:
-                col_ben_df = 'Beneficiario'
-            else:
-                col_ben_df = None
-                st.warning("A coluna de Beneficiário não foi encontrada pelo sistema!")
-            # -------------------------
+            # Aqui identificamos as colunas pelo nome ou pelo índice garantido
+            col_banco_df = next((c for c in df_report.columns if c.upper() in ['BANCO', 'CONTA']), None)
+            col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+            col_desc_df = df_report.columns[2]    # Coluna 2 = Descrição
+            col_ben_df = df_report.columns[9]     # Coluna 9 = Beneficiário
+            col_status_df = 'Status'              # Coluna G (se for o nome exato)
 
-            col_banco_df = next((c for c in colunas_encontradas if c.upper() in ['BANCO', 'CONTA']), None)
-            col_data_df = next((c for c in colunas_encontradas if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
-            col_desc_df = next((c for c in colunas_encontradas if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
-            col_status_df = next((c for c in colunas_encontradas if c.upper() in ['STATUS']), None)
+            # --- FILTROS DE BUSCA (AQUI ENTRA O CÓDIGO QUE VOCÊ TINHA) ---
+            if busca_desc:
+                df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na="")]
             
-            # Adicione esta linha abaixo para achar a Coluna J
-            col_ben_df = 'Beneficiário' # Coluna J que você criou
+            if busca_ben:
+                df_report = df_report[df_report[col_ben_df].astype(str).str.contains(busca_ben, case=False, na="")]
+            
+            # ... (aqui continua o resto do seu código, começando pelo Filtro de Data)
            
 
             # Tratamento e filtro de Data
