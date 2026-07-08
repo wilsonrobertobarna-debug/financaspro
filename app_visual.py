@@ -141,13 +141,18 @@ client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # IDENTIFICAÇÃO DAS ABAS
-# Logo após definir o sh e o ws_base:
-ws_base = sh.get_worksheet(0)
-# Leia os dados diretamente aqui, sem função
-todos_dados = ws_base.get_all_records()
-df_base = pd.DataFrame(todos_dados)
-        
-        # Agora o código continua aqui, já com o df_base carregado corretamente
+def carregar_bancos_manual_gs():
+    # Isso garante que a função encontre a conexão sh que está lá no topo do seu código
+    global sh 
+    
+    try:
+        ws_bancos = sh.worksheet("Bancos")
+        if ws_bancos:
+            dados = ws_bancos.get_all_values()
+            return pd.DataFrame(dados[1:], columns=dados[0])
+    except:
+        return pd.DataFrame()
+    return pd.DataFrame()
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
