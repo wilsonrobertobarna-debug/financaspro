@@ -141,17 +141,17 @@ client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # IDENTIFICAÇÃO DAS ABAS
-if st.button("📄 Gerar PDF"):
-        try:
-            dados_brutos = ws_base.get_all_values()
-            if dados_brutos and len(dados_brutos) > 1:
-                df_base = pd.DataFrame(dados_brutos[1:], columns=dados_brutos[0])
-            else:
-                st.error("A planilha parece estar vazia.")
-                st.stop()
-        except Exception as e:
-            st.error(f"Erro ao carregar dados: {e}")
-            st.stop()
+def carregar_dados_gs(ws):
+    try:
+        # Use o 'ws' que passamos como argumento
+        dados = ws.get_all_values()
+        if dados and len(dados) > 1:
+            df = pd.DataFrame(dados[1:], columns=dados[0])
+            return df
+        return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Erro ao carregar: {e}")
+        return pd.DataFrame()
         
         # Agora o código continua aqui, já com o df_base carregado corretamente
 
