@@ -141,11 +141,14 @@ client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # IDENTIFICAÇÃO DAS ABAS
-ws_base = sh.get_worksheet(0)
-try:
-    ws_bancos = sh.worksheet("Bancos")
-except:
-    ws_bancos = None
+dados_brutos = ws_base.get_all_values()
+
+# Cria o DataFrame usando a primeira linha como cabeçalho
+# Isso força o Pandas a reconhecer todas as colunas existentes, da A até a J (ou mais)
+df_base = pd.DataFrame(dados_brutos[1:], columns=dados_brutos[0])
+
+# Removemos linhas vazias (importante para o filtro funcionar)
+df_base = df_base[df_base['Vencimento'] != ""]
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
