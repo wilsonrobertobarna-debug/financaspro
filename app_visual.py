@@ -1072,10 +1072,10 @@ if aba == "📋 Relatório PDF":
             st.write("Colunas detectadas:", df_base.columns.tolist())
         
             # Filtro de Beneficiário (usando o índice 9, que é a 10ª coluna)
-        if busca_ben:
+            if busca_ben:
             # Vamos forçar a filtragem pelo índice 9
             df_report = df_base[df_base.iloc[:, 9].astype(str).str.contains(busca_ben, case=False, na=False)]
-        else:
+            else:
             df_report = df_base.copy()
 
 
