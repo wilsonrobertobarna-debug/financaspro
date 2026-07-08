@@ -111,6 +111,11 @@ if 'metas_iniciadas' not in st.session_state:
         st.session_state['metas_iniciadas'] = True
     except Exception as e:
         st.error(f"Erro na planilha: {e}")
+        
+# --- RASTREAMENTO DO CARREGAMENTO ---
+st.write("Total de linhas carregadas:", len(df_base))
+st.write("Primeira linha do DataFrame:", df_base.iloc[0].tolist() if not df_base.empty else "DataFrame vazio!")
+
 # 4. ESTILIZAÇÃO
 st.markdown("""
     <style>
