@@ -1079,15 +1079,15 @@ if aba == "📋 Relatório PDF":
             # -------------------------------
             
             # FILTRO DE DESCRIÇÃO (Coluna 2)
+           # FILTRO DE BENEFICIÁRIO (Usando o NOME da coluna, não o número)
             if busca_ben:
-                st.write(f"--- Rastreando busca: '{busca_ben}' ---")
-                # Exibe o que existe na coluna 9 de todas as linhas
-                st.write("Valores encontrados na coluna 9:", df_report.iloc[:, 9].tolist())
+                # Substitua 'Beneficiário' abaixo pelo nome exato que está na linha 1 da coluna J
+                coluna_nome = 'Beneficiário' 
                 
-                # Filtra e mostra o que sobrou
-                df_report = df_report[df_report.iloc[:, 9].astype(str).str.contains(busca_ben, case=False, na=False)]
-                
-                st.write("Linhas após o filtro:", len(df_report))
+                if coluna_nome in df_report.columns:
+                    df_report = df_report[df_report[coluna_nome].astype(str).str.contains(busca_ben, case=False, na=False)]
+                else:
+                    st.error(f"Erro: A coluna '{coluna_nome}' não foi encontrada. Colunas disponíveis: {df_report.columns.tolist()}")
 
         
             # Filtro de Data
