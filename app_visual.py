@@ -1079,16 +1079,15 @@ if aba == "📋 Relatório PDF":
             # -------------------------------
             
             # FILTRO DE DESCRIÇÃO (Coluna 2)
-           # FILTRO DE BENEFICIÁRIO (Usando o NOME da coluna, não o número)
+           # FILTRO DE BENEFICIÁRIO (Diagnóstico Final)
             if busca_ben:
-                # Substitua 'Beneficiário' abaixo pelo nome exato que está na linha 1 da coluna J
-                coluna_nome = 'Beneficiário' 
+                # Vamos ver o que o Pandas realmente "vê" como colunas
+                st.write("Colunas detectadas pelo Pandas:", df_report.columns.tolist())
                 
-                if coluna_nome in df_report.columns:
-                    df_report = df_report[df_report[coluna_nome].astype(str).str.contains(busca_ben, case=False, na=False)]
-                else:
-                    st.error(f"Erro: A coluna '{coluna_nome}' não foi encontrada. Colunas disponíveis: {df_report.columns.tolist()}")
-
+                # Procura o termo 'busca_ben' em todas as colunas de forma bruta
+                # Isso vai nos dizer se o dado sequer existe no DataFrame
+                mask = df_report.apply(lambda row: row.astype(str).str.contains(busca_ben, case=False).any(), axis=1)
+                st.write("Total de linhas encontradas com esse termo em qualquer lugar:", mask.sum())
         
             # Filtro de Data
             df_report['DT_FILTRO'] = pd.to_datetime(df_report['Vencimento'], format="%d/%m/%Y", errors='coerce')
