@@ -168,45 +168,6 @@ def carregar_bancos_manual_gs():
             return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
 
-# --- MÓDULO DE CONSULTA PARA FABIANA ---
-st.sidebar.markdown("---")
-st.sidebar.subheader("🔎 Busca de Lançamentos")
-
-# Carrega os dados atualizados
-df_base = carregar_dados_gs()
-
-# Filtros na barra lateral
-termo_benef = st.sidebar.text_input("Buscar Beneficiário:")
-ano_filtro = st.sidebar.selectbox("Filtrar por Ano:", [2025, 2026], index=1)
-
-if termo_benef:
-    # Filtra o dataframe (verifique se os nomes abaixo batem com sua planilha)
-    # Filtro
-    df_busca = df_base[df_base['Beneficiario'].str.contains(termo_benef, case=False, na=False)]
-    
-    if not df_busca.empty:
-        st.sidebar.write(f"Encontrei {len(df_busca)} registros.")
-        
-        # Seleção da linha na lateral
-        idx_escolhido = st.sidebar.selectbox("Escolha a linha para enviar:", df_busca.index)
-        
-        # Botão na lateral para enviar
-        if st.sidebar.button("Gerar Cartão para Fabiana"):
-            linha = df_busca.loc[idx_escolhido]
-            cartao = (f"📄 *Comprovante de Lançamento*\n\n"
-                      f"*Beneficiário:* {linha['Beneficiario']}\n"
-                      f"*Valor:* {linha['Valor']}\n"
-                      f"*Data:* {linha['Vencimento']}\n"
-                      f"*Descrição:* {linha['Descricao']}\n"
-                      f"*Banco:* {linha['Banco']}")
-            
-            st.sidebar.info(cartao)
-            
-            # Link para o WhatsApp (substitua pelo número da Fabiana)
-            link_zap = f"https://wa.me/5519999999999?text={urllib.parse.quote(cartao)}"
-            st.sidebar.link_button("Abrir WhatsApp 📱", link_zap)
-    else:
-        st.sidebar.warning("Nenhum registro encontrado.")
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
