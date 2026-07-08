@@ -1059,17 +1059,18 @@ if aba == "📋 Relatório PDF":
             # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
             # ========================================================
             df_report = df_base.copy()
-
-            # Filtros de Texto
-            if busca_desc:
-                df_report = df_report[df_report['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)]
             
+            # FILTRO DE DESCRIÇÃO (Coluna 2)
+            if busca_desc:
+                df_report = df_report[df_report.iloc[:, 2].astype(str).str.contains(busca_desc, case=False, na=False)]
+            
+            # FILTRO DE BENEFICIÁRIO (Coluna 9 - A 10ª coluna da planilha)
             if busca_ben:
-                # Usando o nome exato que você viu na lista: "Beneficiário"
-                df_report = df_report[
-                    df_report['Beneficiário'].astype(str).str.strip().str.lower().str.contains(busca_ben.strip().lower(), na=False)
-                ]
-
+                df_report = df_report[df_report.iloc[:, 9].astype(str).str.contains(busca_ben, case=False, na=False)]
+            
+            # FILTRO DE STATUS (Coluna 6)
+            if busca_status != "Todos":
+                df_report = df_report[df_report.iloc[:, 6].astype(str).str.upper() == busca_status.upper()]
             # Filtro de Data
             df_report['DT_FILTRO'] = pd.to_datetime(df_report['Vencimento'], format="%d/%m/%Y", errors='coerce')
             t_ini = pd.to_datetime(b_ini)
