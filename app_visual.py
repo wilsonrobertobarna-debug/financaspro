@@ -1068,7 +1068,7 @@ if aba == "📋 Relatório PDF":
           # ========================================================
             # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
             # ========================================================
-           df_report = df_base.copy()
+            df_report = df_base.copy()
             
             # --- RASTREADOR DE SEGURANÇA ---
             st.write("Colunas disponíveis no sistema:", df_report.columns.tolist())
