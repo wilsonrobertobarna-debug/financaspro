@@ -10,6 +10,22 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
+"""
+===========================================================================
+REGISTRO DE ATUALIZAÇÕES DO SISTEMA (FinançasPro)
+===========================================================================
+
+Data da última atualização importante: 05/07/2026
+
+Resumo da nossa missão hoje:
+1. Filtro: Eliminamos o erro visual 'dt_' da tela através de uma faxina rigorosa.
+2. PDF: Relatório normalizado e limpo, garantindo compatibilidade.
+3. Automação: IDs automáticos (coluna I) funcionando perfeitamente tanto 
+   para lançamentos individuais quanto para transferências (sequencial).
+
+===========================================================================
+"""
+
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
@@ -70,7 +86,7 @@ def atualizar_meta_sheets(nome):
 st.set_page_config(
     page_title="FinançasPro",
     layout="wide",
-    initial_sidebar_state="expanded" # Isso fará a barra vir fechada por padrão
+    initial_sidebar_state="collapsed" # Isso fará a barra vir fechada por padrão
 )
 
 # 2. CONEXÃO (LIGA O MOTOR)
@@ -165,7 +181,6 @@ def carregar_bancos_manual_gs():
         if len(dados) > 1:
             return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
-
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
@@ -1377,13 +1392,12 @@ if aba == "📊 Análises & Configurações":
         st.warning("A base de dados está vazia.")
 
     st.divider()
+    
 
     # 2. COMPARATIVO: MÊS ATUAL VS MÊS ANTERIOR
-    # Tratamento de segurança para evitar erro de dados vazios ou corrompidos
-    df_pagos = df_base[df_base['Status'] == 'Pago'].copy()
-    df_pagos = df_pagos[df_pagos['Mes_Ano'].notna()]
-    meses_unicos = sorted(df_pagos['Mes_Ano'].astype(str).unique())
-
+    # Primeiro, criamos uma lista de meses únicos presentes na base (ordenados)
+    meses_unicos = sorted(df_base[df_base['Status'] == 'Pago']['Mes_Ano'].unique())
+    
     # Pegamos os dois últimos meses da lista
     if len(meses_unicos) >= 2:
         mes_ant = meses_unicos[-2]
@@ -1396,7 +1410,6 @@ if aba == "📊 Análises & Configurações":
 
     with st.expander(f"📊 Comparativo de Sobra Mensal ({mes_ant or 'N/A'} vs. {mes_atual or 'Atual'})", expanded=True):
         if mes_atual:
-  
             # Filtra os dados dinamicamente
             df_m1 = df_base[(df_base['Mes_Ano'] == mes_ant) & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')] if mes_ant else None
             df_m2 = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
