@@ -1066,7 +1066,9 @@ if aba == "📋 Relatório PDF":
             
             if busca_ben:
                 # Usando o nome exato que você viu na lista: "Beneficiário"
-                df_report = df_report[df_report['Beneficiário'].astype(str).str.contains(busca_ben, case=False, na=False)]
+                df_report = df_report[
+                    df_report['Beneficiário'].astype(str).str.strip().str.lower().str.contains(busca_ben.strip().lower(), na=False)
+                ]
 
             # Filtro de Data
             df_report['DT_FILTRO'] = pd.to_datetime(df_report['Vencimento'], format="%d/%m/%Y", errors='coerce')
