@@ -1055,31 +1055,40 @@ if aba == "📋 Relatório PDF":
             pdf = FPDF()
             pdf.add_page()
 
-            # ========================================================
-            # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
-            # ========================================================
-           # ========================================================
+          # ========================================================
             # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
             # ========================================================
             df_report = df_base.copy()
-            
-            # Aqui identificamos as colunas pelo nome ou pelo índice garantido
-            col_banco_df = next((c for c in df_report.columns if c.upper() in ['BANCO', 'CONTA']), None)
-            col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
-            col_desc_df = df_report.columns[2]    # Coluna 2 = Descrição
-            col_ben_df = df_report.columns[9]     # Coluna 9 = Beneficiário
-            col_status_df = 'Status'              # Coluna G (se for o nome exato)
 
-            # --- FILTROS DE BUSCA (AQUI ENTRA O CÓDIGO QUE VOCÊ TINHA) ---
+            # Filtros de Texto
             if busca_desc:
-                df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na="")]
+                df_report = df_report[df_report['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)]
             
             if busca_ben:
-                df_report = df_report[df_report[col_ben_df].astype(str).str.contains(busca_ben, case=False, na="")]
-            
-            # ... (aqui continua o resto do seu código, começando pelo Filtro de Data)
-           
+                # Usando o nome exato que você viu na lista: "Beneficiário"
+                df_report = df_report[df_report['Beneficiário'].astype(str).str.contains(busca_ben, case=False, na=False)]
 
+            # Filtro de Data
+            df_report['DT_FILTRO'] = pd.to_datetime(df_report['Vencimento'], format="%d/%m/%Y", errors='coerce')
+            t_ini = pd.to_datetime(b_ini)
+            t_fim = pd.to_datetime(b_fim)
+            df_report = df_report[(df_report['DT_FILTRO'] >= t_ini) & (df_report['DT_FILTRO'] <= t_fim)]
+
+            # Filtro de Banco
+            if banco_relatorio != "Todos":
+                df_report = df_report[df_report['Banco'].str.upper().str.strip() == str(banco_relatorio).upper()]
+
+            # Filtro de Status
+            if busca_status != "Todos":
+                df_report = df_report[df_report['Status'].str.upper().str.strip() == str(busca_status).upper()]
+
+            df_report = df_report.sort_values(by='DT_FILTRO')
+            
+            # TESTE FINAL: O que sobrou após os filtros?
+            st.write(f"Linhas encontradas após filtros: {len(df_report)}")
+            st.dataframe(df_report)
+
+            
             # Tratamento e filtro de Data
             if col_data_df:
                 df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
