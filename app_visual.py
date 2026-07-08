@@ -141,7 +141,7 @@ client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # IDENTIFICAÇÃO DAS ABAS
-dados_brutos = ws_base.get_all_values()
+ws_base = sh.get_worksheet(0)
 
 # Cria o DataFrame usando a primeira linha como cabeçalho
 # Isso força o Pandas a reconhecer todas as colunas existentes, da A até a J (ou mais)
