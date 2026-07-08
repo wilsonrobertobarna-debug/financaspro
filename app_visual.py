@@ -1009,11 +1009,7 @@ elif "📄" in aba:
     st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
 
 if aba == "📋 Relatório PDF":
-    st.markdown("### 📋 Emissão de Relatório Financeiro")
-    # FORÇAR A VISUALIZAÇÃO DOS DADOS
-    st.write("--- TESTE DE DADOS ---")
-    st.write("Colunas disponíveis no DataFrame:", df_base.columns.tolist())
-    st.dataframe(df_base.head()) # Isso vai mostrar os primeiros dados da planilha
+    st.markdown("### 📋 Emissão de Relatório Financeiro")  
     
     # -------------------------------------------------------------------------
     # LINHA 1 DE FILTROS: BANCO E PERÍODO (Estrutura original mantida intacta)
