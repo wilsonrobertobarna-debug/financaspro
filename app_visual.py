@@ -449,6 +449,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
+            ed_ben = st.text_input("Alterar Beneficiário:", value=item.get('Beneficiario', ''))
             
             col_ed1, col_ed2 = st.columns(2)
             
