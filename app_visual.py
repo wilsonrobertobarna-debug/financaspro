@@ -141,18 +141,21 @@ client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # IDENTIFICAÇÃO DAS ABAS
-def carregar_bancos_manual_gs():
-    # Isso garante que a função encontre a conexão sh que está lá no topo do seu código
-    global sh 
-    
-    try:
-        ws_bancos = sh.worksheet("Bancos")
-        if ws_bancos:
-            dados = ws_bancos.get_all_values()
-            return pd.DataFrame(dados[1:], columns=dados[0])
-    except:
-        return pd.DataFrame()
-    return pd.DataFrame()
+# --- CARREGAMENTO DIRETO (SEM FUNÇÕES PARA NÃO DAR ERRO) ---
+
+# Carrega a base de lançamentos
+ws_base = sh.get_worksheet(0)
+dados_base = ws_base.get_all_values()
+df_base = pd.DataFrame(dados_base[1:], columns=dados_base[0])
+
+# Carrega os bancos
+try:
+    ws_bancos = sh.worksheet("Bancos")
+    dados_bancos = ws_bancos.get_all_values()
+    df_bancos = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
+except:
+    df_bancos = pd.DataFrame() # Cria um dataframe vazio se não achar a aba
+
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
