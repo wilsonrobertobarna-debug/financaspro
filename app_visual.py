@@ -142,7 +142,7 @@ sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # IDENTIFICAÇÃO DAS ABAS
 # Início do bloco de carregamento
-        try:
+         try:
             dados_brutos = ws_base.get_all_values()
             
             # Verificação de segurança
