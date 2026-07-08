@@ -334,7 +334,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
-        f_des = st.text_input("Descrição / Beneficiário")
+        f_des = st.text_input("Descrição")    # Campo existente (Coluna C)
+        f_ben = st.text_input("Beneficiário") # Novo campo (vai para Coluna J)
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação","Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
@@ -373,15 +374,16 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 nova_data = t_dat + relativedelta(months=i)
                 
                 ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
-                    v_str,                          # Coluna B: Valor
-                    f_des,                          # Coluna C: Descrição
-                    f_cat,                          # Coluna D: Categoria
-                    f_tip,                          # Coluna E: Tipo
-                    f_bnc,                          # Coluna F: Banco
-                    f_sta,                          # Coluna G: Status
-                    f_compra_str,                   # Coluna H: Data da Compra
-                    proximo_id + i                  # Coluna I: ID (Agora sem pular coluna!)
+                    nova_data.strftime("%d/%m/%Y"), # A: Vencimento
+                    v_str,                          # B: Valor
+                    f_des,                          # C: Descrição
+                    f_cat,                          # D: Categoria
+                    f_tip,                          # E: Tipo
+                    f_bnc,                          # F: Banco
+                    f_sta,                          # G: Status
+                    f_compra_str,                   # H: Data da Compra
+                    proximo_id + i,                 # I: ID
+                    f_ben                           # J: Beneficiário (NOVO)
                 ])
             
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
