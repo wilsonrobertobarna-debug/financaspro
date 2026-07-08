@@ -1025,12 +1025,13 @@ if aba == "📋 Relatório PDF":
         periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
 
     # -------------------------------------------------------------------------
-    # LINHA 2 DE FILTROS: DESCRIÇÃO E STATUS 
+    # LINHA 2 DE FILTROS: DESCRIÇÃO E BENEFICIÁRIO (Separados)
     # -------------------------------------------------------------------------
-    col_rel3, col_rel4 = st.columns(2)
+    col_rel3, col_rel3b, col_rel4 = st.columns(3)
     with col_rel3:
-        busca_desc = st.text_input("🔍 Pesquisar por Descrição / Beneficiário:", "").strip()
-        
+        busca_desc = st.text_input("🔍 Pesquisar Descrição:", "").strip()
+    with col_rel3b:
+        busca_ben = st.text_input("👤 Pesquisar Beneficiário:", "").strip()
     with col_rel4:
         busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
 
