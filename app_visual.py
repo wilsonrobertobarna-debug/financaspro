@@ -1068,7 +1068,12 @@ if aba == "📋 Relatório PDF":
           # ========================================================
             # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
             # ========================================================
-            df_report = df_base.copy()
+           df_report = df_base.copy()
+            
+            # --- RASTREADOR DE SEGURANÇA ---
+            st.write("Colunas disponíveis no sistema:", df_report.columns.tolist())
+            st.write("Valor na Coluna 9 (Linha 0):", df_report.iloc[0, 9] if len(df_report) > 0 else "Sem dados")
+            # -------------------------------
             
             # FILTRO DE DESCRIÇÃO (Coluna 2)
             if busca_desc:
@@ -1081,6 +1086,8 @@ if aba == "📋 Relatório PDF":
             # FILTRO DE STATUS (Coluna 6)
             if busca_status != "Todos":
                 df_report = df_report[df_report.iloc[:, 6].astype(str).str.upper() == busca_status.upper()]
+
+        
             # Filtro de Data
             df_report['DT_FILTRO'] = pd.to_datetime(df_report['Vencimento'], format="%d/%m/%Y", errors='coerce')
             t_ini = pd.to_datetime(b_ini)
