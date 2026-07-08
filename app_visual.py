@@ -1064,6 +1064,9 @@ if aba == "📋 Relatório PDF":
             col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
             col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
+            # Adicione esta linha abaixo para achar a Coluna J
+            col_ben_df = 'Beneficiário' # Coluna J que você criou
+            
 
             # Tratamento e filtro de Data
             if col_data_df:
@@ -1085,8 +1088,13 @@ if aba == "📋 Relatório PDF":
                 banco_nome = banco_relatorio
                 df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_nome).upper()]
 
+            # Filtro de Descrição (Coluna C)
             if busca_desc and col_desc_df:
                 df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
+            
+            # Novo Filtro de Beneficiário (Coluna J)
+            if busca_ben and col_ben_df in df_report.columns:
+                df_report = df_report[df_report[col_ben_df].astype(str).str.contains(busca_ben, case=False, na=False)]    
 
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
