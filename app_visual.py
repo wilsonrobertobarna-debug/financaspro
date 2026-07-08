@@ -11,23 +11,6 @@ import urllib.parse
 import streamlit.components.v1 as components
 
 
-# --- DEBUG PARA VERIFICAR SECRETS ---
-st.write("Chaves disponíveis no secrets:", st.secrets.keys())
-if "gcp_service_account" in st.secrets:
-    st.write("A chave 'gcp_service_account' foi encontrada!")
-else:
-    st.error("A chave 'gcp_service_account' NÃO foi encontrada. Verifique o nome no painel Secrets.")
-
-# --- 1. AUTENTICAÇÃO (Sempre no topo, fora de qualquer bloco 'if') ---
-gc = gspread.service_account_from_dict(dict(st.secrets["gcp_service_account"]))
-sh = gc.open("FinançasPro") # Coloque o nome real aqui!
-
-# --- 2. CARREGAMENTO (Isso precisa estar aqui, antes de qualquer uso) ---
-ws_base = sh.get_worksheet(0)
-dados = ws_base.get_all_values()
-# Cria o DataFrame usando a primeira linha como cabeçalho
-df_base = pd.DataFrame(dados[1:], columns=dados[0])
-
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
