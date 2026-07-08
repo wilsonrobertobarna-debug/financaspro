@@ -10,43 +10,54 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-# --- FUNÇÕES DE APOIO ---
-def carregar_dados():
-    # Substitua pelo seu código de leitura do Google Sheets/CSV
-    # Exemplo: df = pd.read_csv("seuarquivo.csv")
-    return pd.DataFrame() 
+# --- FUNÇÕES DE CADA TELA ---
+def tela_veiculo():
+    st.header("🚗 Módulo: Veículo")
+    # Seu código do veículo entra aqui
 
-# --- FUNÇÃO DA BARRA LATERAL (Filtros) ---
-def renderizar_sidebar(df):
-    st.sidebar.header("🔍 Busca de Lançamentos")
-    beneficiario = st.sidebar.text_input("Beneficiário")
-    descricao = st.sidebar.text_input("Descrição")
-    ano = st.sidebar.selectbox("Ano", ["", "2026", "2025"])
-    return beneficiario, descricao, ano
+def tela_milo():
+    st.header("🐶 Módulo: Milo")
+    # Seu código do Milo entra aqui
 
-# --- FUNÇÃO DO PAINEL PRINCIPAL ---
-def renderizar_painel_principal(df, beneficiario, descricao, ano):
-    st.title("FinançasPro - Painel de Resultados")
-    
-    if beneficiario or descricao or ano:
-        st.write(f"Resultados para: {beneficiario} | {descricao} | {ano}")
-        with st.container(border=True):
-            st.subheader(f"Cartão: {beneficiario}")
-            if st.button("Enviar via WhatsApp 💬"):
-                st.success("Enviando para o Twilio...")
-    else:
-        st.info("Utilize a barra lateral para filtrar os lançamentos.")
+def tela_pendencias():
+    st.header("⚠️ Módulo: Pendências")
+    # Seu código das pendências entra aqui
 
-# --- EXECUÇÃO PRINCIPAL ---
+def tela_busca():
+    st.header("🔍 Busca de Beneficiário")
+    # Aqui vamos colocar apenas a busca e o resultado do cartão
+    st.sidebar.subheader("Filtros de Busca")
+    nome = st.sidebar.text_input("Beneficiário")
+    if st.sidebar.button("Buscar"):
+        st.write(f"Exibindo resultados para: {nome}")
+        # Aqui entra seu container do cartão e botão WhatsApp
+
+# --- MENU LATERAL (Sempre visível ou colapsável) ---
 def main():
     st.set_page_config(layout="wide")
-    df = carregar_dados()
-    beneficiario, descricao, ano = renderizar_sidebar(df)
-    renderizar_painel_principal(df, beneficiario, descricao, ano)
+    
+    # Este menu na sidebar é o que você vai usar para alternar as telas
+    with st.sidebar:
+        st.title("FinançasPro")
+        menu = st.radio(
+            "Navegação:",
+            ["Busca de Beneficiário", "Veículo", "Milo", "Pendências"]
+        )
+        st.divider()
+        st.write("Configurações do Milo e outros...")
+
+    # Lógica de seleção (O conteúdo muda, a lateral permanece)
+    if menu == "Busca de Beneficiário":
+        tela_busca()
+    elif menu == "Veículo":
+        tela_veiculo()
+    elif menu == "Milo":
+        tela_milo()
+    elif menu == "Pendências":
+        tela_pendencias()
 
 if __name__ == "__main__":
     main()
-
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
