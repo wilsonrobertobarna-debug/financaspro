@@ -19,7 +19,7 @@ else:
     st.error("A chave 'gcp_service_account' NÃO foi encontrada. Verifique o nome no painel Secrets.")
 
 # --- 1. AUTENTICAÇÃO (Sempre no topo, fora de qualquer bloco 'if') ---
-gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
+gc = gspread.service_account_from_dict(dict(st.secrets["gcp_service_account"]))
 sh = gc.open("FinançasPro") # Coloque o nome real aqui!
 
 # --- 2. CARREGAMENTO (Isso precisa estar aqui, antes de qualquer uso) ---
