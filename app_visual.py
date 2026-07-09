@@ -556,7 +556,8 @@ if "💰" in st.session_state.page:
         # 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
         st.subheader("🎯 Metas vs Realizado (Despesas)")
 
-        st.write({k: v for k, v in st.session_state.items() if k.startswith("m_")})         
+        st.write("DEBUG: Verificando chaves de meta...")
+        st.write(st.session_state)       
        
         # Teste: use df_m em vez de df_m_limpo
         df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
