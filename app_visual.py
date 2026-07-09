@@ -491,7 +491,7 @@ if "💰" in st.session_state.page:
             st.write("### 📊 Fluxo Mensal")
             df_f = df_m_limpo.groupby(['Tipo'])['V_Num'].sum().reset_index()
             if not df_f.empty:
-                st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo'), use_container_width=True)
+                st.plotly_chart(px.bar(df_m.groupby(['Tipo'])['V_Num'].sum().reset_index(), x='Tipo', y='V_Num'), use_container_width=True)
                 
 
 # 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
