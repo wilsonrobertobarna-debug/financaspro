@@ -46,11 +46,14 @@ selected = option_menu(
     orientation="horizontal",
 )
 
-# Agora o seu sistema segue normalmente...
+# --- LÓGICA DE NAVEGAÇÃO ---
 if selected == "Finanças":
-    st.write("Bem-vindo às Finanças!")
-if selected == "Pendências":
-    st.write("Bem-vindo às Pendências!")
+    # Coloque aqui a chamada da sua função de finanças
+    st.write("Exibindo Finanças")
+    
+elif selected == "Pendências":
+    # Coloque aqui a chamada da sua função de Pendências
+    st.write("Exibindo Pendências")
 
 st.divider()
    
