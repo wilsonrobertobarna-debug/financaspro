@@ -429,31 +429,38 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
-# --- ABA: 💰 Finanças & Bancos (VERSÃO COMPLETA) ---
-if "💰" in aba:
-    st.subheader("🛡️ FinançasPro Wilson")
+if "💰" in st.session_state.page:
+    import plotly.graph_objects as go
     
- # Seletor de Mês
+    st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
+    st.subheader("🛡️ FinançasPro Wilson")
+
     meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     mes_atual_hoje = datetime.now().strftime("%b")
     mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=mes_atual_hoje)
-    
-    mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
-               "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
-    filtro_mes = f"{mes_map[mes_atual]}/26"
-    
-    # Filtros de Dados
-    df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
-    df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
-    
-    # Cálculos Precisos
-    receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-    gasto_total = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-    rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-    pendente = df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()
-    saldo_geral = (receita_total + rendimento) - gasto_total    
 
-        # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
+    if not df_base.empty:
+        mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
+        filtro_mes = f"{mes_map[mes_atual]}/26"
+        df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+        
+        receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+        gasto_total = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        pendente = df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()
+        saldo_geral = (receita_total + rendimento) - gasto_total
+
+        cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
+        st.markdown(f"""<div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};"><p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p><h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1></div>""", unsafe_allow_html=True)
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
+        c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
+        c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
+        c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
+
+        st.divider()
         g1, g2 = st.columns(2)
         with g1:
             st.write("### 🍕 Gastos por Categoria")
@@ -464,8 +471,6 @@ if "💰" in aba:
             st.write("### 📊 Fluxo Mensal")
             df_f = df_m_limpo.groupby(['Tipo'])['V_Num'].sum().reset_index()
             if not df_f.empty:
-                st.plotly_chart(px.bar(df_m.groupby(['Tipo'])['V_Num'].sum().reset_index(), x='Tipo', y='V_Num'), use_container_width=True)
-                
 
 # 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
         st.subheader("🎯 Metas vs Realizado (Despesas)")
