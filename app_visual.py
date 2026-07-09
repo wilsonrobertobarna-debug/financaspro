@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_option_menu import option_menu
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
@@ -10,10 +11,6 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-
-
-import streamlit as st
-from streamlit_option_menu import option_menu
 
 # 1. Configurações da página (Sempre no topo)
 st.set_page_config(layout="wide")
@@ -38,7 +35,8 @@ if not st.session_state.login:
     st.stop() # O código PARA aqui se não estiver logado
 
 # --- AQUI COMEÇA O SISTEMA (SÓ CARREGA SE LOGIN FOR TRUE) ---
-
+st.write("") 
+st.write("")
 selected = option_menu(
     menu_title=None, 
     options=["Finanças", "Pendências", "Milo & Bolt", "Veículo", "WhatsApp", "Relatório", "Config"],
