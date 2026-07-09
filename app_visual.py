@@ -49,6 +49,10 @@ selected = option_menu(
 # Agora o seu sistema segue normalmente...
 if selected == "Finanças":
     st.write("Bem-vindo às Finanças!")
+if selected == "Pendências":
+    st.write("Bem-vindo às Pendências!")
+
+st.divider()
    
 
 # Definições iniciais de data
