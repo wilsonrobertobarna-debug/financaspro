@@ -473,7 +473,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in st.session_state.page:
-    import plotly.graph_objects as go # Garante que o gráfico de metas funcione
+    import plotly.graph_objects as go
     
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
@@ -484,14 +484,14 @@ if "💰" in st.session_state.page:
     mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=mes_atual_hoje)
     
     if not df_base.empty:
-        # 2. TRADUÇÃO DO FILTRO (Converte "Jun" para "06/26")
+        # 2. TRADUÇÃO DO FILTRO
         mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
                    "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
         filtro_mes = f"{mes_map[mes_atual]}/26"
-               
+        
         # Filtra os dados do mês
         df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]       
+        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
         # 3. CÁLCULOS
         receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
@@ -500,6 +500,7 @@ if "💰" in st.session_state.page:
         pendente = df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()
         saldo_geral = (receita_total + rendimento) - gasto_total
 
+        # 4. EXIBIÇÃO DO SALDO
         # 4. EXIBIÇÃO DO SALDO
         cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
         st.markdown(f"""
@@ -514,7 +515,6 @@ if "💰" in st.session_state.page:
         c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
         c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
         c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
-
         st.divider()
 
         # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
