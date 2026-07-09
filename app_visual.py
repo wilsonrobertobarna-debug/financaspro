@@ -553,9 +553,11 @@ if "💰" in st.session_state.page:
                 st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo'), use_container_width=True)
                 
 
-# 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
+        # 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
         st.subheader("🎯 Metas vs Realizado (Despesas)")
-        
+
+        st.write({k: v for k, v in st.session_state.items() if k.startswith("m_")})         
+       
         # Teste: use df_m em vez de df_m_limpo
         df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
         
