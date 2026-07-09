@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit_option_menu import option_menu
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
@@ -12,60 +11,30 @@ import urllib.parse
 import streamlit.components.v1 as components
 
 
-# 1. Configuração da página (DEVE SER A PRIMEIRA COISA)
-st.set_page_config(layout="wide")
 
-# 2. Lógica de Login (O "Escudo")
+# --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
 
 if not st.session_state.login:
+    # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
     col1, col_centro, col2 = st.columns([1, 2, 1])
+    
     with col_centro:
-        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        st.markdown("<br><br><br>", unsafe_allow_html=True) # Espaçamento superior
         st.markdown("### 🔒 Acesso Seguro")
         senha = st.text_input("Digite sua senha:", type="password")
+        
         if st.button("🔓 Desbloquear Sistema"):
-            if senha == "Wilson123":
+            if senha == "Wilson123": # Troque aqui pela sua senha real
                 st.session_state.login = True
                 st.rerun()
             else:
                 st.error("Senha incorreta, Wilson!")
-    st.stop() # Interrompe o carregamento se não estiver logado
-
-# --- CARREGAMENTO DE DADOS ---
-# Coloque aqui o carregamento dos seus DataFrames
-# Exemplo: df_financas = pd.read_csv("seu_arquivo.csv")
-# Certifique-se de que eles estão declarados aqui antes das funções
-
-# 3. Definição das Funções (As "Gavetas")
-def mostrar_financas():
-    global df_financas
-    st.subheader("💰 Finanças e Bancos")
-    st.table(df_financas)
-
-def mostrar_pendencias():
-    st.subheader("⏳ Pendências")
-    st.write("--- Aqui ficam suas pendências ---")
-
-# --- AQUI COMEÇA O SISTEMA APÓS O LOGIN ---
-
-selected = option_menu(
-    menu_title=None, 
-    options=["Finanças", "Pendências", "Milo & Bolt", "Veículo", "WhatsApp", "Relatório", "Config"],
-    icons=["bank", "clock", "dog", "car", "whatsapp", "file-pdf", "gear"], 
-    orientation="horizontal",
-)
-
-st.divider() # Linha divisória para separar o menu
-
-# 4. Lógica de navegação
-if selected == "Finanças":
-    mostrar_financas()
-elif selected == "Pendências":
-    mostrar_pendencias()
-elif selected == "Milo & Bolt":
-    st.write("Exibindo Milo & Bolt")
+        
+        st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    st.stop() # Bloqueia o carregamento do restante do código abaixo
    
 
 # Definições iniciais de data
