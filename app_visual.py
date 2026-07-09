@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_option_menu import option_menu
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
@@ -10,6 +11,21 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
+# 1. Configurações da página
+st.set_page_config(layout="wide") 
+
+# 2. MENU HORIZONTAL (Isso define o 'selected')
+selected = option_menu(
+    menu_title=None, 
+    options=["Finanças", "Pendências", "Milo & Bolt", "Veículo", "WhatsApp", "Relatório", "Config"],
+    icons=["bank", "clock", "dog", "car", "whatsapp", "file-pdf", "gear"], 
+    orientation="horizontal",
+)
+
+# 3. Lógica para mostrar o conteúdo com base na seleção
+if selected == "Finanças":
+    # Chame aqui a função ou coloque o código da sua página de finanças
+    pass
 
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
