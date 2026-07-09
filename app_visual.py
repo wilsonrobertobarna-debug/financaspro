@@ -39,6 +39,18 @@ st.write("")
 st.write("")
 st.write("") 
 st.write("")
+# 1. Defina as funções das suas páginas
+def tela_financas():
+    st.subheader("💰 Finanças e Bancos")
+    # Todo o seu código de finanças vai aqui dentro
+    st.write("Aqui estão seus lançamentos financeiros...")
+
+def tela_pendencias():
+    st.subheader("⏳ Pendências")
+    # Todo o seu código de pendências vai aqui dentro
+    st.write("Aqui estão suas pendências...")
+
+# 2. O seu menu (ajustado para ser a única fonte de verdade)
 selected = option_menu(
     menu_title=None, 
     options=["Finanças", "Pendências", "Milo & Bolt", "Veículo", "WhatsApp", "Relatório", "Config"],
@@ -46,14 +58,11 @@ selected = option_menu(
     orientation="horizontal",
 )
 
-# --- LÓGICA DE NAVEGAÇÃO ---
+# 3. Lógica que limpa a tela automaticamente ao trocar
 if selected == "Finanças":
-    # Coloque aqui a chamada da sua função de finanças
-    st.write("Exibindo Finanças")
-    
+    tela_financas()
 elif selected == "Pendências":
-    # Coloque aqui a chamada da sua função de Pendências
-    st.write("Exibindo Pendências")
+    tela_pendencias()
 
 st.divider()
    
