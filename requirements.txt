@@ -4,3 +4,4 @@ gspread-pandas
 plotly
 twilio
 fpdf
+streamlit-option-menu
