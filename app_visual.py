@@ -11,7 +11,16 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-# 1. Configurações da página
+
+# --- TELA DE PROTEÇÃO (LOGIN) ---
+if 'login' not in st.session_state:
+    st.session_state.login = False
+
+if not st.session_state.login:
+    # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
+    col1, col_centro, col2 = st.columns([1, 2, 1])
+
+    # 1. Configurações da página
 st.set_page_config(layout="wide") 
 
 # 2. MENU HORIZONTAL (Isso define o 'selected')
@@ -21,20 +30,10 @@ selected = option_menu(
     icons=["bank", "clock", "dog", "car", "whatsapp", "file-pdf", "gear"], 
     orientation="horizontal",
 )
-
 # 3. Lógica para mostrar o conteúdo com base na seleção
 if selected == "Finanças":
     # Chame aqui a função ou coloque o código da sua página de finanças
     pass
-
-
-# --- TELA DE PROTEÇÃO (LOGIN) ---
-if 'login' not in st.session_state:
-    st.session_state.login = False
-
-if not st.session_state.login:
-    # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
-    col1, col_centro, col2 = st.columns([1, 2, 1])
     
     with col_centro:
         st.markdown("<br><br><br>", unsafe_allow_html=True) # Espaçamento superior
