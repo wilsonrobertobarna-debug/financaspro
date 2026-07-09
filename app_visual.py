@@ -59,15 +59,13 @@ selected = option_menu(
 )
 
 ## --- DEFINIÇÃO DAS FUNÇÕES (AS GAVETAS) ---
-def mostrar_financas():
-    global df_financas  # <--- Isso avisa o Python para buscar a variável lá de fora
+def tela_financas(dados):
     st.subheader("💰 Finanças e Bancos")
-    st.table(df_financas)
+    st.table(dados) # Usa o nome 'dados' que veio de fora
 
-def mostrar_pendencias():
-    # TODO o seu código de Pendências vai aqui
-    st.write("--- Código de Pendências ---")
-    st.checkbox("Tarefa 1")
+# 2. Quando chamar a função lá embaixo, passe o seu dataframe
+if selected == "Finanças":
+    tela_financas(df_financas)
 
 # --- LÓGICA DE CONTROLE (O QUE ABRE A GAVETA) ---
 if selected == "Finanças":
