@@ -689,6 +689,8 @@ if "💰" in st.session_state.page:
             st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
+    df_pend = df_base[df_base['Status'] == 'Pendente'].copy()
+    st.dataframe(df_pend[['Vencimento', 'Banco', 'Descrição', 'Valor']], use_container_width=True) 
     
     # 1. Filtros
     col_b, col_d = st.columns(2)
