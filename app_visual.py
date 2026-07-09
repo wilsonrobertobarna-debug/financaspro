@@ -254,32 +254,27 @@ def get_valor_pendente(df):
     df_p = df[(df['Status'] == 'Pendente') & (df['DT'].dt.date <= end_of_month.date())]
     return df_p['V_Num'].sum()
 
-# 4. SIDEBAR - NAVEGAÇÃO
+# --- SIDEBAR E MENU DE NAVEGAÇÃO ---
 st.sidebar.title("🎮 Painel Wilson")
 
 if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     atualizar_sessao()
-    st.cache_data.clear() # <--- ADICIONE ESTA LINHA AQUI!
+    st.cache_data.clear()
     st.rerun()
 
 st.sidebar.divider()
 
-# Inicializa a página se não existir
 if 'page' not in st.session_state:
     st.session_state.page = "💰 Finanças & Bancos"
 
-# Define os itens do menu
 menu_itens = ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"]
 
-# Cria os botões na sidebar com a função de fechar
-# Seu loop de botões na sidebar agora fica assim:
 for item in menu_itens:
     if st.sidebar.button(item, use_container_width=True):
         st.session_state.page = item
-        st.rerun() # Removemos o fechar_sidebar() daqui    
+        st.rerun()
  
 st.sidebar.divider()
-
 aba = st.session_state.page
 
 # BARRINHA 1: NOVO LANÇAMENTO
@@ -376,40 +371,32 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     atualizar_sessao()
                     st.rerun()
 
-               # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
+               # --- AJUSTE / EXCLUSÃO DE LANÇAMENTOS ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
         lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
-        
-        # Usamos uma key para o selectbox para podermos controlá-lo
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
         
         if escolha:
             item = lista_edit[escolha]
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
-            
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
-            
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
             ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
-            
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
             col_ed1, col_ed2 = st.columns(2)
-            
             if col_ed1.button("💾 ATUALIZAR"):
-                v_str = f"{ed_val:.2f}".replace('.', ',')
                 ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
-                ws_base.update_cell(int(item['ID']), 2, v_str)
+                ws_base.update_cell(int(item['ID']), 2, f"{ed_val:.2f}".replace('.', ','))
                 ws_base.update_cell(int(item['ID']), 3, ed_desc)
                 ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
-                st.toast("✅ Lançamento Atualizado!", icon="💰")
-                
+                st.toast("✅ Atualizado!"); atualizar_sessao(); st.rerun()                
                 # Zera o seletor antes de recarregar
                 if "selectbox_ajuste" in st.session_state:
                     del st.session_state["selectbox_ajuste"]
@@ -627,7 +614,6 @@ if "💰" in st.session_state.page:
             st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
 
             
-        # 7. TABELA FINAL
         # 7. TABELA FINAL
         st.subheader("🔍 Lançamentos do Mês")
         
