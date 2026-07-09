@@ -429,55 +429,37 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
-# --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
-if "💰" in st.session_state.page:
-    import plotly.graph_objects as go # Garante que o gráfico de metas funcione
-    
-    st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
+# --- ABA: 💰 Finanças & Bancos (VERSÃO COMPLETA) ---
+if "💰" in aba:
     st.subheader("🛡️ FinançasPro Wilson")
-
-    # 1. BARRINHA DE MESES
-    meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-   # Pega o mês atual em inglês (ex: 'Jul') e ajusta para o nosso formato
+    
+    # Seletor de Mês
     meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     mes_atual_hoje = datetime.now().strftime("%b")
-    
-    # Se o sistema retornar o mês em inglês, garantimos que ele bate com a lista
-    # Como 'Jul' em inglês é 'Jul', funciona direto.
     mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=mes_atual_hoje)
-
-    if not df_base.empty:
-        # 2. TRADUÇÃO DO FILTRO (Converte "Jun" para "06/26")
-        mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
-                   "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
-        filtro_mes = f"{mes_map[mes_atual]}/26"
-        
-        # Filtra os dados do mês
-        df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
-        
-        # 3. CÁLCULOS
-        receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
-        gasto_total = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-        pendente = df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()
-        saldo_geral = (receita_total + rendimento) - gasto_total
-
-        # 4. EXIBIÇÃO DO SALDO
-        cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
-        st.markdown(f"""
-            <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
-                <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
-                <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
-            </div>
-        """, unsafe_allow_html=True)
-
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
-        c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
-        c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
-        c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
-
+    
+    mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
+               "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
+    filtro_mes = f"{mes_map[mes_atual]}/26"
+    
+    # Filtros de Dados
+    df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
+    df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
+    
+    # Cálculos Precisos
+    receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+    gasto_total = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+    rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+    pendente = df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()
+    saldo_geral = (receita_total + rendimento) - gasto_total
+    
+    # Exibição (Cards)
+    st.markdown(f"### Saldo Disponível: R$ {saldo_geral:,.2f}")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
+    c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
+    c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
+    c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
         st.divider()
 
         # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
