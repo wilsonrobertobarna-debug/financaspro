@@ -11,6 +11,7 @@ import urllib.parse
 import streamlit.components.v1 as components
 
 
+
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
@@ -50,20 +51,24 @@ def atualizar_meta_sheets(nome):
         celula = ws_meta.find(nome)
         
         if celula:
-            # 1. NÃO DELETAMOS MAIS A CHAVE. 
-            # O session_state deve manter o valor para o gráfico ler.
+            # 1. A "Paulada": Apaga a memória antiga usando o parâmetro 'nome' correto
+            if f"m_{nome}" in st.session_state:
+                del st.session_state[f"m_{nome}"]
             
             # 2. Atualiza na planilha
             ws_meta.update_cell(celula.row, 2, novo_valor)
             
-            # 3. Atualiza o DataFrame de controle para garantir consistência
+            # 3. Força a atualização do DataFrame de controle (para o gráfico ler o valor novo)
             if 'df_metas_config' in st.session_state:
                 st.session_state['df_metas_config'].loc[st.session_state['df_metas_config']['Nome da Meta'] == nome, 'Valor Alvo'] = novo_valor
             
-            st.toast(f"Meta de {nome} atualizada com sucesso!", icon="✅")
+            # 4. Recarrega (O toast vai rodar logo após o rerun se você tirar o rerun daqui, 
+            # ou você pode usar o toast antes do rerun)
             st.rerun() 
+            
     except Exception as e:
-        st.error(f"Erro ao salvar: {e}")
+        st.error(f"Erro ao salvar no Sheets: {e}")
+
 st.set_page_config(
     page_title="FinançasPro",
     layout="wide",
@@ -90,17 +95,22 @@ def conectar():
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
-# 1. BLOCO DE CARREGAMENTO DA BASE PRINCIPAL (Lançamentos)
-
-#dados = ws_base.get_all_values()
-# O cabeçalho é a linha 0 (linha 1 da planilha)
-#header = dados[0] 
-# Os dados começam exatamente na linha 1 (que é a linha 2 da planilha, onde começa o '2')
-#df_base = pd.DataFrame(dados[1:], columns=header)
-
-# 2. RASTREAMENTO DO CARREGAMENTO (Para você ver que agora funciona)
-#st.write("Total de linhas carregadas na Base:", len(df_base))
-
+# 3. BLOCO DE CARREGAMENTO (Sincroniza Sheets com Session State)
+if 'metas_iniciadas' not in st.session_state:
+    # Esta linha abaixo está recuada (indentada) para dentro do IF
+    try:
+        df_metas = pd.DataFrame(sh.worksheet("Meta").get_all_records())
+        for index, row in df_metas.iterrows():
+            nome = row['Nome da Meta']
+            valor_raw = row['Valor Alvo']
+            try:
+                valor = float(valor_raw) if str(valor_raw).strip() != '' else 0.0
+            except:
+                valor = 0.0
+            st.session_state[f"m_{nome}"] = valor
+        st.session_state['metas_iniciadas'] = True
+    except Exception as e:
+        st.error(f"Erro na planilha: {e}")
 # 4. ESTILIZAÇÃO
 st.markdown("""
     <style>
@@ -131,21 +141,11 @@ client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
 # IDENTIFICAÇÃO DAS ABAS
-# --- CARREGAMENTO DIRETO (SEM FUNÇÕES PARA NÃO DAR ERRO) ---
-
-# Carrega a base de lançamentos
 ws_base = sh.get_worksheet(0)
-dados_base = ws_base.get_all_values()
-df_base = pd.DataFrame(dados_base[1:], columns=dados_base[0])
-
-# Carrega os bancos
 try:
     ws_bancos = sh.worksheet("Bancos")
-    dados_bancos = ws_bancos.get_all_values()
-    df_bancos = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
 except:
-    df_bancos = pd.DataFrame() # Cria um dataframe vazio se não achar a aba
-
+    ws_bancos = None
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
@@ -334,8 +334,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
-        f_des = st.text_input("Descrição")    # Campo existente (Coluna C)
-        f_ben = st.text_input("Beneficiário") # Novo campo (vai para Coluna J)
+        f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação","Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
@@ -374,16 +373,15 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 nova_data = t_dat + relativedelta(months=i)
                 
                 ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"), # A: Vencimento
-                    v_str,                          # B: Valor
-                    f_des,                          # C: Descrição
-                    f_cat,                          # D: Categoria
-                    f_tip,                          # E: Tipo
-                    f_bnc,                          # F: Banco
-                    f_sta,                          # G: Status
-                    f_compra_str,                   # H: Data da Compra
-                    proximo_id + i,                 # I: ID
-                    f_ben                           # J: Beneficiário (NOVO)
+                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
+                    v_str,                          # Coluna B: Valor
+                    f_des,                          # Coluna C: Descrição
+                    f_cat,                          # Coluna D: Categoria
+                    f_tip,                          # Coluna E: Tipo
+                    f_bnc,                          # Coluna F: Banco
+                    f_sta,                          # Coluna G: Status
+                    f_compra_str,                   # Coluna H: Data da Compra
+                    proximo_id + i                  # Coluna I: ID (Agora sem pular coluna!)
                 ])
             
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
@@ -439,7 +437,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
-            ed_ben = st.text_input("Alterar Beneficiário:", value=item.get('Beneficiario', ''))
             
             col_ed1, col_ed2 = st.columns(2)
             
@@ -549,20 +546,14 @@ if "💰" in st.session_state.page:
                 st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo'), use_container_width=True)
                 
 
-        # 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
-        # 6. GRÁFICO DE METAS
+# 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
         st.subheader("🎯 Metas vs Realizado (Despesas)")
         
+        # Teste: use df_m em vez de df_m_limpo
         df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
         
         if not df_metas_graph.empty:
-            # Aqui fazemos uma busca segura: se não encontrar 'm_Categoria', retorna 0.0
-            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(
-                lambda cat: st.session_state.get(f"m_{cat}", 0.0)
-            )
-            
-            # Verificação extra: se todas as metas forem 0, talvez o campo de input esteja com outro nome
-            # Mas vamos seguir com a lógica original de 'm_Categoria'
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
             
             fig_m = go.Figure()
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
@@ -1016,7 +1007,7 @@ elif "📄" in aba:
     st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
 
 if aba == "📋 Relatório PDF":
-    st.markdown("### 📋 Emissão de Relatório Financeiro")  
+    st.markdown("### 📋 Emissão de Relatório Financeiro")
     
     # -------------------------------------------------------------------------
     # LINHA 1 DE FILTROS: BANCO E PERÍODO (Estrutura original mantida intacta)
@@ -1032,13 +1023,12 @@ if aba == "📋 Relatório PDF":
         periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
 
     # -------------------------------------------------------------------------
-    # LINHA 2 DE FILTROS: DESCRIÇÃO E BENEFICIÁRIO (Separados)
+    # LINHA 2 DE FILTROS: DESCRIÇÃO E STATUS 
     # -------------------------------------------------------------------------
-    col_rel3, col_rel3b, col_rel4 = st.columns(3)
+    col_rel3, col_rel4 = st.columns(2)
     with col_rel3:
-        busca_desc = st.text_input("🔍 Pesquisar Descrição:", "").strip()
-    with col_rel3b:
-        busca_ben = st.text_input("👤 Pesquisar Beneficiário:", "").strip()
+        busca_desc = st.text_input("🔍 Pesquisar por Descrição / Beneficiário:", "").strip()
+        
     with col_rel4:
         busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
 
@@ -1062,50 +1052,16 @@ if aba == "📋 Relatório PDF":
             pdf = FPDF()
             pdf.add_page()
 
-          # ========================================================
+            # ========================================================
             # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
             # ========================================================
-            # TESTE RÁPIDO: Verifique se o nome está exatamente assim
-            st.write("Colunas detectadas:", df_base.columns.tolist())
-        
-                    
-            # --- RASTREADOR DE SEGURANÇA ---
-            st.write("Colunas disponíveis no sistema:", df_report.columns.tolist())
-            st.write("Valor na Coluna 9 (Linha 0):", df_report.iloc[0, 9] if len(df_report) > 0 else "Sem dados")
-            # -------------------------------
-            
-            # FILTRO DE DESCRIÇÃO (Coluna 2)
-           # FILTRO DE BENEFICIÁRIO (Diagnóstico Final)
-            if busca_ben:
-                # Vamos ver o que o Pandas realmente "vê" como colunas
-                st.write("Colunas detectadas pelo Pandas:", df_report.columns.tolist())
-                
-                # Procura o termo 'busca_ben' em todas as colunas de forma bruta
-                # Isso vai nos dizer se o dado sequer existe no DataFrame
-                mask = df_report.apply(lambda row: row.astype(str).str.contains(busca_ben, case=False).any(), axis=1)
-                st.write("Total de linhas encontradas com esse termo em qualquer lugar:", mask.sum())
-        
-            # Filtro de Data
-            df_report['DT_FILTRO'] = pd.to_datetime(df_report['Vencimento'], format="%d/%m/%Y", errors='coerce')
-            t_ini = pd.to_datetime(b_ini)
-            t_fim = pd.to_datetime(b_fim)
-            df_report = df_report[(df_report['DT_FILTRO'] >= t_ini) & (df_report['DT_FILTRO'] <= t_fim)]
+            df_report = df_base.copy()
 
-            # Filtro de Banco
-            if banco_relatorio != "Todos":
-                df_report = df_report[df_report['Banco'].str.upper().str.strip() == str(banco_relatorio).upper()]
+            col_banco_df = next((c for c in df_report.columns if c.upper() in ['BANCO', 'CONTA']), None)
+            col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+            col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
+            col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
 
-            # Filtro de Status
-            if busca_status != "Todos":
-                df_report = df_report[df_report['Status'].str.upper().str.strip() == str(busca_status).upper()]
-
-            df_report = df_report.sort_values(by='DT_FILTRO')
-            
-            # TESTE FINAL: O que sobrou após os filtros?
-            st.write(f"Linhas encontradas após filtros: {len(df_report)}")
-            st.dataframe(df_report)
-
-            
             # Tratamento e filtro de Data
             if col_data_df:
                 df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
@@ -1126,20 +1082,15 @@ if aba == "📋 Relatório PDF":
                 banco_nome = banco_relatorio
                 df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_nome).upper()]
 
-            # Filtro de Descrição (Coluna C)
             if busca_desc and col_desc_df:
                 df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
-            
-            # Novo Filtro de Beneficiário (Coluna J)
-            if busca_ben and col_ben_df in df_report.columns:
-                df_report = df_report[df_report[col_ben_df].astype(str).str.contains(busca_ben, case=False, na=False)]    
 
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
             df_report = df_report.sort_values(by='DT_FILTRO')
 
-            # ========================================================
+# ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
             # ========================================================
             base_inicial = 0.0
@@ -1335,7 +1286,6 @@ if aba == "📋 Relatório PDF":
     col_banco_df = next((c for c in df_tela.columns if c.upper() in ['BANCO', 'CONTA']), None)
     col_desc_df = next((c for c in df_tela.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
     col_status_df = next((c for c in df_tela.columns if c.upper() in ['STATUS']), None)
-    col_ben_df = next((c for c in df_tela.columns if c.upper() in ['BENEFICIÁRIO', 'BENEFICIARIO']), None)
 
     # Aplica Data na tela
     if col_data_df:
