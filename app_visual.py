@@ -529,26 +529,40 @@ if "💰" in st.session_state.page:
         with g2:
             st.write("### 📊 Fluxo Mensal (3 Meses)")
             
-            # Lógica dos 3 meses
+            # Cálculo dos 3 meses a partir do mês selecionado
             idx = meses_abreviados.index(mes_atual)
             meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
             filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
             
+            # Filtra a base completa pelos meses selecionados
             df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
+            
+            # Prepara os dados para o gráfico
             df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
             
             if not df_f.empty:
+                # Gráfico com cores fixas e layout limpo
                 fig_fluxo = px.bar(
                     df_f, 
                     x='Mes_Ano', 
                     y='V_Num', 
                     color='Tipo', 
                     barmode='group',
-                    color_discrete_map={'Receita': '#2ecc71', 'Despesa': '#e74c3c', 'Rendimento': '#3498db'}
+                    color_discrete_map={
+                        'Receita': '#2ecc71', 
+                        'Despesa': '#e74c3c', 
+                        'Rendimento': '#3498db'
+                    },
+                    text_auto='.2s' # Adiciona o valor em cima da barra
+                )
+                fig_fluxo.update_layout(
+                    height=350, 
+                    margin=dict(t=30, b=10, l=0, r=0),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                 )
                 st.plotly_chart(fig_fluxo, use_container_width=True)
             else:
-                st.info("Dados insuficientes.")
+                st.info("Aguardando dados para o período...")
                 
 
 # 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
