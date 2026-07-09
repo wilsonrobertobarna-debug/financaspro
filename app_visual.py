@@ -295,30 +295,26 @@ def get_valor_pendente(df):
 
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
+st.sidebar.title("🎮 Painel Wilson")
 
 if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     atualizar_sessao()
-    st.cache_data.clear() # <--- ADICIONE ESTA LINHA AQUI!
+    st.cache_data.clear()
     st.rerun()
 
 st.sidebar.divider()
 
-# Inicializa a página se não existir
 if 'page' not in st.session_state:
     st.session_state.page = "💰 Finanças & Bancos"
 
-# Define os itens do menu
 menu_itens = ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"]
 
-# Cria os botões na sidebar com a função de fechar
-# Seu loop de botões na sidebar agora fica assim:
 for item in menu_itens:
     if st.sidebar.button(item, use_container_width=True):
         st.session_state.page = item
-        st.rerun() # Removemos o fechar_sidebar() daqui    
+        st.rerun()
  
 st.sidebar.divider()
-
 aba = st.session_state.page
 
 # BARRINHA 1: NOVO LANÇAMENTO
