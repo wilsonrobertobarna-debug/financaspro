@@ -420,30 +420,26 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
         
         if escolha:
+            if escolha:
             item = lista_edit[escolha]
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
-            
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
-            
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
             ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
-            
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
             col_ed1, col_ed2 = st.columns(2)
-            
             if col_ed1.button("💾 ATUALIZAR"):
-                v_str = f"{ed_val:.2f}".replace('.', ',')
                 ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
-                ws_base.update_cell(int(item['ID']), 2, v_str)
+                ws_base.update_cell(int(item['ID']), 2, f"{ed_val:.2f}".replace('.', ','))
                 ws_base.update_cell(int(item['ID']), 3, ed_desc)
                 ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
-                st.toast("✅ Lançamento Atualizado!", icon="💰")
+                st.toast("✅ Atualizado!"); atualizar_sessao(); st.rerun()
                 
                 # Zera o seletor antes de recarregar
                 if "selectbox_ajuste" in st.session_state:
