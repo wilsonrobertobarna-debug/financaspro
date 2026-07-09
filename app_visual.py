@@ -37,6 +37,8 @@ if not st.session_state.login:
 # --- AQUI COMEÇA O SISTEMA (SÓ CARREGA SE LOGIN FOR TRUE) ---
 st.write("") 
 st.write("")
+st.write("") 
+st.write("")
 selected = option_menu(
     menu_title=None, 
     options=["Finanças", "Pendências", "Milo & Bolt", "Veículo", "WhatsApp", "Relatório", "Config"],
