@@ -12,29 +12,43 @@ import streamlit.components.v1 as components
 
 
 
+import streamlit as st
+from streamlit_option_menu import option_menu
+
+# 1. Configurações da página (Sempre no topo)
+st.set_page_config(layout="wide")
+
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
 
 if not st.session_state.login:
-    # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
     col1, col_centro, col2 = st.columns([1, 2, 1])
-    
     with col_centro:
-        st.markdown("<br><br><br>", unsafe_allow_html=True) # Espaçamento superior
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
         st.markdown("### 🔒 Acesso Seguro")
         senha = st.text_input("Digite sua senha:", type="password")
-        
         if st.button("🔓 Desbloquear Sistema"):
-            if senha == "Wilson123": # Troque aqui pela sua senha real
+            if senha == "Wilson123":
                 st.session_state.login = True
                 st.rerun()
             else:
                 st.error("Senha incorreta, Wilson!")
-        
-        st.markdown("<br><br>", unsafe_allow_html=True)
     
-    st.stop() # Bloqueia o carregamento do restante do código abaixo
+    st.stop() # O código PARA aqui se não estiver logado
+
+# --- AQUI COMEÇA O SISTEMA (SÓ CARREGA SE LOGIN FOR TRUE) ---
+
+selected = option_menu(
+    menu_title=None, 
+    options=["Finanças", "Pendências", "Milo & Bolt", "Veículo", "WhatsApp", "Relatório", "Config"],
+    icons=["bank", "clock", "dog", "car", "whatsapp", "file-pdf", "gear"], 
+    orientation="horizontal",
+)
+
+# Agora o seu sistema segue normalmente...
+if selected == "Finanças":
+    st.write("Bem-vindo às Finanças!")
    
 
 # Definições iniciais de data
