@@ -10,72 +10,28 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-
+# --- CONFIGURAÇÃO DA PÁGINA ---
+st.set_page_config(page_title="FinançasPro", layout="wide", initial_sidebar_state="collapsed")
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
 
 if not st.session_state.login:
-    # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
     col1, col_centro, col2 = st.columns([1, 2, 1])
-    
     with col_centro:
-        st.markdown("<br><br><br>", unsafe_allow_html=True) # Espaçamento superior
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
         st.markdown("### 🔒 Acesso Seguro")
         senha = st.text_input("Digite sua senha:", type="password")
-        
         if st.button("🔓 Desbloquear Sistema"):
-            if senha == "Wilson123": # Troque aqui pela sua senha real
+            if senha == "Wilson123":
                 st.session_state.login = True
                 st.rerun()
             else:
                 st.error("Senha incorreta, Wilson!")
-        
-        st.markdown("<br><br>", unsafe_allow_html=True)
-    
-    st.stop() # Bloqueia o carregamento do restante do código abaixo
-   
+    st.stop()
 
-# Definições iniciais de data
-agora_br = datetime.now() - timedelta(hours=3)
-hoje_br = agora_br.date()
-
-# FUNÇÃO AJUSTADA: Nome correto e acesso global ao 'sh'
-def atualizar_meta_sheets(nome):
-    global sh 
-    novo_valor = st.session_state[f"m_{nome}"]
-    
-    try:
-        ws_meta = sh.worksheet("Meta")
-        celula = ws_meta.find(nome)
-        
-        if celula:
-            # 1. A "Paulada": Apaga a memória antiga usando o parâmetro 'nome' correto
-            if f"m_{nome}" in st.session_state:
-                del st.session_state[f"m_{nome}"]
-            
-            # 2. Atualiza na planilha
-            ws_meta.update_cell(celula.row, 2, novo_valor)
-            
-            # 3. Força a atualização do DataFrame de controle (para o gráfico ler o valor novo)
-            if 'df_metas_config' in st.session_state:
-                st.session_state['df_metas_config'].loc[st.session_state['df_metas_config']['Nome da Meta'] == nome, 'Valor Alvo'] = novo_valor
-            
-            # 4. Recarrega (O toast vai rodar logo após o rerun se você tirar o rerun daqui, 
-            # ou você pode usar o toast antes do rerun)
-            st.rerun() 
-            
-    except Exception as e:
-        st.error(f"Erro ao salvar no Sheets: {e}")
-
-st.set_page_config(
-    page_title="FinançasPro",
-    layout="wide",
-    initial_sidebar_state="collapsed" # Isso fará a barra vir fechada por padrão
-)
-
-# 2. CONEXÃO (LIGA O MOTOR)
+# --- CONEXÃO COM GOOGLE SHEETS (ÚNICA) ---
 @st.cache_resource
 def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
@@ -83,6 +39,7 @@ def conectar():
         st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
     try:
         pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
+        if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
         final_creds = {
             "type": creds_dict["type"], "project_id": creds_dict["project_id"],
             "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
@@ -94,6 +51,10 @@ def conectar():
 
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+
+# --- DEFINIÇÕES INICIAIS ---
+agora_br = datetime.now() - timedelta(hours=3)
+hoje_br = agora_br.date()
 
 # 3. BLOCO DE CARREGAMENTO (Sincroniza Sheets com Session State)
 if 'metas_iniciadas' not in st.session_state:
