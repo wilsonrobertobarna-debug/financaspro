@@ -50,24 +50,20 @@ def atualizar_meta_sheets(nome):
         celula = ws_meta.find(nome)
         
         if celula:
-            # 1. A "Paulada": Apaga a memória antiga usando o parâmetro 'nome' correto
-            if f"m_{nome}" in st.session_state:
-                del st.session_state[f"m_{nome}"]
+            # 1. NÃO DELETAMOS MAIS A CHAVE. 
+            # O session_state deve manter o valor para o gráfico ler.
             
             # 2. Atualiza na planilha
             ws_meta.update_cell(celula.row, 2, novo_valor)
             
-            # 3. Força a atualização do DataFrame de controle (para o gráfico ler o valor novo)
+            # 3. Atualiza o DataFrame de controle para garantir consistência
             if 'df_metas_config' in st.session_state:
                 st.session_state['df_metas_config'].loc[st.session_state['df_metas_config']['Nome da Meta'] == nome, 'Valor Alvo'] = novo_valor
             
-            # 4. Recarrega (O toast vai rodar logo após o rerun se você tirar o rerun daqui, 
-            # ou você pode usar o toast antes do rerun)
+            st.toast(f"Meta de {nome} atualizada com sucesso!", icon="✅")
             st.rerun() 
-            
     except Exception as e:
-        st.error(f"Erro ao salvar no Sheets: {e}")
-
+        st.error(f"Erro ao salvar: {e}")
 st.set_page_config(
     page_title="FinançasPro",
     layout="wide",
