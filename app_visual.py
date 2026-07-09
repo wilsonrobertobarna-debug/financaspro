@@ -12,29 +12,36 @@ import urllib.parse
 import streamlit.components.v1 as components
 
 
-# --- TELA DE PROTEÇÃO (LOGIN) ---
+# 1. Configuração da página (DEVE SER A PRIMEIRA COISA)
+st.set_page_config(layout="wide") 
+
+# 2. Lógica de Login
 if 'login' not in st.session_state:
     st.session_state.login = False
 
 if not st.session_state.login:
-    # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
+    # --- TELA DE LOGIN ---
     col1, col_centro, col2 = st.columns([1, 2, 1])
+    with col_centro:
+        # Aqui entra seu formulário de login (st.text_input, st.button, etc.)
+        senha = st.text_input("Senha", type="password")
+        if st.button("Entrar"):
+            if senha == "SUA_SENHA_AQUI": # Ajuste sua lógica de senha
+                st.session_state.login = True
+                st.rerun()
 
-    # 1. Configurações da página
-st.set_page_config(layout="wide") 
+else:
+    # --- APÓS O LOGIN: MENU E CONTEÚDO ---
+    selected = option_menu(
+        menu_title=None, 
+        options=["Finanças", "Pendências", "Milo & Bolt", "Veículo", "WhatsApp", "Relatório", "Config"],
+        icons=["bank", "clock", "dog", "car", "whatsapp", "file-pdf", "gear"], 
+        orientation="horizontal",
+    )
 
-# 2. MENU HORIZONTAL (Isso define o 'selected')
-selected = option_menu(
-    menu_title=None, 
-    options=["Finanças", "Pendências", "Milo & Bolt", "Veículo", "WhatsApp", "Relatório", "Config"],
-    icons=["bank", "clock", "dog", "car", "whatsapp", "file-pdf", "gear"], 
-    orientation="horizontal",
-)
-# 3. Lógica para mostrar o conteúdo com base na seleção
-if selected == "Finanças":
-    # Chame aqui a função ou coloque o código da sua página de finanças
-    pass
-    
+    if selected == "Finanças":
+        # Chame a sua função de finanças aqui
+        st.write("Bem-vindo às Finanças!")    
     with col_centro:
         st.markdown("<br><br><br>", unsafe_allow_html=True) # Espaçamento superior
         st.markdown("### 🔒 Acesso Seguro")
