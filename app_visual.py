@@ -524,11 +524,31 @@ if "💰" in st.session_state.page:
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             if not df_p.empty:
                 st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', hole=0.4), use_container_width=True)
+
+        
         with g2:
-            st.write("### 📊 Fluxo Mensal")
-            df_f = df_m_limpo.groupby(['Tipo'])['V_Num'].sum().reset_index()
+            st.write("### 📊 Fluxo Mensal (3 Meses)")
+            
+            # Lógica dos 3 meses
+            idx = meses_abreviados.index(mes_atual)
+            meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
+            filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
+            
+            df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
+            df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
+            
             if not df_f.empty:
-                st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo'), use_container_width=True)
+                fig_fluxo = px.bar(
+                    df_f, 
+                    x='Mes_Ano', 
+                    y='V_Num', 
+                    color='Tipo', 
+                    barmode='group',
+                    color_discrete_map={'Receita': '#2ecc71', 'Despesa': '#e74c3c', 'Rendimento': '#3498db'}
+                )
+                st.plotly_chart(fig_fluxo, use_container_width=True)
+            else:
+                st.info("Dados insuficientes.")
                 
 
 # 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
