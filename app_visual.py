@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit_option_menu import option_menu
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
@@ -12,36 +11,15 @@ import urllib.parse
 import streamlit.components.v1 as components
 
 
-# 1. Configuração da página (DEVE SER A PRIMEIRA COISA)
-st.set_page_config(layout="wide") 
 
-# 2. Lógica de Login
+# --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
 
 if not st.session_state.login:
-    # --- TELA DE LOGIN ---
+    # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
     col1, col_centro, col2 = st.columns([1, 2, 1])
-    with col_centro:
-        # Aqui entra seu formulário de login (st.text_input, st.button, etc.)
-        senha = st.text_input("Senha", type="password")
-        if st.button("Entrar"):
-            if senha == "SUA_SENHA_AQUI": # Ajuste sua lógica de senha
-                st.session_state.login = True
-                st.rerun()
-
-else:
-    # --- APÓS O LOGIN: MENU E CONTEÚDO ---
-    selected = option_menu(
-        menu_title=None, 
-        options=["Finanças", "Pendências", "Milo & Bolt", "Veículo", "WhatsApp", "Relatório", "Config"],
-        icons=["bank", "clock", "dog", "car", "whatsapp", "file-pdf", "gear"], 
-        orientation="horizontal",
-    )
-
-    if selected == "Finanças":
-        # Chame a sua função de finanças aqui
-        st.write("Bem-vindo às Finanças!")    
+    
     with col_centro:
         st.markdown("<br><br><br>", unsafe_allow_html=True) # Espaçamento superior
         st.markdown("### 🔒 Acesso Seguro")
