@@ -414,9 +414,9 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
         lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
-        
-        # Usamos uma key para o selectbox para podermos controlá-lo
+        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
+             
         
         if escolha:
             item = lista_edit[escolha]
