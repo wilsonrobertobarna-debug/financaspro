@@ -58,11 +58,22 @@ selected = option_menu(
     orientation="horizontal",
 )
 
-# 3. Lógica que limpa a tela automaticamente ao trocar
+## --- DEFINIÇÃO DAS FUNÇÕES (AS GAVETAS) ---
+def mostrar_financas():
+    # TODO o seu código de Finanças vai aqui
+    st.write("--- Código de Finanças ---")
+    st.table(df_financas) 
+
+def mostrar_pendencias():
+    # TODO o seu código de Pendências vai aqui
+    st.write("--- Código de Pendências ---")
+    st.checkbox("Tarefa 1")
+
+# --- LÓGICA DE CONTROLE (O QUE ABRE A GAVETA) ---
 if selected == "Finanças":
-    tela_financas()
+    mostrar_financas()
 elif selected == "Pendências":
-    tela_pendencias()
+    mostrar_pendencias()
 
 st.divider()
    
