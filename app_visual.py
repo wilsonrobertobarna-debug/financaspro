@@ -554,16 +554,20 @@ if "💰" in st.session_state.page:
                 
 
         # 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
+        # 6. GRÁFICO DE METAS
         st.subheader("🎯 Metas vs Realizado (Despesas)")
-
-        st.write("DEBUG: Verificando chaves de meta...")
-        st.write(st.session_state)       
-       
-        # Teste: use df_m em vez de df_m_limpo
+        
         df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
         
         if not df_metas_graph.empty:
-            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(cat, 0.0))
+            # Aqui fazemos uma busca segura: se não encontrar 'm_Categoria', retorna 0.0
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(
+                lambda cat: st.session_state.get(f"m_{cat}", 0.0)
+            )
+            
+            # Verificação extra: se todas as metas forem 0, talvez o campo de input esteja com outro nome
+            # Mas vamos seguir com a lógica original de 'm_Categoria'
+            
             fig_m = go.Figure()
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
