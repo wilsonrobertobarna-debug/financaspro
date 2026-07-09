@@ -433,7 +433,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 if "💰" in aba:
     st.subheader("🛡️ FinançasPro Wilson")
     
-    # Seletor de Mês
+ # Seletor de Mês
     meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     mes_atual_hoje = datetime.now().strftime("%b")
     mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=mes_atual_hoje)
@@ -451,16 +451,7 @@ if "💰" in aba:
     gasto_total = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
     rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
     pendente = df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()
-    saldo_geral = (receita_total + rendimento) - gasto_total
-    
-    # Exibição (Cards)
-    st.markdown(f"### Saldo Disponível: R$ {saldo_geral:,.2f}")
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
-    c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
-    c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
-    c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
-    
+    saldo_geral = (receita_total + rendimento) - gasto_total    
 
         # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
         g1, g2 = st.columns(2)
