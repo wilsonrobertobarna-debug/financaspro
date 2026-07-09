@@ -12,10 +12,10 @@ import urllib.parse
 import streamlit.components.v1 as components
 
 
-# 1. Configurações da página (Sempre no topo)
+# 1. Configuração da página (DEVE SER A PRIMEIRA COISA)
 st.set_page_config(layout="wide")
 
-# --- TELA DE PROTEÇÃO (LOGIN) ---
+# 2. Lógica de Login (O "Escudo")
 if 'login' not in st.session_state:
     st.session_state.login = False
 
@@ -31,26 +31,25 @@ if not st.session_state.login:
                 st.rerun()
             else:
                 st.error("Senha incorreta, Wilson!")
-    
-    st.stop() # O código PARA aqui se não estiver logado
+    st.stop() # Interrompe o carregamento se não estiver logado
 
-# --- AQUI COMEÇA O SISTEMA (SÓ CARREGA SE LOGIN FOR TRUE) ---
-st.write("") 
-st.write("")
-st.write("") 
-st.write("")
-# 1. Defina as funções das suas páginas
-def tela_financas():
+# --- CARREGAMENTO DE DADOS ---
+# Coloque aqui o carregamento dos seus DataFrames
+# Exemplo: df_financas = pd.read_csv("seu_arquivo.csv")
+# Certifique-se de que eles estão declarados aqui antes das funções
+
+# 3. Definição das Funções (As "Gavetas")
+def mostrar_financas():
+    global df_financas
     st.subheader("💰 Finanças e Bancos")
-    # Todo o seu código de finanças vai aqui dentro
-    st.write("Aqui estão seus lançamentos financeiros...")
+    st.table(df_financas)
 
-def tela_pendencias():
+def mostrar_pendencias():
     st.subheader("⏳ Pendências")
-    # Todo o seu código de pendências vai aqui dentro
-    st.write("Aqui estão suas pendências...")
+    st.write("--- Aqui ficam suas pendências ---")
 
-# 2. O seu menu (ajustado para ser a única fonte de verdade)
+# --- AQUI COMEÇA O SISTEMA APÓS O LOGIN ---
+
 selected = option_menu(
     menu_title=None, 
     options=["Finanças", "Pendências", "Milo & Bolt", "Veículo", "WhatsApp", "Relatório", "Config"],
@@ -58,22 +57,15 @@ selected = option_menu(
     orientation="horizontal",
 )
 
-## --- DEFINIÇÃO DAS FUNÇÕES (AS GAVETAS) ---
-def tela_financas(dados):
-    st.subheader("💰 Finanças e Bancos")
-    st.table(dados) # Usa o nome 'dados' que veio de fora
+st.divider() # Linha divisória para separar o menu
 
-# 2. Quando chamar a função lá embaixo, passe o seu dataframe
-if selected == "Finanças":
-    tela_financas(df_financas)
-
-# --- LÓGICA DE CONTROLE (O QUE ABRE A GAVETA) ---
+# 4. Lógica de navegação
 if selected == "Finanças":
     mostrar_financas()
 elif selected == "Pendências":
     mostrar_pendencias()
-
-st.divider()
+elif selected == "Milo & Bolt":
+    st.write("Exibindo Milo & Bolt")
    
 
 # Definições iniciais de data
