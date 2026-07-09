@@ -10,28 +10,72 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-# --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="FinançasPro", layout="wide", initial_sidebar_state="collapsed")
+
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
 
 if not st.session_state.login:
+    # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
     col1, col_centro, col2 = st.columns([1, 2, 1])
+    
     with col_centro:
-        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        st.markdown("<br><br><br>", unsafe_allow_html=True) # Espaçamento superior
         st.markdown("### 🔒 Acesso Seguro")
         senha = st.text_input("Digite sua senha:", type="password")
+        
         if st.button("🔓 Desbloquear Sistema"):
-            if senha == "Wilson123":
+            if senha == "Wilson123": # Troque aqui pela sua senha real
                 st.session_state.login = True
                 st.rerun()
             else:
                 st.error("Senha incorreta, Wilson!")
-    st.stop()
+        
+        st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    st.stop() # Bloqueia o carregamento do restante do código abaixo
+   
 
-# --- CONEXÃO COM GOOGLE SHEETS (ÚNICA) ---
+# Definições iniciais de data
+agora_br = datetime.now() - timedelta(hours=3)
+hoje_br = agora_br.date()
+
+# FUNÇÃO AJUSTADA: Nome correto e acesso global ao 'sh'
+def atualizar_meta_sheets(nome):
+    global sh 
+    novo_valor = st.session_state[f"m_{nome}"]
+    
+    try:
+        ws_meta = sh.worksheet("Meta")
+        celula = ws_meta.find(nome)
+        
+        if celula:
+            # 1. A "Paulada": Apaga a memória antiga usando o parâmetro 'nome' correto
+            if f"m_{nome}" in st.session_state:
+                del st.session_state[f"m_{nome}"]
+            
+            # 2. Atualiza na planilha
+            ws_meta.update_cell(celula.row, 2, novo_valor)
+            
+            # 3. Força a atualização do DataFrame de controle (para o gráfico ler o valor novo)
+            if 'df_metas_config' in st.session_state:
+                st.session_state['df_metas_config'].loc[st.session_state['df_metas_config']['Nome da Meta'] == nome, 'Valor Alvo'] = novo_valor
+            
+            # 4. Recarrega (O toast vai rodar logo após o rerun se você tirar o rerun daqui, 
+            # ou você pode usar o toast antes do rerun)
+            st.rerun() 
+            
+    except Exception as e:
+        st.error(f"Erro ao salvar no Sheets: {e}")
+
+st.set_page_config(
+    page_title="FinançasPro",
+    layout="wide",
+    initial_sidebar_state="collapsed" # Isso fará a barra vir fechada por padrão
+)
+
+# 2. CONEXÃO (LIGA O MOTOR)
 @st.cache_resource
 def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
@@ -39,7 +83,6 @@ def conectar():
         st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
     try:
         pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
-        if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
         final_creds = {
             "type": creds_dict["type"], "project_id": creds_dict["project_id"],
             "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
@@ -51,10 +94,6 @@ def conectar():
 
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
-
-# --- DEFINIÇÕES INICIAIS ---
-agora_br = datetime.now() - timedelta(hours=3)
-hoje_br = agora_br.date()
 
 # 3. BLOCO DE CARREGAMENTO (Sincroniza Sheets com Session State)
 if 'metas_iniciadas' not in st.session_state:
@@ -254,27 +293,32 @@ def get_valor_pendente(df):
     df_p = df[(df['Status'] == 'Pendente') & (df['DT'].dt.date <= end_of_month.date())]
     return df_p['V_Num'].sum()
 
-# --- SIDEBAR E MENU DE NAVEGAÇÃO ---
+# 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 
 if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     atualizar_sessao()
-    st.cache_data.clear()
+    st.cache_data.clear() # <--- ADICIONE ESTA LINHA AQUI!
     st.rerun()
 
 st.sidebar.divider()
 
+# Inicializa a página se não existir
 if 'page' not in st.session_state:
     st.session_state.page = "💰 Finanças & Bancos"
 
+# Define os itens do menu
 menu_itens = ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"]
 
+# Cria os botões na sidebar com a função de fechar
+# Seu loop de botões na sidebar agora fica assim:
 for item in menu_itens:
     if st.sidebar.button(item, use_container_width=True):
         st.session_state.page = item
-        st.rerun()
+        st.rerun() # Removemos o fechar_sidebar() daqui    
  
 st.sidebar.divider()
+
 aba = st.session_state.page
 
 # BARRINHA 1: NOVO LANÇAMENTO
@@ -371,32 +415,40 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     atualizar_sessao()
                     st.rerun()
 
-               # --- AJUSTE / EXCLUSÃO DE LANÇAMENTOS ---
+               # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
         lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
+        
+        # Usamos uma key para o selectbox para podermos controlá-lo
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
         
         if escolha:
             item = lista_edit[escolha]
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
+            
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
+            
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
             ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
+            
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
             col_ed1, col_ed2 = st.columns(2)
+            
             if col_ed1.button("💾 ATUALIZAR"):
+                v_str = f"{ed_val:.2f}".replace('.', ',')
                 ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
-                ws_base.update_cell(int(item['ID']), 2, f"{ed_val:.2f}".replace('.', ','))
+                ws_base.update_cell(int(item['ID']), 2, v_str)
                 ws_base.update_cell(int(item['ID']), 3, ed_desc)
                 ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
-                st.toast("✅ Atualizado!"); atualizar_sessao(); st.rerun()                
+                st.toast("✅ Lançamento Atualizado!", icon="💰")
+                
                 # Zera o seletor antes de recarregar
                 if "selectbox_ajuste" in st.session_state:
                     del st.session_state["selectbox_ajuste"]
@@ -429,30 +481,48 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
+# --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in st.session_state.page:
-    import plotly.graph_objects as go
+    import plotly.graph_objects as go # Garante que o gráfico de metas funcione
     
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
+    # 1. BARRINHA DE MESES
+    meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+   # Pega o mês atual em inglês (ex: 'Jul') e ajusta para o nosso formato
     meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     mes_atual_hoje = datetime.now().strftime("%b")
+    
+    # Se o sistema retornar o mês em inglês, garantimos que ele bate com a lista
+    # Como 'Jul' em inglês é 'Jul', funciona direto.
     mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=mes_atual_hoje)
 
     if not df_base.empty:
-        mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
+        # 2. TRADUÇÃO DO FILTRO (Converte "Jun" para "06/26")
+        mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
+                   "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
         filtro_mes = f"{mes_map[mes_atual]}/26"
+        
+        # Filtra os dados do mês
         df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
+        # 3. CÁLCULOS
         receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
         gasto_total = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
         pendente = df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()
         saldo_geral = (receita_total + rendimento) - gasto_total
 
+        # 4. EXIBIÇÃO DO SALDO
         cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
-        st.markdown(f"""<div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};"><p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p><h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1></div>""", unsafe_allow_html=True)
+        st.markdown(f"""
+            <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
+                <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
+                <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
+            </div>
+        """, unsafe_allow_html=True)
 
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
@@ -461,6 +531,8 @@ if "💰" in st.session_state.page:
         c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
 
         st.divider()
+
+        # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
         g1, g2 = st.columns(2)
         with g1:
             st.write("### 🍕 Gastos por Categoria")
@@ -471,6 +543,8 @@ if "💰" in st.session_state.page:
             st.write("### 📊 Fluxo Mensal")
             df_f = df_m_limpo.groupby(['Tipo'])['V_Num'].sum().reset_index()
             if not df_f.empty:
+                st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo'), use_container_width=True)
+                
 
 # 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
         st.subheader("🎯 Metas vs Realizado (Despesas)")
@@ -593,6 +667,7 @@ if "💰" in st.session_state.page:
 
             
         # 7. TABELA FINAL
+        # 7. TABELA FINAL
         st.subheader("🔍 Lançamentos do Mês")
         
         if not df_m_limpo.empty:
@@ -614,8 +689,6 @@ if "💰" in st.session_state.page:
             st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
-    df_pend = df_base[df_base['Status'] == 'Pendente'].copy()
-    st.dataframe(df_pend[['Vencimento', 'Banco', 'Descrição', 'Valor']], use_container_width=True)
     
     # 1. Filtros
     col_b, col_d = st.columns(2)
