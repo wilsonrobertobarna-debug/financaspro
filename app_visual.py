@@ -460,7 +460,7 @@ if "💰" in aba:
     c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
     c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
     c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
-        st.divider()
+    
 
         # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
         g1, g2 = st.columns(2)
