@@ -60,9 +60,9 @@ selected = option_menu(
 
 ## --- DEFINIÇÃO DAS FUNÇÕES (AS GAVETAS) ---
 def mostrar_financas():
-    # TODO o seu código de Finanças vai aqui
-    st.write("--- Código de Finanças ---")
-    st.table(df_financas) 
+    global df_financas  # <--- Isso avisa o Python para buscar a variável lá de fora
+    st.subheader("💰 Finanças e Bancos")
+    st.table(df_financas)
 
 def mostrar_pendencias():
     # TODO o seu código de Pendências vai aqui
