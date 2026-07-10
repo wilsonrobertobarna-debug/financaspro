@@ -298,27 +298,22 @@ st.sidebar.title("🎮 Painel Wilson")
 
 if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     atualizar_sessao()
-    st.cache_data.clear() # <--- ADICIONE ESTA LINHA AQUI!
+    st.cache_data.clear()
     st.rerun()
 
 st.sidebar.divider()
 
-# Inicializa a página se não existir
 if 'page' not in st.session_state:
     st.session_state.page = "💰 Finanças & Bancos"
 
-# Define os itens do menu
 menu_itens = ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"]
 
-# Cria os botões na sidebar com a função de fechar
-# Seu loop de botões na sidebar agora fica assim:
 for item in menu_itens:
     if st.sidebar.button(item, use_container_width=True):
         st.session_state.page = item
-        st.rerun() # Removemos o fechar_sidebar() daqui    
+        st.rerun()
  
 st.sidebar.divider()
-
 aba = st.session_state.page
 
 # BARRINHA 1: NOVO LANÇAMENTO
@@ -419,35 +414,30 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
         lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
-        
-        # Usamos uma key para o selectbox para podermos controlá-lo
+        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
+             
         
         if escolha:
             item = lista_edit[escolha]
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
-            
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
-            
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
             ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
-            
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
             col_ed1, col_ed2 = st.columns(2)
-            
             if col_ed1.button("💾 ATUALIZAR"):
-                v_str = f"{ed_val:.2f}".replace('.', ',')
                 ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
-                ws_base.update_cell(int(item['ID']), 2, v_str)
+                ws_base.update_cell(int(item['ID']), 2, f"{ed_val:.2f}".replace('.', ','))
                 ws_base.update_cell(int(item['ID']), 3, ed_desc)
                 ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
-                st.toast("✅ Lançamento Atualizado!", icon="💰")
+                st.toast("✅ Atualizado!"); atualizar_sessao(); st.rerun()
                 
                 # Zera o seletor antes de recarregar
                 if "selectbox_ajuste" in st.session_state:
@@ -483,23 +473,18 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in st.session_state.page:
-    import plotly.graph_objects as go # Garante que o gráfico de metas funcione
+    import plotly.graph_objects as go
     
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
     # 1. BARRINHA DE MESES
-    meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-   # Pega o mês atual em inglês (ex: 'Jul') e ajusta para o nosso formato
     meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     mes_atual_hoje = datetime.now().strftime("%b")
-    
-    # Se o sistema retornar o mês em inglês, garantimos que ele bate com a lista
-    # Como 'Jul' em inglês é 'Jul', funciona direto.
     mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=mes_atual_hoje)
-
+    
     if not df_base.empty:
-        # 2. TRADUÇÃO DO FILTRO (Converte "Jun" para "06/26")
+        # 2. TRADUÇÃO DO FILTRO
         mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
                    "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
         filtro_mes = f"{mes_map[mes_atual]}/26"
@@ -516,6 +501,7 @@ if "💰" in st.session_state.page:
         saldo_geral = (receita_total + rendimento) - gasto_total
 
         # 4. EXIBIÇÃO DO SALDO
+        # 4. EXIBIÇÃO DO SALDO
         cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
         st.markdown(f"""
             <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
@@ -529,7 +515,6 @@ if "💰" in st.session_state.page:
         c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
         c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
         c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
-
         st.divider()
 
         # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
@@ -539,11 +524,45 @@ if "💰" in st.session_state.page:
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             if not df_p.empty:
                 st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', hole=0.4), use_container_width=True)
+
+        
         with g2:
-            st.write("### 📊 Fluxo Mensal")
-            df_f = df_m_limpo.groupby(['Tipo'])['V_Num'].sum().reset_index()
+            st.write("### 📊 Fluxo Mensal (3 Meses)")
+            
+            # Cálculo dos 3 meses a partir do mês selecionado
+            idx = meses_abreviados.index(mes_atual)
+            meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
+            filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
+            
+            # Filtra a base completa pelos meses selecionados
+            df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
+            
+            # Prepara os dados para o gráfico
+            df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
+            
             if not df_f.empty:
-                st.plotly_chart(px.bar(df_f, x='Tipo', y='V_Num', color='Tipo'), use_container_width=True)
+                # Gráfico com cores fixas e layout limpo
+                fig_fluxo = px.bar(
+                    df_f, 
+                    x='Mes_Ano', 
+                    y='V_Num', 
+                    color='Tipo', 
+                    barmode='group',
+                    color_discrete_map={
+                        'Receita': '#2ecc71', 
+                        'Despesa': '#e74c3c', 
+                        'Rendimento': '#3498db'
+                    },
+                    text_auto='.2s' # Adiciona o valor em cima da barra
+                )
+                fig_fluxo.update_layout(
+                    height=350, 
+                    margin=dict(t=30, b=10, l=0, r=0),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig_fluxo, use_container_width=True)
+            else:
+                st.info("Aguardando dados para o período...")
                 
 
 # 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
@@ -689,6 +708,8 @@ if "💰" in st.session_state.page:
             st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
+    df_pend = df_base[df_base['Status'] == 'Pendente'].copy()
+    st.dataframe(df_pend[['Vencimento', 'Banco', 'Descrição', 'Valor']], use_container_width=True) 
     
     # 1. Filtros
     col_b, col_d = st.columns(2)
