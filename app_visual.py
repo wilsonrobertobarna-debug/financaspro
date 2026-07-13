@@ -590,56 +590,49 @@ if "💰" in st.session_state.page:
     # --- ABAIXO DO GRÁFICO: TUDO FICA NO MESMO NÍVEL ---
     
     # --- COMPARATIVO MENSAL ---
-
-   # Só executa se estivermos na aba "Finanças" ou "Bancos"
-if aba in ["Finanças", "Bancos"]:
+    st.subheader("🔄 Comparativo: Mês Anterior vs. Mês Atual")
+    mes_map = {"Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6, 
+               "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12}
+    mes_atual_num = mes_map[mes_atual]
+    mes_anterior_num = mes_atual_num - 1 if mes_atual_num > 1 else 12
     
-   
-       # --- 1. COMPARATIVO MENSAL ---
-with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
-        if 'mes_atual' in locals() and "/" in mes_atual:
-        mes_escolhido = int(mes_atual.split('/')[0])
-        mes_anterior = mes_escolhido - 1 if mes_escolhido > 1 else 12
-        
-        df_comp = df_base.copy()
-        df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
-        df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior, mes_escolhido])].copy()
-        
-        df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
-            index='Categoria', columns=df_comp['Vencimento'].dt.month, values='V_Num', aggfunc='sum'
-        ).fillna(0)
-        
-        df_pivot = df_pivot.rename(columns={mes_anterior: "Mês Anterior", mes_escolhido: "Mês Atual"})
-        
-        if "Mês Anterior" in df_pivot.columns and "Mês Atual" in df_pivot.columns:
-            df_pivot['Variação (%)'] = ((df_pivot["Mês Atual"] - df_pivot["Mês Anterior"]) / df_pivot["Mês Anterior"] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
-            st.dataframe(df_pivot.style.format("{:.2f}"), use_container_width=True)
-        else:
-            st.info("Dados insuficientes para comparar este mês com o anterior.")
+    df_comp = df_base.copy()
+    df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
+    df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].copy()
+    
+    df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
+        index='Categoria', 
+        columns=df_comp['Vencimento'].dt.month, 
+        values='V_Num', 
+        aggfunc='sum'
+    ).fillna(0)
+    
+    colunas_renomeadas = {mes_anterior_num: "Mês Anterior", mes_atual_num: "Mês Atual"}
+    df_pivot = df_pivot.rename(columns=colunas_renomeadas)
+    
+    if "Mês Anterior" in df_pivot.columns and "Mês Atual" in df_pivot.columns:
+        df_pivot['Variação (%)'] = ((df_pivot["Mês Atual"] - df_pivot["Mês Anterior"]) / df_pivot["Mês Anterior"] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
+    
+    formatacao = {"Mês Anterior": "{:.2f}", "Mês Atual": "{:.2f}", "Variação (%)": "{:.2f}%"}
+    st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
+    
+    # --- MONITOR DE PENDÊNCIAS ---
+    st.subheader("🔔 Monitor de Pendências do Período")
+    df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == filtro_mes)]
+    
+    if not df_pendente_mes.empty:
+        st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
+        st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','Banco','Valor', 'Categoria']], use_container_width=True)
     else:
-        st.warning("Selecione um mês para comparar.")
-
-# --- 2. MONITOR DE PENDÊNCIAS ---
-with st.expander("🔔 Ver Monitor de Pendências do Período"):
-    if 'mes_atual' in locals():
-        df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == mes_atual)]
-        if not df_pendente_mes.empty:
-            st.dataframe(df_pendente_mes[['Vencimento', 'Descrição', 'Banco', 'Valor', 'Categoria']], use_container_width=True)
-        else:
-            st.success("Tudo limpo! Nenhuma pendência para este mês.")
-
-# --- 3. WILSONBOT ---
+        st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
+    
+    # --- WILSONBOT ---
+    #st.subheader("🤖 Consultor WilsonBot")
+    # --- WILSONBOT ---
 st.subheader("🤖 Consultor WilsonBot")
-
-# CORREÇÃO: Use df_m_limpo aqui para evitar o NameError
-if 'df_m_limpo' in locals():
-    df_atual = df_m_limpo.copy()
-else:
-    df_atual = df_base.copy()
-
+df_atual = df_m 
 filtro_exclusao = (df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(['Transferência']))
 total_gasto = df_atual[filtro_exclusao]['V_Num'].sum()
-# ... (resto do seu código do WilsonBot continua igual)
 df_despesas_totais = df_base[df_base['Tipo'] == 'Despesa']
 meses_passados = df_despesas_totais.groupby('Mes_Ano')['V_Num'].sum().tail(3).mean()
 
@@ -664,9 +657,6 @@ st.subheader("🔍 Lançamentos do Mês")
 
 # DEBUG: Vamos ver se o df_m_limpo existe e não está vazio
 if 'df_m_limpo' in locals():
-        df_atual = df_m_limpo.copy()
-    else:
-        df_atual = df_base.copy() # Ou algum outro tratamento de segurança
     if not df_m_limpo.empty:
         df_exibicao = df_m_limpo.copy()
         ajuste = 2 
@@ -679,7 +669,7 @@ if 'df_m_limpo' in locals():
 else:
     st.error("Erro: A variável df_m_limpo não foi encontrada no código. Verifique se o nome está correto ou se ela foi definida anteriormente.")
 
-if "Pendências" in aba:
+elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     df_pend = df_base[df_base['Status'] == 'Pendente'].copy()
     st.dataframe(df_pend[['Vencimento', 'Banco', 'Descrição', 'Valor']], use_container_width=True) 
@@ -693,19 +683,23 @@ if "Pendências" in aba:
 
     periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
 
-    # 2. Processamento e Filtros
+   # 2. Processamento e Filtros (Ordem Correta)
     df_filtrado = df_base.copy()
     
+    # 1. Filtro de Status (garante que apenas Pendentes apareçam)
     df_filtrado['Status_Limpo'] = df_filtrado['Status'].astype(str).str.strip().str.lower()
     df_filtrado = df_filtrado[df_filtrado['Status_Limpo'] == 'pendente'].copy()
     
+    # 2. Filtro de Banco (se selecionado, filtra agora)
     if filtro_banco:
         df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
         
+    # 3. Conversão de Data e Filtro de Período
     col_data = 'Vencimento' 
     if col_data in df_filtrado.columns:
         df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
         
+        # Filtra o período se uma tupla válida for selecionada
         if isinstance(periodo, tuple) and len(periodo) == 2:
             df_filtrado = df_filtrado[
                 (df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
