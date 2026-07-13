@@ -566,37 +566,25 @@ if "💰" in st.session_state.page:
                 
 
 # 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
-        st.subheader("🎯 Metas vs Realizado (Despesas)")
+     # 6. GRÁFICO DE METAS
+    st.subheader("🎯 Metas vs Realizado (Despesas)")
+    
+    # Filtra e agrupa os dados
+    df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
+    
+    if not df_metas_graph.empty:
+        # Busca a meta (usando strip para evitar erro de espaço)
+        df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat.strip()}", 0.0))
         
-        # Teste: use df_m em vez de df_m_limpo
-        df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
+        # Cria o gráfico
+        fig_m = go.Figure()
+        fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
+        fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
         
-        if not df_metas_graph.empty:   
-            #if not df_metas_graph.empty:
-            # 1. Limpa os nomes das categorias para garantir a busca
-            # Remove espaços extras nas pontas e padroniza para não ter erro
-            def buscar_meta(cat):
-                cat_limpa = str(cat).strip()
-                # Procura a chave no session_state ignorando espaços extras
-                return st.session_state.get(f"m_{cat_limpa}", 0.0)
-
-            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat.strip()}", 0.0))
-            
-            # --- DEBUG RÁPIDO (Delete essa linha depois que funcionar) ---
-            # st.write(df_metas_graph) 
-            
-            fig_m = go.Figure()
-            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
-            
-            fig_m = go.Figure()
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
-            
-            fig_m.update_layout(barmode='group', height=350, margin=dict(t=30, b=10, l=0, r=0))
-            st.plotly_chart(fig_m, use_container_width=True)
-        else:
-            st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
-
+        fig_m.update_layout(barmode='group', height=350, margin=dict(t=30, b=10, l=0, r=0))
+        st.plotly_chart(fig_m, use_container_width=True)
+    else:
+        st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
                                         # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA O SEU CÓDIGO) ---
         st.subheader("🔄 Comparativo: Mês Anterior vs. Mês Atual")
         
