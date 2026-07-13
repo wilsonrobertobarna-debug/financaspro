@@ -651,26 +651,26 @@ if "💰" in st.session_state.page:
         st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
             
         # 7. TABELA FINAL
-        # 7. TABELA FINAL
         st.subheader("🔍 Lançamentos do Mês")
         
         if not df_m_limpo.empty:
             df_exibicao = df_m_limpo.copy()
             
-            # AJUSTE DE MENTOR: 
-            # Se você sente que a diferença é de 2, mudamos aqui.
-            # Se precisar ajustar para mais ou para menos, é só mudar este número '2'.
+            # Mantendo seu ajuste de numeração da planilha
             ajuste = 2 
             df_exibicao['Seq.'] = df_exibicao.index + ajuste 
             
             # Inverte para mostrar os mais novos no topo
             df_exibicao = df_exibicao.iloc[::-1]
             
-            st.dataframe(df_exibicao[['Seq.', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
-                         use_container_width=True, 
-                         hide_index=True)
+            st.dataframe(
+                df_exibicao[['Seq.', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
+                use_container_width=True, 
+                hide_index=True
+            )
         else:
             st.warning("Base de dados vazia.")
+
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     df_pend = df_base[df_base['Status'] == 'Pendente'].copy()
