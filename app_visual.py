@@ -571,7 +571,21 @@ if "💰" in st.session_state.page:
         # Teste: use df_m em vez de df_m_limpo
         df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
         
-        if not df_metas_graph.empty:
+        if not df_metas_graph.empty:   
+            #if not df_metas_graph.empty:
+            # 1. Limpa os nomes das categorias para garantir a busca
+            # Remove espaços extras nas pontas e padroniza para não ter erro
+            def buscar_meta(cat):
+                cat_limpa = str(cat).strip()
+                # Procura a chave no session_state ignorando espaços extras
+                return st.session_state.get(f"m_{cat_limpa}", 0.0)
+
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(buscar_meta)
+            
+            # --- DEBUG RÁPIDO (Delete essa linha depois que funcionar) ---
+            # st.write(df_metas_graph) 
+            
+            fig_m = go.Figure()
             df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
             
             fig_m = go.Figure()
