@@ -669,7 +669,7 @@ else:
             maior_gasto = df_vilao.idxmax()
             valor_maior = df_vilao.max()
             st.info(f"💡 **Dica de Ouro:** Sua categoria de maior gasto este mês é '{maior_gasto}', totalizando R$ {valor_maior:,.2f}. Considere revisar esses custos para o próximo mês!")
-        else:
+    else:
             st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
 
             
