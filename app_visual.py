@@ -846,7 +846,7 @@ if aba == "📋 Relatório PDF":
 
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
-        # 1. PEGA O DADO QUE JÁ ESTÁ NA TELA
+        # 1. PEGA O DADO FILTRADO QUE JÁ ESTÁ NA TELA
         df_report = df_v.copy().iloc[::-1].reset_index(drop=True)
         df_report.index += 1
         
@@ -854,12 +854,15 @@ if aba == "📋 Relatório PDF":
         from fpdf import FPDF
         pdf = FPDF()
         pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 10, txt="Relatório Financeiro", ln=True, align='C')
         pdf.set_font("Arial", size=10)
+        pdf.ln(10)
         
-        # 3. IMPRIME LINHA POR LINHA USANDO O df_report
-        # O 'index' aqui já vai de 1 até o fim, batendo com a tela
+        # 3. IMPRIME LINHA POR LINHA
         for index, row in df_report.iterrows():
-            pdf.cell(200, 10, txt=f"ID: {index} | Desc: {row['Descrição']} | Valor: {row['Valor']}", ln=True)
+            texto = f"ID: {index} | Desc: {str(row['Descrição'])[:30]} | Valor: {row['Valor']}"
+            pdf.cell(200, 10, txt=texto, ln=True)
             
         # 4. SALVA
         pdf.output("relatorio.pdf")
