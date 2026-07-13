@@ -590,24 +590,20 @@ if "💰" in st.session_state.page:
     # --- ABAIXO DO GRÁFICO: TUDO FICA NO MESMO NÍVEL ---
     
     # --- COMPARATIVO MENSAL ---
-   # --- COMPARATIVO MENSAL (DENTRO DE UM EXPANDER) ---
-with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
-    # Garante que temos a variável mes_atual definida
-    # Se 'mes_atual' não estiver definido, usamos o mês atual real
-    if 'mes_atual' not in locals():
-        mes_atual = "Jul" # Ou o padrão que você usa
-        
-    mes_map = {"Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6, 
-               "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12}
-    
-    # Verificação de segurança para evitar o KeyError
-    if mes_atual in mes_map:
-        mes_atual_num = mes_map[mes_atual]
-        mes_anterior_num = mes_atual_num - 1 if mes_atual_num > 1 else 12
 
+# --- 1. COMPARATIVO MENSAL (CORRIGIDO) ---
+with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
+    # Verifica se a variável de filtro existe
+    if 'filtro_mes' in locals() and "/" in filtro_mes:
+        mes_escolhido = int(filtro_mes.split('/')[0]) # Pega o "07" de "07/26"
+        
+        # Lógica de mês anterior
+        mes_anterior = mes_escolhido - 1 if mes_escolhido > 1 else 12
+        
         df_comp = df_base.copy()
         df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
-        df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].copy()
+        # Filtra pelos meses numéricos
+        df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior, mes_escolhido])].copy()
 
         df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
             index='Categoria', 
@@ -616,29 +612,32 @@ with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
             aggfunc='sum'
         ).fillna(0)
 
-        # Mapeia os números de volta para os nomes
-        colunas_renomeadas = {mes_anterior_num: "Mês Anterior", mes_atual_num: "Mês Atual"}
-        df_pivot = df_pivot.rename(columns=colunas_renomeadas)
+        # Renomeia as colunas
+        df_pivot = df_pivot.rename(columns={mes_anterior: "Mês Anterior", mes_escolhido: "Mês Atual"})
 
         if "Mês Anterior" in df_pivot.columns and "Mês Atual" in df_pivot.columns:
             df_pivot['Variação (%)'] = ((df_pivot["Mês Atual"] - df_pivot["Mês Anterior"]) / df_pivot["Mês Anterior"] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
-
-        formatacao = {"Mês Anterior": "{:.2f}", "Mês Atual": "{:.2f}", "Variação (%)": "{:.2f}%"}
-        st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
+            formatacao = {"Mês Anterior": "{:.2f}", "Mês Atual": "{:.2f}", "Variação (%)": "{:.2f}%"}
+            st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
+        else:
+            st.info("Dados insuficientes para comparar este mês com o anterior.")
     else:
-        st.warning(f"O mês '{mes_atual}' não foi reconhecido para o comparativo.")
+        st.warning("Selecione um mês no formato correto para ver o comparativo.")
 
-# --- MONITOR DE PENDÊNCIAS (DENTRO DE OUTRO EXPANDER) ---
+# --- 2. MONITOR DE PENDÊNCIAS (CORRIGIDO) ---
 with st.expander("🔔 Ver Monitor de Pendências do Período"):
-    # (Todo o código das pendências fica aqui dentro)
-    df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == filtro_mes)]
+    # Garante que usamos a variável correta que você já tem no código
+    if 'filtro_mes' in locals():
+        df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == filtro_mes)]
 
-    if not df_pendente_mes.empty:
-        st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
-        st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','Banco','Valor', 'Categoria']], use_container_width=True)
+        if not df_pendente_mes.empty:
+            st.warning(f"⚠️ Atenção: {len(df_pendente_mes)} lançamento(s) pendente(s) em {filtro_mes}!")
+            st.dataframe(df_pendente_mes[['Vencimento', 'Descrição', 'Banco', 'Valor', 'Categoria']], use_container_width=True)
+        else:
+            st.success(f"✅ Tudo limpo! Nenhuma pendência para {filtro_mes}.")
     else:
-        st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
-    
+        st.error("Variável 'filtro_mes' não encontrada. Verifique o seletor de mês.")
+        
     # --- WILSONBOT ---
    
 st.subheader("🤖 Consultor WilsonBot")
