@@ -636,21 +636,28 @@ else:
         
             # --- AQUI COMEÇA O WILSONBOT ---
         st.subheader("🤖 Consultor WilsonBot")
-        
-        # Analisa o mês atual
-        df_atual = df_m # Usamos o seu df filtrado que já está pronto
-        filtro_exclusao = (df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(['Transferência']))
-        total_gasto = df_atual[filtro_exclusao]['V_Num'].sum()
-        
-        # Analisa a média dos últimos 3 meses
-        # Nota: Ajustei para filtrar só Despesas na média também, para ficar mais preciso
-        df_despesas_totais = df_base[df_base['Tipo'] == 'Despesa']
-        meses_passados = df_despesas_totais.groupby('Mes_Ano')['V_Num'].sum().tail(3).mean()
+       
+df_atual = df_m 
+filtro_exclusao = (df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(['Transferência']))
+total_gasto = df_atual[filtro_exclusao]['V_Num'].sum()
+df_despesas_totais = df_base[df_base['Tipo'] == 'Despesa']
+meses_passados = df_despesas_totais.groupby('Mes_Ano')['V_Num'].sum().tail(3).mean()
 
-        if total_gasto > meses_passados:
-            st.warning(f"⚠️ **Atenção, Wilson!** Seus gastos este mês estão R$ {(total_gasto - meses_passados):,.2f} acima da sua média dos últimos 3 meses.")
-        else:
-            st.success("✅ **Parabéns!** Seus gastos estão controlados e abaixo da sua média recente.")
+if total_gasto > meses_passados:
+    st.warning(f"⚠️ **Atenção, Wilson!** Seus gastos este mês estão R$ {(total_gasto - meses_passados):,.2f} acima da sua média dos últimos 3 meses.")
+else:
+    st.success("✅ **Parabéns!** Seus gastos estão controlados e abaixo da sua média recente.")
+
+categorias_para_ignorar = ['Transferência', 'Ajuste']
+df_filtrado = df_atual[(df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(categorias_para_ignorar))]
+df_vilao = df_filtrado.groupby('Categoria')['V_Num'].sum()
+
+if not df_vilao.empty:
+    maior_gasto = df_vilao.idxmax()
+    valor_maior = df_vilao.max()
+    st.info(f"💡 **Dica de Ouro:** Sua categoria de maior gasto este mês é '{maior_gasto}', totalizando R$ {valor_maior:,.2f}. Considere revisar esses custos para o próximo mês!")
+else:
+    st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
 
         
         # Identifica o maior vilão (Excluindo Transferências e Ajustes)
