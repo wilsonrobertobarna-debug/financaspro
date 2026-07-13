@@ -571,8 +571,8 @@ if "💰" in st.session_state.page:
         # Teste: use df_m em vez de df_m_limpo
         df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
         
-        #if not df_metas_graph.empty:   
-            if not df_metas_graph.empty:
+        if not df_metas_graph.empty:   
+            #if not df_metas_graph.empty:
             # 1. Limpa os nomes das categorias para garantir a busca
             # Remove espaços extras nas pontas e padroniza para não ter erro
             def buscar_meta(cat):
