@@ -661,9 +661,9 @@ else:
         
         # Identifica o maior vilão (Excluindo Transferências e Ajustes)
         # Filtramos 'Despesa' E que a categoria NÃO ESTEJA na lista de exclusão
-        categorias_para_ignorar = ['Transferência', 'Ajuste']
-        df_filtrado = df_atual[(df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(categorias_para_ignorar))]
-        df_vilao = df_filtrado.groupby('Categoria')['V_Num'].sum()
+    categorias_para_ignorar = ['Transferência', 'Ajuste']
+    df_filtrado = df_atual[(df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(categorias_para_ignorar))]
+    df_vilao = df_filtrado.groupby('Categoria')['V_Num'].sum()
         
         if not df_vilao.empty:
             maior_gasto = df_vilao.idxmax()
