@@ -846,46 +846,46 @@ if aba == "📋 Relatório PDF":
 
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
-        # 1. PEGA O DADO FILTRADO QUE JÁ ESTÁ NA TELA
-        df_report = df_v.copy().iloc[::-1].reset_index(drop=True)
-        df_report.index += 1
-        
-        # 2. INICIA O PDF
-        from fpdf import FPDF
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", 'B', 16)
-        pdf.cell(200, 10, txt="Relatório Financeiro", ln=True, align='C')
-        pdf.set_font("Arial", size=10)
-        pdf.ln(10)
-        
-        # 3. IMPRIME LINHA POR LINHA
-        for index, row in df_report.iterrows():
-            texto = f"ID: {index} | Desc: {str(row['Descrição'])[:30]} | Valor: {row['Valor']}"
-            pdf.cell(200, 10, txt=texto, ln=True)
+            # 1. PEGA O DADO FILTRADO QUE JÁ ESTÁ NA TELA
+            df_report = df_v.copy().iloc[::-1].reset_index(drop=True)
+            df_report.index += 1
             
-        # 4. SALVA
-        pdf.output("relatorio.pdf")
-        st.success("PDF Gerado com sucesso!")
+            # 2. INICIA O PDF
+            from fpdf import FPDF
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", 'B', 16)
+            pdf.cell(200, 10, txt="Relatório Financeiro", ln=True, align='C')
+            pdf.set_font("Arial", size=10)
+            pdf.ln(10)
+            
+            # 3. IMPRIME LINHA POR LINHA
+            for index, row in df_report.iterrows():
+                texto = f"ID: {index} | Desc: {str(row['Descrição'])[:30]} | Valor: {row['Valor']}"
+                pdf.cell(200, 10, txt=texto, ln=True)
+                
+            # 4. SALVA
+            pdf.output("relatorio.pdf")
+            st.success("PDF Gerado com sucesso!")
+    
+                # ========================================================
+                # 1. INICIALIZAÇÃO DO PDF
+                # ========================================================
+            from fpdf import FPDF
+            pdf = FPDF()
+            pdf.add_page()
+    
+                # ========================================================
+                # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
+                # ========================================================
+       
+               
+            df_report = df_base.copy()
 
-            # ========================================================
-            # 1. INICIALIZAÇÃO DO PDF
-            # ========================================================
-        from fpdf import FPDF
-        pdf = FPDF()
-        pdf.add_page()
-
-            # ========================================================
-            # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
-            # ========================================================
-   
-           
-        df_report = df_base.copy()
-
-col_banco_df = next((c for c in df_report.columns if c.upper() in ['BANCO', 'CONTA']), None)
-col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
-col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
-col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
+            col_banco_df = next((c for c in df_report.columns if c.upper() in ['BANCO', 'CONTA']), None)
+            col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+            col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
+            col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
 
             # Tratamento e filtro de Data
             if col_data_df:
