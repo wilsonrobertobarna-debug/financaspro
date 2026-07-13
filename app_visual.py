@@ -584,57 +584,56 @@ if "💰" in st.session_state.page:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
                                         # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA O SEU CÓDIGO) ---
-    with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
-        #st.subheader("🔄 Comparativo: Mês Anterior vs. Mês Atual")
+            with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
+                #st.subheader("🔄 Comparativo: Mês Anterior vs. Mês Atual")
+                
+                # 1. Obter o número do mês atual a partir da sua seleção
+                # O seu 'mes_map' já tem a relação, vamos usar isso:
+                mes_map = {"Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6, 
+                           "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12}
+                
+                mes_atual_num = mes_map[mes_atual]
+                mes_anterior_num = mes_atual_num - 1 if mes_atual_num > 1 else 12
+                
+                # 2. Preparar os dados (convertendo a coluna de vencimento para data)
         
-        # 1. Obter o número do mês atual a partir da sua seleção
-        # O seu 'mes_map' já tem a relação, vamos usar isso:
-        mes_map = {"Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6, 
-                   "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12}
+                df_comp = df_base.copy()
+                
+                # --- BLOCO DE SEGURANÇA PARA DATAS ---
+                df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
+                
+                # Correção aqui: era .co e agora é .copy()
+                df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].copy()
+                
+               # 4. Tabela dinâmica
+                df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
+                    index='Categoria', 
+                    columns=df_comp['Vencimento'].dt.month, 
+                    values='V_Num', 
+                    aggfunc='sum'
+                ).fillna(0)
+                
+                # 5. Renomeia as colunas
+                colunas_renomeadas = {mes_anterior_num: "Mês Anterior", mes_atual_num: "Mês Atual"}
+                df_pivot = df_pivot.rename(columns=colunas_renomeadas)
+                
+                # 6. Cálculo da variação
+                if "Mês Anterior" in df_pivot.columns and "Mês Atual" in df_pivot.columns:
+                    df_pivot['Variação (%)'] = ((df_pivot["Mês Atual"] - df_pivot["Mês Anterior"]) / df_pivot["Mês Anterior"] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
         
-        mes_atual_num = mes_map[mes_atual]
-        mes_anterior_num = mes_atual_num - 1 if mes_atual_num > 1 else 12
+                # --- DEFINIÇÃO DA FORMATAÇÃO (Para resolver o NameError) ---
+                formatacao = {
+                    "Mês Anterior": "{:.2f}",
+                    "Mês Atual": "{:.2f}",
+                    "Variação (%)": "{:.2f}%"
+                }
         
-        # 2. Preparar os dados (convertendo a coluna de vencimento para data)
-
-        df_comp = df_base.copy()
-        
-        # --- BLOCO DE SEGURANÇA PARA DATAS ---
-        df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
-        
-        # Correção aqui: era .co e agora é .copy()
-        df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].copy()
-        
-       # 4. Tabela dinâmica
-        df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
-            index='Categoria', 
-            columns=df_comp['Vencimento'].dt.month, 
-            values='V_Num', 
-            aggfunc='sum'
-        ).fillna(0)
-        
-        # 5. Renomeia as colunas
-        colunas_renomeadas = {mes_anterior_num: "Mês Anterior", mes_atual_num: "Mês Atual"}
-        df_pivot = df_pivot.rename(columns=colunas_renomeadas)
-        
-        # 6. Cálculo da variação
-        if "Mês Anterior" in df_pivot.columns and "Mês Atual" in df_pivot.columns:
-            df_pivot['Variação (%)'] = ((df_pivot["Mês Atual"] - df_pivot["Mês Anterior"]) / df_pivot["Mês Anterior"] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
-
-        # --- DEFINIÇÃO DA FORMATAÇÃO (Para resolver o NameError) ---
-        formatacao = {
-            "Mês Anterior": "{:.2f}",
-            "Mês Atual": "{:.2f}",
-            "Variação (%)": "{:.2f}%"
-        }
-
-        # Agora o st.dataframe vai encontrar a variável formatacao
-        st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
-        # Aplicamos o estilo (o .style.format aplica o que definimos no dicionário)
-
-        
-        st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
-        
+                # Agora o st.dataframe vai encontrar a variável formatacao
+                st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
+                # Aplicamos o estilo (o .style.format aplica o que definimos no dicionário)
+                        
+               
+                
         # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
         st.subheader("🔔 Monitor de Pendências do Período")
         
