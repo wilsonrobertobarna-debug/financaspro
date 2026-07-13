@@ -567,123 +567,88 @@ if "💰" in st.session_state.page:
 
 # 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
      # 6. GRÁFICO DE METAS
-    st.subheader("🎯 Metas vs Realizado (Despesas)")
+    # 6. GRÁFICO DE METAS
+st.subheader("🎯 Metas vs Realizado (Despesas)")
+
+# Filtra e agrupa os dados
+df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
+
+if not df_metas_graph.empty:
+    # Busca a meta (usando strip para evitar erro de espaço)
+    df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat.strip()}", 0.0))
     
-    # Filtra e agrupa os dados
-    df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
+    # Cria o gráfico
+    fig_m = go.Figure()
+    fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
+    fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
     
-    if not df_metas_graph.empty:
-        # Busca a meta (usando strip para evitar erro de espaço)
-        df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat.strip()}", 0.0))
-        
-        # Cria o gráfico
-        fig_m = go.Figure()
-        fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
-        fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
-        
-        fig_m.update_layout(barmode='group', height=350, margin=dict(t=30, b=10, l=0, r=0))
-        st.plotly_chart(fig_m, use_container_width=True)
-    else:
-        st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
-                                        # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA O SEU CÓDIGO) ---
-        st.subheader("🔄 Comparativo: Mês Anterior vs. Mês Atual")
-        
-        # 1. Obter o número do mês atual a partir da sua seleção
-        # O seu 'mes_map' já tem a relação, vamos usar isso:
-        mes_map = {"Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6, 
-                   "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12}
-        
-        mes_atual_num = mes_map[mes_atual]
-        mes_anterior_num = mes_atual_num - 1 if mes_atual_num > 1 else 12
-        
-        # 2. Preparar os dados (convertendo a coluna de vencimento para data)
+    fig_m.update_layout(barmode='group', height=350, margin=dict(t=30, b=10, l=0, r=0))
+    st.plotly_chart(fig_m, use_container_width=True)
+else:
+    st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-        df_comp = df_base.copy()
-        
-        # --- BLOCO DE SEGURANÇA PARA DATAS ---
-        df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
-        
-        # Correção aqui: era .co e agora é .copy()
-        df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].copy()
-        
-       # 4. Tabela dinâmica
-        df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
-            index='Categoria', 
-            columns=df_comp['Vencimento'].dt.month, 
-            values='V_Num', 
-            aggfunc='sum'
-        ).fillna(0)
-        
-        # 5. Renomeia as colunas
-        colunas_renomeadas = {mes_anterior_num: "Mês Anterior", mes_atual_num: "Mês Atual"}
-        df_pivot = df_pivot.rename(columns=colunas_renomeadas)
-        
-        # 6. Cálculo da variação
-        if "Mês Anterior" in df_pivot.columns and "Mês Atual" in df_pivot.columns:
-            df_pivot['Variação (%)'] = ((df_pivot["Mês Atual"] - df_pivot["Mês Anterior"]) / df_pivot["Mês Anterior"] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
+# --- ABAIXO DO GRÁFICO: TUDO FICA NO MESMO NÍVEL ---
 
-        # --- DEFINIÇÃO DA FORMATAÇÃO (Para resolver o NameError) ---
-        formatacao = {
-            "Mês Anterior": "{:.2f}",
-            "Mês Atual": "{:.2f}",
-            "Variação (%)": "{:.2f}%"
-        }
+# --- COMPARATIVO MENSAL ---
+st.subheader("🔄 Comparativo: Mês Anterior vs. Mês Atual")
+mes_map = {"Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6, 
+           "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12}
+mes_atual_num = mes_map[mes_atual]
+mes_anterior_num = mes_atual_num - 1 if mes_atual_num > 1 else 12
 
-        # Agora o st.dataframe vai encontrar a variável formatacao
-        st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
-        # Aplicamos o estilo (o .style.format aplica o que definimos no dicionário)
+df_comp = df_base.copy()
+df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
+df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].copy()
 
-        
-        # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
-        st.subheader("🔔 Monitor de Pendências do Período")
-        
-        # Filtra apenas o que está pendente E pertence ao mês selecionado
-        # Usamos 'filtro_mes' que você já definiu no seu código anterior!
-        df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == filtro_mes)]
-        
-        if not df_pendente_mes.empty:
-            st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
-            
-            # Exibe as pendências do mês
-            st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','Banco','Valor', 'Categoria']], use_container_width=True)
-        else:
-            st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
-        
-        
-            # --- AQUI COMEÇA O WILSONBOT ---
-        st.subheader("🤖 Consultor WilsonBot")
-        
-        # Analisa o mês atual
-        df_atual = df_m # Usamos o seu df filtrado que já está pronto
-        filtro_exclusao = (df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(['Transferência']))
-        total_gasto = df_atual[filtro_exclusao]['V_Num'].sum()
-        
-        # Analisa a média dos últimos 3 meses
-        # Nota: Ajustei para filtrar só Despesas na média também, para ficar mais preciso
-        df_despesas_totais = df_base[df_base['Tipo'] == 'Despesa']
-        meses_passados = df_despesas_totais.groupby('Mes_Ano')['V_Num'].sum().tail(3).mean()
+df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
+    index='Categoria', 
+    columns=df_comp['Vencimento'].dt.month, 
+    values='V_Num', 
+    aggfunc='sum'
+).fillna(0)
 
-        if total_gasto > meses_passados:
-            st.warning(f"⚠️ **Atenção, Wilson!** Seus gastos este mês estão R$ {(total_gasto - meses_passados):,.2f} acima da sua média dos últimos 3 meses.")
-        else:
-            st.success("✅ **Parabéns!** Seus gastos estão controlados e abaixo da sua média recente.")
+colunas_renomeadas = {mes_anterior_num: "Mês Anterior", mes_atual_num: "Mês Atual"}
+df_pivot = df_pivot.rename(columns=colunas_renomeadas)
 
-        
-        # Identifica o maior vilão (Excluindo Transferências e Ajustes)
-        # Filtramos 'Despesa' E que a categoria NÃO ESTEJA na lista de exclusão
-        categorias_para_ignorar = ['Transferência', 'Ajuste']
-        
-        df_filtrado = df_atual[(df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(categorias_para_ignorar))]
-        
-        df_vilao = df_filtrado.groupby('Categoria')['V_Num'].sum()
-        
-        if not df_vilao.empty:
-            maior_gasto = df_vilao.idxmax()
-            valor_maior = df_vilao.max()
-            st.info(f"💡 **Dica de Ouro:** Sua categoria de maior gasto este mês é '{maior_gasto}', totalizando R$ {valor_maior:,.2f}. Considere revisar esses custos para o próximo mês!")
-        else:
-            st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
+if "Mês Anterior" in df_pivot.columns and "Mês Atual" in df_pivot.columns:
+    df_pivot['Variação (%)'] = ((df_pivot["Mês Atual"] - df_pivot["Mês Anterior"]) / df_pivot["Mês Anterior"] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
 
+formatacao = {"Mês Anterior": "{:.2f}", "Mês Atual": "{:.2f}", "Variação (%)": "{:.2f}%"}
+st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
+
+# --- MONITOR DE PENDÊNCIAS ---
+st.subheader("🔔 Monitor de Pendências do Período")
+df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == filtro_mes)]
+
+if not df_pendente_mes.empty:
+    st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
+    st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','Banco','Valor', 'Categoria']], use_container_width=True)
+else:
+    st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
+
+# --- WILSONBOT ---
+st.subheader("🤖 Consultor WilsonBot")
+df_atual = df_m 
+filtro_exclusao = (df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(['Transferência']))
+total_gasto = df_atual[filtro_exclusao]['V_Num'].sum()
+df_despesas_totais = df_base[df_base['Tipo'] == 'Despesa']
+meses_passados = df_despesas_totais.groupby('Mes_Ano')['V_Num'].sum().tail(3).mean()
+
+if total_gasto > meses_passados:
+    st.warning(f"⚠️ **Atenção, Wilson!** Seus gastos este mês estão R$ {(total_gasto - meses_passados):,.2f} acima da sua média dos últimos 3 meses.")
+else:
+    st.success("✅ **Parabéns!** Seus gastos estão controlados e abaixo da sua média recente.")
+
+categorias_para_ignorar = ['Transferência', 'Ajuste']
+df_filtrado = df_atual[(df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(categorias_para_ignorar))]
+df_vilao = df_filtrado.groupby('Categoria')['V_Num'].sum()
+
+if not df_vilao.empty:
+    maior_gasto = df_vilao.idxmax()
+    valor_maior = df_vilao.max()
+    st.info(f"💡 **Dica de Ouro:** Sua categoria de maior gasto este mês é '{maior_gasto}', totalizando R$ {valor_maior:,.2f}. Considere revisar esses custos para o próximo mês!")
+else:
+    st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
             
         # 7. TABELA FINAL
         # 7. TABELA FINAL
