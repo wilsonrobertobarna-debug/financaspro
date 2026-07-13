@@ -591,7 +591,7 @@ if "💰" in st.session_state.page:
         mes_map = {"Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6, 
                    "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12}
         
-        #mes_atual_num = mes_map[mes_atual]
+        mes_atual_num = mes_map[mes_atual]
         mes_anterior_num = mes_atual_num - 1 if mes_atual_num > 1 else 12
         
         # 2. Preparar os dados (convertendo a coluna de vencimento para data)
