@@ -665,7 +665,7 @@ else:
     df_filtrado = df_atual[(df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(categorias_para_ignorar))]
     df_vilao = df_filtrado.groupby('Categoria')['V_Num'].sum()
         
-        if not df_vilao.empty:
+    if not df_vilao.empty:
             maior_gasto = df_vilao.idxmax()
             valor_maior = df_vilao.max()
             st.info(f"💡 **Dica de Ouro:** Sua categoria de maior gasto este mês é '{maior_gasto}', totalizando R$ {valor_maior:,.2f}. Considere revisar esses custos para o próximo mês!")
