@@ -627,8 +627,7 @@ if "💰" in st.session_state.page:
         st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
     
     # --- WILSONBOT ---
-    #st.subheader("🤖 Consultor WilsonBot")
-    # --- WILSONBOT ---
+   
 st.subheader("🤖 Consultor WilsonBot")
 df_atual = df_m 
 filtro_exclusao = (df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(['Transferência']))
@@ -669,7 +668,7 @@ if 'df_m_limpo' in locals():
 else:
     st.error("Erro: A variável df_m_limpo não foi encontrada no código. Verifique se o nome está correto ou se ela foi definida anteriormente.")
 
-elif "Pendências" in aba:
+if "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
     df_pend = df_base[df_base['Status'] == 'Pendente'].copy()
     st.dataframe(df_pend[['Vencimento', 'Banco', 'Descrição', 'Valor']], use_container_width=True) 
@@ -683,23 +682,19 @@ elif "Pendências" in aba:
 
     periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
 
-   # 2. Processamento e Filtros (Ordem Correta)
+    # 2. Processamento e Filtros
     df_filtrado = df_base.copy()
     
-    # 1. Filtro de Status (garante que apenas Pendentes apareçam)
     df_filtrado['Status_Limpo'] = df_filtrado['Status'].astype(str).str.strip().str.lower()
     df_filtrado = df_filtrado[df_filtrado['Status_Limpo'] == 'pendente'].copy()
     
-    # 2. Filtro de Banco (se selecionado, filtra agora)
     if filtro_banco:
         df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
         
-    # 3. Conversão de Data e Filtro de Período
     col_data = 'Vencimento' 
     if col_data in df_filtrado.columns:
         df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
         
-        # Filtra o período se uma tupla válida for selecionada
         if isinstance(periodo, tuple) and len(periodo) == 2:
             df_filtrado = df_filtrado[
                 (df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
