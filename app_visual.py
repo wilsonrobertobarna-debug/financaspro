@@ -596,8 +596,8 @@ if aba in ["Finanças", "Bancos"]:
     
    
        # --- 1. COMPARATIVO MENSAL ---
-    with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
-if 'mes_atual' in locals() and "/" in mes_atual:
+with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
+        if 'mes_atual' in locals() and "/" in mes_atual:
         mes_escolhido = int(mes_atual.split('/')[0])
         mes_anterior = mes_escolhido - 1 if mes_escolhido > 1 else 12
         
