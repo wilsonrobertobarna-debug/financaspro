@@ -566,25 +566,23 @@ if "💰" in st.session_state.page:
                 
 
 # 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
-     # 6. GRÁFICO DE METAS
-    st.subheader("🎯 Metas vs Realizado (Despesas)")
-    
-    # Filtra e agrupa os dados
-    df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
-    
-    if not df_metas_graph.empty:
-        # Busca a meta (usando strip para evitar erro de espaço)
-        df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat.strip()}", 0.0))
+        st.subheader("🎯 Metas vs Realizado (Despesas)")
         
-        # Cria o gráfico
-        fig_m = go.Figure()
-        fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
-        fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
+        # Teste: use df_m em vez de df_m_limpo
+        df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
         
-        fig_m.update_layout(barmode='group', height=350, margin=dict(t=30, b=10, l=0, r=0))
-        st.plotly_chart(fig_m, use_container_width=True)
-    else:
-        st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
+        if not df_metas_graph.empty:
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
+            
+            fig_m = go.Figure()
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
+            
+            fig_m.update_layout(barmode='group', height=350, margin=dict(t=30, b=10, l=0, r=0))
+            st.plotly_chart(fig_m, use_container_width=True)
+        else:
+            st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
+
                                         # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA O SEU CÓDIGO) ---
         st.subheader("🔄 Comparativo: Mês Anterior vs. Mês Atual")
         
@@ -633,6 +631,8 @@ if "💰" in st.session_state.page:
         st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         # Aplicamos o estilo (o .style.format aplica o que definimos no dicionário)
 
+        
+        st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         
         # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
         st.subheader("🔔 Monitor de Pendências do Período")
