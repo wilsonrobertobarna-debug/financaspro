@@ -630,9 +630,6 @@ if "💰" in st.session_state.page:
         # Agora o st.dataframe vai encontrar a variável formatacao
         st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         # Aplicamos o estilo (o .style.format aplica o que definimos no dicionário)
-
-        
-        st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         
         # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
         st.subheader("🔔 Monitor de Pendências do Período")
