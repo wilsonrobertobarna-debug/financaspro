@@ -882,10 +882,10 @@ if aba == "📋 Relatório PDF":
            
         df_report = df_base.copy()
 
-            col_banco_df = next((c for c in df_report.columns if c.upper() in ['BANCO', 'CONTA']), None)
-            col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
-            col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
-            col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
+col_banco_df = next((c for c in df_report.columns if c.upper() in ['BANCO', 'CONTA']), None)
+col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
+col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
 
             # Tratamento e filtro de Data
             if col_data_df:
