@@ -732,7 +732,7 @@ elif "🚗" in aba:
 
 elif "📄" in aba:
     st.title("📄 WhatsApp")
-    
+       
     c1, c2 = st.columns(2)
     d_ini = c1.date_input("Início", hoje_br - timedelta(days=30), format="DD/MM/YYYY", key="zap_d1")
     d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY", key="zap_d2")
@@ -740,29 +740,7 @@ elif "📄" in aba:
     saldos_txt = ""
     total_patrimonio = 0.0 
     
-   # 1. LOOP PELOS BANCOS
-    for b in sorted(bancos_disponiveis):
-        valor_base_planilha = 0.0
-        dia_fechamento = 1 # Valor padrão caso esteja vazio
-        
-        # Busca as informações na aba de Bancos
-        if not df_bancos_info.empty:
-            for _, row in df_bancos_info.iterrows():
-                if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
-                    try:
-                        # Coluna B: Valor (Saldo ou Limite)
-                        v_raw = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                        valor_base_planilha = float(v_raw) if v_raw and v_raw != 'nan' else 0.0
-                        
-                        # Coluna C: Dia de Fechamento (se existir)
-                        if len(row) >= 3:
-                            f_raw = str(row.iloc[2]).strip()
-                            if f_raw and f_raw != 'nan':
-                                dia_fechamento = int(float(f_raw))
-                    except: pass
-                    break
-        
-# 1. LOOP PELOS BANCOS (Ajustado para buscar PENDENTE no Cartão)
+    # ÚNICO LOOP PELOS BANCOS (Organizado)
     for b in sorted(bancos_disponiveis):
         valor_b = 0.0      
         tipo_c = ""
@@ -773,62 +751,42 @@ elif "📄" in aba:
             for _, row in df_bancos_info.iterrows():
                 if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
                     try:
-                        # B (1): Valor (Limite)
                         v_raw = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
                         valor_b = float(v_raw) if v_raw and v_raw != 'nan' else 0.0
-                        
-                        # C (2): Tipo
                         tipo_c = str(row.iloc[2]).strip().upper()
-                        
-                        # D (3): Fechamento
                         if len(row) >= 4:
                             f_raw = str(row.iloc[3]).replace('R$', '').strip()
                             dia_fech_d = int(float(f_raw)) if f_raw and f_raw != 'nan' else 1
-                            
-                        # E (4): Vencimento
                         if len(row) >= 5:
                             ven_raw = str(row.iloc[4]).replace('R$', '').strip()
                             dia_venc_e = int(float(ven_raw)) if ven_raw and ven_raw != 'nan' else 10
                     except: pass
                     break
         
-     # --- LÓGICA DE CARTÃO (Soma Pendentes até a data Limite) ---
+        # Lógica de Cartão
         if "CARTA" in tipo_c or "CART" in b.upper():
-            limite_cartao = valor_b
-            
-            # Filtra a base: 
-            # 1. Do banco específico
-            # 2. Que seja Despesa
-            # 3. Que esteja Pendente
             df_cart_base = df_base[(df_base['Banco'] == b) & 
                                    (df_base['Tipo'].str.upper() == 'DESPESA') & 
                                    (df_base['Status'].str.upper() == 'PENDENTE')].copy()
             
-            # Garante que a coluna de data está em formato de data
-            df_cart_base['DT_ONLY'] = pd.to_datetime(df_cart_base['DT']).dt.date
-            
-            # 🔥 O PULO DO GATO:
-            # Soma tudo o que está pendente DESDE SEMPRE até a DATA FINAL (d_fim) selecionada.
-            # Isso pega contas atrasadas e compras do mês, mas IGNORA parcelas futuras.
+            df_cart_base['DT_ONLY'] = pd.to_datetime(df_cart_base['DT'], errors='coerce').dt.date
             usado = df_cart_base[df_cart_base['DT_ONLY'] <= d_fim]['V_Num'].sum()
-            
-            dispo = limite_cartao - usado
-            
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+            dispo = valor_b - usado
+            saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
         
-        # --- LÓGICA DE CONTA / INVESTIMENTO ---
+        # Lógica de Conta
         else:
-            saldo_inicial = valor_b
-            # Para contas normais, mantemos apenas o que já foi 'Pago'
             mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
             rec_b = mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
             des_b = mov_paga[mov_paga['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
-            s_final = saldo_inicial + rec_b - des_b
-            
+            s_final = valor_b + rec_b - des_b
             icone = "💰" if "INVEST" in tipo_c else "🏦"
             saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
             total_patrimonio += s_final
 
+    # Exibição final limpa
+    st.text(saldos_txt)
+    st.write(f"**Total Patrimônio:** {m_fmt(total_patrimonio)}")
     # 2. RESUMO DO RELATÓRIO (Rendimento e Sobra)
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
