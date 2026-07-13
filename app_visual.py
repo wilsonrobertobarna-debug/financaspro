@@ -634,7 +634,7 @@ if "💰" in st.session_state.page:
 
         
         # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
-    st.subheader("🔔 Monitor de Pendências do Período")
+        st.subheader("🔔 Monitor de Pendências do Período")
         
         # Filtra apenas o que está pendente E pertence ao mês selecionado
         # Usamos 'filtro_mes' que você já definiu no seu código anterior!
