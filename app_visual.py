@@ -635,7 +635,7 @@ else:
         
         
             # --- AQUI COMEÇA O WILSONBOT ---
-        st.subheader("🤖 Consultor WilsonBot")
+st.subheader("🤖 Consultor WilsonBot")
        
 df_atual = df_m 
 filtro_exclusao = (df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(['Transferência']))
