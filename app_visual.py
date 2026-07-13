@@ -591,10 +591,10 @@ if "💰" in st.session_state.page:
     
     # --- COMPARATIVO MENSAL ---
 
-# --- 1. COMPARATIVO MENSAL (CORRIGIDO) ---
-   # --- 1. COMPARATIVO MENSAL (AGORA COM A VARIÁVEL CORRETA) ---
-#with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
-   # --- 1. COMPARATIVO MENSAL ---
+   # Só executa se estivermos na aba "Finanças" ou "Bancos"
+if aba in ["Finanças", "Bancos"]:
+    
+    # --- 1. COMPARATIVO MENSAL ---
     with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
         if 'mes_atual' in locals():
             # ... (código do comparativo) ...
@@ -609,8 +609,11 @@ if "💰" in st.session_state.page:
         if 'mes_atual' in locals():
             df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == mes_atual)]
             # ... (código das pendências) ...
-            st.dataframe(df_pendente_mes[['Vencimento', 'Descrição', 'Banco', 'Valor', 'Categoria']], use_container_width=True)        
-    # --- WILSONBOT ---
+            st.dataframe(df_pendente_mes[['Vencimento', 'Descrição', 'Banco', 'Valor', 'Categoria']], use_container_width=True)
+
+
+   
+# --- WILSONBOT ---
    
 st.subheader("🤖 Consultor WilsonBot")
 df_atual = df_m 
