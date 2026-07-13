@@ -585,7 +585,7 @@ if "💰" in st.session_state.page:
 
                                         # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA O SEU CÓDIGO) ---
         #st.subheader("🔄 Comparativo: Mês Anterior vs. Mês Atual")
-        with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
+    with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
         
         # 1. Obter o número do mês atual a partir da sua seleção
         # O seu 'mes_map' já tem a relação, vamos usar isso:
