@@ -8,6 +8,34 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
+import streamlit.components.v1 as components
+
+
+
+# --- TELA DE PROTEÇÃO (LOGIN) ---
+if 'login' not in st.session_state:
+    st.session_state.login = False
+
+if not st.session_state.login:
+    # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
+    col1, col_centro, col2 = st.columns([1, 2, 1])
+    
+    with col_centro:
+        st.markdown("<br><br><br>", unsafe_allow_html=True) # Espaçamento superior
+        st.markdown("### 🔒 Acesso Seguro")
+        senha = st.text_input("Digite sua senha:", type="password")
+        
+        if st.button("🔓 Desbloquear Sistema"):
+            if senha == "Wilson123": # Troque aqui pela sua senha real
+                st.session_state.login = True
+                st.rerun()
+            else:
+                st.error("Senha incorreta, Wilson!")
+        
+        st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    st.stop() # Bloqueia o carregamento do restante do código abaixo
+   
 
 # Definições iniciais de data
 agora_br = datetime.now() - timedelta(hours=3)
@@ -41,9 +69,11 @@ def atualizar_meta_sheets(nome):
     except Exception as e:
         st.error(f"Erro ao salvar no Sheets: {e}")
 
-# 1. CONFIGURAÇÃO INICIAL
-st.set_page_config(page_title="FinançasPro Wilson", layout="wide")
-st.caption("Versão 2.0.3")
+st.set_page_config(
+    page_title="FinançasPro",
+    layout="wide",
+    initial_sidebar_state="collapsed" # Isso fará a barra vir fechada por padrão
+)
 
 # 2. CONEXÃO (LIGA O MOTOR)
 @st.cache_resource
@@ -268,11 +298,23 @@ st.sidebar.title("🎮 Painel Wilson")
 
 if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     atualizar_sessao()
+    st.cache_data.clear()
     st.rerun()
 
-aba = st.sidebar.radio("Navegação:", ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"])
-
 st.sidebar.divider()
+
+if 'page' not in st.session_state:
+    st.session_state.page = "💰 Finanças & Bancos"
+
+menu_itens = ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"]
+
+for item in menu_itens:
+    if st.sidebar.button(item, use_container_width=True):
+        st.session_state.page = item
+        st.rerun()
+ 
+st.sidebar.divider()
+aba = st.session_state.page
 
 # BARRINHA 1: NOVO LANÇAMENTO
 # Inicializa a variável de estado para controlar a abertura se ela não existir
@@ -299,12 +341,29 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         # ... (após todos os st.selectbox e inputs do formulário)
 
         if st.form_submit_button("Salvar Lançamento"):
-            # 1. Formatações necessárias
+            # 1. BUSCAR O MAIOR ID DIRETO NA PLANILHA (Sem depender de variáveis externas)
+            # Pegamos todos os valores da aba
+            todos_dados = ws_base.get_all_records()
+            
+            if todos_dados:
+                # Transformamos em um DataFrame temporário só para achar o maior ID
+                import pandas as pd
+                df_temp = pd.DataFrame(todos_dados)
+                
+                # Se a coluna ID existir, pegamos o maior + 1, senão começa em 1
+                if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
+                    proximo_id = int(df_temp['ID'].max()) + 1
+                else:
+                    proximo_id = 1
+            else:
+                proximo_id = 1
+
+            # 2. Formatações
             v_str = f"{f_val:.2f}".replace('.', ',')
             t_dat_str = t_dat.strftime("%d/%m/%Y")
             f_compra_str = f_compra.strftime("%d/%m/%Y")
             
-            # 2. Loop usando 't_dat' (a variável correta do seu formulário)
+            # 3. Salvar as parcelas
             for i in range(f_par):
                 nova_data = t_dat + relativedelta(months=i)
                 
@@ -316,275 +375,385 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     f_tip,                          # Coluna E: Tipo
                     f_bnc,                          # Coluna F: Banco
                     f_sta,                          # Coluna G: Status
-                    f_compra_str                    # Coluna H: Data da Compra
+                    f_compra_str,                   # Coluna H: Data da Compra
+                    proximo_id + i                  # Coluna I: ID (Agora sem pular coluna!)
                 ])
             
-            # 3. Finalização
-            st.toast("✅ Lançamento salvo com sucesso!", icon="💰")
+            st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
             atualizar_sessao()
             st.rerun()
+            # --- BARRINHA 2: TRANSFERÊNCIA ---
+    with st.sidebar.expander("💸 Transferência", expanded=False):
+        with st.form("f_transf", clear_on_submit=True):
+            t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+            t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
+            t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
+            t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
+            t_desc = st.text_input("Nota")
+            if st.form_submit_button("TRANSFERIR"):
+                if t_orig == t_dest: 
+                    st.error("Escolha bancos diferentes!")
+                else:
+                    # 1. CALCULA O PRÓXIMO ID (Igual ao que fizemos no outro)
+                    coluna_i = ws_base.col_values(9)
+                    ids_numericos = [int(v) for v in coluna_i[1:] if v and v.isdigit()]
+                    proximo_id = max(ids_numericos) + 1 if ids_numericos else 1
+                    
+                    v_str = f"{t_val:.2f}".replace('.', ',')
+                    d_str = t_dat.strftime("%d/%m/%Y")
+                    
+                    # 2. SALVA AS DUAS LINHAS JÁ COM OS IDs (proximo_id e proximo_id + 1)
+                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", d_str, proximo_id])
+                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", d_str, proximo_id + 1])
+                    
+                    st.toast("✅ Transferência realizada com sucesso!", icon="💰")
+                    atualizar_sessao()
+                    st.rerun()
 
-# Se o usuário mudar de aba ou clicar em outra coisa fora do formulário, o expander fecha amigavelmente
-if aba != "💰 Finanças & Bancos":
-    st.session_state.expander_lancamento_aberto = False
-# BARRINHA 2: TRANSFERÊNCIA
-with st.sidebar.expander("💸 Transferência", expanded=False):
-    with st.form("f_transf", clear_on_submit=True):
-        t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
-        t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
-        t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
-        t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
-        t_desc = st.text_input("Nota")
-        if st.form_submit_button("TRANSFERIR"):
-            if t_orig == t_dest: st.error("Escolha bancos diferentes!")
-            else:
-                v_str = f"{t_val:.2f}".replace('.', ',')
-                d_str = t_dat.strftime("%d/%m/%Y")
-                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", ""])
-                ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", ""])
-                atualizar_sessao()
-                st.rerun()
-
-# BARRINHA 3: AJUSTE / EXCLUSÃO
+               # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
         lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
-        escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
+        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
+        escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
+             
+        
         if escolha:
             item = lista_edit[escolha]
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
-            
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
-            
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
             ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
-            
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
             col_ed1, col_ed2 = st.columns(2)
             if col_ed1.button("💾 ATUALIZAR"):
-                v_str = f"{ed_val:.2f}".replace('.', ',')
                 ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
-                ws_base.update_cell(int(item['ID']), 2, v_str)
+                ws_base.update_cell(int(item['ID']), 2, f"{ed_val:.2f}".replace('.', ','))
                 ws_base.update_cell(int(item['ID']), 3, ed_desc)
                 ws_base.update_cell(int(item['ID']), 6, ed_bnc)
                 ws_base.update_cell(int(item['ID']), 7, ed_sta)
-                atualizar_sessao()
-                st.rerun()
-            if col_ed2.button("🚨 EXCLUIR"):
-                if item['Categoria'] == 'Transferência':
-                    desc = item['Descrição']
-                    data = item['Data']
-                    v_num = item['V_Num']
-                    ids_para_excluir = []
-                    for idx, row in df_base.iterrows():
-                        if (row['Data'] == data and 
-                            abs(row['V_Num'] - v_num) < 0.01 and 
-                            row['Descrição'] == desc and 
-                            row['Categoria'] == 'Transferência'):
-                            ids_para_excluir.append(int(row['ID']))
-                    ids_para_excluir = sorted(list(set(ids_para_excluir)), reverse=True)
-                    for id_linha in ids_para_excluir:
-                        ws_base.delete_rows(id_linha)
-                else:
-                    ws_base.delete_rows(int(item['ID']))
+                st.toast("✅ Atualizado!"); atualizar_sessao(); st.rerun()
+                
+                # Zera o seletor antes de recarregar
+                if "selectbox_ajuste" in st.session_state:
+                    del st.session_state["selectbox_ajuste"]
+                #st.session_state["selectbox_ajuste"] = ""
                 atualizar_sessao()
                 st.rerun()
                 
-# 1. PRIMEIRO: A MÁQUINA (Declare os valores no topo para o Python não se perder)
-receita_total = 7626.23  # Exemplo do seu valor real
-gasto_total = 3434.45
-rendimento = 0.19
-pendente = 6932.67
-# 5. TELAS PRINCIPAIS
-if "💰" in aba:
-    # 1. ESTILO (CSS) - Isso aqui "puxa" tudo para cima antes de desenhar o título
-    st.markdown("""
-        <style>
-               .block-container {
-                    padding-top: 0rem; /* Zera o espaço no topo */
-                    padding-bottom: 0rem;
-                }
-        </style>
-        """, unsafe_allow_html=True)
+            if col_ed2.button("🚨 EXCLUIR"):
+                if item['Categoria'] == 'Transferência':
+                    ids_para_excluir = []
+                    for idx, row in df_base.iterrows():
+                        mesma_data = (row['Vencimento'] == item['Vencimento'])
+                        mesmo_valor = (abs(row['V_Num'] - item['V_Num']) < 0.01)
+                        mesma_desc = (row['Descrição'] == item['Descrição'])
+                        eh_transf = (row['Categoria'] == 'Transferência')
+                        
+                        if mesma_data and mesmo_valor and mesma_desc and eh_transf:
+                            ids_para_excluir.append(int(row['ID']))
+                    
+                    for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
+                        ws_base.delete_rows(id_linha)
+                else:
+                    ws_base.delete_rows(int(item['ID']))
+                
+                st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
+                # Zera o seletor antes de recarregar
+                if "selectbox_ajuste" in st.session_state:
+                    del st.session_state["selectbox_ajuste"]
+                st.session_state["selectbox_ajuste"] = ""
+                atualizar_sessao()
+                st.rerun()
+
+# --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
+if "💰" in st.session_state.page:
+    import plotly.graph_objects as go
     
+    st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
-    # --- COLE AQUI (INÍCIO DA BARRINHA) ---
-    meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
+    # 1. BARRINHA DE MESES
+    meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    mes_atual_hoje = datetime.now().strftime("%b")
+    mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=mes_atual_hoje)
     
-    # Isso cria a barra horizontal de meses
-    st.pills("Período:", meses, selection_mode="single", default="Mai")
-
-    # --- 1. O SALDO GERAL (REI DA TELA) ---
-    # Usamos uma fonte maior e centralizada para ele ser "mais notado"
-    saldo_geral = receita_total - gasto_total
-    cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c" # Verde se positivo, Vermelho se negativo
-    
-    st.markdown(f"""
-        <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
-            <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
-            <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
-        </div>
-    """.replace(",", "X").replace(".", ",").replace("X", "."), unsafe_allow_html=True)
-
-    st.write("") # Espaço de respiro
-
-    # --- 2. OS CARDS DE APOIO (MENORES) ---
-    # Aqui os valores ficam organizados em colunas, ocupando menos espaço vertical
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.metric("📈 Receita", f"R$ {receita_total:,.2f}")
-    with c2:
-        st.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
-    with c3:
-        st.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
-    with c4:
-        st.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
-# ----------------------------------------------
-
-if "💰" in aba:
-    # ... seu código do CSS e Título ...
-    
-    saldo_geral = receita_total - gasto_total # Agora ele não trava mais!
-
-    
-
-    st.divider()
-
-    g1, g2 = st.columns(2)
-    with g1:
-        st.write("### 🍕 Gastos por Categoria")
-        # Colocando o '#' para ignorar o erro de dados por enquanto:
-        # df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-        # if not df_p.empty: 
-        #     st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', title="✨ Gastos por Categoria (%)", hole=0.4), use_container_width=True, config={'staticPlot': True})
-        st.info("Aguardando conexão com os dados...")
-
-    with g2:
-        st.write("### 📊 Fluxo de Caixa")
-        # Fazendo o mesmo aqui para o fluxo:
-        # df_f = df_base[(df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')].copy()
-        # df_f = df_f.sort_values('DT')
-        # df_f_grouped = df_f.groupby(['Mes_Ano', 'Tipo'], sort=False)['V_Num'].sum().reset_index()
-        # if not df_f_grouped.empty: 
-        #     st.plotly_chart(px.bar(df_f_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group', color_discrete_map={'Receita':'#2ecc71','Despesa':'#e74c3c','Rendimento':'#27ae60'}, title="📊 Fluxo de Caixa Mensal"), use_container_width=True, config={'staticPlot': True})
-        st.info("Aguardando conexão com os dados...")
-       
     if not df_base.empty:
-        # AQUI VOCÊ CRIA A VARIÁVEL
-        df_m = df_base[df_base['Mes_Ano'] == mes_atual].copy()
+        # 2. TRADUÇÃO DO FILTRO
+        mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
+                   "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
+        filtro_mes = f"{mes_map[mes_atual]}/26"
+        
+        # Filtra os dados do mês
+        df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-        # Cálculo do saldo
-        saldo_geral = df_m_limpo[df_m_limpo['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum() - df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
-        st.info(f"### 🏦 SALDO GERAL ATUAL: {m_fmt(saldo_geral)}")
-        
+        # 3. CÁLCULOS
+        receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
+        gasto_total = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
+        rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
+        pendente = df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()
+        saldo_geral = (receita_total + rendimento) - gasto_total
+
+        # 4. EXIBIÇÃO DO SALDO
+        # 4. EXIBIÇÃO DO SALDO
+        cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
+        st.markdown(f"""
+            <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
+                <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
+                <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
+            </div>
+        """, unsafe_allow_html=True)
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
+        c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
+        c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
+        c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
         st.divider()
 
-        # --- RESUMO DOS MESES (DENTRO DO MESMO BLOCO) ---
-        with st.expander("📊 RESUMO DOS MESES", expanded=False):
-            m1, m2, m3 = st.columns(3)
-            # Agora o m1 vai encontrar o df_m_limpo porque estão no mesmo "quarto"
-            m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-            m2.metric("📉 Despesa", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-            m3.metric("⚖️ Balanço", m_fmt(saldo_geral))
+        # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
+        g1, g2 = st.columns(2)
+        with g1:
+            st.write("### 🍕 Gastos por Categoria")
+            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+            if not df_p.empty:
+                st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', hole=0.4), use_container_width=True)
 
-        # --- INDICADORES DO MÊS ---
-               
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("📈 Receita", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()))
-        m2.metric("📉 Gasto", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()))
-        m3.metric("💰 Rendimento", m_fmt(df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()))
-        m4.metric("⏳ Pendente", m_fmt(get_valor_pendente(df_base)))
-              
-      
-               
-    if 'df_m_limpo' in locals() or 'df_m_limpo' in globals():
-    
-        # Só faz a conta se a variável existir
-        if df_m_limpo is not None and not df_m_limpo.empty:
         
-            st.subheader("🎯 Metas vs Realizado")
-            df_metas_graph = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+        with g2:
+            st.write("### 📊 Fluxo Mensal (3 Meses)")
             
+            # Cálculo dos 3 meses a partir do mês selecionado
+            idx = meses_abreviados.index(mes_atual)
+            meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
+            filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
+            
+            # Filtra a base completa pelos meses selecionados
+            df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
+            
+            # Prepara os dados para o gráfico
+            df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
+            
+            if not df_f.empty:
+                # Gráfico com cores fixas e layout limpo
+                fig_fluxo = px.bar(
+                    df_f, 
+                    x='Mes_Ano', 
+                    y='V_Num', 
+                    color='Tipo', 
+                    barmode='group',
+                    color_discrete_map={
+                        'Receita': '#2ecc71', 
+                        'Despesa': '#e74c3c', 
+                        'Rendimento': '#3498db'
+                    },
+                    text_auto='.2s' # Adiciona o valor em cima da barra
+                )
+                fig_fluxo.update_layout(
+                    height=350, 
+                    margin=dict(t=30, b=10, l=0, r=0),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig_fluxo, use_container_width=True)
+            else:
+                st.info("Aguardando dados para o período...")
+                
+
+# 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
+        st.subheader("🎯 Metas vs Realizado (Despesas)")
+        
+        # Teste: use df_m em vez de df_m_limpo
+        df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
+        
         if not df_metas_graph.empty:
-            # 1. GARANTIR QUE A COLUNA META EXISTE
-            if 'Meta' not in df_metas_graph.columns:
-                df_metas_graph['Meta'] = 0.0
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
             
-            # 2. PREENCHER COM A LÓGICA DO SESSION_STATE
-            def buscar_meta(cat):
-                return st.session_state.get(f"m_{cat}", 0.0)
-            
-            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(buscar_meta)
-
-            # 3. AGORA SIM, DESENHA O GRÁFICO
-            # Coloque isso logo antes da linha: fig_m = go.Figure()
-            st.write("Dados no session_state para Mercado:", st.session_state.get("m_Mercado", "NÃO ENCONTRADO"))
             fig_m = go.Figure()
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Real', marker_color='#e74c3c'))
-            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta', marker_color='#2ecc71', opacity=0.4))
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
+            fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
             
-            fig_m.update_layout(barmode='group', height=350)
-            st.plotly_chart(fig_m, use_container_width=True, config={'staticPlot': True})
-            st.divider()
+            fig_m.update_layout(barmode='group', height=350, margin=dict(t=30, b=10, l=0, r=0))
+            st.plotly_chart(fig_m, use_container_width=True)
         else:
-            # Este else pertence ao 'if not df_metas_graph.empty'
-            st.info("Nenhuma despesa encontrada para esta categoria.")
-        
-        # O resto do código continua aqui fora, alinhado com o 'if' principal
-        st.subheader("🔍 Busca e Lançamentos")
-        
-        c_d1, c_d2 = st.columns(2)
-        s_ini = c_d1.date_input("Início", datetime.now() - relativedelta(months=1), format="DD/MM/YYYY")
-        s_fim = c_d2.date_input("Fim", datetime.now(), format="DD/MM/YYYY")
-        
-        c1, c2, c3 = st.columns(3)
-        s_bnc = c1.multiselect("Filtrar Banco:", sorted(bancos_disponiveis))
-        s_sta = c2.multiselect("Filtrar Status:", ["Pago", "Pendente"])
-        b_desc = c3.text_input("Buscar Beneficiário:")
-        
-        df_v = df_base.copy()
-        df_v = df_v[df_v['DT'].notna()]
-        df_v = df_v[(df_v['DT'].dt.date >= s_ini) & (df_v['DT'].dt.date <= s_fim)]
-        if s_bnc: df_v = df_v[df_v['Banco'].isin(s_bnc)]
-        if s_sta: df_v = df_v[df_v['Status'].isin(s_sta)]
-        if b_desc: df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
-        
-        df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
-        df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
-        st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+            st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
+                                        # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA O SEU CÓDIGO) ---
+        st.subheader("🔄 Comparativo: Mês Anterior vs. Mês Atual")
+        
+        # 1. Obter o número do mês atual a partir da sua seleção
+        # O seu 'mes_map' já tem a relação, vamos usar isso:
+        mes_map = {"Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6, 
+                   "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12}
+        
+        mes_atual_num = mes_map[mes_atual]
+        mes_anterior_num = mes_atual_num - 1 if mes_atual_num > 1 else 12
+        
+        # 2. Preparar os dados (convertendo a coluna de vencimento para data)
 
-if aba == "Pendências":
+        df_comp = df_base.copy()
+        
+        # --- BLOCO DE SEGURANÇA PARA DATAS ---
+        df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
+        
+        # Correção aqui: era .co e agora é .copy()
+        df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].copy()
+        
+       # 4. Tabela dinâmica
+        df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
+            index='Categoria', 
+            columns=df_comp['Vencimento'].dt.month, 
+            values='V_Num', 
+            aggfunc='sum'
+        ).fillna(0)
+        
+        # 5. Renomeia as colunas
+        colunas_renomeadas = {mes_anterior_num: "Mês Anterior", mes_atual_num: "Mês Atual"}
+        df_pivot = df_pivot.rename(columns=colunas_renomeadas)
+        
+        # 6. Cálculo da variação
+        if "Mês Anterior" in df_pivot.columns and "Mês Atual" in df_pivot.columns:
+            df_pivot['Variação (%)'] = ((df_pivot["Mês Atual"] - df_pivot["Mês Anterior"]) / df_pivot["Mês Anterior"] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
+
+        # --- DEFINIÇÃO DA FORMATAÇÃO (Para resolver o NameError) ---
+        formatacao = {
+            "Mês Anterior": "{:.2f}",
+            "Mês Atual": "{:.2f}",
+            "Variação (%)": "{:.2f}%"
+        }
+
+        # Agora o st.dataframe vai encontrar a variável formatacao
+        st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
+        # Aplicamos o estilo (o .style.format aplica o que definimos no dicionário)
+
+        
+        st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
+        
+        # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
+        st.subheader("🔔 Monitor de Pendências do Período")
+        
+        # Filtra apenas o que está pendente E pertence ao mês selecionado
+        # Usamos 'filtro_mes' que você já definiu no seu código anterior!
+        df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == filtro_mes)]
+        
+        if not df_pendente_mes.empty:
+            st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
+            
+            # Exibe as pendências do mês
+            st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','Banco','Valor', 'Categoria']], use_container_width=True)
+        else:
+            st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
+        
+        
+            # --- AQUI COMEÇA O WILSONBOT ---
+        st.subheader("🤖 Consultor WilsonBot")
+        
+        # Analisa o mês atual
+        df_atual = df_m # Usamos o seu df filtrado que já está pronto
+        filtro_exclusao = (df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(['Transferência']))
+        total_gasto = df_atual[filtro_exclusao]['V_Num'].sum()
+        
+        # Analisa a média dos últimos 3 meses
+        # Nota: Ajustei para filtrar só Despesas na média também, para ficar mais preciso
+        df_despesas_totais = df_base[df_base['Tipo'] == 'Despesa']
+        meses_passados = df_despesas_totais.groupby('Mes_Ano')['V_Num'].sum().tail(3).mean()
+
+        if total_gasto > meses_passados:
+            st.warning(f"⚠️ **Atenção, Wilson!** Seus gastos este mês estão R$ {(total_gasto - meses_passados):,.2f} acima da sua média dos últimos 3 meses.")
+        else:
+            st.success("✅ **Parabéns!** Seus gastos estão controlados e abaixo da sua média recente.")
+
+        
+        # Identifica o maior vilão (Excluindo Transferências e Ajustes)
+        # Filtramos 'Despesa' E que a categoria NÃO ESTEJA na lista de exclusão
+        categorias_para_ignorar = ['Transferência', 'Ajuste']
+        
+        df_filtrado = df_atual[(df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(categorias_para_ignorar))]
+        
+        df_vilao = df_filtrado.groupby('Categoria')['V_Num'].sum()
+        
+        if not df_vilao.empty:
+            maior_gasto = df_vilao.idxmax()
+            valor_maior = df_vilao.max()
+            st.info(f"💡 **Dica de Ouro:** Sua categoria de maior gasto este mês é '{maior_gasto}', totalizando R$ {valor_maior:,.2f}. Considere revisar esses custos para o próximo mês!")
+        else:
+            st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
+
+            
+        # 7. TABELA FINAL
+        # 7. TABELA FINAL
+        st.subheader("🔍 Lançamentos do Mês")
+        
+        if not df_m_limpo.empty:
+            df_exibicao = df_m_limpo.copy()
+            
+            # AJUSTE DE MENTOR: 
+            # Se você sente que a diferença é de 2, mudamos aqui.
+            # Se precisar ajustar para mais ou para menos, é só mudar este número '2'.
+            ajuste = 2 
+            df_exibicao['Seq.'] = df_exibicao.index + ajuste 
+            
+            # Inverte para mostrar os mais novos no topo
+            df_exibicao = df_exibicao.iloc[::-1]
+            
+            st.dataframe(df_exibicao[['Seq.', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
+                         use_container_width=True, 
+                         hide_index=True)
+        else:
+            st.warning("Base de dados vazia.")
+elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
+    df_pend = df_base[df_base['Status'] == 'Pendente'].copy()
+    st.dataframe(df_pend[['Vencimento', 'Banco', 'Descrição', 'Valor']], use_container_width=True) 
     
-    c1, c2, c3 = st.columns(3)
-    
-    with c1:
-        filtro_banco = st.multiselect("Filtrar Banco:", df_base['Banco'].unique(), key="b_pend")
-    with c2:
-        busca_desc = st.text_input("🔍 Buscar por Descrição", key="d_pend")
-    with c3:
-        busca_benef = st.text_input("👤 Buscar por Beneficiário", key="n_pend")
+    # 1. Filtros
+    col_b, col_d = st.columns(2)
+    with col_b:
+        filtro_banco = st.multiselect("Filtrar Banco/Cartão:", df_base['Banco'].unique(), key="banco_pend")
+    with col_d:
+        busca_desc = st.text_input("Buscar Descrição:", key="desc_pend")
 
-    df_v = df_base[df_base['Status'].astype(str).str.strip() == 'Pendente'].copy()
+    periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
+
+   # 2. Processamento e Filtros (Ordem Correta)
+    df_filtrado = df_base.copy()
     
+    # 1. Filtro de Status (garante que apenas Pendentes apareçam)
+    df_filtrado['Status_Limpo'] = df_filtrado['Status'].astype(str).str.strip().str.lower()
+    df_filtrado = df_filtrado[df_filtrado['Status_Limpo'] == 'pendente'].copy()
+    
+    # 2. Filtro de Banco (se selecionado, filtra agora)
     if filtro_banco:
-        df_v = df_v[df_v['Banco'].isin(filtro_banco)]
+        df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
+        
+    # 3. Conversão de Data e Filtro de Período
+    col_data = 'Vencimento' 
+    if col_data in df_filtrado.columns:
+        df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
+        
+        # Filtra o período se uma tupla válida for selecionada
+        if isinstance(periodo, tuple) and len(periodo) == 2:
+            df_filtrado = df_filtrado[
+                (df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
+                (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
+            ]
+            
+    # 4. Filtro de Descrição (Por último, para refinar)
     if busca_desc:
-        df_v = df_v[df_v['Descrição'].astype(str).str.contains(busca_desc, case=False, na=False)]
+        df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
     
-    if busca_benef and 'Beneficiário' in df_v.columns:
-        df_v = df_v[df_v['Beneficiário'].astype(str).str.contains(busca_benef, case=False, na=False)]
+    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
+    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
+    cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
+    
+    # Exibe a tabela
+    st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
 
-    st.write(f"### Total: {len(df_v)}")
-    st.dataframe(df_v, use_container_width=True, hide_index=True)
-    
     # 4. Botão de Baixa (Funcionalidade de Baixa)
     if not df_filtrado.empty:
         nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
@@ -888,37 +1057,25 @@ if aba == "📋 Relatório PDF":
 
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
-        # 1. PEGA O DADO QUE JÁ ESTÁ NA TELA
-        df_report = df_v.copy().iloc[::-1].reset_index(drop=True)
-        df_report.index += 1
-        
-        # 2. INICIA O PDF
-        from fpdf import FPDF
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=10)
-        
-        # 3. IMPRIME LINHA POR LINHA USANDO O df_report
-        # O 'index' aqui já vai de 1 até o fim, batendo com a tela
-        for index, row in df_report.iterrows():
-            pdf.cell(200, 10, txt=f"ID: {index} | Desc: {row['Descrição']} | Valor: {row['Valor']}", ln=True)
-            
-        # 4. SALVA
-        pdf.output("relatorio.pdf")
-        st.success("PDF Gerado com sucesso!")
+        try:
+            if isinstance(periodo_pdf, (list, tuple)):
+                if len(periodo_pdf) == 2:
+                    b_ini, b_fim = periodo_pdf[0], periodo_pdf[1]
+                else:
+                    b_ini = b_fim = periodo_pdf[0]
+            else:
+                b_ini = b_fim = periodo_pdf
 
             # ========================================================
             # 1. INICIALIZAÇÃO DO PDF
             # ========================================================
-        from fpdf import FPDF
-        pdf = FPDF()
-        pdf.add_page()
+            from fpdf import FPDF
+            pdf = FPDF()
+            pdf.add_page()
 
             # ========================================================
             # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
             # ========================================================
-   
-           
             df_report = df_base.copy()
 
             col_banco_df = next((c for c in df_report.columns if c.upper() in ['BANCO', 'CONTA']), None)
@@ -1170,9 +1327,17 @@ if aba == "📋 Relatório PDF":
     if busca_status != "Todos" and col_status_df:
         df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
-    # Faxina das colunas internas para manter o visual limpo
-    colunas_para_esconder = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
-    colunas_visiveis = [c for c in df_tela.columns if c not in colunas_para_esconder]
+   # --- FAXINA RIGOROSA ---
+    # Lista de colunas proibidas
+    colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
+    
+    # Filtra mantendo apenas colunas que NÃO estão na lista proibida 
+    # E que NÃO começam com "DT_" (isso mata o dt_ que está aparecendo)
+    colunas_visiveis = [
+        c for c in df_tela.columns 
+        if c not in colunas_proibidas and not c.upper().startswith('DT_')
+    ]
+    
     df_tela_limpo = df_tela[colunas_visiveis]
 
     # Exibe os dados
@@ -1187,45 +1352,99 @@ if aba == "📋 Relatório PDF":
 if aba == "📊 Análises & Configurações":
     st.markdown("## 📊 Painel de Análises & Configurações")
     
+   
     # 1. GRÁFICO: EVOLUÇÃO DO SALDO ACUMULADO
     st.subheader("📈 Evolução do Saldo Acumulado")
-    df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
-    if not df_saldo_dia.empty:
-        df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
-            lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
-        )
-        df_saldo_dia = df_saldo_dia.groupby('Vencimento')['Valor_Com_Sinal'].sum().reset_index()
-        df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
+    
+    # Certifique-se de que o df_base não está vazio
+    if not df_base.empty:
+        # CONVERSÃO ESSENCIAL: Garante que DT seja data e V_Num seja número
+        df_base['DT'] = pd.to_datetime(df_base['DT'], format='%d/%m/%Y', errors='coerce')
+        df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0)
         
-        fig_acum = px.line(df_saldo_dia, x='Vencimento', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
-        fig_acum.update_layout(height=350)
-        st.plotly_chart(fig_acum, use_container_width=True, config={'staticPlot': True})
+        # Filtra apenas o que está PAGO e ordena cronologicamente
+        df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
+        
+        if not df_saldo_dia.empty:
+            # Aplica o sinal positivo para receitas e negativo para despesas
+            df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
+                lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
+            )
+            
+            # Agrupa por data real (DT)
+            df_saldo_dia = df_saldo_dia.groupby('DT')['Valor_Com_Sinal'].sum().reset_index()
+            
+            # Calcula o Saldo Acumulado (soma cumulativa)
+            df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
+            
+            # Cria o gráfico
+            import plotly.express as px
+            fig_acum = px.line(
+                df_saldo_dia, 
+                x='DT', 
+                y='Saldo_Acumulado', 
+                title="Progresso do Patrimônio Acumulado no Tempo", 
+                markers=True
+            )
+            
+            # Ajusta layout para melhor leitura
+            fig_acum.update_layout(height=350, margin=dict(l=20, r=20, t=50, b=20))
+            fig_acum.update_xaxes(title="Data", tickformat="%d/%m/%Y")
+            fig_acum.update_yaxes(title="Saldo (R$)")
+            
+            st.plotly_chart(fig_acum, use_container_width=True)
+        else:
+            st.info("Não há lançamentos marcados como 'Pago' para exibir o gráfico.")
+    else:
+        st.warning("A base de dados está vazia.")
 
     st.divider()
 
-    # 2. COMPARATIVO: MARÇO VS ABRIL
-    with st.expander("📊 Comparativo de Sobra Mensal (Março vs. Abril)", expanded=True):
-        df_mar = df_base[(df_base['Mes_Ano'] == '03/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
-        df_abr = df_base[(df_base['Mes_Ano'] == '04/26') & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
-        
-        rec_mar = df_mar[df_mar['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        desp_mar = df_mar[df_mar['Tipo'] == 'Despesa']['V_Num'].sum()
-        sobra_mar = rec_mar - desp_mar
-        
-        rec_abr = df_abr[df_abr['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        desp_abr = df_abr[df_abr['Tipo'] == 'Despesa']['V_Num'].sum()
-        sobra_abr = rec_abr - desp_abr
-        
-        var_valor = sobra_abr - sobra_mar
-        var_pct = ((sobra_abr - sobra_mar) / abs(sobra_mar) * 100) if sobra_mar != 0 else 0.0
-        
-        c_c1, c_c2, c_c3 = st.columns(3)
-        c_c1.metric("Sobra de Março", m_fmt(sobra_mar))
-        c_c2.metric("Sobra de Abril", m_fmt(sobra_abr))
-        c_c3.metric("Variação Líquida", m_fmt(var_valor), delta=f"{var_pct:.1f}%")
+    # 2. COMPARATIVO: MÊS ATUAL VS MÊS ANTERIOR
+    # Tratamento de segurança para evitar erro de dados vazios ou corrompidos
+    df_pagos = df_base[df_base['Status'] == 'Pago'].copy()
+    df_pagos = df_pagos[df_pagos['Mes_Ano'].notna()]
+    meses_unicos = sorted(df_pagos['Mes_Ano'].astype(str).unique())
+
+    # Pegamos os dois últimos meses da lista
+    if len(meses_unicos) >= 2:
+        mes_ant = meses_unicos[-2]
+        mes_atual = meses_unicos[-1]
+    elif len(meses_unicos) == 1:
+        mes_ant = None
+        mes_atual = meses_unicos[0]
+    else:
+        mes_ant, mes_atual = None, None
+
+    with st.expander(f"📊 Comparativo de Sobra Mensal ({mes_ant or 'N/A'} vs. {mes_atual or 'Atual'})", expanded=True):
+        if mes_atual:
+  
+            # Filtra os dados dinamicamente
+            df_m1 = df_base[(df_base['Mes_Ano'] == mes_ant) & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')] if mes_ant else None
+            df_m2 = df_base[(df_base['Mes_Ano'] == mes_atual) & (df_base['Categoria'] != 'Transferência') & (df_base['Status'] == 'Pago')]
+            
+            # Função para calcular sobra
+            def calcular_sobra(df):
+                if df is None or df.empty: return 0.0
+                rec = df[df['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+                desp = df[df['Tipo'] == 'Despesa']['V_Num'].sum()
+                return rec - desp
+
+            sobra_m1 = calcular_sobra(df_m1)
+            sobra_m2 = calcular_sobra(df_m2)
+            
+            var_valor = sobra_m2 - sobra_m1
+            var_pct = ((sobra_m2 - sobra_m1) / abs(sobra_m1) * 100) if sobra_m1 != 0 else 0.0
+            
+            c_c1, c_c2, c_c3 = st.columns(3)
+            c_c1.metric(f"Sobra de {mes_ant or '---'}", m_fmt(sobra_m1))
+            c_c2.metric(f"Sobra de {mes_atual}", m_fmt(sobra_m2))
+            c_c3.metric("Variação Líquida", m_fmt(var_valor), delta=f"{var_pct:.1f}%")
+        else:
+            st.write("Sem dados suficientes para o comparativo.")
 
     st.divider()
-
+  
     # 3. DATAFRAME: BANCOS E CARTÕES
     st.subheader("🏦 Informações de Contas e Cartões")
     if not df_bancos_info.empty:
