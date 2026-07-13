@@ -592,7 +592,6 @@ if "💰" in st.session_state.page:
     # --- COMPARATIVO MENSAL ---
 
 # --- 1. COMPARATIVO MENSAL (CORRIGIDO) ---
-with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
    # --- 1. COMPARATIVO MENSAL (AGORA COM A VARIÁVEL CORRETA) ---
 with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
     # Usando a variável 'mes_atual' do seu sistema
