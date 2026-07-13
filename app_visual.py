@@ -594,31 +594,52 @@ if "💰" in st.session_state.page:
    # Só executa se estivermos na aba "Finanças" ou "Bancos"
 if aba in ["Finanças", "Bancos"]:
     
-    # --- 1. COMPARATIVO MENSAL ---
-    with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
-        if 'mes_atual' in locals():
-            # ... (código do comparativo) ...
-            # Certifique-se que aqui dentro você usa df_base ou o dataframe correto
-            mes_escolhido = int(mes_atual.split('/')[0])
-            # ... resto do código do comparativo ...
+   
+       # --- 1. COMPARATIVO MENSAL ---
+with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
+    if 'mes_atual' in locals() and "/" in mes_atual:
+        mes_escolhido = int(mes_atual.split('/')[0])
+        mes_anterior = mes_escolhido - 1 if mes_escolhido > 1 else 12
+        
+        df_comp = df_base.copy()
+        df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
+        df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior, mes_escolhido])].copy()
+        
+        df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
+            index='Categoria', columns=df_comp['Vencimento'].dt.month, values='V_Num', aggfunc='sum'
+        ).fillna(0)
+        
+        df_pivot = df_pivot.rename(columns={mes_anterior: "Mês Anterior", mes_escolhido: "Mês Atual"})
+        
+        if "Mês Anterior" in df_pivot.columns and "Mês Atual" in df_pivot.columns:
+            df_pivot['Variação (%)'] = ((df_pivot["Mês Atual"] - df_pivot["Mês Anterior"]) / df_pivot["Mês Anterior"] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
+            st.dataframe(df_pivot.style.format("{:.2f}"), use_container_width=True)
         else:
-            st.warning("Selecione um mês para comparar.")
+            st.info("Dados insuficientes para comparar este mês com o anterior.")
+    else:
+        st.warning("Selecione um mês para comparar.")
 
-    # --- 2. MONITOR DE PENDÊNCIAS ---
-    with st.expander("🔔 Ver Monitor de Pendências do Período"):
-        if 'mes_atual' in locals():
-            df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == mes_atual)]
-            # ... (código das pendências) ...
+# --- 2. MONITOR DE PENDÊNCIAS ---
+with st.expander("🔔 Ver Monitor de Pendências do Período"):
+    if 'mes_atual' in locals():
+        df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == mes_atual)]
+        if not df_pendente_mes.empty:
             st.dataframe(df_pendente_mes[['Vencimento', 'Descrição', 'Banco', 'Valor', 'Categoria']], use_container_width=True)
+        else:
+            st.success("Tudo limpo! Nenhuma pendência para este mês.")
 
-
-   
-# --- WILSONBOT ---
-   
+# --- 3. WILSONBOT ---
 st.subheader("🤖 Consultor WilsonBot")
-df_atual = df_m 
+
+# CORREÇÃO: Use df_m_limpo aqui para evitar o NameError
+if 'df_m_limpo' in locals():
+    df_atual = df_m_limpo.copy()
+else:
+    df_atual = df_base.copy()
+
 filtro_exclusao = (df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(['Transferência']))
 total_gasto = df_atual[filtro_exclusao]['V_Num'].sum()
+# ... (resto do seu código do WilsonBot continua igual)
 df_despesas_totais = df_base[df_base['Tipo'] == 'Despesa']
 meses_passados = df_despesas_totais.groupby('Mes_Ano')['V_Num'].sum().tail(3).mean()
 
