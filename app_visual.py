@@ -585,6 +585,7 @@ if "💰" in st.session_state.page:
 
                                         # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA O SEU CÓDIGO) ---
        
+
 with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
     # 1. Obter o número do mês atual a partir da sua seleção
     mes_map = {"Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6, 
@@ -623,19 +624,14 @@ with st.expander("🔄 Ver Comparativo: Mês Anterior vs. Mês Atual"):
     st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         
         # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
-        st.subheader("🔔 Monitor de Pendências do Período")
-        
-        # Filtra apenas o que está pendente E pertence ao mês selecionado
-        # Usamos 'filtro_mes' que você já definiu no seu código anterior!
-        df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == filtro_mes)]
-        
-        if not df_pendente_mes.empty:
-            st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
-            
-            # Exibe as pendências do mês
-            st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','Banco','Valor', 'Categoria']], use_container_width=True)
-        else:
-            st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
+st.subheader("🔔 Monitor de Pendências do Período")
+df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == filtro_mes)]
+
+if not df_pendente_mes.empty:
+    st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
+    st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','Banco','Valor', 'Categoria']], use_container_width=True)
+else:
+    st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
         
         
             # --- AQUI COMEÇA O WILSONBOT ---
