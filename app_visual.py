@@ -580,7 +580,7 @@ if "💰" in st.session_state.page:
                 # Procura a chave no session_state ignorando espaços extras
                 return st.session_state.get(f"m_{cat_limpa}", 0.0)
 
-            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(buscar_meta)
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat.strip()}", 0.0))
             
             # --- DEBUG RÁPIDO (Delete essa linha depois que funcionar) ---
             # st.write(df_metas_graph) 
