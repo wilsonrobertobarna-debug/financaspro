@@ -906,57 +906,52 @@ elif "📄" in aba:
             
         saldos_txt = ""
         total_patrimonio = 0.0 
-        
-        # --- FILTRAGEM ---
-        # Separamos os nomes dos bancos por tipo para não misturar no loop
-        lista_cartoes = []
-        lista_contas = []
-        lista_invest = []
 
-        for b in sorted(bancos_disponiveis):
-            tipo = ""
-            if not df_bancos_info.empty:
-                for _, row in df_bancos_info.iterrows():
-                    if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
-                        tipo = str(row.iloc[2]).strip().upper()
-                        break
-            if "CARTA" in tipo and "ALIMENT" not in tipo: lista_cartoes.append(b)
-            elif "INVEST" in tipo: lista_invest.append(b)
-            else: lista_contas.append(b)
+        # --- FUNÇÃO DE AUXÍLIO PARA LIMPEZA ---
+        def f_num(val): return float(str(val).replace('R$', '').replace('.', '').replace(',', '.') or 0)
 
-        # --- EXIBIÇÃO ---
+        # --- 1. CARTÕES ---
         st.subheader("💳 Cartões de Crédito")
-        for b in lista_cartoes:
-            # Lógica de Cartão
-            usado = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PENDENTE')]['V_Num'].sum()
-            st.write(f"💳 {b}: Usado: {m_fmt(usado)}")
-            saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
+        for b in sorted(bancos_disponiveis):
+            row = df_bancos_info[df_bancos_info.iloc[:,0] == b]
+            if not row.empty and "CARTA" in str(row.iloc[0,2]).upper() and "ALIMENT" not in str(row.iloc[0,2]).upper():
+                usado = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PENDENTE') & (df_base['Tipo'].str.upper() == 'DESPESA')]['V_Num'].sum()
+                st.markdown(f"💳 **{b}**: Usado: {m_fmt(usado)}")
+                saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
 
         st.markdown("---")
-        st.subheader("🏦 Contas e Alimentação")
-        for b in lista_contas:
-            # Lógica de Conta
-            val_b = float(str(df_bancos_info[df_bancos_info.iloc[:,0] == b].iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
-            mov = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
-            s_final = val_b + mov[mov['Tipo'].str.upper().str.contains('RECEITA|REND')]['V_Num'].sum() - mov[mov['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
-            icone = "🍽️" if "ALIMENT" in b.upper() else "🏦"
-            st.write(f"{icone} {b}: Saldo: {m_fmt(s_final)}")
-            saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
-            total_patrimonio += s_final
+        
+        # --- 2. CONTAS E ALIMENTAÇÃO ---
+        st.subheader("🏦 Contas e Benefícios")
+        for b in sorted(bancos_disponiveis):
+            row = df_bancos_info[df_bancos_info.iloc[:,0] == b]
+            if not row.empty and "CARTA" not in str(row.iloc[0,2]).upper() and "INVEST" not in str(row.iloc[0,2]).upper():
+                val_b = f_num(row.iloc[0,1])
+                mov = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
+                rec = mov[mov['Tipo'].str.upper().str.contains('RECEITA|REND')]['V_Num'].sum()
+                des = mov[mov['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
+                s_final = val_b + rec - des
+                icone = "🍽️" if "ALIMENT" in b.upper() else "🏦"
+                st.markdown(f"{icone} **{b}**: Saldo: {m_fmt(s_final)}")
+                saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
+                total_patrimonio += s_final
 
         st.markdown("---")
+
+        # --- 3. INVESTIMENTOS ---
         st.subheader("📈 Investimentos")
-        for b in lista_invest:
-            val_b = float(str(df_bancos_info[df_bancos_info.iloc[:,0] == b].iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
-            st.write(f"📈 {b}: Saldo: {m_fmt(val_b)}")
-            saldos_txt += f"📈 {b}: Saldo: {m_fmt(val_b)}\n"
-            total_patrimonio += val_b
+        for b in sorted(bancos_disponiveis):
+            row = df_bancos_info[df_bancos_info.iloc[:,0] == b]
+            if not row.empty and "INVEST" in str(row.iloc[0,2]).upper():
+                val_b = f_num(row.iloc[0,1])
+                st.markdown(f"📈 **{b}**: Saldo: {m_fmt(val_b)}")
+                saldos_txt += f"📈 {b}: Saldo: {m_fmt(val_b)}\n"
+                total_patrimonio += val_b
 
-        # --- RESUMO FINAL (No final, exatamente como você quer) ---
+        # --- RODAPÉ E RELATÓRIO ---
         st.divider()
         st.metric("💰 TOTAL PATRIMÔNIO", m_fmt(total_patrimonio))
         
-        # Cálculo de Receita/Despesa do período
         df_base['DT_O'] = pd.to_datetime(df_base['DT']).dt.date
         df_p = df_base[(df_base['DT_O'] >= d_ini) & (df_base['DT_O'] <= d_fim)]
         rec_v = df_p[(df_p['Tipo'].str.upper() == 'RECEITA') & (df_p['Status'] == 'PAGO')]['V_Num'].sum()
