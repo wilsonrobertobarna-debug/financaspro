@@ -907,16 +907,24 @@ elif "📄" in aba:
         cartoes, contas, inves = [], [], []
         
         # --- CLASSIFICAÇÃO COM LOG DE SEGURANÇA ---
+       cartoes, contas, inves = [], [], []
+        
         for b in sorted(bancos_disponiveis):
             info = df_bancos_info[df_bancos_info.iloc[:,0] == b]
             if info.empty: continue
             
             tipo_raw = str(info.iloc[0,2]).strip().lower()
             
-            # Ajuste: incluí "vale alimentação" e qualquer coisa que tenha "cartao"
-            if "cartao" in tipo_raw or "vale" in tipo_raw:
+            # DEBUG: Se você quiser ver o que ele está lendo, descomente a linha abaixo:
+            # st.write(f"DEBUG: {b} -> Tipo lido: '{tipo_raw}'")
+            
+            # Vamos classificar olhando tanto pelo Tipo quanto pelo NOME do banco
+            eh_cartao = "cartao" in tipo_raw or "cartao" in b.lower()
+            eh_invest = "invest" in tipo_raw or "poup" in tipo_raw
+            
+            if eh_cartao:
                 cartoes.append(b)
-            elif "investimento" in tipo_raw or "poupança" in tipo_raw:
+            elif eh_invest:
                 inves.append(b)
             else:
                 contas.append(b)
