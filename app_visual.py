@@ -964,44 +964,49 @@ elif "📄" in aba:
         
     
 # --- LÓGICA DE CARTÃO DE CRÉDITO (Cálculo Automático de Fatura) ---
-        if "CARTA" in tipo_c.upper() and "ALIMENT" not in tipo_c.upper():
-            # Filtra apenas o banco específico e despesas pendentes
-            df_cart = df_base[(df_base['Banco'] == b) & 
-                               (df_base['Tipo'].str.upper() == 'DESPESA') & 
-                               (df_base['Status'].str.upper() == 'PENDENTE')].copy()
-            
-            # Converte a data da compra para o formato correto
-            df_cart['DT_COMPRA'] = pd.to_datetime(df_cart['DT'])
-            
-            # Função para saber se a compra cai na fatura do mês atual
-            def pertence_a_fatura(data_compra, dia_fech):
-                # Se o dia da compra é <= dia de fechamento, pertence ao ciclo atual.
-                # Se for maior, pertence ao ciclo do mês seguinte.
-                return data_compra.day <= dia_fech
-
-            # Filtra: pega compras feitas no ciclo que vence no mês selecionado
-            # (Aqui ele verifica se a compra pertence ao ciclo da fatura que você quer ver)
-            df_cart['No_Ciclo'] = df_cart['DT_COMPRA'].apply(lambda x: pertence_a_fatura(x, dia_fech_d))
-            
-            # Soma o usado apenas do que entra no ciclo
-            usado = df_cart[df_cart['No_Ciclo'] == True]['V_Num'].sum()
-            
-            dispo = valor_b - usado
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+        st.subheader("💳 Cartões de Crédito")
+        for b in sorted(bancos_disponiveis):
+                if "CARTA" in tipo_c.upper() and "ALIMENT" not in tipo_c.upper():
+                    # Filtra apenas o banco específico e despesas pendentes
+                    df_cart = df_base[(df_base['Banco'] == b) & 
+                                       (df_base['Tipo'].str.upper() == 'DESPESA') & 
+                                       (df_base['Status'].str.upper() == 'PENDENTE')].copy()
+                    
+                    # Converte a data da compra para o formato correto
+                    df_cart['DT_COMPRA'] = pd.to_datetime(df_cart['DT'])
+                    
+                    # Função para saber se a compra cai na fatura do mês atual
+                    def pertence_a_fatura(data_compra, dia_fech):
+                        # Se o dia da compra é <= dia de fechamento, pertence ao ciclo atual.
+                        # Se for maior, pertence ao ciclo do mês seguinte.
+                        return data_compra.day <= dia_fech
         
+                    # Filtra: pega compras feitas no ciclo que vence no mês selecionado
+                    # (Aqui ele verifica se a compra pertence ao ciclo da fatura que você quer ver)
+                    df_cart['No_Ciclo'] = df_cart['DT_COMPRA'].apply(lambda x: pertence_a_fatura(x, dia_fech_d))
+                    
+                    # Soma o usado apenas do que entra no ciclo
+                    usado = df_cart[df_cart['No_Ciclo'] == True]['V_Num'].sum()
+                    
+                    dispo = valor_b - usado
+                    saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+        st.markdown("---")
+            
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
         else:
-            saldo_inicial = valor_b
-            # Para contas normais, mantemos apenas o que já foi 'Pago'
-            mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
-            rec_b = mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
-            des_b = mov_paga[mov_paga['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
-            s_final = saldo_inicial + rec_b - des_b
-            
-            icone = "💰" if "INVEST" in tipo_c else "🏦"
-            saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
-            total_patrimonio += s_final
+            st.subheader("📈 Investimentos")
+        for b in sorted(bancos_disponiveis):
+            if "INVEST" in tipo_c.upper():
+                s_final = valor_b # Ajuste conforme sua lógica de cálculo de inv
+                st.write(f"📈 **{b}**: Saldo: {m_fmt(s_final)}")
+                saldos_txt += f"📈 {b}: Saldo: {m_fmt(s_final)}\n"
+                total_patrimonio += s_final
 
+        # --- RESUMO E ENVIO ---
+        st.divider()
+        st.metric("💰 TOTAL PATRIMÔNIO", m_fmt(total_patrimonio))
+        st.text_area("Copiar Relatório", relat, height=200) # (Certifique-se que a variável 'relat' está montada)
+        st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
     # 2. RESUMO DO RELATÓRIO (Rendimento e Sobra)
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
