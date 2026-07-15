@@ -898,33 +898,26 @@ elif "📄" in aba:
         st.title("📄 WhatsApp")
         import calendar
         
-        # Função interna de formatação para evitar o NameError
-        def m_fmt(valor):
-            return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
+        # Datas (suas linhas de d_ini e d_fim continuam aqui)
         d_ini = st.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
         d_fim = st.date_input("Fim", hoje_br.replace(day=calendar.monthrange(hoje_br.year, hoje_br.month)[1]), format="DD/MM/YYYY", key="zap_d2")
             
         saldos_txt = "" 
         total_patrimonio = 0.0 
 
-        # --- SEPARAÇÃO PELA PLANILHA ---
+        # --- AQUI É ONDE VOCÊ COLOCA O CÓDIGO DA SEPARAÇÃO ROBUSTA ---
         cartoes, contas, inves = [], [], []
         
         for b in sorted(bancos_disponiveis):
-            # Busca a linha do banco na planilha de informações
             info = df_bancos_info[df_bancos_info.iloc[:,0] == b]
             if info.empty: continue
             
-            # Pega o tipo da coluna 3 (índice 2)
-            tipo_b = str(info.iloc[0,2]).upper()
+            tipo_raw = str(info.iloc[0,2]).strip().lower()
             
-            if "CARTA" in tipo_b and "ALIMENT" not in tipo_b:
+            if "cartao" in tipo_raw:
                 cartoes.append(b)
-            elif "INVEST" in tipo_b:
+            elif "investimento" in tipo_raw:
                 inves.append(b)
-            else:
-                contas.append(b)
 
         # --- EXIBIÇÃO ---
         st.subheader("💳 Cartões de Crédito")
