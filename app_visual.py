@@ -994,11 +994,8 @@ elif "📄" in aba:
         else:
             saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)} (Venc: {dia_venc_e})\n"
            
-        
-        
-        # --- LÓGICA DE CONTA / INVESTIMENTO ---
-        else:
-            saldo_inicial = valor_b
+ 
+            #saldo_inicial = valor_b
             # Para contas normais, mantemos apenas o que já foi 'Pago'
             mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
             rec_b = mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
