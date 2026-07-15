@@ -898,26 +898,28 @@ elif "📄" in aba:
         st.title("📄 WhatsApp")
         import calendar
         
-        # Datas (suas linhas de d_ini e d_fim continuam aqui)
         d_ini = st.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
         d_fim = st.date_input("Fim", hoje_br.replace(day=calendar.monthrange(hoje_br.year, hoje_br.month)[1]), format="DD/MM/YYYY", key="zap_d2")
             
         saldos_txt = "" 
         total_patrimonio = 0.0 
 
-        # --- AQUI É ONDE VOCÊ COLOCA O CÓDIGO DA SEPARAÇÃO ROBUSTA ---
         cartoes, contas, inves = [], [], []
         
+        # --- CLASSIFICAÇÃO COM LOG DE SEGURANÇA ---
         for b in sorted(bancos_disponiveis):
             info = df_bancos_info[df_bancos_info.iloc[:,0] == b]
             if info.empty: continue
             
             tipo_raw = str(info.iloc[0,2]).strip().lower()
             
-            if "cartao" in tipo_raw:
+            # Ajuste: incluí "vale alimentação" e qualquer coisa que tenha "cartao"
+            if "cartao" in tipo_raw or "vale" in tipo_raw:
                 cartoes.append(b)
-            elif "investimento" in tipo_raw:
+            elif "investimento" in tipo_raw or "poupança" in tipo_raw:
                 inves.append(b)
+            else:
+                contas.append(b)
 
         # --- EXIBIÇÃO ---
         st.subheader("💳 Cartões de Crédito")
@@ -926,19 +928,16 @@ elif "📄" in aba:
             st.write(f"💳 {b}: Usado: {m_fmt(usado)}")
             saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
 
-        st.markdown("---")
         st.subheader("🏦 Contas e Benefícios")
         for b in contas:
             info = df_bancos_info[df_bancos_info.iloc[:,0] == b]
             val_b = float(str(info.iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
             mov = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
             s_final = val_b + mov[mov['Tipo'].str.contains('Receita|Rend', case=False, na=False)]['V_Num'].sum() - mov[mov['Tipo'] == 'Despesa']['V_Num'].sum()
-            icone = "🍽️" if "ALIMENT" in str(info.iloc[0,2]).upper() else "🏦"
-            st.write(f"{icone} {b}: Saldo: {m_fmt(s_final)}")
-            saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
+            st.write(f"🏦 {b}: Saldo: {m_fmt(s_final)}")
+            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(s_final)}\n"
             total_patrimonio += s_final
 
-        st.markdown("---")
         st.subheader("📈 Investimentos")
         for b in inves:
             info = df_bancos_info[df_bancos_info.iloc[:,0] == b]
@@ -948,15 +947,7 @@ elif "📄" in aba:
             total_patrimonio += val_b
 
         st.divider()
-        df_p = df_base[(pd.to_datetime(df_base['DT']).dt.date >= d_ini) & (pd.to_datetime(df_base['DT']).dt.date <= d_fim)]
-        rec_v = df_p[(df_p['Tipo'] == 'Receita') & (df_p['Status'] == 'Pago')]['V_Num'].sum()
-        des_v = df_p[(df_p['Tipo'] == 'Despesa') & (df_p['Status'] == 'Pago')]['V_Num'].sum()
-        
-        relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
-        relat += f"========================================\nREC: {m_fmt(rec_v)} | DES: {m_fmt(des_v)}\n"
-        relat += f"========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL: {m_fmt(total_patrimonio)}"
-        
-        st.text_area("Copiar Relatório", relat, height=150)
+        st.text_area("Copiar Relatório", f"SALDOS:\n{saldos_txt}\nTOTAL: {m_fmt(total_patrimonio)}", height=150)
         st.markdown(f'[📲 Enviar](https://wa.me/?text={urllib.parse.quote(relat)})')
 
 
