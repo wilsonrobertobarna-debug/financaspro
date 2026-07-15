@@ -903,11 +903,9 @@ elif "📄" in aba:
             
         saldos_txt = "" 
         total_patrimonio = 0.0 
-
-        cartoes, contas, inves = [], [], []
-        
+                
         # --- CLASSIFICAÇÃO COM LOG DE SEGURANÇA ---
-       cartoes, contas, inves = [], [], []
+        cartoes, contas, inves = [], [], []
         
         for b in sorted(bancos_disponiveis):
             info = df_bancos_info[df_bancos_info.iloc[:,0] == b]
