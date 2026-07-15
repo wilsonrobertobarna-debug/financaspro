@@ -894,7 +894,7 @@ elif "🚗" in aba:
         st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 st.title("📄 WhatsApp")
-         import calendar
+         #import calendar
         
         # Datas configuradas para o mês completo
         ano, mes = hoje_br.year, hoje_br.month
