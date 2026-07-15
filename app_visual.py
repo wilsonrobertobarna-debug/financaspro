@@ -909,19 +909,23 @@ elif "📄" in aba:
         lista_cartoes = ["CARTAO", "CREDITO", "VISA", "MASTERCARD"]
         lista_invest = ["INVEST", "POU", "POUPANCA"]
 
-        # 1. CARTÕES
+       # 1. CARTÕES (Forçando qualquer coisa com CARTAO ou CREDITO)
         st.subheader("💳 Cartões de Crédito")
         for b in sorted(bancos_disponiveis):
-            if any(termo in b.upper() for termo in lista_cartoes) and "ALIMENT" not in b.upper():
+            if "CARTAO" in b.upper() or "CREDITO" in b.upper():
                 usado = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pendente')]['V_Num'].sum()
                 st.write(f"💳 {b}: Usado: {m_fmt(usado)}")
                 saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
 
-        # 2. CONTAS E ALIMENTAÇÃO
+        # 2. CONTAS E ALIMENTAÇÃO (Excluindo explicitamente os cartões)
         st.markdown("---")
         st.subheader("🏦 Contas e Benefícios")
         for b in sorted(bancos_disponiveis):
-            if not any(termo in b.upper() for termo in lista_cartoes) and not any(termo in b.upper() for termo in lista_invest):
+            # Condição: NÃO é Cartão E NÃO é Investimento/Poupança
+            eh_cartao = "CARTAO" in b.upper() or "CREDITO" in b.upper()
+            eh_invest = any(termo in b.upper() for termo in ["INVEST", "POU", "POUPANCA"])
+            
+            if not eh_cartao and not eh_invest:
                 row = df_bancos_info[df_bancos_info.iloc[:,0] == b]
                 val_b = float(str(row.iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
                 mov = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
@@ -931,6 +935,7 @@ elif "📄" in aba:
                 saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
                 total_patrimonio += s_final
 
+        
         # 3. INVESTIMENTOS
         st.markdown("---")
         st.subheader("📈 Investimentos")
