@@ -893,14 +893,7 @@ elif "🚗" in aba:
         df_car_display['Valor'] = df_car['V_Num'].apply(m_fmt)
         st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-Wilson, a razão pela qual não está separando é que o bancos_disponiveis deve estar sendo lido diretamente de uma lista que não diferencia os tipos, e o nosso if está falhando em classificar.
-
-Vamos usar uma técnica infalível: deixar o código "olhar" para a coluna de tipo da sua planilha de bancos, e não para o nome do banco. Eu garanti que, se ele encontrar "CARTA" na planilha, ele vai direto para o bloco de Cartões, sem exceção.
-
-Substitua por este código, que lê a coluna da planilha antes de decidir:
-
-Python
-   elif "📄" in aba:
+elif "📄" in aba:
         st.title("📄 WhatsApp")
         import calendar
         
