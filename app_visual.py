@@ -927,12 +927,12 @@ elif "📄" in aba:
             eh_cartao = "cartao" in tipo_raw or "cartao" in b.lower()
             eh_invest = "invest" in tipo_raw or "poup" in tipo_raw
             
-            if eh_cartao:
-                cartoes.append(b)
-            elif eh_invest:
-                inves.append(b)
-            else:
-                contas.append(b)
+            #if eh_cartao:
+                #cartoes.append(b)
+            #elif eh_invest:
+                #inves.append(b)
+            #else:
+                #contas.append(b)
 
         # --- EXIBIÇÃO ---
         st.subheader("💳 Cartões de Crédito")
