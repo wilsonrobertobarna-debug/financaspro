@@ -755,47 +755,44 @@ elif "Pendências" in aba:
         st.divider()
         st.subheader("🔔 Avisos: Vencimentos Próximos")        
     
-    c1, c2, c3 = st.columns(3) # Aumentei para 3 colunas para caber o filtro de data
-    s_bnc = c1.multiselect("Filtrar Banco/Cartão:", sorted(bancos_disponiveis))
-    b_desc = c2.text_input("Buscar Descrição:", key="busca_desc_pendencias")
-    #periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now())) # Filtro de data novo
-    # 1. Calendário forçado no padrão BR
-    periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now()), format="DD/MM/YYYY")
+  # 1. Filtros
+    c1, c2, c3 = st.columns(3)
+    s_bnc = c1.multiselect("Filtrar Banco/Cartão:", sorted(bancos_disponiveis), key="banco_aviso")
+    b_desc = c2.text_input("Buscar Descrição:", key="busca_desc_aviso")
+    # Calendário forçado no padrão BR
+    periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now()), format="DD/MM/YYYY", key="data_aviso")
 
-    # 2. Converte a coluna da planilha para data de forma segura
-   # 1. Filtro inicial de Pendentes
+    # 2. Processamento (Filtro inicial de Pendentes)
     df_v = df_base[df_base['Status'] == 'Pendente'].copy()
     
-    # 2. Conversão segura da coluna que você usa para filtrar (DT)
-    #df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], dayfirst=True, errors='coerce')
-    df_v['DT_Obj'] = pd.to_datetime(df_v['Vencimento'], dayfirst=True, errors='coerce')
-    df_v = df_v.dropna(subset=['DT_Obj']) 
+    # Conversão única e segura usando apenas 'Vencimento'
+    df_v['Data_Formatada'] = pd.to_datetime(df_v['Vencimento'], dayfirst=True, errors='coerce')
+    df_v = df_v.dropna(subset=['Data_Formatada'])
     
-    # 3. Aplicar Filtro de Banco e Descrição ANTES do filtro de data (boa prática)
+    # 3. Aplicar Filtro de Banco e Descrição
     if s_bnc:
         df_v = df_v[df_v['Banco'].isin(s_bnc)]
     if b_desc:
         df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
     
-    # 4. FILTRO ÚNICO DE DATA (Simplificado e direto)
-        df_v['Data_Formatada'] = pd.to_datetime(df_v['Vencimento'], dayfirst=True, errors='coerce')
-    
-    # Aplicação do filtro de data (usando a mesma lógica da primeira parte)
+    # 4. Filtro de Data único e direto
     if isinstance(periodo, tuple) and len(periodo) == 2:
         df_v = df_v[
             (df_v['Data_Formatada'].dt.date >= periodo[0]) & 
             (df_v['Data_Formatada'].dt.date <= periodo[1])
         ]
-        # Filtra o dataframe usando as datas convertidas
-        df_v = df_v[(df_v['DT_Obj'] >= inicio) & (df_v['DT_Obj'] <= fim)]
         
     # 5. Exibição
-    df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
+    st.write(f"Total de itens encontrados: {len(df_v)}")
+    
+    # Garante que as colunas existem antes de exibir
+    colunas_exibicao = ['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']
+    df_v_display = df_v[colunas_exibicao].copy()
+    
+    # Formatação do Valor
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
     
-    st.write(f"Total de itens encontrados: {len(df_v_display)}") # Adicionei isso para você ver se o filtro está achando algo
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
-
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
     
