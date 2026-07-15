@@ -897,10 +897,9 @@ elif "📄" in aba:
         st.title("📄 WhatsApp")
         import calendar
         
-        # Datas configuradas para o mês completo
+        # Datas
         ano, mes = hoje_br.year, hoje_br.month
         data_fim_mes = hoje_br.replace(day=calendar.monthrange(ano, mes)[1])
-        
         c1, c2 = st.columns(2)
         d_ini = c1.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
         d_fim = c2.date_input("Fim", data_fim_mes, format="DD/MM/YYYY", key="zap_d2")
@@ -908,63 +907,67 @@ elif "📄" in aba:
         saldos_txt = ""
         total_patrimonio = 0.0 
         
-        # --- ESTRUTURA VISUAL: CARTÕES ---
+        # --- FILTRAGEM ---
+        # Separamos os nomes dos bancos por tipo para não misturar no loop
+        lista_cartoes = []
+        lista_contas = []
+        lista_invest = []
+
+        for b in sorted(bancos_disponiveis):
+            tipo = ""
+            if not df_bancos_info.empty:
+                for _, row in df_bancos_info.iterrows():
+                    if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
+                        tipo = str(row.iloc[2]).strip().upper()
+                        break
+            if "CARTA" in tipo and "ALIMENT" not in tipo: lista_cartoes.append(b)
+            elif "INVEST" in tipo: lista_invest.append(b)
+            else: lista_contas.append(b)
+
+        # --- EXIBIÇÃO ---
         st.subheader("💳 Cartões de Crédito")
-        for b in sorted(bancos_disponiveis):
-            valor_b, tipo_c, dia_fech_d, dia_venc_e = 0.0, "", 1, 10
-            if not df_bancos_info.empty:
-                for _, row in df_bancos_info.iterrows():
-                    if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
-                        try:
-                            valor_b = float(str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip() or 0)
-                            tipo_c = str(row.iloc[2]).strip().upper()
-                            if len(row) >= 4: dia_fech_d = int(float(str(row.iloc[3]).replace('R$', '').strip() or 1))
-                            if len(row) >= 5: dia_venc_e = int(float(str(row.iloc[4]).replace('R$', '').strip() or 10))
-                        except: pass
-                        break
-            
-            if "CARTA" in tipo_c and "ALIMENT" not in tipo_c:
-                df_cart = df_base[(df_base['Banco'] == b) & (df_base['Tipo'].str.upper() == 'DESPESA') & (df_base['Status'].str.upper() == 'PENDENTE')].copy()
-                df_cart['DT_COMPRA'] = pd.to_datetime(df_cart['DT'])
-                usado = df_cart[df_cart['DT_COMPRA'].apply(lambda x: x.day <= dia_fech_d)]['V_Num'].sum()
-                st.write(f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(valor_b - usado)}")
-                saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(valor_b - usado)} (Venc: {dia_venc_e})\n"
-        
+        for b in lista_cartoes:
+            # Lógica de Cartão
+            usado = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PENDENTE')]['V_Num'].sum()
+            st.write(f"💳 {b}: Usado: {m_fmt(usado)}")
+            saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
+
         st.markdown("---")
+        st.subheader("🏦 Contas e Alimentação")
+        for b in lista_contas:
+            # Lógica de Conta
+            val_b = float(str(df_bancos_info[df_bancos_info.iloc[:,0] == b].iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
+            mov = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
+            s_final = val_b + mov[mov['Tipo'].str.upper().str.contains('RECEITA|REND')]['V_Num'].sum() - mov[mov['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
+            icone = "🍽️" if "ALIMENT" in b.upper() else "🏦"
+            st.write(f"{icone} {b}: Saldo: {m_fmt(s_final)}")
+            saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
+            total_patrimonio += s_final
 
-        # --- ESTRUTURA VISUAL: CONTAS E INVESTIMENTOS ---
-        st.subheader("🏦 Contas e Investimentos")
-        for b in sorted(bancos_disponiveis):
-            valor_b, tipo_c = 0.0, ""
-            if not df_bancos_info.empty:
-                for _, row in df_bancos_info.iterrows():
-                    if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
-                        valor_b = float(str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip() or 0)
-                        tipo_c = str(row.iloc[2]).strip().upper()
-                        break
-            
-            if "CARTA" not in tipo_c:
-                mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
-                s_final = valor_b + mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum() - mov_paga[mov_paga['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
-                icone = "📈" if "INVEST" in tipo_c else ("🍽️" if "ALIMENT" in tipo_c else "🏦")
-                st.write(f"{icone} {b}: Saldo: {m_fmt(s_final)}")
-                saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
-                total_patrimonio += s_final
+        st.markdown("---")
+        st.subheader("📈 Investimentos")
+        for b in lista_invest:
+            val_b = float(str(df_bancos_info[df_bancos_info.iloc[:,0] == b].iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
+            st.write(f"📈 {b}: Saldo: {m_fmt(val_b)}")
+            saldos_txt += f"📈 {b}: Saldo: {m_fmt(val_b)}\n"
+            total_patrimonio += val_b
 
-        # --- RESUMO FINAL ---
+        # --- RESUMO FINAL (No final, exatamente como você quer) ---
         st.divider()
-        df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
-        df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)]
+        st.metric("💰 TOTAL PATRIMÔNIO", m_fmt(total_patrimonio))
         
-        rec_v = df_per[(df_per['Tipo'].str.upper() == 'RECEITA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
-        des_v = df_per[(df_per['Tipo'].str.upper() == 'DESPESA') & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        # Cálculo de Receita/Despesa do período
+        df_base['DT_O'] = pd.to_datetime(df_base['DT']).dt.date
+        df_p = df_base[(df_base['DT_O'] >= d_ini) & (df_base['DT_O'] <= d_fim)]
+        rec_v = df_p[(df_p['Tipo'].str.upper() == 'RECEITA') & (df_p['Status'] == 'PAGO')]['V_Num'].sum()
+        des_v = df_p[(df_p['Tipo'].str.upper() == 'DESPESA') & (df_p['Status'] == 'PAGO')]['V_Num'].sum()
         
         relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
         relat += f"========================================\nREC: {m_fmt(rec_v)} | DES: {m_fmt(des_v)}\n"
         relat += f"========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL: {m_fmt(total_patrimonio)}"
         
         st.text_area("Copiar Relatório", relat, height=200)
-        st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
+        st.markdown(f'[📲 Enviar](https://wa.me/?text={urllib.parse.quote(relat)})')
 
 
 if aba == "📋 Relatório PDF":
