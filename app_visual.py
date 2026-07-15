@@ -988,15 +988,15 @@ elif "📄" in aba:
     # -------------------------------------------------------------------------
     # LINHA 1 DE FILTROS: BANCO E PERÍODO (Estrutura original mantida intacta)
     # -------------------------------------------------------------------------
-    col_rel1, col_rel2 = st.columns(2)
-    with col_rel1:
-        opcoes_banco_rel = ["Todos"] + list(bancos_disponiveis)
-        banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel)
-        
-    with col_rel2:
-        data_padrao_ini = datetime(2026, 4, 20)
-        data_padrao_fim = datetime(2026, 5, 20)
-        periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
+        col_rel1, col_rel2 = st.columns(2)
+        with col_rel1:
+            opcoes_banco_rel = ["Todos"] + list(bancos_disponiveis)
+            banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel)
+            
+        with col_rel2:
+            data_padrao_ini = datetime(2026, 4, 20)
+            data_padrao_fim = datetime(2026, 5, 20)
+            periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
 
     # -------------------------------------------------------------------------
     # LINHA 2 DE FILTROS: DESCRIÇÃO E STATUS 
