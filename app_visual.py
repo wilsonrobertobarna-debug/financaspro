@@ -704,27 +704,26 @@ if "💰" in st.session_state.page:
         else:
             st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
-elif "Pendências" in aba:
-        st.title("📋 Lançamentos Pendentes")
+    st.title("📋 Lançamentos Pendentes")
         
-        # --- FILTROS UNIFICADOS ---
-        c1, c2, c3 = st.columns(3)
-        filtro_banco = c1.multiselect("Filtrar Banco/Cartão:", sorted(bancos_disponiveis), key="banco_pend")
-        busca_desc = c2.text_input("Buscar Descrição:", key="desc_pend")
-        periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now()), format="DD/MM/YYYY", key="data_pend")
+    # --- FILTROS UNIFICADOS ---
+    c1, c2, c3 = st.columns(3)
+    filtro_banco = c1.multiselect("Filtrar Banco/Cartão:", sorted(bancos_disponiveis), key="banco_pend")
+    busca_desc = c2.text_input("Buscar Descrição:", key="desc_pend")
+    periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now()), format="DD/MM/YYYY", key="data_pend")
 
-        # --- PROCESSAMENTO ---
-        df_v = df_base[df_base['Status'].astype(str).str.strip().str.lower() == 'pendente'].copy()
-        df_v['Data_Formatada'] = pd.to_datetime(df_v['Vencimento'], dayfirst=True, errors='coerce')
-        df_v = df_v.dropna(subset=['Data_Formatada'])
+    # --- PROCESSAMENTO ---
+    df_v = df_base[df_base['Status'].astype(str).str.strip().str.lower() == 'pendente'].copy()
+    df_v['Data_Formatada'] = pd.to_datetime(df_v['Vencimento'], dayfirst=True, errors='coerce')
+    df_v = df_v.dropna(subset=['Data_Formatada'])
 
-        if filtro_banco:
-            df_v = df_v[df_v['Banco'].isin(filtro_banco)]
-        if busca_desc:
-            df_v = df_v[df_v['Descrição'].str.contains(busca_desc, case=False, na=False)]
+    if filtro_banco:
+        df_v = df_v[df_v['Banco'].isin(filtro_banco)]
+    if busca_desc:
+        df_v = df_v[df_v['Descrição'].str.contains(busca_desc, case=False, na=False)]
         
-        if isinstance(periodo, tuple) and len(periodo) == 2:
-            df_v = df_v[(df_v['Data_Formatada'].dt.date >= periodo[0]) & (df_v['Data_Formatada'].dt.date <= periodo[1])]
+    if isinstance(periodo, tuple) and len(periodo) == 2:
+        df_v = df_v[(df_v['Data_Formatada'].dt.date >= periodo[0]) & (df_v['Data_Formatada'].dt.date <= periodo[1])]
 
         # --- EXIBIÇÃO ---
         st.write(f"### Lançamentos Encontrados: {len(df_v)}")
