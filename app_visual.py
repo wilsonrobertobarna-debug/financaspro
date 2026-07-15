@@ -787,19 +787,17 @@ elif "Pendências" in aba:
     df_v = df_base[df_base['Status'] == 'Pendente'].copy()
     
     # 2. Converte a coluna da planilha para data de forma segura
-    df_v = df_base[df_base['Status'] == 'Pendente'].copy()
+   df_v = df_base[df_base['Status'] == 'Pendente'].copy()
     
-    # TESTE DE DIAGNÓSTICO:
-    # Vamos converter forçando o formato da sua planilha.
-    # Se a data na sua planilha estiver, por exemplo, "01/05/2026", o formato é "%d/%m/%Y"
-    df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], format='%d/%m/%Y', errors='coerce')
+    # Converte forçando o erro a virar vazio (NaT), e depois removemos as linhas com erro
+    df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], dayfirst=True, errors='coerce')
+    df_v = df_v.dropna(subset=['DT_Obj']) # Isso remove aquela linha que estava dando erro
     
-    # Isso vai nos dizer se as datas estão sendo lidas ou virando "NaT" (vazio)
-    st.write(f"Linhas com data válida: {df_v['DT_Obj'].notna().sum()} de {len(df_v)}")
-    
-    if df_v['DT_Obj'].isna().sum() > 0:
-        st.error("Opa! O Python não conseguiu ler algumas datas. Verifique se estão todas no formato DD/MM/AAAA na planilha.")
-    
+    # Aplicação do filtro de data (usando a mesma lógica que você disse que funciona na outra aba)
+    if isinstance(periodo, tuple) and len(periodo) == 2:
+        # Garantir que a comparação seja feita com o objeto data
+        mask = (df_v['DT_Obj'].dt.date >= periodo[0]) & (df_v['DT_Obj'].dt.date <= periodo[1])
+        df_v = df_v[mask]    
     # 3. Filtros de texto/banco
     if s_bnc:
         df_v = df_v[df_v['Banco'].isin(s_bnc)]
