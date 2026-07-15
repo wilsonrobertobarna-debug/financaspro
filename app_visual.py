@@ -987,8 +987,8 @@ elif "📄" in aba:
             usado = df_cart[df_cart['No_Ciclo'] == True]['V_Num'].sum()
 
             if valor_b > 0:
-            dispo = valor_b - usado
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+                dispo = valor_b - usado
+                saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
 
             else:
                 # Caso seja um cartão sem limite definido na planilha
