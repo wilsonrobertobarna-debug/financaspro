@@ -1413,7 +1413,7 @@ if aba == "📊 Análises & Configurações":
     else:
         mes_ant, mes_atual = None, None
 
-    with st.expander(f"📊 Comparativo de Sobra Mensal ({mes_ant or 'N/A'} vs. {mes_atual or 'Atual'})", expanded=True):
+    with st.expander(f"📊 Comparativo de Sobra Mensal ({mes_ant or 'N/A'} vs. {mes_atual or 'Atual'})", expanded=False):
         if mes_atual:
   
             # Filtra os dados dinamicamente
