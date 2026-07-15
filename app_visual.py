@@ -894,10 +894,16 @@ elif "🚗" in aba:
         st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "📄" in aba:
-    st.title("📄 WhatsApp")
+    #st.title("📄 WhatsApp")
+    
+    #c1, c2 = st.columns(2)
+    #d_ini = c1.date_input("Início", hoje_br - timedelta(days=30), format="DD/MM/YYYY", key="zap_d1")
+    #d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY", key="zap_d2")
+    # Define o primeiro dia do mês atual e o dia de hoje (ou último dia do mês)
+    primeiro_dia_mes = hoje_br.replace(day=1)
     
     c1, c2 = st.columns(2)
-    d_ini = c1.date_input("Início", hoje_br - timedelta(days=30), format="DD/MM/YYYY", key="zap_d1")
+    d_ini = c1.date_input("Início", primeiro_dia_mes, format="DD/MM/YYYY", key="zap_d1")
     d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY", key="zap_d2")
     
     saldos_txt = ""
