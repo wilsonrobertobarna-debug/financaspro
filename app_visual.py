@@ -785,7 +785,8 @@ elif "Pendências" in aba:
     df_v = df_base[df_base['Status'] == 'Pendente'].copy()
     
     # Garantir que a coluna de data esteja no formato correto para o filtro
-    df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], errors='coerce') 
+    #df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], errors='coerce')
+    df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], dayfirst=True, errors='coerce')
     
     if s_bnc:
         df_v = df_v[df_v['Banco'].isin(s_bnc)]
