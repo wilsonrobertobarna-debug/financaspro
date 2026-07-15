@@ -764,7 +764,7 @@ elif "Pendências" in aba:
             for idx_df, row in df_filtrado.iterrows():
                 linha_sheets = int(idx_df) + 2
                 ws_base.update_cell(linha_sheets, idx_status, "Pago")
-                ws_base.update_cell(linha_sheets, idx_venc, nova_data.strftime("%d/%m/%Y"))
+                ws_base.update_cell(linha_sheets, idx_venc, nova_data.strftime("%d/%m/%Y"))                
                 sucessos += 1
             
             st.toast(f"✅ {sucessos} itens baixados!", icon="💰")
@@ -789,7 +789,8 @@ elif "Pendências" in aba:
     df_v = df_base[df_base['Status'] == 'Pendente'].copy()
     
     # 2. Conversão segura da coluna que você usa para filtrar (DT)
-    df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], dayfirst=True, errors='coerce')
+    #df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], dayfirst=True, errors='coerce')
+    df_v['DT_Obj'] = pd.to_datetime(df_v['Vencimento'], dayfirst=True, errors='coerce')
     df_v = df_v.dropna(subset=['DT_Obj']) 
     
     # 3. Aplicar Filtro de Banco e Descrição ANTES do filtro de data (boa prática)
@@ -799,9 +800,14 @@ elif "Pendências" in aba:
         df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
     
     # 4. FILTRO ÚNICO DE DATA (Simplificado e direto)
+        df_v['Data_Formatada'] = pd.to_datetime(df_v['Vencimento'], dayfirst=True, errors='coerce')
+    
+    # Aplicação do filtro de data (usando a mesma lógica da primeira parte)
     if isinstance(periodo, tuple) and len(periodo) == 2:
-        inicio = pd.to_datetime(periodo[0])
-        fim = pd.to_datetime(periodo[1])
+        df_v = df_v[
+            (df_v['Data_Formatada'].dt.date >= periodo[0]) & 
+            (df_v['Data_Formatada'].dt.date <= periodo[1])
+        ]
         # Filtra o dataframe usando as datas convertidas
         df_v = df_v[(df_v['DT_Obj'] >= inicio) & (df_v['DT_Obj'] <= fim)]
         
