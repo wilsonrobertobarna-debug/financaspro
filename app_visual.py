@@ -907,13 +907,18 @@ elif "📄" in aba:
             row = df_bancos_info[df_bancos_info.iloc[:,0] == b]
             return str(row.iloc[0,2]).upper() if not row.empty else ""
 
+        # --- LÓGICA DE FILTRAGEM ---
         st.subheader("💳 Cartões de Crédito")
         for b in sorted(bancos_disponiveis):
-            tipo = get_tipo_banco(b)
-            if "CARTA" in tipo and "ALIMENT" not in tipo:
-                usado = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pendente')]['V_Num'].sum()
-                st.write(f"💳 {b}: Usado: {m_fmt(usado)}")
-                saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
+            row = df_bancos_info[df_bancos_info.iloc[:,0] == b]
+            tipo = str(row.iloc[0,2]).upper() if not row.empty else ""
+            
+            # FILTRO: Se tiver qualquer um desses termos, vai para Cartão
+            if any(termo in tipo for termo in ["CARTA", "CREDITO", "ITAU GOLD", "VISA", "MASTERCARD"]):
+                if "ALIMENT" not in tipo:
+                    usado = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pendente')]['V_Num'].sum()
+                    st.write(f"💳 {b}: Usado: {m_fmt(usado)}")
+                    saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
 
         st.markdown("---")
         st.subheader("🏦 Contas e Benefícios")
