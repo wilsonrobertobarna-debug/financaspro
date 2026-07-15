@@ -985,7 +985,7 @@ elif "📄" in aba:
             
             # Soma o usado apenas do que entra no ciclo
             #usado = df_cart[df_cart['No_Ciclo'] == True]['V_Num'].sum()
-                df_cart_base[df_cart_base['DT_ONLY'] <= d_fim]['V_Num'].sum(
+             df_cart_base[df_cart_base['DT_ONLY'] <= d_fim]['V_Num'].sum(
             
            # dispo = valor_b - usado
             dispo = limite_cartao - usado    
