@@ -894,7 +894,12 @@ elif "🚗" in aba:
         st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 
-elif "📄" in aba:
+#elif "📄" in aba:
+        #st.title("📄 WhatsApp")
+        #import calendar
+    elif "📄" in aba:
+        # Limpa qualquer resíduo anterior da página
+        st.empty() 
         st.title("📄 WhatsApp")
         import calendar
         
