@@ -910,12 +910,12 @@ elif "📄" in aba:
     ultimo_dia = calendar.monthrange(ano, mes)[1]
     data_fim_mes = hoje_br.replace(day=ultimo_dia)
         
-        c1, c2 = st.columns(2)
-        d_ini = c1.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
-        d_fim = c2.date_input("Fim", data_fim_mes, format="DD/MM/YYYY", key="zap_d2")
+    c1, c2 = st.columns(2)
+    d_ini = c1.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
+    d_fim = c2.date_input("Fim", data_fim_mes, format="DD/MM/YYYY", key="zap_d2")
             
-        saldos_txt = ""
-        total_patrimonio = 0.0 
+    saldos_txt = ""
+    total_patrimonio = 0.0 
     
    # 1. LOOP PELOS BANCOS
     for b in sorted(bancos_disponiveis):
