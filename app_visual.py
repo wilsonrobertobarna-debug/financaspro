@@ -781,26 +781,28 @@ elif "Pendências" in aba:
     s_bnc = c1.multiselect("Filtrar Banco/Cartão:", sorted(bancos_disponiveis))
     b_desc = c2.text_input("Buscar Descrição:", key="busca_desc_pendencias")
     #periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now())) # Filtro de data novo
+    # 1. Calendário forçado no padrão BR
     periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now()), format="DD/MM/YYYY")
 
     df_v = df_base[df_base['Status'] == 'Pendente'].copy()
     
-    # Garantir que a coluna de data esteja no formato correto para o filtro
-    #df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], errors='coerce')
+    # 2. Converte a coluna da planilha para data de forma segura
     df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], dayfirst=True, errors='coerce')
     
+    # 3. Filtros de texto/banco
     if s_bnc:
         df_v = df_v[df_v['Banco'].isin(s_bnc)]
     if b_desc:
         df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
     
-    # Aplicação do filtro de data
+    # 4. FILTRO DE DATA "À PROVA DE ERRO"
     if isinstance(periodo, tuple) and len(periodo) == 2:
-        data_inicio = pd.to_datetime(periodo[0])
-        data_fim = pd.to_datetime(periodo[1])
-        df_v = df_v[(df_v['DT_Obj'] >= data_inicio) & (df_v['DT_Obj'] <= data_fim)]
-    #if isinstance(periodo, tuple) and len(periodo) == 2:
-        #df_v = df_v[(df_v['DT_Obj'].dt.date >= periodo[0]) & (df_v['DT_Obj'].dt.date <= periodo[1])]
+        # Extraímos apenas o ano, mês e dia da seleção do calendário
+        inicio = pd.Timestamp(periodo[0])
+        fim = pd.Timestamp(periodo[1])
+        
+        # Filtramos comparando apenas as datas, ignorando qualquer confusão de horas
+        df_v = df_v[(df_v['DT_Obj'] >= inicio) & (df_v['DT_Obj'] <= fim)]
         
     df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
