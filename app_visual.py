@@ -787,7 +787,18 @@ elif "Pendências" in aba:
     df_v = df_base[df_base['Status'] == 'Pendente'].copy()
     
     # 2. Converte a coluna da planilha para data de forma segura
-    df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], dayfirst=True, errors='coerce')
+    df_v = df_base[df_base['Status'] == 'Pendente'].copy()
+    
+    # TESTE DE DIAGNÓSTICO:
+    # Vamos converter forçando o formato da sua planilha.
+    # Se a data na sua planilha estiver, por exemplo, "01/05/2026", o formato é "%d/%m/%Y"
+    df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], format='%d/%m/%Y', errors='coerce')
+    
+    # Isso vai nos dizer se as datas estão sendo lidas ou virando "NaT" (vazio)
+    st.write(f"Linhas com data válida: {df_v['DT_Obj'].notna().sum()} de {len(df_v)}")
+    
+    if df_v['DT_Obj'].isna().sum() > 0:
+        st.error("Opa! O Python não conseguiu ler algumas datas. Verifique se estão todas no formato DD/MM/AAAA na planilha.")
     
     # 3. Filtros de texto/banco
     if s_bnc:
