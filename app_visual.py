@@ -898,8 +898,7 @@ elif "📄" in aba:
         import calendar
         
         # Datas
-        ano, mes = hoje_br.year, hoje_br.month
-        data_fim_mes = hoje_br.replace(day=calendar.monthrange(ano, mes)[1])
+        data_fim_mes = hoje_br.replace(day=calendar.monthrange(hoje_br.year, hoje_br.month)[1])
         c1, c2 = st.columns(2)
         d_ini = c1.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
         d_fim = c2.date_input("Fim", data_fim_mes, format="DD/MM/YYYY", key="zap_d2")
@@ -907,56 +906,42 @@ elif "📄" in aba:
         saldos_txt = "" 
         total_patrimonio = 0.0 
 
-        # Função para limpar valor da planilha
-        def limpar_valor(val):
-            return float(str(val).replace('R$', '').replace('.', '').replace(',', '.') or 0)
+        # --- EXIBIÇÃO FORÇADA ---
+        # Definimos os bancos manualmente para o exemplo, substitua pelos nomes exatos que aparecem no seu dropdown
+        
+        st.subheader("💳 Cartões de Crédito")
+        for b in sorted(bancos_disponiveis):
+            # Filtro simples: SE o nome do banco contém 'CARTÃO' ou 'CREDITO'
+            if "CARTAO" in b.upper() or "CREDITO" in b.upper():
+                usado = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pendente')]['V_Num'].sum()
+                st.write(f"💳 {b}: Usado: {m_fmt(usado)}")
+                saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
 
-        # --- EXIBIÇÃO E FILTRO ---
-        for tipo_titulo, filtro_termo, sinal in [
-            ("💳 Cartões de Crédito", "CARTA", "CARTA"),
-            ("🏦 Contas e Benefícios", "CONTA", "CARTA"),
-            ("📈 Investimentos", "INVEST", "INVEST")
-        ]:
-            st.subheader(tipo_titulo)
-            
-            for b in sorted(bancos_disponiveis):
-                row = df_bancos_info[df_bancos_info.iloc[:,0] == b]
-                if row.empty: continue
-                
-                tipo_planilha = str(row.iloc[0,2]).upper()
-                
-                # Regra rígida de filtro
-                if filtro_termo == "CARTA":
-                    if "CARTA" in tipo_planilha and "ALIMENT" not in tipo_planilha:
-                        usado = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pendente')]['V_Num'].sum()
-                        st.write(f"💳 {b}: Usado: {m_fmt(usado)}")
-                        saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
-                        
-                elif filtro_termo == "CONTA":
-                    if "CARTA" not in tipo_planilha and "INVEST" not in tipo_planilha:
-                        val_b = limpar_valor(row.iloc[0,1])
-                        mov = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
-                        rec = mov[mov['Tipo'].str.contains('Receita|Rend', case=False)]['V_Num'].sum()
-                        des = mov[mov['Tipo'] == 'Despesa']['V_Num'].sum()
-                        s_final = val_b + rec - des
-                        icone = "🍽️" if "ALIMENT" in tipo_planilha else "🏦"
-                        st.write(f"{icone} {b}: Saldo: {m_fmt(s_final)}")
-                        saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
-                        total_patrimonio += s_final
-                        
-                elif filtro_termo == "INVEST":
-                    if "INVEST" in tipo_planilha:
-                        val_b = limpar_valor(row.iloc[0,1])
-                        st.write(f"📈 {b}: Saldo: {m_fmt(val_b)}")
-                        saldos_txt += f"📈 {b}: Saldo: {m_fmt(val_b)}\n"
-                        total_patrimonio += val_b
+        st.markdown("---")
+        
+        st.subheader("🏦 Contas e Benefícios")
+        for b in sorted(bancos_disponiveis):
+            # Se NÃO é cartão e NÃO é investimento
+            if "CARTAO" not in b.upper() and "CREDITO" not in b.upper() and "INVEST" not in b.upper():
+                val_b = float(str(df_bancos_info[df_bancos_info.iloc[:,0] == b].iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
+                mov = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
+                s_final = val_b + mov[mov['Tipo'].str.contains('Receita|Rend', case=False, na=False)]['V_Num'].sum() - mov[mov['Tipo'] == 'Despesa']['V_Num'].sum()
+                st.write(f"🏦 {b}: Saldo: {m_fmt(s_final)}")
+                saldos_txt += f"🏦 {b}: Saldo: {m_fmt(s_final)}\n"
+                total_patrimonio += s_final
 
-            st.markdown("---")
+        st.markdown("---")
+        st.subheader("📈 Investimentos")
+        for b in sorted(bancos_disponiveis):
+            if "INVEST" in b.upper():
+                val_b = float(str(df_bancos_info[df_bancos_info.iloc[:,0] == b].iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
+                st.write(f"📈 {b}: Saldo: {m_fmt(val_b)}")
+                saldos_txt += f"📈 {b}: Saldo: {m_fmt(val_b)}\n"
+                total_patrimonio += val_b
 
-        # --- RESUMO FINAL ---
+        # --- RELATÓRIO FINAL ---
         st.divider()
-        df_base['DT_O'] = pd.to_datetime(df_base['DT']).dt.date
-        df_p = df_base[(df_base['DT_O'] >= d_ini) & (df_base['DT_O'] <= d_fim)]
+        df_p = df_base[(pd.to_datetime(df_base['DT']).dt.date >= d_ini) & (pd.to_datetime(df_base['DT']).dt.date <= d_fim)]
         rec_v = df_p[(df_p['Tipo'] == 'Receita') & (df_p['Status'] == 'Pago')]['V_Num'].sum()
         des_v = df_p[(df_p['Tipo'] == 'Despesa') & (df_p['Status'] == 'Pago')]['V_Num'].sum()
         
