@@ -795,7 +795,11 @@ elif "Pendências" in aba:
     
     # Aplicação do filtro de data
     if isinstance(periodo, tuple) and len(periodo) == 2:
-        df_v = df_v[(df_v['DT_Obj'].dt.date >= periodo[0]) & (df_v['DT_Obj'].dt.date <= periodo[1])]
+        data_inicio = pd.to_datetime(periodo[0])
+        data_fim = pd.to_datetime(periodo[1])
+        df_v = df_v[(df_v['DT_Obj'] >= data_inicio) & (df_v['DT_Obj'] <= data_fim)]
+    #if isinstance(periodo, tuple) and len(periodo) == 2:
+        #df_v = df_v[(df_v['DT_Obj'].dt.date >= periodo[0]) & (df_v['DT_Obj'].dt.date <= periodo[1])]
         
     df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
