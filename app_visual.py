@@ -1001,14 +1001,14 @@ elif "📄" in aba:
     # -------------------------------------------------------------------------
     # LINHA 2 DE FILTROS: DESCRIÇÃO E STATUS 
     # -------------------------------------------------------------------------
-    col_rel3, col_rel4 = st.columns(2)
-    with col_rel3:
-        busca_desc = st.text_input("🔍 Pesquisar por Descrição / Beneficiário:", "").strip()
-        
-    with col_rel4:
-        busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
-
-    st.markdown("---")
+        col_rel3, col_rel4 = st.columns(2)
+        with col_rel3:
+            busca_desc = st.text_input("🔍 Pesquisar por Descrição / Beneficiário:", "").strip()
+            
+        with col_rel4:
+            busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
+    
+        st.markdown("---")
 
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
