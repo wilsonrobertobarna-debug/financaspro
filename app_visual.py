@@ -704,74 +704,59 @@ if "💰" in st.session_state.page:
         else:
             st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
-    st.title("📋 Lançamentos Pendentes")
-    df_pend = df_base[df_base['Status'] == 'Pendente'].copy()
-    st.dataframe(df_pend[['Vencimento', 'Banco', 'Descrição', 'Valor']], use_container_width=True) 
-    
-    # 1. Filtros
-    col_b, col_d = st.columns(2)
-    with col_b:
-        filtro_banco = st.multiselect("Filtrar Banco/Cartão:", df_base['Banco'].unique(), key="banco_pend")
-    with col_d:
-        busca_desc = st.text_input("Buscar Descrição:", key="desc_pend")
-
-    periodo = st.date_input("Filtrar por Período:", (hoje.replace(day=1), hoje + timedelta(days=30)), key="data_pend")
-
-   # 2. Processamento e Filtros (Ordem Correta)
-    df_filtrado = df_base.copy()
-    
-    # 1. Filtro de Status (garante que apenas Pendentes apareçam)
-    df_filtrado['Status_Limpo'] = df_filtrado['Status'].astype(str).str.strip().str.lower()
-    df_filtrado = df_filtrado[df_filtrado['Status_Limpo'] == 'pendente'].copy()
-    
-    # 2. Filtro de Banco (se selecionado, filtra agora)
-    if filtro_banco:
-        df_filtrado = df_filtrado[df_filtrado['Banco'].isin(filtro_banco)]
+elif "Pendências" in aba:
+        st.title("📋 Lançamentos Pendentes")
         
-    # 3. Conversão de Data e Filtro de Período
-    col_data = 'Vencimento' 
-    if col_data in df_filtrado.columns:
-        df_filtrado['Data_Formatada'] = pd.to_datetime(df_filtrado[col_data], errors='coerce')
+        # --- FILTROS UNIFICADOS ---
+        c1, c2, c3 = st.columns(3)
+        filtro_banco = c1.multiselect("Filtrar Banco/Cartão:", sorted(bancos_disponiveis), key="banco_pend")
+        busca_desc = c2.text_input("Buscar Descrição:", key="desc_pend")
+        periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now()), format="DD/MM/YYYY", key="data_pend")
+
+        # --- PROCESSAMENTO ---
+        # 1. Filtra Pendentes de uma vez só
+        df_v = df_base[df_base['Status'].astype(str).str.strip().str.lower() == 'pendente'].copy()
         
-        # Filtra o período se uma tupla válida for selecionada
+        # 2. Conversão SEGURA de data (usando Vencimento em todo o código)
+        df_v['Data_Formatada'] = pd.to_datetime(df_v['Vencimento'], dayfirst=True, errors='coerce')
+        df_v = df_v.dropna(subset=['Data_Formatada'])
+
+        # 3. Aplicação dos filtros
+        if filtro_banco:
+            df_v = df_v[df_v['Banco'].isin(filtro_banco)]
+        if busca_desc:
+            df_v = df_v[df_v['Descrição'].str.contains(busca_desc, case=False, na=False)]
+        
+        # Filtro de Período
         if isinstance(periodo, tuple) and len(periodo) == 2:
-            df_filtrado = df_filtrado[
-                (df_filtrado['Data_Formatada'].dt.date >= periodo[0]) & 
-                (df_filtrado['Data_Formatada'].dt.date <= periodo[1])
-            ]
-            
-    # 4. Filtro de Descrição (Por último, para refinar)
-    if busca_desc:
-        df_filtrado = df_filtrado[df_filtrado['Descrição'].str.contains(busca_desc, case=False, na=False)]
-    
-    st.write(f"### Lançamentos Encontrados: {len(df_filtrado)}")    
-    colunas_visiveis = ['Vencimento', 'Banco', 'Descrição', 'Valor']
-    cols_existentes = [c for c in colunas_visiveis if c in df_filtrado.columns]
-    
-    # Exibe a tabela
-    st.dataframe(df_filtrado[cols_existentes], use_container_width=True, hide_index=True)
+            df_v = df_v[(df_v['Data_Formatada'].dt.date >= periodo[0]) & (df_v['Data_Formatada'].dt.date <= periodo[1])]
 
-    # 4. Botão de Baixa (Funcionalidade de Baixa)
-    if not df_filtrado.empty:
-        nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
-        if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_final"):
-            sucessos = 0
-            headers = ws_base.row_values(1)
-            idx_status = headers.index('Status') + 1
-            # Ajuste dinâmico para a coluna de Vencimento/Data
-            idx_venc = [i for i, h in enumerate(headers) if 'VENC' in h.upper() or 'DATA' in h.upper()][0] + 1
-            
-            for idx_df, row in df_filtrado.iterrows():
-                linha_sheets = int(idx_df) + 2
-                ws_base.update_cell(linha_sheets, idx_status, "Pago")
-                ws_base.update_cell(linha_sheets, idx_venc, nova_data.strftime("%d/%m/%Y"))                
-                sucessos += 1
-            
-            st.toast(f"✅ {sucessos} itens baixados!", icon="💰")
-            atualizar_sessao()
-            st.rerun()
-    else:
-        st.info("Nenhum lançamento encontrado neste período.")
+        # --- EXIBIÇÃO ---
+        st.write(f"### Lançamentos Encontrados: {len(df_v)}")
+        df_display = df_v[['ID', 'Vencimento', 'Banco', 'Descrição', 'Valor', 'Categoria']].copy()
+        df_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+        st.dataframe(df_display.iloc[::-1], use_container_width=True, hide_index=True)
+
+        # --- BOTÃO DE BAIXA ---
+        if not df_v.empty:
+            nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
+            if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_final"):
+                headers = ws_base.row_values(1)
+                idx_status = headers.index('Status') + 1
+                idx_venc = [i for i, h in enumerate(headers) if 'VENC' in h.upper() or 'DATA' in h.upper()][0] + 1
+                
+                sucessos = 0
+                for idx_df, row in df_v.iterrows():
+                    linha_sheets = int(idx_df) + 2
+                    ws_base.update_cell(linha_sheets, idx_status, "Pago")
+                    ws_base.update_cell(linha_sheets, idx_venc, nova_data.strftime("%d/%m/%Y"))
+                    sucessos += 1
+                
+                st.toast(f"✅ {sucessos} itens baixados!", icon="💰")
+                atualizar_sessao()
+                st.rerun()
+        else:
+            st.info("Nenhum lançamento encontrado neste período.")
     st.divider()
     st.subheader("🔔 Avisos: Vencimentos Próximos")
        # ... (aqui você mantém a lógica original dos alertas de vencimento se desejar) ...
