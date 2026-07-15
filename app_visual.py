@@ -901,20 +901,28 @@ elif "📄" in aba:
         d_ini = st.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
         d_fim = st.date_input("Fim", hoje_br.replace(day=calendar.monthrange(hoje_br.year, hoje_br.month)[1]), format="DD/MM/YYYY", key="zap_d2")
             
-        # Listas de classificação
+     # --- CLASSIFICAÇÃO COM FILTRO EXAUSTIVO ---
         cartoes, contas, inves = [], [], []
+        
+        # Termos que identificam o que É investimento
+        termos_invest = ["invest.", "invest ", "prev.", "pou.", "tcross", "moto"]
+        
         for b in sorted(bancos_disponiveis):
             info = df_bancos_info[df_bancos_info.iloc[:,0] == b]
             if info.empty: continue
+            
             nome_b = b.lower()
             tipo_raw = str(info.iloc[0,2]).strip().lower()
+            
+            # 1. Checagem Cartão
             if "cartao" in nome_b or "cartão" in nome_b or "cartao" in tipo_raw:
                 cartoes.append(b)
-            elif "invest" in tipo_raw or "poup" in tipo_raw:
+            # 2. Checagem Investimento (usando a lista acima)
+            elif any(termo in nome_b for termo in termos_invest) or "investimento" in tipo_raw:
                 inves.append(b)
+            # 3. Restante é Conta
             else:
                 contas.append(b)
-
         saldos_txt = ""
         total_patrimonio = 0.0
 
