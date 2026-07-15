@@ -900,11 +900,19 @@ elif "📄" in aba:
     #d_ini = c1.date_input("Início", hoje_br - timedelta(days=30), format="DD/MM/YYYY", key="zap_d1")
     #d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY", key="zap_d2")
     # Define o primeiro dia do mês atual e o dia de hoje (ou último dia do mês)
-    primeiro_dia_mes = hoje_br.replace(day=1)
+   import calendar
+
+    # 1. Pega o mês e ano de hoje
+    ano = hoje_br.year
+    mes = hoje_br.month
+    
+    # 2. Descobre o último dia do mês atual
+    ultimo_dia = calendar.monthrange(ano, mes)[1]
+    data_fim_mes = hoje_br.replace(day=ultimo_dia)
     
     c1, c2 = st.columns(2)
-    d_ini = c1.date_input("Início", primeiro_dia_mes, format="DD/MM/YYYY", key="zap_d1")
-    d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY", key="zap_d2")
+    d_ini = c1.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
+    d_fim = c2.date_input("Fim", data_fim_mes, format="DD/MM/YYYY", key="zap_d2")
     
     saldos_txt = ""
     total_patrimonio = 0.0 
