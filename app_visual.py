@@ -954,36 +954,33 @@ elif "📄" in aba:
         st.text_area("Copiar Relatório", relat, height=200) # (Certifique-se que a variável 'relat' está montada)
         st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
     # 2. RESUMO DO RELATÓRIO (Rendimento e Sobra)
-    df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
-    df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
+    # --- RESUMO DO RELATÓRIO (Rendimento e Sobra) ---
+        df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
+        df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
 
-    if not df_per.empty:
-        df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
-        df_per['C_UP'] = df_per['Categoria'].astype(str).str.upper().str.strip()
+        if not df_per.empty:
+            df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
+            df_per['C_UP'] = df_per['Categoria'].astype(str).str.upper().str.strip()
+            
+            mask_rend = (df_per['T_UP'].str.contains('REND', na=False)) | (df_per['C_UP'].str.contains('REND', na=False))
+            rend_v = df_per[mask_rend & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+            
+            rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
+            des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
+            sobra = rec_v - des_v
+        else:
+            rec_v = des_v = rend_v = sobra = 0.0
+
+        # 3. TEXTO FINAL
+        relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
+        relat += f"========================================\n"
+        relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
+        relat += f"DES: {m_fmt(des_v)} | SOBRA: {m_fmt(sobra)}\n"
+        relat += f"========================================\n\n"
+        relat += f"SALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}"
         
-        # Procura REND na Categoria ou no Tipo
-        mask_rend = (df_per['T_UP'].str.contains('REND', na=False)) | (df_per['C_UP'].str.contains('REND', na=False))
-        rend_v = df_per[mask_rend & (df_per['Status'] == 'Pago')]['V_Num'].sum()
-        
-        rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
-        des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
-        sobra = rec_v - des_v
-    else:
-        rec_v = des_v = rend_v = sobra = 0.0
-
-    # 3. TEXTO FINAL
-    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
-    relat += f"========================================\n"
-    relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
-    relat += f"DES: {m_fmt(des_v)} | SOBRA: {m_fmt(sobra)}\n"
-    relat += f"========================================\n\n"
-    relat += f"SALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}"
-    
-    st.text_area("Copiar Relatório", relat, height=300)
-    st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
-
-if aba == "📋 Relatório PDF":
-    st.markdown("### 📋 Emissão de Relatório Financeiro")
+        st.text_area("Copiar Relatório", relat, height=300)
+        st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
     
     # -------------------------------------------------------------------------
     # LINHA 1 DE FILTROS: BANCO E PERÍODO (Estrutura original mantida intacta)
