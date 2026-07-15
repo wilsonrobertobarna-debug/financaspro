@@ -984,7 +984,7 @@ elif "📄" in aba:
             df_cart['No_Ciclo'] = df_cart['DT_COMPRA'].apply(lambda x: pertence_a_fatura(x, dia_fech_d))
             
             # Soma o usado apenas do que entra no ciclo
-            usado = df_cart[df_cart['No_Ciclo'] == True]['V_Num'].sum()
+            usado = df_cart['V_Num'].sum()
 
             if valor_b > 0:
                 dispo = valor_b - usado
