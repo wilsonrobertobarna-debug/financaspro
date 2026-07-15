@@ -904,37 +904,39 @@ elif "📄" in aba:
         d_ini = c1.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
         d_fim = c2.date_input("Fim", data_fim_mes, format="DD/MM/YYYY", key="zap_d2")
             
-        saldos_txt = ""
+        # Limpeza para evitar relatórios duplicados
+        saldos_txt = "" 
         total_patrimonio = 0.0 
-
-        # --- FUNÇÃO DE AUXÍLIO PARA LIMPEZA ---
-        def f_num(val): return float(str(val).replace('R$', '').replace('.', '').replace(',', '.') or 0)
-
+        
         # --- 1. CARTÕES ---
         st.subheader("💳 Cartões de Crédito")
         for b in sorted(bancos_disponiveis):
+            # Busca estrita na linha correspondente
             row = df_bancos_info[df_bancos_info.iloc[:,0] == b]
-            if not row.empty and "CARTA" in str(row.iloc[0,2]).upper() and "ALIMENT" not in str(row.iloc[0,2]).upper():
-                usado = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PENDENTE') & (df_base['Tipo'].str.upper() == 'DESPESA')]['V_Num'].sum()
-                st.markdown(f"💳 **{b}**: Usado: {m_fmt(usado)}")
-                saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
+            if not row.empty:
+                tipo = str(row.iloc[0,2]).upper()
+                if "CARTA" in tipo and "ALIMENT" not in tipo:
+                    usado = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pendente') & (df_base['Tipo'] == 'Despesa')]['V_Num'].sum()
+                    st.write(f"💳 **{b}**: Usado: {m_fmt(usado)}")
+                    saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
 
         st.markdown("---")
         
-        # --- 2. CONTAS E ALIMENTAÇÃO ---
+        # --- 2. CONTAS E BENEFÍCIOS ---
         st.subheader("🏦 Contas e Benefícios")
         for b in sorted(bancos_disponiveis):
             row = df_bancos_info[df_bancos_info.iloc[:,0] == b]
-            if not row.empty and "CARTA" not in str(row.iloc[0,2]).upper() and "INVEST" not in str(row.iloc[0,2]).upper():
-                val_b = f_num(row.iloc[0,1])
-                mov = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
-                rec = mov[mov['Tipo'].str.upper().str.contains('RECEITA|REND')]['V_Num'].sum()
-                des = mov[mov['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
-                s_final = val_b + rec - des
-                icone = "🍽️" if "ALIMENT" in b.upper() else "🏦"
-                st.markdown(f"{icone} **{b}**: Saldo: {m_fmt(s_final)}")
-                saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
-                total_patrimonio += s_final
+            if not row.empty:
+                tipo = str(row.iloc[0,2]).upper()
+                # Apenas contas que NÃO são cartão e NÃO são investimento
+                if "CARTA" not in tipo and "INVEST" not in tipo:
+                    val_b = float(str(row.iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
+                    mov = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
+                    s_final = val_b + mov[mov['Tipo'].str.contains('Receita|Rend', case=False)]['V_Num'].sum() - mov[mov['Tipo'] == 'Despesa']['V_Num'].sum()
+                    icone = "🍽️" if "ALIMENT" in tipo else "🏦"
+                    st.write(f"{icone} **{b}**: Saldo: {m_fmt(s_final)}")
+                    saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
+                    total_patrimonio += s_final
 
         st.markdown("---")
 
@@ -943,19 +945,20 @@ elif "📄" in aba:
         for b in sorted(bancos_disponiveis):
             row = df_bancos_info[df_bancos_info.iloc[:,0] == b]
             if not row.empty and "INVEST" in str(row.iloc[0,2]).upper():
-                val_b = f_num(row.iloc[0,1])
-                st.markdown(f"📈 **{b}**: Saldo: {m_fmt(val_b)}")
+                val_b = float(str(row.iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
+                st.write(f"📈 **{b}**: Saldo: {m_fmt(val_b)}")
                 saldos_txt += f"📈 {b}: Saldo: {m_fmt(val_b)}\n"
                 total_patrimonio += val_b
 
-        # --- RODAPÉ E RELATÓRIO ---
+        # --- RESUMO E RELATÓRIO FINAL ---
         st.divider()
         st.metric("💰 TOTAL PATRIMÔNIO", m_fmt(total_patrimonio))
         
+        # Recalcula do zero para garantir
         df_base['DT_O'] = pd.to_datetime(df_base['DT']).dt.date
         df_p = df_base[(df_base['DT_O'] >= d_ini) & (df_base['DT_O'] <= d_fim)]
-        rec_v = df_p[(df_p['Tipo'].str.upper() == 'RECEITA') & (df_p['Status'] == 'PAGO')]['V_Num'].sum()
-        des_v = df_p[(df_p['Tipo'].str.upper() == 'DESPESA') & (df_p['Status'] == 'PAGO')]['V_Num'].sum()
+        rec_v = df_p[(df_p['Tipo'] == 'Receita') & (df_p['Status'] == 'Pago')]['V_Num'].sum()
+        des_v = df_p[(df_p['Tipo'] == 'Despesa') & (df_p['Status'] == 'Pago')]['V_Num'].sum()
         
         relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
         relat += f"========================================\nREC: {m_fmt(rec_v)} | DES: {m_fmt(des_v)}\n"
@@ -963,7 +966,6 @@ elif "📄" in aba:
         
         st.text_area("Copiar Relatório", relat, height=200)
         st.markdown(f'[📲 Enviar](https://wa.me/?text={urllib.parse.quote(relat)})')
-
 
 if aba == "📋 Relatório PDF":
     st.markdown("### 📋 Emissão de Relatório Financeiro")
