@@ -756,7 +756,7 @@ elif "Pendências" in aba:
                 st.rerun()
         else:
             st.info("Nenhum lançamento encontrado neste período.")
-    st.divider()
+   
     st.subheader("🔔 Avisos: Vencimentos Próximos")
        # ... (aqui você mantém a lógica original dos alertas de vencimento se desejar) ...
         
