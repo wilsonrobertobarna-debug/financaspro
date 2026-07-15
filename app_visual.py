@@ -984,10 +984,13 @@ elif "📄" in aba:
             df_cart['No_Ciclo'] = df_cart['DT_COMPRA'].apply(lambda x: pertence_a_fatura(x, dia_fech_d))
             
             # Soma o usado apenas do que entra no ciclo
-            usado = df_cart[df_cart['No_Ciclo'] == True]['V_Num'].sum()
-            
-            dispo = valor_b - usado
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+            usado = df_cart_base[df_cart_base['DT_ONLY'] <= d_fim]['V_Num'].sum()
+            #usado = df_cart[df_cart['No_Ciclo'] == True]['V_Num'].sum()
+            dispo = limite_cartao - usado
+            #dispo = valor_b - usado
+            #saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+        
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
         else:
