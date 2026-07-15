@@ -704,7 +704,6 @@ if "💰" in st.session_state.page:
         else:
             st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
-elif "Pendências" in aba:
         st.title("📋 Lançamentos Pendentes")
         
         # --- FILTROS UNIFICADOS ---
