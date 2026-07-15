@@ -895,46 +895,42 @@ elif "🚗" in aba:
 
 
 elif "📄" in aba:
+        # 1. Limpa a página para remover vestígios de execuções anteriores
+        st.empty() 
         st.title("📄 WhatsApp")
         import calendar
-          
+        
         d_ini = st.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
         d_fim = st.date_input("Fim", hoje_br.replace(day=calendar.monthrange(hoje_br.year, hoje_br.month)[1]), format="DD/MM/YYYY", key="zap_d2")
             
-     # --- CLASSIFICAÇÃO COM FILTRO EXAUSTIVO ---
         cartoes, contas, inves = [], [], []
-        
-        # Termos que identificam o que É investimento
         termos_invest = ["invest.", "invest ", "prev.", "pou.", "tcross", "moto"]
         
         for b in sorted(bancos_disponiveis):
             info = df_bancos_info[df_bancos_info.iloc[:,0] == b]
             if info.empty: continue
-            
             nome_b = b.lower()
             tipo_raw = str(info.iloc[0,2]).strip().lower()
-            
-            # 1. Checagem Cartão
             if "cartao" in nome_b or "cartão" in nome_b or "cartao" in tipo_raw:
                 cartoes.append(b)
-            # 2. Checagem Investimento (usando a lista acima)
             elif any(termo in nome_b for termo in termos_invest) or "investimento" in tipo_raw:
                 inves.append(b)
-            # 3. Restante é Conta
             else:
                 contas.append(b)
-        saldos_txt = ""
-        total_patrimonio = 0.0
 
-        # Exibição Cartões
+        # Geração do texto do relatório (O que vai para o WhatsApp)
+        relat_txt = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
+        relat_txt += "========================================\n"
+        
+        # Exibição e montagem do texto
         st.subheader("💳 Cartões de Crédito")
         for b in cartoes:
             usado = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pendente')]['V_Num'].sum()
             st.write(f"💳 {b}: Usado: {m_fmt(usado)}")
-            saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
+            relat_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
 
-        # Exibição Contas e Soma Patrimônio
         st.subheader("🏦 Contas e Benefícios")
+        tot_contas = 0.0
         for b in contas:
             info = df_bancos_info[df_bancos_info.iloc[:,0] == b]
             val_b = float(str(info.iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
@@ -942,30 +938,27 @@ elif "📄" in aba:
             s_final = val_b + mov[mov['Tipo'].str.contains('Receita|Rend', case=False, na=False)]['V_Num'].sum() - mov[mov['Tipo'] == 'Despesa']['V_Num'].sum()
             icone = "🍽️" if "aliment" in str(info.iloc[0,2]).lower() else "🏦"
             st.write(f"{icone} {b}: Saldo: {m_fmt(s_final)}")
-            saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
-            total_patrimonio += s_final
+            relat_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
+            tot_contas += s_final
 
-        # Exibição Investimentos e Soma Patrimônio
         st.subheader("📈 Investimentos")
+        tot_inv = 0.0
         for b in inves:
             info = df_bancos_info[df_bancos_info.iloc[:,0] == b]
             val_b = float(str(info.iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
             st.write(f"📈 {b}: Saldo: {m_fmt(val_b)}")
-            saldos_txt += f"📈 {b}: Saldo: {m_fmt(val_b)}\n"
-            total_patrimonio += val_b
+            relat_txt += f"📈 {b}: Saldo: {m_fmt(val_b)}\n"
+            tot_inv += val_b
 
-        # Rodapé e Botão
+        # Finalização do relatório
+        relat_txt += f"========================================\nTOTAL PATRIMÔNIO: {m_fmt(tot_contas + tot_inv)}"
+        
         st.divider()
-        df_p = df_base[(pd.to_datetime(df_base['DT']).dt.date >= d_ini) & (pd.to_datetime(df_base['DT']).dt.date <= d_fim)]
-        rec_v = df_p[(df_p['Tipo'] == 'Receita') & (df_p['Status'] == 'Pago')]['V_Num'].sum()
-        des_v = df_p[(df_p['Tipo'] == 'Despesa') & (df_p['Status'] == 'Pago')]['V_Num'].sum()
+        st.text_area("Relatório para Copiar:", relat_txt, height=250)
         
-        relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
-        relat += f"========================================\nREC: {m_fmt(rec_v)} | DES: {m_fmt(des_v)}\n"
-        relat += f"========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}"
-        
-        st.text_area("Copiar Relatório", relat, height=150)
-        st.markdown(f'[📲 Enviar](https://wa.me/?text={urllib.parse.quote(relat)})')
+        # Link único gerado na hora
+        import urllib.parse
+        st.markdown(f'[📲 Enviar Relatório Atualizado](https://wa.me/?text={urllib.parse.quote(relat_txt)})')
 
 
 if aba == "📋 Relatório PDF":
