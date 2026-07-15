@@ -970,32 +970,28 @@ elif "📄" in aba:
                                (df_base['Tipo'].str.upper() == 'DESPESA') & 
                                (df_base['Status'].str.upper() == 'PENDENTE')].copy()
             
-            # 1. Primeiro, garantimos que o DataFrame do cartão existe dentro deste bloco
-        df_cart = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PENDENTE')].copy()
-        
-        # 2. Só tentamos calcular se houver lançamentos pendentes
-        if not df_cart.empty and 'Dia de Vencimento' in df_cart.columns:
-            # Converte a coluna para data
-            df_cart['DT_VENC_DATA'] = pd.to_datetime(df_cart['Dia de Vencimento'], errors='coerce')
+            # Converte a data da compra para o formato correto
+            df_cart['DT_COMPRA'] = pd.to_datetime(df_cart['DT'])
             
-            # Filtra mês 7 e ano 2026
-            df_cart_mes = df_cart[
-                (df_cart['DT_VENC_DATA'].dt.month == 7) & 
-                (df_cart['DT_VENC_DATA'].dt.year == 2026)
-            ]
-            usado = df_cart_mes['V_Num'].sum()
-        else:
-            usado = 0.0
+            # Função para saber se a compra cai na fatura do mês atual
+            def pertence_a_fatura(data_compra, dia_fech):
+                # Se o dia da compra é <= dia de fechamento, pertence ao ciclo atual.
+                # Se for maior, pertence ao ciclo do mês seguinte.
+                return data_compra.day <= dia_fech
 
-        # 3. Exibição
-        if valor_b > 0:
+            # Filtra: pega compras feitas no ciclo que vence no mês selecionado
+            # (Aqui ele verifica se a compra pertence ao ciclo da fatura que você quer ver)
+            df_cart['No_Ciclo'] = df_cart['DT_COMPRA'].apply(lambda x: pertence_a_fatura(x, dia_fech_d))
+            
+            # Soma o usado apenas do que entra no ciclo
+            usado = df_cart[df_cart['No_Ciclo'] == True]['V_Num'].sum()
+            
             dispo = valor_b - usado
             saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+        
+        # --- LÓGICA DE CONTA / INVESTIMENTO ---
         else:
-            saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)} (Venc: {dia_venc_e})\n"
-           
- 
-            #saldo_inicial = valor_b
+            saldo_inicial = valor_b
             # Para contas normais, mantemos apenas o que já foi 'Pago'
             mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
             rec_b = mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
