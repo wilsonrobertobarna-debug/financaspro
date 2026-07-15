@@ -988,8 +988,8 @@ elif "📄" in aba:
             #usado = df_cart[df_cart['No_Ciclo'] == True]['V_Num'].sum()
             dispo = limite_cartao - usado
             #dispo = valor_b - usado
-            #saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+            saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+           
         
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
