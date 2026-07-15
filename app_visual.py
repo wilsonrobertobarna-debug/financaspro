@@ -897,54 +897,52 @@ elif "📄" in aba:
         st.title("📄 WhatsApp")
         import calendar
         
+        # Datas
         d_ini = st.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
         d_fim = st.date_input("Fim", hoje_br.replace(day=calendar.monthrange(hoje_br.year, hoje_br.month)[1]), format="DD/MM/YYYY", key="zap_d2")
             
         saldos_txt = "" 
         total_patrimonio = 0.0 
 
-        def get_tipo_banco(b):
-            row = df_bancos_info[df_bancos_info.iloc[:,0] == b]
-            return str(row.iloc[0,2]).upper() if not row.empty else ""
+        # --- SEPARAÇÃO MANUAL POR NOMES ---
+        # Substitua estes nomes pelos nomes exatos que aparecem na sua lista de bancos
+        lista_cartoes = ["CARTAO", "CREDITO", "VISA", "MASTERCARD"]
+        lista_invest = ["INVEST", "POU", "POUPANCA"]
 
-        # --- LÓGICA DE FILTRAGEM ---
+        # 1. CARTÕES
         st.subheader("💳 Cartões de Crédito")
         for b in sorted(bancos_disponiveis):
-            row = df_bancos_info[df_bancos_info.iloc[:,0] == b]
-            tipo = str(row.iloc[0,2]).upper() if not row.empty else ""
-            
-            # FILTRO: Se tiver qualquer um desses termos, vai para Cartão
-            if any(termo in tipo for termo in ["CARTA", "CREDITO", "ITAU GOLD", "VISA", "MASTERCARD"]):
-                if "ALIMENT" not in tipo:
-                    usado = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pendente')]['V_Num'].sum()
-                    st.write(f"💳 {b}: Usado: {m_fmt(usado)}")
-                    saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
+            if any(termo in b.upper() for termo in lista_cartoes) and "ALIMENT" not in b.upper():
+                usado = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pendente')]['V_Num'].sum()
+                st.write(f"💳 {b}: Usado: {m_fmt(usado)}")
+                saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
 
+        # 2. CONTAS E ALIMENTAÇÃO
         st.markdown("---")
         st.subheader("🏦 Contas e Benefícios")
         for b in sorted(bancos_disponiveis):
-            tipo = get_tipo_banco(b)
-            if "CARTA" not in tipo and "INVEST" not in tipo:
+            if not any(termo in b.upper() for termo in lista_cartoes) and not any(termo in b.upper() for termo in lista_invest):
                 row = df_bancos_info[df_bancos_info.iloc[:,0] == b]
                 val_b = float(str(row.iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
                 mov = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
                 s_final = val_b + mov[mov['Tipo'].str.contains('Receita|Rend', case=False, na=False)]['V_Num'].sum() - mov[mov['Tipo'] == 'Despesa']['V_Num'].sum()
-                icone = "🍽️" if "ALIMENT" in tipo else "🏦"
+                icone = "🍽️" if "ALIMENT" in b.upper() else "🏦"
                 st.write(f"{icone} {b}: Saldo: {m_fmt(s_final)}")
                 saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
                 total_patrimonio += s_final
 
+        # 3. INVESTIMENTOS
         st.markdown("---")
         st.subheader("📈 Investimentos")
         for b in sorted(bancos_disponiveis):
-            tipo = get_tipo_banco(b)
-            if "INVEST" in tipo:
+            if any(termo in b.upper() for termo in lista_invest):
                 row = df_bancos_info[df_bancos_info.iloc[:,0] == b]
                 val_b = float(str(row.iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
                 st.write(f"📈 {b}: Saldo: {m_fmt(val_b)}")
                 saldos_txt += f"📈 {b}: Saldo: {m_fmt(val_b)}\n"
                 total_patrimonio += val_b
 
+        # --- RELATÓRIO FINAL ---
         st.divider()
         df_p = df_base[(pd.to_datetime(df_base['DT']).dt.date >= d_ini) & (pd.to_datetime(df_base['DT']).dt.date <= d_fim)]
         rec_v = df_p[(df_p['Tipo'] == 'Receita') & (df_p['Status'] == 'Pago')]['V_Num'].sum()
@@ -956,7 +954,6 @@ elif "📄" in aba:
         
         st.text_area("Copiar Relatório", relat, height=150)
         st.markdown(f'[📲 Enviar](https://wa.me/?text={urllib.parse.quote(relat)})')
-
 
 if aba == "📋 Relatório PDF":
     st.markdown("### 📋 Emissão de Relatório Financeiro")
