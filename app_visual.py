@@ -784,10 +784,8 @@ elif "Pendências" in aba:
     # 1. Calendário forçado no padrão BR
     periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now()), format="DD/MM/YYYY")
 
-    df_v = df_base[df_base['Status'] == 'Pendente'].copy()
-    
     # 2. Converte a coluna da planilha para data de forma segura
-   df_v = df_base[df_base['Status'] == 'Pendente'].copy()
+    df_v = df_base[df_base['Status'] == 'Pendente'].copy()
     
     # Converte forçando o erro a virar vazio (NaT), e depois removemos as linhas com erro
     df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], dayfirst=True, errors='coerce')
@@ -797,7 +795,8 @@ elif "Pendências" in aba:
     if isinstance(periodo, tuple) and len(periodo) == 2:
         # Garantir que a comparação seja feita com o objeto data
         mask = (df_v['DT_Obj'].dt.date >= periodo[0]) & (df_v['DT_Obj'].dt.date <= periodo[1])
-        df_v = df_v[mask]    
+        df_v = df_v[mask]  
+        
     # 3. Filtros de texto/banco
     if s_bnc:
         df_v = df_v[df_v['Banco'].isin(s_bnc)]
