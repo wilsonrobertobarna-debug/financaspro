@@ -785,35 +785,31 @@ elif "Pendências" in aba:
     periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now()), format="DD/MM/YYYY")
 
     # 2. Converte a coluna da planilha para data de forma segura
+   # 1. Filtro inicial de Pendentes
     df_v = df_base[df_base['Status'] == 'Pendente'].copy()
     
-    # Converte forçando o erro a virar vazio (NaT), e depois removemos as linhas com erro
+    # 2. Conversão segura da coluna que você usa para filtrar (DT)
     df_v['DT_Obj'] = pd.to_datetime(df_v['DT'], dayfirst=True, errors='coerce')
-    df_v = df_v.dropna(subset=['DT_Obj']) # Isso remove aquela linha que estava dando erro
+    df_v = df_v.dropna(subset=['DT_Obj']) 
     
-    # Aplicação do filtro de data (usando a mesma lógica que você disse que funciona na outra aba)
-    if isinstance(periodo, tuple) and len(periodo) == 2:
-        # Garantir que a comparação seja feita com o objeto data
-        mask = (df_v['DT_Obj'].dt.date >= periodo[0]) & (df_v['DT_Obj'].dt.date <= periodo[1])
-        df_v = df_v[mask]  
-        
-    # 3. Filtros de texto/banco
+    # 3. Aplicar Filtro de Banco e Descrição ANTES do filtro de data (boa prática)
     if s_bnc:
         df_v = df_v[df_v['Banco'].isin(s_bnc)]
     if b_desc:
         df_v = df_v[df_v['Descrição'].str.contains(b_desc, case=False, na=False)]
     
-    # 4. FILTRO DE DATA "À PROVA DE ERRO"
+    # 4. FILTRO ÚNICO DE DATA (Simplificado e direto)
     if isinstance(periodo, tuple) and len(periodo) == 2:
-        # Extraímos apenas o ano, mês e dia da seleção do calendário
-        inicio = pd.Timestamp(periodo[0])
-        fim = pd.Timestamp(periodo[1])
-        
-        # Filtramos comparando apenas as datas, ignorando qualquer confusão de horas
+        inicio = pd.to_datetime(periodo[0])
+        fim = pd.to_datetime(periodo[1])
+        # Filtra o dataframe usando as datas convertidas
         df_v = df_v[(df_v['DT_Obj'] >= inicio) & (df_v['DT_Obj'] <= fim)]
         
+    # 5. Exibição
     df_v_display = df_v[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Banco', 'Status']].copy()
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
+    
+    st.write(f"Total de itens encontrados: {len(df_v_display)}") # Adicionei isso para você ver se o filtro está achando algo
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "🐾" in aba:
