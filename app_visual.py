@@ -886,7 +886,7 @@ elif "🚗" in aba:
     st.info("💡 **Atenção:** Digite a quantidade em **Litros** e a distância em **Quilômetros**.")
     
     c_cons1, c_cons2, c_cons3 = st.columns(3)
-    litros = c_cons1.number_input("Litros Abastecidos", value=0.0, step=0.5, min_value=0.0)
+    litros = c_cons1.number_input("Litros Abastecidos", value=0.0, step=0.5, format="%.1f")
     distancia = c_cons2.number_input("Distância Percorrida (km)", value=0.0, step=10.0, min_value=0.0)
     
     # Validação segura: só calcula se ambos forem maiores que zero
