@@ -894,15 +894,10 @@ elif "🚗" in aba:
         st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 
-#elif "📄" in aba:
-        #st.title("📄 WhatsApp")
-        #import calendar
-    elif "📄" in aba:
-        # Limpa qualquer resíduo anterior da página
-        st.empty() 
+elif "📄" in aba:
         st.title("📄 WhatsApp")
         import calendar
-        
+          
         d_ini = st.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
         d_fim = st.date_input("Fim", hoje_br.replace(day=calendar.monthrange(hoje_br.year, hoje_br.month)[1]), format="DD/MM/YYYY", key="zap_d2")
             
