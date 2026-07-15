@@ -1021,12 +1021,14 @@ elif "📄" in aba:
         rec_v = des_v = rend_v = sobra = 0.0
 
     # 3. TEXTO FINAL
-    relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
+   # 3. TEXTO FINAL (Resumido para ficar limpo)
+    relat = f"RELATÓRIO WILSON - {d_ini.strftime('%m/%Y')}\n"
     relat += f"========================================\n"
-    relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
-    relat += f"DES: {m_fmt(des_v)} | SOBRA: {m_fmt(sobra)}\n"
+    relat += f"REC: {m_fmt(rec_v)} | DES: {m_fmt(des_v)}\n"
+    relat += f"SOBRA: {m_fmt(sobra)}\n"
     relat += f"========================================\n\n"
-    relat += f"SALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}"
+    relat += f"SALDOS:\n{saldos_txt}\n"
+    relat += f"TOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}"
     
     st.text_area("Copiar Relatório", relat, height=300)
     st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
