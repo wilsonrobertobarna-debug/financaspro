@@ -704,6 +704,7 @@ if "💰" in st.session_state.page:
         else:
             st.warning("Base de dados vazia.")
 elif "Pendências" in aba:
+elif "Pendências" in aba:
         st.title("📋 Lançamentos Pendentes")
         
         # --- FILTROS UNIFICADOS ---
@@ -713,20 +714,15 @@ elif "Pendências" in aba:
         periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now()), format="DD/MM/YYYY", key="data_pend")
 
         # --- PROCESSAMENTO ---
-        # 1. Filtra Pendentes de uma vez só
         df_v = df_base[df_base['Status'].astype(str).str.strip().str.lower() == 'pendente'].copy()
-        
-        # 2. Conversão SEGURA de data (usando Vencimento em todo o código)
         df_v['Data_Formatada'] = pd.to_datetime(df_v['Vencimento'], dayfirst=True, errors='coerce')
         df_v = df_v.dropna(subset=['Data_Formatada'])
 
-        # 3. Aplicação dos filtros
         if filtro_banco:
             df_v = df_v[df_v['Banco'].isin(filtro_banco)]
         if busca_desc:
             df_v = df_v[df_v['Descrição'].str.contains(busca_desc, case=False, na=False)]
         
-        # Filtro de Período
         if isinstance(periodo, tuple) and len(periodo) == 2:
             df_v = df_v[(df_v['Data_Formatada'].dt.date >= periodo[0]) & (df_v['Data_Formatada'].dt.date <= periodo[1])]
 
@@ -756,10 +752,9 @@ elif "Pendências" in aba:
                 st.rerun()
         else:
             st.info("Nenhum lançamento encontrado neste período.")
-   
-    st.subheader("🔔 Avisos: Vencimentos Próximos")
-       # ... (aqui você mantém a lógica original dos alertas de vencimento se desejar) ...
         
+        st.divider()
+        st.subheader("🔔 Avisos: Vencimentos Próximos")        
     
     c1, c2, c3 = st.columns(3) # Aumentei para 3 colunas para caber o filtro de data
     s_bnc = c1.multiselect("Filtrar Banco/Cartão:", sorted(bancos_disponiveis))
