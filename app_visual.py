@@ -780,7 +780,8 @@ elif "Pendências" in aba:
     c1, c2, c3 = st.columns(3) # Aumentei para 3 colunas para caber o filtro de data
     s_bnc = c1.multiselect("Filtrar Banco/Cartão:", sorted(bancos_disponiveis))
     b_desc = c2.text_input("Buscar Descrição:", key="busca_desc_pendencias")
-    periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now())) # Filtro de data novo
+    #periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now())) # Filtro de data novo
+    periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now()), format="DD/MM/YYYY")
 
     df_v = df_base[df_base['Status'] == 'Pendente'].copy()
     
