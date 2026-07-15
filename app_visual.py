@@ -964,7 +964,7 @@ elif "📄" in aba:
         
     
 # --- LÓGICA DE CARTÃO DE CRÉDITO (Cálculo Automático de Fatura) ---
-        if "CARTA" in tipo_c.upper() and "ALIMENT" not in tipo_c.upper():
+        if ("CARTA" in tipo_c.upper() or "CARTÃO" in b.upper()) and "ALIMENT" not in tipo_c.upper():
             # Filtra apenas o banco específico e despesas pendentes
             df_cart = df_base[(df_base['Banco'] == b) & 
                                (df_base['Tipo'].str.upper() == 'DESPESA') & 
@@ -985,9 +985,14 @@ elif "📄" in aba:
             
             # Soma o usado apenas do que entra no ciclo
             usado = df_cart[df_cart['No_Ciclo'] == True]['V_Num'].sum()
-            
+
+            if valor_b > 0:
             dispo = valor_b - usado
             saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+
+            else:
+                # Caso seja um cartão sem limite definido na planilha
+                saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)} (Venc: {dia_venc_e})\n"
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
         else:
