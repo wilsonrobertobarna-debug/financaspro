@@ -904,7 +904,7 @@ elif "📄" in aba:
         saldos_txt = "" 
         total_patrimonio = 0.0 
                 
-        # --- CLASSIFICAÇÃO COM LOG DE SEGURANÇA ---
+       # --- CLASSIFICAÇÃO COM TRAVA DE SEGURANÇA ---
         cartoes, contas, inves = [], [], []
         
         for b in sorted(bancos_disponiveis):
@@ -912,10 +912,17 @@ elif "📄" in aba:
             if info.empty: continue
             
             tipo_raw = str(info.iloc[0,2]).strip().lower()
+            nome_b = b.lower()
             
-            # DEBUG: Se você quiser ver o que ele está lendo, descomente a linha abaixo:
-            # st.write(f"DEBUG: {b} -> Tipo lido: '{tipo_raw}'")
-            
+            # TRAVA DE SEGURANÇA: Se tiver "cartão" no nome ou no tipo, é cartão. Ponto.
+            if "cartao" in nome_b or "cartão" in nome_b or "cartao" in tipo_raw:
+                cartoes.append(b)
+            # SE NÃO FOR CARTÃO, verifica se é investimento
+            elif "invest" in tipo_raw or "poup" in tipo_raw:
+                inves.append(b)
+            # SE NÃO FOR NENHUM DOS DOIS, é conta
+            else:
+                contas.append(b)            
             # Vamos classificar olhando tanto pelo Tipo quanto pelo NOME do banco
             eh_cartao = "cartao" in tipo_raw or "cartao" in b.lower()
             eh_invest = "invest" in tipo_raw or "poup" in tipo_raw
