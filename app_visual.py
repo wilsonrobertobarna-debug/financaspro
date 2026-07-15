@@ -901,57 +901,52 @@ elif "📄" in aba:
         d_ini = st.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
         d_fim = st.date_input("Fim", hoje_br.replace(day=calendar.monthrange(hoje_br.year, hoje_br.month)[1]), format="DD/MM/YYYY", key="zap_d2")
             
-        saldos_txt = "" 
-        total_patrimonio = 0.0 
-                
-       # --- CLASSIFICAÇÃO COM TRAVA DE SEGURANÇA ---
+        # Listas de classificação
         cartoes, contas, inves = [], [], []
-        
         for b in sorted(bancos_disponiveis):
             info = df_bancos_info[df_bancos_info.iloc[:,0] == b]
             if info.empty: continue
-            
-            tipo_raw = str(info.iloc[0,2]).strip().lower()
             nome_b = b.lower()
-            
-            # TRAVA DE SEGURANÇA: Se tiver "cartão" no nome ou no tipo, é cartão. Ponto.
+            tipo_raw = str(info.iloc[0,2]).strip().lower()
             if "cartao" in nome_b or "cartão" in nome_b or "cartao" in tipo_raw:
                 cartoes.append(b)
-            # SE NÃO FOR CARTÃO, verifica se é investimento
             elif "invest" in tipo_raw or "poup" in tipo_raw:
                 inves.append(b)
-            # SE NÃO FOR NENHUM DOS DOIS, é conta
             else:
-                contas.append(b)            
-            # Vamos classificar olhando tanto pelo Tipo quanto pelo NOME do banco
-            eh_cartao = "cartao" in tipo_raw or "cartao" in b.lower()
-            eh_invest = "invest" in tipo_raw or "poup" in tipo_raw
-                      
+                contas.append(b)
 
-        # --- EXIBIÇÃO ---
+        saldos_txt = ""
+        total_patrimonio = 0.0
+
+        # Exibição Cartões
         st.subheader("💳 Cartões de Crédito")
         for b in cartoes:
             usado = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pendente')]['V_Num'].sum()
             st.write(f"💳 {b}: Usado: {m_fmt(usado)}")
             saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
 
-       # 1. Somar Contas
-        total_contas = 0.0
+        # Exibição Contas e Soma Patrimônio
+        st.subheader("🏦 Contas e Benefícios")
         for b in contas:
             info = df_bancos_info[df_bancos_info.iloc[:,0] == b]
             val_b = float(str(info.iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
             mov = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
-            total_contas += val_b + mov[mov['Tipo'].str.contains('Receita|Rend', case=False, na=False)]['V_Num'].sum() - mov[mov['Tipo'] == 'Despesa']['V_Num'].sum()
-        
-        # 2. Somar Investimentos
-        total_invest = 0.0
+            s_final = val_b + mov[mov['Tipo'].str.contains('Receita|Rend', case=False, na=False)]['V_Num'].sum() - mov[mov['Tipo'] == 'Despesa']['V_Num'].sum()
+            icone = "🍽️" if "aliment" in str(info.iloc[0,2]).lower() else "🏦"
+            st.write(f"{icone} {b}: Saldo: {m_fmt(s_final)}")
+            saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
+            total_patrimonio += s_final
+
+        # Exibição Investimentos e Soma Patrimônio
+        st.subheader("📈 Investimentos")
         for b in inves:
             info = df_bancos_info[df_bancos_info.iloc[:,0] == b]
-            total_invest += float(str(info.iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
-        
-        total_patrimonio = total_contas + total_invest
+            val_b = float(str(info.iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
+            st.write(f"📈 {b}: Saldo: {m_fmt(val_b)}")
+            saldos_txt += f"📈 {b}: Saldo: {m_fmt(val_b)}\n"
+            total_patrimonio += val_b
 
-        # --- EXIBIÇÃO DO RODAPÉ ---
+        # Rodapé e Botão
         st.divider()
         df_p = df_base[(pd.to_datetime(df_base['DT']).dt.date >= d_ini) & (pd.to_datetime(df_base['DT']).dt.date <= d_fim)]
         rec_v = df_p[(df_p['Tipo'] == 'Receita') & (df_p['Status'] == 'Pago')]['V_Num'].sum()
@@ -962,7 +957,7 @@ elif "📄" in aba:
         relat += f"========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}"
         
         st.text_area("Copiar Relatório", relat, height=150)
-        st.markdown(f'[📲 Enviar para WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
+        st.markdown(f'[📲 Enviar](https://wa.me/?text={urllib.parse.quote(relat)})')
 
 
 if aba == "📋 Relatório PDF":
