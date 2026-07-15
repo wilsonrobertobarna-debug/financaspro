@@ -894,29 +894,27 @@ elif "🚗" in aba:
         st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
 
 elif "📄" in aba:
-    st.title("📄 WhatsApp")
-    elif "📄" in aba:
-    st.title("📄 WhatsApp")
-    import calendar
+        st.title("📄 WhatsApp")
+        import calendar
         
-    # Datas configuradas para o mês completo
-    ano, mes = hoje_br.year, hoje_br.month
-    data_fim_mes = hoje_br.replace(day=calendar.monthrange(ano, mes)[1])
+        # Datas configuradas para o mês completo
+        ano, mes = hoje_br.year, hoje_br.month
+        data_fim_mes = hoje_br.replace(day=calendar.monthrange(ano, mes)[1])
         
-    c1, c2 = st.columns(2)
-    d_ini = c1.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
-    d_fim = c2.date_input("Fim", data_fim_mes, format="DD/MM/YYYY", key="zap_d2")
+        c1, c2 = st.columns(2)
+        d_ini = c1.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
+        d_fim = c2.date_input("Fim", data_fim_mes, format="DD/MM/YYYY", key="zap_d2")
             
-    saldos_txt = ""
-    total_patrimonio = 0.0 
+        saldos_txt = ""
+        total_patrimonio = 0.0 
         
-    # --- ESTRUTURA VISUAL: CARTÕES ---
-    st.subheader("💳 Cartões de Crédito")
-    for b in sorted(bancos_disponiveis):
-    valor_b, tipo_c, dia_fech_d, dia_venc_e = 0.0, "", 1, 10
-    if not df_bancos_info.empty:
-    for _, row in df_bancos_info.iterrows():
-    if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
+        # --- ESTRUTURA VISUAL: CARTÕES ---
+        st.subheader("💳 Cartões de Crédito")
+        for b in sorted(bancos_disponiveis):
+            valor_b, tipo_c, dia_fech_d, dia_venc_e = 0.0, "", 1, 10
+            if not df_bancos_info.empty:
+                for _, row in df_bancos_info.iterrows():
+                    if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
                         try:
                             valor_b = float(str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip() or 0)
                             tipo_c = str(row.iloc[2]).strip().upper()
@@ -967,6 +965,8 @@ elif "📄" in aba:
         
         st.text_area("Copiar Relatório", relat, height=200)
         st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
+
+
 if aba == "📋 Relatório PDF":
     st.markdown("### 📋 Emissão de Relatório Financeiro")
     
