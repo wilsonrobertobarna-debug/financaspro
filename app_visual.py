@@ -954,7 +954,7 @@ elif "📄" in aba:
         st.text_area("Copiar Relatório", relat, height=200) # (Certifique-se que a variável 'relat' está montada)
         st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
     # 2. RESUMO DO RELATÓRIO (Rendimento e Sobra)
-    # --- RESUMO DO RELATÓRIO (Rendimento e Sobra) ---
+   # --- 2. RESUMO DO RELATÓRIO (Rendimento e Sobra) ---
         df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
         df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
 
@@ -971,7 +971,7 @@ elif "📄" in aba:
         else:
             rec_v = des_v = rend_v = sobra = 0.0
 
-        # 3. TEXTO FINAL
+        # --- 3. MONTAGEM DO TEXTO FINAL ---
         relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
         relat += f"========================================\n"
         relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
@@ -979,7 +979,10 @@ elif "📄" in aba:
         relat += f"========================================\n\n"
         relat += f"SALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}"
         
-        st.text_area("Copiar Relatório", relat, height=300)
+        # --- 4. EXIBIÇÃO VISUAL (O que você vê na tela) ---
+        st.divider()
+        st.metric("💰 TOTAL PATRIMÔNIO", m_fmt(total_patrimonio))
+        st.text_area("Copiar Relatório", relat, height=200)
         st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
     
     # -------------------------------------------------------------------------
