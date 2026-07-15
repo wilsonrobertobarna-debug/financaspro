@@ -979,30 +979,30 @@ elif "📄" in aba:
                 # Se for maior, pertence ao ciclo do mês seguinte.
                 return data_compra.day <= dia_fech
 
-# --- LÓGICA DE CARTÃO POR VENCIMENTO (JULHO/2026) ---
-        
-        # 1. Converte a coluna "Dia de Vencimento" para data
-        # Usamos errors='coerce' para tratar erros de preenchimento
-        df_cart['DT_VENC_DATA'] = pd.to_datetime(df_cart['Dia de Vencimento'], errors='coerce')
-        
-        # 2. Filtra o que vence exatamente em Julho de 2026
-        df_cart_mes = df_cart[
-            (df_cart['DT_VENC_DATA'].dt.month == 7) & 
-            (df_cart['DT_VENC_DATA'].dt.year == 2026)
-        ].copy()
-        
-        # 3. Soma o valor utilizado (se não houver nada no mês, usa 0)
-        usado = df_cart_mes['V_Num'].sum() if not df_cart_mes.empty else 0.0
-        
-        # 4. Exibição no relatório
-        if valor_b > 0:
-            dispo = valor_b - usado
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
-        else:
-            saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)} (Venc: {dia_venc_e})\n"
-        
-        # --- LÓGICA DE CONTA / INVESTIMENTO ---
-        else:
+        # --- LÓGICA DE CARTÃO POR VENCIMENTO (JULHO/2026) ---
+                
+                # 1. Converte a coluna "Dia de Vencimento" para data
+                # Usamos errors='coerce' para tratar erros de preenchimento
+                df_cart['DT_VENC_DATA'] = pd.to_datetime(df_cart['Dia de Vencimento'], errors='coerce')
+                
+                # 2. Filtra o que vence exatamente em Julho de 2026
+                df_cart_mes = df_cart[
+                    (df_cart['DT_VENC_DATA'].dt.month == 7) & 
+                    (df_cart['DT_VENC_DATA'].dt.year == 2026)
+                ].copy()
+                
+                # 3. Soma o valor utilizado (se não houver nada no mês, usa 0)
+                usado = df_cart_mes['V_Num'].sum() if not df_cart_mes.empty else 0.0
+                
+                # 4. Exibição no relatório
+                if valor_b > 0:
+                    dispo = valor_b - usado
+                    saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+                else:
+                    saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)} (Venc: {dia_venc_e})\n"
+                
+                # --- LÓGICA DE CONTA / INVESTIMENTO ---
+                else:
             saldo_inicial = valor_b
             # Para contas normais, mantemos apenas o que já foi 'Pago'
             mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
