@@ -948,7 +948,7 @@ elif "📄" in aba:
 
         st.divider()
         st.text_area("Copiar Relatório", f"SALDOS:\n{saldos_txt}\nTOTAL: {m_fmt(total_patrimonio)}", height=150)
-        st.markdown(f'[📲 Enviar](https://wa.me/?text={urllib.parse.quote(relat)})')
+        #st.markdown(f'[📲 Enviar](https://wa.me/?text={urllib.parse.quote(relat)})')
 
 
 if aba == "📋 Relatório PDF":
