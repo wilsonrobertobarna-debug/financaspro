@@ -897,59 +897,61 @@ elif "📄" in aba:
         st.title("📄 WhatsApp")
         import calendar
         
+        # --- DEFINA AQUI OS NOMES EXATOS QUE APARECEM NO SEU SISTEMA ---
+        # Exemplo: ["NUBANK CARTAO", "BRADESCO CARTAO"]
+        lista_cartoes = ["CARTAO", "CREDITO"] 
+        lista_invest = ["INVEST"]
+        
         # Datas
-        data_fim_mes = hoje_br.replace(day=calendar.monthrange(hoje_br.year, hoje_br.month)[1])
-        c1, c2 = st.columns(2)
-        d_ini = c1.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
-        d_fim = c2.date_input("Fim", data_fim_mes, format="DD/MM/YYYY", key="zap_d2")
+        d_ini = st.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY")
+        d_fim = st.date_input("Fim", hoje_br.replace(day=calendar.monthrange(hoje_br.year, hoje_br.month)[1]), format="DD/MM/YYYY")
             
         saldos_txt = "" 
         total_patrimonio = 0.0 
 
-        # --- EXIBIÇÃO FORÇADA ---
-        # Definimos os bancos manualmente para o exemplo, substitua pelos nomes exatos que aparecem no seu dropdown
-        
+        # Função auxiliar para filtrar e somar
+        def get_saldo_conta(b):
+            val_b = float(str(df_bancos_info[df_bancos_info.iloc[:,0] == b].iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
+            mov = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
+            return val_b + mov[mov['Tipo'].str.contains('Receita|Rend', case=False, na=False)]['V_Num'].sum() - mov[mov['Tipo'] == 'Despesa']['V_Num'].sum()
+
+        # --- EXIBIÇÃO ORGANIZADA ---
+        # 1. Cartões
         st.subheader("💳 Cartões de Crédito")
         for b in sorted(bancos_disponiveis):
-            # Filtro simples: SE o nome do banco contém 'CARTÃO' ou 'CREDITO'
-            if "CARTAO" in b.upper() or "CREDITO" in b.upper():
+            if any(termo in b.upper() for termo in lista_cartoes):
                 usado = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pendente')]['V_Num'].sum()
                 st.write(f"💳 {b}: Usado: {m_fmt(usado)}")
                 saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
 
-        st.markdown("---")
-        
+        # 2. Contas (Tudo que não for cartão nem investimento)
         st.subheader("🏦 Contas e Benefícios")
         for b in sorted(bancos_disponiveis):
-            # Se NÃO é cartão e NÃO é investimento
-            if "CARTAO" not in b.upper() and "CREDITO" not in b.upper() and "INVEST" not in b.upper():
-                val_b = float(str(df_bancos_info[df_bancos_info.iloc[:,0] == b].iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
-                mov = df_base[(df_base['Banco'] == b) & (df_base['Status'] == 'Pago')]
-                s_final = val_b + mov[mov['Tipo'].str.contains('Receita|Rend', case=False, na=False)]['V_Num'].sum() - mov[mov['Tipo'] == 'Despesa']['V_Num'].sum()
+            if not any(t in b.upper() for t in lista_cartoes) and not any(t in b.upper() for t in lista_invest):
+                s_final = get_saldo_conta(b)
                 st.write(f"🏦 {b}: Saldo: {m_fmt(s_final)}")
                 saldos_txt += f"🏦 {b}: Saldo: {m_fmt(s_final)}\n"
                 total_patrimonio += s_final
 
-        st.markdown("---")
+        # 3. Investimentos
         st.subheader("📈 Investimentos")
         for b in sorted(bancos_disponiveis):
-            if "INVEST" in b.upper():
+            if any(termo in b.upper() for termo in lista_invest):
                 val_b = float(str(df_bancos_info[df_bancos_info.iloc[:,0] == b].iloc[0,1]).replace('R$', '').replace('.', '').replace(',', '.') or 0)
                 st.write(f"📈 {b}: Saldo: {m_fmt(val_b)}")
                 saldos_txt += f"📈 {b}: Saldo: {m_fmt(val_b)}\n"
                 total_patrimonio += val_b
 
-        # --- RELATÓRIO FINAL ---
+        # --- RELATÓRIO FINAL LIMPO ---
         st.divider()
+        st.write(f"**TOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}**")
+        
         df_p = df_base[(pd.to_datetime(df_base['DT']).dt.date >= d_ini) & (pd.to_datetime(df_base['DT']).dt.date <= d_fim)]
         rec_v = df_p[(df_p['Tipo'] == 'Receita') & (df_p['Status'] == 'Pago')]['V_Num'].sum()
         des_v = df_p[(df_p['Tipo'] == 'Despesa') & (df_p['Status'] == 'Pago')]['V_Num'].sum()
         
-        relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
-        relat += f"========================================\nREC: {m_fmt(rec_v)} | DES: {m_fmt(des_v)}\n"
-        relat += f"========================================\n\nSALDOS:\n{saldos_txt}\nTOTAL: {m_fmt(total_patrimonio)}"
-        
-        st.text_area("Copiar Relatório", relat, height=200)
+        relat = f"RELATÓRIO WILSON\nREC: {m_fmt(rec_v)} | DES: {m_fmt(des_v)}\n\nSALDOS:\n{saldos_txt}\nTOTAL: {m_fmt(total_patrimonio)}"
+        st.text_area("Copiar Relatório", relat, height=150)
         st.markdown(f'[📲 Enviar](https://wa.me/?text={urllib.parse.quote(relat)})')
 
 if aba == "📋 Relatório PDF":
