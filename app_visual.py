@@ -970,33 +970,39 @@ elif "📄" in aba:
                                (df_base['Tipo'].str.upper() == 'DESPESA') & 
                                (df_base['Status'].str.upper() == 'PENDENTE')].copy()
             
+            
             # --- CÁLCULO SEGURO DE CARTÃO ---
         
-        # 1. Filtra os lançamentos pendentes daquele banco específico
+  # --- LÓGICA INTELIGENTE: DIFERENCIA CARTÃO DE CRÉDITO DE DÉBITO/BENEFÍCIO ---
+        
+        # Filtra lançamentos do banco
         df_cart = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PENDENTE')].copy()
         
-        # 2. Só tenta processar se a coluna de vencimento existir e houver dados
-        if not df_cart.empty and 'Dia de Vencimento' in df_cart.columns:
-            # Converte a coluna para data (força formato de data, ignora erros)
+        # VERIFICAÇÃO: Se for Alelo ou Pluxee, não usamos vencimento, usamos o total disponível
+        if b in ['Alelo', 'Pluxee']:
+            # O 'usado' aqui seria a soma de todos os gastos pendentes, sem filtro de data de vencimento
+            usado = df_cart['V_Num'].sum() if not df_cart.empty else 0.0
+            dispo = valor_b - usado
+            saldos_txt += f"💳 {b}: Saldo: {m_fmt(dispo)} | Usado: {m_fmt(usado)}\n"
+            
+        # SE FOR CARTÃO DE CRÉDITO (Mercado Pago, etc)
+        elif 'Dia de Vencimento' in df_cart.columns and not df_cart.empty:
             df_cart['DT_VENC_DATA'] = pd.to_datetime(df_cart['Dia de Vencimento'], errors='coerce')
             
-            # Filtra mês 7 e ano 2026 (ajuste para o mês/ano que você deseja conferir)
+            # Filtra apenas o mês atual (Julho)
             df_cart_mes = df_cart[
                 (df_cart['DT_VENC_DATA'].dt.month == 7) & 
                 (df_cart['DT_VENC_DATA'].dt.year == 2026)
             ]
-            
-            # Soma apenas o que passou no filtro
             usado = df_cart_mes['V_Num'].sum()
-        else:
-            usado = 0.0
-
-        # 3. Exibição e Alerta
-        if valor_b > 0:
             dispo = valor_b - usado
             saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+        
         else:
-            saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)} (Venc: {dia_venc_e})\n"
+            # Caso genérico
+            usado = df_cart['V_Num'].sum() if not df_cart.empty else 0.0
+            saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
+            
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
      
