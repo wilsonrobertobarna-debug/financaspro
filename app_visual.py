@@ -963,9 +963,14 @@ elif "📄" in aba:
             # 1. Do banco específico
             # 2. Que seja Despesa
             # 3. Que esteja Pendente
-            df_cart_base = df_base[(df_base['Banco'] == b) & 
-                                   (df_base['Tipo'].str.upper() == 'DESPESA') & 
-                                   (df_base['Status'].str.upper() == 'PENDENTE')].copy()
+            df_cart_base = df_base[
+                (df_base['Banco'] == b) & 
+                (df_base['Tipo'].str.upper() == 'DESPESA') & 
+                (
+                    (df_base['Status'].str.upper() == 'PENDENTE') | 
+                    (pd.to_datetime(df_base['Vencimento']).dt.date <= d_fim)
+                )
+            ].copy()
             
             # Garante que a coluna de data está em formato de data
             df_cart_base['DT_ONLY'] = pd.to_datetime(df_cart_base['DT']).dt.date
