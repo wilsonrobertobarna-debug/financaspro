@@ -973,7 +973,12 @@ elif "📄" in aba:
             # 🔥 O PULO DO GATO:
             # Soma tudo o que está pendente DESDE SEMPRE até a DATA FINAL (d_fim) selecionada.
             # Isso pega contas atrasadas e compras do mês, mas IGNORA parcelas futuras.
-            usado = df_cart_base[df_cart_base['DT_ONLY'] <= d_fim]['V_Num'].sum()
+            mask = (df_base['Banco'] == b) & \
+           (df_base['Status'].str.upper() == 'PENDENTE') & \
+           (pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True).dt.date <= d_fim)
+
+            usado = df_base.loc[mask, 'V_Num'].sum()
+            #usado = df_cart_base[df_cart_base['DT_ONLY'] <= d_fim]['V_Num'].sum()
             
             dispo = limite_cartao - usado
             
