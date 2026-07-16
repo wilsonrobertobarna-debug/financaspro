@@ -990,6 +990,7 @@ elif "📄" in aba:
         # --- LÓGICA DE AGRUPAMENTO (EXECUTAR ANTES DE EXIBIR) ---
 
 # --- LIMPEZA TOTAL E REORGANIZAÇÃO ---
+# --- LIMPEZA TOTAL E REORGANIZAÇÃO ---
 saldos_txt = ""
 
 # 1. Define os bancos que você realmente quer mostrar
