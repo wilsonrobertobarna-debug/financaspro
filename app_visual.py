@@ -956,40 +956,32 @@ elif "📄" in aba:
                     break
         
      # --- LÓGICA DE CARTÃO (Soma Pendentes até a data Limite) ---
-saldos_txt = "" 
-
-    # Loop pelos bancos
-    for b in sorted(bancos_disponiveis):
-        valor_b = 0.0
-        tipo_c = ""
-        dia_venc_e = 10
+        if "CARTA" in tipo_c or "CART" in b.upper():
+            limite_cartao = valor_b
+            
+            # Filtra a base: 
+            # 1. Do banco específico
+            # 2. Que seja Despesa
+            # 3. Que esteja Pendente
+            df_cart_base = df_base[(df_base['Banco'] == b) & 
+                                   (df_base['Tipo'].str.upper() == 'DESPESA') & 
+                                   (df_base['Status'].str.upper() == 'PENDENTE')].copy()
+            
+            # Garante que a coluna de data está em formato de data
+            df_cart_base['DT_ONLY'] = pd.to_datetime(df_cart_base['DT']).dt.date
+            
+            # 🔥 O PULO DO GATO:
+            # Soma tudo o que está pendente DESDE SEMPRE até a DATA FINAL (d_fim) selecionada.
+            # Isso pega contas atrasadas e compras do mês, mas IGNORA parcelas futuras.
+            usado = df_cart_base[df_cart_base['DT_ONLY'] <= d_fim]['V_Num'].sum()
+            
+            dispo = limite_cartao - usado
+            
+            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
         
-        # [AQUI VAI O SEU CÓDIGO QUE BUSCA AS INFO DE TIPO_C E VALOR_B NO df_bancos_info]
-        # ... (seu código de busca de banco permanece igual) ...
-
-            # --- CÁLCULO BLINDADO ---
-            if "CARTA" in tipo_c or "CART" in b.upper() or "ALELO" in b.upper() or "PLUXEE" in b.upper():
-                
-                # Filtra apenas a linha do banco exato, Status Pendente e Data válida
-                # Usamos o .copy() para garantir que não estamos alterando o df_base original
-                df_venc = pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True)
-                
-                # Filtro estrito:
-                mask = (df_base['Banco'] == b) & \
-                       (df_base['Status'].str.upper() == 'PENDENTE') & \
-                       (df_venc.dt.date <= d_fim)
-                
-                # Soma apenas esta máscara
-                usado = df_base.loc[mask, 'V_Num'].sum()
-                
-                dispo = valor_b - usado
-                
-                saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
-
-        
-            # --- LÓGICA DE CONTA / INVESTIMENTO ---
-        
-            #saldo_inicial = valor_b
+        # --- LÓGICA DE CONTA / INVESTIMENTO ---
+        else:
+            saldo_inicial = valor_b
             # Para contas normais, mantemos apenas o que já foi 'Pago'
             mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
             rec_b = mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
