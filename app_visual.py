@@ -974,19 +974,16 @@ elif "📄" in aba:
                     (df_base['Status'].str.upper() == 'PENDENTE') | 
                     (df_vencimento.dt.date <= d_fim)
                 )
+           # --- AJUSTE NO CÁLCULO DO USADO ---
+                       # --- AJUSTE NO CÁLCULO DO USADO ---
+            # Filtra apenas o que é do mês selecionado ou atrasado
+            df_filtrado_cartao = df_cart_base[
+                (df_vencimento.dt.date <= d_fim) # Pega tudo até hoje
             ].copy()
-            # Garante que a coluna de data está em formato de data
-            df_cart_base['DT_ONLY'] = pd.to_datetime(df_cart_base['DT']).dt.date
             
-            # 🔥 O PULO DO GATO:
-            # Soma tudo o que está pendente DESDE SEMPRE até a DATA FINAL (d_fim) selecionada.
-            # Isso pega contas atrasadas e compras do mês, mas IGNORA parcelas futuras.
-            usado = df_cart_base[df_cart_base['DT_ONLY'] <= d_fim]['V_Num'].sum()
-            
-            dispo = limite_cartao - usado
-            
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
-        
+            # O "Pulo do Gato": Soma apenas se a data de vencimento não for muito futura
+            # (Isso evita somar parcelas de daqui a 5 meses)
+            usado = df_filtrado_cartao['V_Num'].sum()
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
         else:
             saldo_inicial = valor_b
