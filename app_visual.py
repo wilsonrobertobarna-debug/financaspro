@@ -990,32 +990,27 @@ elif "📄" in aba:
         # --- LÓGICA DE AGRUPAMENTO (EXECUTAR ANTES DE EXIBIR) ---
 
 # --- LIMPEZA TOTAL E REORGANIZAÇÃO ---
-# --- LIMPEZA TOTAL E REORGANIZAÇÃO ---
-    saldos_txt = ""
+# --- BLOCO ÚNICO DE CÁLCULO (SUBSTITUA TUDO O QUE VOCÊ TEM AÍ) ---
+    saldos_txt = ""  # Isso reseta o que estava acumulado antes
     
-    # 1. Define os bancos que você realmente quer mostrar
-    bancos_desejados = ['Alelo', 'Pluxee', 'Mercado Pago', 'Nubank', 'Itau - Fabiana', 'Inter', 'Dinheiro']
-    
-    for b in bancos_desejados:
+    for b in ['Alelo', 'Pluxee', 'Mercado Pago', 'Nubank', 'Itau - Fabiana', 'Inter', 'Dinheiro']:
         df_banco = df_base[df_base['Banco'] == b]
-        
-        if df_banco.empty:
-            continue
+        if df_banco.empty: continue
             
-        # Soma de tudo que é Pendente (Gastos)
+        # Soma de gastos e receitas/saldos de forma clara
         gastos = df_banco[df_banco['Status'].str.upper() == 'PENDENTE']['V_Num'].sum()
+        entradas = df_banco[df_banco['Status'].str.upper() != 'PENDENTE']['V_Num'].sum()
         
-        # Soma de todo o resto (Saldo/Entradas/Receitas)
-        saldo_total = df_banco[df_banco['Status'].str.upper() != 'PENDENTE']['V_Num'].sum()
+        # Cálculo
+        saldo_final = entradas - gastos
         
-        # Cálculo final
-        disponivel = saldo_total - gastos
-        
-        # Exibição (Apenas uma linha por banco, sem duplicar)
+        # Exibição (apenas uma linha por banco, sem ícone 💰)
         if b in ['Alelo', 'Pluxee', 'Mercado Pago']:
-            saldos_txt += f"💳 {b}: Usado: {m_fmt(gastos)} | A utilizar: {m_fmt(disponivel)}\n"
+            saldos_txt += f"💳 {b}: Usado: {m_fmt(gastos)} | A utilizar: {m_fmt(saldo_final)}\n"
         else:
-            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(disponivel)}\n"
+            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo_final)}\n"
+    
+    # Agora o sados_txt está limpo e pronto para imprimir
             
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
