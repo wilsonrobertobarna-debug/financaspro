@@ -984,32 +984,36 @@ elif "📄" in aba:
        # --- LÓGICA DE CARTÃO COM CONTROLE MENSAL ---
         
         # 1. Filtra apenas o que é gasto deste banco E é PENDENTE
-        df_gastos = df_base[
-            (df_base['Banco'] == b) & 
-            (df_base['Status'].str.upper() == 'PENDENTE')
-        ].copy()
+# --- LÓGICA UNIFICADA: AGRUPANDO TUDO POR NOME DE BANCO ---
         
-        # 2. Garante que temos as datas para filtrar o mês
+        # 1. Filtra todos os lançamentos do banco, independente de ser Limite ou Gasto
+        df_banco = df_base[df_base['Banco'] == b]
+        
+        # 2. O 'limite' deve ser o valor total que você configurou (seu valor_b)
+        # O 'usado' é a soma de todos os itens PENDENTES deste banco no mês atual
+        df_gastos = df_banco[df_banco['Status'].str.upper() == 'PENDENTE'].copy()
+        
         if 'Data' in df_gastos.columns:
             df_gastos['Data'] = pd.to_datetime(df_gastos['Data'], errors='coerce')
-            # Filtra apenas gastos de Julho/2026
-            df_mes_atual = df_gastos[
+            df_gastos = df_gastos[
                 (df_gastos['Data'].dt.month == 7) & 
                 (df_gastos['Data'].dt.year == 2026)
             ]
-            usado = df_mes_atual['V_Num'].sum()
-        else:
-            usado = 0.0
-            
-        # 3. Cálculo: 'valor_b' é o saldo disponível/limite que você definiu no sistema
+        
+        usado = df_gastos['V_Num'].sum()
         a_utilizar = valor_b - usado
         
-        # 4. Exibição limpa
-        # O nome do banco já vem na variável 'b', então não precisamos repetir "Cartão" no f-string
-        if b in ['Alelo', 'Pluxee', 'Mercado Pago']:
-            saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)} | a utilizar: {m_fmt(a_utilizar)}\n"
+        # 3. Exibição Condicional
+        # Se o banco tiver limite configurado (valor_b > 0), tratamos como Cartão
+        if valor_b > 0:
+            # Se for um cartão, exibimos o formato detalhado
+            saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | a utilizar: {m_fmt(a_utilizar)}\n"
         else:
-            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(valor_b)}\n"  
+            # Se não tiver limite (Bancos/Investimentos), exibimos apenas o Saldo
+            # Nota: Aqui, se for conta corrente, o valor_b seria o saldo disponível
+            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(valor_b)}\n"
+
+            
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
      
