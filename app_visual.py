@@ -981,23 +981,35 @@ elif "📄" in aba:
         # Filtra lançamentos pendentes
        # --- LÓGICA DE AGRUPAMENTO (EVITA LINHAS DUPLICADAS) ---
         
-        # 1. Filtra tudo deste banco de uma vez só
-        df_banco = df_base[df_base['Banco'] == b]
+       # --- LÓGICA DE CARTÃO COM CONTROLE MENSAL ---
         
-        # 2. Pega o limite/saldo inicial (valor_b) e soma os gastos (pendentes)
-        # Assumimos que o 'valor_b' está na primeira linha encontrada do banco
-        limite_total = df_banco['Valor_Limite'].iloc[0] if 'Valor_Limite' in df_banco.columns else valor_b
+        # 1. Filtra apenas o que é gasto deste banco E é PENDENTE
+        df_gastos = df_base[
+            (df_base['Banco'] == b) & 
+            (df_base['Status'].str.upper() == 'PENDENTE')
+        ].copy()
         
-        df_pendentes = df_banco[df_banco['Status'].str.upper() == 'PENDENTE']
-        usado = df_pendentes['V_Num'].sum()
-        
-        # 3. Exibição única
-        if 'Cartão' in b or b in ['Alelo', 'Pluxee', 'Mercado Pago']:
-            a_utilizar = limite_total - usado
-            saldos_txt += f"💳 Cartão {b}: Usado: {m_fmt(usado)} | a utilizar: {m_fmt(a_utilizar)}\n"
+        # 2. Garante que temos as datas para filtrar o mês
+        if 'Data' in df_gastos.columns:
+            df_gastos['Data'] = pd.to_datetime(df_gastos['Data'], errors='coerce')
+            # Filtra apenas gastos de Julho/2026
+            df_mes_atual = df_gastos[
+                (df_gastos['Data'].dt.month == 7) & 
+                (df_gastos['Data'].dt.year == 2026)
+            ]
+            usado = df_mes_atual['V_Num'].sum()
         else:
-            # Para Bancos e Investimentos, exibe apenas o saldo (valor_b)
-            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(valor_b)}\n"            
+            usado = 0.0
+            
+        # 3. Cálculo: 'valor_b' é o saldo disponível/limite que você definiu no sistema
+        a_utilizar = valor_b - usado
+        
+        # 4. Exibição limpa
+        # O nome do banco já vem na variável 'b', então não precisamos repetir "Cartão" no f-string
+        if b in ['Alelo', 'Pluxee', 'Mercado Pago']:
+            saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)} | a utilizar: {m_fmt(a_utilizar)}\n"
+        else:
+            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(valor_b)}\n"  
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
      
