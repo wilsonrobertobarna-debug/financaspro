@@ -984,8 +984,10 @@ elif "📄" in aba:
        # --- LÓGICA DE CARTÃO COM CONTROLE MENSAL ---
         
         # 1. Filtra apenas o que é gasto deste banco E é PENDENTE
-# --- LÓGICA UNIFICADA: AGRUPANDO TUDO POR NOME DE BANCO ---
-      ancos_unicos = df_base['Banco'].unique()
+# --- LÓGICA DE AGRUPAMENTO (EXECUTAR ANTES DE EXIBIR) ---
+
+# Obtém a lista de bancos únicos (para não repetir)
+bancos_unicos = df_base['Banco'].unique()
 
 saldos_txt = ""
 
