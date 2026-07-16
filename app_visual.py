@@ -956,25 +956,35 @@ elif "📄" in aba:
                     break
         
      # --- LÓGICA DE CARTÃO (Soma Pendentes até a data Limite) ---
-       # --- LÓGICA DE CARTÃO (Soma Pendentes e Atrasados) ---
+saldos_txt = "" 
+
+    # Loop pelos bancos
+    for b in sorted(bancos_disponiveis):
+        valor_b = 0.0
+        tipo_c = ""
+        dia_venc_e = 10
+        
+        # [AQUI VAI O SEU CÓDIGO QUE BUSCA AS INFO DE TIPO_C E VALOR_B NO df_bancos_info]
+        # ... (seu código de busca de banco permanece igual) ...
+
+        # --- CÁLCULO BLINDADO ---
         if "CARTA" in tipo_c or "CART" in b.upper() or "ALELO" in b.upper() or "PLUXEE" in b.upper():
-            limite_cartao = valor_b
             
-            # Cria a série de datas com segurança
+            # Filtra apenas a linha do banco exato, Status Pendente e Data válida
+            # Usamos o .copy() para garantir que não estamos alterando o df_base original
             df_venc = pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True)
             
-            # Filtra a base
-            condicao_banco = (df_base['Banco'] == b)
-            condicao_tipo = (df_base['Tipo'].str.upper() == 'DESPESA')
-            condicao_pendente_ou_vencido = (df_base['Status'].str.upper() == 'PENDENTE') | (df_venc.dt.date <= d_fim)
+            # Filtro estrito:
+            mask = (df_base['Banco'] == b) & \
+                   (df_base['Status'].str.upper() == 'PENDENTE') & \
+                   (df_venc.dt.date <= d_fim)
             
-            df_cart_base = df_base[condicao_banco & condicao_tipo & condicao_pendente_ou_vencido].copy()
+            # Soma apenas esta máscara
+            usado = df_base.loc[mask, 'V_Num'].sum()
             
-            # Soma o que é válido
-            usado = df_cart_base[df_venc.dt.date <= d_fim]['V_Num'].sum()
+            dispo = valor_b - usado
             
-            dispo = limite_cartao - usado
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+            saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
 
         
             # --- LÓGICA DE CONTA / INVESTIMENTO ---
