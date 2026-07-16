@@ -989,33 +989,32 @@ elif "📄" in aba:
 # Obtém a lista de bancos únicos (para não repetir)
         # --- LÓGICA DE AGRUPAMENTO (EXECUTAR ANTES DE EXIBIR) ---
 
-# --- LISTA LIMPA E DIRETA ---
-# Define apenas o que é realmente banco/cartão
-    bancos_reais = ['Nubank', 'Itau - Fabiana', 'Inter', 'Dinheiro', 'Alelo', 'Pluxee', 'Mercado Pago']
+# --- LIMPEZA TOTAL E REORGANIZAÇÃO ---
+saldos_txt = ""
+
+# 1. Define os bancos que você realmente quer mostrar
+bancos_desejados = ['Alelo', 'Pluxee', 'Mercado Pago', 'Nubank', 'Itau - Fabiana', 'Inter', 'Dinheiro']
+
+for b in bancos_desejados:
+    df_banco = df_base[df_base['Banco'] == b]
     
-    saldos_txt = ""
+    if df_banco.empty:
+        continue
+        
+    # Soma de tudo que é Pendente (Gastos)
+    gastos = df_banco[df_banco['Status'].str.upper() == 'PENDENTE']['V_Num'].sum()
     
-    for b in bancos_reais:
-        # 1. Filtra dados do banco
-        df_banco = df_base[df_base['Banco'] == b]
-        if df_banco.empty:
-            continue
-            
-        # 2. Define o Saldo Total (Ajuste aqui conforme sua coluna de saldo)
-        # Se você tem uma linha de saldo na planilha, soma tudo
-        valor_total = df_banco['V_Num'].sum() 
-        
-        # 3. Soma apenas gastos PENDENTES
-        usado = df_banco[df_banco['Status'].str.upper() == 'PENDENTE']['V_Num'].sum()
-        
-        # 4. Cálculo
-        a_utilizar = valor_total - usado
-        
-        # 5. Exibição limpa (Sem duplicar banco e cifrão)
-        if b in ['Alelo', 'Pluxee', 'Mercado Pago']:
-            saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)} | A utilizar: {m_fmt(a_utilizar)}\n"
-        else:
-            saldos_txt += f"🏦 {b}: Saldo Final: {m_fmt(valor_total)}\n"
+    # Soma de todo o resto (Saldo/Entradas/Receitas)
+    saldo_total = df_banco[df_banco['Status'].str.upper() != 'PENDENTE']['V_Num'].sum()
+    
+    # Cálculo final
+    disponivel = saldo_total - gastos
+    
+    # Exibição (Apenas uma linha por banco, sem duplicar)
+    if b in ['Alelo', 'Pluxee', 'Mercado Pago']:
+        saldos_txt += f"💳 {b}: Usado: {m_fmt(gastos)} | A utilizar: {m_fmt(disponivel)}\n"
+    else:
+        saldos_txt += f"🏦 {b}: Saldo: {m_fmt(disponivel)}\n"
             
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
