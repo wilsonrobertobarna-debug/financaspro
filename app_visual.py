@@ -987,32 +987,35 @@ elif "📄" in aba:
 # --- LÓGICA DE AGRUPAMENTO (EXECUTAR ANTES DE EXIBIR) ---
 
 # Obtém a lista de bancos únicos (para não repetir)
-        bancos_unicos = df_base['Banco'].unique()
-        
-        saldos_txt = ""
-        
-        for b in bancos_unicos:
-            # 1. Filtra tudo desse banco
-            df_banco = df_base[df_base['Banco'] == b]
-            
-            # 2. Define o Limite/Saldo Total
-            # Assumimos que o limite é o maior valor encontrado ou um valor fixo que você tem
-            # Se você tiver uma linha de "Saldo Inicial", pegamos ela:
-            valor_b = df_banco[df_banco['Status'] == 'Inicial']['V_Num'].sum() 
-            
-            # 3. Soma apenas os gastos PENDENTES deste banco
-            df_gastos = df_banco[df_banco['Status'].str.upper() == 'PENDENTE']
-            usado = df_gastos['V_Num'].sum()
-            
-            # 4. Cálculo
-            a_utilizar = valor_b - usado
-            
-            # 5. Exibição única (Uma linha por banco)
-            if 'Cartão' in b or b in ['Alelo', 'Pluxee', 'Mercado Pago']:
-                saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)} | a utilizar: {m_fmt(a_utilizar)}\n"
-            else:
-                # Se for banco/investimento, mostra o saldo total atual
-                saldos_txt += f"🏦 {b}: Saldo: {m_fmt(valor_b - usado)}\n"
+        # --- LÓGICA DE AGRUPAMENTO (EXECUTAR ANTES DE EXIBIR) ---
+
+# Obtém a lista de bancos únicos (para não repetir)
+bancos_unicos = df_base['Banco'].unique()
+
+saldos_txt = ""
+
+for b in bancos_unicos:
+    # 1. Filtra tudo desse banco
+    df_banco = df_base[df_base['Banco'] == b]
+    
+    # 2. Define o Limite/Saldo Total
+    # Assumimos que o limite é o maior valor encontrado ou um valor fixo que você tem
+    # Se você tiver uma linha de "Saldo Inicial", pegamos ela:
+    valor_b = df_banco[df_banco['Status'] == 'Inicial']['V_Num'].sum() 
+    
+    # 3. Soma apenas os gastos PENDENTES deste banco
+    df_gastos = df_banco[df_banco['Status'].str.upper() == 'PENDENTE']
+    usado = df_gastos['V_Num'].sum()
+    
+    # 4. Cálculo
+    a_utilizar = valor_b - usado
+    
+    # 5. Exibição única (Uma linha por banco)
+    if 'Cartão' in b or b in ['Alelo', 'Pluxee', 'Mercado Pago']:
+        saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)} | a utilizar: {m_fmt(a_utilizar)}\n"
+    else:
+        # Se for banco/investimento, mostra o saldo total atual
+        saldos_txt += f"🏦 {b}: Saldo: {m_fmt(valor_b - usado)}\n"
             
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
