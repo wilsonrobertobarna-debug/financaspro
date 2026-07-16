@@ -992,34 +992,33 @@ elif "📄" in aba:
 # --- LIMPEZA TOTAL E REORGANIZAÇÃO ---
 # --- BLOCO ÚNICO DE CÁLCULO (SUBSTITUA TUDO O QUE VOCÊ TEM AÍ) ---
    # --- CÓDIGO MESTRE (APAGUE TUDO ANTES DISSO E USE SÓ ISSO) ---
-        saldos_txt = ""
-        # Lista de todos os seus bancos, cartões e investimentos
-        todos_bancos = ['Alelo', 'Pluxee', 'Mercado Pago', 'Nubank', 'Itau - Fabiana', 'Inter', 'Dinheiro', 'Investimentos']
-        
-        for b in todos_bancos:
-            df_banco = df_base[df_base['Banco'] == b]
-            if df_banco.empty: continue
-            
-            # Soma de gastos (Pendentes)
-            gastos = df_banco[df_banco['Status'].str.upper() == 'PENDENTE']['V_Num'].sum()
-            
-            # Soma de entradas/saldos (Tudo que NÃO é pendente)
-            entradas = df_banco[df_banco['Status'].str.upper() != 'PENDENTE']['V_Num'].sum()
-            
-            # Cálculo: Se for cartão, consideramos limite, senão apenas saldo
-            saldo_final = entradas - gastos
-            
-            # Exibição organizada
-            if b in ['Alelo', 'Pluxee', 'Mercado Pago']:
-                saldos_txt += f"💳 {b}: Usado: {m_fmt(gastos)} | A utilizar: {m_fmt(saldo_final)}\n"
-            else:
-                saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo_final)}\n"
-        
-        # Cálculo único do patrimônio total
-        patrimonio_total = df_base['V_Num'].sum()
-        saldos_txt += f"\n💰 TOTAL PATRIMÔNIO: {m_fmt(patrimonio_total)}"
+# --- CÓDIGO MESTRE (APAGUE TUDO ANTES DISSO E USE SÓ ISSO) ---
+saldos_txt = ""
+# Lista de todos os seus bancos, cartões e investimentos
+todos_bancos = ['Alelo', 'Pluxee', 'Mercado Pago', 'Nubank', 'Itau - Fabiana', 'Inter', 'Dinheiro', 'Investimentos']
+
+for b in todos_bancos:
+    df_banco = df_base[df_base['Banco'] == b]
+    if df_banco.empty: continue
     
-    # Agora o sados_txt está limpo e pronto para imprimir
+    # Soma de gastos (Pendentes)
+    gastos = df_banco[df_banco['Status'].str.upper() == 'PENDENTE']['V_Num'].sum()
+    
+    # Soma de entradas/saldos (Tudo que NÃO é pendente)
+    entradas = df_banco[df_banco['Status'].str.upper() != 'PENDENTE']['V_Num'].sum()
+    
+    # Cálculo: Se for cartão, consideramos limite, senão apenas saldo
+    saldo_final = entradas - gastos
+    
+    # Exibição organizada
+    if b in ['Alelo', 'Pluxee', 'Mercado Pago']:
+        saldos_txt += f"💳 {b}: Usado: {m_fmt(gastos)} | A utilizar: {m_fmt(saldo_final)}\n"
+    else:
+        saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo_final)}\n"
+
+# Cálculo único do patrimônio total
+patrimonio_total = df_base['V_Num'].sum()
+saldos_txt += f"\n💰 TOTAL PATRIMÔNIO: {m_fmt(patrimonio_total)}"
             
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
