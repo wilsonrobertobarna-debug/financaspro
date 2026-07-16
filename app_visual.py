@@ -956,35 +956,28 @@ elif "📄" in aba:
                     break
         
      # --- LÓGICA DE CARTÃO (Soma Pendentes até a data Limite) ---
-        if "CARTA" in tipo_c or "CART" in b.upper():
-            limite_cartao = valor_b
-            
-            # Filtra a base: 
-            # 1. Do banco específico
-            # 2. Que seja Despesa
-            # 3. Que esteja Pendente
-           # Garante que a coluna de vencimento seja convertida com segurança
-            df_vencimento = pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True)
-            
-            # Agora aplicamos o filtro usando esse df limpo
-            df_cart_base = df_base[
-                (df_base['Banco'] == b) & 
-                (df_base['Tipo'].str.upper() == 'DESPESA') & 
-                (
-                    (df_base['Status'].str.upper() == 'PENDENTE') | 
-                    (df_vencimento.dt.date <= d_fim)
-                )
-           # --- AJUSTE NO CÁLCULO DO USADO ---
-                       # --- AJUSTE NO CÁLCULO DO USADO ---
-            # Filtra apenas o que é do mês selecionado ou atrasado
-            df_filtrado_cartao = df_cart_base[
-                (df_vencimento.dt.date <= d_fim) # Pega tudo até hoje
-            ].copy()
-            
-            # O "Pulo do Gato": Soma apenas se a data de vencimento não for muito futura
-            # (Isso evita somar parcelas de daqui a 5 meses)
-            usado = df_filtrado_cartao['V_Num'].sum()
-        # --- LÓGICA DE CONTA / INVESTIMENTO ---
+       # --- LÓGICA DE CARTÃO (Soma Pendentes e Atrasados) ---
+    if "CARTA" in tipo_c or "CART" in b.upper() or "ALELO" in b.upper() or "PLUXEE" in b.upper():
+        limite_cartao = valor_b
+        
+        # Cria a série de datas com segurança
+        df_venc = pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True)
+        
+        # Filtra a base
+        condicao_banco = (df_base['Banco'] == b)
+        condicao_tipo = (df_base['Tipo'].str.upper() == 'DESPESA')
+        condicao_pendente_ou_vencido = (df_base['Status'].str.upper() == 'PENDENTE') | (df_venc.dt.date <= d_fim)
+        
+        df_cart_base = df_base[condicao_banco & condicao_tipo & condicao_pendente_ou_vencido].copy()
+        
+        # Soma o que é válido
+        usado = df_cart_base[df_venc.dt.date <= d_fim]['V_Num'].sum()
+        
+        dispo = limite_cartao - usado
+        saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+
+        
+            # --- LÓGICA DE CONTA / INVESTIMENTO ---
         else:
             saldo_inicial = valor_b
             # Para contas normais, mantemos apenas o que já foi 'Pago'
