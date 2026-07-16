@@ -991,31 +991,31 @@ elif "📄" in aba:
 
 # --- LIMPEZA TOTAL E REORGANIZAÇÃO ---
 # --- LIMPEZA TOTAL E REORGANIZAÇÃO ---
-saldos_txt = ""
-
-# 1. Define os bancos que você realmente quer mostrar
-bancos_desejados = ['Alelo', 'Pluxee', 'Mercado Pago', 'Nubank', 'Itau - Fabiana', 'Inter', 'Dinheiro']
-
-for b in bancos_desejados:
-    df_banco = df_base[df_base['Banco'] == b]
+    saldos_txt = ""
     
-    if df_banco.empty:
-        continue
+    # 1. Define os bancos que você realmente quer mostrar
+    bancos_desejados = ['Alelo', 'Pluxee', 'Mercado Pago', 'Nubank', 'Itau - Fabiana', 'Inter', 'Dinheiro']
+    
+    for b in bancos_desejados:
+        df_banco = df_base[df_base['Banco'] == b]
         
-    # Soma de tudo que é Pendente (Gastos)
-    gastos = df_banco[df_banco['Status'].str.upper() == 'PENDENTE']['V_Num'].sum()
-    
-    # Soma de todo o resto (Saldo/Entradas/Receitas)
-    saldo_total = df_banco[df_banco['Status'].str.upper() != 'PENDENTE']['V_Num'].sum()
-    
-    # Cálculo final
-    disponivel = saldo_total - gastos
-    
-    # Exibição (Apenas uma linha por banco, sem duplicar)
-    if b in ['Alelo', 'Pluxee', 'Mercado Pago']:
-        saldos_txt += f"💳 {b}: Usado: {m_fmt(gastos)} | A utilizar: {m_fmt(disponivel)}\n"
-    else:
-        saldos_txt += f"🏦 {b}: Saldo: {m_fmt(disponivel)}\n"
+        if df_banco.empty:
+            continue
+            
+        # Soma de tudo que é Pendente (Gastos)
+        gastos = df_banco[df_banco['Status'].str.upper() == 'PENDENTE']['V_Num'].sum()
+        
+        # Soma de todo o resto (Saldo/Entradas/Receitas)
+        saldo_total = df_banco[df_banco['Status'].str.upper() != 'PENDENTE']['V_Num'].sum()
+        
+        # Cálculo final
+        disponivel = saldo_total - gastos
+        
+        # Exibição (Apenas uma linha por banco, sem duplicar)
+        if b in ['Alelo', 'Pluxee', 'Mercado Pago']:
+            saldos_txt += f"💳 {b}: Usado: {m_fmt(gastos)} | A utilizar: {m_fmt(disponivel)}\n"
+        else:
+            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(disponivel)}\n"
             
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
