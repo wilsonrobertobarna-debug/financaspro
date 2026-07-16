@@ -970,60 +970,28 @@ elif "📄" in aba:
                                (df_base['Tipo'].str.upper() == 'DESPESA') & 
                                (df_base['Status'].str.upper() == 'PENDENTE')].copy()
             
+            # Converte a data da compra para o formato correto
+            df_cart['DT_COMPRA'] = pd.to_datetime(df_cart['DT'])
             
-            # --- CÁLCULO SEGURO DE CARTÃO ---
-        
-  # --- LÓGICA INTELIGENTE: DIFERENCIA CARTÃO DE CRÉDITO DE DÉBITO/BENEFÍCIO ---
-        
-        # Filtra lançamentos do banco
-        # --- LÓGICA DE EXIBIÇÃO POR TIPO DE CONTA ---
-        
-        # Filtra lançamentos pendentes
-       # --- LÓGICA DE AGRUPAMENTO (EVITA LINHAS DUPLICADAS) ---
-        
-       # --- LÓGICA DE CARTÃO COM CONTROLE MENSAL ---
-        
-        # 1. Filtra apenas o que é gasto deste banco E é PENDENTE
-# --- LÓGICA DE AGRUPAMENTO (EXECUTAR ANTES DE EXIBIR) ---
+            # Função para saber se a compra cai na fatura do mês atual
+            def pertence_a_fatura(data_compra, dia_fech):
+                # Se o dia da compra é <= dia de fechamento, pertence ao ciclo atual.
+                # Se for maior, pertence ao ciclo do mês seguinte.
+                return data_compra.day <= dia_fech
 
-# Obtém a lista de bancos únicos (para não repetir)
-        # --- LÓGICA DE AGRUPAMENTO (EXECUTAR ANTES DE EXIBIR) ---
-
-# --- LIMPEZA TOTAL E REORGANIZAÇÃO ---
-# --- BLOCO ÚNICO DE CÁLCULO (SUBSTITUA TUDO O QUE VOCÊ TEM AÍ) ---
-   # --- CÓDIGO MESTRE (APAGUE TUDO ANTES DISSO E USE SÓ ISSO) ---
-# --- CÓDIGO MESTRE (APAGUE TUDO ANTES DISSO E USE SÓ ISSO) ---
-            # --- CÓDIGO DE SEGURANÇA (DIAGNÓSTICO) ---
-            saldos_txt = ""
+            # Filtra: pega compras feitas no ciclo que vence no mês selecionado
+            # (Aqui ele verifica se a compra pertence ao ciclo da fatura que você quer ver)
+            df_cart['No_Ciclo'] = df_cart['DT_COMPRA'].apply(lambda x: pertence_a_fatura(x, dia_fech_d))
             
-            # 1. Vamos pegar a lista real de bancos que existem na sua planilha
-            bancos_reais = df_base['Banco'].unique()
+            # Soma o usado apenas do que entra no ciclo
+            usado = df_cart[df_cart['No_Ciclo'] == True]['V_Num'].sum()
             
-            for b in bancos_reais:
-                df_banco = df_base[df_base['Banco'] == b]
-                
-                # Soma de gastos (Pendentes)
-                gastos = df_banco[df_banco['Status'].str.upper() == 'PENDENTE']['V_Num'].sum()
-                
-                # Soma de todo o resto (Entradas/Saldos)
-                entradas = df_banco[df_banco['Status'].str.upper() != 'PENDENTE']['V_Num'].sum()
-                
-                saldo_final = entradas - gastos
-                
-                # Exibição (agora ele vai imprimir todos os bancos que encontrar)
-                if b in ['Alelo', 'Pluxee', 'Mercado Pago']:
-                    saldos_txt += f"💳 {b}: Usado: {m_fmt(gastos)} | A utilizar: {m_fmt(saldo_final)}\n"
-                else:
-                    saldos_txt += f"🏦 {b}: Saldo: {m_fmt(saldo_final)}\n"
-            
-            # Cálculo do patrimônio (Somando tudo o que é real na planilha)
-            patrimonio_total = df_base['V_Num'].sum()
-            saldos_txt += f"\n💰 TOTAL PATRIMÔNIO: {m_fmt(patrimonio_total)}"
-            
+            dispo = valor_b - usado
+            saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
-     
-            #saldo_inicial = valor_b
+        else:
+            saldo_inicial = valor_b
             # Para contas normais, mantemos apenas o que já foi 'Pago'
             mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
             rec_b = mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
