@@ -957,24 +957,24 @@ elif "📄" in aba:
         
      # --- LÓGICA DE CARTÃO (Soma Pendentes até a data Limite) ---
        # --- LÓGICA DE CARTÃO (Soma Pendentes e Atrasados) ---
-    if "CARTA" in tipo_c or "CART" in b.upper() or "ALELO" in b.upper() or "PLUXEE" in b.upper():
-        limite_cartao = valor_b
-        
-        # Cria a série de datas com segurança
-        df_venc = pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True)
-        
-        # Filtra a base
-        condicao_banco = (df_base['Banco'] == b)
-        condicao_tipo = (df_base['Tipo'].str.upper() == 'DESPESA')
-        condicao_pendente_ou_vencido = (df_base['Status'].str.upper() == 'PENDENTE') | (df_venc.dt.date <= d_fim)
-        
-        df_cart_base = df_base[condicao_banco & condicao_tipo & condicao_pendente_ou_vencido].copy()
-        
-        # Soma o que é válido
-        usado = df_cart_base[df_venc.dt.date <= d_fim]['V_Num'].sum()
-        
-        dispo = limite_cartao - usado
-        saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+        if "CARTA" in tipo_c or "CART" in b.upper() or "ALELO" in b.upper() or "PLUXEE" in b.upper():
+            limite_cartao = valor_b
+            
+            # Cria a série de datas com segurança
+            df_venc = pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True)
+            
+            # Filtra a base
+            condicao_banco = (df_base['Banco'] == b)
+            condicao_tipo = (df_base['Tipo'].str.upper() == 'DESPESA')
+            condicao_pendente_ou_vencido = (df_base['Status'].str.upper() == 'PENDENTE') | (df_venc.dt.date <= d_fim)
+            
+            df_cart_base = df_base[condicao_banco & condicao_tipo & condicao_pendente_ou_vencido].copy()
+            
+            # Soma o que é válido
+            usado = df_cart_base[df_venc.dt.date <= d_fim]['V_Num'].sum()
+            
+            dispo = limite_cartao - usado
+            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
 
         
             # --- LÓGICA DE CONTA / INVESTIMENTO ---
