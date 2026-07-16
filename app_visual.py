@@ -979,26 +979,25 @@ elif "📄" in aba:
         # --- LÓGICA DE EXIBIÇÃO POR TIPO DE CONTA ---
         
         # Filtra lançamentos pendentes
-        df_cart = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PENDENTE')].copy()
-        usado = df_cart['V_Num'].sum() if not df_cart.empty else 0.0
+       # --- LÓGICA DE AGRUPAMENTO (EVITA LINHAS DUPLICADAS) ---
         
-        # 1. Lógica para Cartões (Alelo, Pluxee, Mercado Pago, etc.)
-        # Se 'valor_b' (limite/depósito) for maior que 0, tratamos como cartão
-        if valor_b > 0:
-            a_utilizar = valor_b - usado
-            
-            # Se for Alelo ou Pluxee, exibe conforme você pediu
-            if b in ['Alelo', 'Pluxee']:
-                saldos_txt += f"💳 Cartão {b}: Usado: {m_fmt(usado)} | a utilizar: {m_fmt(a_utilizar)}\n"
-            # Para outros cartões (ex: Mercado Pago)
-            else:
-                saldos_txt += f"💳 Cartão {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | a utilizar: {m_fmt(a_utilizar)}\n"
+        # 1. Filtra tudo deste banco de uma vez só
+        df_banco = df_base[df_base['Banco'] == b]
         
-        # 2. Lógica para Bancos e Investimentos (não mostra 'usado', apenas o saldo)
+        # 2. Pega o limite/saldo inicial (valor_b) e soma os gastos (pendentes)
+        # Assumimos que o 'valor_b' está na primeira linha encontrada do banco
+        limite_total = df_banco['Valor_Limite'].iloc[0] if 'Valor_Limite' in df_banco.columns else valor_b
+        
+        df_pendentes = df_banco[df_banco['Status'].str.upper() == 'PENDENTE']
+        usado = df_pendentes['V_Num'].sum()
+        
+        # 3. Exibição única
+        if 'Cartão' in b or b in ['Alelo', 'Pluxee', 'Mercado Pago']:
+            a_utilizar = limite_total - usado
+            saldos_txt += f"💳 Cartão {b}: Usado: {m_fmt(usado)} | a utilizar: {m_fmt(a_utilizar)}\n"
         else:
-            # Assumindo que o saldo total está em 'valor_b'
-            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(valor_b)}\n"
-            
+            # Para Bancos e Investimentos, exibe apenas o saldo (valor_b)
+            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(valor_b)}\n"            
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
      
