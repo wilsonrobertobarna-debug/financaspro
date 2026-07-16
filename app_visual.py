@@ -991,31 +991,31 @@ elif "📄" in aba:
 
 # --- LISTA LIMPA E DIRETA ---
 # Define apenas o que é realmente banco/cartão
-bancos_reais = ['Nubank', 'Itau - Fabiana', 'Inter', 'Dinheiro', 'Alelo', 'Pluxee', 'Mercado Pago']
-
-saldos_txt = ""
-
-for b in bancos_reais:
-    # 1. Filtra dados do banco
-    df_banco = df_base[df_base['Banco'] == b]
-    if df_banco.empty:
-        continue
+    bancos_reais = ['Nubank', 'Itau - Fabiana', 'Inter', 'Dinheiro', 'Alelo', 'Pluxee', 'Mercado Pago']
+    
+    saldos_txt = ""
+    
+    for b in bancos_reais:
+        # 1. Filtra dados do banco
+        df_banco = df_base[df_base['Banco'] == b]
+        if df_banco.empty:
+            continue
+            
+        # 2. Define o Saldo Total (Ajuste aqui conforme sua coluna de saldo)
+        # Se você tem uma linha de saldo na planilha, soma tudo
+        valor_total = df_banco['V_Num'].sum() 
         
-    # 2. Define o Saldo Total (Ajuste aqui conforme sua coluna de saldo)
-    # Se você tem uma linha de saldo na planilha, soma tudo
-    valor_total = df_banco['V_Num'].sum() 
-    
-    # 3. Soma apenas gastos PENDENTES
-    usado = df_banco[df_banco['Status'].str.upper() == 'PENDENTE']['V_Num'].sum()
-    
-    # 4. Cálculo
-    a_utilizar = valor_total - usado
-    
-    # 5. Exibição limpa (Sem duplicar banco e cifrão)
-    if b in ['Alelo', 'Pluxee', 'Mercado Pago']:
-        saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)} | A utilizar: {m_fmt(a_utilizar)}\n"
-    else:
-        saldos_txt += f"🏦 {b}: Saldo Final: {m_fmt(valor_total)}\n"
+        # 3. Soma apenas gastos PENDENTES
+        usado = df_banco[df_banco['Status'].str.upper() == 'PENDENTE']['V_Num'].sum()
+        
+        # 4. Cálculo
+        a_utilizar = valor_total - usado
+        
+        # 5. Exibição limpa (Sem duplicar banco e cifrão)
+        if b in ['Alelo', 'Pluxee', 'Mercado Pago']:
+            saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)} | A utilizar: {m_fmt(a_utilizar)}\n"
+        else:
+            saldos_txt += f"🏦 {b}: Saldo Final: {m_fmt(valor_total)}\n"
             
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
