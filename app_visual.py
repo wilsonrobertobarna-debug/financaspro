@@ -976,32 +976,28 @@ elif "📄" in aba:
   # --- LÓGICA INTELIGENTE: DIFERENCIA CARTÃO DE CRÉDITO DE DÉBITO/BENEFÍCIO ---
         
         # Filtra lançamentos do banco
+        # --- LÓGICA DE EXIBIÇÃO POR TIPO DE CONTA ---
+        
+        # Filtra lançamentos pendentes
         df_cart = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PENDENTE')].copy()
+        usado = df_cart['V_Num'].sum() if not df_cart.empty else 0.0
         
-        # VERIFICAÇÃO: Se for Alelo ou Pluxee, não usamos vencimento, usamos o total disponível
-        if b in ['Alelo', 'Pluxee']:
-            # O 'usado' aqui seria a soma de todos os gastos pendentes, sem filtro de data de vencimento
-            usado = df_cart['V_Num'].sum() if not df_cart.empty else 0.0
-            dispo = valor_b - usado
-            saldos_txt += f"💳 {b}: Saldo: {m_fmt(dispo)} | Usado: {m_fmt(usado)}\n"
+        # 1. Lógica para Cartões (Alelo, Pluxee, Mercado Pago, etc.)
+        # Se 'valor_b' (limite/depósito) for maior que 0, tratamos como cartão
+        if valor_b > 0:
+            a_utilizar = valor_b - usado
             
-        # SE FOR CARTÃO DE CRÉDITO (Mercado Pago, etc)
-        elif 'Dia de Vencimento' in df_cart.columns and not df_cart.empty:
-            df_cart['DT_VENC_DATA'] = pd.to_datetime(df_cart['Dia de Vencimento'], errors='coerce')
-            
-            # Filtra apenas o mês atual (Julho)
-            df_cart_mes = df_cart[
-                (df_cart['DT_VENC_DATA'].dt.month == 7) & 
-                (df_cart['DT_VENC_DATA'].dt.year == 2026)
-            ]
-            usado = df_cart_mes['V_Num'].sum()
-            dispo = valor_b - usado
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+            # Se for Alelo ou Pluxee, exibe conforme você pediu
+            if b in ['Alelo', 'Pluxee']:
+                saldos_txt += f"💳 Cartão {b}: Usado: {m_fmt(usado)} | a utilizar: {m_fmt(a_utilizar)}\n"
+            # Para outros cartões (ex: Mercado Pago)
+            else:
+                saldos_txt += f"💳 Cartão {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | a utilizar: {m_fmt(a_utilizar)}\n"
         
+        # 2. Lógica para Bancos e Investimentos (não mostra 'usado', apenas o saldo)
         else:
-            # Caso genérico
-            usado = df_cart['V_Num'].sum() if not df_cart.empty else 0.0
-            saldos_txt += f"💳 {b}: Usado: {m_fmt(usado)}\n"
+            # Assumindo que o saldo total está em 'valor_b'
+            saldos_txt += f"🏦 {b}: Saldo: {m_fmt(valor_b)}\n"
             
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
