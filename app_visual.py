@@ -1104,13 +1104,21 @@ if aba == "📋 Relatório PDF":
                 banco_nome = banco_relatorio
                 df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_nome).upper()]
 
+            # 1. Filtra pela Descrição (Coluna C)
             if busca_desc and col_desc_df:
                 df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
 
+            # 2. Filtra pelo Beneficiário (Coluna J)
+            # Como o seu df_report tem as colunas na ordem original da planilha,
+            # a coluna J é o índice 9 (começando do 0)
+            if busca_benef:
+                # Pegamos o nome da coluna que está na posição 9
+                nome_col_benef = df_report.columns[9] 
+                df_report = df_report[df_report[nome_col_benef].astype(str).str.contains(busca_benef, case=False, na=False)]
+
+            # 3. Filtra pelo Status
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
-
-            df_report = df_report.sort_values(by='DT_FILTRO')
 
 # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
