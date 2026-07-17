@@ -436,9 +436,15 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
                # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
-    if not df_base.empty:
-        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
-        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
+    # BUSCA DIRETO DO GOOGLE SHEETS PARA NÃO FICAR COM DADOS VELHOS
+    ws_atual = sh.get_worksheet(0)
+    dados_atuais = ws_atual.get_all_records()
+    df_real = pd.DataFrame(dados_atuais)
+    
+    if not df_real.empty:
+        # Cria a lista baseada no df_real (que está fresco na planilha)
+        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_real.iloc[::-1].iterrows()}
+        
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
              
         
