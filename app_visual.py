@@ -149,9 +149,17 @@ except:
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
+   #def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
+    
+    # Criamos o DF mantendo os nomes originais das colunas que já existem
     df = pd.DataFrame(dados[1:], columns=dados[0])
+    
+    # Garantimos a coluna Beneficiário (se não existir, cria vazia para não dar erro)
+    if 'Beneficiário' not in df.columns:
+        df['Beneficiário'] = ""
+        
     df['ID'] = range(2, len(df) + 2)
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
@@ -160,6 +168,7 @@ def carregar_dados_gs():
     df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
     return df
+    
 
 def carregar_bancos_manual_gs():
     if ws_bancos:
