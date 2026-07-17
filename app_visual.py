@@ -301,13 +301,22 @@ def get_valor_pendente(df):
     end_of_month = datetime(now.year, now.month, 1) + relativedelta(months=1, days=-1)
     df_p = df[(df['Status'] == 'Pendente') & (df['DT'].dt.date <= end_of_month.date())]
     return df_p['V_Num'].sum()
+    
 
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 
 if st.sidebar.button("🔄 Atualizar dados do Sheets"):
-    atualizar_sessao()
+    # 1. Deleta os dados antigos da memória para forçar uma nova busca
+    if 'df_base' in st.session_state: del st.session_state['df_base']
+    if 'df_bancos_info' in st.session_state: del st.session_state['df_bancos_info']
+    
+    # 2. Limpa totalmente o cache do motor do Streamlit
     st.cache_data.clear()
+    st.cache_resource.clear()
+    
+    # 3. Executa a sua função que puxa tudo do Sheets do zero
+    atualizar_sessao()
     st.rerun()
 
 st.sidebar.divider()
@@ -324,6 +333,7 @@ for item in menu_itens:
  
 st.sidebar.divider()
 aba = st.session_state.page
+
 
 # BARRINHA 1: NOVO LANÇAMENTO
 # Inicializa a variável de estado para controlar a abertura se ela não existir
