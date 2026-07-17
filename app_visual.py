@@ -357,7 +357,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
                
         # Garante que a variável exista para evitar o NameError
-        f_venc_cartao = None 
+            f_venc_cartao = None 
 
         # ... (após todos os st.selectbox e inputs do formulário)
 
