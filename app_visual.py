@@ -9,6 +9,7 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
+import time
 
 
 
@@ -490,34 +491,35 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
                 
-            if col_ed2.button("🚨 EXCLUIR", key="btn_excluir"):
-                # Debug: vamos ver se o sistema sabe qual linha excluir
-                st.write(f"Tentando excluir linha: {idx_linha} (ID: {item['ID']})")
-                
+if col_ed2.button("🚨 EXCLUIR", key="btn_excluir"):
                 try:
                     if item['Categoria'] == 'Transferência':
-                        # Lógica de transferência...
                         ids_para_excluir = []
                         for idx, row in df_base.iterrows():
-                            # ... (sua lógica de busca de transferência)
+                            # Lógica para achar os IDs das transferências
                             if (row['Vencimento'] == item['Vencimento'] and 
                                 abs(float(row['V_Num']) - float(item['V_Num_Temp'])) < 0.01 and
                                 row['Descrição'] == item['Descrição']):
                                 ids_para_excluir.append(int(row['ID']) + 1)
                         
+                        # Exclui de trás para frente para não bagunçar as linhas
                         for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
                             ws_base.delete_rows(id_linha)
+                            time.sleep(1) # Pausa estratégica
                     else:
                         # Exclusão simples
                         ws_base.delete_rows(idx_linha)
-                        
-                   
-                    time.sleep(1) # Dá um respiro de 1 segundo para o Google processar
-                    st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
+                        time.sleep(1) # Pausa estratégica
+                    
+                    st.toast("✅ Exclusão realizada com sucesso!")
                     if "selectbox_ajuste" in st.session_state:
                         del st.session_state["selectbox_ajuste"]
+                    
                     atualizar_sessao()
                     st.rerun()
+                    
+                except Exception as e:
+                    st.error(f"Erro ao excluir: {e}")
                     
                 except Exception as e:
                     st.error(f"Erro ao excluir: {e}")
