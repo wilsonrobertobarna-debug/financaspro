@@ -331,7 +331,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação", "Vale Alimentação", "Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"])
+        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação","Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         
@@ -896,10 +896,17 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 WhatsApp")
     
+# --- CORREÇÃO DA INDENTAÇÃO AQUI ---
+    import calendar
+    ano = hoje_br.year
+    mes = hoje_br.month
+    ultimo_dia = calendar.monthrange(ano, mes)[1]
+    data_fim_mes = hoje_br.replace(day=ultimo_dia)
+        
     c1, c2 = st.columns(2)
-    d_ini = c1.date_input("Início", hoje_br - timedelta(days=30), format="DD/MM/YYYY", key="zap_d1")
-    d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY", key="zap_d2")
-    
+    d_ini = c1.date_input("Início", hoje_br.replace(day=1), format="DD/MM/YYYY", key="zap_d1")
+    d_fim = c2.date_input("Fim", data_fim_mes, format="DD/MM/YYYY", key="zap_d2")
+        # ------------------------------------
     saldos_txt = ""
     total_patrimonio = 0.0 
     
@@ -955,34 +962,32 @@ elif "📄" in aba:
                     except: pass
                     break
         
-     # --- LÓGICA DE CARTÃO (Soma Pendentes até a data Limite) ---
-        if "CARTA" in tipo_c or "CART" in b.upper():
-            limite_cartao = valor_b
+    
+# --- LÓGICA DE CARTÃO DE CRÉDITO (Cálculo Automático de Fatura) ---
+        if "CARTA" in tipo_c.upper() and "ALIMENT" not in tipo_c.upper():
+            # Filtra apenas o banco específico e despesas pendentes
+            df_cart = df_base[(df_base['Banco'] == b) & 
+                               (df_base['Tipo'].str.upper() == 'DESPESA') & 
+                               (df_base['Status'].str.upper() == 'PENDENTE')].copy()
             
-            # Filtra a base: 
-            # 1. Do banco específico
-            # 2. Que seja Despesa
-            # 3. Que esteja Pendente
-            df_cart_base = df_base[(df_base['Banco'] == b) & 
-                                   (df_base['Tipo'].str.upper() == 'DESPESA') & 
-                                   (df_base['Status'].str.upper() == 'PENDENTE')].copy()
+            # Converte a data da compra para o formato correto
+            df_cart['DT_COMPRA'] = pd.to_datetime(df_cart['DT'])
             
-            # Garante que a coluna de data está em formato de data
-            df_cart_base['DT_ONLY'] = pd.to_datetime(df_cart_base['DT']).dt.date
-            
-            # 🔥 O PULO DO GATO:
-            # Soma tudo o que está pendente DESDE SEMPRE até a DATA FINAL (d_fim) selecionada.
-            # Isso pega contas atrasadas e compras do mês, mas IGNORA parcelas futuras.
-            mask = (df_base['Banco'] == b) & \
-           (df_base['Status'].str.upper() == 'PENDENTE') & \
-           (pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True).dt.date <= d_fim)
+            # Função para saber se a compra cai na fatura do mês atual
+            def pertence_a_fatura(data_compra, dia_fech):
+                # Se o dia da compra é <= dia de fechamento, pertence ao ciclo atual.
+                # Se for maior, pertence ao ciclo do mês seguinte.
+                return data_compra.day <= dia_fech
 
-            usado = df_base.loc[mask, 'V_Num'].sum()
-            #usado = df_cart_base[df_cart_base['DT_ONLY'] <= d_fim]['V_Num'].sum()
+            # Filtra: pega compras feitas no ciclo que vence no mês selecionado
+            # (Aqui ele verifica se a compra pertence ao ciclo da fatura que você quer ver)
+            df_cart['No_Ciclo'] = df_cart['DT_COMPRA'].apply(lambda x: pertence_a_fatura(x, dia_fech_d))
             
-            dispo = limite_cartao - usado
+            # Soma o usado apenas do que entra no ciclo
+            usado = df_cart[df_cart['No_Ciclo'] == True]['V_Num'].sum()
             
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+            dispo = valor_b - usado
+            saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
         
         # --- LÓGICA DE CONTA / INVESTIMENTO ---
         else:
