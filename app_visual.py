@@ -9,26 +9,7 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
-import time
 
-# COLE A FUNÇÃO AQUI:
-def converter_valor(v):
-    try:
-        # Se o valor já for um número (int ou float), retorna direto
-        if isinstance(v, (int, float)):
-            return float(v)
-            
-        # Converte para string e limpa
-        valor_str = str(v).replace('R$', '').replace(' ', '')
-        
-        # Se tiver vírgula (formato brasileiro), trata como decimal
-        if ',' in valor_str:
-            # Substitui a vírgula por ponto
-            valor_str = valor_str.replace(',', '.')
-            
-        return float(valor_str)
-    except:
-        return 0.0
 
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
@@ -170,14 +151,7 @@ except:
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
-    
-    # Assegura que o cabeçalho seja lido e os dados acompanhem
     df = pd.DataFrame(dados[1:], columns=dados[0])
-    
-    # Se a coluna 'Beneficiário' não existir na planilha, o código cria ela vazia
-    if 'Beneficiário' not in df.columns:
-        df['Beneficiário'] = ""
-        
     df['ID'] = range(2, len(df) + 2)
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
@@ -186,7 +160,6 @@ def carregar_dados_gs():
     df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
     return df
-    
 
 def carregar_bancos_manual_gs():
     if ws_bancos:
@@ -194,7 +167,6 @@ def carregar_bancos_manual_gs():
         if len(dados) > 1:
             return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
-    
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
@@ -320,22 +292,13 @@ def get_valor_pendente(df):
     end_of_month = datetime(now.year, now.month, 1) + relativedelta(months=1, days=-1)
     df_p = df[(df['Status'] == 'Pendente') & (df['DT'].dt.date <= end_of_month.date())]
     return df_p['V_Num'].sum()
-    
 
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 
 if st.sidebar.button("🔄 Atualizar dados do Sheets"):
-    # 1. Deleta os dados antigos da memória para forçar uma nova busca
-    if 'df_base' in st.session_state: del st.session_state['df_base']
-    if 'df_bancos_info' in st.session_state: del st.session_state['df_bancos_info']
-    
-    # 2. Limpa totalmente o cache do motor do Streamlit
-    st.cache_data.clear()
-    st.cache_resource.clear()
-    
-    # 3. Executa a sua função que puxa tudo do Sheets do zero
     atualizar_sessao()
+    st.cache_data.clear()
     st.rerun()
 
 st.sidebar.divider()
@@ -353,7 +316,6 @@ for item in menu_itens:
 st.sidebar.divider()
 aba = st.session_state.page
 
-
 # BARRINHA 1: NOVO LANÇAMENTO
 # Inicializa a variável de estado para controlar a abertura se ela não existir
 if "expander_lancamento_aberto" not in st.session_state:
@@ -361,38 +323,34 @@ if "expander_lancamento_aberto" not in st.session_state:
 
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
     with st.form("f_novo", clear_on_submit=True):
+        # Usando a variável hoje_br que já corrige o fuso horário
         f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
         t_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
         
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
-        
-        # Lógica do Beneficiário
-        beneficiarios_cadastrados = sorted([str(x) for x in df_base['Beneficiário'].unique() if str(x).strip() != ""])
-        f_ben_selecionado = st.selectbox("Beneficiário", options=["(Selecione ou Digite Abaixo)"] + beneficiarios_cadastrados)
-        
-        if f_ben_selecionado == "Outro":
-            f_ben = st.text_input("Beneficiário (Digite o nome):")
-            st.write("Sugestões: " + ", ".join(beneficiarios_cadastrados[:5])) # Mostra os primeiros para você ver
-            #f_ben = st.text_input("Nome do Beneficiário (Selecione acima ou digite aqui):", value="" if f_ben_selecionado == "(Selecione ou Digite Abaixo)" else f_ben_selecionado)
-        else:
-            f_ben = f_ben_selecionado
-            
-        f_des = st.text_input("Descrição")
+        f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação", "Vale Alimentação", "Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         
+        # Garante que a variável exista para evitar o NameError
         f_venc_cartao = None 
 
+        # ... (após todos os st.selectbox e inputs do formulário)
+
         if st.form_submit_button("Salvar Lançamento"):
-            # 1. BUSCAR O MAIOR ID DIRETO NA PLANILHA
+            # 1. BUSCAR O MAIOR ID DIRETO NA PLANILHA (Sem depender de variáveis externas)
+            # Pegamos todos os valores da aba
             todos_dados = ws_base.get_all_records()
             
             if todos_dados:
+                # Transformamos em um DataFrame temporário só para achar o maior ID
                 import pandas as pd
                 df_temp = pd.DataFrame(todos_dados)
+                
+                # Se a coluna ID existir, pegamos o maior + 1, senão começa em 1
                 if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
                     proximo_id = int(df_temp['ID'].max()) + 1
                 else:
@@ -410,16 +368,15 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 nova_data = t_dat + relativedelta(months=i)
                 
                 ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"), # A: Vencimento
-                    v_str,                          # B: Valor
-                    f_des,                          # C: Descrição
-                    f_cat,                          # D: Categoria
-                    f_tip,                          # E: Tipo
-                    f_bnc,                          # F: Banco
-                    f_sta,                          # G: Status
-                    f_compra_str,                   # H: Data da Compra
-                    proximo_id + i,                 # I: ID
-                    f_ben                           # J: Beneficiário
+                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
+                    v_str,                          # Coluna B: Valor
+                    f_des,                          # Coluna C: Descrição
+                    f_cat,                          # Coluna D: Categoria
+                    f_tip,                          # Coluna E: Tipo
+                    f_bnc,                          # Coluna F: Banco
+                    f_sta,                          # Coluna G: Status
+                    f_compra_str,                   # Coluna H: Data da Compra
+                    proximo_id + i                  # Coluna I: ID (Agora sem pular coluna!)
                 ])
             
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
@@ -455,81 +412,64 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
                # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
-    ws_atual = sh.get_worksheet(0)
-    # Buscamos os dados direto da planilha para garantir que não fiquem dados velhos
-    dados_atuais = ws_atual.get_all_records()
-    df_real = pd.DataFrame(dados_atuais)
-    
-    if not df_real.empty:
-        # 1. Calculamos o V_Num_Temp para não dar erro na edição
-        def converter_valor(v):
-            try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
-            except: return 0.0
-            
-        df_real['V_Num_Temp'] = df_real['Valor'].apply(converter_valor)
-        
-        # 2. Criamos a lista de seleção
-        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_real.iloc[::-1].iterrows()}
-        
+    if not df_base.empty:
+        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
+        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
+             
         
         if escolha:
-           if escolha:
             item = lista_edit[escolha]
-            idx_linha = int(item['ID']) + 1 
-            
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
-            ed_val = st.number_input("Alterar Valor:", value=float(valor_limpo), step=0.01, format="%.2f")   
+            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
-            
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
             ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
-            
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
-            # --- DEFINIÇÃO DAS COLUNAS (Garanta que isso esteja aqui dentro) ---
             col_ed1, col_ed2 = st.columns(2)
-            
-            # --- BOTÃO ATUALIZAR ---
-            if col_ed1.button("💾 ATUALIZAR", key="btn_atualizar"):
-                ws_base.update_cell(idx_linha, 1, ed_dat.strftime("%d/%m/%Y"))
-                ws_base.update_cell(idx_linha, 2, f"{ed_val:.2f}".replace('.', ','))
-                ws_base.update_cell(idx_linha, 3, ed_desc)
-                ws_base.update_cell(idx_linha, 6, ed_bnc)
-                ws_base.update_cell(idx_linha, 7, ed_sta)
-                st.toast("✅ Atualizado!")
-                time.sleep(1)
+            if col_ed1.button("💾 ATUALIZAR"):
+                ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
+                ws_base.update_cell(int(item['ID']), 2, f"{ed_val:.2f}".replace('.', ','))
+                ws_base.update_cell(int(item['ID']), 3, ed_desc)
+                ws_base.update_cell(int(item['ID']), 6, ed_bnc)
+                ws_base.update_cell(int(item['ID']), 7, ed_sta)
+                st.toast("✅ Atualizado!"); atualizar_sessao(); st.rerun()
+                
+                # Zera o seletor antes de recarregar
+                if "selectbox_ajuste" in st.session_state:
+                    del st.session_state["selectbox_ajuste"]
+                #st.session_state["selectbox_ajuste"] = ""
                 atualizar_sessao()
                 st.rerun()
                 
-            # --- BOTÃO EXCLUIR ---
-            if col_ed2.button("🚨 EXCLUIR", key="btn_excluir"):
-                try:
-                    if item['Categoria'] == 'Transferência':
-                        ids_para_excluir = []
-                        for idx, row in df_base.iterrows():
-                            if (row['Vencimento'] == item['Vencimento'] and 
-                                abs(float(row['V_Num']) - float(item['V_Num_Temp'])) < 0.01 and
-                                row['Descrição'] == item['Descrição']):
-                                ids_para_excluir.append(int(row['ID']) + 1)
-                        for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
-                            ws_base.delete_rows(id_linha)
-                            time.sleep(1)
-                    else:
-                        ws_base.delete_rows(idx_linha)
-                        time.sleep(1)
+            if col_ed2.button("🚨 EXCLUIR"):
+                if item['Categoria'] == 'Transferência':
+                    ids_para_excluir = []
+                    for idx, row in df_base.iterrows():
+                        mesma_data = (row['Vencimento'] == item['Vencimento'])
+                        mesmo_valor = (abs(row['V_Num'] - item['V_Num']) < 0.01)
+                        mesma_desc = (row['Descrição'] == item['Descrição'])
+                        eh_transf = (row['Categoria'] == 'Transferência')
+                        
+                        if mesma_data and mesmo_valor and mesma_desc and eh_transf:
+                            ids_para_excluir.append(int(row['ID']))
                     
-                    st.toast("✅ Exclusão realizada com sucesso!")
-                    if "selectbox_ajuste" in st.session_state:
-                        del st.session_state["selectbox_ajuste"]
-                    atualizar_sessao()
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Erro ao excluir: {e}")
-
+                    for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
+                        ws_base.delete_rows(id_linha)
+                else:
+                    ws_base.delete_rows(int(item['ID']))
+                
+                st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
+                # Zera o seletor antes de recarregar
+                if "selectbox_ajuste" in st.session_state:
+                    del st.session_state["selectbox_ajuste"]
+                st.session_state["selectbox_ajuste"] = ""
+                atualizar_sessao()
+                st.rerun()
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in st.session_state.page:
