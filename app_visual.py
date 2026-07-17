@@ -14,13 +14,21 @@ import time
 # COLE A FUNÇÃO AQUI:
 def converter_valor(v):
     try:
-        # Se for string (ex: "50000,00"), transforma a vírgula em ponto e converte
-        if isinstance(v, str):
-            v = v.replace('R$', '').replace(',', '.')
-        return float(v)
+        # Se o valor já for um número (int ou float), retorna direto
+        if isinstance(v, (int, float)):
+            return float(v)
+            
+        # Converte para string e limpa
+        valor_str = str(v).replace('R$', '').replace(' ', '')
+        
+        # Se tiver vírgula (formato brasileiro), trata como decimal
+        if ',' in valor_str:
+            # Substitui a vírgula por ponto
+            valor_str = valor_str.replace(',', '.')
+            
+        return float(valor_str)
     except:
         return 0.0
-
 
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
