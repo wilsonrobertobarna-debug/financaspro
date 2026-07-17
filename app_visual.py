@@ -332,46 +332,36 @@ if "expander_lancamento_aberto" not in st.session_state:
 
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
     with st.form("f_novo", clear_on_submit=True):
-        #with st.form("f_novo", clear_on_submit=True):
-            f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
-            t_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
+        f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
+        t_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
+        
+        f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
+        f_par = st.number_input("Parcelas", min_value=1, value=1)
+        
+        # Lógica do Beneficiário
+        beneficiarios_cadastrados = sorted([str(x) for x in df_base['Beneficiário'].unique() if str(x).strip() != ""])
+        f_ben_selecionado = st.selectbox("Beneficiário", options=beneficiarios_cadastrados + ["Outro"], index=0)
+        
+        if f_ben_selecionado == "Outro":
+            f_ben = st.text_input("Digite o nome do novo Beneficiário:")
+        else:
+            f_ben = f_ben_selecionado
             
-            f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
-            f_par = st.number_input("Parcelas", min_value=1, value=1)
-            
-            # Lógica do Beneficiário
-            beneficiarios_cadastrados = sorted([str(x) for x in df_base['Beneficiário'].unique() if str(x).strip() != ""])
-            f_ben_selecionado = st.selectbox("Beneficiário", options=beneficiarios_cadastrados + ["Outro"], index=0)
-            
-            # Se escolher "Outro", permite digitar um novo nome
-            if f_ben_selecionado == "Outro":
-                f_ben = st.text_input("Digite o nome do novo Beneficiário:")
-            else:
-                f_ben = f_ben_selecionado
-                
-            f_des = st.text_input("Descrição")
-            f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-            f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação", "Vale Alimentação", "Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"])
-            f_bnc = st.selectbox("Banco", bancos_disponiveis)
-            f_sta = st.selectbox("Status", ["Pago", "Pendente"])
-
-               
-        # Garante que a variável exista para evitar o NameError
-            f_venc_cartao = None 
-
-        # ... (após todos os st.selectbox e inputs do formulário)
+        f_des = st.text_input("Descrição")
+        f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
+        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação", "Vale Alimentação", "Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"])
+        f_bnc = st.selectbox("Banco", bancos_disponiveis)
+        f_sta = st.selectbox("Status", ["Pago", "Pendente"])
+        
+        f_venc_cartao = None 
 
         if st.form_submit_button("Salvar Lançamento"):
-            # 1. BUSCAR O MAIOR ID DIRETO NA PLANILHA (Sem depender de variáveis externas)
-            # Pegamos todos os valores da aba
+            # 1. BUSCAR O MAIOR ID DIRETO NA PLANILHA
             todos_dados = ws_base.get_all_records()
             
             if todos_dados:
-                # Transformamos em um DataFrame temporário só para achar o maior ID
                 import pandas as pd
                 df_temp = pd.DataFrame(todos_dados)
-                
-                # Se a coluna ID existir, pegamos o maior + 1, senão começa em 1
                 if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
                     proximo_id = int(df_temp['ID'].max()) + 1
                 else:
@@ -389,15 +379,15 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 nova_data = t_dat + relativedelta(months=i)
                 
                 ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
-                    v_str,                          # Coluna B: Valor
-                    f_des,                          # Coluna C: Descrição
-                    f_cat,                          # Coluna D: Categoria
-                    f_tip,                          # Coluna E: Tipo
-                    f_bnc,                          # Coluna F: Banco
-                    f_sta,                          # Coluna G: Status
-                    f_compra_str,                   # Coluna H: Data da Compra
-                    proximo_id + i,                 # Coluna I: ID (Agora sem pular coluna!)
+                    nova_data.strftime("%d/%m/%Y"), # A: Vencimento
+                    v_str,                          # B: Valor
+                    f_des,                          # C: Descrição
+                    f_cat,                          # D: Categoria
+                    f_tip,                          # E: Tipo
+                    f_bnc,                          # F: Banco
+                    f_sta,                          # G: Status
+                    f_compra_str,                   # H: Data da Compra
+                    proximo_id + i,                 # I: ID
                     f_ben                           # J: Beneficiário
                 ])
             
