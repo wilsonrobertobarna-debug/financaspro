@@ -473,10 +473,11 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
-            # --- DEFINIÇÃO DAS COLUNAS PARA OS BOTÕES ---
+          # --- DEFINIÇÃO DAS COLUNAS PARA OS BOTÕES ---
             col_ed1, col_ed2 = st.columns(2)
             
-            if col_ed1.button("💾 ATUALIZAR"):
+            # Adicionei um 'key' único para cada botão
+            if col_ed1.button("💾 ATUALIZAR", key="btn_atualizar"):
                 ws_base.update_cell(idx_linha, 1, ed_dat.strftime("%d/%m/%Y"))
                 ws_base.update_cell(idx_linha, 2, f"{ed_val:.2f}".replace('.', ','))
                 ws_base.update_cell(idx_linha, 3, ed_desc)
@@ -487,7 +488,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
                 
-            if col_ed2.button("🚨 EXCLUIR"):
+            if col_ed2.button("🚨 EXCLUIR", key="btn_excluir"):
                 if item['Categoria'] == 'Transferência':
                     ids_para_excluir = []
                     for idx, row in df_base.iterrows():
@@ -507,31 +508,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
                 if "selectbox_ajuste" in st.session_state:
                     del st.session_state["selectbox_ajuste"]
-                atualizar_sessao()
-                st.rerun()
-                
-            if col_ed2.button("🚨 EXCLUIR"):
-                if item['Categoria'] == 'Transferência':
-                    ids_para_excluir = []
-                    for idx, row in df_base.iterrows():
-                        mesma_data = (row['Vencimento'] == item['Vencimento'])
-                        mesmo_valor = (abs(row['V_Num'] - item['V_Num']) < 0.01)
-                        mesma_desc = (row['Descrição'] == item['Descrição'])
-                        eh_transf = (row['Categoria'] == 'Transferência')
-                        
-                        if mesma_data and mesmo_valor and mesma_desc and eh_transf:
-                            ids_para_excluir.append(int(row['ID']))
-                    
-                    for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
-                        ws_base.delete_rows(id_linha)
-                else:
-                    ws_base.delete_rows(int(item['ID']))
-                
-                st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
-                # Zera o seletor antes de recarregar
-                if "selectbox_ajuste" in st.session_state:
-                    del st.session_state["selectbox_ajuste"]
-                st.session_state["selectbox_ajuste"] = ""
                 atualizar_sessao()
                 st.rerun()
 
