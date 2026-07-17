@@ -11,6 +11,18 @@ import urllib.parse
 import streamlit.components.v1 as components
 import time
 
+# COLE A FUNÇÃO AQUI:
+def converter_valor(v):
+    try:
+        # Se for número, já retorna como float
+        if isinstance(v, (int, float)):
+            return float(v)
+        # Se for texto, limpa e converte
+        valor_str = str(v).replace('R$', '').replace('.', '').replace(',', '.')
+        return float(valor_str)
+    except:
+        return 0.0
+
 
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
