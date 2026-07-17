@@ -437,12 +437,12 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     ws_atual = sh.get_worksheet(0)
-    # Buscamos os dados
+    # Buscamos os dados direto da planilha para garantir que não fiquem dados velhos
     dados_atuais = ws_atual.get_all_records()
     df_real = pd.DataFrame(dados_atuais)
     
     if not df_real.empty:
-        # 1. Calculamos o V_Num apenas para a edição, usando a coluna 'Valor' que já existe na planilha
+        # 1. Calculamos o V_Num_Temp para não dar erro na edição
         def converter_valor(v):
             try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
             except: return 0.0
@@ -457,14 +457,11 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         if escolha:
             item = lista_edit[escolha]
             
-            # Buscamos o número da linha real na planilha para não errar no update_cell
-            # Como o get_all_records() começa na linha 2 (após cabeçalho), o índice é ID+1
             idx_linha = int(item['ID']) + 1 
             
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
             
-            # Usamos o V_Num_Temp que criamos acima
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num_Temp']), step=0.01, format="%.2f")
             
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
@@ -476,8 +473,10 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
-            if st.button("💾 ATUALIZAR"):
-                # Usamos idx_linha para garantir que estamos editando a linha certa
+            # --- DEFINIÇÃO DAS COLUNAS PARA OS BOTÕES ---
+            col_ed1, col_ed2 = st.columns(2)
+            
+            if col_ed1.button("💾 ATUALIZAR"):
                 ws_base.update_cell(idx_linha, 1, ed_dat.strftime("%d/%m/%Y"))
                 ws_base.update_cell(idx_linha, 2, f"{ed_val:.2f}".replace('.', ','))
                 ws_base.update_cell(idx_linha, 3, ed_desc)
@@ -485,6 +484,29 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 ws_base.update_cell(idx_linha, 7, ed_sta)
                 
                 st.toast("✅ Atualizado!")
+                atualizar_sessao()
+                st.rerun()
+                
+            if col_ed2.button("🚨 EXCLUIR"):
+                if item['Categoria'] == 'Transferência':
+                    ids_para_excluir = []
+                    for idx, row in df_base.iterrows():
+                        mesma_data = (row['Vencimento'] == item['Vencimento'])
+                        mesmo_valor = (abs(float(row['V_Num']) - float(item['V_Num_Temp'])) < 0.01)
+                        mesma_desc = (row['Descrição'] == item['Descrição'])
+                        eh_transf = (row['Categoria'] == 'Transferência')
+                        
+                        if mesma_data and mesmo_valor and mesma_desc and eh_transf:
+                            ids_para_excluir.append(int(row['ID']) + 1)
+                    
+                    for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
+                        ws_base.delete_rows(id_linha)
+                else:
+                    ws_base.delete_rows(idx_linha)
+                
+                st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
+                if "selectbox_ajuste" in st.session_state:
+                    del st.session_state["selectbox_ajuste"]
                 atualizar_sessao()
                 st.rerun()
                 
