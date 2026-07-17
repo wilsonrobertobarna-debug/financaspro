@@ -1109,15 +1109,13 @@ if aba == "📋 Relatório PDF":
             if busca_desc and col_desc_df:
                 df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
 
-            # 2. Filtra pelo Beneficiário (Coluna J)
-            # Como o seu df_report tem as colunas na ordem original da planilha,
-            # a coluna J é o índice 9 (começando do 0)
+            # 2. Filtro pelo Beneficiário (Coluna J)
+            # Garantindo que ele busque especificamente na Coluna J (índice 9)
             if busca_benef:
-                # Pegamos o nome da coluna que está na posição 9
-                nome_col_benef = df_report.columns[9] 
-                df_report = df_report[df_report[nome_col_benef].astype(str).str.contains(busca_benef, case=False, na=False)]
+                col_benef_nome = df_report.columns[9] # J é o índice 9
+                df_report = df_report[df_report[col_benef_nome].astype(str).str.contains(busca_benef, case=False, na=False)]
 
-            # 3. Filtra pelo Status
+            # 3. Filtro pelo Status
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
