@@ -480,7 +480,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
-            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num_Temp']), step=0.01, format="%.2f")
+            ed_val = st.number_input("Alterar Valor:", value=float(valor_limpo), step=0.01, format="%.2f")   
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
