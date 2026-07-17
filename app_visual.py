@@ -350,10 +350,11 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         
         # Lógica do Beneficiário
         beneficiarios_cadastrados = sorted([str(x) for x in df_base['Beneficiário'].unique() if str(x).strip() != ""])
-        f_ben_selecionado = st.selectbox("Beneficiário", options=beneficiarios_cadastrados + ["Outro"], index=0)
+        f_ben_selecionado = st.selectbox("Beneficiário", options=["(Selecione ou Digite Abaixo)"] + beneficiarios_cadastrados)
         
         if f_ben_selecionado == "Outro":
             f_ben = st.text_input("Digite o nome do novo Beneficiário:")
+            f_ben = st.text_input("Nome do Beneficiário (Selecione acima ou digite aqui):", value="" if f_ben_selecionado == "(Selecione ou Digite Abaixo)" else f_ben_selecionado)
         else:
             f_ben = f_ben_selecionado
             
