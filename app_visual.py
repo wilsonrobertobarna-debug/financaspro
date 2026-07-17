@@ -456,15 +456,13 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
         
         if escolha:
+           if escolha:
             item = lista_edit[escolha]
-            
             idx_linha = int(item['ID']) + 1 
             
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
-            
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num_Temp']), step=0.01, format="%.2f")
-            
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
@@ -474,55 +472,47 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
-          # --- DEFINIÇÃO DAS COLUNAS PARA OS BOTÕES ---
+            # --- DEFINIÇÃO DAS COLUNAS (Garanta que isso esteja aqui dentro) ---
             col_ed1, col_ed2 = st.columns(2)
             
-            # Adicionei um 'key' único para cada botão
+            # --- BOTÃO ATUALIZAR ---
             if col_ed1.button("💾 ATUALIZAR", key="btn_atualizar"):
                 ws_base.update_cell(idx_linha, 1, ed_dat.strftime("%d/%m/%Y"))
                 ws_base.update_cell(idx_linha, 2, f"{ed_val:.2f}".replace('.', ','))
                 ws_base.update_cell(idx_linha, 3, ed_desc)
                 ws_base.update_cell(idx_linha, 6, ed_bnc)
                 ws_base.update_cell(idx_linha, 7, ed_sta)
-                
-                ws_base.delete_rows(idx_linha)
-                time.sleep(1) # Dá um respiro de 1 segundo para o Google processar
                 st.toast("✅ Atualizado!")
+                time.sleep(1)
                 atualizar_sessao()
                 st.rerun()
                 
-if col_ed2.button("🚨 EXCLUIR", key="btn_excluir"):
+            # --- BOTÃO EXCLUIR ---
+            if col_ed2.button("🚨 EXCLUIR", key="btn_excluir"):
                 try:
                     if item['Categoria'] == 'Transferência':
                         ids_para_excluir = []
                         for idx, row in df_base.iterrows():
-                            # Lógica para achar os IDs das transferências
                             if (row['Vencimento'] == item['Vencimento'] and 
                                 abs(float(row['V_Num']) - float(item['V_Num_Temp'])) < 0.01 and
                                 row['Descrição'] == item['Descrição']):
                                 ids_para_excluir.append(int(row['ID']) + 1)
-                        
-                        # Exclui de trás para frente para não bagunçar as linhas
                         for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
                             ws_base.delete_rows(id_linha)
-                            time.sleep(1) # Pausa estratégica
+                            time.sleep(1)
                     else:
-                        # Exclusão simples
                         ws_base.delete_rows(idx_linha)
-                        time.sleep(1) # Pausa estratégica
+                        time.sleep(1)
                     
                     st.toast("✅ Exclusão realizada com sucesso!")
                     if "selectbox_ajuste" in st.session_state:
                         del st.session_state["selectbox_ajuste"]
-                    
                     atualizar_sessao()
                     st.rerun()
-                    
                 except Exception as e:
                     st.error(f"Erro ao excluir: {e}")
-                    
-                except Exception as e:
-                    st.error(f"Erro ao excluir: {e}")
+
+
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in st.session_state.page:
     import plotly.graph_objects as go
