@@ -149,14 +149,13 @@ except:
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
-   #def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
     
-    # Criamos o DF mantendo os nomes originais das colunas que já existem
+    # Assegura que o cabeçalho seja lido e os dados acompanhem
     df = pd.DataFrame(dados[1:], columns=dados[0])
     
-    # Garantimos a coluna Beneficiário (se não existir, cria vazia para não dar erro)
+    # Se a coluna 'Beneficiário' não existir na planilha, o código cria ela vazia
     if 'Beneficiário' not in df.columns:
         df['Beneficiário'] = ""
         
@@ -176,6 +175,7 @@ def carregar_bancos_manual_gs():
         if len(dados) > 1:
             return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
+    
 
 # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
