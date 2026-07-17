@@ -436,43 +436,55 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
                # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
-    # BUSCA DIRETO DO GOOGLE SHEETS PARA NÃO FICAR COM DADOS VELHOS
     ws_atual = sh.get_worksheet(0)
+    # Buscamos os dados
     dados_atuais = ws_atual.get_all_records()
     df_real = pd.DataFrame(dados_atuais)
     
     if not df_real.empty:
-        # Cria a lista baseada no df_real (que está fresco na planilha)
+        # 1. Calculamos o V_Num apenas para a edição, usando a coluna 'Valor' que já existe na planilha
+        def converter_valor(v):
+            try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
+            except: return 0.0
+            
+        df_real['V_Num_Temp'] = df_real['Valor'].apply(converter_valor)
+        
+        # 2. Criamos a lista de seleção
         lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_real.iloc[::-1].iterrows()}
         
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
-             
         
         if escolha:
             item = lista_edit[escolha]
+            
+            # Buscamos o número da linha real na planilha para não errar no update_cell
+            # Como o get_all_records() começa na linha 2 (após cabeçalho), o índice é ID+1
+            idx_linha = int(item['ID']) + 1 
+            
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
-            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+            
+            # Usamos o V_Num_Temp que criamos acima
+            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num_Temp']), step=0.01, format="%.2f")
+            
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
+            
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
             ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
+            
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
-            col_ed1, col_ed2 = st.columns(2)
-            if col_ed1.button("💾 ATUALIZAR"):
-                ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
-                ws_base.update_cell(int(item['ID']), 2, f"{ed_val:.2f}".replace('.', ','))
-                ws_base.update_cell(int(item['ID']), 3, ed_desc)
-                ws_base.update_cell(int(item['ID']), 6, ed_bnc)
-                ws_base.update_cell(int(item['ID']), 7, ed_sta)
-                st.toast("✅ Atualizado!"); atualizar_sessao(); st.rerun()
+            if st.button("💾 ATUALIZAR"):
+                # Usamos idx_linha para garantir que estamos editando a linha certa
+                ws_base.update_cell(idx_linha, 1, ed_dat.strftime("%d/%m/%Y"))
+                ws_base.update_cell(idx_linha, 2, f"{ed_val:.2f}".replace('.', ','))
+                ws_base.update_cell(idx_linha, 3, ed_desc)
+                ws_base.update_cell(idx_linha, 6, ed_bnc)
+                ws_base.update_cell(idx_linha, 7, ed_sta)
                 
-                # Zera o seletor antes de recarregar
-                if "selectbox_ajuste" in st.session_state:
-                    del st.session_state["selectbox_ajuste"]
-                #st.session_state["selectbox_ajuste"] = ""
+                st.toast("✅ Atualizado!")
                 atualizar_sessao()
                 st.rerun()
                 
