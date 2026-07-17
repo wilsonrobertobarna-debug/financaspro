@@ -371,7 +371,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 ws_base.append_row([
                     nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
                     v_str,                          # Coluna B: Valor
-                    f_des,                          # Coluna C: Descrição
+                    f_desc,                         # Coluna C: Descrição
                     f_cat,                          # Coluna D: Categoria
                     f_tip,                          # Coluna E: Tipo
                     f_bnc,                          # Coluna F: Banco
