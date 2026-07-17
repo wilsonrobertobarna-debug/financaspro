@@ -484,6 +484,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 ws_base.update_cell(idx_linha, 6, ed_bnc)
                 ws_base.update_cell(idx_linha, 7, ed_sta)
                 
+                ws_base.delete_rows(idx_linha)
+                time.sleep(1) # Dá um respiro de 1 segundo para o Google processar
                 st.toast("✅ Atualizado!")
                 atualizar_sessao()
                 st.rerun()
@@ -508,7 +510,9 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     else:
                         # Exclusão simples
                         ws_base.delete_rows(idx_linha)
-                    
+                        
+                   
+                    time.sleep(1) # Dá um respiro de 1 segundo para o Google processar
                     st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
                     if "selectbox_ajuste" in st.session_state:
                         del st.session_state["selectbox_ajuste"]
