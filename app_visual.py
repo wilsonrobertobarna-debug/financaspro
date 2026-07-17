@@ -331,8 +331,8 @@ if "expander_lancamento_aberto" not in st.session_state:
     st.session_state.expander_lancamento_aberto = False
 
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
-    #with st.form("f_novo", clear_on_submit=True):
-        with st.form("f_novo", clear_on_submit=True):
+    with st.form("f_novo", clear_on_submit=True):
+        #with st.form("f_novo", clear_on_submit=True):
             f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
             t_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
             
