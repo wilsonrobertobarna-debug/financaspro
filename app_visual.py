@@ -331,7 +331,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         f_des = st.text_input("Descrição / Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação","Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"])
+        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação", "Vale Alimentação", "Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"])
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         
@@ -871,16 +871,20 @@ elif "🚗" in aba:
             
     st.divider()
     
+ 
     st.subheader("⛽ Cálculo de Consumo (Km/L)")
-    st.info("💡 **Atenção:** Digite a quantidade de combustível em **Litros** (ex: 50.0) e a distância em **Quilômetros** (ex: 600.0), e não o valor monetário em R$.")
+    st.info("💡 **Atenção:** Digite a quantidade em **Litros** e a distância em **Quilômetros**.")
     
     c_cons1, c_cons2, c_cons3 = st.columns(3)
-    litros = c_cons1.number_input("Litros Abastecidos", value=0.0, step=0.5)
-    distancia = c_cons2.number_input("Distância Percorrida (km)", value=0.0, step=10.0)
+    litros = c_cons1.number_input("Litros Abastecidos", value=0.0, step=0.5, format="%.1f")
+    distancia = c_cons2.number_input("Distância Percorrida (km)", value=0, step=10, format="%d")
     
-    if litros > 0 and distancia > 0:
+    # Validação segura: só calcula se ambos forem maiores que zero
+    if litros > 0:
         consumo = distancia / litros
-        c_cons3.success(f"📊 Consumo Médio: {consumo:.2f} km/l")
+        c_cons3.metric(label="Consumo Médio", value=f"{consumo:.2f} km/l")
+    else:
+        c_cons3.warning("Aguardando dados...")
         
     st.divider()
     df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
@@ -969,7 +973,12 @@ elif "📄" in aba:
             # 🔥 O PULO DO GATO:
             # Soma tudo o que está pendente DESDE SEMPRE até a DATA FINAL (d_fim) selecionada.
             # Isso pega contas atrasadas e compras do mês, mas IGNORA parcelas futuras.
-            usado = df_cart_base[df_cart_base['DT_ONLY'] <= d_fim]['V_Num'].sum()
+            mask = (df_base['Banco'] == b) & \
+           (df_base['Status'].str.upper() == 'PENDENTE') & \
+           (pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True).dt.date <= d_fim)
+
+            usado = df_base.loc[mask, 'V_Num'].sum()
+            #usado = df_cart_base[df_cart_base['DT_ONLY'] <= d_fim]['V_Num'].sum()
             
             dispo = limite_cartao - usado
             
