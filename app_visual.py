@@ -489,28 +489,34 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 st.rerun()
                 
             if col_ed2.button("🚨 EXCLUIR", key="btn_excluir"):
-                if item['Categoria'] == 'Transferência':
-                    ids_para_excluir = []
-                    for idx, row in df_base.iterrows():
-                        mesma_data = (row['Vencimento'] == item['Vencimento'])
-                        mesmo_valor = (abs(float(row['V_Num']) - float(item['V_Num_Temp'])) < 0.01)
-                        mesma_desc = (row['Descrição'] == item['Descrição'])
-                        eh_transf = (row['Categoria'] == 'Transferência')
-                        
-                        if mesma_data and mesmo_valor and mesma_desc and eh_transf:
-                            ids_para_excluir.append(int(row['ID']) + 1)
-                    
-                    for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
-                        ws_base.delete_rows(id_linha)
-                else:
-                    ws_base.delete_rows(idx_linha)
+                # Debug: vamos ver se o sistema sabe qual linha excluir
+                st.write(f"Tentando excluir linha: {idx_linha} (ID: {item['ID']})")
                 
-                st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
-                if "selectbox_ajuste" in st.session_state:
-                    del st.session_state["selectbox_ajuste"]
-                atualizar_sessao()
-                st.rerun()
-
+                try:
+                    if item['Categoria'] == 'Transferência':
+                        # Lógica de transferência...
+                        ids_para_excluir = []
+                        for idx, row in df_base.iterrows():
+                            # ... (sua lógica de busca de transferência)
+                            if (row['Vencimento'] == item['Vencimento'] and 
+                                abs(float(row['V_Num']) - float(item['V_Num_Temp'])) < 0.01 and
+                                row['Descrição'] == item['Descrição']):
+                                ids_para_excluir.append(int(row['ID']) + 1)
+                        
+                        for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
+                            ws_base.delete_rows(id_linha)
+                    else:
+                        # Exclusão simples
+                        ws_base.delete_rows(idx_linha)
+                    
+                    st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
+                    if "selectbox_ajuste" in st.session_state:
+                        del st.session_state["selectbox_ajuste"]
+                    atualizar_sessao()
+                    st.rerun()
+                    
+                except Exception as e:
+                    st.error(f"Erro ao excluir: {e}")
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in st.session_state.page:
     import plotly.graph_objects as go
