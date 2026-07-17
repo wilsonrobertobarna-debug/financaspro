@@ -1079,7 +1079,7 @@ if aba == "📋 Relatório PDF":
             pdf.set_font("Arial", 'B', 12)
             # Se você preencheu o campo 'busca_benef', ele imprime o nome, senão escreve 'Todos'
             nome_benef_imprimir = busca_benef if busca_benef and busca_benef.strip() != "" else "Todos"
-            pdf.cell(0, 10, f"Beneficiário Filtrado: {nome_benef_imprimir}", ln=True)
+            pdf.cell(0, 10, f"Beneficiário: {nome_benef_imprimir}", ln=True)
             pdf.ln(5) # Pula uma linha para dar espaço para a tabela
 
             # ========================================================
