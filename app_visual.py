@@ -353,8 +353,9 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         f_ben_selecionado = st.selectbox("Beneficiário", options=["(Selecione ou Digite Abaixo)"] + beneficiarios_cadastrados)
         
         if f_ben_selecionado == "Outro":
-            f_ben = st.text_input("Digite o nome do novo Beneficiário:")
-            f_ben = st.text_input("Nome do Beneficiário (Selecione acima ou digite aqui):", value="" if f_ben_selecionado == "(Selecione ou Digite Abaixo)" else f_ben_selecionado)
+            f_ben = st.text_input("Beneficiário (Digite o nome):")
+            st.write("Sugestões: " + ", ".join(beneficiarios_cadastrados[:5])) # Mostra os primeiros para você ver
+            #f_ben = st.text_input("Nome do Beneficiário (Selecione acima ou digite aqui):", value="" if f_ben_selecionado == "(Selecione ou Digite Abaixo)" else f_ben_selecionado)
         else:
             f_ben = f_ben_selecionado
             
