@@ -74,6 +74,34 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed" # Isso fará a barra vir fechada por padrão
 )
+    # 2. BARRA DE ATALHOS RÁPIDOS NO TOPO (Aqueles botões que acabamos de fazer)
+col_b1, col_b2, col_b3, col_b4 = st.columns(4)
+
+with col_b1:
+    if st.button("🐶 Pet: Milo & Bolt", use_container_width=True):
+        st.session_state.filtro_categoria_ativa = "Pet"
+        st.rerun()
+
+with col_b2:
+    if st.button("🚗 Veículo", use_container_width=True):
+        st.session_state.filtro_categoria_ativa = "Veículo"
+        st.rerun()
+
+with col_b3:
+    if st.button("🏦 Bancos", use_container_width=True):
+        st.session_state.filtro_categoria_ativa = "Bancos"
+        st.rerun()
+
+with col_b4:
+    if st.button("🔄 Limpar Filtros", use_container_width=True):
+        st.session_state.filtro_categoria_ativa = None
+        st.rerun()
+
+st.divider()
+
+# 3. O RESTO DO SEU PAINEL (Gráficos, tabelas, relatórios, etc.)
+# ... (código dos seus relatórios e da barra lateral)
+    
 
 # 2. CONEXÃO (LIGA O MOTOR)
 @st.cache_resource
