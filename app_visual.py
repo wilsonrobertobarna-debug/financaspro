@@ -78,27 +78,31 @@ st.set_page_config(
 # ========================================================
 # BARRA DE ATALHOS RÁPIDOS NO TOPO
 # ========================================================
+# ========================================================
+# BARRA DE ATALHOS RÁPIDOS NO TOPO (Alinhada com a lateral)
+# ========================================================
 st.markdown("### ⚡ Acesso Rápido")
 col_b1, col_b2, col_b3, col_b4 = st.columns(4)
 
 with col_b1:
     if st.button("🐶 Pet: Milo & Bolt", use_container_width=True):
-        st.session_state.filtro_categoria_ativa = "Pet"
+        # Substitua 'pagina_atual' pela exata variável que sua lateral usa para mudar de tela
+        st.session_state.pagina_atual = "🐶 Pet" 
         st.rerun()
 
 with col_b2:
     if st.button("🚗 Veículo", use_container_width=True):
-        st.session_state.filtro_categoria_ativa = "Veículo"
+        st.session_state.pagina_atual = "🚗 Gestão do Veículo"
         st.rerun()
 
 with col_b3:
     if st.button("🏦 Bancos", use_container_width=True):
-        st.session_state.filtro_categoria_ativa = "Bancos"
+        st.session_state.pagina_atual = "🏦 Bancos"
         st.rerun()
 
 with col_b4:
-    if st.button("🔄 Limpar Filtros", use_container_width=True):
-        st.session_state.filtro_categoria_ativa = None
+    if st.button("🏠 Início", use_container_width=True):
+        st.session_state.pagina_atual = "🏠 Início"
         st.rerun()
 
 st.markdown("---")
