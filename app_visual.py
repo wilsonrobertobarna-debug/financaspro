@@ -179,6 +179,7 @@ try:
 except:
     ws_bancos = None
 
+
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
@@ -189,8 +190,21 @@ def carregar_dados_gs():
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
         except: return 0.0
     df['V_Num'] = df['Valor'].apply(p_float)
-    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
+    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')    
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+    
+    # --- APLICA O FILTRO DOS BOTÕES DO TOPO, SE HOUVER UM ATIVO ---
+    if 'filtro_categoria_ativa' in st.session_state and st.session_state.filtro_categoria_ativa:
+        filtro = st.session_state.filtro_categoria_ativa
+        
+        if filtro == "Pet":
+            df = df[df['Categoria'].astype(str).str.contains("Pet|Milo|Bolt", case=False, na=False)]
+        elif filtro == "Veículo":
+            df = df[df['Categoria'].astype(str).str.contains("Veículo|Combustível|Carro|Moto", case=False, na=False)]
+        elif filtro == "Bancos":
+            # Se quiser filtrar por banco específico no futuro, ajustamos aqui
+            pass
+            
     return df
 
 def carregar_bancos_manual_gs():
