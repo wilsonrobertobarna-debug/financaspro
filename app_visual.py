@@ -1031,7 +1031,8 @@ elif "📄" in aba:
 if aba == "📋 Relatório PDF":
     st.markdown("### 📋 Emissão de Relatório Financeiro")
     
-  # LINHA 1 DE FILTROS: BANCO E PERÍODO (Julho: 01/07 a 31/07)
+  # -------------------------------------------------------------------------
+    # LINHA 1 DE FILTROS: BANCO E PERÍODO (Julho: 01/07 a 31/07)
     # -------------------------------------------------------------------------
     col_rel1, col_rel2 = st.columns(2)
     with col_rel1:
@@ -1039,9 +1040,9 @@ if aba == "📋 Relatório PDF":
         banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel)
         
     with col_rel2:
-        data_padrao_ini = dt_lib.date(2026, 7, 1)
-        data_padrao_fim = dt_lib.date(2026, 7, 31)
-        periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
+        data_padrao_ini = datetime(2026, 7, 1)
+        data_padrao_fim = datetime(2026, 7, 31)
+        periodo_pdf = st.date_input("Período do Relatório:", value=(data_padrao_ini, data_padrao_fim), format="DD/MM/YYYY")
 
     # -------------------------------------------------------------------------
     # LINHA 2 DE FILTROS: DESCRIÇÃO E STATUS 
