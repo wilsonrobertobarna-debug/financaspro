@@ -72,8 +72,67 @@ def atualizar_meta_sheets(nome):
 st.set_page_config(
     page_title="FinançasPro",
     layout="wide",
-    initial_sidebar_state="collapsed" # Isso fará a barra vir fechada por padrão
+    initial_sidebar_state="collapsed" # Isso fará a barra vir fechada por padrão    
 )
+# Inicializa a aba padrão na memória se ela ainda não existir
+if 'aba_atual' not in st.session_state:
+    st.session_state.aba_atual = "Início"
+# ========================================================
+# BARRA DE ATALHOS RÁPIDOS NO TOPO
+# ========================================================
+st.markdown("### ⚡ Acesso Rápido")
+col_b1, col_b2, col_b3, col_b4 = st.columns(4)
+
+with col_b1:
+    if st.button("🐶 Pet: Milo & Bolt", use_container_width=True):
+        st.session_state.aba_atual = "🐶 Pet"
+        st.rerun()
+
+with col_b2:
+    if st.button("🚗 Veículo", use_container_width=True):
+        st.session_state.aba_atual = "🚗 Gestão do Veículo"
+        st.rerun()
+
+with col_b3:
+    if st.button("🏦 Bancos", use_container_width=True):
+        st.session_state.aba_atual = "🏦 Bancos"
+        st.rerun()
+
+with col_b4:
+    if st.button("🏠 Início", use_container_width=True):
+        st.session_state.aba_atual = "Início"
+        st.rerun()
+
+st.markdown("---")
+
+# ========================================================
+# Roteador de Telas (Abre a seção baseada no botão clicado)
+# ========================================================
+aba = st.session_state.aba_atual
+
+if aba == "🚗 Gestão do Veículo":
+    st.title("🚗 Gestão do Veículo")
+    c1, c2, c3 = st.columns([1,1,2])
+    alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
+    gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
+    if alc > 0 and gas > 0:
+        if (alc/gas) <= 0.7: 
+            c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
+        else: 
+            c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
+    st.divider()
+
+elif aba == "🐶 Pet":
+    st.title("🐶 Pet: Milo & Bolt")
+    # Aqui entra o seu conteúdo do Pet
+
+elif aba == "🏦 Bancos":
+    st.title("🏦 Bancos")
+    # Aqui entra o seu conteúdo dos Bancos
+
+else:
+    st.title("🏠 Início - Painel Geral")
+    # Aqui entra o seu painel financeiro principal
 
 # ========================================================
 # BARRA DE ATALHOS RÁPIDOS NO TOPO
