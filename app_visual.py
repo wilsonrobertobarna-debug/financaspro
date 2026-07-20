@@ -324,8 +324,6 @@ if "expander_lancamento_aberto" not in st.session_state:
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
     with st.form("f_novo", clear_on_submit=True):
         # Usando a variável hoje_br que já corrige o fuso horário
-
-        f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
         t_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
         
@@ -334,7 +332,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         f_desc = st.text_input("📝 Descrição")
         f_bnfc = st.text_input("👤 Beneficiário")
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação", "Vale Alimentação", "Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"])  
+        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação", "Vale Alimentação", "Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"])
+        f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         
         # Garante que a variável exista para evitar o NameError
@@ -1038,20 +1037,12 @@ if aba == "📋 Relatório PDF":
     col_rel1, col_rel2 = st.columns(2)
     with col_rel1:
         opcoes_banco_rel = ["Todos"] + list(bancos_disponiveis)
-        banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel)    
-   
-    with col_rel2:
-        # Calcula automaticamente o primeiro e o último dia do mês atual
-        hoje_atual = datetime.now()
-        primeiro_dia_mes = hoje_atual.replace(day=1)
+        banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel)
         
-        if hoje_atual.month == 12:
-            ultimo_dia_mes = hoje_atual.replace(year=hoje_atual.year + 1, month=1, day=1) - timedelta(days=1)
-        else:
-            ultimo_dia_mes = hoje_atual.replace(month=hoje_atual.month + 1, day=1) - timedelta(days=1)
-
-            periodo_pdf = st.date_input("Período do Relatório:", [primeiro_dia_mes, ultimo_dia_mes], format="DD/MM/YYYY")
-    
+    with col_rel2:
+        data_padrao_ini = datetime(2026, 4, 20)
+        data_padrao_fim = datetime(2026, 5, 20)
+        periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
 
     # -------------------------------------------------------------------------
     # LINHA 2 DE FILTROS: DESCRIÇÃO E STATUS 
