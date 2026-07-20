@@ -1250,7 +1250,7 @@ if aba == "📋 Relatório PDF":
 
             
             # ========================================================
-            # 5. MONTAGEM DO CABEÇALHO DO PDF (Com Banco, Beneficiário, Vencimento e Período)
+            # 5. MONTAGEM DO CABEÇALHO DO PDF (Com Período e Vencimento Exato)
             # ========================================================
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
@@ -1264,15 +1264,16 @@ if aba == "📋 Relatório PDF":
             pdf.set_font("Arial", 'B', 10)
             pdf.cell(200, 6, txt=f"BANCO / CARTAO: {str(banco_nome).upper()}", ln=1, align="L")
             
-            # Linha 2: Beneficiário (se houver um selecionado ou ativo)
-            if 'busca_beneficiario' in locals() and busca_beneficiario and busca_beneficiario != "Todos":
-                pdf.cell(200, 6, txt=f"BENEFICIARIO: {str(busca_beneficiario).upper()}", ln=1, align="L")
+            # Linha 2: Beneficiário (Se houver)
+            benef_selecionado = locals().get('beneficiario_filtro', locals().get('b_beneficiario', 'Todos'))
+            if str(benef_selecionado).strip() and str(benef_selecionado).upper() != "TODOS":
+                pdf.cell(200, 6, txt=f"BENEFICIARIO: {str(benef_selecionado).upper()}", ln=1, align="L")
             
-            # Linha 3: Vencimento ou Período dinâmico
-            # Verifica explicitamente se é cartão pelas colunas ou pelo nome do banco
+            # Linha 3: Período e Vencimento da Fatura
             eh_cartao = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
             if eh_cartao:
-                pdf.cell(200, 6, txt=f"VENCIMENTO DA FATURA / PERIODO: {p_inicio} ate {p_fim}", ln=1, align="L")
+                data_vencimento_fatura = pd.to_datetime(b_fim).strftime('%d/%m/%Y')
+                pdf.cell(200, 6, txt=f"PERIODO: {p_inicio} ate {p_fim}  |  VENCIMENTO DA FATURA: {data_vencimento_fatura}", ln=1, align="L")
             else:
                 pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
             
