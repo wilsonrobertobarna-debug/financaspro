@@ -1040,10 +1040,22 @@ if aba == "📋 Relatório PDF":
         opcoes_banco_rel = ["Todos"] + list(bancos_disponiveis)
         banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel)
         
+    #with col_rel2:
+        #data_padrao_ini = datetime(2026, 4, 20)
+        #data_padrao_fim = datetime(2026, 5, 20)
+        #periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
     with col_rel2:
-        data_padrao_ini = datetime(2026, 4, 20)
-        data_padrao_fim = datetime(2026, 5, 20)
-        periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
+        # Calcula automaticamente o primeiro e o último dia do mês atual
+        hoje_atual = datetime.now()
+        primeiro_dia_mes = hoje_atual.replace(day=1)
+        
+        if hoje_atual.month == 12:
+            ultimo_dia_mes = hoje_atual.replace(year=hoje_atual.year + 1, month=1, day=1) - timedelta(days=1)
+        else:
+            ultimo_dia_mes = hoje_atual.replace(month=hoje_atual.month + 1, day=1) - timedelta(days=1)
+
+            periodo_pdf = st.date_input("Período do Relatório:", [primeiro_dia_mes, ultimo_dia_mes], format="DD/MM/YYYY")
+    
 
     # -------------------------------------------------------------------------
     # LINHA 2 DE FILTROS: DESCRIÇÃO E STATUS 
