@@ -71,9 +71,6 @@ def atualizar_meta_sheets(nome):
 
 st.set_page_config(
     page_title="FinançasPro",
-   # 1. Configuração da página limpa
-st.set_page_config(
-    page_title="FinançasPro",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
