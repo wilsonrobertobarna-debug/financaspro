@@ -1291,13 +1291,24 @@ if aba == "📋 Relatório PDF":
             pdf.cell(20, 7, "Status", 1)
             pdf.ln()
 
-           
-            # ========================================================
-            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF (Exibindo a Data de Compra)
-            # ========================================================
            # ========================================================
-            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF (Exibindo a Data de Compra)
+            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF (Com Numeração Automática de Parcelas)
             # ========================================================
+            
+            # Passo prévio: Cria uma contagem automática caso haja lançamentos repetidos (parcelados)
+            if not df_report.empty:
+                # Cria uma chave combinando Descrição e Valor para identificar o grupo de parcelas
+                desc_col_temp = 'Descrição' if 'Descrição' in df_report.columns else 'Descricao'
+                val_col_temp = 'V_Num' if 'V_Num' in df_report.columns else 'Valor'
+                
+                if desc_col_temp in df_report.columns and val_col_temp in df_report.columns:
+                    df_report['_grupo_parc'] = df_report[desc_col_temp].astype(str) + "_" + df_report[val_col_temp].astype(str)
+                    df_report['_parc_atual'] = df_report.groupby('_grupo_parc').cumcount() + 1
+                    df_report['_parc_total'] = df_report.groupby('_grupo_parc')['_grupo_parc'].transform('count')
+                else:
+                    df_report['_parc_atual'] = 1
+                    df_report['_parc_total'] = 1
+            
             pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
                 # Puxa estritamente a data da compra para a tabela
@@ -1309,31 +1320,22 @@ if aba == "📋 Relatório PDF":
                 # Pega a descrição base
                 desc_base = str(row.get('Descrição', row.get('Descricao', 'Sem nome'))).strip()
                 
-                # Procura o parcelamento em qualquer coluna que possa existir no seu DataFrame
-                p_atual = row.get('Parcela', row.get('Parcela_Atual', row.get('N_Parcela', row.get('Atual', None))))
-                p_total = row.get('Total_Parcelas', row.get('Total', row.get('Qtd_Parcelas', row.get('Parcelas', None))))
+                # Pega a contagem automática calculada acima
+                p_atual = row.get('_parc_atual', 1)
+                p_total = row.get('_parc_total', 1)
                 
-                # Se achou valores numéricos de parcelas nas colunas, formata
-                if p_atual is not None and p_total is not None and str(p_atual).strip() != "" and str(p_total).strip() != "":
-                    # Tenta converter para número para garantir o formato X/Y
-                    try:
-                        a_int = int(float(str(p_atual)))
-                        t_int = int(float(str(p_total)))
-                        if t_int > 0:
-                            desc_val = f"{desc_base} {a_int}/{t_int}"[:24]
-                        else:
-                            desc_val = desc_base[:24]
-                    except:
-                        desc_val = desc_base[:24]
+                # Se for mais de 1 parcela repetida, adiciona o formato X/Y. Se for única, coloca 1/1 ou mantém limpo.
+                if int(p_total) > 1:
+                    desc_val = f"{desc_base} {int(p_atual)}/{int(p_total)}"[:24]
                 else:
-                    # Se não tem coluna separada, usa a descrição pura
-                    desc_val = desc_base[:24]
+                    desc_val = f"{desc_base} 1/1"[:24] # Mude para desc_base[:24] se preferir sem o 1/1 nas compras à vista
 
                 valor_val = pd.to_numeric(row.get('V_Num', row.get('Valor', 0)), errors='coerce')
                 if pd.isna(valor_val): valor_val = 0.0
                 saldo_val = row.get('Saldo_Acum', 0.0)
                 status_val = str(row.get('Status', '-'))
 
+                
                 if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper():
                     texto_valor = f"- R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                     cor_valor = (255, 0, 0)
