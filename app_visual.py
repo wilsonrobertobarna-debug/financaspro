@@ -80,31 +80,33 @@ if 'aba_atual' not in st.session_state:
 # ========================================================
 # BARRA DE ATALHOS RÁPIDOS NO TOPO
 # ========================================================
+# ========================================================
+# BARRA DE ATALHOS RÁPIDOS NO TOPO
+# ========================================================
 st.markdown("### ⚡ Acesso Rápido")
 col_b1, col_b2, col_b3, col_b4 = st.columns(4)
 
 with col_b1:
-    if st.button("🐶 Pet: Milo & Bolt", use_container_width=True):
+    if st.button("🐶 Pet: Milo & Bolt", use_container_width=True, key="btn_topo_pet"):
         st.session_state.aba_atual = "🐶 Pet"
         st.rerun()
 
 with col_b2:
-    if st.button("🚗 Veículo", use_container_width=True):
+    if st.button("🚗 Veículo", use_container_width=True, key="btn_topo_veiculo"):
         st.session_state.aba_atual = "🚗 Gestão do Veículo"
         st.rerun()
 
 with col_b3:
-    if st.button("🏦 Bancos", use_container_width=True):
+    if st.button("🏦 Bancos", use_container_width=True, key="btn_topo_bancos"):
         st.session_state.aba_atual = "🏦 Bancos"
         st.rerun()
 
 with col_b4:
-    if st.button("🏠 Início", use_container_width=True):
+    if st.button("🏠 Início", use_container_width=True, key="btn_topo_inicio"):
         st.session_state.aba_atual = "Início"
         st.rerun()
 
 st.markdown("---")
-
 # ========================================================
 # Roteador de Telas (Abre a seção baseada no botão clicado)
 # ========================================================
