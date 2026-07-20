@@ -1057,8 +1057,7 @@ if aba == "📋 Relatório PDF":
 
     st.markdown("---")
 
-   
- # Botão para processar e gerar o documento
+    # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
             if isinstance(periodo_pdf, (list, tuple)):
@@ -1127,55 +1126,240 @@ if aba == "📋 Relatório PDF":
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
+# ========================================================
+            # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
+            # ========================================================
+            base_inicial = 0.0
+            
+            # REGRA 1: Se for Cartão de Crédito, o saldo inicial DEVE vir zerado
+            if "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper():
+                base_inicial = 0.0
+            else:
+                # REGRA 2: Banco - Pega o Saldo Inicial do Sistema e aplica as movimentações até o dia 17
+                try:
+                    # 3.1 Primeiro, buscamos o Saldo Inicial de Cadastro (Aquele de Abril, ex: R$ 17,07)
+                    saldo_sistema_abril = 0.0
+                    try:
+                        ws_bancos = sh.worksheet("Bancos")
+                        dados_bancos = ws_bancos.get_all_values()
+                        df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
+                        
+                        col_banco_cad = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
+                        col_saldo_cad = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
+                        
+                        if banco_nome != "Todos os Bancos":
+                            linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome.upper()]
+                            if not linha_banco.empty:
+                                val_cru = str(linha_banco.iloc[0][col_saldo_cad]).strip()
+                                import re
+                                val_limpo = re.sub(r'[^\d.,-]', '', val_cru)
+                                if '.' in val_limpo and ',' in val_limpo:
+                                    val_limpo = val_limpo.replace('.', '').replace(',', '.')
+                                elif ',' in val_limpo:
+                                    val_limpo = val_limpo.replace(',', '.')
+                                saldo_sistema_abril = float(val_limpo)
+                    except:
+                        saldo_sistema_abril = 0.0
+
+                    # 3.2 Agora, calculamos a movimentação que aconteceu desde o começo até o dia 17/05
+                    df_historico = df_base.copy()
+                    col_data_h = next((c for c in df_historico.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+                    col_banco_h = next((c for c in df_historico.columns if c.upper() in ['BANCO', 'CONTA']), None)
+                    
+                    if col_data_h:
+                        df_historico['DT_HIST'] = pd.to_datetime(df_historico[col_data_h], format="%d/%m/%Y", errors='coerce')
+                    else:
+                        df_historico['DT_HIST'] = pd.to_datetime(df_historico.index, errors='coerce')
+                        
+                    if banco_nome != "Todos os Bancos" and col_banco_h:
+                        df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == str(banco_nome).upper()]
+                    
+                    # Filtra tudo o que aconteceu estritamente ANTES do dia de início do relatório (antes do dia 18)
+                    df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
+                    
+                    saldo_acumulado_passado = 0.0
+                    for _, r_pass in df_antes_do_periodo.iterrows():
+                        val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
+                        
+                        if isinstance(val_p_cru, str):
+                            import re
+                            val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
+                            if '.' in val_p_limpo and ',' in val_p_limpo:
+                                val_p_limpo = val_p_limpo.replace('.', '').replace(',', '.')
+                            elif ',' in val_p_limpo:
+                                val_p_limpo = val_p_limpo.replace(',', '.')
+                            val_p = pd.to_numeric(val_p_limpo, errors='coerce')
+                        else:
+                            val_p = pd.to_numeric(val_p_cru, errors='coerce')
+                            
+                        if pd.isna(val_p): val_p = 0.0
+                        
+                        tipo_p = str(r_pass.get('Tipo', '')).upper().strip()
+                        if "DESPESA" in tipo_p or "GASTO" in tipo_p:
+                            saldo_acumulado_passado -= val_p
+                        else:
+                            saldo_acumulado_passado += val_p
+                    
+                    # O saldo inicial real no dia 18 é o saldo base do sistema + as movimentações do passado!
+                    base_inicial = saldo_sistema_abril + saldo_acumulado_passado
+                except:
+                    base_inicial = 0.0
+
+            saldo_anterior = base_inicial
+
+            saldo_anterior = base_inicial            # ========================================================
+            # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO
+            # ========================================================
+            corrente = saldo_anterior 
+            saldos_lista = []
+
+            for _, r in df_report.iterrows():
+                val = pd.to_numeric(r.get('V_Num', r.get('Valor', 0)), errors='coerce')
+                if pd.isna(val): val = 0
+                
+                tipo_check = str(r.get('Tipo', '')).upper().strip()
+                if "DESPESA" in tipo_check or "GASTO" in tipo_check:
+                    corrente -= val
+                else:
+                    corrente += val
+                saldos_lista.append(corrente)
+            
+            df_report['Saldo_Acum'] = saldos_lista
+
+            # ========================================================
+            # 5. MONTAGEM DO CABEÇALHO DO PDF (Mantido padrão limpo)
+            # ========================================================
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
+            pdf.ln(2)
+            
+            pdf.set_font("Arial", '', 10)
+            p_inicio = b_ini.strftime('%d/%m/%Y')
+            p_fim = b_fim.strftime('%d/%m/%Y')
+            
+            pdf.set_font("Arial", 'B', 10)
+            pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {str(banco_nome).upper()}", ln=1, align="L")
+            pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
+            
+            txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+            pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
+            pdf.ln(5)
+
+            # Cabeçalho da Tabela
+            pdf.set_font("Arial", 'B', 9)
+            pdf.cell(20, 7, "Data", 1)
+            pdf.cell(18, 7, "Tipo", 1)
+            pdf.cell(35, 7, "Categoria", 1)
+            pdf.cell(45, 7, "Descricao", 1)
+            pdf.cell(25, 7, "Valor", 1)
+            pdf.cell(32, 7, "Saldo Acum.", 1)
+            pdf.cell(20, 7, "Status", 1)
+            pdf.ln()
+
+            # ========================================================
+            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
+            # ========================================================
+            pdf.set_font("Arial", '', 9)
+            for index, row in df_report.iterrows():
+                data_str = row['DT_FILTRO'].strftime('%d/%m/%Y') if not pd.isna(row['DT_FILTRO']) else str(row.get(col_data_df, '---'))
+                
+                tipo_str = str(row.get('Tipo', '---')).strip()
+                cat_val = str(row.get('Categoria', 'Geral'))[:18]
+                desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))[:24]
+                valor_val = pd.to_numeric(row.get('V_Num', row.get('Valor', 0)), errors='coerce')
+                if pd.isna(valor_val): valor_val = 0.0
+                saldo_val = row.get('Saldo_Acum', 0.0)
+                status_val = str(row.get('Status', '-'))
+
+                if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper():
+                    texto_valor = f"- R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    cor_valor = (255, 0, 0)
+                else:
+                    texto_valor = f"R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    cor_valor = (0, 0, 0)
+
+                texto_saldo = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                cor_saldo = (255, 0, 0) if saldo_val < 0 else (0, 0, 0)
+
+                pdf.cell(20, 6, data_str, 1)
+                pdf.cell(18, 6, tipo_str, 1)
+                pdf.cell(35, 6, cat_val, 1)
+                pdf.cell(45, 6, desc_val, 1)
+                
+                pdf.set_text_color(*cor_valor)
+                pdf.cell(25, 6, texto_valor, 1)
+                
+                pdf.set_text_color(*cor_saldo)
+                pdf.cell(32, 6, texto_saldo, 1)
+                
+                pdf.set_text_color(0, 0, 0)
+                pdf.cell(20, 6, status_val, 1)
+                pdf.ln()
+
+            pdf_output = pdf.output(dest='S')
+            if isinstance(pdf_output, str):
+                pdf_output = pdf_output.encode('latin-1')
+                
+            st.download_button(
+                label="📥 Baixar PDF",
+                data=pdf_output,
+                file_name="relatorio_financaspro.pdf",
+                mime="application/pdf"
+            )
+            st.success(f"PDF pronto! Relatório atualizado.")
+
+        except Exception as e:
+            st.error(f"Erro ao gerar o PDF: {e}")
+
     # =========================================================================
     # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS 4 FILTROS (VISUAL LIMPO)
     # =========================================================================
-        st.markdown("### 🔍 Lançamentos Filtrados")
+    st.markdown("### 🔍 Lançamentos Filtrados")
+
+    df_tela = df_base.copy()
     
-        df_tela = df_base.copy()
-        
-        col_data_df = next((c for c in df_tela.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
-        col_banco_df = next((c for c in df_tela.columns if c.upper() in ['BANCO', 'CONTA']), None)
-        col_desc_df = next((c for c in df_tela.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
-        col_status_df = next((c for c in df_tela.columns if c.upper() in ['STATUS']), None)
+    col_data_df = next((c for c in df_tela.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+    col_banco_df = next((c for c in df_tela.columns if c.upper() in ['BANCO', 'CONTA']), None)
+    col_desc_df = next((c for c in df_tela.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
+    col_status_df = next((c for c in df_tela.columns if c.upper() in ['STATUS']), None)
+
+    # Aplica Data na tela
+    if col_data_df:
+        df_tela['DT_FILTRO'] = pd.to_datetime(df_tela[col_data_df], format="%d/%m/%Y", errors='coerce')
+        if isinstance(periodo_pdf, (list, tuple)) and len(periodo_pdf) == 2:
+            df_tela = df_tela[(df_tela['DT_FILTRO'] >= pd.to_datetime(periodo_pdf[0])) & 
+                               (df_tela['DT_FILTRO'] <= pd.to_datetime(periodo_pdf[1]))]
+
+    # Aplica Banco na tela
+    if banco_relatorio != "Todos" and col_banco_df:
+        df_tela = df_tela[df_tela[col_banco_df].str.upper().str.strip() == str(banco_relatorio).upper()]
+
+    # Aplica Descrição na tela
+    if busca_desc and col_desc_df:
+        df_tela = df_tela[df_tela[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
+
+    # Aplica Status na tela
+    if busca_status != "Todos" and col_status_df:
+        df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
+
+   # --- FAXINA RIGOROSA ---
+    # Lista de colunas proibidas
+    colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
     
-        # Aplica Data na tela
-        if col_data_df:
-            df_tela['DT_FILTRO'] = pd.to_datetime(df_tela[col_data_df], format="%d/%m/%Y", errors='coerce')
-            if isinstance(periodo_pdf, (list, tuple)) and len(periodo_pdf) == 2:
-                df_tela = df_tela[(df_tela['DT_FILTRO'] >= pd.to_datetime(periodo_pdf[0])) & 
-                                   (df_tela['DT_FILTRO'] <= pd.to_datetime(periodo_pdf[1]))]
+    # Filtra mantendo apenas colunas que NÃO estão na lista proibida 
+    # E que NÃO começam com "DT_" (isso mata o dt_ que está aparecendo)
+    colunas_visiveis = [
+        c for c in df_tela.columns 
+        if c not in colunas_proibidas and not c.upper().startswith('DT_')
+    ]
     
-        # Aplica Banco na tela
-        if banco_relatorio != "Todos" and col_banco_df:
-            df_tela = df_tela[df_tela[col_banco_df].str.upper().str.strip() == str(banco_relatorio).upper()]
-    
-        # Aplica Descrição na tela
-        if busca_desc and col_desc_df:
-            df_tela = df_tela[df_tela[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
-    
-        # Aplica Status na tela
-        if busca_status != "Todos" and col_status_df:
-            df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
-    
-       # --- FAXINA RIGOROSA ---
-        # Lista de colunas proibidas
-        colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
-        
-        # Filtra mantendo apenas colunas que NÃO estão na lista proibida 
-        # E que NÃO começam com "DT_" (isso mata o dt_ que está aparecendo)
-        colunas_visiveis = [
-            c for c in df_tela.columns 
-            if c not in colunas_proibidas and not c.upper().startswith('DT_')
-        ]
-        
-        df_tela_limpo = df_tela[colunas_visiveis]
-    
-        # Exibe os dados
-        if not df_tela_limpo.empty:
-            st.dataframe(df_tela_limpo, use_container_width=True)
-        else:
-            st.info("Nenhum lançamento encontrado para os filtros aplicados.")
+    df_tela_limpo = df_tela[colunas_visiveis]
+
+    # Exibe os dados
+    if not df_tela_limpo.empty:
+        st.dataframe(df_tela_limpo, use_container_width=True)
+    else:
+        st.info("Nenhum lançamento encontrado para os filtros aplicados.")
 # =========================================================================
 # NOVA ABA: 📊 ANÁLISES & CONFIGURAÇÕES (Criada no final do arquivo)
 # =========================================================================
