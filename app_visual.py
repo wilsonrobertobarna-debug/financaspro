@@ -368,16 +368,23 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             for i in range(f_par):
                 nova_data = t_dat + relativedelta(months=i)
                 
+                # Cria a descrição já com o número da parcela (Ex: Teste 1/5)
+                # Se for parcela única (1 de 1), podemos deixar limpo ou com 1/1
+                if f_par > 1:
+                    desc_com_parcela = f"{f_desc.strip()} {i+1}/{f_par}"
+                else:
+                    desc_com_parcela = f_desc.strip() # Ou f"{f_desc.strip()} 1/1" se preferir
+                
                 ws_base.append_row([
                     nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
                     v_str,                          # Coluna B: Valor
-                    f_desc,                         # Coluna C: Descrição
+                    desc_com_parcela,               # Coluna C: Descrição com a parcela embutida!
                     f_cat,                          # Coluna D: Categoria
                     f_tip,                          # Coluna E: Tipo
                     f_bnc,                          # Coluna F: Banco
                     f_sta,                          # Coluna G: Status
                     f_compra_str,                   # Coluna H: Data da Compra
-                    proximo_id + i,                 # Coluna I: ID (Agora sem pular coluna!)
+                    proximo_id + i,                 # Coluna I: ID
                     f_bnfc                          # Coluna J: Beneficiário
                 ])
             
