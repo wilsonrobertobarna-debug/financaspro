@@ -75,7 +75,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed" # Isso fará a barra vir fechada por padrão
 )
 
-# 2. BARRA DE ATALHOS RÁPIDOS NO TOPO (Aqueles botões que acabamos de fazer)
+# ========================================================
+# BARRA DE ATALHOS RÁPIDOS NO TOPO
+# ========================================================
+st.markdown("### ⚡ Acesso Rápido")
 col_b1, col_b2, col_b3, col_b4 = st.columns(4)
 
 with col_b1:
@@ -98,7 +101,7 @@ with col_b4:
         st.session_state.filtro_categoria_ativa = None
         st.rerun()
 
-st.divider()
+st.markdown("---")
 
 # 3. O RESTO DO SEU PAINEL (Gráficos, tabelas, relatórios, etc.)
 # ... (código dos seus relatórios e da barra lateral)
