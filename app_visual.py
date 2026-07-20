@@ -80,9 +80,7 @@ if 'aba_atual' not in st.session_state:
 # ========================================================
 # BARRA DE ATALHOS RÁPIDOS NO TOPO
 # ========================================================
-# ========================================================
-# BARRA DE ATALHOS RÁPIDOS NO TOPO
-# ========================================================
+
 st.markdown("### ⚡ Acesso Rápido")
 col_b1, col_b2, col_b3, col_b4 = st.columns(4)
 
@@ -132,41 +130,7 @@ elif aba == "🏦 Bancos":
     st.title("🏦 Bancos")
     # Aqui entra o seu conteúdo dos Bancos
 
-else:
-    st.title("🏠 Início - Painel Geral")
-    # Aqui entra o seu painel financeiro principal
 
-# ========================================================
-# BARRA DE ATALHOS RÁPIDOS NO TOPO
-# ========================================================
-st.markdown("### ⚡ Acesso Rápido")
-col_b1, col_b2, col_b3, col_b4 = st.columns(4)
-
-with col_b1:
-    if st.button("🐶 Pet: Milo & Bolt", use_container_width=True):
-        st.session_state.menu_lateral = "Pet"  # Use o nome exato da opção do seu menu lateral
-        st.rerun()
-
-with col_b2:
-    if st.button("🚗 Veículo", use_container_width=True):
-        st.session_state.menu_lateral = "🚗 Gestão do Veículo"  # Use o nome exato da opção
-        st.rerun()
-
-with col_b3:
-    if st.button("🏦 Bancos", use_container_width=True):
-        st.session_state.menu_lateral = "🏦 Bancos"  # Use o nome exato da opção
-        st.rerun()
-
-with col_b4:
-    if st.button("🏠 Início", use_container_width=True):
-        st.session_state.menu_lateral = "Início"  # Use o nome exato da opção inicial
-        st.rerun()
-
-st.markdown("---")
-
-# 3. O RESTO DO SEU PAINEL (Gráficos, tabelas, relatórios, etc.)
-# ... (código dos seus relatórios e da barra lateral)
-    
 
 # 2. CONEXÃO (LIGA O MOTOR)
 @st.cache_resource
