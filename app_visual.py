@@ -1291,10 +1291,11 @@ if aba == "📋 Relatório PDF":
             pdf.cell(20, 7, "Status", 1)
             pdf.ln()
 
+           
             # ========================================================
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF (Exibindo a Data de Compra)
             # ========================================================
-            # ========================================================
+           # ========================================================
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF (Exibindo a Data de Compra)
             # ========================================================
             pdf.set_font("Arial", '', 9)
@@ -1305,17 +1306,27 @@ if aba == "📋 Relatório PDF":
                 tipo_str = str(row.get('Tipo', '---')).strip()
                 cat_val = str(row.get('Categoria', 'Geral'))[:18]
                 
-                # Tratamento da descrição com o número das parcelas (ex: 1/5, 2/5)
+                # Pega a descrição base
                 desc_base = str(row.get('Descrição', row.get('Descricao', 'Sem nome'))).strip()
-                p_atual = row.get('Parcela_Atual', row.get('Parcela', row.get('N_Parcela', None)))
-                p_total = row.get('Total_Parcelas', row.get('TotalParcelas', row.get('Qtd_Parcelas', None)))
                 
-                if p_atual is not None and p_total is not None and str(p_atual).isdigit() and str(p_total).isdigit():
-                    if int(p_total) > 1:
-                        desc_val = f"{desc_base} {int(p_atual)}/{int(p_total)}"[:24]
-                    else:
-                        desc_val = f"{desc_base} 1/1"[:24]
+                # Procura o parcelamento em qualquer coluna que possa existir no seu DataFrame
+                p_atual = row.get('Parcela', row.get('Parcela_Atual', row.get('N_Parcela', row.get('Atual', None))))
+                p_total = row.get('Total_Parcelas', row.get('Total', row.get('Qtd_Parcelas', row.get('Parcelas', None))))
+                
+                # Se achou valores numéricos de parcelas nas colunas, formata
+                if p_atual is not None and p_total is not None and str(p_atual).strip() != "" and str(p_total).strip() != "":
+                    # Tenta converter para número para garantir o formato X/Y
+                    try:
+                        a_int = int(float(str(p_atual)))
+                        t_int = int(float(str(p_total)))
+                        if t_int > 0:
+                            desc_val = f"{desc_base} {a_int}/{t_int}"[:24]
+                        else:
+                            desc_val = desc_base[:24]
+                    except:
+                        desc_val = desc_base[:24]
                 else:
+                    # Se não tem coluna separada, usa a descrição pura
                     desc_val = desc_base[:24]
 
                 valor_val = pd.to_numeric(row.get('V_Num', row.get('Valor', 0)), errors='coerce')
