@@ -1038,12 +1038,8 @@ if aba == "📋 Relatório PDF":
     col_rel1, col_rel2 = st.columns(2)
     with col_rel1:
         opcoes_banco_rel = ["Todos"] + list(bancos_disponiveis)
-        banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel)
-        
-    #with col_rel2:
-        #data_padrao_ini = datetime(2026, 4, 20)
-        #data_padrao_fim = datetime(2026, 5, 20)
-        #periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
+        banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel)    
+   
     with col_rel2:
         # Calcula automaticamente o primeiro e o último dia do mês atual
         hoje_atual = datetime.now()
