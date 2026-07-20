@@ -72,67 +72,8 @@ def atualizar_meta_sheets(nome):
 st.set_page_config(
     page_title="FinançasPro",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed" # Isso fará a barra vir fechada por padrão
 )
-
-# 2. Inicializa a memória da aba atual
-if 'aba_atual' not in st.session_state:
-    st.session_state.aba_atual = "Início"
-
-# 3. Barra única de atalhos rápidos no topo
-st.markdown("### ⚡ Acesso Rápido")
-col_b1, col_b2, col_b3, col_b4 = st.columns(4)
-
-with col_b1:
-    if st.button("🐶 Pet: Milo & Bolt", use_container_width=True, key="topo_pet"):
-        st.session_state.aba_atual = "🐶 Pet"
-        st.rerun()
-
-with col_b2:
-    if st.button("🚗 Veículo", use_container_width=True, key="topo_veiculo"):
-        st.session_state.aba_atual = "🚗 Gestão do Veículo"
-        st.rerun()
-
-with col_b3:
-    if st.button("🏦 Bancos", use_container_width=True, key="topo_bancos"):
-        st.session_state.aba_atual = "🏦 Bancos"
-        st.rerun()
-
-with col_b4:
-    if st.button("🏠 Início", use_container_width=True, key="topo_inicio"):
-        st.session_state.aba_atual = "Início"
-        st.rerun()
-
-st.markdown("---")
-
-# 4. Conteúdo que muda conforme o botão clicado
-aba = st.session_state.aba_atual
-
-if aba == "🚗 Gestão do Veículo":
-    st.title("🚗 Gestão do Veículo")
-    c1, c2, c3 = st.columns([1,1,2])
-    alc = c1.number_input("Preço Álcool", value=0.0, step=0.01, key="preco_alc")
-    gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01, key="preco_gas")
-    if alc > 0 and gas > 0:
-        if (alc/gas) <= 0.7: 
-            c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
-        else: 
-            c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
-    st.divider()
-
-elif aba == "🐶 Pet":
-    st.title("🐶 Pet: Milo & Bolt")
-    st.write("Aqui ficam as informações e lançamentos do Pet.")
-
-elif aba == "🏦 Bancos":
-    st.title("🏦 Bancos")
-    st.write("Aqui ficam os dados dos cartões e contas.")
-
-else:
-    st.title("🏠 Início - Painel Geral")
-    st.write("Seu painel principal de lançamentos e totais.")
-
-
 
 # 2. CONEXÃO (LIGA O MOTOR)
 @st.cache_resource
@@ -206,7 +147,6 @@ try:
 except:
     ws_bancos = None
 
-
 # FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
@@ -217,21 +157,8 @@ def carregar_dados_gs():
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
         except: return 0.0
     df['V_Num'] = df['Valor'].apply(p_float)
-    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')    
+    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
     df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
-    
-    # --- APLICA O FILTRO DOS BOTÕES DO TOPO, SE HOUVER UM ATIVO ---
-    if 'filtro_categoria_ativa' in st.session_state and st.session_state.filtro_categoria_ativa:
-        filtro = st.session_state.filtro_categoria_ativa
-        
-        if filtro == "Pet":
-            df = df[df['Categoria'].astype(str).str.contains("Pet|Milo|Bolt", case=False, na=False)]
-        elif filtro == "Veículo":
-            df = df[df['Categoria'].astype(str).str.contains("Veículo|Combustível|Carro|Moto", case=False, na=False)]
-        elif filtro == "Bancos":
-            # Se quiser filtrar por banco específico no futuro, ajustamos aqui
-            pass
-            
     return df
 
 def carregar_bancos_manual_gs():
