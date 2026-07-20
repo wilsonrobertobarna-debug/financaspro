@@ -1034,7 +1034,7 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     # LINHA 1 DE FILTROS: BANCO E PERÍODO (Estrutura original mantida intacta)
     # -------------------------------------------------------------------------
-   col_rel1, col_rel2 = st.columns(2)
+    col_rel1, col_rel2 = st.columns(2)
     with col_rel1:
         opcoes_banco_rel = ["Todos"] + list(bancos_disponiveis)
         banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel)
