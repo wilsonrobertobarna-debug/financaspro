@@ -1043,7 +1043,7 @@ if aba == "📋 Relatório PDF":
     ultimo_dia_mes = datetime.date(hoje.year, hoje.month, monthrange(hoje.year, hoje.month)[1])
 
     # -------------------------------------------------------------------------
-    # LINHA 1 DE FILTROS: BANCO E PERÍODO (Restaurando o período correto de vencimento)
+    # LINHA 1 DE FILTROS: BANCO E PERÍODO (Restaurando o período correto)
     # -------------------------------------------------------------------------
     col_rel1, col_rel2 = st.columns(2)
     with col_rel1:
@@ -1051,9 +1051,9 @@ if aba == "📋 Relatório PDF":
         banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel)
         
     with col_rel2:
-        # Volta com o padrão que funcionava para os seus vencimentos de cartão/contas
-        data_padrao_ini = datetime(2026, 6, 20) # Ajuste aqui o mês base correto se precisar
-        data_padrao_fim = datetime(2026, 7, 20)
+        import datetime as dt_lib
+        data_padrao_ini = dt_lib.date(2026, 6, 20)
+        data_padrao_fim = dt_lib.date(2026, 7, 20)
         periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
 
     # -------------------------------------------------------------------------
