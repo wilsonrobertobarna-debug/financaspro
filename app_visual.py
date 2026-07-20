@@ -1133,7 +1133,21 @@ if aba == "📋 Relatório PDF":
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
-# ========================================================
+            # 3. Filtro pelo Status
+            if busca_status != "Todos" and col_status_df:
+                df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
+
+            # ========================================================
+            # ORDENAÇÃO E FILTRAGEM PELA DATA DE COMPRA PARA O PDF
+            # ========================================================
+            col_compra_df = next((c for c in df_report.columns if c.upper() in ['COMPRA', 'DATA COMPRA', 'DT COMPRA', 'DATA_COMPRA']), None)
+            
+            if col_compra_df:
+                # Converte para data temporária para ordenar certinho pela compra
+                df_report['DT_ORDEM'] = pd.to_datetime(df_report[col_compra_df], format="%d/%m/%Y", errors='coerce')
+                df_report = df_report.sort_values(by='DT_ORDEM')
+
+            # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
             # ========================================================
             base_inicial = 0.0
@@ -1233,28 +1247,34 @@ if aba == "📋 Relatório PDF":
             
             df_report['Saldo_Acum'] = saldos_lista
 
+            
             # ========================================================
-            # 5. MONTAGEM DO CABEÇALHO DO PDF (Mantido padrão limpo)
+            # 5. MONTAGEM DO CABEÇALHO DO PDF (Com o Vencimento do Cartão no Topo)
             # ========================================================
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
             pdf.ln(2)
             
             pdf.set_font("Arial", '', 10)
-            p_inicio = b_ini.strftime('%d/%m/%Y')
-            p_fim = b_fim.strftime('%d/%m/%Y')
+            p_inicio = pd.to_datetime(b_ini).strftime('%d/%m/%Y')
+            p_fim = pd.to_datetime(b_fim).strftime('%d/%m/%Y')
             
             pdf.set_font("Arial", 'B', 10)
-            pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {str(banco_nome).upper()}", ln=1, align="L")
-            pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
+            pdf.cell(200, 6, txt=f"BANCO / CARTAO SELECIONADO: {str(banco_nome).upper()}", ln=1, align="L")
+            
+            # Se for cartão, exibe o vencimento da fatura no topo junto com o período da busca
+            if "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper():
+                pdf.cell(200, 6, txt=f"VENCIMENTO DA FATURA / PERIODO: {p_inicio} ate {p_fim}", ln=1, align="L")
+            else:
+                pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
             
             txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
             pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
             pdf.ln(5)
 
-            # Cabeçalho da Tabela
+            # Cabeçalho da Tabela (Mostrando "Dt Compra" na primeira coluna)
             pdf.set_font("Arial", 'B', 9)
-            pdf.cell(20, 7, "Data", 1)
+            pdf.cell(20, 7, "Dt Compra", 1)
             pdf.cell(18, 7, "Tipo", 1)
             pdf.cell(35, 7, "Categoria", 1)
             pdf.cell(45, 7, "Descricao", 1)
@@ -1264,11 +1284,12 @@ if aba == "📋 Relatório PDF":
             pdf.ln()
 
             # ========================================================
-            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
+            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF (Exibindo a Data de Compra)
             # ========================================================
             pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
-                data_str = row['DT_FILTRO'].strftime('%d/%m/%Y') if not pd.isna(row['DT_FILTRO']) else str(row.get(col_data_df, '---'))
+                # Puxa estritamente a data da compra para a tabela
+                data_str = str(row.get(col_compra_df, '---')) if col_compra_df else '---'
                 
                 tipo_str = str(row.get('Tipo', '---')).strip()
                 cat_val = str(row.get('Categoria', 'Geral'))[:18]
