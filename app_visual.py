@@ -1248,40 +1248,42 @@ if aba == "📋 Relatório PDF":
             
             df_report['Saldo_Acum'] = saldos_lista
 
-            
             # ========================================================
-            # 5. MONTAGEM DO CABEÇALHO DO PDF (Com Período e Vencimento Exato)
+            # 5. MONTAGEM DO CABEÇALHO DO PDF (Ordem correta e Vencimento dia 20)
             # ========================================================
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
+            
+            # Linha logo abaixo do título: Beneficiário (se houver/estiver filtrado)
+            benef_selecionado = locals().get('beneficiario_filtro', locals().get('b_beneficiario', 'Todos'))
+            if str(benef_selecionado).strip() and str(benef_selecionado).upper() != "TODOS":
+                pdf.set_font("Arial", 'B', 10)
+                pdf.cell(200, 6, txt=f"BENEFICIARIO: {str(benef_selecionado).upper()}", ln=1, align="L")
+            
             pdf.ln(2)
             
             pdf.set_font("Arial", '', 10)
             p_inicio = pd.to_datetime(b_ini).strftime('%d/%m/%Y')
             p_fim = pd.to_datetime(b_fim).strftime('%d/%m/%Y')
             
-            # Linha 1: Banco / Cartão Selecionado
+            # Banco / Cartão Selecionado
             pdf.set_font("Arial", 'B', 10)
             pdf.cell(200, 6, txt=f"BANCO / CARTAO: {str(banco_nome).upper()}", ln=1, align="L")
             
-            # Linha 2: Beneficiário (Se houver)
-            benef_selecionado = locals().get('beneficiario_filtro', locals().get('b_beneficiario', 'Todos'))
-            if str(benef_selecionado).strip() and str(benef_selecionado).upper() != "TODOS":
-                pdf.cell(200, 6, txt=f"BENEFICIARIO: {str(benef_selecionado).upper()}", ln=1, align="L")
-            
-            # Linha 3: Período e Vencimento da Fatura
+            # Período e Vencimento da Fatura (Forçando o dia 20 para o cartão)
             eh_cartao = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
             if eh_cartao:
-                data_vencimento_fatura = pd.to_datetime(b_fim).strftime('%d/%m/%Y')
+                # Pega o mês e o ano da data final da busca e monta o vencimento cravado no dia 20
+                dt_fim_obj = pd.to_datetime(b_fim)
+                data_vencimento_fatura = f"20/{dt_fim_obj.strftime('%m/%Y')}"
                 pdf.cell(200, 6, txt=f"PERIODO: {p_inicio} ate {p_fim}  |  VENCIMENTO DA FATURA: {data_vencimento_fatura}", ln=1, align="L")
             else:
                 pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
             
-            # Linha 4: Saldo Anterior
+            # Saldo Anterior
             txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
             pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
             pdf.ln(5)
-
             # Cabeçalho da Tabela (Mostrando "Dt Compra" na primeira coluna)
             pdf.set_font("Arial", 'B', 9)
             pdf.cell(20, 7, "Dt Compra", 1)
