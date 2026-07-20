@@ -1029,21 +1029,10 @@ elif "📄" in aba:
     st.markdown(f'[📲 Enviar para o WhatsApp](https://wa.me/?text={urllib.parse.quote(relat)})')
 
 if aba == "📋 Relatório PDF":
-   if aba == "📋 Relatório PDF":
-    import datetime
-    from calendar import monthrange
-
     st.markdown("### 📋 Emissão de Relatório Financeiro")
     
     # -------------------------------------------------------------------------
-    # LINHA 1 DE FILTROS: BANCO E PERÍODO (Mês atual dinâmico)
-    # -------------------------------------------------------------------------
-    hoje = datetime.date.today()
-    primeiro_dia_mes = datetime.date(hoje.year, hoje.month, 1)
-    ultimo_dia_mes = datetime.date(hoje.year, hoje.month, monthrange(hoje.year, hoje.month)[1])
-
-    # -------------------------------------------------------------------------
-    # LINHA 1 DE FILTROS: BANCO E PERÍODO (Restaurando o período correto)
+    # LINHA 1 DE FILTROS: BANCO E PERÍODO (Estrutura original mantida intacta)
     # -------------------------------------------------------------------------
     col_rel1, col_rel2 = st.columns(2)
     with col_rel1:
@@ -1051,9 +1040,8 @@ if aba == "📋 Relatório PDF":
         banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel)
         
     with col_rel2:
-        import datetime as dt_lib
-        data_padrao_ini = dt_lib.date(2026, 6, 20)
-        data_padrao_fim = dt_lib.date(2026, 7, 20)
+        data_padrao_ini = datetime(2026, 4, 20)
+        data_padrao_fim = datetime(2026, 5, 20)
         periodo_pdf = st.date_input("Período do Relatório:", [data_padrao_ini, data_padrao_fim], format="DD/MM/YYYY")
 
     # -------------------------------------------------------------------------
@@ -1089,63 +1077,67 @@ if aba == "📋 Relatório PDF":
 
             # --- ADIÇÃO DO BENEFICIÁRIO NO TOPO ---
             pdf.set_font("Arial", 'B', 12)
+            # Se você preencheu o campo 'busca_benef', ele imprime o nome, senão escreve 'Todos'
             nome_benef_imprimir = busca_benef if busca_benef and busca_benef.strip() != "" else "Todos"
             pdf.cell(0, 10, f"Beneficiário: {nome_benef_imprimir}", ln=True)
-            pdf.ln(5)
+            pdf.ln(5) # Pula uma linha para dar espaço para a tabela
 
             # ========================================================
-            # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF - DATA DE COMPRA)
+            # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
             # ========================================================
             df_report = df_base.copy()
 
             col_banco_df = next((c for c in df_report.columns if c.upper() in ['BANCO', 'CONTA']), None)
-            # Identifica a coluna de Data de Compra em vez de Vencimento
-            col_compra_df = next((c for c in df_report.columns if c.upper() in ['COMPRA', 'DATA COMPRA', 'DT COMPRA', 'DATA_COMPRA', 'DATA', 'DT']), None)
+            col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
             col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
 
-            # Tratamento e filtro de Data baseado na Compra
-            if col_compra_df:
-                df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_compra_df], format="%d/%m/%Y", errors='coerce')
+            # Tratamento e filtro de Data
+            if col_data_df:
+                df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
             else:
                 df_report['DT_FILTRO'] = pd.to_datetime(df_report.index, errors='coerce')
 
             t_ini = pd.to_datetime(b_ini)
             t_fim = pd.to_datetime(b_fim)
 
+            # Guardamos uma cópia completa para calcular o saldo retroativo do Banco antes de filtrar o período final
+            df_retroativo = df_report.copy()
+
             # Aplica os filtros na tabela que vai de fato para o PDF
             df_report = df_report[(df_report['DT_FILTRO'] >= t_ini) & (df_report['DT_FILTRO'] <= t_fim)]
-
-            # Ordena estritamente por Data de Compra
-            df_report = df_report.sort_values(by='DT_FILTRO')
 
             banco_nome = "Todos os Bancos"
             if banco_relatorio != "Todos" and col_banco_df:
                 banco_nome = banco_relatorio
                 df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_nome).upper()]
 
-            # 1. Filtra pela Descrição
+            # 1. Filtra pela Descrição (Coluna C)
             if busca_desc and col_desc_df:
                 df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
 
             # 2. Filtro pelo Beneficiário (Coluna J)
+            # Garantindo que ele busque especificamente na Coluna J (índice 9)
             if busca_benef:
-                col_benef_nome = df_report.columns[9]
+                col_benef_nome = df_report.columns[9] # J é o índice 9
                 df_report = df_report[df_report[col_benef_nome].astype(str).str.contains(busca_benef, case=False, na=False)]
 
             # 3. Filtro pelo Status
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
-            # ========================================================
-            # 3. BUSCA DO SALDO DE ABERTURA
+# ========================================================
+            # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
             # ========================================================
             base_inicial = 0.0
             
+            # REGRA 1: Se for Cartão de Crédito, o saldo inicial DEVE vir zerado
             if "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper():
                 base_inicial = 0.0
             else:
+                # REGRA 2: Banco - Pega o Saldo Inicial do Sistema e aplica as movimentações até o dia 17
                 try:
+                    # 3.1 Primeiro, buscamos o Saldo Inicial de Cadastro (Aquele de Abril, ex: R$ 17,07)
                     saldo_sistema_abril = 0.0
                     try:
                         ws_bancos = sh.worksheet("Bancos")
@@ -1169,8 +1161,9 @@ if aba == "📋 Relatório PDF":
                     except:
                         saldo_sistema_abril = 0.0
 
+                    # 3.2 Agora, calculamos a movimentação que aconteceu desde o começo até o dia 17/05
                     df_historico = df_base.copy()
-                    col_data_h = next((c for c in df_historico.columns if c.upper() in ['COMPRA', 'DATA COMPRA', 'DT COMPRA', 'DATA_COMPRA', 'VENCIMENTO', 'DATA', 'DT']), None)
+                    col_data_h = next((c for c in df_historico.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
                     col_banco_h = next((c for c in df_historico.columns if c.upper() in ['BANCO', 'CONTA']), None)
                     
                     if col_data_h:
@@ -1181,11 +1174,13 @@ if aba == "📋 Relatório PDF":
                     if banco_nome != "Todos os Bancos" and col_banco_h:
                         df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == str(banco_nome).upper()]
                     
+                    # Filtra tudo o que aconteceu estritamente ANTES do dia de início do relatório (antes do dia 18)
                     df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
                     
                     saldo_acumulado_passado = 0.0
                     for _, r_pass in df_antes_do_periodo.iterrows():
                         val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
+                        
                         if isinstance(val_p_cru, str):
                             import re
                             val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
@@ -1205,13 +1200,14 @@ if aba == "📋 Relatório PDF":
                         else:
                             saldo_acumulado_passado += val_p
                     
+                    # O saldo inicial real no dia 18 é o saldo base do sistema + as movimentações do passado!
                     base_inicial = saldo_sistema_abril + saldo_acumulado_passado
                 except:
                     base_inicial = 0.0
 
             saldo_anterior = base_inicial
 
-            # ========================================================
+            saldo_anterior = base_inicial            # ========================================================
             # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO
             # ========================================================
             corrente = saldo_anterior 
@@ -1231,7 +1227,7 @@ if aba == "📋 Relatório PDF":
             df_report['Saldo_Acum'] = saldos_lista
 
             # ========================================================
-            # 5. MONTAGEM DO CABEÇALHO DO PDF
+            # 5. MONTAGEM DO CABEÇALHO DO PDF (Mantido padrão limpo)
             # ========================================================
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
@@ -1243,15 +1239,15 @@ if aba == "📋 Relatório PDF":
             
             pdf.set_font("Arial", 'B', 10)
             pdf.cell(200, 6, txt=f"BANCO SELECIONADO: {str(banco_nome).upper()}", ln=1, align="L")
-            pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO (COMPRA): {p_inicio} ate {p_fim}", ln=1, align="L")
+            pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
             
             txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
             pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
             pdf.ln(5)
 
-            # Cabeçalho da Tabela (Mostrando Data Compra)
+            # Cabeçalho da Tabela
             pdf.set_font("Arial", 'B', 9)
-            pdf.cell(20, 7, "Dt Compra", 1)
+            pdf.cell(20, 7, "Data", 1)
             pdf.cell(18, 7, "Tipo", 1)
             pdf.cell(35, 7, "Categoria", 1)
             pdf.cell(45, 7, "Descricao", 1)
@@ -1265,7 +1261,7 @@ if aba == "📋 Relatório PDF":
             # ========================================================
             pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
-                data_str = row['DT_FILTRO'].strftime('%d/%m/%Y') if not pd.isna(row['DT_FILTRO']) else str(row.get(col_compra_df, '---'))
+                data_str = row['DT_FILTRO'].strftime('%d/%m/%Y') if not pd.isna(row['DT_FILTRO']) else str(row.get(col_data_df, '---'))
                 
                 tipo_str = str(row.get('Tipo', '---')).strip()
                 cat_val = str(row.get('Categoria', 'Geral'))[:18]
@@ -1316,23 +1312,23 @@ if aba == "📋 Relatório PDF":
             st.error(f"Erro ao gerar o PDF: {e}")
 
     # =========================================================================
-    # 7. EXIBIÇÃO DA TABELA NA TELA COM OS FILTROS DINÂMICOS
+    # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS 4 FILTROS (VISUAL LIMPO)
     # =========================================================================
     st.markdown("### 🔍 Lançamentos Filtrados")
 
     df_tela = df_base.copy()
     
-    col_data_tela = next((c for c in df_tela.columns if c.upper() in ['COMPRA', 'DATA COMPRA', 'DT COMPRA', 'DATA_COMPRA', 'VENCIMENTO', 'DATA', 'DT']), None)
+    col_data_df = next((c for c in df_tela.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
     col_banco_df = next((c for c in df_tela.columns if c.upper() in ['BANCO', 'CONTA']), None)
     col_desc_df = next((c for c in df_tela.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
     col_status_df = next((c for c in df_tela.columns if c.upper() in ['STATUS']), None)
 
-    # Aplica Data na tela respeitando o período selecionado
-    if col_data_tela:
-        df_tela['DT_FILTRO'] = pd.to_datetime(df_tela[col_data_tela], format="%d/%m/%Y", errors='coerce')
+    # Aplica Data na tela
+    if col_data_df:
+        df_tela['DT_FILTRO'] = pd.to_datetime(df_tela[col_data_df], format="%d/%m/%Y", errors='coerce')
         if isinstance(periodo_pdf, (list, tuple)) and len(periodo_pdf) == 2:
             df_tela = df_tela[(df_tela['DT_FILTRO'] >= pd.to_datetime(periodo_pdf[0])) & 
-                              (df_tela['DT_FILTRO'] <= pd.to_datetime(periodo_pdf[1]))]
+                               (df_tela['DT_FILTRO'] <= pd.to_datetime(periodo_pdf[1]))]
 
     # Aplica Banco na tela
     if banco_relatorio != "Todos" and col_banco_df:
@@ -1346,8 +1342,12 @@ if aba == "📋 Relatório PDF":
     if busca_status != "Todos" and col_status_df:
         df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
-    # --- FAXINA RIGOROSA ---
+   # --- FAXINA RIGOROSA ---
+    # Lista de colunas proibidas
     colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
+    
+    # Filtra mantendo apenas colunas que NÃO estão na lista proibida 
+    # E que NÃO começam com "DT_" (isso mata o dt_ que está aparecendo)
     colunas_visiveis = [
         c for c in df_tela.columns 
         if c not in colunas_proibidas and not c.upper().startswith('DT_')
