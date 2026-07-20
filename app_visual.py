@@ -1294,6 +1294,9 @@ if aba == "📋 Relatório PDF":
             # ========================================================
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF (Exibindo a Data de Compra)
             # ========================================================
+            # ========================================================
+            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF (Exibindo a Data de Compra)
+            # ========================================================
             pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
                 # Puxa estritamente a data da compra para a tabela
@@ -1301,7 +1304,20 @@ if aba == "📋 Relatório PDF":
                 
                 tipo_str = str(row.get('Tipo', '---')).strip()
                 cat_val = str(row.get('Categoria', 'Geral'))[:18]
-                desc_val = str(row.get('Descrição', row.get('Descricao', 'Sem nome')))[:24]
+                
+                # Tratamento da descrição com o número das parcelas (ex: 1/5, 2/5)
+                desc_base = str(row.get('Descrição', row.get('Descricao', 'Sem nome'))).strip()
+                p_atual = row.get('Parcela_Atual', row.get('Parcela', row.get('N_Parcela', None)))
+                p_total = row.get('Total_Parcelas', row.get('TotalParcelas', row.get('Qtd_Parcelas', None)))
+                
+                if p_atual is not None and p_total is not None and str(p_atual).isdigit() and str(p_total).isdigit():
+                    if int(p_total) > 1:
+                        desc_val = f"{desc_base} {int(p_atual)}/{int(p_total)}"[:24]
+                    else:
+                        desc_val = f"{desc_base} 1/1"[:24]
+                else:
+                    desc_val = desc_base[:24]
+
                 valor_val = pd.to_numeric(row.get('V_Num', row.get('Valor', 0)), errors='coerce')
                 if pd.isna(valor_val): valor_val = 0.0
                 saldo_val = row.get('Saldo_Acum', 0.0)
