@@ -1228,7 +1228,8 @@ if aba == "📋 Relatório PDF":
 
             saldo_anterior = base_inicial
 
-            saldo_anterior = base_inicial            # ========================================================
+            saldo_anterior = base_inicial 
+            # ========================================================
             # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO
             # ========================================================
             corrente = saldo_anterior 
@@ -1249,7 +1250,7 @@ if aba == "📋 Relatório PDF":
 
             
             # ========================================================
-            # 5. MONTAGEM DO CABEÇALHO DO PDF (Com o Vencimento do Cartão no Topo)
+            # 5. MONTAGEM DO CABEÇALHO DO PDF (Com Banco, Beneficiário, Vencimento e Período)
             # ========================================================
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
@@ -1259,15 +1260,23 @@ if aba == "📋 Relatório PDF":
             p_inicio = pd.to_datetime(b_ini).strftime('%d/%m/%Y')
             p_fim = pd.to_datetime(b_fim).strftime('%d/%m/%Y')
             
+            # Linha 1: Banco / Cartão Selecionado
             pdf.set_font("Arial", 'B', 10)
-            pdf.cell(200, 6, txt=f"BANCO / CARTAO SELECIONADO: {str(banco_nome).upper()}", ln=1, align="L")
+            pdf.cell(200, 6, txt=f"BANCO / CARTAO: {str(banco_nome).upper()}", ln=1, align="L")
             
-            # Se for cartão, exibe o vencimento da fatura no topo junto com o período da busca
-            if "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper():
+            # Linha 2: Beneficiário (se houver um selecionado ou ativo)
+            if 'busca_beneficiario' in locals() and busca_beneficiario and busca_beneficiario != "Todos":
+                pdf.cell(200, 6, txt=f"BENEFICIARIO: {str(busca_beneficiario).upper()}", ln=1, align="L")
+            
+            # Linha 3: Vencimento ou Período dinâmico
+            # Verifica explicitamente se é cartão pelas colunas ou pelo nome do banco
+            eh_cartao = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
+            if eh_cartao:
                 pdf.cell(200, 6, txt=f"VENCIMENTO DA FATURA / PERIODO: {p_inicio} ate {p_fim}", ln=1, align="L")
             else:
                 pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
             
+            # Linha 4: Saldo Anterior
             txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
             pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
             pdf.ln(5)
