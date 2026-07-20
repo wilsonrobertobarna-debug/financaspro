@@ -78,27 +78,30 @@ st.set_page_config(
 # ========================================================
 # BARRA DE ATALHOS RÁPIDOS NO TOPO (Sincronizada com a lateral)
 # ========================================================
+# ========================================================
+# BARRA DE ATALHOS RÁPIDOS NO TOPO
+# ========================================================
 st.markdown("### ⚡ Acesso Rápido")
 col_b1, col_b2, col_b3, col_b4 = st.columns(4)
 
 with col_b1:
     if st.button("🐶 Pet: Milo & Bolt", use_container_width=True):
-        st.session_state.aba = "🐶 Pet"  # Mude para o texto exato que está no selectbox da lateral para o Pet
+        st.session_state.menu_lateral = "Pet"  # Use o nome exato da opção do seu menu lateral
         st.rerun()
 
 with col_b2:
     if st.button("🚗 Veículo", use_container_width=True):
-        st.session_state.aba = "🚗 Gestão do Veículo"  # Usa o mesmo texto que abre o seu código do veículo!
+        st.session_state.menu_lateral = "🚗 Gestão do Veículo"  # Use o nome exato da opção
         st.rerun()
 
 with col_b3:
     if st.button("🏦 Bancos", use_container_width=True):
-        st.session_state.aba = "🏦 Bancos"  # Mude para o texto exato do banco na lateral
+        st.session_state.menu_lateral = "🏦 Bancos"  # Use o nome exato da opção
         st.rerun()
 
 with col_b4:
-    if st.button("🏠 Início / Geral", use_container_width=True):
-        st.session_state.aba = "🏠 Início"  # Mude para a opção padrão da tela inicial
+    if st.button("🏠 Início", use_container_width=True):
+        st.session_state.menu_lateral = "Início"  # Use o nome exato da opção inicial
         st.rerun()
 
 st.markdown("---")
