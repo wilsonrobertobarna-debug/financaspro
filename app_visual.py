@@ -1130,52 +1130,52 @@ if aba == "📋 Relatório PDF":
     # =========================================================================
     # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS 4 FILTROS (VISUAL LIMPO)
     # =========================================================================
-    st.markdown("### 🔍 Lançamentos Filtrados")
-
-    df_tela = df_base.copy()
+        st.markdown("### 🔍 Lançamentos Filtrados")
     
-    col_data_df = next((c for c in df_tela.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
-    col_banco_df = next((c for c in df_tela.columns if c.upper() in ['BANCO', 'CONTA']), None)
-    col_desc_df = next((c for c in df_tela.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
-    col_status_df = next((c for c in df_tela.columns if c.upper() in ['STATUS']), None)
-
-    # Aplica Data na tela
-    if col_data_df:
-        df_tela['DT_FILTRO'] = pd.to_datetime(df_tela[col_data_df], format="%d/%m/%Y", errors='coerce')
-        if isinstance(periodo_pdf, (list, tuple)) and len(periodo_pdf) == 2:
-            df_tela = df_tela[(df_tela['DT_FILTRO'] >= pd.to_datetime(periodo_pdf[0])) & 
-                               (df_tela['DT_FILTRO'] <= pd.to_datetime(periodo_pdf[1]))]
-
-    # Aplica Banco na tela
-    if banco_relatorio != "Todos" and col_banco_df:
-        df_tela = df_tela[df_tela[col_banco_df].str.upper().str.strip() == str(banco_relatorio).upper()]
-
-    # Aplica Descrição na tela
-    if busca_desc and col_desc_df:
-        df_tela = df_tela[df_tela[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
-
-    # Aplica Status na tela
-    if busca_status != "Todos" and col_status_df:
-        df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
-
-   # --- FAXINA RIGOROSA ---
-    # Lista de colunas proibidas
-    colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
+        df_tela = df_base.copy()
+        
+        col_data_df = next((c for c in df_tela.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+        col_banco_df = next((c for c in df_tela.columns if c.upper() in ['BANCO', 'CONTA']), None)
+        col_desc_df = next((c for c in df_tela.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
+        col_status_df = next((c for c in df_tela.columns if c.upper() in ['STATUS']), None)
     
-    # Filtra mantendo apenas colunas que NÃO estão na lista proibida 
-    # E que NÃO começam com "DT_" (isso mata o dt_ que está aparecendo)
-    colunas_visiveis = [
-        c for c in df_tela.columns 
-        if c not in colunas_proibidas and not c.upper().startswith('DT_')
-    ]
+        # Aplica Data na tela
+        if col_data_df:
+            df_tela['DT_FILTRO'] = pd.to_datetime(df_tela[col_data_df], format="%d/%m/%Y", errors='coerce')
+            if isinstance(periodo_pdf, (list, tuple)) and len(periodo_pdf) == 2:
+                df_tela = df_tela[(df_tela['DT_FILTRO'] >= pd.to_datetime(periodo_pdf[0])) & 
+                                   (df_tela['DT_FILTRO'] <= pd.to_datetime(periodo_pdf[1]))]
     
-    df_tela_limpo = df_tela[colunas_visiveis]
-
-    # Exibe os dados
-    if not df_tela_limpo.empty:
-        st.dataframe(df_tela_limpo, use_container_width=True)
-    else:
-        st.info("Nenhum lançamento encontrado para os filtros aplicados.")
+        # Aplica Banco na tela
+        if banco_relatorio != "Todos" and col_banco_df:
+            df_tela = df_tela[df_tela[col_banco_df].str.upper().str.strip() == str(banco_relatorio).upper()]
+    
+        # Aplica Descrição na tela
+        if busca_desc and col_desc_df:
+            df_tela = df_tela[df_tela[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
+    
+        # Aplica Status na tela
+        if busca_status != "Todos" and col_status_df:
+            df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
+    
+       # --- FAXINA RIGOROSA ---
+        # Lista de colunas proibidas
+        colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
+        
+        # Filtra mantendo apenas colunas que NÃO estão na lista proibida 
+        # E que NÃO começam com "DT_" (isso mata o dt_ que está aparecendo)
+        colunas_visiveis = [
+            c for c in df_tela.columns 
+            if c not in colunas_proibidas and not c.upper().startswith('DT_')
+        ]
+        
+        df_tela_limpo = df_tela[colunas_visiveis]
+    
+        # Exibe os dados
+        if not df_tela_limpo.empty:
+            st.dataframe(df_tela_limpo, use_container_width=True)
+        else:
+            st.info("Nenhum lançamento encontrado para os filtros aplicados.")
 # =========================================================================
 # NOVA ABA: 📊 ANÁLISES & CONFIGURAÇÕES (Criada no final do arquivo)
 # =========================================================================
