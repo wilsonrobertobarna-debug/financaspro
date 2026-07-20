@@ -1294,17 +1294,20 @@ if aba == "📋 Relatório PDF":
            # ========================================================
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF (Com Numeração Automática de Parcelas)
             # ========================================================
-            
-            # Passo prévio: Cria uma contagem automática caso haja lançamentos repetidos (parcelados)
+            # ========================================================
+            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF (Numeração por Descrição e Valor)
+            # ========================================================
             if not df_report.empty:
-                # Cria uma chave combinando Descrição e Valor para identificar o grupo de parcelas
                 desc_col_temp = 'Descrição' if 'Descrição' in df_report.columns else 'Descricao'
                 val_col_temp = 'V_Num' if 'V_Num' in df_report.columns else 'Valor'
                 
                 if desc_col_temp in df_report.columns and val_col_temp in df_report.columns:
-                    df_report['_grupo_parc'] = df_report[desc_col_temp].astype(str) + "_" + df_report[val_col_temp].astype(str)
-                    df_report['_parc_atual'] = df_report.groupby('_grupo_parc').cumcount() + 1
-                    df_report['_parc_total'] = df_report.groupby('_grupo_parc')['_grupo_parc'].transform('count')
+                    # Cria uma chave unindo a descrição e o valor exato
+                    df_report['_chave_parcela'] = df_report[desc_col_temp].astype(str).str.strip().str.upper() + "_" + df_report[val_col_temp].astype(str)
+                    
+                    # Conta quantas vezes essa mesma compra aparece no relatório e qual é a ordem dela
+                    df_report['_parc_atual'] = df_report.groupby('_chave_parcela').cumcount() + 1
+                    df_report['_parc_total'] = df_report.groupby('_chave_parcela')['_chave_parcela'].transform('count')
                 else:
                     df_report['_parc_atual'] = 1
                     df_report['_parc_total'] = 1
@@ -1317,18 +1320,16 @@ if aba == "📋 Relatório PDF":
                 tipo_str = str(row.get('Tipo', '---')).strip()
                 cat_val = str(row.get('Categoria', 'Geral'))[:18]
                 
-                # Pega a descrição base
                 desc_base = str(row.get('Descrição', row.get('Descricao', 'Sem nome'))).strip()
                 
-                # Pega a contagem automática calculada acima
                 p_atual = row.get('_parc_atual', 1)
                 p_total = row.get('_parc_total', 1)
                 
-                # Se for mais de 1 parcela repetida, adiciona o formato X/Y. Se for única, coloca 1/1 ou mantém limpo.
+                # Se aparecer mais de uma vez com o mesmo valor e nome, coloca o x/y. Se for única, exibe 1/1 (ou limpa).
                 if int(p_total) > 1:
                     desc_val = f"{desc_base} {int(p_atual)}/{int(p_total)}"[:24]
                 else:
-                    desc_val = f"{desc_base} 1/1"[:24] # Mude para desc_base[:24] se preferir sem o 1/1 nas compras à vista
+                    desc_val = f"{desc_base} 1/1"[:24]
 
                 valor_val = pd.to_numeric(row.get('V_Num', row.get('Valor', 0)), errors='coerce')
                 if pd.isna(valor_val): valor_val = 0.0
