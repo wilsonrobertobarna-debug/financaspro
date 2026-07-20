@@ -74,7 +74,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed" # Isso fará a barra vir fechada por padrão
 )
-    # 2. BARRA DE ATALHOS RÁPIDOS NO TOPO (Aqueles botões que acabamos de fazer)
+   wild
+# 2. BARRA DE ATALHOS RÁPIDOS NO TOPO (Aqueles botões que acabamos de fazer)
 col_b1, col_b2, col_b3, col_b4 = st.columns(4)
 
 with col_b1:
