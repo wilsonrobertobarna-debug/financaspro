@@ -69,75 +69,15 @@ def atualizar_meta_sheets(nome):
     except Exception as e:
         st.error(f"Erro ao salvar no Sheets: {e}")
 
-
-    # 1. Configuração da página limpa
 st.set_page_config(
     page_title="FinançasPro",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed" # Isso fará a barra vir fechada por padrão
 )
 
-# 2. Inicializa a memória da aba atual
-if 'aba_atual' not in st.session_state:
-    st.session_state.aba_atual = "Início"
-
-# 3. Barra única de atalhos rápidos no topo
-st.markdown("### ⚡ Acesso Rápido")
-col_b1, col_b2, col_b3, col_b4 = st.columns(4)
-
-with col_b1:
-    if st.button("🐶 Pet: Milo & Bolt", use_container_width=True, key="topo_pet"):
-        st.session_state.aba_atual = "🐶 Pet"
-        st.rerun()
-
-with col_b2:
-    if st.button("🚗 Veículo", use_container_width=True, key="topo_veiculo"):
-        st.session_state.aba_atual = "🚗 Gestão do Veículo"
-        st.rerun()
-
-with col_b3:
-    if st.button("🏦 Bancos", use_container_width=True, key="topo_bancos"):
-        st.session_state.aba_atual = "🏦 Bancos"
-        st.rerun()
-
-with col_b4:
-    if st.button("🏠 Início", use_container_width=True, key="topo_inicio"):
-        st.session_state.aba_atual = "Início"
-        st.rerun()
-
-st.markdown("---")
-
-# 4. Conteúdo que muda conforme o botão clicado
-aba = st.session_state.aba_atual
-
-if aba == "🚗 Gestão do Veículo":
-    st.title("🚗 Gestão do Veículo")
-    c1, c2, c3 = st.columns([1,1,2])
-    alc = c1.number_input("Preço Álcool", value=0.0, step=0.01, key="preco_alc")
-    gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01, key="preco_gas")
-    if alc > 0 and gas > 0:
-        if (alc/gas) <= 0.7: 
-            c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
-        else: 
-            c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
-    st.divider()
-
-elif aba == "🐶 Pet":
-    st.title("🐶 Pet: Milo & Bolt")
-    st.write("Aqui ficam as informações e lançamentos do Pet.")
-
-elif aba == "🏦 Bancos":
-    st.title("🏦 Bancos")
-    st.write("Aqui ficam os dados dos cartões e contas.")
-
-else:
-   # st.title("🏠 Início - Painel Geral")
-   # st.write("Seu painel principal de lançamentos e totais.")
 # 2. CONEXÃO (LIGA O MOTOR)
-#@st.cache_resource
-
-
-    def conectar():
+@st.cache_resource
+def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
     if not creds_dict:
         st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
