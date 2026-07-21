@@ -131,10 +131,12 @@ elif aba == "🏦 Bancos":
     st.write("Aqui ficam os dados dos cartões e contas.")
 
 else:
-    st.title("🏠 Início - Painel Geral")
-    st.write("Seu painel principal de lançamentos e totais.")
+   # st.title("🏠 Início - Painel Geral")
+   # st.write("Seu painel principal de lançamentos e totais.")
 # 2. CONEXÃO (LIGA O MOTOR)
 @st.cache_resource
+
+
 def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
     if not creds_dict:
