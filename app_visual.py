@@ -137,7 +137,7 @@ else:
 #@st.cache_resource
 
 
-def conectar():
+    def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
     if not creds_dict:
         st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
