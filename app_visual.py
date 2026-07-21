@@ -134,7 +134,7 @@ else:
    # st.title("🏠 Início - Painel Geral")
    # st.write("Seu painel principal de lançamentos e totais.")
 # 2. CONEXÃO (LIGA O MOTOR)
-@st.cache_resource
+#@st.cache_resource
 
 
 def conectar():
