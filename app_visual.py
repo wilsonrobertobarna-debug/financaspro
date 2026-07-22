@@ -468,7 +468,7 @@ with st.sidebar.expander("⚡ Operações"):
 
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
-if "💰" in st.session_state.page:
+    if "💰" in st.session_state.page:
     import plotly.graph_objects as go
     
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
