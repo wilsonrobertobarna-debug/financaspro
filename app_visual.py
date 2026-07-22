@@ -10,7 +10,7 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-# Configuração da página (força a barra lateral a ficar recolhida/invisível)
+# Configuração da página
 st.set_page_config(
     page_title="FinançasPro",
     layout="wide",
@@ -40,29 +40,25 @@ if not st.session_state.login:
         st.markdown("<br><br>", unsafe_allow_html=True)
     st.stop()
 
-# ========================================================
-# 3. BOTÃO DE NAVEGAÇÃO NO TOPO (SEM BARRA LATERAL)
-# ========================================================
-col_vazia, col_btn = st.columns([5, 1])
-with col_btn:
-    if st.session_state.aba_atual == "Finanças & Bancos":
-        if st.button("⏳ Pendências", use_container_width=True, type="primary"):
-            st.session_state.aba_atual = "Pendências"
-            st.rerun()
-    else:
-        if st.button("🏠 Finanças", use_container_width=True, type="primary"):
-            st.session_state.aba_atual = "Finanças & Bancos"
-            st.rerun()
-
-st.markdown("---")
+# Função para desenhar o botão de troca de aba no topo absoluto
+def mostrar_topo():
+    col_vazia, col_btn = st.columns([5, 1])
+    with col_btn:
+        if st.session_state.aba_atual == "Finanças & Bancos":
+            if st.button("⏳ Pendências", use_container_width=True, type="primary"):
+                st.session_state.aba_atual = "Pendências"
+                st.rerun()
+        else:
+            if st.button("🏠 Finanças", use_container_width=True, type="primary"):
+                st.session_state.aba_atual = "Finanças & Bancos"
+                st.rerun()
+    st.markdown("---")
 
 # ========================================================
-# 4. ROTEADOR DE TELAS
+# 3. ROTEADOR DE TELAS
 # ========================================================
 if st.session_state.aba_atual == "Pendências":
-    # ----------------------------------------------------
-    # TELA DE PENDÊNCIAS
-    # ----------------------------------------------------
+    mostrar_topo()
     st.title("⏳ Tela de Pendências")
     st.write("Aqui vai ficar a listagem de pagamentos pendentes.")
     
@@ -70,9 +66,9 @@ else:
     # ----------------------------------------------------
     # TELA DE FINANÇAS & BANCOS (SEU CÓDIGO DO DIA 20)
     # ----------------------------------------------------
+    mostrar_topo() # Desenha o botão bem no topo antes de carregar o financeiro
     
-    # [COLE TODO O SEU CÓDIGO DO DIA 20 AQUI DENTRO, MAS ANTES VERIFIQUE SE NÃO TEM NENHUM "st.sidebar" ESCRITO LÁ DENTRO]
-    
+    # [COLE TODO O SEU CÓDIGO DO DIA 20 AQUI ABAIXO]
     st.title("💰 Tela de Finanças & Bancos")
     st.write("Seu painel do dia 20 roda aqui dentro.")
 
