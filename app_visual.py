@@ -10,46 +10,28 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-# Configuração da página
-st.set_page_config(page_title="FinançasPro", layout="wide")
+# --- BARRA DE NAVEGAÇÃO NO TOPO ---
+st.markdown("## 🎮 Painel Wilson")  # título no topo
 
-# CSS para fixar a barra no topo
-st.markdown("""
-    <style>
-    .top-bar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        background-color: #f8f9fa;
-        padding: 10px;
-        z-index: 999;
-        border-bottom: 1px solid #ddd;
-    }
-    .block-container {
-        padding-top: 180px; /* espaço para não ficar escondido atrás da barra */
-    }
-    </style>
-""", unsafe_allow_html=True)
+# Criar colunas para os botões
+col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 
-# Barra de navegação
-with st.container():
-    st.markdown('<div class="top-bar">', unsafe_allow_html=True)
-    col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
-    menu_itens = [
-        "💰 Finanças & Bancos",
-        "Pendências",
-        "🐾 Milo & Bolt",
-        "🚗 Meu Veículo",
-        "📄 WhatsApp",
-        "📋 Relatório PDF",
-        "📊 Análises & Configurações"
-    ]
-    for col, item in zip([col1, col2, col3, col4, col5, col6, col7], menu_itens):
-        if col.button(item, use_container_width=True):
-            st.session_state.page = item
-            st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+menu_itens = [
+    "💰 Finanças & Bancos",
+    "Pendências",
+    "🐾 Milo & Bolt",
+    "🚗 Meu Veículo",
+    "📄 WhatsApp",
+    "📋 Relatório PDF",
+    "📊 Análises & Configurações"
+]
+
+# Distribuir os botões nas colunas
+for col, item in zip([col1, col2, col3, col4, col5, col6, col7], menu_itens):
+    if col.button(item, use_container_width=True):
+        st.session_state.page = item
+        st.rerun()
+O que muda:
 
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
