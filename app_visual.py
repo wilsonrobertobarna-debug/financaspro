@@ -10,27 +10,62 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-# --- BARRA DE NAVEGAÇÃO NO TOPO ---
-st.markdown("## 🎮 Painel Wilson")  # título no topo
+# --- Tela de login ---
+if 'login' not in st.session_state:
+    st.session_state.login = False
 
-# Criar colunas para os botões
-col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
+if not st.session_state.login:
+    col1, col_centro, col2 = st.columns([1, 2, 1])
+    with col_centro:
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        st.markdown("### 🔒 Acesso Seguro")
+        senha = st.text_input("Digite sua senha:", type="password")
+        if st.button("🔓 Desbloquear Sistema"):
+            if senha == "Wilson123":
+                st.session_state.login = True
+                st.rerun()
+            else:
+                st.error("Senha incorreta, Wilson!")
+    st.stop()
 
-menu_itens = [
-    "💰 Finanças & Bancos",
-    "Pendências",
-    "🐾 Milo & Bolt",
-    "🚗 Meu Veículo",
-    "📄 WhatsApp",
-    "📋 Relatório PDF",
-    "📊 Análises & Configurações"
-]
+# --- Se login foi feito, mostra barra de navegação ---
+else:
+    st.markdown("""
+        <style>
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #f8f9fa;
+            padding: 10px;
+            z-index: 999;
+            border-bottom: 1px solid #ddd;
+        }
+        .block-container {
+            padding-top: 120px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-# Distribuir os botões nas colunas
-for col, item in zip([col1, col2, col3, col4, col5, col6, col7], menu_itens):
-    if col.button(item, use_container_width=True):
-        st.session_state.page = item
-        st.rerun()
+    with st.container():
+        st.markdown('<div class="top-bar">', unsafe_allow_html=True)
+        col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
+        menu_itens = [
+            "💰 Finanças & Bancos",
+            "Pendências",
+            "🐾 Milo & Bolt",
+            "🚗 Meu Veículo",
+            "📄 WhatsApp",
+            "📋 Relatório PDF",
+            "📊 Análises & Configurações"
+        ]
+        for col, item in zip([col1, col2, col3, col4, col5, col6, col7], menu_itens):
+            if col.button(item, use_container_width=True):
+                st.session_state.page = item
+                st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
 
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
