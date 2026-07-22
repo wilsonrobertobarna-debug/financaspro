@@ -340,8 +340,8 @@ if st.sidebar.button("🔄 Atualizar dados do Sheets"):
 
 st.sidebar.divider()
 
-#if 'page' not in st.session_state:
-    #st.session_state.page = "💰 Finanças & Bancos"
+if 'page' not in st.session_state:
+    st.session_state.page = "💰 Finanças & Bancos"
 
 menu_itens = ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"]
 
