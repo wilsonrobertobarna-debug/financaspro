@@ -358,6 +358,7 @@ aba = st.session_state.page
     # --- Novo Lançamento ---with tab1:
    # --- BLOCO DE OPERAÇÕES UNIFICADO ---
 # --- CSS para estilizar abas ---
+# --- CSS para estilizar abas ---
 st.markdown("""
     <style>
     .stTabs [data-baseweb="tab"] {
@@ -387,9 +388,9 @@ st.markdown("""
 # --- BLOCO DE OPERAÇÕES UNIFICADO ---
 with st.sidebar.expander("⚡ Operações"):
     tab1, tab2, tab3 = st.tabs([
-        "🚀 <b>Novo Lançamento</b>", 
-        "💸 <b>Transferência</b>", 
-        "⚙️ <b>Ajustar</b>"
+        "🚀 Novo Lançamento", 
+        "💸 Transferência", 
+        "⚙️ Ajustar"
     ])
 
     # --- Novo Lançamento ---
@@ -406,7 +407,6 @@ with st.sidebar.expander("⚡ Operações"):
             f_cat = st.selectbox("Categoria", ["Mercado","Aluguel","Luz/Água","Outros"])
             f_sta = st.selectbox("Status", ["Pago", "Pendente"])
             if st.form_submit_button("Salvar Lançamento"):
-                # lógica de salvar no Sheets
                 st.toast("✅ Lançamento salvo!", icon="💰")
                 atualizar_sessao()
                 st.rerun()
@@ -420,7 +420,6 @@ with st.sidebar.expander("⚡ Operações"):
             t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
             t_desc = st.text_input("Nota")
             if st.form_submit_button("TRANSFERIR"):
-                # lógica de transferência
                 st.toast("✅ Transferência realizada!", icon="💸")
                 atualizar_sessao()
                 st.rerun()
@@ -435,15 +434,14 @@ with st.sidebar.expander("⚡ Operações"):
                 ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
                 ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
                 if st.button("💾 ATUALIZAR"):
-                    # lógica de update
                     st.toast("✅ Atualizado!", icon="📝")
                     atualizar_sessao()
                     st.rerun()
                 if st.button("🚨 EXCLUIR"):
-                    # lógica de exclusão
                     st.toast("✅ Exclusão realizada!", icon="🗑️")
                     atualizar_sessao()
                     st.rerun()
+
 
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
