@@ -74,7 +74,7 @@ def atualizar_meta_sheets(nome):
 if 'aba_atual' not in st.session_state:
     st.session_state.aba_atual = "Finanças & Bancos"
 
-# Barra de Atalhos Rápidos no Topo (Com botões reais)
+# Barra de Atalhos Rápidos no Topo
 st.markdown("### ⚡ Acesso Rápido")
 col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 
@@ -116,27 +116,26 @@ with col7:
 st.markdown("---")
 
 # ========================================================
-# ROTEADOR DE TELAS EXCLUSIVAS (ISOLAMENTO TOTAL COM RERUN)
+# FUNÇÕES DE CADA TELA (ISOLAMENTO POR FUNÇÃO)
 # ========================================================
-aba = st.session_state.aba_atual
 
-if aba == "Finanças & Bancos":
-    # 🏠 COLE TODO O SEU CÓDIGO DE FINANÇAS EXATAMENTE AQUI DENTRO:
-    st.write("Aqui vai o seu painel completo de Finanças & Bancos.")
+def tela_financas():
+    # 🏠 COLE TODO O SEU CÓDIGO ANTIGO DE FINANÇAS AQUI DENTRO:
+    st.write("Aqui dentro fica exclusivamente o seu painel de Finanças & Bancos.")
 
-elif aba == "Atualizar dados":
+def tela_atualizar():
     st.title("🔄 Atualizar dados do Sheets")
     st.write("Sincronização de dados.")
 
-elif aba == "Pendencias":
+def tela_pendencias():
     st.title("⏳ Pendências")
     st.write("Lista de pagamentos e pendências.")
 
-elif aba == "Milo & Bolt":
+def tela_pet():
     st.title("🐶 Pet: Milo & Bolt")
     st.write("Aqui entram as informações e controle dos pets.")
 
-elif aba == "Meu Veículo":
+def tela_veiculo():
     st.title("🚗 Gestão do Veículo")
     c1, c2, c3 = st.columns([1,1,2])
     alc = c1.number_input("Preço Álcool", value=0.0, step=0.01, key="preco_alc")
@@ -148,14 +147,33 @@ elif aba == "Meu Veículo":
             c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
     st.divider()
 
-elif aba == "Relatório Pdf":
+def tela_relatorios():
     st.title("📊 Relatório Pdf")
     st.write("Geração de relatórios.")
 
-elif aba == "Ajustar lançamentos":
+def tela_ajustes():
     st.title("🛠️ Ajustar lançamentos")
     st.write("Painel de ajustes.")
 
+# ========================================================
+# ROTEADOR CENTRAL (CHAMA APENAS A FUNÇÃO DA ABA ATUAL)
+# ========================================================
+aba = st.session_state.aba_atual
+
+if aba == "Finanças & Bancos":
+    tela_financas()
+elif aba == "Atualizar dados":
+    tela_atualizar()
+elif aba == "Pendencias":
+    tela_pendencias()
+elif aba == "Milo & Bolt":
+    tela_pet()
+elif aba == "Meu Veículo":
+    tela_veiculo()
+elif aba == "Relatório Pdf":
+    tela_relatorios()
+elif aba == "Ajustar lançamentos":
+    tela_ajustes()
 
 
 if not st.session_state.login:
