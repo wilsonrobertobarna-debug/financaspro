@@ -390,9 +390,9 @@ st.markdown("""
 # --- BLOCO DE OPERAÇÕES UNIFICADO ---
 with st.sidebar.expander("⚡ Operações"):
     tab1, tab2, tab3 = st.tabs([
-        "🚀 Novo Lançamento", 
-        "💸 Transferência", 
-        "⚙️ Ajustar"
+        " <i class='fa fa-plus-circle'></i> Novo Lançamento", 
+        " <i class='fa fa-exchange-alt'></i> Transferência", 
+        " <i class='fa fa-edit'></i> Ajustar"
     ])
 
     # --- Novo Lançamento ---
