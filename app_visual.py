@@ -40,25 +40,32 @@ if not st.session_state.login:
         st.markdown("<br><br>", unsafe_allow_html=True)
     st.stop()
 
-# Função para desenhar o botão de troca de aba no topo absoluto
-def mostrar_topo():
-    col_vazia, col_btn = st.columns([5, 1])
-    with col_btn:
-        if st.session_state.aba_atual == "Finanças & Bancos":
-            if st.button("⏳ Pendências", use_container_width=True, type="primary"):
-                st.session_state.aba_atual = "Pendências"
-                st.rerun()
-        else:
-            if st.button("🏠 Finanças", use_container_width=True, type="primary"):
-                st.session_state.aba_atual = "Finanças & Bancos"
-                st.rerun()
-    st.markdown("---")
+# ========================================================
+# 3. NAVEGAÇÃO SUPERIOR BLINDADA (ESTILO BOTÃO/PÍLULA)
+# ========================================================
+# Isso cria um seletor visualmente limpo no topo que nunca some
+escolha = st.radio(
+    "Navegação",
+    ["💰 Finanças & Bancos", "⏳ Pendências"],
+    horizontal=True,
+    label_visibility="collapsed"
+)
+
+# Sincroniza a escolha com a memória
+if "Finanças" in escolha:
+    st.session_state.aba_atual = "Finanças & Bancos"
+else:
+    st.session_state.aba_atual = "Pendências"
+
+st.markdown("---")
 
 # ========================================================
-# 3. ROTEADOR DE TELAS
+# 4. ROTEADOR DE TELAS
 # ========================================================
 if st.session_state.aba_atual == "Pendências":
-    mostrar_topo()
+    # ----------------------------------------------------
+    # TELA DE PENDÊNCIAS
+    # ----------------------------------------------------
     st.title("⏳ Tela de Pendências")
     st.write("Aqui vai ficar a listagem de pagamentos pendentes.")
     
@@ -66,12 +73,10 @@ else:
     # ----------------------------------------------------
     # TELA DE FINANÇAS & BANCOS (SEU CÓDIGO DO DIA 20)
     # ----------------------------------------------------
-    mostrar_topo() # Desenha o botão bem no topo antes de carregar o financeiro
     
-    # [COLE TODO O SEU CÓDIGO DO DIA 20 AQUI ABAIXO]
+    # [COLE TODO O SEU CÓDIGO DO DIA 20 AQUI DENTRO]
     st.title("💰 Tela de Finanças & Bancos")
     st.write("Seu painel do dia 20 roda aqui dentro.")
-
 
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
