@@ -43,21 +43,21 @@ st.markdown("---")
 # FUNÇÃO 1: TELA DE FINANÇAS & BANCOS
 # ========================================================
 def tela_financas():
+    # COLE TODO O SEU CÓDIGO DO DIA 20 AQUI DENTRO (RECUADO)
     st.title("💰 Tela de Finanças & Bancos")
-    st.write("Aqui dentro vai todo o código do seu painel financeiro (métricas, gráficos, etc).")
-    # Quando for trazer o seu código de finanças do dia 20 para cá, 
-    # certifique-se de que ele está identado (recuado) aqui dentro!
+    # Exemplo: carregamento de dados, métricas, gráficos, etc.
+
 
 # ========================================================
 # FUNÇÃO 2: TELA DE PENDÊNCIAS
 # ========================================================
 def tela_pendencias():
     st.title("⏳ Tela de Pendências")
-    st.write("Aqui vai ficar apenas a listagem de pagamentos pendentes, sem misturar com o financeiro.")
-    # Aqui dentro você coloca o código específico de pendências.
+    # Coloque o código da tela de pendências aqui dentro
+
 
 # ========================================================
-# ROTEADOR CENTRAL (EXIBE APENAS A ABA CLICADA)
+# ROTEADOR CENTRAL (ONDE A MÁGICA ACONTECE)
 # ========================================================
 aba = st.session_state.aba_atual
 
