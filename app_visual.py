@@ -22,12 +22,12 @@ st.markdown("""
         left: 0;
         width: 100%;
         background-color: #f8f9fa;
-        padding: 40px;
+        padding: 10px;
         z-index: 999;
         border-bottom: 1px solid #ddd;
     }
     .block-container {
-        padding-top: 80px; /* espaço para não ficar escondido atrás da barra */
+        padding-top: 120px; /* espaço para não ficar escondido atrás da barra */
     }
     </style>
 """, unsafe_allow_html=True)
