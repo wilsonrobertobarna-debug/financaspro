@@ -70,44 +70,66 @@ def atualizar_meta_sheets(nome):
     except Exception as e:
         st.error(f"Erro ao atualizar meta: {e}")
 
-# Inicialização blindada da aba atual
-if 'aba_selecionada' not in st.session_state:
-    st.session_state.aba_selecionada = "Finanças & Bancos"
+# Inicializa a memória da aba atual
+if 'aba_atual' not in st.session_state:
+    st.session_state.aba_atual = "Finanças & Bancos"
 
-# Barra de Navegação Superior (Usando Radio em formato de pílulas/botões para evitar vazamento)
-escolha = st.radio(
-    "Navegação",
-    options=["Finanças & Bancos", "Atualizar dados", "Pendencias", "Milo & Bolt", "Meu Veículo", "Relatório Pdf", "Ajustar lançamentos"],
-    horizontal=True,
-    label_visibility="collapsed",
-    key="widget_navegacao"
-)
+# Barra de Atalhos Rápidos no Topo (Com botões reais)
+st.markdown("### ⚡ Acesso Rápido")
+col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 
-# Sincroniza a escolha do radio com a sessão
-st.session_state.aba_selecionada = escolha
+with col1:
+    if st.button("🏠 Finanças", use_container_width=True, key="btn_financas"):
+        st.session_state.aba_atual = "Finanças & Bancos"
+
+with col2:
+    if st.button("🔄 Atualizar", use_container_width=True, key="btn_atualizar"):
+        st.session_state.aba_atual = "Atualizar dados"
+
+with col3:
+    if st.button("⏳ Pendências", use_container_width=True, key="btn_pendencias"):
+        st.session_state.aba_atual = "Pendencias"
+
+with col4:
+    if st.button("🐶 Milo & Bolt", use_container_width=True, key="btn_pet"):
+        st.session_state.aba_atual = "Milo & Bolt"
+
+with col5:
+    if st.button("🚗 Meu Veículo", use_container_width=True, key="btn_veiculo"):
+        st.session_state.aba_atual = "Meu Veículo"
+
+with col6:
+    if st.button("📊 Relatórios", use_container_width=True, key="btn_relatorios"):
+        st.session_state.aba_atual = "Relatório Pdf"
+
+with col7:
+    if st.button("⚙️ Ajustes", use_container_width=True, key="btn_ajustes"):
+        st.session_state.aba_atual = "Ajustar lançamentos"
 
 st.markdown("---")
 
 # ========================================================
 # ROTEADOR DE TELAS EXCLUSIVAS (ISOLAMENTO TOTAL)
 # ========================================================
-if st.session_state.aba_selecionada == "Finanças & Bancos":
+aba = st.session_state.aba_atual
+
+if aba == "Finanças & Bancos":
     # 🏠 COLE TODO O SEU CÓDIGO DE FINANÇAS AQUI DENTRO:
     st.write("Aqui vai o seu painel completo de Finanças & Bancos.")
 
-elif st.session_state.aba_selecionada == "Atualizar dados":
+elif aba == "Atualizar dados":
     st.title("🔄 Atualizar dados do Sheets")
     st.write("Sincronização de dados.")
 
-elif st.session_state.aba_selecionada == "Pendencias":
+elif aba == "Pendencias":
     st.title("⏳ Pendências")
     st.write("Lista de pagamentos e pendências.")
 
-elif st.session_state.aba_selecionada == "Milo & Bolt":
+elif aba == "Milo & Bolt":
     st.title("🐶 Pet: Milo & Bolt")
     st.write("Aqui entram as informações e controle dos pets.")
 
-elif st.session_state.aba_selecionada == "Meu Veículo":
+elif aba == "Meu Veículo":
     st.title("🚗 Gestão do Veículo")
     c1, c2, c3 = st.columns([1,1,2])
     alc = c1.number_input("Preço Álcool", value=0.0, step=0.01, key="preco_alc")
@@ -119,13 +141,16 @@ elif st.session_state.aba_selecionada == "Meu Veículo":
             c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
     st.divider()
 
-elif st.session_state.aba_selecionada == "Relatório Pdf":
+elif aba == "Relatório Pdf":
     st.title("📊 Relatório Pdf")
     st.write("Geração de relatórios.")
 
-elif st.session_state.aba_selecionada == "Ajustar lançamentos":
+elif aba == "Ajustar lançamentos":
     st.title("🛠️ Ajustar lançamentos")
     st.write("Painel de ajustes.")
+
+
+
 if not st.session_state.login:
     # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
     col1, col_centro, col2 = st.columns([1, 2, 1])
