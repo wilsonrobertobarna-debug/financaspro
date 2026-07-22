@@ -361,6 +361,7 @@ aba = st.session_state.page
 # --- CSS + FontAwesome ---
 # --- CSS + FontAwesome ---
 # --- CSS + FontAwesome ---
+# --- CSS + FontAwesome ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
@@ -406,7 +407,7 @@ with st.sidebar.expander("⚡ Operações"):
             f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
             f_cat = st.selectbox("Categoria", ["Mercado","Aluguel","Luz/Água","Outros"])
             f_sta = st.selectbox("Status", ["Pago", "Pendente"])
-            if st.form_submit_button("Salvar Lançamento"):
+            if st.form_submit_button("💾 Salvar Lançamento"):
                 st.toast("✅ Lançamento salvo!", icon="💰")
                 atualizar_sessao()
                 st.rerun()
@@ -420,7 +421,7 @@ with st.sidebar.expander("⚡ Operações"):
             t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
             t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
             t_desc = st.text_input("Nota")
-            if st.form_submit_button("TRANSFERIR"):
+            if st.form_submit_button("🔄 Transferir"):
                 st.toast("✅ Transferência realizada!", icon="💸")
                 atualizar_sessao()
                 st.rerun()
@@ -435,14 +436,15 @@ with st.sidebar.expander("⚡ Operações"):
                 item = lista_edit[escolha]
                 ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
                 ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
-                if st.button("💾 ATUALIZAR"):
+                if st.button("✏️ Atualizar"):
                     st.toast("✅ Atualizado!", icon="📝")
                     atualizar_sessao()
                     st.rerun()
-                if st.button("🚨 EXCLUIR"):
+                if st.button("🗑️ Excluir"):
                     st.toast("✅ Exclusão realizada!", icon="🗑️")
                     atualizar_sessao()
                     st.rerun()
+
 
 
 
