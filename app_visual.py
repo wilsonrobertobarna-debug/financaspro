@@ -11,22 +11,28 @@ import urllib.parse
 import streamlit.components.v1 as components
 
 
-# 1. Configuração da página limpa e barra recolhida
+# ========================================================
+# 1. CONFIGURAÇÃO DA PÁGINA
+# ========================================================
 st.set_page_config(
     page_title="FinançasPro",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# 2. Função para mudar a aba de forma segura
+# ========================================================
+# 2. FUNÇÃO DE CONTROLE DE ABAS (SEGURA)
+# ========================================================
 def mudar_aba(nome_aba):
     st.session_state.aba_atual = nome_aba
 
-# Inicializa a memória da aba atual na tela principal correta
+# Inicializa a memória da aba atual na tela principal
 if 'aba_atual' not in st.session_state:
     st.session_state.aba_atual = "Finanças & Bancos"
 
-# 3. Barra de atalhos rápidos no topo com callbacks seguros
+# ========================================================
+# 3. BARRA DE ATALHOS RÁPIDOS NO TOPO
+# ========================================================
 st.markdown("### ⚡ Acesso Rápido")
 col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 
@@ -53,13 +59,30 @@ with col7:
 
 st.markdown("---")
 
-# 4. Roteador de Telas (Uma aba abre e fecha as outras automaticamente)
+# ========================================================
+# 4. ROTEADOR DE TELAS (EXIBE APENAS A ABA SELECIONADA)
+# ========================================================
 aba = st.session_state.aba_atual
 
 if aba == "Finanças & Bancos":
     st.title("🏠 Finanças & Bancos - Painel Geral")
-    st.write("Seu painel principal de finanças e bancos.")
-    # 👉 [Cole aqui embaixo todo o seu código antigo do painel principal quando quiser]
+    
+    # ----------------------------------------------------
+    # 👇 COLE TODO O SEU CÓDIGO ANTIGO DO PAINEL FINANCEIRO AQUI:
+    # ----------------------------------------------------
+    st.markdown("📊 Clique aqui para ver o Relatório Bancário Completo")
+    st.markdown("🛡️ **FinançasPro Wilson**")
+    st.write("Período:")
+    
+    # Exemplo dos seus cards (substitua ou mantenha conforme seu código original)
+    col_s1, col_s2, col_s3, col_s4, col_s5 = st.columns(5)
+    col_s1.metric("SALDO DISPONÍVEL", "R$ 5,614.68")
+    col_s2.metric("📈 Receita", "R$ 11,637.31")
+    col_s3.metric("📉 Gasto", "R$ 6,022.67")
+    col_s4.metric("💰 Rendimento", "R$ 0.04")
+    col_s5.metric("⏳ Pendente", "R$ 5,196.67")
+    
+    st.write("*(Cole o restante do código do seu painel financeiro aqui embaixo)*")
 
 elif aba == "Meu Veículo":
     st.title("🚗 Gestão do Veículo")
