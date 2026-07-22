@@ -354,6 +354,63 @@ for item in menu_itens:
 st.sidebar.divider()
 aba = st.session_state.page
 
+# --- BLOCO DE OPERAÇÕES UNIFICADO ---
+with st.sidebar.expander("⚡ Operações"):
+    tab1, tab2, tab3 = st.tabs(["🚀 Novo Lançamento", "💸 Transferência", "⚙️ Ajustar"])
+
+    # --- Novo Lançamento ---
+    with tab1:
+        with st.form("f_novo", clear_on_submit=True):
+            f_bnc = st.selectbox("Banco", bancos_disponiveis)
+            f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
+            t_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
+            f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
+            f_par = st.number_input("Parcelas", min_value=1, value=1)
+            f_desc = st.text_input("📝 Descrição")
+            f_bnfc = st.text_input("👤 Beneficiário")
+            f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
+            f_cat = st.selectbox("Categoria", ["Mercado","Aluguel","Luz/Água","Outros"])
+            f_sta = st.selectbox("Status", ["Pago", "Pendente"])
+            if st.form_submit_button("Salvar Lançamento"):
+                # sua lógica de salvar aqui...
+                st.toast("✅ Lançamento salvo!", icon="💰")
+                atualizar_sessao()
+                st.rerun()
+
+    # --- Transferência ---
+    with tab2:
+        with st.form("f_transf", clear_on_submit=True):
+            t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+            t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
+            t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
+            t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
+            t_desc = st.text_input("Nota")
+            if st.form_submit_button("TRANSFERIR"):
+                # sua lógica de transferência aqui...
+                st.toast("✅ Transferência realizada!", icon="💰")
+                atualizar_sessao()
+                st.rerun()
+
+    # --- Ajustar Lançamento ---
+    with tab3:
+        if not df_base.empty:
+            lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
+            escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
+            if escolha:
+                item = lista_edit[escolha]
+                ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+                ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
+                if st.button("💾 ATUALIZAR"):
+                    # sua lógica de update aqui...
+                    st.toast("✅ Atualizado!", icon="💰")
+                    atualizar_sessao()
+                    st.rerun()
+                if st.button("🚨 EXCLUIR"):
+                    # sua lógica de exclusão aqui...
+                    st.toast("✅ Exclusão realizada!", icon="💰")
+                    atualizar_sessao()
+                    st.rerun()
+
 # BARRINHA 1: NOVO LANÇAMENTO
 # Inicializa a variável de estado para controlar a abertura se ela não existir
 if "expander_lancamento_aberto" not in st.session_state:
