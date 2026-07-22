@@ -1,48 +1,3 @@
-import streamlit as st
-import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
-from fpdf import FPDF
-import urllib.parse
-import streamlit.components.v1 as components
-
-# Configuração da página
-st.set_page_config(
-    page_title="FinançasPro",
-    layout="wide",
-    initial_sidebar_state="expanded" # Deixa a barra lateral aberta para o botão ficar visível
-)
-
-# Inicializa a memória da aba atual
-if 'aba_atual' not in st.session_state:
-    st.session_state.aba_atual = "Finanças & Bancos"
-
-# 1. CONTROLE DE LOGIN (PRIMEIRO DE TUDO)
-if 'login' not in st.session_state:
-    st.session_state.login = False
-
-if not st.session_state.login:
-    col1, col_centro, col2 = st.columns([1, 2, 1])
-    with col_centro:
-        st.markdown("<br><br><br>", unsafe_allow_html=True)
-        st.markdown("### 🔒 Acesso Seguro")
-        senha = st.text_input("Digite sua senha:", type="password")
-        if st.button("🔓 Desbloquear Sistema"):
-            if senha == "Wilson123":
-                st.session_state.login = True
-                st.rerun()
-            else:
-                st.error("Senha incorreta, Wilson!")
-        st.markdown("<br><br>", unsafe_allow_html=True)
-    st.stop() # Bloqueia o resto do app se não estiver logado
-
-# ========================================================
-# 2. MENU LATERAL FIXO (NÃO SUME NUNCA)
-# ========================================================
 # ========================================================
 # 2. MENU LATERAL FIXO (LIMPO E ORGANIZADO)
 # ========================================================
@@ -60,18 +15,6 @@ with st.sidebar:
             st.rerun()
             
     st.markdown("---")
-# ========================================================
-# 3. ROTEADOR DE TELAS
-# ========================================================
-if st.session_state.aba_atual == "Pendências":
-    st.title("⏳ Tela de Pendências")
-    st.write("Aqui vai ficar a listagem de pagamentos pendentes.")
-    
-else:
-    # --- TODO O SEU CÓDIGO ORIGINAL DO DIA 20 VAI AQUI DENTRO ---
-    
-    st.title("💰 Tela de Finanças & Bancos")
-    st.write("Aqui roda o seu painel financeiro oficial do dia 20.")
 
 
 
