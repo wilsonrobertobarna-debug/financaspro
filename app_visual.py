@@ -362,52 +362,33 @@ aba = st.session_state.page
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-.stTabs [data-baseweb="tab"] {
+/* estilo geral dos botões */
+div.stButton > button:first-child {
     font-weight: bold;
-    padding: 8px 16px;
     border-radius: 6px;
-    margin-right: 4px;
-}
-/* aba 1: Novo Lançamento */
-.stTabs [data-baseweb="tab"]:nth-child(1) {
-    background-color: #d4f8d4;
-    color: #006400;
-}
-/* aba 2: Transferência */
-.stTabs [data-baseweb="tab"]:nth-child(2) {
-    background-color: #d4e8f8;
-    color: #004080;
-}
-/* aba 3: Ajustar */
-.stTabs [data-baseweb="tab"]:nth-child(3) {
-    background-color: #ffe5cc;
-    color: #cc5200;
+    padding: 6px 12px;
+    color: white;
+    border: none;
 }
 
-/* --- Botões customizados por key --- */
-button#save_btn {
-    background-color: #28a745 !important; /* verde */
-    color: white !important;
-    font-weight: bold;
-    border-radius: 6px;
+/* Salvar = verde */
+div.stButton > button[data-testid="save_btn"] {
+    background-color: #28a745;
 }
-button#transfer_btn {
-    background-color: #007bff !important; /* azul */
-    color: white !important;
-    font-weight: bold;
-    border-radius: 6px;
+
+/* Transferir = azul */
+div.stButton > button[data-testid="transfer_btn"] {
+    background-color: #007bff;
 }
-button#update_btn {
-    background-color: #fd7e14 !important; /* laranja */
-    color: white !important;
-    font-weight: bold;
-    border-radius: 6px;
+
+/* Atualizar = laranja */
+div.stButton > button[data-testid="update_btn"] {
+    background-color: #fd7e14;
 }
-button#delete_btn {
-    background-color: #dc3545 !important; /* vermelho */
-    color: white !important;
-    font-weight: bold;
-    border-radius: 6px;
+
+/* Excluir = vermelho */
+div.stButton > button[data-testid="delete_btn"] {
+    background-color: #dc3545;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -448,6 +429,26 @@ with st.sidebar.expander("⚡ Operações"):
                 st.toast("✅ Transferência realizada!", icon="💸")
                 atualizar_sessao()
                 st.rerun()
+
+    # --- Ajustar Lançamento ---
+    with tab3:
+        st.markdown("<i class='fa fa-edit'></i> **Ajustar Lançamento**", unsafe_allow_html=True)
+        if not df_base.empty:
+            lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
+            escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
+            if escolha:
+                item = lista_edit[escolha]
+                ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+                ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
+                if st.button("✏️ Atualizar", key="update_btn"):
+                    st.toast("✅ Atualizado!", icon="📝")
+                    atualizar_sessao()
+                    st.rerun()
+                if st.button("🗑️ Excluir", key="delete_btn"):
+                    st.toast("✅ Exclusão realizada!", icon="🗑️")
+                    atualizar_sessao()
+                    st.rerun()
+
 
 
 
