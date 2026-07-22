@@ -90,7 +90,7 @@ with col7:
 st.markdown("---")
 
 # ========================================================
-# FUNÇÃO DA TELA DE FINANÇAS (LIMPA E ÚNICA)
+# FUNÇÃO DA TELA DE FINANÇAS (BLINDADA E COMPLETA)
 # ========================================================
 def tela_financas():
     # 1. CONEXÃO (LIGA O MOTOR)
@@ -210,6 +210,13 @@ def tela_financas():
     if 'df_bancos_info' not in st.session_state:
         st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
 
+    df_base = st.session_state['df_base']
+    df_bancos_info = st.session_state['df_bancos_info']
+
+    # CABEÇALHO DO PAINEL
+    st.markdown("🛡️ **FinançasPro Wilson**")
+    st.write("Seu painel financeiro está carregado e pronto.")
+
 # Função global de atualização de metas
 def atualizar_meta_sheets(nome):
     global sh 
@@ -268,7 +275,7 @@ def tela_ajustes():
     st.write("Painel de ajustes.")
 
 # ========================================================
-# ROTEADOR CENTRAL
+# ROTEADOR CENTRAL (EXIBE APENAS A ABA ATUAL)
 # ========================================================
 aba = st.session_state.aba_atual
 
