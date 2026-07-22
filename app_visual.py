@@ -357,8 +357,40 @@ aba = st.session_state.page
 
     # --- Novo Lançamento ---with tab1:
    # --- BLOCO DE OPERAÇÕES UNIFICADO ---
+# --- CSS para estilizar abas ---
+st.markdown("""
+    <style>
+    .stTabs [data-baseweb="tab"] {
+        font-weight: bold;
+        padding: 8px 16px;
+        border-radius: 6px;
+        margin-right: 4px;
+    }
+    /* aba 1: Novo Lançamento */
+    .stTabs [data-baseweb="tab"]:nth-child(1) {
+        background-color: #d4f8d4; /* verde claro */
+        color: #006400; /* verde escuro */
+    }
+    /* aba 2: Transferência */
+    .stTabs [data-baseweb="tab"]:nth-child(2) {
+        background-color: #d4e8f8; /* azul claro */
+        color: #004080; /* azul escuro */
+    }
+    /* aba 3: Ajustar */
+    .stTabs [data-baseweb="tab"]:nth-child(3) {
+        background-color: #ffe5cc; /* laranja claro */
+        color: #cc5200; /* laranja escuro */
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- BLOCO DE OPERAÇÕES UNIFICADO ---
 with st.sidebar.expander("⚡ Operações"):
-    tab1, tab2, tab3 = st.tabs(["🚀 Novo Lançamento", "💸 Transferência", "⚙️ Ajustar"])
+    tab1, tab2, tab3 = st.tabs([
+        "🚀 <b>Novo Lançamento</b>", 
+        "💸 <b>Transferência</b>", 
+        "⚙️ <b>Ajustar</b>"
+    ])
 
     # --- Novo Lançamento ---
     with tab1:
@@ -389,7 +421,7 @@ with st.sidebar.expander("⚡ Operações"):
             t_desc = st.text_input("Nota")
             if st.form_submit_button("TRANSFERIR"):
                 # lógica de transferência
-                st.toast("✅ Transferência realizada!", icon="💰")
+                st.toast("✅ Transferência realizada!", icon="💸")
                 atualizar_sessao()
                 st.rerun()
 
@@ -404,12 +436,12 @@ with st.sidebar.expander("⚡ Operações"):
                 ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
                 if st.button("💾 ATUALIZAR"):
                     # lógica de update
-                    st.toast("✅ Atualizado!", icon="💰")
+                    st.toast("✅ Atualizado!", icon="📝")
                     atualizar_sessao()
                     st.rerun()
                 if st.button("🚨 EXCLUIR"):
                     # lógica de exclusão
-                    st.toast("✅ Exclusão realizada!", icon="💰")
+                    st.toast("✅ Exclusão realizada!", icon="🗑️")
                     atualizar_sessao()
                     st.rerun()
 
