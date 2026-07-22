@@ -81,40 +81,47 @@ col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 with col1:
     if st.button("🏠 Finanças", use_container_width=True, key="btn_financas"):
         st.session_state.aba_atual = "Finanças & Bancos"
+        st.rerun()
 
 with col2:
     if st.button("🔄 Atualizar", use_container_width=True, key="btn_atualizar"):
         st.session_state.aba_atual = "Atualizar dados"
+        st.rerun()
 
 with col3:
     if st.button("⏳ Pendências", use_container_width=True, key="btn_pendencias"):
         st.session_state.aba_atual = "Pendencias"
+        st.rerun()
 
 with col4:
     if st.button("🐶 Milo & Bolt", use_container_width=True, key="btn_pet"):
         st.session_state.aba_atual = "Milo & Bolt"
+        st.rerun()
 
 with col5:
     if st.button("🚗 Meu Veículo", use_container_width=True, key="btn_veiculo"):
         st.session_state.aba_atual = "Meu Veículo"
+        st.rerun()
 
 with col6:
     if st.button("📊 Relatórios", use_container_width=True, key="btn_relatorios"):
         st.session_state.aba_atual = "Relatório Pdf"
+        st.rerun()
 
 with col7:
     if st.button("⚙️ Ajustes", use_container_width=True, key="btn_ajustes"):
         st.session_state.aba_atual = "Ajustar lançamentos"
+        st.rerun()
 
 st.markdown("---")
 
 # ========================================================
-# ROTEADOR DE TELAS EXCLUSIVAS (ISOLAMENTO TOTAL)
+# ROTEADOR DE TELAS EXCLUSIVAS (ISOLAMENTO TOTAL COM RERUN)
 # ========================================================
 aba = st.session_state.aba_atual
 
 if aba == "Finanças & Bancos":
-    # 🏠 COLE TODO O SEU CÓDIGO DE FINANÇAS AQUI DENTRO:
+    # 🏠 COLE TODO O SEU CÓDIGO DE FINANÇAS EXATAMENTE AQUI DENTRO:
     st.write("Aqui vai o seu painel completo de Finanças & Bancos.")
 
 elif aba == "Atualizar dados":
