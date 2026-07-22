@@ -1,20 +1,80 @@
+import streamlit as st
+import pandas as pd
+import gspread
+from google.oauth2.service_account import Credentials
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+from fpdf import FPDF
+import urllib.parse
+import streamlit.components.v1 as components
+
+# Configuração da página (força a barra lateral a ficar recolhida/invisível)
+st.set_page_config(
+    page_title="FinançasPro",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# 1. MEMÓRIA DA ABA ATUAL
+if 'aba_atual' not in st.session_state:
+    st.session_state.aba_atual = "Finanças & Bancos"
+
+# 2. CONTROLE DE LOGIN
+if 'login' not in st.session_state:
+    st.session_state.login = False
+
+if not st.session_state.login:
+    col1, col_centro, col2 = st.columns([1, 2, 1])
+    with col_centro:
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        st.markdown("### 🔒 Acesso Seguro")
+        senha = st.text_input("Digite sua senha:", type="password")
+        if st.button("🔓 Desbloquear Sistema"):
+            if senha == "Wilson123":
+                st.session_state.login = True
+                st.rerun()
+            else:
+                st.error("Senha incorreta, Wilson!")
+        st.markdown("<br><br>", unsafe_allow_html=True)
+    st.stop()
+
 # ========================================================
-# 2. MENU LATERAL FIXO (LIMPO E ORGANIZADO)
+# 3. BOTÃO DE NAVEGAÇÃO NO TOPO (SEM BARRA LATERAL)
 # ========================================================
-with st.sidebar:
-    st.markdown("## 🧭 Menu")
-    st.markdown("---")
-    
+col_vazia, col_btn = st.columns([5, 1])
+with col_btn:
     if st.session_state.aba_atual == "Finanças & Bancos":
-        if st.button("⏳ Ver Pendências", use_container_width=True, type="primary"):
+        if st.button("⏳ Pendências", use_container_width=True, type="primary"):
             st.session_state.aba_atual = "Pendências"
             st.rerun()
     else:
-        if st.button("🏠 Ir para Finanças", use_container_width=True, type="primary"):
+        if st.button("🏠 Finanças", use_container_width=True, type="primary"):
             st.session_state.aba_atual = "Finanças & Bancos"
             st.rerun()
-            
-    st.markdown("---")
+
+st.markdown("---")
+
+# ========================================================
+# 4. ROTEADOR DE TELAS
+# ========================================================
+if st.session_state.aba_atual == "Pendências":
+    # ----------------------------------------------------
+    # TELA DE PENDÊNCIAS
+    # ----------------------------------------------------
+    st.title("⏳ Tela de Pendências")
+    st.write("Aqui vai ficar a listagem de pagamentos pendentes.")
+    
+else:
+    # ----------------------------------------------------
+    # TELA DE FINANÇAS & BANCOS (SEU CÓDIGO DO DIA 20)
+    # ----------------------------------------------------
+    
+    # [COLE TODO O SEU CÓDIGO DO DIA 20 AQUI DENTRO, MAS ANTES VERIFIQUE SE NÃO TEM NENHUM "st.sidebar" ESCRITO LÁ DENTRO]
+    
+    st.title("💰 Tela de Finanças & Bancos")
+    st.write("Seu painel do dia 20 roda aqui dentro.")
 
 
 
