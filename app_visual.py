@@ -10,28 +10,6 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-# --- BARRA DE NAVEGAÇÃO NO TOPO ---
-st.markdown("## 🎮 Painel Wilson")  # título no topo
-
-# Criar colunas para os botões
-col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
-
-menu_itens = [
-    "💰 Finanças & Bancos",
-    "Pendências",
-    "🐾 Milo & Bolt",
-    "🚗 Meu Veículo",
-    "📄 WhatsApp",
-    "📋 Relatório PDF",
-    "📊 Análises & Configurações"
-]
-
-# Distribuir os botões nas colunas
-for col, item in zip([col1, col2, col3, col4, col5, col6, col7], menu_itens):
-    if col.button(item, use_container_width=True):
-        st.session_state.page = item
-        st.rerun()
-O que muda:
 
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
