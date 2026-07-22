@@ -45,7 +45,6 @@ if not st.session_state.login:
     
     st.stop()
 
-
 # Configurações e funções globais
 agora_br = datetime.now() - timedelta(hours=3)
 hoje_br = agora_br.date()
@@ -71,52 +70,44 @@ def atualizar_meta_sheets(nome):
     except Exception as e:
         st.error(f"Erro ao atualizar meta: {e}")
 
-def mudar_aba(nome_aba):
-    st.session_state.aba_atual = nome_aba
+# Inicialização blindada da aba atual
+if 'aba_selecionada' not in st.session_state:
+    st.session_state.aba_selecionada = "Finanças & Bancos"
 
-if 'aba_atual' not in st.session_state:
-    st.session_state.aba_atual = "Finanças & Bancos"
+# Barra de Navegação Superior (Usando Radio em formato de pílulas/botões para evitar vazamento)
+escolha = st.radio(
+    "Navegação",
+    options=["Finanças & Bancos", "Atualizar dados", "Pendencias", "Milo & Bolt", "Meu Veículo", "Relatório Pdf", "Ajustar lançamentos"],
+    horizontal=True,
+    label_visibility="collapsed",
+    key="widget_navegacao"
+)
 
-
-# Barra de atalhos rápidos no topo
-st.markdown("### ⚡ Acesso Rápido")
-col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
-
-with col1:
-    st.button("🏠 Finanças", use_container_width=True, key="topo_financas", on_click=mudar_aba, args=("Finanças & Bancos",))
-
-with col2:
-    st.button("🔄 Atualizar", use_container_width=True, key="topo_atualizar", on_click=mudar_aba, args=("Atualizar dados",))
-
-with col3:
-    st.button("⏳ Pendências", use_container_width=True, key="topo_pendencias", on_click=mudar_aba, args=("Pendencias",))
-
-with col4:
-    st.button("🐶 Milo & Bolt", use_container_width=True, key="topo_pet", on_click=mudar_aba, args=("Milo & Bolt",))
-
-with col5:
-    st.button("🚗 Meu Veículo", use_container_width=True, key="topo_veiculo", on_click=mudar_aba, args=("Meu Veículo",))
-
-with col6:
-    st.button("📊 Relatórios", use_container_width=True, key="topo_relatorios", on_click=mudar_aba, args=("Relatório Pdf",))
-
-with col7:
-    st.button("⚙️ Ajustes", use_container_width=True, key="topo_ajustes", on_click=mudar_aba, args=("Ajustar lançamentos",))
+# Sincroniza a escolha do radio com a sessão
+st.session_state.aba_selecionada = escolha
 
 st.markdown("---")
-
 
 # ========================================================
 # ROTEADOR DE TELAS EXCLUSIVAS (ISOLAMENTO TOTAL)
 # ========================================================
-aba = st.session_state.aba_atual
+if st.session_state.aba_selecionada == "Finanças & Bancos":
+    # 🏠 COLE TODO O SEU CÓDIGO DE FINANÇAS AQUI DENTRO:
+    st.write("Aqui vai o seu painel completo de Finanças & Bancos.")
 
-if aba == "Finanças & Bancos":
-    # 🏠 O SEU PAINEL DE FINANÇAS ENTRA EXATAMENTE AQUI DENTRO:
-    # (Tudo o que for de finanças precisa ficar indentado aqui dentro para não vazar)
-    pass
+elif st.session_state.aba_selecionada == "Atualizar dados":
+    st.title("🔄 Atualizar dados do Sheets")
+    st.write("Sincronização de dados.")
 
-elif aba == "Meu Veículo":
+elif st.session_state.aba_selecionada == "Pendencias":
+    st.title("⏳ Pendências")
+    st.write("Lista de pagamentos e pendências.")
+
+elif st.session_state.aba_selecionada == "Milo & Bolt":
+    st.title("🐶 Pet: Milo & Bolt")
+    st.write("Aqui entram as informações e controle dos pets.")
+
+elif st.session_state.aba_selecionada == "Meu Veículo":
     st.title("🚗 Gestão do Veículo")
     c1, c2, c3 = st.columns([1,1,2])
     alc = c1.number_input("Preço Álcool", value=0.0, step=0.01, key="preco_alc")
@@ -128,26 +119,13 @@ elif aba == "Meu Veículo":
             c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
     st.divider()
 
-elif aba == "Milo & Bolt":
-    st.title("🐶 Pet: Milo & Bolt")
-    st.write("Aqui entram as informações e controle dos pets.")
-
-elif aba == "Pendencias":
-    st.title("⏳ Pendências")
-    st.write("Lista de pagamentos e pendências.")
-
-elif aba == "Atualizar dados":
-    st.title("🔄 Atualizar dados do Sheets")
-    st.write("Sincronização de dados.")
-
-elif aba == "Relatório Pdf":
+elif st.session_state.aba_selecionada == "Relatório Pdf":
     st.title("📊 Relatório Pdf")
     st.write("Geração de relatórios.")
 
-elif aba == "Ajustar lançamentos":
+elif st.session_state.aba_selecionada == "Ajustar lançamentos":
     st.title("🛠️ Ajustar lançamentos")
     st.write("Painel de ajustes.")
-
 if not st.session_state.login:
     # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
     col1, col_centro, col2 = st.columns([1, 2, 1])
