@@ -768,7 +768,6 @@ elif "Pendências" in aba:
     
     # no topo do arquivo   
 
-
 elif "🐾" in aba and mostrar_milo_bolt:
     st.title("🐾 Gestão Milo & Bolt")
     
