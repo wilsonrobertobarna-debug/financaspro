@@ -29,7 +29,6 @@ if not st.session_state.login:
     st.stop()
 
 # --- Se login foi feito, mostra barra de navegação ---
-else:
     st.markdown("""
 
     with st.container():
