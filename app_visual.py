@@ -354,57 +354,30 @@ st.sidebar.divider()
 aba = st.session_state.page
 
 # BARRINHA 1: NOVO LANÇAMENTO
-
-    # --- Novo Lançamento ---with tab1:
-   # --- BLOCO DE OPERAÇÕES UNIFICADO ---
-# --- CSS para estilizar abas ---
-# --- CSS + FontAwesome ---
-# --- CSS + FontAwesome ---
 # --- CSS + FontAwesome ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-/* estilo geral dos botões */
-div.stButton > button:first-child {
-    font-weight: bold;
-    border-radius: 6px;
-    padding: 6px 12px;
-    color: white;
-    border: none;
-}
-
-/* ordem dos botões dentro dos formulários */
-div.stButton:nth-of-type(1) > button {
-    background-color: #28a745; /* verde - salvar */
-}
-div.stButton:nth-of-type(2) > button {
-    background-color: #007bff; /* azul - transferir */
-}
-div.stButton:nth-of-type(3) > button {
-    background-color: #fd7e14; /* laranja - atualizar */
-}
-div.stButton:nth-of-type(4) > button {
-    background-color: #dc3545; /* vermelho - excluir */
-}
-
-/* abas coloridas */
 .stTabs [data-baseweb="tab"] {
     font-weight: bold;
     padding: 8px 16px;
     border-radius: 6px;
     margin-right: 4px;
 }
+/* aba 1: Novo Lançamento */
 .stTabs [data-baseweb="tab"]:nth-child(1) {
-    background-color: #d4f8d4;
-    color: #006400;
+    background-color: #d4f8d4; /* verde claro */
+    color: #006400; /* verde escuro */
 }
+/* aba 2: Transferência */
 .stTabs [data-baseweb="tab"]:nth-child(2) {
-    background-color: #d4e8f8;
-    color: #004080;
+    background-color: #d4e8f8; /* azul claro */
+    color: #004080; /* azul escuro */
 }
+/* aba 3: Ajustar */
 .stTabs [data-baseweb="tab"]:nth-child(3) {
-    background-color: #ffe5cc;
-    color: #cc5200;
+    background-color: #ffe5cc; /* laranja claro */
+    color: #cc5200; /* laranja escuro */
 }
 </style>
 """, unsafe_allow_html=True)
@@ -461,10 +434,9 @@ with st.sidebar.expander("⚡ Operações"):
                     atualizar_sessao()
                     st.rerun()
                 if st.button("🗑️ Excluir"):
-
-
-
-
+                    st.toast("✅ Exclusão realizada!", icon="🗑️")
+                    atualizar_sessao()
+                    st.rerun()
 
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) --
