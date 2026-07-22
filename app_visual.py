@@ -31,7 +31,7 @@ if 'aba_atual' not in st.session_state:
     st.session_state.aba_atual = "Finanças & Bancos"
 
 # ========================================================
-# 3. BARRA DE ATALHOS RÁPIDOS NO TOPO
+# 3. BARRA DE ATALHOS RÁPIDOS NO TOPO (FIXA EM TODAS AS TELAS)
 # ========================================================
 st.markdown("### ⚡ Acesso Rápido")
 col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
@@ -60,21 +60,18 @@ with col7:
 st.markdown("---")
 
 # ========================================================
-# 4. ROTEADOR DE TELAS (EXIBE APENAS A ABA SELECIONADA)
+# 4. ROTEADOR DE TELAS EXCLUSIVAS (CADA ABA FICA ISOLADA)
 # ========================================================
 aba = st.session_state.aba_atual
 
 if aba == "Finanças & Bancos":
+    # 🏠 TUDO AQUI SÓ APARECE QUANDO CLICAR NO BOTÃO "FINANÇAS"
     st.title("🏠 Finanças & Bancos - Painel Geral")
     
-    # ----------------------------------------------------
-    # 👇 COLE TODO O SEU CÓDIGO ANTIGO DO PAINEL FINANCEIRO AQUI:
-    # ----------------------------------------------------
     st.markdown("📊 Clique aqui para ver o Relatório Bancário Completo")
     st.markdown("🛡️ **FinançasPro Wilson**")
     st.write("Período:")
     
-    # Exemplo dos seus cards (substitua ou mantenha conforme seu código original)
     col_s1, col_s2, col_s3, col_s4, col_s5 = st.columns(5)
     col_s1.metric("SALDO DISPONÍVEL", "R$ 5,614.68")
     col_s2.metric("📈 Receita", "R$ 11,637.31")
@@ -82,9 +79,10 @@ if aba == "Finanças & Bancos":
     col_s4.metric("💰 Rendimento", "R$ 0.04")
     col_s5.metric("⏳ Pendente", "R$ 5,196.67")
     
-    st.write("*(Cole o restante do código do seu painel financeiro aqui embaixo)*")
+    st.write("*(Cole o restante do seu código do painel financeiro aqui dentro)*")
 
 elif aba == "Meu Veículo":
+    # 🚗 TUDO AQUI SÓ APARECE QUANDO CLICAR NO BOTÃO "MEU VEÍCULO"
     st.title("🚗 Gestão do Veículo")
     c1, c2, c3 = st.columns([1,1,2])
     alc = c1.number_input("Preço Álcool", value=0.0, step=0.01, key="preco_alc")
@@ -97,22 +95,27 @@ elif aba == "Meu Veículo":
     st.divider()
 
 elif aba == "Milo & Bolt":
+    # 🐶 TUDO AQUI SÓ APARECE QUANDO CLICAR NO BOTÃO "MILO & BOLT"
     st.title("🐶 Pet: Milo & Bolt")
     st.write("Aqui entram as informações e controle dos pets.")
 
 elif aba == "Pendencias":
+    # ⏳ TUDO AQUI SÓ APARECE QUANDO CLICAR NO BOTÃO "PENDÊNCIAS"
     st.title("⏳ Pendências")
     st.write("Lista de pagamentos e pendências.")
 
 elif aba == "Atualizar dados":
+    # 🔄 TUDO AQUI SÓ APARECE QUANDO CLICAR NO BOTÃO "ATUALIZAR"
     st.title("🔄 Atualizar dados do Sheets")
     st.write("Sincronização de dados.")
 
 elif aba == "Relatório Pdf":
+    # 📊 TUDO AQUI SÓ APARECE QUANDO CLICAR NO BOTÃO "RELATÓRIOS"
     st.title("📊 Relatório Pdf")
     st.write("Geração de relatórios.")
 
 elif aba == "Ajustar lançamentos":
+    # ⚙️ TUDO AQUI SÓ APARECE QUANDO CLICAR NO BOTÃO "AJUSTES"
     st.title("🛠️ Ajustar lançamentos")
     st.write("Painel de ajustes.")
 
