@@ -10,7 +10,97 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
+# 1. Configuração da página limpa e barra recolhida
+st.set_page_config(
+    page_title="FinançasPro",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
+# 2. Inicializa a memória da aba atual na tela principal correta
+if 'aba_atual' not in st.session_state:
+    st.session_state.aba_atual = "Finanças & Bancos"
+
+# 3. Barra de atalhos rápidos no topo (Substitui a barra lateral)
+st.markdown("### ⚡ Acesso Rápido")
+col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
+
+with col1:
+    if st.button("🏠 Finanças", use_container_width=True, key="topo_financas"):
+        st.session_state.aba_atual = "Finanças & Bancos"
+        st.rerun()
+
+with col2:
+    if st.button("🔄 Atualizar", use_container_width=True, key="topo_atualizar"):
+        st.session_state.aba_atual = "Atualizar dados"
+        st.rerun()
+
+with col3:
+    if st.button("⏳ Pendências", use_container_width=True, key="topo_pendencias"):
+        st.session_state.aba_atual = "Pendencias"
+        st.rerun()
+
+with col4:
+    if st.button("🐶 Milo & Bolt", use_container_width=True, key="topo_pet"):
+        st.session_state.aba_atual = "Milo & Bolt"
+        st.rerun()
+
+with col5:
+    if st.button("🚗 Meu Veículo", use_container_width=True, key="topo_veiculo"):
+        st.session_state.aba_atual = "Meu Veículo"
+        st.rerun()
+
+with col6:
+    if st.button("📊 Relatórios", use_container_width=True, key="topo_relatorios"):
+        st.session_state.aba_atual = "Relatório Pdf"
+        st.rerun()
+
+with col7:
+    if st.button("⚙️ Ajustes", use_container_width=True, key="topo_ajustes"):
+        st.session_state.aba_atual = "Ajustar lançamentos"
+        st.rerun()
+
+st.markdown("---")
+
+# 4. Roteador de Telas (Uma aba abre e fecha as outras automaticamente)
+aba = st.session_state.aba_atual
+
+if aba == "Finanças & Bancos":
+    st.title("🏠 Finanças & Bancos - Painel Geral")
+    # 👉 [Cole aqui embaixo todo o código antigo do seu painel principal de finanças e bancos]
+    st.write("Seu painel principal está pronto para receber o código antigo aqui.")
+
+elif aba == "Meu Veículo":
+    st.title("🚗 Gestão do Veículo")
+    c1, c2, c3 = st.columns([1,1,2])
+    alc = c1.number_input("Preço Álcool", value=0.0, step=0.01, key="preco_alc")
+    gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01, key="preco_gas")
+    if alc > 0 and gas > 0:
+        if (alc/gas) <= 0.7: 
+            c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
+        else: 
+            c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
+    st.divider()
+
+elif aba == "Milo & Bolt":
+    st.title("🐶 Pet: Milo & Bolt")
+    st.write("Aqui entram as informações e controle dos pets.")
+
+elif aba == "Pendencias":
+    st.title("⏳ Pendências")
+    st.write("Lista de pagamentos e pendências.")
+
+elif aba == "Atualizar dados":
+    st.title("🔄 Atualizar dados do Sheets")
+    st.write("Sincronização de dados.")
+
+elif aba == "Relatório Pdf":
+    st.title("📊 Relatório Pdf")
+    st.write("Geração de relatórios.")
+
+elif aba == "Ajustar lançamentos":
+    st.title("🛠️ Ajustar lançamentos")
+    st.write("Painel de ajustes.")
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
