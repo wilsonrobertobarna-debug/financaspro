@@ -10,11 +10,6 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-
-import streamlit as st
-import pandas as pd
-from datetime import datetime, timedelta
-
 # Configuração da página
 st.set_page_config(
     page_title="FinançasPro",
@@ -45,30 +40,9 @@ if not st.session_state.login:
     
     st.stop()
 
-# Configurações e funções globais
+# Configurações globais de data
 agora_br = datetime.now() - timedelta(hours=3)
 hoje_br = agora_br.date()
-
-def atualizar_meta_sheets(nome):
-    global sh 
-    novo_valor = st.session_state[f"m_{nome}"]
-    
-    try:
-        ws_meta = sh.worksheet("Meta")
-        celula = ws_meta.find(nome)
-        
-        if celula:
-            if f"m_{nome}" in st.session_state:
-                del st.session_state[f"m_{nome}"]
-            
-            ws_meta.update_cell(celula.row, 2, novo_valor)
-            
-            if 'df_metas_config' in st.session_state:
-                st.session_state['df_metas_config'].loc[st.session_state['df_metas_config']['Nome da Meta'] == nome, 'Valor Alvo'] = novo_valor
-            
-            st.rerun() 
-    except Exception as e:
-        st.error(f"Erro ao atualizar meta: {e}")
 
 # Inicializa a memória da aba atual
 if 'aba_atual' not in st.session_state:
@@ -116,15 +90,151 @@ with col7:
 st.markdown("---")
 
 # ========================================================
-# FUNÇÕES DE CADA TELA
+# FUNÇÃO DA TELA DE FINANÇAS (LIMPA E ÚNICA)
 # ========================================================
-
 def tela_financas():
-    # 🏠 COLE TODO O SEU CÓDIGO ANTIGO DE FINANÇAS EXATAMENTE AQUI DENTRO:
-    # (Certifique-se de que todo o seu painel financeiro esteja recuado para dentro desta função)
-    st.title("🏠 Finanças & Bancos - Painel Geral")
-    st.write("Cole seu código de finanças aqui embaixo.")
+    # 1. CONEXÃO (LIGA O MOTOR)
+    @st.cache_resource
+    def conectar():
+        creds_dict = st.secrets.get("connections", {}).get("gsheets")
+        if not creds_dict:
+            st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
+        try:
+            pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
+            if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
+            final_creds = {
+                "type": creds_dict["type"], "project_id": creds_dict["project_id"],
+                "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
+                "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
+            }
+            return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
+        except Exception as e:
+            st.error(f"Erro na conexão: {e}"); st.stop()
 
+    client = conectar()
+    global sh
+    sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+
+    # IDENTIFICAÇÃO DAS ABAS
+    ws_base = sh.get_worksheet(0)
+    try:
+        ws_bancos = sh.worksheet("Bancos")
+    except:
+        ws_bancos = None
+
+    # FUNÇÕES DE CARREGAMENTO DIRETO
+    def carregar_dados_gs():
+        dados = ws_base.get_all_values()
+        if len(dados) <= 1: return pd.DataFrame()
+        df = pd.DataFrame(dados[1:], columns=dados[0])
+        df['ID'] = range(2, len(df) + 2)
+        def p_float(v):
+            try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
+            except: return 0.0
+        df['V_Num'] = df['Valor'].apply(p_float)
+        df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
+        df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+        return df
+
+    def carregar_bancos_manual_gs():
+        if ws_bancos:
+            dados = ws_bancos.get_all_values()
+            if len(dados) > 1:
+                return pd.DataFrame(dados[1:], columns=dados[0])
+        return pd.DataFrame()
+
+    # BLOCO DE CARREGAMENTO DE METAS
+    if 'metas_iniciadas' not in st.session_state:
+        try:
+            df_metas = pd.DataFrame(sh.worksheet("Meta").get_all_records())
+            for index, row in df_metas.iterrows():
+                nome = row['Nome da Meta']
+                valor_raw = row['Valor Alvo']
+                try:
+                    valor = float(valor_raw) if str(valor_raw).strip() != '' else 0.0
+                except:
+                    valor = 0.0
+                st.session_state[f"m_{nome}"] = valor
+            st.session_state['metas_iniciadas'] = True
+        except Exception as e:
+            st.error(f"Erro na planilha: {e}")
+
+    # ESTILIZAÇÃO
+    st.markdown("""
+        <style>
+        [data-testid='stMetricLabel'], [data-testid='stMetricValue'] {
+            font-size: 1.1rem !important; font-weight: bold !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # --- RELATÓRIO BANCÁRIO ÚNICO ---
+    with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
+        df = carregar_dados_gs()
+        df_bancos = carregar_bancos_manual_gs()
+        
+        df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
+        hoje = pd.Timestamp.today().normalize()
+        df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
+        
+        if not df_bancos.empty:
+            qtd_colunas = 4
+            
+            def formatar_moeda(valor):
+                try:
+                    return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                except:
+                    return "R$ 0,00"
+
+            for i in range(0, len(df_bancos), qtd_colunas):
+                cols = st.columns(qtd_colunas)
+                linha = df_bancos.iloc[i:i + qtd_colunas]
+                
+                for j, (index, row) in enumerate(linha.iterrows()):
+                    with cols[j]:
+                        nome_banco = row['Nome do Banco']
+                        saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
+                        
+                        filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
+                        df_banco_atual = df[filtro]
+                        
+                        entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+                        saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+                        
+                        saldo_atual = saldo_inicial + entradas - saidas
+                        st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
+
+    # INICIALIZA O CACHE NA SESSÃO
+    if 'df_base' not in st.session_state:
+        st.session_state['df_base'] = carregar_dados_gs()
+    if 'df_bancos_info' not in st.session_state:
+        st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
+
+# Função global de atualização de metas
+def atualizar_meta_sheets(nome):
+    global sh 
+    novo_valor = st.session_state[f"m_{nome}"]
+    
+    try:
+        ws_meta = sh.worksheet("Meta")
+        celula = ws_meta.find(nome)
+        
+        if celula:
+            if f"m_{nome}" in st.session_state:
+                del st.session_state[f"m_{nome}"]
+            
+            ws_meta.update_cell(celula.row, 2, novo_valor)
+            
+            if 'df_metas_config' in st.session_state:
+                st.session_state['df_metas_config'].loc[st.session_state['df_metas_config']['Nome da Meta'] == nome, 'Valor Alvo'] = novo_valor
+            
+            st.rerun() 
+    except Exception as e:
+        st.error(f"Erro ao salvar no Sheets: {e}")
+
+# ========================================================
+# FUNÇÕES DAS OUTRAS TELAS
+# ========================================================
 def tela_atualizar():
     st.title("🔄 Atualizar dados do Sheets")
     st.write("Sincronização de dados.")
@@ -176,6 +286,8 @@ elif aba == "Relatório Pdf":
     tela_relatorios()
 elif aba == "Ajustar lançamentos":
     tela_ajustes()
+
+
 
 if not st.session_state.login:
     # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
