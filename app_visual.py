@@ -31,22 +31,6 @@ if not st.session_state.login:
 # --- Se login foi feito, mostra barra de navegação ---
 else:
     st.markdown("""
-        <style>
-        .top-bar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background-color: #f8f9fa;
-            padding: 10px;
-            z-index: 999;
-            border-bottom: 1px solid #ddd;
-        }
-        .block-container {
-            padding-top: 120px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
 
     with st.container():
         st.markdown('<div class="top-bar">', unsafe_allow_html=True)
