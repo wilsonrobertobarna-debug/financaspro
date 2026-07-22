@@ -354,16 +354,6 @@ st.sidebar.divider()
 aba = st.session_state.page
 
 # BARRINHA 1: NOVO LANÇAMENTO
-# Inicializa a variável de estado para controlar a abertura se ela não existir
-if "expander_lancamento_aberto" not in st.session_state:
-    st.session_state.expander_lancamento_aberto = False
-
-# --- BLOCO DE OPERAÇÕES UNIFICADO ---
-with st.sidebar.expander("⚡ Operações"):
-    tab1, tab2, tab3 = st.tabs(["🚀 Novo Lançamento", "💸 Transferência", "⚙️ Ajustar"])
-# --- BLOCO DE OPERAÇÕES UNIFICADO ---
-with st.sidebar.expander("⚡ Operações"):
-    tab1, tab2, tab3 = st.tabs(["🚀 Novo Lançamento", "💸 Transferência", "⚙️ Ajustar"])
 
     # --- Novo Lançamento ---
     with tab1:
