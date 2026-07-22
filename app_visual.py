@@ -399,6 +399,228 @@ if 'df_base' not in st.session_state:
 df_base = st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
 
+if not st.session_state.login:
+    # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
+    col1, col_centro, col2 = st.columns([1, 2, 1])
+    
+    with col_centro:
+        st.markdown("<br><br><br>", unsafe_allow_html=True) # Espaçamento superior
+        st.markdown("### 🔒 Acesso Seguro")
+        senha = st.text_input("Digite sua senha:", type="password")
+        
+        if st.button("🔓 Desbloquear Sistema"):
+            if senha == "Wilson123": # Troque aqui pela sua senha real
+                st.session_state.login = True
+                st.rerun()
+            else:
+                st.error("Senha incorreta, Wilson!")
+        
+        st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    st.stop() # Bloqueia o carregamento do restante do código abaixo
+   
+
+# Definições iniciais de data
+agora_br = datetime.now() - timedelta(hours=3)
+hoje_br = agora_br.date()
+
+# FUNÇÃO AJUSTADA: Nome correto e acesso global ao 'sh'
+def atualizar_meta_sheets(nome):
+    global sh 
+    novo_valor = st.session_state[f"m_{nome}"]
+    
+    try:
+        ws_meta = sh.worksheet("Meta")
+        celula = ws_meta.find(nome)
+        
+        if celula:
+            # 1. A "Paulada": Apaga a memória antiga usando o parâmetro 'nome' correto
+            if f"m_{nome}" in st.session_state:
+                del st.session_state[f"m_{nome}"]
+            
+            # 2. Atualiza na planilha
+            ws_meta.update_cell(celula.row, 2, novo_valor)
+            
+            # 3. Força a atualização do DataFrame de controle (para o gráfico ler o valor novo)
+            if 'df_metas_config' in st.session_state:
+                st.session_state['df_metas_config'].loc[st.session_state['df_metas_config']['Nome da Meta'] == nome, 'Valor Alvo'] = novo_valor
+            
+            # 4. Recarrega (O toast vai rodar logo após o rerun se você tirar o rerun daqui, 
+            # ou você pode usar o toast antes do rerun)
+            st.rerun() 
+            
+    except Exception as e:
+        st.error(f"Erro ao salvar no Sheets: {e}")
+
+st.set_page_config(
+    page_title="FinançasPro",
+    layout="wide",
+    initial_sidebar_state="collapsed" # Isso fará a barra vir fechada por padrão
+)
+
+# 2. CONEXÃO (LIGA O MOTOR)
+@st.cache_resource
+def conectar():
+    creds_dict = st.secrets.get("connections", {}).get("gsheets")
+    if not creds_dict:
+        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
+    try:
+        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
+        final_creds = {
+            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
+            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
+            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
+        }
+        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
+    except Exception as e:
+        st.error(f"Erro na conexão: {e}"); st.stop()
+
+client = conectar()
+sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+
+# 3. BLOCO DE CARREGAMENTO (Sincroniza Sheets com Session State)
+if 'metas_iniciadas' not in st.session_state:
+    # Esta linha abaixo está recuada (indentada) para dentro do IF
+    try:
+        df_metas = pd.DataFrame(sh.worksheet("Meta").get_all_records())
+        for index, row in df_metas.iterrows():
+            nome = row['Nome da Meta']
+            valor_raw = row['Valor Alvo']
+            try:
+                valor = float(valor_raw) if str(valor_raw).strip() != '' else 0.0
+            except:
+                valor = 0.0
+            st.session_state[f"m_{nome}"] = valor
+        st.session_state['metas_iniciadas'] = True
+    except Exception as e:
+        st.error(f"Erro na planilha: {e}")
+# 4. ESTILIZAÇÃO
+st.markdown("""
+    <style>
+    [data-testid='stMetricLabel'], [data-testid='stMetricValue'] {
+        font-size: 1.1rem !important; font-weight: bold !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+# 2. CONEXÃO
+@st.cache_resource
+def conectar():
+    creds_dict = st.secrets.get("connections", {}).get("gsheets")
+    if not creds_dict:
+        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
+    try:
+        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
+        if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
+        final_creds = {
+            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
+            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
+            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
+        }
+        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
+    except Exception as e:
+        st.error(f"Erro: {e}"); st.stop()
+
+client = conectar()
+sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+
+# IDENTIFICAÇÃO DAS ABAS
+ws_base = sh.get_worksheet(0)
+try:
+    ws_bancos = sh.worksheet("Bancos")
+except:
+    ws_bancos = None
+
+# FUNÇÕES DE CARREGAMENTO DIRETO
+def carregar_dados_gs():
+    dados = ws_base.get_all_values()
+    if len(dados) <= 1: return pd.DataFrame()
+    df = pd.DataFrame(dados[1:], columns=dados[0])
+    df['ID'] = range(2, len(df) + 2)
+    def p_float(v):
+        try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
+        except: return 0.0
+    df['V_Num'] = df['Valor'].apply(p_float)
+    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
+    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+    return df
+
+def carregar_bancos_manual_gs():
+    if ws_bancos:
+        dados = ws_bancos.get_all_values()
+        if len(dados) > 1:
+            return pd.DataFrame(dados[1:], columns=dados[0])
+    return pd.DataFrame()
+
+# --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
+with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
+    df = carregar_dados_gs()
+    df_bancos = carregar_bancos_manual_gs()
+    
+    # 1. Ajuste de Datas
+    df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
+    hoje = pd.Timestamp.today().normalize()
+    
+    # 2. Garantir que V_Num seja numérico
+    df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
+    
+    if not df_bancos.empty:
+        qtd_colunas = 4
+        
+        def formatar_moeda(valor):
+            try:
+                return f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            except:
+                return "R$ 0,00"
+
+        for i in range(0, len(df_bancos), qtd_colunas):
+            cols = st.columns(qtd_colunas)
+            linha = df_bancos.iloc[i:i + qtd_colunas]
+            
+            for j, (index, row) in enumerate(linha.iterrows()):
+                with cols[j]:
+                    nome_banco = row['Nome do Banco']
+                    saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
+                    
+                    # 3. Filtrar transações deste banco até hoje
+                    filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
+                    df_banco_atual = df[filtro]
+                    
+                    # 4. Cálculo inteligente: 
+                    # Soma tudo se for 'Receita' ou 'Transferência' (entrada)
+                    # Subtrai se for 'Despesa'
+                    # Verifique na sua planilha se o nome na coluna 'Tipo' é exatamente 'Despesa'
+                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+                    
+                    saldo_atual = saldo_inicial + entradas - saidas
+                    
+                    st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
+# INICIALIZA O CACHE NA SESSÃO
+if 'df_base' not in st.session_state:
+    st.session_state['df_base'] = carregar_dados_gs()
+if 'df_bancos_info' not in st.session_state:
+    st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
+
+# 2. Agora criamos as variáveis locais para usar nas barras
+df_base = st.session_state['df_base']
+df_bancos_info = st.session_state['df_bancos_info']
+
+# FUNÇÃO PARA ATUALIZAR O ESTADO
+def atualizar_sessao():
+    st.session_state['df_base'] = carregar_dados_gs()
+    st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
+
+# A "MÉCÂNICA" DE SEGURANÇA:
+# Se o programa acabou de abrir e não tem nada na memória, ele carrega.
+# Se já tem algo na memória (mesmo que você tenha fechado e aberto), 
+# ele NÃO limpa, ele mantém o que está lá até que você aperte o botão de atualizar.
+if 'df_base' not in st.session_state:
+    atualizar_sessao()
+
+# Agora, as variáveis sempre terão o conteúdo que foi carregado
+df_base = st.session_state['df_base']
+df_bancos_info = st.session_state['df_bancos_info']
+
 # INTEGRAÇÃO DE AVISOS NO WHATSAPP VIA TWILIO
 def enviar_whatsapp_pendencias(df):
     now = datetime.now()
