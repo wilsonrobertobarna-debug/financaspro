@@ -65,24 +65,10 @@ st.markdown("---")
 aba = st.session_state.aba_atual
 
 if aba == "Finanças & Bancos":
-    # 🏠 TUDO AQUI SÓ APARECE QUANDO CLICAR NO BOTÃO "FINANÇAS"
-    st.title("🏠 Finanças & Bancos - Painel Geral")
-    
-    st.markdown("📊 Clique aqui para ver o Relatório Bancário Completo")
-    st.markdown("🛡️ **FinançasPro Wilson**")
-    st.write("Período:")
-    
-    col_s1, col_s2, col_s3, col_s4, col_s5 = st.columns(5)
-    col_s1.metric("SALDO DISPONÍVEL", "R$ 5,614.68")
-    col_s2.metric("📈 Receita", "R$ 11,637.31")
-    col_s3.metric("📉 Gasto", "R$ 6,022.67")
-    col_s4.metric("💰 Rendimento", "R$ 0.04")
-    col_s5.metric("⏳ Pendente", "R$ 5,196.67")
-    
-    st.write("*(Cole o restante do seu código do painel financeiro aqui dentro)*")
+    # 🏠 Aqui é onde vai o seu painel financeiro original (atualmente limpo para você encaixar)
+    st.write("")
 
 elif aba == "Meu Veículo":
-    # 🚗 TUDO AQUI SÓ APARECE QUANDO CLICAR NO BOTÃO "MEU VEÍCULO"
     st.title("🚗 Gestão do Veículo")
     c1, c2, c3 = st.columns([1,1,2])
     alc = c1.number_input("Preço Álcool", value=0.0, step=0.01, key="preco_alc")
@@ -95,27 +81,22 @@ elif aba == "Meu Veículo":
     st.divider()
 
 elif aba == "Milo & Bolt":
-    # 🐶 TUDO AQUI SÓ APARECE QUANDO CLICAR NO BOTÃO "MILO & BOLT"
     st.title("🐶 Pet: Milo & Bolt")
     st.write("Aqui entram as informações e controle dos pets.")
 
 elif aba == "Pendencias":
-    # ⏳ TUDO AQUI SÓ APARECE QUANDO CLICAR NO BOTÃO "PENDÊNCIAS"
     st.title("⏳ Pendências")
     st.write("Lista de pagamentos e pendências.")
 
 elif aba == "Atualizar dados":
-    # 🔄 TUDO AQUI SÓ APARECE QUANDO CLICAR NO BOTÃO "ATUALIZAR"
     st.title("🔄 Atualizar dados do Sheets")
     st.write("Sincronização de dados.")
 
 elif aba == "Relatório Pdf":
-    # 📊 TUDO AQUI SÓ APARECE QUANDO CLICAR NO BOTÃO "RELATÓRIOS"
     st.title("📊 Relatório Pdf")
     st.write("Geração de relatórios.")
 
 elif aba == "Ajustar lançamentos":
-    # ⚙️ TUDO AQUI SÓ APARECE QUANDO CLICAR NO BOTÃO "AJUSTES"
     st.title("🛠️ Ajustar lançamentos")
     st.write("Painel de ajustes.")
 
