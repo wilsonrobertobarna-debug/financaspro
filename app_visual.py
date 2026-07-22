@@ -359,10 +359,6 @@ aba = st.session_state.page
    # --- BLOCO DE OPERAÇÕES UNIFICADO ---
 # --- CSS para estilizar abas ---
 # --- CSS + FontAwesome ---
-# --- CSS + FontAwesome ---
-# --- CSS + FontAwesome ---
-# --- CSS + FontAwesome ---
-# --- CSS + FontAwesome ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
@@ -388,33 +384,30 @@ st.markdown("""
     color: #cc5200;
 }
 
-/* --- Botões customizados --- */
-div.stButton > button:first-child {
+/* --- Botões customizados por key --- */
+button#save_btn {
+    background-color: #28a745 !important; /* verde */
+    color: white !important;
     font-weight: bold;
     border-radius: 6px;
-    padding: 6px 12px;
-    color: white;
-    border: none;
 }
-
-/* Salvar = verde */
-div.stButton > button[kind="primary"] {
-    background-color: #28a745;
+button#transfer_btn {
+    background-color: #007bff !important; /* azul */
+    color: white !important;
+    font-weight: bold;
+    border-radius: 6px;
 }
-
-/* Transferir = azul */
-div.stButton > button[kind="secondary"] {
-    background-color: #007bff;
+button#update_btn {
+    background-color: #fd7e14 !important; /* laranja */
+    color: white !important;
+    font-weight: bold;
+    border-radius: 6px;
 }
-
-/* Atualizar = orange */
-div.stButton > button[kind="tertiary"] {
-    background-color: #fd7e14;
-}
-
-/* Excluir = vermelho */
-div.stButton > button[kind="danger"] {
-    background-color: #dc3545;
+button#delete_btn {
+    background-color: #dc3545 !important; /* vermelho */
+    color: white !important;
+    font-weight: bold;
+    border-radius: 6px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -437,7 +430,7 @@ with st.sidebar.expander("⚡ Operações"):
             f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
             f_cat = st.selectbox("Categoria", ["Mercado","Aluguel","Luz/Água","Outros"])
             f_sta = st.selectbox("Status", ["Pago", "Pendente"])
-            if st.form_submit_button("💾 Salvar Lançamento", type="primary"):
+            if st.form_submit_button("💾 Salvar Lançamento", key="save_btn"):
                 st.toast("✅ Lançamento salvo!", icon="💰")
                 atualizar_sessao()
                 st.rerun()
@@ -451,29 +444,11 @@ with st.sidebar.expander("⚡ Operações"):
             t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
             t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
             t_desc = st.text_input("Nota")
-            if st.form_submit_button("🔄 Transferir", type="secondary"):
+            if st.form_submit_button("🔄 Transferir", key="transfer_btn"):
                 st.toast("✅ Transferência realizada!", icon="💸")
                 atualizar_sessao()
                 st.rerun()
 
-    # --- Ajustar Lançamento ---
-    with tab3:
-        st.markdown("<i class='fa fa-edit'></i> **Ajustar Lançamento**", unsafe_allow_html=True)
-        if not df_base.empty:
-            lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
-            escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
-            if escolha:
-                item = lista_edit[escolha]
-                ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
-                ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
-                if st.button("✏️ Atualizar", type="tertiary"):
-                    st.toast("✅ Atualizado!", icon="📝")
-                    atualizar_sessao()
-                    st.rerun()
-                if st.button("🗑️ Excluir", type="danger"):
-                    st.toast("✅ Exclusão realizada!", icon="🗑️")
-                    atualizar_sessao()
-                    st.rerun()
 
 
 
