@@ -10,7 +10,7 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-# Configuração global da página (Apenas uma vez no topo)
+# Configuração global da página
 st.set_page_config(
     page_title="FinançasPro",
     layout="wide",
@@ -36,6 +36,152 @@ with col2:
         st.rerun()
 
 st.markdown("---")
+
+# ========================================================
+# FUNÇÃO 1: TELA DE FINANÇAS & BANCOS
+# ========================================================
+def tela_financas():
+    # --- TELA DE PROTEÇÃO (LOGIN) ---
+    if 'login' not in st.session_state:
+        st.session_state.login = False
+
+    if not st.session_state.login:
+        col1, col_centro, col2 = st.columns([1, 2, 1])
+        
+        with col_centro:
+            st.markdown("<br><br><br>", unsafe_allow_html=True)
+            st.markdown("### 🔒 Acesso Seguro")
+            senha = st.text_input("Digite sua senha:", type="password", key="input_senha_fin")
+            
+            if st.button("🔓 Desbloquear Sistema", key="btn_login_fin"):
+                if senha == "Wilson123":
+                    st.session_state.login = True
+                    st.rerun()
+                else:
+                    st.error("Senha incorreta, Wilson!")
+            
+            st.markdown("<br><br>", unsafe_allow_html=True)
+        
+        st.stop()
+
+    # Definições iniciais de data
+    agora_br = datetime.now() - timedelta(hours=3)
+    hoje_br = agora_br.date()
+
+    # 2. CONEXÃO (LIGA O MOTOR)
+    @st.cache_resource
+    def conectar():
+        creds_dict = st.secrets.get("connections", {}).get("gsheets")
+        if not creds_dict:
+            st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
+        try:
+            pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
+            if pk.startswith('"') and pk.endswith('"'): pk = pk[1:-1]
+            final_creds = {
+                "type": creds_dict["type"], "project_id": creds_dict["project_id"],
+                "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
+                "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
+            }
+            return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
+        except Exception as e:
+            st.error(f"Erro na conexão: {e}"); st.stop()
+
+    global sh
+    client = conectar()
+    sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
+
+    # 3. BLOCO DE CARREGAMENTO DE METAS
+    if 'metas_iniciadas' not in st.session_state:
+        try:
+            df_metas = pd.DataFrame(sh.worksheet("Meta").get_all_records())
+            for index, row in df_metas.iterrows():
+                nome = row['Nome da Meta']
+                valor_raw = row['Valor Alvo']
+                try:
+                    valor = float(valor_raw) if str(valor_raw).strip() != '' else 0.0
+                except:
+                    valor = 0.0
+                st.session_state[f"m_{nome}"] = valor
+            st.session_state['metas_iniciadas'] = True
+        except Exception as e:
+            st.error(f"Erro na planilha: {e}")
+
+    # 4. ESTILIZAÇÃO
+    st.markdown("""
+        <style>
+        [data-testid='stMetricLabel'], [data-testid='stMetricValue'] {
+            font-size: 1.1rem !important; font-weight: bold !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # IDENTIFICAÇÃO DAS ABAS
+    ws_base = sh.get_worksheet(0)
+    try:
+        ws_bancos = sh.worksheet("Bancos")
+    except:
+        ws_bancos = None
+
+    # FUNÇÕES DE CARREGAMENTO DIRETO (DENTRO DA TELA)
+    def carregar_dados_gs():
+        dados = ws_base.get_all_values()
+        if len(dados) <= 1: return pd.DataFrame()
+        df = pd.DataFrame(dados[1:], columns=dados[0])
+        df['ID'] = range(2, len(df) + 2)
+        def p_float(v):
+            try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
+            except: return 0.0
+        df['V_Num'] = df['Valor'].apply(p_float)
+        df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
+        df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+        return df
+
+    def carregar_bancos_manual_gs():
+        if ws_bancos:
+            dados = ws_bancos.get_all_values()
+            if len(dados) > 1:
+                return pd.DataFrame(dados[1:], columns=dados[0])
+        return pd.DataFrame()
+
+    st.title("💰 Tela de Finanças & Bancos")
+    st.write("Seu painel financeiro está carregado com sucesso!")
+
+
+# Função global de atualização de metas
+def atualizar_meta_sheets(nome):
+    global sh 
+    novo_valor = st.session_state[f"m_{nome}"]
+    try:
+        ws_meta = sh.worksheet("Meta")
+        celula = ws_meta.find(nome)
+        if celula:
+            if f"m_{nome}" in st.session_state:
+                del st.session_state[f"m_{nome}"]
+            ws_meta.update_cell(celula.row, 2, novo_valor)
+            if 'df_metas_config' in st.session_state:
+                st.session_state['df_metas_config'].loc[st.session_state['df_metas_config']['Nome da Meta'] == nome, 'Valor Alvo'] = novo_valor
+            st.rerun() 
+    except Exception as e:
+        st.error(f"Erro ao salvar no Sheets: {e}")
+
+
+# ========================================================
+# FUNÇÃO 2: TELA DE PENDÊNCIAS
+# ========================================================
+def tela_pendencias():
+    st.title("⏳ Tela de Pendências")
+    st.write("Aqui vai ficar a listagem de pagamentos pendentes, isolada do financeiro.")
+
+
+# ========================================================
+# ROTEADOR CENTRAL (EXIBE APENAS A ABA SELECIONADA)
+# ========================================================
+aba = st.session_state.aba_atual
+
+if aba == "Finanças & Bancos":
+    tela_financas()
+elif aba == "Pendências":
+    tela_pendencias()
 
 # ========================================================
 # FUNÇÃO 1: TELA DE FINANÇAS & BANCOS (TUDO PROTEGIDO AQUI DENTRO)
