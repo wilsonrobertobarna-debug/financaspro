@@ -768,9 +768,9 @@ elif "Pendências" in aba:
     
     # no topo do arquivo   
 
-elif "🐾" in aba and mostrar_milo_bolt:
+elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
-    
+
     df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
                      df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
     
