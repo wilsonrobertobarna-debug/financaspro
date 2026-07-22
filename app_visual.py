@@ -11,26 +11,6 @@ import urllib.parse
 import streamlit.components.v1 as components
 
 
-  # --- Tela de login ---
-if 'login' not in st.session_state:
-    st.session_state.login = False
-
-if not st.session_state.login:
-    # só mostra login
-    col1, col_centro, col2 = st.columns([1, 2, 1])
-    with col_centro:
-        st.markdown("<br><br><br>", unsafe_allow_html=True)
-        st.markdown("### 🔒 Acesso Seguro")
-        senha = st.text_input("Digite sua senha:", type="password")
-        if st.button("🔓 Desbloquear Sistema"):
-            if senha == "Wilson123":
-                st.session_state.login = True
-                st.rerun()
-            else:
-                st.error("Senha incorreta, Wilson!")
-    st.stop()
-
-# --- Se login foi feito, mostra botões no topo ---
 st.markdown("## 🎮 Painel Wilson")
 
 col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
