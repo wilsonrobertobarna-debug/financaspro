@@ -95,7 +95,6 @@ elif aba == "Ajustar lançamentos":
 
 
 
-
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
     st.session_state.login = False
