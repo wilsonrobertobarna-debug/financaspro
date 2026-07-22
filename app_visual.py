@@ -11,7 +11,7 @@ import urllib.parse
 import streamlit.components.v1 as components
 
 
-# ========================================================
+========================================================
 # 1. CONFIGURAÇÃO DA PÁGINA
 # ========================================================
 st.set_page_config(
@@ -21,17 +21,69 @@ st.set_page_config(
 )
 
 # ========================================================
-# 2. FUNÇÃO DE CONTROLE DE ABAS (SEGURA)
+# 2. TELA DE PROTEÇÃO (LOGIN) - DEVE SER A PRIMEIRA COISA
 # ========================================================
+if 'login' not in st.session_state:
+    st.session_state.login = False
+
+if not st.session_state.login:
+    col1, col_centro, col2 = st.columns([1, 2, 1])
+    
+    with col_centro:
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        st.markdown("### 🔒 Acesso Seguro")
+        senha = st.text_input("Digite sua senha:", type="password")
+        
+        if st.button("🔓 Desbloquear Sistema"):
+            if senha == "Wilson123":
+                st.session_state.login = True
+                st.rerun()
+            else:
+                st.error("Senha incorreta, Wilson!")
+        
+        st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    # 🛑 BARRA TOTALMENTE O SISTEMA AQUI SE NÃO ESTIVER LOGADO
+    st.stop()
+
+
+# ========================================================
+# 3. CONFIGURAÇÕES E FUNÇÕES GLOBAIS (SÓ RODAM APÓS O LOGIN)
+# ========================================================
+agora_br = datetime.now() - timedelta(hours=3)
+hoje_br = agora_br.date()
+
+def atualizar_meta_sheets(nome):
+    global sh 
+    novo_valor = st.session_state[f"m_{nome}"]
+    
+    try:
+        ws_meta = sh.worksheet("Meta")
+        celula = ws_meta.find(nome)
+        
+        if celula:
+            if f"m_{nome}" in st.session_state:
+                del st.session_state[f"m_{nome}"]
+            
+            ws_meta.update_cell(celula.row, 2, novo_valor)
+            
+            if 'df_metas_config' in st.session_state:
+                st.session_state['df_metas_config'].loc[st.session_state['df_metas_config']['Nome da Meta'] == nome, 'Valor Alvo'] = novo_valor
+            
+            st.rerun() 
+    except Exception as e:
+        st.error(f"Erro ao atualizar meta: {e}")
+
+# Função para mudar a aba de forma segura
 def mudar_aba(nome_aba):
     st.session_state.aba_atual = nome_aba
 
-# Inicializa a memória da aba atual na tela principal
 if 'aba_atual' not in st.session_state:
     st.session_state.aba_atual = "Finanças & Bancos"
 
+
 # ========================================================
-# 3. BARRA DE ATALHOS RÁPIDOS NO TOPO (FIXA EM TODAS AS TELAS)
+# 4. BARRA DE ATALHOS RÁPIDOS NO TOPO (SÓ APARECE LOGADO)
 # ========================================================
 st.markdown("### ⚡ Acesso Rápido")
 col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
@@ -59,24 +111,16 @@ with col7:
 
 st.markdown("---")
 
-# ========================================================
-# 4. DEFINIÇÃO DA TELA DE FINANÇAS ISOLADA
-# ========================================================
-def tela_financas():
-    st.title("🏠 Finanças & Bancos - Painel Geral")
-    
-    # ----------------------------------------------------
-    # 👉 COLE TODO O SEU CÓDIGO ANTIGO DE FINANÇAS AQUI DENTRO:
-    # ----------------------------------------------------
-    st.write("Seu painel financeiro completo fica isolado aqui dentro.")
 
 # ========================================================
-# 5. ROTEADOR DE TELAS EXCLUSIVAS
+# 5. ROTEADOR DE TELAS EXCLUSIVAS (ISOLAMENTO TOTAL)
 # ========================================================
 aba = st.session_state.aba_atual
 
 if aba == "Finanças & Bancos":
-    tela_financas()
+    st.title("🏠 Finanças & Bancos - Painel Geral")
+    # 👉 COLE TODO O SEU CÓDIGO ANTIGO DE FINANÇAS AQUI DENTRO:
+    st.write("Seu painel financeiro completo entra aqui.")
 
 elif aba == "Meu Veículo":
     st.title("🚗 Gestão do Veículo")
@@ -109,7 +153,6 @@ elif aba == "Relatório Pdf":
 elif aba == "Ajustar lançamentos":
     st.title("🛠️ Ajustar lançamentos")
     st.write("Painel de ajustes.")
-
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
