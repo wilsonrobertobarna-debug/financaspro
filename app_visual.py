@@ -770,7 +770,7 @@ elif "Pendências" in aba:
 mostrar_milo_bolt = False   # controla se a aba Milo & Bolt aparece
 
 # dentro da lógica das abas
-elif "🐾" in aba and mostrar_milo_bolt:
+    elif "🐾" in aba and mostrar_milo_bolt:
     st.title("🐾 Gestão Milo & Bolt")
     
     df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
