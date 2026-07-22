@@ -356,7 +356,13 @@ aba = st.session_state.page
 # BARRINHA 1: NOVO LANÇAMENTO
 
     # --- Novo Lançamento ---with tab1:
-    with st.form("f_novo", clear_on_submit=True):
+   # --- BLOCO DE OPERAÇÕES UNIFICADO ---
+with st.sidebar.expander("⚡ Operações"):
+    tab1, tab2, tab3 = st.tabs(["🚀 Novo Lançamento", "💸 Transferência", "⚙️ Ajustar"])
+
+    # --- Novo Lançamento ---
+    with tab1:
+        with st.form("f_novo", clear_on_submit=True):
             f_bnc = st.selectbox("Banco", bancos_disponiveis)
             f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
             t_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
