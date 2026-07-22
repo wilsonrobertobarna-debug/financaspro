@@ -65,10 +65,14 @@ st.markdown("---")
 aba = st.session_state.aba_atual
 
 if aba == "Finanças & Bancos":
-    # 🏠 Aqui é onde vai o seu painel financeiro original (atualmente limpo para você encaixar)
-    st.write("")
+    # 🏠 TUDO DO SEU PAINEL DE FINANÇAS ENTRA AQUI DENTRO:
+    st.title("🏠 Finanças & Bancos - Painel Geral")
+    
+    # 👉 COLE TODO O SEU CÓDIGO ANTIGO DO PAINEL DE FINANÇAS AQUI EMBAIXO:
+    st.write("Seu painel completo de finanças vai aqui dentro.")
 
 elif aba == "Meu Veículo":
+    # 🚗 TELA DE VEÍCULO ISOLADA
     st.title("🚗 Gestão do Veículo")
     c1, c2, c3 = st.columns([1,1,2])
     alc = c1.number_input("Preço Álcool", value=0.0, step=0.01, key="preco_alc")
@@ -81,25 +85,29 @@ elif aba == "Meu Veículo":
     st.divider()
 
 elif aba == "Milo & Bolt":
+    # 🐶 TELA DO PET ISOLADA
     st.title("🐶 Pet: Milo & Bolt")
     st.write("Aqui entram as informações e controle dos pets.")
 
 elif aba == "Pendencias":
+    # ⏳ TELA DE PENDÊNCIAS ISOLADA
     st.title("⏳ Pendências")
     st.write("Lista de pagamentos e pendências.")
 
 elif aba == "Atualizar dados":
+    # 🔄 TELA DE ATUALIZAÇÃO ISOLADA
     st.title("🔄 Atualizar dados do Sheets")
     st.write("Sincronização de dados.")
 
 elif aba == "Relatório Pdf":
+    # 📊 TELA DE RELATÓRIOS ISOLADA
     st.title("📊 Relatório Pdf")
     st.write("Geração de relatórios.")
 
 elif aba == "Ajustar lançamentos":
+    # ⚙️ TELA DE AJUSTES ISOLADA
     st.title("🛠️ Ajustar lançamentos")
     st.write("Painel de ajustes.")
-
 
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
