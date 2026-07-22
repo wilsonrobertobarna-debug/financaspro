@@ -21,8 +21,28 @@ st.set_page_config(
 if 'aba_atual' not in st.session_state:
     st.session_state.aba_atual = "Finanças & Bancos"
 
+# 1. CONTROLE DE LOGIN (PRIMEIRO DE TUDO)
+if 'login' not in st.session_state:
+    st.session_state.login = False
+
+if not st.session_state.login:
+    col1, col_centro, col2 = st.columns([1, 2, 1])
+    with col_centro:
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        st.markdown("### 🔒 Acesso Seguro")
+        senha = st.text_input("Digite sua senha:", type="password")
+        if st.button("🔓 Desbloquear Sistema"):
+            if senha == "Wilson123": # Ou a sua senha real do dia 20
+                st.session_state.login = True
+                st.rerun()
+            else:
+                st.error("Senha incorreta, Wilson!")
+        st.markdown("<br><br>", unsafe_allow_html=True)
+    st.stop() # Bloqueia o resto do app se não estiver logado
+
 # ========================================================
-# BARRA DE NAVEGAÇÃO SUPERIOR (BOTÃO ÚNICO)
+# 2. A PARTIR daqui o usuário já está logado!
+# O BOTÃO DE NAVEGAÇÃO FICA AQUI PARA APARECER SEMPRE
 # ========================================================
 col1, col2 = st.columns([4, 1])
 with col2:
@@ -38,19 +58,18 @@ with col2:
 st.markdown("---")
 
 # ========================================================
-# ROTEADOR DE TELAS
+# 3. ROTEADOR DE TELAS (FINANÇAS VS PENDÊNCIAS)
 # ========================================================
 if st.session_state.aba_atual == "Pendências":
-    # --- TELA DE PENDÊNCIAS ---
     st.title("⏳ Tela de Pendências")
     st.write("Aqui vai ficar a listagem de pagamentos pendentes.")
     
 else:
-    # --- TODO O SEU CÓDIGO ORIGINAL DO DIA 20 VAI AQUI EMBAIXO ---
-    # Cole aqui exatamente o seu arquivo do dia 20 (login, gsheets, métricas, etc)
+    # --- TODO O SEU CÓDIGO ORIGINAL DO DIA 20 VAI AQUI DENTRO ---
+    # (Cole aqui o seu código do dia 20, contanto que a verificação de login de lá já não conflite com esta)
     
     st.title("💰 Tela de Finanças & Bancos")
-    st.write("Cole o seu código oficial do dia 20 logo abaixo desta linha.")
+    st.write("Aqui roda o seu painel financeiro oficial.")
 
 
 
