@@ -362,6 +362,7 @@ aba = st.session_state.page
 # --- CSS + FontAwesome ---
 # --- CSS + FontAwesome ---
 # --- CSS + FontAwesome ---
+# --- CSS + FontAwesome ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
@@ -373,18 +374,47 @@ st.markdown("""
 }
 /* aba 1: Novo Lançamento */
 .stTabs [data-baseweb="tab"]:nth-child(1) {
-    background-color: #d4f8d4; /* verde claro */
-    color: #006400; /* verde escuro */
+    background-color: #d4f8d4;
+    color: #006400;
 }
 /* aba 2: Transferência */
 .stTabs [data-baseweb="tab"]:nth-child(2) {
-    background-color: #d4e8f8; /* azul claro */
-    color: #004080; /* azul escuro */
+    background-color: #d4e8f8;
+    color: #004080;
 }
 /* aba 3: Ajustar */
 .stTabs [data-baseweb="tab"]:nth-child(3) {
-    background-color: #ffe5cc; /* laranja claro */
-    color: #cc5200; /* laranja escuro */
+    background-color: #ffe5cc;
+    color: #cc5200;
+}
+
+/* --- Botões customizados --- */
+div.stButton > button:first-child {
+    font-weight: bold;
+    border-radius: 6px;
+    padding: 6px 12px;
+    color: white;
+    border: none;
+}
+
+/* Salvar = verde */
+div.stButton > button[kind="primary"] {
+    background-color: #28a745;
+}
+
+/* Transferir = azul */
+div.stButton > button[kind="secondary"] {
+    background-color: #007bff;
+}
+
+/* Atualizar = orange */
+div.stButton > button[kind="tertiary"] {
+    background-color: #fd7e14;
+}
+
+/* Excluir = vermelho */
+div.stButton > button[kind="danger"] {
+    background-color: #dc3545;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -407,7 +437,7 @@ with st.sidebar.expander("⚡ Operações"):
             f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
             f_cat = st.selectbox("Categoria", ["Mercado","Aluguel","Luz/Água","Outros"])
             f_sta = st.selectbox("Status", ["Pago", "Pendente"])
-            if st.form_submit_button("💾 Salvar Lançamento"):
+            if st.form_submit_button("💾 Salvar Lançamento", type="primary"):
                 st.toast("✅ Lançamento salvo!", icon="💰")
                 atualizar_sessao()
                 st.rerun()
@@ -421,7 +451,7 @@ with st.sidebar.expander("⚡ Operações"):
             t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
             t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
             t_desc = st.text_input("Nota")
-            if st.form_submit_button("🔄 Transferir"):
+            if st.form_submit_button("🔄 Transferir", type="secondary"):
                 st.toast("✅ Transferência realizada!", icon="💸")
                 atualizar_sessao()
                 st.rerun()
@@ -436,11 +466,11 @@ with st.sidebar.expander("⚡ Operações"):
                 item = lista_edit[escolha]
                 ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
                 ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
-                if st.button("✏️ Atualizar"):
+                if st.button("✏️ Atualizar", type="tertiary"):
                     st.toast("✅ Atualizado!", icon="📝")
                     atualizar_sessao()
                     st.rerun()
-                if st.button("🗑️ Excluir"):
+                if st.button("🗑️ Excluir", type="danger"):
                     st.toast("✅ Exclusão realizada!", icon="🗑️")
                     atualizar_sessao()
                     st.rerun()
