@@ -116,12 +116,14 @@ with col7:
 st.markdown("---")
 
 # ========================================================
-# FUNÇÕES DE CADA TELA (ISOLAMENTO POR FUNÇÃO)
+# FUNÇÕES DE CADA TELA
 # ========================================================
 
 def tela_financas():
-    # 🏠 COLE TODO O SEU CÓDIGO ANTIGO DE FINANÇAS AQUI DENTRO:
-    st.write("Aqui dentro fica exclusivamente o seu painel de Finanças & Bancos.")
+    # 🏠 COLE TODO O SEU CÓDIGO ANTIGO DE FINANÇAS EXATAMENTE AQUI DENTRO:
+    # (Certifique-se de que todo o seu painel financeiro esteja recuado para dentro desta função)
+    st.title("🏠 Finanças & Bancos - Painel Geral")
+    st.write("Cole seu código de finanças aqui embaixo.")
 
 def tela_atualizar():
     st.title("🔄 Atualizar dados do Sheets")
@@ -156,7 +158,7 @@ def tela_ajustes():
     st.write("Painel de ajustes.")
 
 # ========================================================
-# ROTEADOR CENTRAL (CHAMA APENAS A FUNÇÃO DA ABA ATUAL)
+# ROTEADOR CENTRAL
 # ========================================================
 aba = st.session_state.aba_atual
 
@@ -174,7 +176,6 @@ elif aba == "Relatório Pdf":
     tela_relatorios()
 elif aba == "Ajustar lançamentos":
     tela_ajustes()
-
 
 if not st.session_state.login:
     # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
