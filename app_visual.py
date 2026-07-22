@@ -11,18 +11,18 @@ import urllib.parse
 import streamlit.components.v1 as components
 
 
-========================================================
-# 1. CONFIGURAÇÃO DA PÁGINA
-# ========================================================
+import streamlit as st
+import pandas as pd
+from datetime import datetime, timedelta
+
+# Configuração da página
 st.set_page_config(
     page_title="FinançasPro",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# ========================================================
-# 2. TELA DE PROTEÇÃO (LOGIN) - DEVE SER A PRIMEIRA COISA
-# ========================================================
+# Tela de Proteção (Login)
 if 'login' not in st.session_state:
     st.session_state.login = False
 
@@ -43,13 +43,10 @@ if not st.session_state.login:
         
         st.markdown("<br><br>", unsafe_allow_html=True)
     
-    # 🛑 BARRA TOTALMENTE O SISTEMA AQUI SE NÃO ESTIVER LOGADO
     st.stop()
 
 
-# ========================================================
-# 3. CONFIGURAÇÕES E FUNÇÕES GLOBAIS (SÓ RODAM APÓS O LOGIN)
-# ========================================================
+# Configurações e funções globais
 agora_br = datetime.now() - timedelta(hours=3)
 hoje_br = agora_br.date()
 
@@ -74,7 +71,6 @@ def atualizar_meta_sheets(nome):
     except Exception as e:
         st.error(f"Erro ao atualizar meta: {e}")
 
-# Função para mudar a aba de forma segura
 def mudar_aba(nome_aba):
     st.session_state.aba_atual = nome_aba
 
@@ -82,9 +78,7 @@ if 'aba_atual' not in st.session_state:
     st.session_state.aba_atual = "Finanças & Bancos"
 
 
-# ========================================================
-# 4. BARRA DE ATALHOS RÁPIDOS NO TOPO (SÓ APARECE LOGADO)
-# ========================================================
+# Barra de atalhos rápidos no topo
 st.markdown("### ⚡ Acesso Rápido")
 col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 
@@ -112,9 +106,7 @@ with col7:
 st.markdown("---")
 
 
-# ========================================================
-# 5. ROTEADOR DE TELAS EXCLUSIVAS (ISOLAMENTO TOTAL)
-# ========================================================
+# Roteador de telas exclusivas
 aba = st.session_state.aba_atual
 
 if aba == "Finanças & Bancos":
@@ -153,10 +145,6 @@ elif aba == "Relatório Pdf":
 elif aba == "Ajustar lançamentos":
     st.title("🛠️ Ajustar lançamentos")
     st.write("Painel de ajustes.")
-
-# --- TELA DE PROTEÇÃO (LOGIN) ---
-if 'login' not in st.session_state:
-    st.session_state.login = False
 
 if not st.session_state.login:
     # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
