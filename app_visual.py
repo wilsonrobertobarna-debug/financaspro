@@ -765,56 +765,56 @@ elif "Pendências" in aba:
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
     
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
-#elif "🐾" in aba:
-    #st.title("🐾 Gestão Milo & Bolt")
+elif "🐾" in aba:
+    st.title("🐾 Gestão Milo & Bolt")
     
-    #df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
-                     #df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
+    df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
+                     df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
     
-    #if not df_pet.empty:
-        #df_pet_mes = df_pet[(df_pet['Mes_Ano'] == mes_atual) & (df_pet['Status'] == 'Pago')]
-        #gasto_total_mes = df_pet_mes['V_Num'].sum()
+    if not df_pet.empty:
+        df_pet_mes = df_pet[(df_pet['Mes_Ano'] == mes_atual) & (df_pet['Status'] == 'Pago')]
+        gasto_total_mes = df_pet_mes['V_Num'].sum()
         
-        #df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
-                          #df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
-        #df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
-                          #df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
+        df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
+                          df_pet['Categoria'].str.contains('Milo', case=False, na=False)]
+        df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
+                          df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
         
-        #m_milo = df_milo[(df_milo['Mes_Ano'] == mes_atual) & (df_milo['Status'] == 'Pago')]['V_Num'].sum()
-        #m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'] == 'Pago')]['V_Num'].sum()
+        m_milo = df_milo[(df_milo['Mes_Ano'] == mes_atual) & (df_milo['Status'] == 'Pago')]['V_Num'].sum()
+        m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'] == 'Pago')]['V_Num'].sum()
         
-        #c_p1, c_p2, c_p3 = st.columns(3)
-        #c_p1.metric("📈 Gasto Total (Mês)", m_fmt(gasto_total_mes))
-        #c_p2.metric("🐶 Com o Milo (Mês)", m_fmt(m_milo))
-        #c_p3.metric("🐱 Com o Bolt (Mês)", m_fmt(m_bolt))
+        c_p1, c_p2, c_p3 = st.columns(3)
+        c_p1.metric("📈 Gasto Total (Mês)", m_fmt(gasto_total_mes))
+        c_p2.metric("🐶 Com o Milo (Mês)", m_fmt(m_milo))
+        c_p3.metric("🐱 Com o Bolt (Mês)", m_fmt(m_bolt))
         
-        #st.divider()
-        #st.subheader("📋 Controle de Saúde e Ração")
-        #c_v1, c_v2 = st.columns(2)
-        #with c_v1:
-            #st.markdown("**💊 Vacinas, Vermífugos e Veterinário**")
-            #st.info("💡 *Dica: Ao lançar na descrição, coloque o nome do pet (ex: Vacina V10 Milo).*")
-        #with c_v2:
-            #st.markdown("**🛍️ Controle de Ração e PetShop**")
-            #st.info("💡 *Dica: Use a categoria 'Pet: Milo' ou 'Pet: Bolt' para facilitar a separação!*")
+        st.divider()
+        st.subheader("📋 Controle de Saúde e Ração")
+        c_v1, c_v2 = st.columns(2)
+        with c_v1:
+            st.markdown("**💊 Vacinas, Vermífugos e Veterinário**")
+            st.info("💡 *Dica: Ao lançar na descrição, coloque o nome do pet (ex: Vacina V10 Milo).*")
+        with c_v2:
+            st.markdown("**🛍️ Controle de Ração e PetShop**")
+            st.info("💡 *Dica: Use a categoria 'Pet: Milo' ou 'Pet: Bolt' para facilitar a separação!*")
             
-        #st.divider()
-        #st.subheader("🔍 Lançamentos dos Meninos")
+        st.divider()
+        st.subheader("🔍 Lançamentos dos Meninos")
         
-        #c_f1, c_f2 = st.columns([1, 2])
-        #pet_escolha = c_f1.radio("Filtrar por Pet:", ["Todos", "Milo", "Bolt"], horizontal=True)
+        c_f1, c_f2 = st.columns([1, 2])
+        pet_escolha = c_f1.radio("Filtrar por Pet:", ["Todos", "Milo", "Bolt"], horizontal=True)
         
-        #df_show = df_pet.copy()
-        #if pet_escolha == "Milo":
-            #df_show = df_milo
-        #elif pet_escolha == "Bolt":
-            #df_show = df_bolt
+        df_show = df_pet.copy()
+        if pet_escolha == "Milo":
+            df_show = df_milo
+        elif pet_escolha == "Bolt":
+            df_show = df_bolt
             
-        #df_show_display = df_show[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']].copy()
-        #df_show_display['Valor'] = df_show['V_Num'].apply(m_fmt)
-        #st.dataframe(df_show_display.iloc[::-1], use_container_width=True, hide_index=True)
-    #else:
-       # st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
+        df_show_display = df_show[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Categoria', 'Status']].copy()
+        df_show_display['Valor'] = df_show['V_Num'].apply(m_fmt)
+        st.dataframe(df_show_display.iloc[::-1], use_container_width=True, hide_index=True)
+    else:
+        st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
 
 elif "🚗" in aba:
     st.title("🚗 Gestão do Veículo")
