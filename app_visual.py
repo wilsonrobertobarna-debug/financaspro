@@ -10,6 +10,7 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
+
 # 1. Configuração da página limpa e barra recolhida
 st.set_page_config(
     page_title="FinançasPro",
@@ -17,48 +18,38 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. Inicializa a memória da aba atual na tela principal correta
+# 2. Função para mudar a aba de forma segura
+def mudar_aba(nome_aba):
+    st.session_state.aba_atual = nome_aba
+
+# Inicializa a memória da aba atual na tela principal correta
 if 'aba_atual' not in st.session_state:
     st.session_state.aba_atual = "Finanças & Bancos"
 
-# 3. Barra de atalhos rápidos no topo (Substitui a barra lateral)
+# 3. Barra de atalhos rápidos no topo com callbacks seguros
 st.markdown("### ⚡ Acesso Rápido")
 col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 
 with col1:
-    if st.button("🏠 Finanças", use_container_width=True, key="topo_financas"):
-        st.session_state.aba_atual = "Finanças & Bancos"
-        st.rerun()
+    st.button("🏠 Finanças", use_container_width=True, key="topo_financas", on_click=mudar_aba, args=("Finanças & Bancos",))
 
 with col2:
-    if st.button("🔄 Atualizar", use_container_width=True, key="topo_atualizar"):
-        st.session_state.aba_atual = "Atualizar dados"
-        st.rerun()
+    st.button("🔄 Atualizar", use_container_width=True, key="topo_atualizar", on_click=mudar_aba, args=("Atualizar dados",))
 
 with col3:
-    if st.button("⏳ Pendências", use_container_width=True, key="topo_pendencias"):
-        st.session_state.aba_atual = "Pendencias"
-        st.rerun()
+    st.button("⏳ Pendências", use_container_width=True, key="topo_pendencias", on_click=mudar_aba, args=("Pendencias",))
 
 with col4:
-    if st.button("🐶 Milo & Bolt", use_container_width=True, key="topo_pet"):
-        st.session_state.aba_atual = "Milo & Bolt"
-        st.rerun()
+    st.button("🐶 Milo & Bolt", use_container_width=True, key="topo_pet", on_click=mudar_aba, args=("Milo & Bolt",))
 
 with col5:
-    if st.button("🚗 Meu Veículo", use_container_width=True, key="topo_veiculo"):
-        st.session_state.aba_atual = "Meu Veículo"
-        st.rerun()
+    st.button("🚗 Meu Veículo", use_container_width=True, key="topo_veiculo", on_click=mudar_aba, args=("Meu Veículo",))
 
 with col6:
-    if st.button("📊 Relatórios", use_container_width=True, key="topo_relatorios"):
-        st.session_state.aba_atual = "Relatório Pdf"
-        st.rerun()
+    st.button("📊 Relatórios", use_container_width=True, key="topo_relatorios", on_click=mudar_aba, args=("Relatório Pdf",))
 
 with col7:
-    if st.button("⚙️ Ajustes", use_container_width=True, key="topo_ajustes"):
-        st.session_state.aba_atual = "Ajustar lançamentos"
-        st.rerun()
+    st.button("⚙️ Ajustes", use_container_width=True, key="topo_ajustes", on_click=mudar_aba, args=("Ajustar lançamentos",))
 
 st.markdown("---")
 
@@ -67,8 +58,8 @@ aba = st.session_state.aba_atual
 
 if aba == "Finanças & Bancos":
     st.title("🏠 Finanças & Bancos - Painel Geral")
-    # 👉 [Cole aqui embaixo todo o código antigo do seu painel principal de finanças e bancos]
-    st.write("Seu painel principal está pronto para receber o código antigo aqui.")
+    st.write("Seu painel principal de finanças e bancos.")
+    # 👉 [Cole aqui embaixo todo o seu código antigo do painel principal quando quiser]
 
 elif aba == "Meu Veículo":
     st.title("🚗 Gestão do Veículo")
@@ -101,6 +92,9 @@ elif aba == "Relatório Pdf":
 elif aba == "Ajustar lançamentos":
     st.title("🛠️ Ajustar lançamentos")
     st.write("Painel de ajustes.")
+
+
+
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
