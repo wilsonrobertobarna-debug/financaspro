@@ -382,9 +382,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- BLOCO DE OPERAÇÕES UNIFICADO ---
-with st.sidebar.expander("⚡ Operações"):
-    tab1, tab2, tab3 = st.tabs(["Novo Lançamento", "Transferência", "Ajustar"])
+# --- Botão único na lateral ---
+with st.sidebar:
+    if st.button("🔄 Atualizar dados do Sheets"):
+        atualizar_sessao()
+        st.toast("📊 Dados atualizados do Google Sheets!", icon="✅")
+        st.rerun()
 # --- BLOCO DE OPERAÇÕES UNIFICADO ---
 with st.sidebar.expander("⚡ Operações"):
     tab1, tab2, tab3 = st.tabs(["Novo Lançamento", "Transferência", "Ajustar"])
