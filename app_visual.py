@@ -358,164 +358,24 @@ aba = st.session_state.page
 if "expander_lancamento_aberto" not in st.session_state:
     st.session_state.expander_lancamento_aberto = False
 
-with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
-    with st.form("f_novo", clear_on_submit=True):
-        # Usando a variável hoje_br que já corrige o fuso horário
-        f_bnc = st.selectbox("Banco", bancos_disponiveis)
-        f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
-        t_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
-        
-        f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
-        f_par = st.number_input("Parcelas", min_value=1, value=1)
-        f_desc = st.text_input("📝 Descrição")
-        f_bnfc = st.text_input("👤 Beneficiário")
-        f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação", "Vale Alimentação", "Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"]) 
-        f_sta = st.selectbox("Status", ["Pago", "Pendente"])
-        
-        # Garante que a variável exista para evitar o NameError
-        f_venc_cartao = None 
+# --- BLOCO DE OPERAÇÕES UNIFICADO ---
+with st.sidebar.expander("⚡ Operações"):
+    tab1, tab2, tab3 = st.tabs(["🚀 Novo Lançamento", "💸 Transferência", "⚙️ Ajustar"])
 
-        # ... (após todos os st.selectbox e inputs do formulário)
+    # --- Novo Lançamento ---
+    with tab1:
+        st.write("Formulário de novo lançamento aqui...")
+        # copie aqui o código que estava dentro do expansor "Novo Lançamento"
 
-        if st.form_submit_button("Salvar Lançamento"):
-            # 1. BUSCAR O MAIOR ID DIRETO NA PLANILHA (Sem depender de variáveis externas)
-            # Pegamos todos os valores da aba
-            todos_dados = ws_base.get_all_records()
-            
-            if todos_dados:
-                # Transformamos em um DataFrame temporário só para achar o maior ID
-                import pandas as pd
-                df_temp = pd.DataFrame(todos_dados)
-                
-                # Se a coluna ID existir, pegamos o maior + 1, senão começa em 1
-                if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
-                    proximo_id = int(df_temp['ID'].max()) + 1
-                else:
-                    proximo_id = 1
-            else:
-                proximo_id = 1
+    # --- Transferência ---
+    with tab2:
+        st.write("Formulário de transferência aqui...")
+        # copie aqui o código que estava dentro do expansor "Transferência"
 
-            # 2. Formatações
-            v_str = f"{f_val:.2f}".replace('.', ',')
-            t_dat_str = t_dat.strftime("%d/%m/%Y")
-            f_compra_str = f_compra.strftime("%d/%m/%Y")
-            
-            # 3. Salvar as parcelas
-            for i in range(f_par):
-                nova_data = t_dat + relativedelta(months=i)
-                
-                # Cria a descrição já com o número da parcela (Ex: Teste 1/5)
-                # Se for parcela única (1 de 1), podemos deixar limpo ou com 1/1
-                if f_par > 1:
-                    desc_com_parcela = f"{f_desc.strip()} {i+1}/{f_par}"
-                else:
-                    desc_com_parcela = f_desc.strip() # Ou f"{f_desc.strip()} 1/1" se preferir
-                
-                ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
-                    v_str,                          # Coluna B: Valor
-                    desc_com_parcela,               # Coluna C: Descrição com a parcela embutida!
-                    f_cat,                          # Coluna D: Categoria
-                    f_tip,                          # Coluna E: Tipo
-                    f_bnc,                          # Coluna F: Banco
-                    f_sta,                          # Coluna G: Status
-                    f_compra_str,                   # Coluna H: Data da Compra
-                    proximo_id + i,                 # Coluna I: ID
-                    f_bnfc                          # Coluna J: Beneficiário
-                ])
-            
-            st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
-            atualizar_sessao()
-            st.rerun()
-            # --- BARRINHA 2: TRANSFERÊNCIA ---
-    with st.sidebar.expander("💸 Transferência", expanded=False):
-        with st.form("f_transf", clear_on_submit=True):
-            t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
-            t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
-            t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
-            t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
-            t_desc = st.text_input("Nota")
-            if st.form_submit_button("TRANSFERIR"):
-                if t_orig == t_dest: 
-                    st.error("Escolha bancos diferentes!")
-                else:
-                    # 1. CALCULA O PRÓXIMO ID (Igual ao que fizemos no outro)
-                    coluna_i = ws_base.col_values(9)
-                    ids_numericos = [int(v) for v in coluna_i[1:] if v and v.isdigit()]
-                    proximo_id = max(ids_numericos) + 1 if ids_numericos else 1
-                    
-                    v_str = f"{t_val:.2f}".replace('.', ',')
-                    d_str = t_dat.strftime("%d/%m/%Y")
-                    
-                    # 2. SALVA AS DUAS LINHAS JÁ COM OS IDs (proximo_id e proximo_id + 1)
-                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", d_str, proximo_id])
-                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", d_str, proximo_id + 1])
-                    
-                    st.toast("✅ Transferência realizada com sucesso!", icon="💰")
-                    atualizar_sessao()
-                    st.rerun()
-
-               # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
-with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
-    if not df_base.empty:
-        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
-        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
-        escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
-             
-        
-        if escolha:
-            item = lista_edit[escolha]
-            data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
-            ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
-            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
-            ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
-            idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
-            ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
-            status_opcoes = ["Pago", "Pendente"]
-            index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
-            ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
-            
-            col_ed1, col_ed2 = st.columns(2)
-            if col_ed1.button("💾 ATUALIZAR"):
-                ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
-                ws_base.update_cell(int(item['ID']), 2, f"{ed_val:.2f}".replace('.', ','))
-                ws_base.update_cell(int(item['ID']), 3, ed_desc)
-                ws_base.update_cell(int(item['ID']), 6, ed_bnc)
-                ws_base.update_cell(int(item['ID']), 7, ed_sta)
-                st.toast("✅ Atualizado!"); atualizar_sessao(); st.rerun()
-                
-                # Zera o seletor antes de recarregar
-                if "selectbox_ajuste" in st.session_state:
-                    del st.session_state["selectbox_ajuste"]
-                #st.session_state["selectbox_ajuste"] = ""
-                atualizar_sessao()
-                st.rerun()
-                
-            if col_ed2.button("🚨 EXCLUIR"):
-                if item['Categoria'] == 'Transferência':
-                    ids_para_excluir = []
-                    for idx, row in df_base.iterrows():
-                        mesma_data = (row['Vencimento'] == item['Vencimento'])
-                        mesmo_valor = (abs(row['V_Num'] - item['V_Num']) < 0.01)
-                        mesma_desc = (row['Descrição'] == item['Descrição'])
-                        eh_transf = (row['Categoria'] == 'Transferência')
-                        
-                        if mesma_data and mesmo_valor and mesma_desc and eh_transf:
-                            ids_para_excluir.append(int(row['ID']))
-                    
-                    for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
-                        ws_base.delete_rows(id_linha)
-                else:
-                    ws_base.delete_rows(int(item['ID']))
-                
-                st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
-                # Zera o seletor antes de recarregar
-                if "selectbox_ajuste" in st.session_state:
-                    del st.session_state["selectbox_ajuste"]
-                st.session_state["selectbox_ajuste"] = ""
-                atualizar_sessao()
-                st.rerun()
+    # --- Ajustar Lançamento ---
+    with tab3:
+        st.write("Formulário de ajuste aqui...")
+        # copie aqui o código que estava dentro do expansor "Ajustar Lançamento"
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in st.session_state.page:
