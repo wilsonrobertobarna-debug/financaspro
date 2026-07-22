@@ -106,13 +106,15 @@ with col7:
 st.markdown("---")
 
 
-# Roteador de telas exclusivas
+# ========================================================
+# ROTEADOR DE TELAS EXCLUSIVAS (ISOLAMENTO TOTAL)
+# ========================================================
 aba = st.session_state.aba_atual
 
 if aba == "Finanças & Bancos":
-    st.title("🏠 Finanças & Bancos - Painel Geral")
-    # 👉 COLE TODO O SEU CÓDIGO ANTIGO DE FINANÇAS AQUI DENTRO:
-    st.write("Seu painel financeiro completo entra aqui.")
+    # 🏠 O SEU PAINEL DE FINANÇAS ENTRA EXATAMENTE AQUI DENTRO:
+    # (Tudo o que for de finanças precisa ficar indentado aqui dentro para não vazar)
+    pass
 
 elif aba == "Meu Veículo":
     st.title("🚗 Gestão do Veículo")
