@@ -60,22 +60,23 @@ with col7:
 st.markdown("---")
 
 # ========================================================
-# 4. ROTEADOR DE TELAS EXCLUSIVAS (ISOLAMENTO TOTAL)
+# 4. DEFINIÇÃO DA TELA DE FINANÇAS ISOLADA
+# ========================================================
+def tela_financas():
+    st.title("🏠 Finanças & Bancos - Painel Geral")
+    
+    # ----------------------------------------------------
+    # 👉 COLE TODO O SEU CÓDIGO ANTIGO DE FINANÇAS AQUI DENTRO:
+    # ----------------------------------------------------
+    st.write("Seu painel financeiro completo fica isolado aqui dentro.")
+
+# ========================================================
+# 5. ROTEADOR DE TELAS EXCLUSIVAS
 # ========================================================
 aba = st.session_state.aba_atual
 
 if aba == "Finanças & Bancos":
-    # ====================================================
-    # 🏠 INÍCIO DO PAINEL DE FINANÇAS E BANCOS
-    # Cole todo o seu código antigo de finanças EXATAMENTE AQUI:
-    # ====================================================
-    
-    st.title("🏠 Finanças & Bancos - Painel Geral")
-    st.write("Seu painel financeiro completo entra aqui dentro.")
-    
-    # ====================================================
-    # 🏠 FIM DO PAINEL DE FINANÇAS
-    # ====================================================
+    tela_financas()
 
 elif aba == "Meu Veículo":
     st.title("🚗 Gestão do Veículo")
