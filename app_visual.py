@@ -10,61 +10,6 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-# Configuração da página
-st.set_page_config(
-    page_title="FinançasPro",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-# 1. MEMÓRIA DA ABA ATUAL (Inicia em Finanças)
-if 'aba_atual' not in st.session_state:
-    st.session_state.aba_atual = "Finanças & Bancos"
-
-# 2. CONTROLE DE LOGIN
-if 'login' not in st.session_state:
-    st.session_state.login = False
-
-if not st.session_state.login:
-    col1, col_centro, col2 = st.columns([1, 2, 1])
-    with col_centro:
-        st.markdown("<br><br><br>", unsafe_allow_html=True)
-        st.markdown("### 🔒 Acesso Seguro")
-        senha = st.text_input("Digite sua senha:", type="password")
-        if st.button("🔓 Desbloquear Sistema"):
-            if senha == "Wilson123":
-                st.session_state.login = True
-                st.rerun()
-            else:
-                st.error("Senha incorreta, Wilson!")
-        st.markdown("<br><br>", unsafe_allow_html=True)
-    st.stop()
-
-# ========================================================
-# 3. ROTEADOR DE TELAS COM O BOTÃO FUNCIONAL
-# ========================================================
-if st.session_state.aba_atual == "Pendências":
-    # --- TELA DE PENDÊNCIAS ---
-    # Botão para voltar ao Finanças posicionado no topo da tela de pendências
-    if st.button("🏠 Voltar para Finanças & Bancos", type="primary"):
-        st.session_state.aba_atual = "Finanças & Bancos"
-        st.rerun()
-        
-    st.title("⏳ Tela de Pendências")
-    st.write("Aqui vai ficar a listagem de pagamentos pendentes.")
-    
-else:
-    # --- TELA DE FINANÇAS & BANCOS (SEU CÓDIGO DO DIA 20) ---
-    # Botão para ir para Pendências posicionado no topo do Finanças
-    if st.button("⏳ Ir para Pendências", type="primary"):
-        st.session_state.aba_atual = "Pendências"
-        st.rerun()
-        
-    st.markdown("---")
-    
-    # [COLE TODO O SEU CÓDIGO DO DIA 20 AQUI ABAIXO]
-    st.title("💰 Tela de Finanças & Bancos")
-    st.write("Seu painel do dia 20 roda aqui dentro.")
 
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
