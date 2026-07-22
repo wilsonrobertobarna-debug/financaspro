@@ -359,6 +359,7 @@ aba = st.session_state.page
    # --- BLOCO DE OPERAÇÕES UNIFICADO ---
 # --- CSS para estilizar abas ---
 # --- CSS + FontAwesome ---
+# --- CSS + FontAwesome ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
@@ -386,17 +387,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
 # --- BLOCO DE OPERAÇÕES UNIFICADO ---
 with st.sidebar.expander("⚡ Operações"):
-    tab1, tab2, tab3 = st.tabs([
-        " <i class='fa fa-plus-circle'></i> Novo Lançamento", 
-        " <i class='fa fa-exchange-alt'></i> Transferência", 
-        " <i class='fa fa-edit'></i> Ajustar"
-    ])
+    tab1, tab2, tab3 = st.tabs(["Novo Lançamento", "Transferência", "Ajustar"])
 
     # --- Novo Lançamento ---
     with tab1:
+        st.markdown("<i class='fa fa-plus-circle'></i> **Novo Lançamento**", unsafe_allow_html=True)
         with st.form("f_novo", clear_on_submit=True):
             f_bnc = st.selectbox("Banco", bancos_disponiveis)
             f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
@@ -415,6 +412,7 @@ with st.sidebar.expander("⚡ Operações"):
 
     # --- Transferência ---
     with tab2:
+        st.markdown("<i class='fa fa-exchange-alt'></i> **Transferência**", unsafe_allow_html=True)
         with st.form("f_transf", clear_on_submit=True):
             t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
             t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
@@ -428,6 +426,7 @@ with st.sidebar.expander("⚡ Operações"):
 
     # --- Ajustar Lançamento ---
     with tab3:
+        st.markdown("<i class='fa fa-edit'></i> **Ajustar Lançamento**", unsafe_allow_html=True)
         if not df_base.empty:
             lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
             escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()))
