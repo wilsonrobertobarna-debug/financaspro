@@ -10,6 +10,64 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
+# Configuração da página (deixe apenas uma vez no topo)
+st.set_page_config(
+    page_title="FinançasPro",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# Inicializa a memória da aba atual
+if 'aba_atual' not in st.session_state:
+    st.session_state.aba_atual = "Finanças & Bancos"
+
+# ========================================================
+# BARRA DE NAVEGAÇÃO SUPERIOR (APENAS 1 BOTÃO DE ALTERNÂNCIA)
+# ========================================================
+col_espaco, col_botao = [st.columns([4, 1])[0], st.columns([4, 1])[1]] # Alinha o botão para a direita, ou use st.columns(2) se preferir
+# Se preferir simples com st.columns(2), use:
+# col1, col2 = st.columns(2)
+
+# Vamos usar 2 colunas para ficar bem firme no topo:
+c1, c2 = st.columns([3, 1])
+with c2:
+    if st.session_state.aba_atual == "Finanças & Bancos":
+        if st.button("⏳ Ir para Pendências", use_container_width=True, type="primary"):
+            st.session_state.aba_atual = "Pendências"
+            st.rerun()
+    else:
+        if st.button("🏠 Finanças & Bancos", use_container_width=True, type="primary"):
+            st.session_state.aba_atual = "Finanças & Bancos"
+            st.rerun()
+
+st.markdown("---")
+
+# ========================================================
+# ROTEADOR CENTRAL DAS TELAS
+# ========================================================
+
+if st.session_state.aba_atual == "Pendências":
+    # ----------------------------------------------------
+    # TELA DE PENDÊNCIAS (Isolada)
+    # ----------------------------------------------------
+    st.title("⏳ Tela de Pendências")
+    st.write("Aqui vai ficar a listagem de pagamentos pendentes.")
+    
+else:
+    # ----------------------------------------------------
+    # TELA DE FINANÇAS & BANCOS (TODO O SEU CÓDIGO DO DIA 20)
+    # ----------------------------------------------------
+    
+    # [COLE TODO O SEU CÓDIGO DO DIA 20 AQUI DENTRO]
+    # Exemplo do que vai aqui dentro:
+    # - O seu login / senha (se houver)
+    # - Conexão com Google Sheets
+    # - Leitura dos DataFrames e métricas
+    # - Seus gráficos e formulários originais
+    
+    st.title("💰 Tela de Finanças & Bancos")
+    st.write("Aqui entra o seu painel financeiro oficial do dia 20.")
+
 
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
