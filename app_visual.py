@@ -358,32 +358,34 @@ aba = st.session_state.page
     # --- Novo Lançamento ---with tab1:
    # --- BLOCO DE OPERAÇÕES UNIFICADO ---
 # --- CSS para estilizar abas ---
-# --- CSS para estilizar abas ---
+# --- CSS + FontAwesome ---
 st.markdown("""
-    <style>
-    .stTabs [data-baseweb="tab"] {
-        font-weight: bold;
-        padding: 8px 16px;
-        border-radius: 6px;
-        margin-right: 4px;
-    }
-    /* aba 1: Novo Lançamento */
-    .stTabs [data-baseweb="tab"]:nth-child(1) {
-        background-color: #d4f8d4; /* verde claro */
-        color: #006400; /* verde escuro */
-    }
-    /* aba 2: Transferência */
-    .stTabs [data-baseweb="tab"]:nth-child(2) {
-        background-color: #d4e8f8; /* azul claro */
-        color: #004080; /* azul escuro */
-    }
-    /* aba 3: Ajustar */
-    .stTabs [data-baseweb="tab"]:nth-child(3) {
-        background-color: #ffe5cc; /* laranja claro */
-        color: #cc5200; /* laranja escuro */
-    }
-    </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+.stTabs [data-baseweb="tab"] {
+    font-weight: bold;
+    padding: 8px 16px;
+    border-radius: 6px;
+    margin-right: 4px;
+}
+/* aba 1: Novo Lançamento */
+.stTabs [data-baseweb="tab"]:nth-child(1) {
+    background-color: #d4f8d4; /* verde claro */
+    color: #006400; /* verde escuro */
+}
+/* aba 2: Transferência */
+.stTabs [data-baseweb="tab"]:nth-child(2) {
+    background-color: #d4e8f8; /* azul claro */
+    color: #004080; /* azul escuro */
+}
+/* aba 3: Ajustar */
+.stTabs [data-baseweb="tab"]:nth-child(3) {
+    background-color: #ffe5cc; /* laranja claro */
+    color: #cc5200; /* laranja escuro */
+}
+</style>
 """, unsafe_allow_html=True)
+
 
 # --- BLOCO DE OPERAÇÕES UNIFICADO ---
 with st.sidebar.expander("⚡ Operações"):
