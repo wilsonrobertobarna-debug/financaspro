@@ -14,7 +14,7 @@ import streamlit.components.v1 as components
 st.set_page_config(
     page_title="FinançasPro",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded" # Deixa a barra lateral aberta para o botão ficar visível
 )
 
 # Inicializa a memória da aba atual
@@ -32,7 +32,7 @@ if not st.session_state.login:
         st.markdown("### 🔒 Acesso Seguro")
         senha = st.text_input("Digite sua senha:", type="password")
         if st.button("🔓 Desbloquear Sistema"):
-            if senha == "Wilson123": # Ou a sua senha real do dia 20
+            if senha == "Wilson123":
                 st.session_state.login = True
                 st.rerun()
             else:
@@ -41,11 +41,10 @@ if not st.session_state.login:
     st.stop() # Bloqueia o resto do app se não estiver logado
 
 # ========================================================
-# 2. A PARTIR daqui o usuário já está logado!
-# O BOTÃO DE NAVEGAÇÃO FICA AQUI PARA APARECER SEMPRE
+# 2. MENU LATERAL FIXO (NÃO SUME NUNCA)
 # ========================================================
-col1, col2 = st.columns([4, 1])
-with col2:
+with st.sidebar:
+    st.markdown("### ⚡ Navegação")
     if st.session_state.aba_atual == "Finanças & Bancos":
         if st.button("⏳ Ir para Pendências", use_container_width=True, type="primary"):
             st.session_state.aba_atual = "Pendências"
@@ -54,11 +53,10 @@ with col2:
         if st.button("🏠 Finanças & Bancos", use_container_width=True, type="primary"):
             st.session_state.aba_atual = "Finanças & Bancos"
             st.rerun()
-
-st.markdown("---")
+    st.markdown("---")
 
 # ========================================================
-# 3. ROTEADOR DE TELAS (FINANÇAS VS PENDÊNCIAS)
+# 3. ROTEADOR DE TELAS
 # ========================================================
 if st.session_state.aba_atual == "Pendências":
     st.title("⏳ Tela de Pendências")
@@ -66,10 +64,9 @@ if st.session_state.aba_atual == "Pendências":
     
 else:
     # --- TODO O SEU CÓDIGO ORIGINAL DO DIA 20 VAI AQUI DENTRO ---
-    # (Cole aqui o seu código do dia 20, contanto que a verificação de login de lá já não conflite com esta)
     
     st.title("💰 Tela de Finanças & Bancos")
-    st.write("Aqui roda o seu painel financeiro oficial.")
+    st.write("Aqui roda o seu painel financeiro oficial do dia 20.")
 
 
 
