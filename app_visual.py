@@ -60,19 +60,22 @@ with col7:
 st.markdown("---")
 
 # ========================================================
-# 4. ROTEADOR DE TELAS EXCLUSIVAS (CADA ABA FICA ISOLADA)
+# 4. ROTEADOR DE TELAS EXCLUSIVAS (ISOLAMENTO TOTAL)
 # ========================================================
 aba = st.session_state.aba_atual
 
 if aba == "Finanças & Bancos":
-    # 🏠 TUDO DO SEU PAINEL DE FINANÇAS FICA EXCLUSIVAMENTE AQUI DENTRO:
-    st.title("🏠 Finanças & Bancos - Painel Geral")
+    # ====================================================
+    # 🏠 INÍCIO DO PAINEL DE FINANÇAS E BANCOS
+    # Cole todo o seu código antigo de finanças EXATAMENTE AQUI:
+    # ====================================================
     
-    # ----------------------------------------------------
-    # 👉 COLE TODO O SEU CÓDIGO ANTIGO DE FINANÇAS AQUI ABAIXO:
-    # (Toda aquela parte dos seus cards, tabelas, saldos e bancos)
-    # ----------------------------------------------------
-    st.write("Cole todo o seu código principal de finanças logo aqui embaixo.")
+    st.title("🏠 Finanças & Bancos - Painel Geral")
+    st.write("Seu painel financeiro completo entra aqui dentro.")
+    
+    # ====================================================
+    # 🏠 FIM DO PAINEL DE FINANÇAS
+    # ====================================================
 
 elif aba == "Meu Veículo":
     st.title("🚗 Gestão do Veículo")
