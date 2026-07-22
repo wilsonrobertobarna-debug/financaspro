@@ -360,6 +360,7 @@ aba = st.session_state.page
 # --- CSS para estilizar abas ---
 # --- CSS + FontAwesome ---
 # --- CSS + FontAwesome ---
+# --- CSS + FontAwesome ---
 st.markdown("""
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
@@ -372,24 +373,18 @@ div.stButton > button:first-child {
     border: none;
 }
 
-/* Salvar = verde */
-div.stButton > button:has(span:contains("Salvar")) {
-    background-color: #28a745;
+/* ordem dos botões dentro dos formulários */
+div.stButton:nth-of-type(1) > button {
+    background-color: #28a745; /* verde - salvar */
 }
-
-/* Transferir = azul */
-div.stButton > button:has(span:contains("Transferir")) {
-    background-color: #007bff;
+div.stButton:nth-of-type(2) > button {
+    background-color: #007bff; /* azul - transferir */
 }
-
-/* Atualizar = laranja */
-div.stButton > button:has(span:contains("Atualizar")) {
-    background-color: #fd7e14;
+div.stButton:nth-of-type(3) > button {
+    background-color: #fd7e14; /* laranja - atualizar */
 }
-
-/* Excluir = vermelho */
-div.stButton > button:has(span:contains("Excluir")) {
-    background-color: #dc3545;
+div.stButton:nth-of-type(4) > button {
+    background-color: #dc3545; /* vermelho - excluir */
 }
 
 /* abas coloridas */
@@ -466,9 +461,6 @@ with st.sidebar.expander("⚡ Operações"):
                     atualizar_sessao()
                     st.rerun()
                 if st.button("🗑️ Excluir"):
-                    st.toast("✅ Exclusão realizada!", icon="🗑️")
-                    atualizar_sessao()
-                    st.rerun()
 
 
 
