@@ -31,7 +31,7 @@ for col, item in zip([col1, col2, col3, col4, col5, col6, col7], menu_itens):
     if col.button(item, use_container_width=True):
         st.session_state.page = item
         st.rerun()
-O que muda:
+
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
