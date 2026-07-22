@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 1. MEMÓRIA DA ABA ATUAL
+# 1. MEMÓRIA DA ABA ATUAL (Inicia em Finanças)
 if 'aba_atual' not in st.session_state:
     st.session_state.aba_atual = "Finanças & Bancos"
 
@@ -41,40 +41,28 @@ if not st.session_state.login:
     st.stop()
 
 # ========================================================
-# 3. NAVEGAÇÃO SUPERIOR BLINDADA (ESTILO BOTÃO/PÍLULA)
-# ========================================================
-# Isso cria um seletor visualmente limpo no topo que nunca some
-escolha = st.radio(
-    "Navegação",
-    ["💰 Finanças & Bancos", "⏳ Pendências"],
-    horizontal=True,
-    label_visibility="collapsed"
-)
-
-# Sincroniza a escolha com a memória
-if "Finanças" in escolha:
-    st.session_state.aba_atual = "Finanças & Bancos"
-else:
-    st.session_state.aba_atual = "Pendências"
-
-st.markdown("---")
-
-# ========================================================
-# 4. ROTEADOR DE TELAS
+# 3. ROTEADOR DE TELAS COM O BOTÃO FUNCIONAL
 # ========================================================
 if st.session_state.aba_atual == "Pendências":
-    # ----------------------------------------------------
-    # TELA DE PENDÊNCIAS
-    # ----------------------------------------------------
+    # --- TELA DE PENDÊNCIAS ---
+    # Botão para voltar ao Finanças posicionado no topo da tela de pendências
+    if st.button("🏠 Voltar para Finanças & Bancos", type="primary"):
+        st.session_state.aba_atual = "Finanças & Bancos"
+        st.rerun()
+        
     st.title("⏳ Tela de Pendências")
     st.write("Aqui vai ficar a listagem de pagamentos pendentes.")
     
 else:
-    # ----------------------------------------------------
-    # TELA DE FINANÇAS & BANCOS (SEU CÓDIGO DO DIA 20)
-    # ----------------------------------------------------
+    # --- TELA DE FINANÇAS & BANCOS (SEU CÓDIGO DO DIA 20) ---
+    # Botão para ir para Pendências posicionado no topo do Finanças
+    if st.button("⏳ Ir para Pendências", type="primary"):
+        st.session_state.aba_atual = "Pendências"
+        st.rerun()
+        
+    st.markdown("---")
     
-    # [COLE TODO O SEU CÓDIGO DO DIA 20 AQUI DENTRO]
+    # [COLE TODO O SEU CÓDIGO DO DIA 20 AQUI ABAIXO]
     st.title("💰 Tela de Finanças & Bancos")
     st.write("Seu painel do dia 20 roda aqui dentro.")
 
