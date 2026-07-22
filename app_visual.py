@@ -27,7 +27,7 @@ st.markdown("""
         border-bottom: 1px solid #ddd;
     }
     .block-container {
-        padding-top: 120px; /* espaço para não ficar escondido atrás da barra */
+        padding-top: 180px; /* espaço para não ficar escondido atrás da barra */
     }
     </style>
 """, unsafe_allow_html=True)
