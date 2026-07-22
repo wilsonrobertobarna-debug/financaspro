@@ -43,18 +43,23 @@ if not st.session_state.login:
 # ========================================================
 # 2. MENU LATERAL FIXO (NÃO SUME NUNCA)
 # ========================================================
+# ========================================================
+# 2. MENU LATERAL FIXO (LIMPO E ORGANIZADO)
+# ========================================================
 with st.sidebar:
-    st.markdown("### ⚡ Navegação")
+    st.markdown("## 🧭 Menu")
+    st.markdown("---")
+    
     if st.session_state.aba_atual == "Finanças & Bancos":
-        if st.button("⏳ Ir para Pendências", use_container_width=True, type="primary"):
+        if st.button("⏳ Ver Pendências", use_container_width=True, type="primary"):
             st.session_state.aba_atual = "Pendências"
             st.rerun()
     else:
-        if st.button("🏠 Finanças & Bancos", use_container_width=True, type="primary"):
+        if st.button("🏠 Ir para Finanças", use_container_width=True, type="primary"):
             st.session_state.aba_atual = "Finanças & Bancos"
             st.rerun()
+            
     st.markdown("---")
-
 # ========================================================
 # 3. ROTEADOR DE TELAS
 # ========================================================
