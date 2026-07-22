@@ -766,10 +766,9 @@ elif "Pendências" in aba:
     
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
     
-    # no topo do arquivo
-    mostrar_milo_bolt = False   # controla se a aba Milo & Bolt aparece
+    # no topo do arquivo   
 
-# dentro da lógica das abas
+
 elif "🐾" in aba and mostrar_milo_bolt:
     st.title("🐾 Gestão Milo & Bolt")
     
