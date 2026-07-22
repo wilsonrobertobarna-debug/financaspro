@@ -19,7 +19,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Inicializa a memória da aba atual (começa direto em Finanças & Bancos)
+# Inicializa a memória da aba atual
 if 'aba_atual' not in st.session_state:
     st.session_state.aba_atual = "Finanças & Bancos"
 
@@ -39,16 +39,26 @@ with col2:
 
 st.markdown("---")
 
-# --- FUNÇÕES DAS TELAS ---
+# ========================================================
+# FUNÇÃO 1: TELA DE FINANÇAS & BANCOS
+# ========================================================
 def tela_financas():
     st.title("💰 Tela de Finanças & Bancos")
-    st.write("Aqui é onde vai rodar o seu painel financeiro principal.")
+    st.write("Aqui dentro vai todo o código do seu painel financeiro (métricas, gráficos, etc).")
+    # Quando for trazer o seu código de finanças do dia 20 para cá, 
+    # certifique-se de que ele está identado (recuado) aqui dentro!
 
+# ========================================================
+# FUNÇÃO 2: TELA DE PENDÊNCIAS
+# ========================================================
 def tela_pendencias():
     st.title("⏳ Tela de Pendências")
-    st.write("Aqui vai ficar a listagem de pagamentos pendentes.")
+    st.write("Aqui vai ficar apenas a listagem de pagamentos pendentes, sem misturar com o financeiro.")
+    # Aqui dentro você coloca o código específico de pendências.
 
-# --- ROTEADOR CENTRAL ---
+# ========================================================
+# ROTEADOR CENTRAL (EXIBE APENAS A ABA CLICADA)
+# ========================================================
 aba = st.session_state.aba_atual
 
 if aba == "Finanças & Bancos":
