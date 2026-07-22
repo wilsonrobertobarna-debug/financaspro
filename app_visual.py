@@ -10,7 +10,7 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-# Configuração da página (deixe apenas uma vez no topo)
+# Configuração da página
 st.set_page_config(
     page_title="FinançasPro",
     layout="wide",
@@ -22,15 +22,10 @@ if 'aba_atual' not in st.session_state:
     st.session_state.aba_atual = "Finanças & Bancos"
 
 # ========================================================
-# BARRA DE NAVEGAÇÃO SUPERIOR (APENAS 1 BOTÃO DE ALTERNÂNCIA)
+# BARRA DE NAVEGAÇÃO SUPERIOR (BOTÃO ÚNICO)
 # ========================================================
-col_espaco, col_botao = [st.columns([4, 1])[0], st.columns([4, 1])[1]] # Alinha o botão para a direita, ou use st.columns(2) se preferir
-# Se preferir simples com st.columns(2), use:
-# col1, col2 = st.columns(2)
-
-# Vamos usar 2 colunas para ficar bem firme no topo:
-c1, c2 = st.columns([3, 1])
-with c2:
+col1, col2 = st.columns([4, 1])
+with col2:
     if st.session_state.aba_atual == "Finanças & Bancos":
         if st.button("⏳ Ir para Pendências", use_container_width=True, type="primary"):
             st.session_state.aba_atual = "Pendências"
@@ -43,30 +38,19 @@ with c2:
 st.markdown("---")
 
 # ========================================================
-# ROTEADOR CENTRAL DAS TELAS
+# ROTEADOR DE TELAS
 # ========================================================
-
 if st.session_state.aba_atual == "Pendências":
-    # ----------------------------------------------------
-    # TELA DE PENDÊNCIAS (Isolada)
-    # ----------------------------------------------------
+    # --- TELA DE PENDÊNCIAS ---
     st.title("⏳ Tela de Pendências")
     st.write("Aqui vai ficar a listagem de pagamentos pendentes.")
     
 else:
-    # ----------------------------------------------------
-    # TELA DE FINANÇAS & BANCOS (TODO O SEU CÓDIGO DO DIA 20)
-    # ----------------------------------------------------
-    
-    # [COLE TODO O SEU CÓDIGO DO DIA 20 AQUI DENTRO]
-    # Exemplo do que vai aqui dentro:
-    # - O seu login / senha (se houver)
-    # - Conexão com Google Sheets
-    # - Leitura dos DataFrames e métricas
-    # - Seus gráficos e formulários originais
+    # --- TODO O SEU CÓDIGO ORIGINAL DO DIA 20 VAI AQUI EMBAIXO ---
+    # Cole aqui exatamente o seu arquivo do dia 20 (login, gsheets, métricas, etc)
     
     st.title("💰 Tela de Finanças & Bancos")
-    st.write("Aqui entra o seu painel financeiro oficial do dia 20.")
+    st.write("Cole o seu código oficial do dia 20 logo abaixo desta linha.")
 
 
 
