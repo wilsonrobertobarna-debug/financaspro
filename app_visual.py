@@ -10,6 +10,52 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
+import streamlit as st
+
+# Configuração da página
+st.set_page_config(
+    page_title="FinançasPro",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# Inicializa a memória da aba atual (começa direto em Finanças & Bancos)
+if 'aba_atual' not in st.session_state:
+    st.session_state.aba_atual = "Finanças & Bancos"
+
+# --- BARRA DE NAVEGAÇÃO COM APENAS 2 BOTÕES ---
+st.markdown("### ⚡ Acesso Rápido")
+col1, col2 = st.columns(2)
+
+with col1:
+    if st.button("🏠 Finanças & Bancos", use_container_width=True):
+        st.session_state.aba_atual = "Finanças & Bancos"
+        st.rerun()
+
+with col2:
+    if st.button("⏳ Pendências", use_container_width=True):
+        st.session_state.aba_atual = "Pendências"
+        st.rerun()
+
+st.markdown("---")
+
+# --- FUNÇÕES DAS TELAS ---
+def tela_financas():
+    st.title("💰 Tela de Finanças & Bancos")
+    st.write("Aqui é onde vai rodar o seu painel financeiro principal.")
+
+def tela_pendencias():
+    st.title("⏳ Tela de Pendências")
+    st.write("Aqui vai ficar a listagem de pagamentos pendentes.")
+
+# --- ROTEADOR CENTRAL ---
+aba = st.session_state.aba_atual
+
+if aba == "Finanças & Bancos":
+    tela_financas()
+elif aba == "Pendências":
+    tela_pendencias()
+
 
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
