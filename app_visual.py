@@ -40,7 +40,7 @@ if not st.session_state.login:
 # 2. MENU NO TOPO (SÓ APARECE DEPOIS DE LOGAR)
 # ========================================================
 st.markdown("## 🎮 Painel Wilson")
-#st.markdown("<style>div.block-container {padding-top: 1rem;}</style>", unsafe_allow_html=True)
+
 st.markdown("""
 <style>
     /* Remove o espaço em branco excessivo entre os blocos e linhas */
@@ -51,8 +51,15 @@ st.markdown("""
     div.element-container {
         margin-bottom: -0.5rem !important;
     }
+    /* Oculta os itens e ícones extras indesejados da barra lateral */
+    [data-testid="stSidebarNav"] {
+        display: none;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+if 'page' not in st.session_state:
+    st.session_state.page = "💰 Finanças & Bancos"
 
 if 'page' not in st.session_state:
     st.session_state.page = "💰 Finanças & Bancos"
