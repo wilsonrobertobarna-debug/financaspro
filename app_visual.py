@@ -1403,35 +1403,28 @@ if aba == "📋 Relatório PDF":
         
          # Período e Vencimento da Fatura (Dinâmico buscando do Sheets)
      # Período e Vencimento da Fatura (Dinâmico e seguro sem blocos complexos)
-            except Exception:
+           except:
             pass
 
-        # Período e Vencimento da Fatura (Dinâmico e seguro)
-       # Bloco seguro para período e vencimento da fatura
-        try:
-            eh_cartao = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
-            
-            if eh_cartao:
-                dt_fim_obj = pd.to_datetime(b_fim)
-                dia_venc = "20"
-                
-                if 'df_cartoes' in locals() and df_cartoes is not None and not df_cartoes.empty:
-                    match_cartao = df_cartoes[df_cartoes['Banco'].str.upper().str.strip() == str(banco_nome).upper()]
-                    if not match_cartao.empty and 'Vencimento' in match_cartao.columns:
-                        dia_venc = str(int(match_cartao['Vencimento'].values[0])).zfill(2)
+        # Período e Vencimento da Fatura (Dinâmico)
+        eh_cartao = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
+        if eh_cartao:
+            dt_fim_obj = pd.to_datetime(b_fim)
+            dia_venc = "20"
+            if 'df_cartoes' in locals() and df_cartoes is not None and not df_cartoes.empty:
+                match_cartao = df_cartoes[df_cartoes['Banco'].str.upper().str.strip() == str(banco_nome).upper()]
+                if not match_cartao.empty and 'Vencimento' in match_cartao.columns:
+                    dia_venc = str(int(match_cartao['Vencimento'].values[0])).zfill(2)
 
-                data_vencimento_fatura = f"{dia_venc}/{dt_fim_obj.strftime('%m/%Y')}"
-                pdf.cell(200, 6, txt=f"PERIODO: {p_inicio} ate {p_fim}   |   VENCIMENTO DA FATURA: {data_vencimento_fatura}", ln=1, align="L")
-            else:
-                pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
-            
-            # Saldo Anterior
-            txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-            pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
-            pdf.ln(5)
-            
-        except Exception as e:
-            pdf.cell(200, 6, txt=f"ERRO AO PROCESSAR CABECALHO: {str(e)}", ln=1, align="L")
+            data_vencimento_fatura = f"{dia_venc}/{dt_fim_obj.strftime('%m/%Y')}"
+            pdf.cell(200, 6, txt=f"PERIODO: {p_inicio} ate {p_fim}   |   VENCIMENTO DA FATURA: {data_vencimento_fatura}", ln=1, align="L")
+        else:
+            pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
+        
+        # Saldo Anterior
+        txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+        pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
+        pdf.ln(5)
         
             
             # Cabeçalho da Tabela (Mostrando "Dt Compra" na primeira coluna)
