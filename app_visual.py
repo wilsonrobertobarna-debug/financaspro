@@ -62,6 +62,18 @@ if nova_pagina != st.session_state.page:
     st.rerun()
 
 st.markdown("---")
+st.markdown("""
+<style>
+    /* Remove o espaço em branco excessivo entre os blocos e linhas */
+    hr {
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    div.element-container {
+        margin-bottom: -0.5rem !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # ========================================================
 # 3. CONTEÚDO DAS PÁGINAS
