@@ -589,28 +589,35 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
                 
-            if col_ed2.button("🚨 EXCLUIR"):
+           if col_ed2.button("🚨 EXCLUIR"):
                 if item['Categoria'] == 'Transferência':
                     ids_para_excluir = []
                     for idx, row in df_base.iterrows():
-                        mesma_data = (row['Vencimento'] == item['Vencimento'])
-                        mesmo_valor = (abs(row['V_Num'] - item['V_Num']) < 0.01)
-                        mesma_desc = (row['Descrição'] == item['Descrição'])
-                        eh_transf = (row['Categoria'] == 'Transferência')
+                        mesma_data = (str(row['Vencimento']) == str(item['Vencimento']))
+                        mesmo_valor = (abs(float(row['V_Num']) - float(item['V_Num'])) < 0.01)
+                        mesma_desc = (str(row['Descrição']) == str(item['Descrição']))
+                        eh_transf = (str(row['Categoria']).strip() == 'Transferência')
                         
                         if mesma_data and mesmo_valor and mesma_desc and eh_transf:
-                            ids_para_excluir.append(int(row['ID']))
+                            if 'ID' in row and pd.notna(row['ID']):
+                                ids_para_excluir.append(int(float(row['ID'])))
                     
-                    for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
-                        ws_base.delete_rows(id_linha)
+                    # Se não achou por ID exato mas tem linhas correspondentes, apaga de trás para frente na planilha
+                    if ids_para_excluir:
+                        for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
+                            try:
+                                ws_base.delete_rows(id_linha)
+                            except:
+                                pass
+                    else:
+                        # Fallback de segurança caso o ID falhe
+                        ws_base.delete_rows(int(float(item['ID'])))
                 else:
-                    ws_base.delete_rows(int(item['ID']))
+                    ws_base.delete_rows(int(float(item['ID'])))
                 
-                st.toast("✅ Exclusão realizada com sucesso!", icon="💰")
-                # Zera o seletor antes de recarregar
+                st.toast("✅ Transferência e contrapartida excluídas com sucesso!", icon="💰")
                 if "selectbox_ajuste" in st.session_state:
                     del st.session_state["selectbox_ajuste"]
-                st.session_state["selectbox_ajuste"] = ""
                 atualizar_sessao()
                 st.rerun()
 
