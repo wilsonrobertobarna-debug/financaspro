@@ -1403,13 +1403,16 @@ if aba == "📋 Relatório PDF":
         
          # Período e Vencimento da Fatura (Dinâmico buscando do Sheets)
      # Período e Vencimento da Fatura (Dinâmico e seguro sem blocos complexos)
+       except Exception:
+            pass
+
+        # Período e Vencimento da Fatura (Dinâmico e seguro)
         eh_cartao = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
         
         if eh_cartao:
             dt_fim_obj = pd.to_datetime(b_fim)
             dia_venc = "20"
             
-            # Validação simples baseada em variáveis existentes
             if 'df_cartoes' in locals():
                 if df_cartoes is not None and not df_cartoes.empty:
                     match_cartao = df_cartoes[df_cartoes['Banco'].str.upper().str.strip() == str(banco_nome).upper()]
