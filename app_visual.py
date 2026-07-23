@@ -421,13 +421,16 @@ st.sidebar.divider()
 if 'page' not in st.session_state:
     st.session_state.page = "💰 Finanças & Bancos"
 
-#menu_itens = ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"]
-
-for item in menu_itens:
-    # Pula o item 'Meu Veículo' para que ele não seja criado na barra lateral
-    if item == "🚗 Meu Veículo":
-        continue
-
+menu_itens = [
+    #"💰 Finanças & Bancos", 
+    #"Pendências", 
+    #"🐾 Milo & Bolt", 
+    # "🚗 Meu Veículo",  <-- Colocando o # aqui dentro, o Python ignora só ele!
+    #"📄 WhatsApp", 
+    #"📋 Relatório PDF", 
+    "📊 Análises & Configurações"
+]
+    
 for item in menu_itens:
     if st.sidebar.button(item, use_container_width=True):
         st.session_state.page = item
