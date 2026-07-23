@@ -424,6 +424,11 @@ if 'page' not in st.session_state:
 menu_itens = ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"]
 
 for item in menu_itens:
+    # Pula o item 'Meu Veículo' para que ele não seja criado na barra lateral
+    if item == "🚗 Meu Veículo":
+        continue
+
+for item in menu_itens:
     if st.sidebar.button(item, use_container_width=True):
         st.session_state.page = item
         st.rerun()
