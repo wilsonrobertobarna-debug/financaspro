@@ -14,7 +14,7 @@ import streamlit.components.v1 as components
 st.set_page_config(
     page_title="Painel Wilson",
     layout="wide",
-    initial_sidebar_state="expanded" # Mantém a barra lateral aberta/disponível
+    initial_sidebar_state="expanded" # Mantém a barra lateral visível e pronta
 )
 
 # Estilos globais (espaçamentos)
@@ -31,7 +31,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ========================================================
-# 1. TELA DE LOGIN (COMPACTA E CENTRALIZADA)
+# 1. TELA DE LOGIN 
 # ========================================================
 if 'login' not in st.session_state:
     st.session_state.login = False
@@ -84,10 +84,9 @@ st.markdown("---")
 # ========================================================
 if st.session_state.page == "💰 Finanças & Bancos":
     
-    # ORDEM EXATA QUE VOCÊ PEDIU:
-    # 1. Botão de Atualizar Sheets
+    # 1. Botão de Atualizar Sheets no topo da página
     if st.button("🔄 Atualizar Sheets"):
-        # Cole aqui a sua lógica real de atualizar o sheets
+        # Insira aqui sua lógica do Sheets se precisar
         st.success("Sheets atualizado!")
 
     st.markdown("---")
@@ -95,7 +94,6 @@ if st.session_state.page == "💰 Finanças & Bancos":
     # 2. Logo abaixo: Novos lançamentos, Transferência e Ajuste de lançamentos
     st.markdown("### Lançamentos")
     
-    # Se você quiser eles na largura normal da tela (alinhados à esquerda):
     if st.button("➕ Novo Lançamento"):
         pass
         
@@ -105,7 +103,7 @@ if st.session_state.page == "💰 Finanças & Bancos":
     if st.button("⚙️ Ajuste de Lançamentos"):
         pass
         
-    # (Caso você queira colar o restante do seu código financeiro antigo, coloque aqui embaixo)
+    # (Cole aqui o restante do seu código de finanças normal)
 
 elif st.session_state.page == "Pendências":
     st.title("⏳ Tela de Pendências")
@@ -124,7 +122,6 @@ elif st.session_state.page == "📋 Relatório PDF":
 
 elif st.session_state.page == "📊 Análises & Configurações":
     st.title("📊 Análises & Configurações")
-
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
 if 'login' not in st.session_state:
