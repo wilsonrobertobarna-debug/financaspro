@@ -428,7 +428,7 @@ menu_itens = [
     # "🚗 Meu Veículo",  <-- Colocando o # aqui dentro, o Python ignora só ele!
     #"📄 WhatsApp", 
     #"📋 Relatório PDF", 
-    "📊 Análises & Configurações"
+    #"📊 Análises & Configurações"
 ]
     
 for item in menu_itens:
