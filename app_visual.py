@@ -589,7 +589,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
                 
-           if col_ed2.button("🚨 EXCLUIR"):
+            if col_ed2.button("🚨 EXCLUIR"):
                 if item['Categoria'] == 'Transferência':
                     ids_para_excluir = []
                     for idx, row in df_base.iterrows():
