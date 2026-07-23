@@ -814,27 +814,28 @@ if "💰" in st.session_state.page:
             st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
 
             
-        # 7. TABELA FINAL
-        # 7. TABELA FINAL
+# 7. TABELA FINAL
         st.subheader("🔍 Lançamentos do Mês")
         
         if not df_m_limpo.empty:
             df_exibicao = df_m_limpo.copy()
             
+            # Ordena pelo ID do maior para o menor para o mais recente ficar sempre no topo
+            if 'ID' in df_exibicao.columns:
+                df_exibicao = df_exibicao.sort_values(by='ID', ascending=False)
+            
             # AJUSTE DE MENTOR: 
             # Se você sente que a diferença é de 2, mudamos aqui.
-            # Se precisar ajustar para mais ou para menos, é só mudar este número '2'.
             ajuste = 2 
-            df_exibicao['Seq.'] = df_exibicao.index + ajuste 
-            
-            # Inverte para mostrar os mais novos no topo
-            df_exibicao = df_exibicao.iloc[::-1]
+            df_exibicao['Seq.'] = range(len(df_exibicao), 0, -1) # Mantém a sequência decrescente bonitinha
             
             st.dataframe(df_exibicao[['Seq.', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
                          use_container_width=True, 
                          hide_index=True)
         else:
             st.warning("Base de dados vazia.")
+
+
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
         
