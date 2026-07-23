@@ -514,6 +514,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
             atualizar_sessao()
             st.rerun()
+            
            # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
         with st.form("f_transf", clear_on_submit=True):
@@ -575,17 +576,38 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             
             col_ed1, col_ed2 = st.columns(2)
             if col_ed1.button("💾 ATUALIZAR"):
-                ws_base.update_cell(int(item['ID']), 1, ed_dat.strftime("%d/%m/%Y"))
-                ws_base.update_cell(int(item['ID']), 2, f"{ed_val:.2f}".replace('.', ','))
-                ws_base.update_cell(int(item['ID']), 3, ed_desc)
-                ws_base.update_cell(int(item['ID']), 6, ed_bnc)
-                ws_base.update_cell(int(item['ID']), 7, ed_sta)
-                st.toast("✅ Atualizado!"); atualizar_sessao(); st.rerun()
+                id_atual = int(float(item['ID']))
                 
-                # Zera o seletor antes de recarregar
+                # Se for Transferência, atualiza as duas pontas (origem e destino)
+                if str(item['Categoria']).strip() == 'Transferência':
+                    desc_antiga = str(item['Descrição'])
+                    data_antiga = str(item['Vencimento'])
+                    valor_antigo = float(item['V_Num'])
+                    
+                    # Varre a base para achar todas as linhas que formam essa transferência
+                    for idx, row in df_base.iterrows():
+                        if (str(row['Vencimento']) == data_antiga and 
+                            abs(float(row['V_Num']) - valor_antigo) < 0.01 and 
+                            str(row['Descrição']) == desc_antiga and 
+                            str(row['Categoria']).strip() == 'Transferência'):
+                            
+                            linha_id = int(float(row['ID']))
+                            ws_base.update_cell(linha_id, 1, ed_dat.strftime("%d/%m/%Y"))
+                            ws_base.update_cell(linha_id, 2, f"{ed_val:.2f}".replace('.', ','))
+                            ws_base.update_cell(linha_id, 3, ed_desc)
+                            ws_base.update_cell(linha_id, 6, ed_bnc)
+                            ws_base.update_cell(linha_id, 7, ed_sta)
+                else:
+                    # Lançamento normal (atualiza só a linha selecionada)
+                    ws_base.update_cell(id_atual, 1, ed_dat.strftime("%d/%m/%Y"))
+                    ws_base.update_cell(id_atual, 2, f"{ed_val:.2f}".replace('.', ','))
+                    ws_base.update_cell(id_atual, 3, ed_desc)
+                    ws_base.update_cell(id_atual, 6, ed_bnc)
+                    ws_base.update_cell(id_atual, 7, ed_sta)
+                
+                st.toast("✅ Atualização sincronizada nas duas pontas!", icon="💰")
                 if "selectbox_ajuste" in st.session_state:
                     del st.session_state["selectbox_ajuste"]
-                #st.session_state["selectbox_ajuste"] = ""
                 atualizar_sessao()
                 st.rerun()
                 
