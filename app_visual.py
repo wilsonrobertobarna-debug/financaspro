@@ -1401,18 +1401,31 @@ if aba == "📋 Relatório PDF":
             pdf.cell(200, 6, txt=f"BANCO / CARTAO: {str(banco_nome).upper()}", ln=1, align="L")
             
             # Período e Vencimento da Fatura (Forçando o dia 20 para o cartão)
-            eh_cartao = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
-            if eh_cartao:
-                dt_fim_obj = pd.to_datetime(b_fim)
-                data_vencimento_fatura = f"20/{dt_fim_obj.strftime('%m/%Y')}"
-                pdf.cell(200, 6, txt=f"PERIODO: {p_inicio} ate {p_fim}  |  VENCIMENTO DA FATURA: {data_vencimento_fatura}", ln=1, align="L")
-            else:
-                pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
+           # Período e Vencimento da Fatura (Dinâmico buscando do Sheets)
+        eh_cartao = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
+        if eh_cartao:
+            dt_fim_obj = pd.to_datetime(b_fim)
             
-            # Saldo Anterior
-            txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-            pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
-            pdf.ln(5)
+            # Pega o dia de vencimento cadastrado no Sheets para este cartão específico
+            dia_venc = "20" # Padrão caso não ache
+            try:
+                # Tenta buscar na base de cartões/bancos carregada do Sheets
+                # (Ajuste o nome do DataFrame ou da coluna se necessário, ex: df_cartoes)
+                info_cartao = df_cartoes[df_cartoes['Banco'].str.upper().str.strip() == str(banco_nome).upper()]
+                if not info_cartao.empty:
+                    dia_venc = str(int(info_cartao['Vencimento'].values[0])).zfill(2)
+            except Exception:
+                pass
+
+            data_vencimento_fatura = f"{dia_venc}/{dt_fim_obj.strftime('%m/%Y')}"
+            pdf.cell(200, 6, txt=f"PERIODO: {p_inicio} ate {p_fim}   |   VENCIMENTO DA FATURA: {data_vencimento_fatura}", ln=1, align="L")
+        else:
+            pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
+        
+        # Saldo Anterior
+        txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+        pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
+        pdf.ln(5)
             
             # Cabeçalho da Tabela (Mostrando "Dt Compra" na primeira coluna)
             pdf.set_font("Arial", 'B', 9)
