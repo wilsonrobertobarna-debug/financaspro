@@ -30,7 +30,8 @@ if not st.session_state.login:
     with col_login:
         st.markdown("<br><br>", unsafe_allow_html=True) # Um respiro no topo
         st.markdown("### 🔒 Acesso Seguro - Painel Wilson")
-        senha = st.text_input("Digite sua senha:", type="password")
+        senha = st.text_input("Digite sua senha:", type="password", key="senha_input")
+        #senha = st.text_input("Digite sua senha:", type="password")
         
         if st.button("🔓 Desbloquear", use_container_width=True):
             if senha == "Wilson123":
@@ -111,6 +112,8 @@ elif st.session_state.page == "📋 Relatório PDF":
 elif st.session_state.page == "📊 Análises & Configurações":
     st.title("📊 Análises & Configurações")
     st.write("Configurações do sistema...")
+
+
 if not st.session_state.login:
     # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
     col1, col_centro, col2 = st.columns([1, 2, 1])
