@@ -514,7 +514,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
             atualizar_sessao()
             st.rerun()
-            # --- BARRINHA 2: TRANSFERÊNCIA ---
+           # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
         with st.form("f_transf", clear_on_submit=True):
             t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
@@ -526,21 +526,32 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 if t_orig == t_dest: 
                     st.error("Escolha bancos diferentes!")
                 else:
-                    # 1. CALCULA O PRÓXIMO ID (Igual ao que fizemos no outro)
-                    coluna_i = ws_base.col_values(9)
-                    ids_numericos = [int(v) for v in coluna_i[1:] if v and v.isdigit()]
-                    proximo_id = max(ids_numericos) + 1 if ids_numericos else 1
+                    # 1. Calcula o próximo ID de forma segura
+                    todos_dados = ws_base.get_all_records()
+                    if todos_dados:
+                        import pandas as pd
+                        df_temp = pd.DataFrame(todos_dados)
+                        if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
+                            proximo_id = int(df_temp['ID'].max()) + 1
+                        else:
+                            proximo_id = 1
+                    else:
+                        proximo_id = 1
                     
                     v_str = f"{t_val:.2f}".replace('.', ',')
                     d_str = t_dat.strftime("%d/%m/%Y")
                     
-                    # 2. SALVA AS DUAS LINHAS JÁ COM OS IDs (proximo_id e proximo_id + 1)
-                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Despesa", t_orig, "Pago", d_str, proximo_id])
-                    ws_base.append_row([d_str, v_str, f"TR: {t_desc}", "Transferência", "Receita", t_dest, "Pago", d_str, proximo_id + 1])
+                    # Descrição unificada para identificar o par da transferência facilmente
+                    desc_transf = f"TR: {t_desc}".strip() if t_desc else "TR: Transferência entre contas"
                     
-                    st.toast("✅ Transferência realizada com sucesso!", icon="💰")
+                    # 2. Salva as duas pontas na planilha com IDs sequenciais (Origem e Destino)
+                    ws_base.append_row([d_str, v_str, desc_transf, "Transferência", "Despesa", t_orig, "Pago", d_str, proximo_id, ""])
+                    ws_base.append_row([d_str, v_str, desc_transf, "Transferência", "Receita", t_dest, "Pago", d_str, proximo_id + 1, ""])
+                    
+                    st.toast("✅ Transferência sincronizada nas duas pontas!", icon="💰")
                     atualizar_sessao()
                     st.rerun()
+
 
                # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
