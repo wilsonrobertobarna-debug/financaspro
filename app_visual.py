@@ -55,8 +55,8 @@ if not st.session_state.login:
 st.markdown("## 🎮 Painel Wilson")
 st.markdown("""
 <style>
-    /* Oculta o item 'Meu Veículo' da lista da barra lateral nativa */
-    [data-testid="stSidebarNav"] li:has(span:contains("Meu Veículo")) {
+    /* Oculta completamente a lista de páginas automáticas da barra lateral */
+    [data-testid="stSidebarNav"] {
         display: none !important;
     }
 </style>
