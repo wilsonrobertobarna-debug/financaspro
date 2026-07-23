@@ -1403,7 +1403,7 @@ if aba == "📋 Relatório PDF":
         
          # Período e Vencimento da Fatura (Dinâmico buscando do Sheets)
      # Período e Vencimento da Fatura (Dinâmico e seguro sem blocos complexos)
-           except:
+            except:
             pass
 
         # Período e Vencimento da Fatura (Dinâmico)
