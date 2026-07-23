@@ -10,10 +10,40 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
+# Configuração da página
+st.set_page_config(
+    page_title="Painel Wilson",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
+# ========================================================
+# 1. TELA DE LOGIN (BARREIRA DE SEGURANÇA)
+# ========================================================
+if 'login' not in st.session_state:
+    st.session_state.login = False
+
+if not st.session_state.login:
+    st.markdown("### 🔒 Acesso Seguro")
+    senha = st.text_input("Digite sua senha:", type="password")
+    
+    if st.button("🔓 Desbloquear"):
+        if senha == "Wilson123":
+            st.session_state.login = True
+            st.rerun()
+        else:
+            st.error("Senha Incorreta.")
+            
+    st.stop() 
+
+# ========================================================
+# 2. MENU NO TOPO (SÓ APARECE DEPOIS DE LOGAR)
+# ========================================================
 st.markdown("## 🎮 Painel Wilson")
 
-col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
+if 'page' not in st.session_state:
+    st.session_state.page = "💰 Finanças & Bancos"
+
 menu_itens = [
     "💰 Finanças & Bancos",
     "Pendências",
@@ -24,11 +54,47 @@ menu_itens = [
     "📊 Análises & Configurações"
 ]
 
-for col, item in zip([col1, col2, col3, col4, col5, col6, col7], menu_itens):
-    if col.button(item, use_container_width=True):
-        st.session_state.page = item
-        st.rerun()
+# Menu otimizado para não poluir o celular
+nova_pagina = st.selectbox("Navegue pelo sistema:", menu_itens, index=menu_itens.index(st.session_state.page))
 
+if nova_pagina != st.session_state.page:
+    st.session_state.page = nova_pagina
+    st.rerun()
+
+st.markdown("---")
+
+# ========================================================
+# 3. CONTEÚDO DAS PÁGINAS
+# ========================================================
+if st.session_state.page == "💰 Finanças & Bancos":
+    # ----------------------------------------------------
+    # COLE AQUI TODO O SEU CÓDIGO DO DIA 20 (FINANÇAS)
+    # ----------------------------------------------------
+    st.write("Seu painel financeiro roda aqui dentro.")
+
+elif st.session_state.page == "Pendências":
+    st.title("⏳ Tela de Pendências")
+    st.write("Em construção...")
+
+elif st.session_state.page == "🐾 Milo & Bolt":
+    st.title("🐾 Milo & Bolt")
+    st.write("Informações dos pets...")
+
+elif st.session_state.page == "🚗 Meu Veículo":
+    st.title("🚗 Meu Veículo")
+    st.write("Controle do veículo...")
+
+elif st.session_state.page == "📄 WhatsApp":
+    st.title("📄 WhatsApp")
+    st.write("Automações do WhatsApp...")
+
+elif st.session_state.page == "📋 Relatório PDF":
+    st.title("📋 Relatório PDF")
+    st.write("Geração de relatórios...")
+
+elif st.session_state.page == "📊 Análises & Configurações":
+    st.title("📊 Análises & Configurações")
+    st.write("Configurações do sistema...")
 
 
 # --- TELA DE PROTEÇÃO (LOGIN) ---
