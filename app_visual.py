@@ -47,13 +47,13 @@ if not st.session_state.login:
 st.markdown("## 🎮 Painel Wilson")
 st.markdown("""
 <style>
-    /* Oculta a página 'Meu Veículo' do menu lateral */
-    [data-testid="stSidebarNav"] a[href*="Meu_Veículo"],
-    [data-testid="stSidebarNav"] span:has-text("Meu Veículo") {
+    /* Oculta o item 'Meu Veículo' da lista da barra lateral nativa */
+    [data-testid="stSidebarNav"] li:has(span:contains("Meu Veículo")) {
         display: none !important;
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 if 'page' not in st.session_state:
     st.session_state.page = "💰 Finanças & Bancos"
