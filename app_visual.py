@@ -17,48 +17,27 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Estilos globais (espaçamentos e remoção de navegação padrão)
-st.markdown("""
-<style>
-    hr {
-        margin-top: 0.5rem !important;
-        margin-bottom: 0.5rem !important;
-    }
-    div.element-container {
-        margin-bottom: -0.5rem !important;
-    }
-    [data-testid="stSidebarNav"] {
-        display: none;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 # ========================================================
-# 1. TELA DE LOGIN (COMPACTA E CENTRALIZADA)
+# 1. TELA DE LOGIN (BARREIRA DE SEGURANÇA)
 # ========================================================
 if 'login' not in st.session_state:
     st.session_state.login = False
 
 if not st.session_state.login:
-    # Cria colunas para o login não esticar na tela toda
-    _, col_login, _ = st.columns([1, 1.5, 1])
+    st.markdown("### 🔒 Acesso Seguro")
+    senha = st.text_input("Digite sua senha:", type="password")
     
-    with col_login:
-        st.markdown("<br><br>", unsafe_allow_html=True) # Um respiro no topo
-        st.markdown("### 🔒 Acesso Seguro - Painel Wilson")
-        senha = st.text_input("Digite sua senha:", type="password")
-        
-        if st.button("🔓 Desbloquear", use_container_width=True):
-            if senha == "Wilson123":
-                st.session_state.login = True
-                st.rerun()
-            else:
-                st.error("Senha Incorreta.")
-                
+    if st.button("🔓 Desbloquear"):
+        if senha == "Wilson123":
+            st.session_state.login = True
+            st.rerun()
+        else:
+            st.error("Senha Incorreta.")
+            
     st.stop() 
 
 # ========================================================
-# 2. MENU NO TOPO
+# 2. MENU NO TOPO (SÓ APARECE DEPOIS DE LOGAR)
 # ========================================================
 st.markdown("## 🎮 Painel Wilson")
 
@@ -75,6 +54,7 @@ menu_itens = [
     "📊 Análises & Configurações"
 ]
 
+# Menu otimizado para não poluir o celular
 nova_pagina = st.selectbox("Navegue pelo sistema:", menu_itens, index=menu_itens.index(st.session_state.page))
 
 if nova_pagina != st.session_state.page:
@@ -88,46 +68,33 @@ st.markdown("---")
 # ========================================================
 if st.session_state.page == "💰 Finanças & Bancos":
     # ----------------------------------------------------
-    # O SEU CÓDIGO DE FINANÇAS ENTRA AQUI EMBAIXO
+    # COLE AQUI TODO O SEU CÓDIGO DO DIA 20 (FINANÇAS)
     # ----------------------------------------------------
-    
-    # Exemplo da ordem que você pediu (Atualizar Sheets primeiro, depois os lançamentos):
-    if st.button("🔄 Atualizar Sheets"):
-        st.success("Sheets atualizado com sucesso! (exemplo)")
-        
-    st.markdown("---")
-    
-    # Seus botões de novos lançamentos, transferências e ajustes devem vir logo abaixo:
-    st.markdown("### Gestão de Lançamentos")
-    col_a, col_b, col_c = st.columns(3)
-    with col_a:
-        if st.button("➕ Novo Lançamento", use_container_width=True):
-            pass
-    with col_b:
-        if st.button("🔁 Transferência", use_container_width=True):
-            pass
-    with col_c:
-        if st.button("⚙️ Ajuste de Lançamentos", use_container_width=True):
-            pass
+    pass
 
 elif st.session_state.page == "Pendências":
     st.title("⏳ Tela de Pendências")
+    st.write("Em construção...")
 
 elif st.session_state.page == "🐾 Milo & Bolt":
     st.title("🐾 Milo & Bolt")
+    st.write("Informações dos pets...")
 
 elif st.session_state.page == "🚗 Meu Veículo":
     st.title("🚗 Meu Veículo")
+    st.write("Controle do veículo...")
 
 elif st.session_state.page == "📄 WhatsApp":
     st.title("📄 WhatsApp")
+    st.write("Automações do WhatsApp...")
 
 elif st.session_state.page == "📋 Relatório PDF":
     st.title("📋 Relatório PDF")
+    st.write("Geração de relatórios...")
 
 elif st.session_state.page == "📊 Análises & Configurações":
     st.title("📊 Análises & Configurações")
-
+    st.write("Configurações do sistema...")
 if not st.session_state.login:
     # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
     col1, col_centro, col2 = st.columns([1, 2, 1])
