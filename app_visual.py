@@ -41,6 +41,18 @@ if not st.session_state.login:
 # ========================================================
 st.markdown("## 🎮 Painel Wilson")
 #st.markdown("<style>div.block-container {padding-top: 1rem;}</style>", unsafe_allow_html=True)
+st.markdown("""
+<style>
+    /* Remove o espaço em branco excessivo entre os blocos e linhas */
+    hr {
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    div.element-container {
+        margin-bottom: -0.5rem !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 if 'page' not in st.session_state:
     st.session_state.page = "💰 Finanças & Bancos"
