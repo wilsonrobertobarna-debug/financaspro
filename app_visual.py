@@ -16,6 +16,14 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+st.markdown("""
+<style>
+    /* Oculta completamente a lista de páginas automáticas da barra lateral */
+    [data-testid="stSidebarNav"] {
+        display: none !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # ========================================================
 # 1. TELA DE LOGIN (COMPACTA E CENTRALIZADA)
