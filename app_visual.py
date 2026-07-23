@@ -1400,21 +1400,29 @@ if aba == "📋 Relatório PDF":
             pdf.cell(200, 6, txt=f"BANCO / CARTAO: {str(banco_nome).upper()}", ln=1, align="L")
         
             # Período e Vencimento da Fatura (Dinâmico buscando do Sheets)
-           # Período e Vencimento da Fatura (Buscando das colunas reais do Sheets)
+           # Período e Vencimento da Fatura (Busca universal em qualquer DataFrame disponível)
             eh_cartao = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
             if eh_cartao:
                 dt_fim_obj = pd.to_datetime(b_fim)
-                dia_venc = "20" # Padrão caso não ache
+                dia_venc = "20" # Padrão caso falhe tudo
                 
-                if 'df_cartoes' in locals() and df_cartoes is not None and not df_cartoes.empty:
-                    # Limpa e normaliza para comparar o nome do banco/cartão
-                    banco_busca = str(banco_nome).upper().strip()
-                    
-                    # Procura na coluna 'Nome do Banco' e pega o 'Dia de Vencimento' correspondente
-                    match_cartao = df_cartoes[df_cartoes['Nome do Banco'].astype(str).str.upper().str.strip() == banco_busca]
-                    if not match_cartao.empty and 'Dia de Vencimento' in match_cartao.columns:
-                        val_venc = match_cartao['Dia de Vencimento'].values[0]
-                        dia_venc = str(int(float(val_venc))).zfill(2)
+                try:
+                    # Procura em todas as variáveis do Streamlit por uma que tenha 'Nome do Banco' e 'Dia de Vencimento'
+                    for var_name, var_val in list(locals().items()) + list(globals().items()):
+                        if isinstance(var_val, pd.DataFrame) and 'Nome do Banco' in var_val.columns and 'Dia de Vencimento' in var_val.columns:
+                            banco_busca = str(banco_nome).upper().strip()
+                            # Tenta achar por correspondência exata ou parcial (ex: Mercado Pago)
+                            match = var_val[var_val['Nome do Banco'].astype(str).str.upper().str.strip() == banco_busca]
+                            if match.empty:
+                                match = var_val[var_val['Nome do Banco'].astype(str).str.upper().str.contains(banco_busca, na=False)]
+                            
+                            if not match.empty:
+                                val_venc = match['Dia de Vencimento'].values[0]
+                                if pd.notna(val_venc):
+                                    dia_venc = str(int(float(val_venc))).zfill(2)
+                                    break
+                except Exception:
+                    pass
 
                 data_vencimento_fatura = f"{dia_venc}/{dt_fim_obj.strftime('%m/%Y')}"
                 pdf.cell(200, 6, txt=f"PERIODO: {p_inicio} ate {p_fim}   |   VENCIMENTO DA FATURA: {data_vencimento_fatura}", ln=1, align="L")
