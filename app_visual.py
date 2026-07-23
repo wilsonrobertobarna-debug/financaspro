@@ -40,6 +40,7 @@ if not st.session_state.login:
 # 2. MENU NO TOPO (SÓ APARECE DEPOIS DE LOGAR)
 # ========================================================
 st.markdown("## 🎮 Painel Wilson")
+st.markdown("<style>div.block-container {padding-top: 1rem;}</style>", unsafe_allow_html=True)
 
 if 'page' not in st.session_state:
     st.session_state.page = "💰 Finanças & Bancos"
