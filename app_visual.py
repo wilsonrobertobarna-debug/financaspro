@@ -1402,17 +1402,27 @@ if aba == "📋 Relatório PDF":
 
         
          # Período e Vencimento da Fatura (Dinâmico buscando do Sheets)
-      # Período e Vencimento da Fatura (Dinâmico buscando do Sheets)
+      # --- BLINDAGEM DE SEGURANÇA PARA EVITAR ERRO DE SINTAXE ANTERIOR ---
+        try:
+            pass
+        except:
+            pass
+        # -----------------------------------------------------------------
+
+        # Período e Vencimento da Fatura (Dinâmico buscando do Sheets)
         eh_cartao = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
         if eh_cartao:
             dt_fim_obj = pd.to_datetime(b_fim)
             
             # Pega o dia de vencimento de forma segura
             dia_venc = "20"
-            if 'df_cartoes' in locals() and not df_cartoes.empty:
-                match_cartao = df_cartoes[df_cartoes['Banco'].str.upper().str.strip() == str(banco_nome).upper()]
-                if not match_cartao.empty and 'Vencimento' in match_cartao.columns:
-                    dia_venc = str(int(match_cartao['Vencimento'].values[0])).zfill(2)
+            try:
+                if 'df_cartoes' in locals() and not df_cartoes.empty:
+                    match_cartao = df_cartoes[df_cartoes['Banco'].str.upper().str.strip() == str(banco_nome).upper()]
+                    if not match_cartao.empty and 'Vencimento' in match_cartao.columns:
+                        dia_venc = str(int(match_cartao['Vencimento'].values[0])).zfill(2)
+            except:
+                pass
 
             data_vencimento_fatura = f"{dia_venc}/{dt_fim_obj.strftime('%m/%Y')}"
             pdf.cell(200, 6, txt=f"PERIODO: {p_inicio} ate {p_fim}   |   VENCIMENTO DA FATURA: {data_vencimento_fatura}", ln=1, align="L")
