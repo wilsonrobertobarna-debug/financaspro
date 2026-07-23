@@ -39,9 +39,10 @@ if not st.session_state.login:
 # ========================================================
 # 2. MENU NO TOPO (SÓ APARECE DEPOIS DE LOGAR)
 # ========================================================
+st.markdown("""
 st.markdown("## 🎮 Painel Wilson")
 #st.markdown("<style>div.block-container {padding-top: 1rem;}</style>", unsafe_allow_html=True)
-st.markdown("""
+
 <style>
     /* Remove o espaço em branco excessivo entre os blocos e linhas */
     hr {
