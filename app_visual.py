@@ -17,6 +17,9 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# ========================================================
+# 1. TELA DE LOGIN (BARREIRA DE SEGURANÇA)
+# ========================================================
 if 'login' not in st.session_state:
     st.session_state.login = False
 
@@ -25,16 +28,13 @@ if not st.session_state.login:
     senha = st.text_input("Digite sua senha:", type="password")
     
     if st.button("🔓 Desbloquear"):
-        if senha == "Wilson123": # Coloque sua senha real aqui
+        if senha == "Wilson123":
             st.session_state.login = True
             st.rerun()
         else:
             st.error("Senha Incorreta.")
             
-    # O SEGREDO ESTÁ AQUI: O st.stop() impede que o código 
-    # continue desenhando o menu se não estiver logado!
     st.stop()
-
 # ========================================================
 # 2. MENU NO TOPO (SÓ APARECE DEPOIS DE LOGAR)
 # ========================================================
