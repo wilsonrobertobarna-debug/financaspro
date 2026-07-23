@@ -70,7 +70,7 @@ if st.session_state.page == "💰 Finanças & Bancos":
     # ----------------------------------------------------
     # COLE AQUI TODO O SEU CÓDIGO DO DIA 20 (FINANÇAS)
     # ----------------------------------------------------
-    st.write("Seu painel financeiro roda aqui dentro.")
+    pass
 
 elif st.session_state.page == "Pendências":
     st.title("⏳ Tela de Pendências")
