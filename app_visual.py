@@ -1399,18 +1399,16 @@ if aba == "📋 Relatório PDF":
             # Banco / Cartão Selecionado
             pdf.set_font("Arial", 'B', 10)
             pdf.cell(200, 6, txt=f"BANCO / CARTAO: {str(banco_nome).upper()}", ln=1, align="L")
-            
-            # Período e Vencimento da Fatura (Forçando o dia 20 para o cartão)
-           # Período e Vencimento da Fatura (Dinâmico buscando do Sheets)
+
+        
+         # Período e Vencimento da Fatura (Dinâmico buscando do Sheets)
         eh_cartao = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
         if eh_cartao:
             dt_fim_obj = pd.to_datetime(b_fim)
             
             # Pega o dia de vencimento cadastrado no Sheets para este cartão específico
-            dia_venc = "20" # Padrão caso não ache
+            dia_venc = "20"  # Padrão caso não ache
             try:
-                # Tenta buscar na base de cartões/bancos carregada do Sheets
-                # (Ajuste o nome do DataFrame ou da coluna se necessário, ex: df_cartoes)
                 info_cartao = df_cartoes[df_cartoes['Banco'].str.upper().str.strip() == str(banco_nome).upper()]
                 if not info_cartao.empty:
                     dia_venc = str(int(info_cartao['Vencimento'].values[0])).zfill(2)
@@ -1426,6 +1424,7 @@ if aba == "📋 Relatório PDF":
         txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
         pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
         pdf.ln(5)
+        
             
             # Cabeçalho da Tabela (Mostrando "Dt Compra" na primeira coluna)
             pdf.set_font("Arial", 'B', 9)
