@@ -18,33 +18,30 @@ st.set_page_config(
 )
 
 # ========================================================
-# 1. TELA DE LOGIN (COMPACTA E CENTRALIZADA VIA CSS)
+# 1. TELA DE LOGIN (COMPACTA COM CONTAINER)
 # ========================================================
 if 'login' not in st.session_state:
     st.session_state.login = False
 
 if not st.session_state.login:
-    # CSS para limitar a largura da caixa de login e centralizá-la na tela
-    st.markdown("""
-        <style>
-            [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
-                max-width: 450px;
-                margin: 0 auto;
-            }
-        </style>
-    """, unsafe_allow_html=True)
+    # Cria um espaço vertical para afastar do topo da tela do notebook
+    st.markdown("<br>" * 4, unsafe_allow_html=True)
     
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown("### 🔒 Acesso Seguro")
-    senha = st.text_input("Digite sua senha:", type="password", key="senha_input")
+    # Centraliza usando colunas proporcionais, mas guardando dentro de uma estrutura limpa
+    _, col_centro, _ = st.columns([1.5, 2, 1.5])
     
-    if st.button("🔓 Desbloquear", use_container_width=True):
-        if senha == "Wilson123":
-            st.session_state.login = True
-            st.rerun()
-        else:
-            st.error("Senha Incorreta.")
+    with col_centro:
+        with st.container(border=True):
+            st.markdown("### 🔒 Acesso Seguro")
+            senha = st.text_input("Digite sua senha:", type="password", key="senha_input")
             
+            if st.button("🔓 Desbloquear", use_container_width=True):
+                if senha == "Wilson123":
+                    st.session_state.login = True
+                    st.rerun()
+                else:
+                    st.error("Senha Incorreta.")
+                    
     st.stop()
 
 # ========================================================
