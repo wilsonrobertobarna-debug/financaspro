@@ -17,31 +17,22 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ========================================================
-# 1. TELA DE LOGIN (COMPACTA COM CONTAINER)
-# ========================================================
 if 'login' not in st.session_state:
     st.session_state.login = False
 
 if not st.session_state.login:
-    # Cria um espaço vertical para afastar do topo da tela do notebook
-    st.markdown("<br>" * 4, unsafe_allow_html=True)
+    st.markdown("### 🔒 Acesso Seguro")
+    senha = st.text_input("Digite sua senha:", type="password")
     
-    # Centraliza usando colunas proporcionais, mas guardando dentro de uma estrutura limpa
-    _, col_centro, _ = st.columns([1.5, 2, 1.5])
-    
-    with col_centro:
-        with st.container(border=True):
-            st.markdown("### 🔒 Acesso Seguro")
-            senha = st.text_input("Digite sua senha:", type="password", key="senha_input")
+    if st.button("🔓 Desbloquear"):
+        if senha == "Wilson123": # Coloque sua senha real aqui
+            st.session_state.login = True
+            st.rerun()
+        else:
+            st.error("Senha Incorreta.")
             
-            if st.button("🔓 Desbloquear", use_container_width=True):
-                if senha == "Wilson123":
-                    st.session_state.login = True
-                    st.rerun()
-                else:
-                    st.error("Senha Incorreta.")
-                    
+    # O SEGREDO ESTÁ AQUI: O st.stop() impede que o código 
+    # continue desenhando o menu se não estiver logado!
     st.stop()
 
 # ========================================================
