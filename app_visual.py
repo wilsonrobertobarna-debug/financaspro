@@ -421,7 +421,7 @@ st.sidebar.divider()
 if 'page' not in st.session_state:
     st.session_state.page = "💰 Finanças & Bancos"
 
-menu_itens = ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt",  "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"]
+#menu_itens = ["💰 Finanças & Bancos", "Pendências", "🐾 Milo & Bolt", "🚗 Meu Veículo", "📄 WhatsApp", "📋 Relatório PDF", "📊 Análises & Configurações"]
 
 for item in menu_itens:
     # Pula o item 'Meu Veículo' para que ele não seja criado na barra lateral
