@@ -14,10 +14,10 @@ import streamlit.components.v1 as components
 st.set_page_config(
     page_title="Painel Wilson",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded" # Mantém a barra lateral aberta/disponível
 )
 
-# Estilos globais (espaçamentos e remoção de navegação padrão)
+# Estilos globais (espaçamentos)
 st.markdown("""
 <style>
     hr {
@@ -26,9 +26,6 @@ st.markdown("""
     }
     div.element-container {
         margin-bottom: -0.5rem !important;
-    }
-    [data-testid="stSidebarNav"] {
-        display: none;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -40,11 +37,10 @@ if 'login' not in st.session_state:
     st.session_state.login = False
 
 if not st.session_state.login:
-    # Cria colunas para o login não esticar na tela toda
     _, col_login, _ = st.columns([1, 1.5, 1])
     
     with col_login:
-        st.markdown("<br><br>", unsafe_allow_html=True) # Um respiro no topo
+        st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown("### 🔒 Acesso Seguro - Painel Wilson")
         senha = st.text_input("Digite sua senha:", type="password")
         
@@ -87,28 +83,29 @@ st.markdown("---")
 # 3. CONTEÚDO DAS PÁGINAS
 # ========================================================
 if st.session_state.page == "💰 Finanças & Bancos":
-    # ----------------------------------------------------
-    # O SEU CÓDIGO DE FINANÇAS ENTRA AQUI EMBAIXO
-    # ----------------------------------------------------
     
-    # Exemplo da ordem que você pediu (Atualizar Sheets primeiro, depois os lançamentos):
+    # ORDEM EXATA QUE VOCÊ PEDIU:
+    # 1. Botão de Atualizar Sheets
     if st.button("🔄 Atualizar Sheets"):
-        st.success("Sheets atualizado com sucesso! (exemplo)")
-        
+        # Cole aqui a sua lógica real de atualizar o sheets
+        st.success("Sheets atualizado!")
+
     st.markdown("---")
+
+    # 2. Logo abaixo: Novos lançamentos, Transferência e Ajuste de lançamentos
+    st.markdown("### Lançamentos")
     
-    # Seus botões de novos lançamentos, transferências e ajustes devem vir logo abaixo:
-    st.markdown("### Gestão de Lançamentos")
-    col_a, col_b, col_c = st.columns(3)
-    with col_a:
-        if st.button("➕ Novo Lançamento", use_container_width=True):
-            pass
-    with col_b:
-        if st.button("🔁 Transferência", use_container_width=True):
-            pass
-    with col_c:
-        if st.button("⚙️ Ajuste de Lançamentos", use_container_width=True):
-            pass
+    # Se você quiser eles na largura normal da tela (alinhados à esquerda):
+    if st.button("➕ Novo Lançamento"):
+        pass
+        
+    if st.button("🔁 Transferência"):
+        pass
+        
+    if st.button("⚙️ Ajuste de Lançamentos"):
+        pass
+        
+    # (Caso você queira colar o restante do seu código financeiro antigo, coloque aqui embaixo)
 
 elif st.session_state.page == "Pendências":
     st.title("⏳ Tela de Pendências")
