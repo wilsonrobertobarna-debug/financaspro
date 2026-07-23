@@ -1400,14 +1400,29 @@ if aba == "📋 Relatório PDF":
             pdf.cell(200, 6, txt=f"BANCO / CARTAO: {str(banco_nome).upper()}", ln=1, align="L")
         
             # Período e Vencimento da Fatura (Dinâmico buscando do Sheets)
+            # Período e Vencimento da Fatura (Dinâmico buscando do Sheets com busca flexível)
             eh_cartao = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
             if eh_cartao:
                 dt_fim_obj = pd.to_datetime(b_fim)
-                dia_venc = "20"
+                dia_venc = "20" # Padrão de segurança
+                
                 if 'df_cartoes' in locals() and df_cartoes is not None and not df_cartoes.empty:
-                    match_cartao = df_cartoes[df_cartoes['Banco'].str.upper().str.strip() == str(banco_nome).upper()]
-                    if not match_cartao.empty and 'Vencimento' in match_cartao.columns:
-                        dia_venc = str(int(match_cartao['Vencimento'].values[0])).zfill(2)
+                    # Normaliza o nome do banco selecionado para comparar
+                    banco_busca = str(banco_nome).upper().strip()
+                    
+                    # Procura em todas as colunas textuais do df_cartoes para achar o vencimento correspondente
+                    for idx, row in df_cartoes.iterrows():
+                        linha_str = " ".join([str(val).upper() for val in row.values])
+                        if banco_busca in linha_str or any(word in linha_str for word in banco_busca.split() if len(word) > 3):
+                            # Tenta extrair um número que pareça dia de vencimento (1 a 31)
+                            for val in row.values:
+                                try:
+                                    num = int(val)
+                                    if 1 <= num <= 31:
+                                        dia_venc = str(num).zfill(2)
+                                        break
+                                except:
+                                    pass
 
                 data_vencimento_fatura = f"{dia_venc}/{dt_fim_obj.strftime('%m/%Y')}"
                 pdf.cell(200, 6, txt=f"PERIODO: {p_inicio} ate {p_fim}   |   VENCIMENTO DA FATURA: {data_vencimento_fatura}", ln=1, align="L")
