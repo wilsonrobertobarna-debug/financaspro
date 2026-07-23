@@ -1400,29 +1400,21 @@ if aba == "📋 Relatório PDF":
             pdf.cell(200, 6, txt=f"BANCO / CARTAO: {str(banco_nome).upper()}", ln=1, align="L")
         
             # Período e Vencimento da Fatura (Dinâmico buscando do Sheets)
-            # Período e Vencimento da Fatura (Dinâmico buscando do Sheets com busca flexível)
+           # Período e Vencimento da Fatura (Buscando das colunas reais do Sheets)
             eh_cartao = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
             if eh_cartao:
                 dt_fim_obj = pd.to_datetime(b_fim)
-                dia_venc = "20" # Padrão de segurança
+                dia_venc = "20" # Padrão caso não ache
                 
                 if 'df_cartoes' in locals() and df_cartoes is not None and not df_cartoes.empty:
-                    # Normaliza o nome do banco selecionado para comparar
+                    # Limpa e normaliza para comparar o nome do banco/cartão
                     banco_busca = str(banco_nome).upper().strip()
                     
-                    # Procura em todas as colunas textuais do df_cartoes para achar o vencimento correspondente
-                    for idx, row in df_cartoes.iterrows():
-                        linha_str = " ".join([str(val).upper() for val in row.values])
-                        if banco_busca in linha_str or any(word in linha_str for word in banco_busca.split() if len(word) > 3):
-                            # Tenta extrair um número que pareça dia de vencimento (1 a 31)
-                            for val in row.values:
-                                try:
-                                    num = int(val)
-                                    if 1 <= num <= 31:
-                                        dia_venc = str(num).zfill(2)
-                                        break
-                                except:
-                                    pass
+                    # Procura na coluna 'Nome do Banco' e pega o 'Dia de Vencimento' correspondente
+                    match_cartao = df_cartoes[df_cartoes['Nome do Banco'].astype(str).str.upper().str.strip() == banco_busca]
+                    if not match_cartao.empty and 'Dia de Vencimento' in match_cartao.columns:
+                        val_venc = match_cartao['Dia de Vencimento'].values[0]
+                        dia_venc = str(int(float(val_venc))).zfill(2)
 
                 data_vencimento_fatura = f"{dia_venc}/{dt_fim_obj.strftime('%m/%Y')}"
                 pdf.cell(200, 6, txt=f"PERIODO: {p_inicio} ate {p_fim}   |   VENCIMENTO DA FATURA: {data_vencimento_fatura}", ln=1, align="L")
