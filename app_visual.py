@@ -18,23 +18,31 @@ st.set_page_config(
 )
 
 # ========================================================
-# 1. TELA DE LOGIN (BARREIRA DE SEGURANÇA)
+# 1. TELA DE LOGIN (COMPACTA E CENTRALIZADA)
 # ========================================================
 if 'login' not in st.session_state:
     st.session_state.login = False
 
 if not st.session_state.login:
-    st.markdown("### 🔒 Acesso Seguro")
-    senha = st.text_input("Digite sua senha:", type="password")
+    # Cria 3 colunas: a da esquerda e da direita servem de margem, 
+    # e a do meio (tamanho 1.5) segura o login compactadinho.
+    _, col_login, _ = st.columns([1, 1.5, 1])
     
-    if st.button("🔓 Desbloquear"):
-        if senha == "Wilson123":
-            st.session_state.login = True
-            st.rerun()
-        else:
-            st.error("Senha Incorreta.")
-            
-    st.stop() 
+    with col_login:
+        st.markdown("<br><br>", unsafe_allow_html=True) # Dá um respiro para não colar no topo
+        st.markdown("### 🔒 Acesso Seguro")
+        
+        # O campo de senha e o botão agora respeitam o tamanho dessa coluna do meio
+        senha = st.text_input("Digite sua senha:", type="password")
+        
+        if st.button("🔓 Desbloquear", use_container_width=True):
+            if senha == "Wilson123": # Coloque sua senha real aqui
+                st.session_state.login = True
+                st.rerun()
+            else:
+                st.error("Senha Incorreta.")
+                
+    st.stop() # Para a execução aqui se não estiver logado
 
 # ========================================================
 # 2. MENU NO TOPO (SÓ APARECE DEPOIS DE LOGAR)
