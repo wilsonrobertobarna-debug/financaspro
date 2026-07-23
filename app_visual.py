@@ -45,6 +45,15 @@ if not st.session_state.login:
 # 2. MENU NO TOPO (SÓ APARECE DEPOIS DE LOGAR)
 # ========================================================
 st.markdown("## 🎮 Painel Wilson")
+st.markdown("""
+<style>
+    /* Oculta a página 'Meu Veículo' do menu lateral */
+    [data-testid="stSidebarNav"] a[href*="Meu_Veículo"],
+    [data-testid="stSidebarNav"] span:has-text("Meu Veículo") {
+        display: none !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 if 'page' not in st.session_state:
     st.session_state.page = "💰 Finanças & Bancos"
