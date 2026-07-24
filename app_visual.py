@@ -443,16 +443,16 @@ aba = st.session_state.page
 
 # BARRINHA 1: NOVO LANÇAMENTO
 # Inicializa a variável de estado para controlar a abertura se ela não existir
+# BARRINHA 1: NOVO LANÇAMENTO
 if "expander_lancamento_aberto" not in st.session_state:
     st.session_state.expander_lancamento_aberto = False
 
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
     with st.form("f_novo", clear_on_submit=True):
-        # Usando a variável hoje_br que já corrige o fuso horário
-        f_bnc = st.selectbox("Banco", bancos_disponiveis)
-        f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
+        f_bnc = st.selectbox("Banco", bancos_disponiveis, key="sb_banco_novo_lancamento")
+        f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY", key="dt_compra_novo_lancamento")
         
-      # --- CÁLCULO INTELIGENTE DO VENCIMENTO ---
+        # --- CÁLCULO INTELIGENTE DO VENCIMENTO ---
         vencimento_calculado = hoje_br
         eh_cartao = False
         dia_fech = 0
@@ -494,18 +494,17 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.markdown(f"📅 **Vencimento (Cartão - Fech: {dia_fech} / Venc: {dia_venc}):** `{vencimento_calculado.strftime('%d/%m/%Y')}`")
             t_dat = vencimento_calculado
         else:
-            t_dat = st.date_input("📅 Vencimento", value=hoje_br, format="DD/MM/YYYY", key="vencimento_banco_comum_novo")
-            
-        f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
-        f_par = st.number_input("Parcelas", min_value=1, value=1)
-        f_desc = st.text_input("📝 Descrição")
-        f_bnfc = st.text_input("👤 Beneficiário")
-        f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"])
-        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação", "Vale Alimentação", "Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"]) 
-        f_sta = st.selectbox("Status", ["Pago", "Pendente"])
+            t_dat = st.date_input("📅 Data de Vencimento", value=hoje_br, format="DD/MM/YYYY", key="dt_vencimento_banco_comum")
+        
+        f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f", key="val_novo_lancamento")
+        f_par = st.number_input("Parcelas", min_value=1, value=1, key="par_novo_lancamento")
+        f_desc = st.text_input("📝 Descrição", key="desc_novo_lancamento")
+        f_bnfc = st.text_input("👤 Beneficiário", key="bnfc_novo_lancamento")
+        f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"], key="tip_novo_lancamento")
+        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação", "Vale Alimentação", "Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"], key="cat_novo_lancamento") 
+        f_sta = st.selectbox("Status", ["Pago", "Pendente"], key="sta_novo_lancamento")
         
         if st.form_submit_button("Salvar Lançamento"):
-            # 1. BUSCAR O MAIOR ID DIRETO NA PLANILHA
             todos_dados = ws_base.get_all_records()
             
             if todos_dados:
@@ -518,11 +517,9 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             else:
                 proximo_id = 1
 
-            # 2. Formatações
             v_str = f"{f_val:.2f}".replace('.', ',')
             f_compra_str = f_compra.strftime("%d/%m/%Y")
             
-            # 3. Salvar as parcelas
             for i in range(f_par):
                 nova_data = t_dat + relativedelta(months=i)
                 
@@ -532,16 +529,16 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     desc_com_parcela = f_desc.strip()
                 
                 ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
-                    v_str,                          # Coluna B: Valor
-                    desc_com_parcela,               # Coluna C: Descrição com a parcela
-                    f_cat,                          # Coluna D: Categoria
-                    f_tip,                          # Coluna E: Tipo
-                    f_bnc,                          # Coluna F: Banco
-                    f_sta,                          # Coluna G: Status
-                    f_compra_str,                   # Coluna H: Data da Compra
-                    proximo_id + i,                 # Coluna I: ID
-                    f_bnfc                          # Coluna J: Beneficiário
+                    nova_data.strftime("%d/%m/%Y"),
+                    v_str,
+                    desc_com_parcela,
+                    f_cat,
+                    f_tip,
+                    f_bnc,
+                    f_sta,
+                    f_compra_str,
+                    proximo_id + i,
+                    f_bnfc
                 ])
             
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
