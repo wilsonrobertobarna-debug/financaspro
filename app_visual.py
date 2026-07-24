@@ -452,26 +452,20 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
         
-        # --- CÁLCULO INTELIGENTE DO VENCIMENTO ---
+      # --- CÁLCULO INTELIGENTE DO VENCIMENTO ---
         vencimento_calculado = hoje_br
         eh_cartao = False
         dia_fech = 0
         dia_venc = 0
         
-        # DEPURADOR VISUAL RÁPIDO:
-        st.write(f"🔍 Debug Banco Selecionado: '{f_bnc}' | DataFrame vazio? {df_bancos_info.empty}")
-
-        if not df_bancos_info.empty:
+        if not df_bancos_info.empty and f_bnc:
             try:
-                # Normaliza limpando espaços
                 bancos_coluna_0 = df_bancos_info.iloc[:, 0].astype(str).str.strip()
                 banco_alvo = str(f_bnc).strip()
-                
                 banco_row = df_bancos_info[bancos_coluna_0 == banco_alvo]
                 
                 if not banco_row.empty:
                     tipo_conta = str(banco_row.iloc[0, 2]).strip().lower()
-                    st.write(f"✅ Achou na planilha! Tipo lido: '{tipo_conta}'")
                     
                     if "cartão" in tipo_conta or "cartao" in tipo_conta:
                         eh_cartao = True
@@ -492,12 +486,15 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                         dia_real_venc = min(dia_venc, ultimo_dia_mes)
                         
                         vencimento_calculado = f_compra.replace(year=ano_alvo, month=mes_alvo, day=dia_real_venc)
-                else:
-                    st.warning("⚠️ O banco selecionado não bateu exatamente com a Coluna 0 da planilha de bancos.")
-            except Exception as e:
-                st.error(f"Erro no cálculo: {e}")
+            except Exception:
                 eh_cartao = False
 
+        # --- EXIBIÇÃO E DEFINIÇÃO DO VENCIMENTO ---
+        if eh_cartao:
+            st.markdown(f"📅 **Vencimento (Cartão - Fech: {dia_fech} / Venc: {dia_venc}):** `{vencimento_calculado.strftime('%d/%m/%Y')}`")
+            t_dat = vencimento_calculado
+        else:
+            t_dat = st.date_input("📅 Vencimento", value=hoje_br, format="DD/MM/YYYY")
         # --- EXIBIÇÃO E DEFINIÇÃO DO VENCIMENTO ---
         if eh_cartao:
             st.markdown(f"📅 **Vencimento (Cartão - Fech: {dia_fech} / Venc: {dia_venc}):** `{vencimento_calculado.strftime('%d/%m/%Y')}`")
