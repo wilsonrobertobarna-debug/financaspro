@@ -494,13 +494,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.markdown(f"📅 **Vencimento (Cartão - Fech: {dia_fech} / Venc: {dia_venc}):** `{vencimento_calculado.strftime('%d/%m/%Y')}`")
             t_dat = vencimento_calculado
         else:
-            t_dat = st.date_input("📅 Vencimento", value=hoje_br, format="DD/MM/YYYY")
-        # --- EXIBIÇÃO E DEFINIÇÃO DO VENCIMENTO ---
-        if eh_cartao:
-            st.markdown(f"📅 **Vencimento (Cartão - Fech: {dia_fech} / Venc: {dia_venc}):** `{vencimento_calculado.strftime('%d/%m/%Y')}`")
-            t_dat = vencimento_calculado
-        else:
-            t_dat = st.date_input("📅 Vencimento", value=hoje_br, format="DD/MM/YYYY")
+            t_dat = st.date_input("📅 Vencimento", value=hoje_br, format="DD/MM/YYYY", key="vencimento_banco_comum_novo")
             
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
