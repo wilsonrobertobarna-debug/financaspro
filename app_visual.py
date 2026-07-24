@@ -442,60 +442,63 @@ aba = st.session_state.page
 
 
 # BARRINHA 1: NOVO LANÇAMENTO
-# Inicializa a variável de estado para controlar a abertura se ela não existir
-# BARRINHA 1: NOVO LANÇAMENTO
 if "expander_lancamento_aberto" not in st.session_state:
     st.session_state.expander_lancamento_aberto = False
 
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
-    with st.form("f_novo", clear_on_submit=True):
-        f_bnc = st.selectbox("Banco", bancos_disponiveis, key="sb_banco_novo_lancamento")
-        f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY", key="dt_compra_novo_lancamento")
-        
-        # --- CÁLCULO INTELIGENTE DO VENCIMENTO ---
-        vencimento_calculado = hoje_br
-        eh_cartao = False
-        dia_fech = 0
-        dia_venc = 0
-        
-        if not df_bancos_info.empty and f_bnc:
-            try:
-                bancos_coluna_0 = df_bancos_info.iloc[:, 0].astype(str).str.strip()
-                banco_alvo = str(f_bnc).strip()
-                banco_row = df_bancos_info[bancos_coluna_0 == banco_alvo]
+    
+    # 1. O Banco fica FORA do formulário para atualizar a tela na mesma hora que você troca
+    f_bnc = st.selectbox("Banco", bancos_disponiveis, key="sb_banco_novo_lancamento")
+    
+    # Data da Compra também fora ou logo no começo
+    f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY", key="dt_compra_novo_lancamento")
+    
+    # --- CÁLCULO INTELIGENTE DO VENCIMENTO ---
+    vencimento_calculado = hoje_br
+    eh_cartao = False
+    dia_fech = 0
+    dia_venc = 0
+    
+    if not df_bancos_info.empty and f_bnc:
+        try:
+            bancos_coluna_0 = df_bancos_info.iloc[:, 0].astype(str).str.strip()
+            banco_alvo = str(f_bnc).strip()
+            banco_row = df_bancos_info[bancos_coluna_0 == banco_alvo]
+            
+            if not banco_row.empty:
+                tipo_conta = str(banco_row.iloc[0, 2]).strip().lower()
                 
-                if not banco_row.empty:
-                    tipo_conta = str(banco_row.iloc[0, 2]).strip().lower()
+                if "cartão" in tipo_conta or "cartao" in tipo_conta:
+                    eh_cartao = True
+                    dia_fech = int(banco_row.iloc[0, 3])
+                    dia_venc = int(banco_row.iloc[0, 4])
                     
-                    if "cartão" in tipo_conta or "cartao" in tipo_conta:
-                        eh_cartao = True
-                        dia_fech = int(banco_row.iloc[0, 3])
-                        dia_venc = int(banco_row.iloc[0, 4])
-                        
-                        ano_alvo = f_compra.year
-                        mes_alvo = f_compra.month
-                        
-                        if f_compra.day >= dia_fech:
-                            mes_alvo += 1
-                            if mes_alvo > 12:
-                                mes_alvo = 1
-                                ano_alvo += 1
-                                
-                        import calendar
-                        ultimo_dia_mes = calendar.monthrange(ano_alvo, mes_alvo)[1]
-                        dia_real_venc = min(dia_venc, ultimo_dia_mes)
-                        
-                        vencimento_calculado = f_compra.replace(year=ano_alvo, month=mes_alvo, day=dia_real_venc)
-            except Exception:
-                eh_cartao = False
+                    ano_alvo = f_compra.year
+                    mes_alvo = f_compra.month
+                    
+                    if f_compra.day >= dia_fech:
+                        mes_alvo += 1
+                        if mes_alvo > 12:
+                            mes_alvo = 1
+                            ano_alvo += 1
+                            
+                    import calendar
+                    ultimo_dia_mes = calendar.monthrange(ano_alvo, mes_alvo)[1]
+                    dia_real_venc = min(dia_venc, ultimo_dia_mes)
+                    
+                    vencimento_calculado = f_compra.replace(year=ano_alvo, month=mes_alvo, day=dia_real_venc)
+        except Exception:
+            eh_cartao = False
 
-        # --- EXIBIÇÃO E DEFINIÇÃO DO VENCIMENTO ---
-        if eh_cartao:
-            st.markdown(f"📅 **Vencimento (Cartão - Fech: {dia_fech} / Venc: {dia_venc}):** `{vencimento_calculado.strftime('%d/%m/%Y')}`")
-            t_dat = vencimento_calculado
-        else:
-            t_dat = st.date_input("📅 Data de Vencimento", value=hoje_br, format="DD/MM/YYYY", key="dt_vencimento_banco_comum")
-        
+    # --- EXIBIÇÃO E DEFINIÇÃO DO VENCIMENTO ---
+    if eh_cartao:
+        st.markdown(f"📅 **Vencimento (Cartão - Fech: {dia_fech} / Venc: {dia_venc}):** `{vencimento_calculado.strftime('%d/%m/%Y')}`")
+        t_dat = vencimento_calculado
+    else:
+        t_dat = st.date_input("📅 Data de Vencimento", value=hoje_br, format="DD/MM/YYYY", key="dt_vencimento_banco_comum")
+
+    # 2. Agora entra o formulário com o restante dos campos e o botão Salvar
+    with st.form("f_novo", clear_on_submit=True):
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f", key="val_novo_lancamento")
         f_par = st.number_input("Parcelas", min_value=1, value=1, key="par_novo_lancamento")
         f_desc = st.text_input("📝 Descrição", key="desc_novo_lancamento")
