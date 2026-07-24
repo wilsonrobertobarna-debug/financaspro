@@ -452,13 +452,13 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
         
-      # --- CÁLCULO INTELIGENTE DO VENCIMENTO ---
+        # --- CÁLCULO INTELIGENTE DO VENCIMENTO ---
         vencimento_calculado = hoje_br
         eh_cartao = False
         dia_fech = 0
         dia_venc = 0
         
-        if not df_bancos_info.empty:
+        if not df_bancos_info.empty and f_bnc:
             try:
                 # Procura a linha correspondente ao banco selecionado na Coluna 0
                 bancos_coluna_0 = df_bancos_info.iloc[:, 0].astype(str).str.strip()
@@ -492,15 +492,13 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             except Exception:
                 eh_cartao = False
 
-      # --- EXIBIÇÃO E DEFINIÇÃO DO VENCIMENTO ---
+        # --- EXIBIÇÃO E DEFINIÇÃO DO VENCIMENTO ---
         if eh_cartao:
-            # Se for cartão, exibe fixo calculado da planilha
             st.markdown(f"📅 **Vencimento (Cartão - Fech: {dia_fech} / Venc: {dia_venc}):** `{vencimento_calculado.strftime('%d/%m/%Y')}`")
             t_dat = vencimento_calculado
         else:
-            # Se for banco comum, investimento, etc., libera o campo para você escolher a data livremente
-            t_dat = st.date_input("📅 Vencimento", value=hoje_br, format="DD/MM/YYYY")
-       
+            t_dat = st.date_input("📅 Vencimento", value=hoje_br, format="DD/MM/YYYY") 
+            
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
         f_desc = st.text_input("📝 Descrição")
