@@ -10,6 +10,44 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
+# --- LIMPEZA E PADRONIZAÇÃO VISUAL DO BITELO ---
+st.markdown("""
+<style>
+    /* Oculta elementos desnecessários do Streamlit para um visual mais limpo */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
+    /* Padding compacto para aproveitar melhor a tela */
+    .block-container {
+        padding-top: 1.5rem;
+        padding-bottom: 2rem;
+        padding-left: 3rem;
+        padding-right: 3rem;
+    }
+
+    /* Suaviza as bordas de todos os cartões e métricas */
+    div[data-testid="stMetric"], div.stAlert {
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    /* Estilização limpa para os expanders da sidebar */
+    .streamlit-expanderHeader {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    /* Padronização de tabelas e dataframes */
+    div[data-testid="stDataFrame"] {
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #f0f2f6;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
 # Configuração da página
 st.set_page_config(
     page_title="Painel Wilson",
