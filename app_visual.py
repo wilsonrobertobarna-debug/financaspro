@@ -440,6 +440,7 @@ for item in menu_itens:
 st.sidebar.divider()
 aba = st.session_state.page
 
+
 # BARRINHA 1: NOVO LANÇAMENTO
 # Inicializa a variável de estado para controlar a abertura se ela não existir
 if "expander_lancamento_aberto" not in st.session_state:
@@ -450,7 +451,31 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         # Usando a variável hoje_br que já corrige o fuso horário
         f_bnc = st.selectbox("Banco", bancos_disponiveis)
         f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY")
-        t_dat = st.date_input("Vencimento", datetime.now(), format="DD/MM/YYYY")
+        
+        # --- CÁLCULO INTELIGENTE DO VENCIMENTO AUTOMÁTICO DO CARTÃO/BANCO ---
+        vencimento_calculado = hoje_br
+        if not df_bancos_info.empty:
+            try:
+                # Procura a linha correspondente ao banco selecionado na aba de informações de bancos
+                banco_row = df_bancos_info[df_bancos_info.iloc[:, 0].astype(str).str.strip() == str(f_bnc).strip()]
+                if not banco_row.empty:
+                    # Tenta pegar o dia de vencimento (geralmente na coluna 2 ou ajustado conforme sua planilha)
+                    # Se na sua planilha o vencimento for a segunda coluna (índice 1) ou terceira:
+                    dia_venc = int(banco_row.iloc[0, 1])
+                    # Define o vencimento para o mês da data da compra com o dia configurado do banco
+                    vencimento_calculado = f_compra.replace(day=dia_venc)
+                    # Se o dia de vencimento já passou no mês da compra, joga para o mês seguinte (regra padrão de fatura)
+                    if vencimento_calculado < f_compra:
+                        if f_compra.month == 12:
+                            vencimento_calculado = vencimento_calculado.replace(year=f_compra.year + 1, month=1)
+                        else:
+                            vencimento_calculado = vencimento_calculado.replace(month=f_compra.month + 1)
+            except Exception:
+                vencimento_calculado = f_compra
+
+        # Exibe a data de vencimento calculada automaticamente (travada para novos lançamentos)
+        st.markdown(f"📅 **Vencimento Automático:** `{vencimento_calculado.strftime('%d/%m/%Y')}`")
+        t_dat = vencimento_calculado  # Atribui o vencimento calculado para a variável de salvamento
         
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
@@ -460,22 +485,13 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação", "Vale Alimentação", "Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"]) 
         f_sta = st.selectbox("Status", ["Pago", "Pendente"])
         
-        # Garante que a variável exista para evitar o NameError
-        f_venc_cartao = None 
-
-        # ... (após todos os st.selectbox e inputs do formulário)
-
         if st.form_submit_button("Salvar Lançamento"):
-            # 1. BUSCAR O MAIOR ID DIRETO NA PLANILHA (Sem depender de variáveis externas)
-            # Pegamos todos os valores da aba
+            # 1. BUSCAR O MAIOR ID DIRETO NA PLANILHA
             todos_dados = ws_base.get_all_records()
             
             if todos_dados:
-                # Transformamos em um DataFrame temporário só para achar o maior ID
                 import pandas as pd
                 df_temp = pd.DataFrame(todos_dados)
-                
-                # Se a coluna ID existir, pegamos o maior + 1, senão começa em 1
                 if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
                     proximo_id = int(df_temp['ID'].max()) + 1
                 else:
@@ -485,24 +501,21 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
             # 2. Formatações
             v_str = f"{f_val:.2f}".replace('.', ',')
-            t_dat_str = t_dat.strftime("%d/%m/%Y")
             f_compra_str = f_compra.strftime("%d/%m/%Y")
             
             # 3. Salvar as parcelas
             for i in range(f_par):
                 nova_data = t_dat + relativedelta(months=i)
                 
-                # Cria a descrição já com o número da parcela (Ex: Teste 1/5)
-                # Se for parcela única (1 de 1), podemos deixar limpo ou com 1/1
                 if f_par > 1:
                     desc_com_parcela = f"{f_desc.strip()} {i+1}/{f_par}"
                 else:
-                    desc_com_parcela = f_desc.strip() # Ou f"{f_desc.strip()} 1/1" se preferir
+                    desc_com_parcela = f_desc.strip()
                 
                 ws_base.append_row([
                     nova_data.strftime("%d/%m/%Y"), # Coluna A: Vencimento
                     v_str,                          # Coluna B: Valor
-                    desc_com_parcela,               # Coluna C: Descrição com a parcela embutida!
+                    desc_com_parcela,               # Coluna C: Descrição com a parcela
                     f_cat,                          # Coluna D: Categoria
                     f_tip,                          # Coluna E: Tipo
                     f_bnc,                          # Coluna F: Banco
