@@ -458,23 +458,26 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         dia_fech = 0
         dia_venc = 0
         
-        if not df_bancos_info.empty and f_bnc:
+        # DEPURADOR VISUAL RÁPIDO:
+        st.write(f"🔍 Debug Banco Selecionado: '{f_bnc}' | DataFrame vazio? {df_bancos_info.empty}")
+
+        if not df_bancos_info.empty:
             try:
-                # Procura a linha correspondente ao banco selecionado na Coluna 0
+                # Normaliza limpando espaços
                 bancos_coluna_0 = df_bancos_info.iloc[:, 0].astype(str).str.strip()
-                banco_row = df_bancos_info[bancos_coluna_0 == str(f_bnc).strip()]
+                banco_alvo = str(f_bnc).strip()
+                
+                banco_row = df_bancos_info[bancos_coluna_0 == banco_alvo]
                 
                 if not banco_row.empty:
-                    # Lê o Tipo de Conta (Coluna 2) para ver se é "Cartão"
                     tipo_conta = str(banco_row.iloc[0, 2]).strip().lower()
+                    st.write(f"✅ Achou na planilha! Tipo lido: '{tipo_conta}'")
                     
                     if "cartão" in tipo_conta or "cartao" in tipo_conta:
                         eh_cartao = True
-                        # Coluna 3: Dia de Fechamento | Coluna 4: Dia de Vencimento
                         dia_fech = int(banco_row.iloc[0, 3])
                         dia_venc = int(banco_row.iloc[0, 4])
                         
-                        # Regra do Cartão: Comprou no dia do fechamento ou depois? Vai para o mês seguinte!
                         ano_alvo = f_compra.year
                         mes_alvo = f_compra.month
                         
@@ -489,7 +492,10 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                         dia_real_venc = min(dia_venc, ultimo_dia_mes)
                         
                         vencimento_calculado = f_compra.replace(year=ano_alvo, month=mes_alvo, day=dia_real_venc)
-            except Exception:
+                else:
+                    st.warning("⚠️ O banco selecionado não bateu exatamente com a Coluna 0 da planilha de bancos.")
+            except Exception as e:
+                st.error(f"Erro no cálculo: {e}")
                 eh_cartao = False
 
         # --- EXIBIÇÃO E DEFINIÇÃO DO VENCIMENTO ---
@@ -497,7 +503,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.markdown(f"📅 **Vencimento (Cartão - Fech: {dia_fech} / Venc: {dia_venc}):** `{vencimento_calculado.strftime('%d/%m/%Y')}`")
             t_dat = vencimento_calculado
         else:
-            t_dat = st.date_input("📅 Vencimento", value=hoje_br, format="DD/MM/YYYY") 
+            t_dat = st.date_input("📅 Vencimento", value=hoje_br, format="DD/MM/YYYY")
             
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
