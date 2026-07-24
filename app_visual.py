@@ -455,42 +455,41 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
       # --- CÁLCULO INTELIGENTE DO VENCIMENTO ---
         vencimento_calculado = hoje_br
         eh_cartao = False
+        dia_fech = 0
+        dia_venc = 0
         
         if not df_bancos_info.empty:
             try:
-                # Normaliza o nome do banco selecionado e o da planilha para comparar sem erro de espaço
+                # Procura a linha correspondente ao banco selecionado na Coluna 0
                 bancos_coluna_0 = df_bancos_info.iloc[:, 0].astype(str).str.strip()
                 banco_row = df_bancos_info[bancos_coluna_0 == str(f_bnc).strip()]
                 
                 if not banco_row.empty:
-                    # Pega o dia de vencimento (ajuste o índice 1 se o vencimento estiver em outra coluna na sua planilha)
-                    dia_venc = int(banco_row.iloc[0, 1])
+                    # Lê o Tipo de Conta (Coluna 2) para ver se é "Cartão"
+                    tipo_conta = str(banco_row.iloc[0, 2]).strip().lower()
                     
-                    # Tenta pegar o dia de fechamento (geralmente coluna 2)
-                    try:
-                        dia_fech = int(banco_row.iloc[0, 2])
-                    except Exception:
-                        dia_fech = dia_venc - 7 # Padrão de 7 dias antes se não achar
-
-                    eh_cartao = True
-                    
-                    # Regra do Cartão: Comprou no dia do fechamento ou depois? Vai para o mês seguinte!
-                    ano_alvo = f_compra.year
-                    mes_alvo = f_compra.month
-                    
-                    if f_compra.day >= dia_fech:
-                        mes_alvo += 1
-                        if mes_alvo > 12:
-                            mes_alvo = 1
-                            ano_alvo += 1
-                            
-                    import calendar
-                    ultimo_dia_mes = calendar.monthrange(ano_alvo, mes_alvo)[1]
-                    dia_real_venc = min(dia_venc, ultimo_dia_mes)
-                    
-                    vencimento_calculado = f_compra.replace(year=ano_alvo, month=mes_alvo, day=dia_real_venc)
-            except Exception as e:
-                # Se der qualquer erro, o Streamlit avisa discretamente para sabermos o motivo
+                    if "cartão" in tipo_conta or "cartao" in tipo_conta:
+                        eh_cartao = True
+                        # Coluna 3: Dia de Fechamento | Coluna 4: Dia de Vencimento
+                        dia_fech = int(banco_row.iloc[0, 3])
+                        dia_venc = int(banco_row.iloc[0, 4])
+                        
+                        # Regra do Cartão: Comprou no dia do fechamento ou depois? Vai para o mês seguinte!
+                        ano_alvo = f_compra.year
+                        mes_alvo = f_compra.month
+                        
+                        if f_compra.day >= dia_fech:
+                            mes_alvo += 1
+                            if mes_alvo > 12:
+                                mes_alvo = 1
+                                ano_alvo += 1
+                                
+                        import calendar
+                        ultimo_dia_mes = calendar.monthrange(ano_alvo, mes_alvo)[1]
+                        dia_real_venc = min(dia_venc, ultimo_dia_mes)
+                        
+                        vencimento_calculado = f_compra.replace(year=ano_alvo, month=mes_alvo, day=dia_real_venc)
+            except Exception:
                 eh_cartao = False
 
         # Exibição no formulário
@@ -499,7 +498,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             t_dat = vencimento_calculado
         else:
             t_dat = st.date_input("📅 Vencimento (Banco Comum)", value=hoje_br, format="DD/MM/YYYY")
-
        
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
         f_par = st.number_input("Parcelas", min_value=1, value=1)
