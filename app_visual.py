@@ -84,6 +84,10 @@ if not st.session_state.login:
 # ========================================================
 # 2. TOPO DO SISTEMA (FIXO NO TOPO / STICKY)
 # ========================================================
+# ========================================================
+# 2. TOPO DO SISTEMA (FIXO NATIVO NO TOPO)
+# ========================================================
+
 st.markdown("""
 <style>
     /* Oculta o menu lateral padrão */
@@ -95,55 +99,49 @@ st.markdown("""
     .block-container {
         padding-top: 1rem !important;
     }
-
-    /* TRAVA O TOPO DE FORMA DEFINITIVA */
-    .topo-fixo {
-        position: sticky;
-        top: 0px;
-        z-index: 999999;
-        background-color: var(--background-color, #0e1117);
-        padding-top: 5px;
-        padding-bottom: 2px;
-    }
-
-    /* Aproxima o selectbox e a linha */
-    .topo-fixo div.stSelectbox {
-        margin-bottom: -1.2rem !important;
-    }
-    .topo-fixo hr {
-        margin-top: 0.1rem !important;
-        margin-bottom: 0.4rem !important;
-    }
 </style>
-
-<div class="topo-fixo">
 """, unsafe_allow_html=True)
 
-st.markdown("## 🎮 Painel Wilson")
+# Cria um container fixo nativo para o topo
+topo_container = st.container()
 
-if 'page' not in st.session_state:
-    st.session_state.page = "💰 Finanças & Bancos"
+with topo_container:
+    st.markdown("""
+    <style>
+        /* Trava o container nativo no topo da tela sem criar riscos pretos */
+        [data-testid="stVerticalBlock"]:has(> div > div > label:contains("Navegue pelo sistema")) {
+            position: sticky;
+            top: 0px;
+            z-index: 999999;
+            background-color: var(--background-color, #0e1117);
+            padding-top: 10px;
+            padding-bottom: 5px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("## 🎮 Painel Wilson")
 
-menu_itens = [
-    "💰 Finanças & Bancos",
-    "Pendências",
-    "🐾 Milo & Bolt",
-    "🚗 Meu Veículo",
-    "📄 WhatsApp",
-    "📋 Relatório PDF",
-    "📊 Análises & Configurações"
-]
+    if 'page' not in st.session_state:
+        st.session_state.page = "💰 Finanças & Bancos"
 
-nova_pagina = st.selectbox("Navegue pelo sistema:", menu_itens, index=menu_itens.index(st.session_state.page))
+    menu_itens = [
+        "💰 Finanças & Bancos",
+        "Pendências",
+        "🐾 Milo & Bolt",
+        "🚗 Meu Veículo",
+        "📄 WhatsApp",
+        "📋 Relatório PDF",
+        "📊 Análises & Configurações"
+    ]
 
-if nova_pagina != st.session_state.page:
-    st.session_state.page = nova_pagina
-    st.rerun()
+    nova_pagina = st.selectbox("Navegue pelo sistema:", menu_itens, index=menu_itens.index(st.session_state.page))
 
-st.markdown("---")
+    if nova_pagina != st.session_state.page:
+        st.session_state.page = nova_pagina
+        st.rerun()
 
-st.markdown("</div>", unsafe_allow_html=True)
-
+    st.markdown("---")
 # ========================================================
 # 3. CONTEÚDO DAS PÁGINAS
 # ========================================================
