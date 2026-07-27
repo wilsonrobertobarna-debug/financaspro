@@ -78,6 +78,20 @@ if nova_pagina != st.session_state.page:
 
 st.markdown("---")
 
+# --------------------------------------------------------
+# CSS PARA ELIMINAR O ESPAÇO EM BRANCO EXCESSIVO NO TOPO
+# --------------------------------------------------------
+st.markdown("""
+<style>
+    .block-container {
+        padding-top: 1.2rem !important;
+    }
+    h2, h3, div.element-container {
+        margin-top: 0px !important;
+        padding-top: 0px !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 # ========================================================
 # 3. CONTEÚDO DAS PÁGINAS (SEM SUJEIRA OU TÍTULOS REPETIDOS)
 # ========================================================
