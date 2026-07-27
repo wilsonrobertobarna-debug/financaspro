@@ -1237,6 +1237,8 @@ elif "📄" in aba:
 
 if aba == "📋 Relatório PDF":
     st.markdown("### 📋 Emissão de Relatório Financeiro")
+ if aba == "📋 Relatório PDF":
+    st.markdown("### 📋 Emissão de Relatório Financeiro")
     
     # -------------------------------------------------------------------------
     # LINHA 1 DE FILTROS: BANCO E PERÍODO (Estrutura original mantida intacta)
@@ -1306,10 +1308,10 @@ if aba == "📋 Relatório PDF":
 
             eh_cartao_geral = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
 
-            # --- REGRA DE OURO DA DATA PARA FILTRO E ORDENAÇÃO ---
-            # Se for cartão, o filtro de período e ordenação obedece estritamente à Data da Compra. Senão, à Data de Vencimento.
-            if eh_cartao_geral and col_compra_df:
-                col_filtro_ativo = col_compra_df
+            # --- REGRA DE FILTRAGEM DA FATURA VS CONTA CORRENTE ---
+            # Se for cartão, o filtro de período olha a Data de Vencimento (fatura que vence no mês). Senão, usa a data normal.
+            if eh_cartao_geral and col_data_df:
+                col_filtro_ativo = col_data_df
             else:
                 col_filtro_ativo = col_data_df if col_data_df else df_report.columns[0]
 
@@ -1338,7 +1340,7 @@ if aba == "📋 Relatório PDF":
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
             # ========================================================
-            # ORDENAÇÃO INTELIGENTE POR LINHA OU GERAL
+            # ORDENAÇÃO INTELIGENTE: ORDENA PELA DATA DE COMPRA NO CARTÃO
             # ========================================================
             if banco_relatorio == "Todos":
                 def pega_data_ordenacao(row):
@@ -1351,7 +1353,10 @@ if aba == "📋 Relatório PDF":
                 df_report['DT_ORDEM_TEMP'] = df_report.apply(pega_data_ordenacao, axis=1)
                 df_report['DT_ORDEM'] = pd.to_datetime(df_report['DT_ORDEM_TEMP'], format="%d/%m/%Y", errors='coerce')
             else:
-                df_report['DT_ORDEM'] = pd.to_datetime(df_report[col_filtro_ativo], format="%d/%m/%Y", errors='coerce')
+                if eh_cartao_geral and col_compra_df:
+                    df_report['DT_ORDEM'] = pd.to_datetime(df_report[col_compra_df], format="%d/%m/%Y", errors='coerce')
+                else:
+                    df_report['DT_ORDEM'] = pd.to_datetime(df_report[col_filtro_ativo], format="%d/%m/%Y", errors='coerce')
 
             df_report = df_report.sort_values(by='DT_ORDEM')
 
@@ -1487,7 +1492,7 @@ if aba == "📋 Relatório PDF":
                     pass
 
                 data_vencimento_fatura = f"{dia_venc}/{dt_fim_obj.strftime('%m/%Y')}"
-                pdf.cell(200, 6, txt=f"PERIODO: {p_inicio} ate {p_fim}   |   VENCIMENTO DA FATURA: {data_vencimento_fatura}", ln=1, align="L")
+                pdf.cell(200, 6, txt=f"FATURA COM VENCIMENTO EM: {data_vencimento_fatura}", ln=1, align="L")
             else:
                 pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
             
@@ -1509,7 +1514,7 @@ if aba == "📋 Relatório PDF":
             pdf.ln()
 
             # ========================================================
-            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
+            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF (MOSTRA DATA DA COMPRA)
             # ========================================================
             if not df_report.empty:
                 desc_col_temp = 'Descrição' if 'Descrição' in df_report.columns else 'Descricao'
@@ -1523,7 +1528,7 @@ if aba == "📋 Relatório PDF":
             
             pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
-                # Garante que para Cartão exibe a Data da Compra, e para Conta exibe a Data de Vencimento/Pagamento
+                # Para cartão, força exibir a Data da Compra na linha da tabela
                 b_linha_atual = str(row.get(col_banco_df, '')).upper()
                 is_cartao_linha = "CARTAO" in b_linha_atual or "CARTÃO" in b_linha_atual
                 
