@@ -148,7 +148,7 @@ with topo_container:
 if st.session_state.page == "💰 Finanças & Bancos":
     pass
 
-elif st.session_state.page == "Pendências":
+elif st.session_state.page == "📋 Pendências":
     pass
 
 elif st.session_state.page == "🐾 Milo & Bolt":
