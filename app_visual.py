@@ -82,8 +82,43 @@ if not st.session_state.login:
     st.stop()
 
 # ========================================================
-# 2. TOPO DO SISTEMA (TÍTULO PRINCIPAL E MENU DE NAVEGAÇÃO)
+# 2. TOPO DO SISTEMA (FIXO NO TOPO / STICKY)
 # ========================================================
+st.markdown("""
+<style>
+    /* Oculta o menu lateral padrão */
+    [data-testid="stSidebarNav"] {
+        display: none !important;
+    }
+    
+    /* Respiro ideal no topo da página */
+    .block-container {
+        padding-top: 1rem !important;
+    }
+
+    /* TRAVA O TOPO DE FORMA DEFINITIVA */
+    .topo-fixo {
+        position: sticky;
+        top: 0px;
+        z-index: 999999;
+        background-color: var(--background-color, #0e1117);
+        padding-top: 5px;
+        padding-bottom: 2px;
+    }
+
+    /* Aproxima o selectbox e a linha */
+    .topo-fixo div.stSelectbox {
+        margin-bottom: -1.2rem !important;
+    }
+    .topo-fixo hr {
+        margin-top: 0.1rem !important;
+        margin-bottom: 0.4rem !important;
+    }
+</style>
+
+<div class="topo-fixo">
+""", unsafe_allow_html=True)
+
 st.markdown("## 🎮 Painel Wilson")
 
 if 'page' not in st.session_state:
@@ -106,6 +141,8 @@ if nova_pagina != st.session_state.page:
     st.rerun()
 
 st.markdown("---")
+
+st.markdown("</div>", unsafe_allow_html=True)
 
 # ========================================================
 # 3. CONTEÚDO DAS PÁGINAS
