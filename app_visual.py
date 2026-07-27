@@ -39,6 +39,22 @@ st.markdown("""
         margin-top: 0.2rem !important;
         margin-bottom: 0.5rem !important;
     }
+
+    /* CONGELA O TOPO (Painel Wilson, menu e linha) */
+    /* Fixa o cabeçalho principal do Streamlit no topo da página */
+    header[data-testid="stHeader"] {
+        background: transparent;
+    }
+    
+    /* Cria uma barra flutuante fixa com fundo sólido para o seu menu e título */
+    .st-emotion-cache-18ni7ap, [data-testid="stVerticalBlock"]:has(> div > div > label:contains("Navegue pelo sistema")) {
+        position: sticky;
+        top: 0px;
+        z-index: 99999;
+        background-color: var(--background-color, #0e1117);
+        padding-top: 10px;
+        padding-bottom: 5px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
