@@ -1237,6 +1237,8 @@ elif "📄" in aba:
 
 if aba == "📋 Relatório PDF":
     st.markdown("### 📋 Emissão de Relatório Financeiro")
+    if aba == "📋 Relatório PDF":
+    st.markdown("### 📋 Emissão de Relatório Financeiro")
     
     # -------------------------------------------------------------------------
     # LINHA 1 DE FILTROS: BANCO E PERÍODO (Estrutura original mantida intacta)
@@ -1304,23 +1306,21 @@ if aba == "📋 Relatório PDF":
             if banco_relatorio != "Todos" and col_banco_df:
                 banco_nome = banco_relatorio
 
-            # Identifica se o escopo atual é Cartão de Crédito
             eh_cartao_geral = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
 
-            # --- REGRA INTELIGENTE DE DATA POR TIPO DE CONTA ---
-            # Se for cartão, filtra e ordena por Data da Compra. Se for banco/investimento, por Vencimento/Pagamento.
+            # --- REGRA DE OURO DA DATA PARA FILTRO E ORDENAÇÃO ---
+            # Se for cartão, o filtro de período e ordenação obedece estritamente à Data da Compra. Senão, à Data de Vencimento.
             if eh_cartao_geral and col_compra_df:
                 col_filtro_ativo = col_compra_df
             else:
                 col_filtro_ativo = col_data_df if col_data_df else df_report.columns[0]
 
-            # Tratamento e filtro de Data baseado na regra correta
             df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_filtro_ativo], format="%d/%m/%Y", errors='coerce')
 
             t_ini = pd.to_datetime(b_ini)
             t_fim = pd.to_datetime(b_fim)
 
-            # Aplica os filtros na tabela que vai para o PDF
+            # Aplica o período selecionado
             df_report = df_report[(df_report['DT_FILTRO'] >= t_ini) & (df_report['DT_FILTRO'] <= t_fim)]
 
             if banco_relatorio != "Todos" and col_banco_df:
@@ -1340,18 +1340,17 @@ if aba == "📋 Relatório PDF":
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
             # ========================================================
-            # ORDENAÇÃO INTELIGENTE (Data Compra para Cartão, Vencimento para o resto)
+            # ORDENAÇÃO INTELIGENTE POR LINHA OU GERAL
             # ========================================================
             if banco_relatorio == "Todos":
-                # Se forem vários bancos misturados, cria uma coluna dinâmica por linha
-                def pega_data_linha(row):
+                def pega_data_ordenacao(row):
                     b_linha = str(row.get(col_banco_df, '')).upper()
                     if ("CARTAO" in b_linha or "CARTÃO" in b_linha) and col_compra_df:
                         return row.get(col_compra_df, row.get(col_data_df))
                     else:
                         return row.get(col_data_df)
                 
-                df_report['DT_ORDEM_TEMP'] = df_report.apply(pega_data_linha, axis=1)
+                df_report['DT_ORDEM_TEMP'] = df_report.apply(pega_data_ordenacao, axis=1)
                 df_report['DT_ORDEM'] = pd.to_datetime(df_report['DT_ORDEM_TEMP'], format="%d/%m/%Y", errors='coerce')
             else:
                 df_report['DT_ORDEM'] = pd.to_datetime(df_report[col_filtro_ativo], format="%d/%m/%Y", errors='coerce')
@@ -1526,7 +1525,7 @@ if aba == "📋 Relatório PDF":
             
             pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
-                # Puxa a data correta baseada no banco da linha específica
+                # Garante que para Cartão exibe a Data da Compra, e para Conta exibe a Data de Vencimento/Pagamento
                 b_linha_atual = str(row.get(col_banco_df, '')).upper()
                 is_cartao_linha = "CARTAO" in b_linha_atual or "CARTÃO" in b_linha_atual
                 
