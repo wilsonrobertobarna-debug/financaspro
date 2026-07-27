@@ -458,7 +458,7 @@ if 'page' not in st.session_state:
 
 menu_itens = [
     #"💰 Finanças & Bancos", 
-    #"Pendências", 
+    #"📋Pendências", 
     #"🐾 Milo & Bolt", 
     # "🚗 Meu Veículo",  <-- Colocando o # aqui dentro, o Python ignora só ele!
     #"📄 WhatsApp", 
