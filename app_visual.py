@@ -1311,6 +1311,11 @@ if aba == "📋 Relatório PDF":
         opcoes_cat_rel = ["Todas"] + list(categorias_disponiveis)
         busca_categoria = st.selectbox("📂 Filtrar Categoria:", opcoes_cat_rel)
 
+    with col_rel7:
+        tipos_disponiveis = sorted(df_base['Tipo'].dropna().unique()) if 'Tipo' in df_base.columns else []
+        opcoes_tipo_rel = ["Todos"] + list(tipos_disponiveis)
+        busca_tipo = st.selectbox("🏷️ Filtrar Tipo:", opcoes_tipo_rel)
+
     st.markdown("---")
 
     # Botão para processar e gerar o documento / visualizar
