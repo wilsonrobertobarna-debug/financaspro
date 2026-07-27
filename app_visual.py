@@ -103,6 +103,8 @@ st.markdown("""
 # 3. CONTEÚDO DAS PÁGINAS (Com visual limpo e sem títulos repetidos)
 # ========================================================
 if st.session_state.page == "💰 Finanças & Bancos":
+    st.markdown("## 🎮 Painel Wilson")
+    st.markdown("---")
     # ----------------------------------------------------
     # COLE AQUI TODO O SEU CÓDIGO DO DIA 20 (FINANÇAS)
     # ----------------------------------------------------
