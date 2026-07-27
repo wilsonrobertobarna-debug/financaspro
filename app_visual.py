@@ -1278,6 +1278,9 @@ elif "📄" in aba:
 if aba == "📋 Relatório PDF":
     st.markdown("### 📋 Emissão de Relatório Financeiro")
 
+   if aba == "📋 Relatório PDF":
+    st.markdown("### 📋 Emissão de Relatório Financeiro")
+
     # -------------------------------------------------------------------------
     # LINHA 1 DE FILTROS: BANCO E PERÍODO (Estrutura original mantida intacta)
     # -------------------------------------------------------------------------
@@ -1298,7 +1301,6 @@ if aba == "📋 Relatório PDF":
 
         periodo_pdf = st.date_input("Período do Relatório:", [primeiro_dia_mes, ultimo_dia_mes], format="DD/MM/YYYY")
 
-   
     # -------------------------------------------------------------------------
     # LINHA 2 DE FILTROS: DESCRIÇÃO, BENEFICIÁRIO E STATUS 
     # -------------------------------------------------------------------------
@@ -1315,13 +1317,11 @@ if aba == "📋 Relatório PDF":
     # -------------------------------------------------------------------------
     col_rel6, col_rel7 = st.columns(2)
     with col_rel6:
-        # Pega todas as categorias únicas que existem no seu dataframe para popular o seletor
         categorias_disponiveis = sorted(df_base['Categoria'].dropna().unique()) if 'Categoria' in df_base.columns else []
         opcoes_cat_rel = ["Todas"] + list(categorias_disponiveis)
         busca_categoria = st.selectbox("📂 Filtrar Categoria:", opcoes_cat_rel)
 
     st.markdown("---")
-
     # Botão para processar e gerar o documento
     if st.button("📄 Gerar PDF"):
         try:
