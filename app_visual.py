@@ -25,14 +25,19 @@ st.markdown("""
     [data-testid="stSidebarNav"] {
         display: none !important;
     }
-    /* Reduz drasticamente a margem superior da página inteira */
+    
+    /* Dá o respiro ideal no topo para a barra nativa do Streamlit não esconder o título */
     .block-container {
-        padding-top: 0.8rem !important;
+        padding-top: 2.2rem !important;
     }
-    /* Zera margens extras em títulos e blocos */
-    h2, h3, div.element-container {
-        margin-top: 0px !important;
-        padding-top: 0px !important;
+    
+    /* Cola a linha divisória e o conteúdo logo abaixo do menu, eliminando o vão */
+    div.stSelectbox {
+        margin-bottom: -1rem !important;
+    }
+    hr {
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.8rem !important;
     }
 </style>
 """, unsafe_allow_html=True)
