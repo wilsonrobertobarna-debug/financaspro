@@ -127,7 +127,7 @@ with topo_container:
 
     menu_itens = [
         "💰 Finanças & Bancos",
-        "Pendências",
+        "📋 Pendências",
         "🐾 Milo & Bolt",
         "🚗 Meu Veículo",
         "📄 WhatsApp",
