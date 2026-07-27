@@ -50,6 +50,7 @@ if not st.session_state.login:
                 st.error("Senha Incorreta.")
                 
     st.stop()
+
 # ========================================================
 # 2. MENU NO TOPO (SÓ APARECE DEPOIS DE LOGAR)
 # ========================================================
@@ -99,7 +100,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ========================================================
-# 3. CONTEÚDO DAS PÁGINAS
+# 3. CONTEÚDO DAS PÁGINAS (Com visual limpo e sem títulos repetidos)
 # ========================================================
 if st.session_state.page == "💰 Finanças & Bancos":
     # ----------------------------------------------------
@@ -108,28 +109,28 @@ if st.session_state.page == "💰 Finanças & Bancos":
     pass
 
 elif st.session_state.page == "Pendências":
-    st.title("⏳ Tela de Pendências")
-    st.write("Em construção...")
+    # Espaço reservado para a lógica de Pendências sem poluição no topo
+    pass
 
 elif st.session_state.page == "🐾 Milo & Bolt":
-    st.title("🐾 Milo & Bolt")
-    st.write("Informações dos pets...")
+    # Espaço reservado para os pets sem poluição no topo
+    pass
 
 elif st.session_state.page == "🚗 Meu Veículo":
-    st.title("🚗 Meu Veículo")
-    st.write("Controle do veículo...")
+    # Espaço reservado para o veículo sem poluição no topo
+    pass
 
 elif st.session_state.page == "📄 WhatsApp":
-    st.title("📄 WhatsApp")
-    st.write("Automações do WhatsApp...")
+    # Espaço reservado para o WhatsApp sem poluição no topo
+    pass
 
 elif st.session_state.page == "📋 Relatório PDF":
-    st.title("📋 Relatório PDF")
-    st.write("Geração de relatórios...")
+    # Aqui entra o código dos filtros do PDF direto, sem st.title repetido!
+    pass
 
 elif st.session_state.page == "📊 Análises & Configurações":
-    st.title("📊 Análises & Configurações")
-    st.write("Configurações do sistema...")
+    # Espaço reservado para análises sem poluição no topo
+    pass
 
 
 if not st.session_state.login:
