@@ -1664,6 +1664,10 @@ if aba == "📋 Relatório PDF":
     if busca_status != "Todos" and col_status_df:
         df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
+    # Aplica Categoria na tela
+    if 'busca_categoria' in locals() and busca_categoria != "Todas" and 'Categoria' in df_tela.columns:
+        df_tela = df_tela[df_tela['Categoria'].str.upper().str.strip() == str(busca_categoria).upper()]
+
    # --- FAXINA RIGOROSA ---
     # Lista de colunas proibidas
     colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
