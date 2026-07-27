@@ -1278,8 +1278,11 @@ elif "📄" in aba:
 if aba == "📋 Relatório PDF":
     st.markdown("### 📋 Emissão de Relatório Financeiro")
 
+   if aba == "📋 Relatório PDF":
+    st.markdown("### 📋 Emissão de Relatório Financeiro")
+
     # -------------------------------------------------------------------------
-    # LINHA 1 DE FILTROS: BANCO E PERÍODO (Estrutura original mantida intacta)
+    # 1. FILTROS DA TELA (Banco, Período, Descrição, Beneficiário, Status e Categoria)
     # -------------------------------------------------------------------------
     col_rel1, col_rel2 = st.columns(2)
     with col_rel1:
@@ -1287,10 +1290,8 @@ if aba == "📋 Relatório PDF":
         banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel)
         
     with col_rel2:
-        # Calcula automaticamente o primeiro e o último dia do mês atual
         hoje_atual = datetime.now()
         primeiro_dia_mes = hoje_atual.replace(day=1)
-        
         if hoje_atual.month == 12:
             ultimo_dia_mes = hoje_atual.replace(year=hoje_atual.year + 1, month=1, day=1) - timedelta(days=1)
         else:
@@ -1298,9 +1299,6 @@ if aba == "📋 Relatório PDF":
 
         periodo_pdf = st.date_input("Período do Relatório:", [primeiro_dia_mes, ultimo_dia_mes], format="DD/MM/YYYY")
 
-    # -------------------------------------------------------------------------
-    # LINHA 2 DE FILTROS: DESCRIÇÃO, BENEFICIÁRIO E STATUS 
-    # -------------------------------------------------------------------------
     col_rel3, col_rel4, col_rel5 = st.columns(3)
     with col_rel3:
         busca_desc = st.text_input("🔍 Pesquisar por Descrição:", "").strip()
@@ -1309,9 +1307,7 @@ if aba == "📋 Relatório PDF":
     with col_rel5:
         busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
 
-    # -------------------------------------------------------------------------
-    # LINHA 3 DE FILTROS: CATEGORIA
-    # -------------------------------------------------------------------------
+    # Nova linha para o filtro de Categoria
     col_rel6, col_rel7 = st.columns(2)
     with col_rel6:
         categorias_disponiveis = sorted(df_base['Categoria'].dropna().unique()) if 'Categoria' in df_base.columns else []
@@ -1319,7 +1315,8 @@ if aba == "📋 Relatório PDF":
         busca_categoria = st.selectbox("📂 Filtrar Categoria:", opcoes_cat_rel)
 
     st.markdown("---")
-    # Botão para processar e gerar o documento
+
+    # Botão para processar e gerar o documento / visualizar
     if st.button("📄 Gerar PDF"):
         try:
             if isinstance(periodo_pdf, (list, tuple)):
@@ -1331,15 +1328,15 @@ if aba == "📋 Relatório PDF":
                 b_ini = b_fim = periodo_pdf
 
             # ========================================================
-            # 1. INICIALIZAÇÃO DO PDF
+            # INICIALIZAÇÃO DO PDF
             # ========================================================
             from fpdf import FPDF
             pdf = FPDF(orientation='P', unit='mm', format='A4')
-            pdf.set_margins(left=8, top=10, right=8) # Margem lateral ajustada para dar o respiro
+            pdf.set_margins(left=8, top=10, right=8)
             pdf.add_page()
 
             # ========================================================
-            # 2. CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
+            # CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
             # ========================================================
             df_report = df_base.copy()
 
@@ -1347,7 +1344,6 @@ if aba == "📋 Relatório PDF":
             col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
             col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
-            col_compra_df = next((c for c in df_report.columns if c.upper() in ['COMPRA', 'DATA COMPRA', 'DT COMPRA', 'DATA_COMPRA']), None)
 
             banco_nome = "Todos os Bancos"
             if banco_relatorio != "Todos" and col_banco_df:
@@ -1355,8 +1351,6 @@ if aba == "📋 Relatório PDF":
 
             eh_cartao_geral = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
 
-            # --- REGRA DE FILTRAGEM DA FATURA VS CONTA CORRENTE ---
-            # Se for cartão, o filtro de período olha a Data de Vencimento (fatura que vence no mês). Senão, usa a data normal.
             if eh_cartao_geral and col_data_df:
                 col_filtro_ativo = col_data_df
             else:
@@ -1367,27 +1361,24 @@ if aba == "📋 Relatório PDF":
             t_ini = pd.to_datetime(b_ini)
             t_fim = pd.to_datetime(b_fim)
 
-            # Aplica o período selecionado
+            # Aplica os filtros
             df_report = df_report[(df_report['DT_FILTRO'] >= t_ini) & (df_report['DT_FILTRO'] <= t_fim)]
 
             if banco_relatorio != "Todos" and col_banco_df:
                 df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_nome).upper()]
 
-            # 1. Filtra pela Descrição
             if busca_desc and col_desc_df:
                 df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
 
-            # 2. Filtro pelo Beneficiário (Coluna J)
             if busca_benef:
-                col_benef_nome = df_report.columns[9] # J é o índice 9
+                col_benef_nome = df_report.columns[9] 
                 df_report = df_report[df_report[col_benef_nome].astype(str).str.contains(busca_benef, case=False, na=False)]
 
-            # 3. Filtro pelo Status
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
-                
-            # 4. Filtro pela Categoria
-            if 'busca_categoria' in locals() and busca_categoria != "Todas" and 'Categoria' in df_report.columns:
+
+            # Filtro de Categoria integrado com sucesso
+            if busca_categoria != "Todas" and 'Categoria' in df_report.columns:
                 df_report = df_report[df_report['Categoria'].str.upper().str.strip() == str(busca_categoria).upper()]
 
             # ========================================================
