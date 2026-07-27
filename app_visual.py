@@ -17,11 +17,22 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+# CSS GLOBAL: Joga para o topo e elimina espaçamentos excessivos de uma vez
 st.markdown("""
 <style>
-    /* Oculta completamente a lista de páginas automáticas da barra lateral */
+    /* Oculta o menu lateral padrão */
     [data-testid="stSidebarNav"] {
         display: none !important;
+    }
+    /* Reduz drasticamente a margem superior da página inteira */
+    .block-container {
+        padding-top: 0.8rem !important;
+    }
+    /* Zera margens extras em títulos e blocos */
+    h2, h3, div.element-container {
+        margin-top: 0px !important;
+        padding-top: 0px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -33,14 +44,12 @@ if 'login' not in st.session_state:
     st.session_state.login = False
 
 if not st.session_state.login:
-    # Cria colunas para o login não esticar na tela toda
     _, col_login, _ = st.columns([1, 1.5, 1])
     
     with col_login:
-        st.markdown("<br><br>", unsafe_allow_html=True) # Um respiro no topo
+        st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown("### 🔒 Acesso Seguro - Painel Wilson")
         senha = st.text_input("Digite sua senha:", type="password", key="senha_input")
-        #senha = st.text_input("Digite sua senha:", type="password")
         
         if st.button("🔓 Desbloquear", use_container_width=True):
             if senha == "Wilson123":
@@ -69,7 +78,6 @@ menu_itens = [
     "📊 Análises & Configurações"
 ]
 
-# Menu otimizado para o celular
 nova_pagina = st.selectbox("Navegue pelo sistema:", menu_itens, index=menu_itens.index(st.session_state.page))
 
 if nova_pagina != st.session_state.page:
@@ -78,29 +86,10 @@ if nova_pagina != st.session_state.page:
 
 st.markdown("---")
 
-# --------------------------------------------------------
-# CSS PARA ELIMINAR O ESPAÇO EM BRANCO EXCESSIVO NO TOPO
-# --------------------------------------------------------
-st.markdown("""
-<style>
-    .block-container {
-        padding-top: 1.2rem !important;
-    }
-    h2, h3, div.element-container {
-        margin-top: 0px !important;
-        padding-top: 0px !important;
-    }
-</style>
-""", unsafe_allow_html=True)
 # ========================================================
-# 3. CONTEÚDO DAS PÁGINAS (SEM SUJEIRA OU TÍTULOS REPETIDOS)
+# 3. CONTEÚDO DAS PÁGINAS
 # ========================================================
 if st.session_state.page == "💰 Finanças & Bancos":
-    # ----------------------------------------------------
-    # COLE AQUI TODO O SEU CÓDIGO DO DIA 20 (FINANÇAS)
-    # (Remova qualquer "st.markdown('## 🎮 Painel Wilson')" 
-    # ou títulos antigos que estejam soltos bem no começo dele)
-    # ----------------------------------------------------
     pass
 
 elif st.session_state.page == "Pendências":
@@ -120,7 +109,6 @@ elif st.session_state.page == "📋 Relatório PDF":
 
 elif st.session_state.page == "📊 Análises & Configurações":
     pass
-
 
 if not st.session_state.login:
     # Criamos 3 colunas: esquerda e direita são vazias, o centro é a caixa de login
