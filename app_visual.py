@@ -26,18 +26,18 @@ st.markdown("""
         display: none !important;
     }
     
-    /* Dá o respiro ideal no topo para a barra nativa do Streamlit não esconder o título */
+    /* Respiro ideal no topo */
     .block-container {
         padding-top: 2.2rem !important;
     }
     
-    /* Cola a linha divisória e o conteúdo logo abaixo do menu, eliminando o vão */
+    /* Aproxima bem o menu da linha divisória */
     div.stSelectbox {
-        margin-bottom: -1rem !important;
+        margin-bottom: -1.5rem !important;
     }
     hr {
-        margin-top: 0.5rem !important;
-        margin-bottom: 0.8rem !important;
+        margin-top: 0.2rem !important;
+        margin-bottom: 0.5rem !important;
     }
 </style>
 """, unsafe_allow_html=True)
