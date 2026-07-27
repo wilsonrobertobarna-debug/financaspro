@@ -1278,9 +1278,6 @@ elif "📄" in aba:
 if aba == "📋 Relatório PDF":
     st.markdown("### 📋 Emissão de Relatório Financeiro")
 
-   if aba == "📋 Relatório PDF":
-    st.markdown("### 📋 Emissão de Relatório Financeiro")
-
     # -------------------------------------------------------------------------
     # 1. FILTROS DA TELA (Banco, Período, Descrição, Beneficiário, Status e Categoria)
     # -------------------------------------------------------------------------
