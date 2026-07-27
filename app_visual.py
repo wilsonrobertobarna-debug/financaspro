@@ -1240,7 +1240,7 @@ elif "📄" in aba:
             saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
             total_patrimonio += s_final
 
-    # 2. RESUMO DO RELATÓRIO (Rendimento e Sobra)
+# 2. RESUMO DO RELATÓRIO (Rendimento, Sobra e Pendentes)
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
 
@@ -1255,17 +1255,16 @@ elif "📄" in aba:
         rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
         des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
         sobra = rec_v - des_v
-    else:
-        rec_v = des_v = rend_v = sobra = 0.0
 
-   # 3. TEXTO FINAL
-    # Tratando o valor do cartão para garantir que fique negativo e com o emoji vermelho
-    # (Se a variável do cartão no seu código se chamar diferente, ajuste o nome dela aqui dentro)
-    val_cartao_negativo = -abs(cartao_v) if 'cartao_v' in locals() and cartao_v else 0.0
+        # SOMA DOS PENDENTES NO PERÍODO (contas que vencem no mês e estão pendentes)
+        val_pendente = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'].str.upper() == 'PENDENTE') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
+    else:
+        rec_v = des_v = rend_v = sobra = val_pendente = 0.0
+
+    # 3. TEXTO FINAL
+    # Tratando o valor do cartão (usando a variável 'usado' que o seu loop já calcula)
+    val_cartao_negativo = -abs(usado) if 'usado' in locals() and usado else 0.0
     cartao_fmt = f"-{m_fmt(abs(val_cartao_negativo))} 🔴" if val_cartao_negativo != 0 else m_fmt(0)
-    
-    # Variável do pendente (substitua 'pendente_v' pelo nome exato da variável de pendentes no seu código, se for diferente)
-    val_pendente = pendente_v if 'pendente_v' in locals() and pendente_v else 0.0
 
     relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"========================================\n"
