@@ -1669,6 +1669,11 @@ if aba == "📋 Relatório PDF":
     if busca_desc and col_desc_df:
         df_tela = df_tela[df_tela[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
 
+    # Aplica Beneficiário na tela
+    if busca_benef:
+        col_benef_nome = df_tela.columns[9]  # Coluna J é o índice 9
+        df_tela = df_tela[df_tela[col_benef_nome].astype(str).str.contains(busca_benef, case=False, na=False)]
+
     # Aplica Status na tela
     if busca_status != "Todos" and col_status_df:
         df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
