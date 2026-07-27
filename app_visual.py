@@ -1388,6 +1388,9 @@ if aba == "📋 Relatório PDF":
             # 3. Filtro pelo Status
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
+            # 4. Filtro pela Categoria
+            if 'busca_categoria' in locals() and busca_categoria != "Todas" and 'Categoria' in df_report.columns:
+                df_report = df_report[df_report['Categoria'].str.upper().str.strip() == str(busca_categoria).upper()]
 
             # ========================================================
             # ORDENAÇÃO INTELIGENTE: ORDENA PELA DATA DE COMPRA NO CARTÃO
