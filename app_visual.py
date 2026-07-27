@@ -1298,33 +1298,39 @@ if aba == "📋 Relatório PDF":
             col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
             col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
-
-            # Tratamento e filtro de Data
-            if col_data_df:
-                df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_data_df], format="%d/%m/%Y", errors='coerce')
-            else:
-                df_report['DT_FILTRO'] = pd.to_datetime(df_report.index, errors='coerce')
-
-            t_ini = pd.to_datetime(b_ini)
-            t_fim = pd.to_datetime(b_fim)
-
-            # Guardamos uma cópia completa para calcular o saldo retroativo do Banco antes de filtrar o período final
-            df_retroativo = df_report.copy()
-
-            # Aplica os filtros na tabela que vai de fato para o PDF
-            df_report = df_report[(df_report['DT_FILTRO'] >= t_ini) & (df_report['DT_FILTRO'] <= t_fim)]
+            col_compra_df = next((c for c in df_report.columns if c.upper() in ['COMPRA', 'DATA COMPRA', 'DT COMPRA', 'DATA_COMPRA']), None)
 
             banco_nome = "Todos os Bancos"
             if banco_relatorio != "Todos" and col_banco_df:
                 banco_nome = banco_relatorio
+
+            # Identifica se o escopo atual é Cartão de Crédito
+            eh_cartao_geral = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
+
+            # --- REGRA INTELIGENTE DE DATA POR TIPO DE CONTA ---
+            # Se for cartão, filtra e ordena por Data da Compra. Se for banco/investimento, por Vencimento/Pagamento.
+            if eh_cartao_geral and col_compra_df:
+                col_filtro_ativo = col_compra_df
+            else:
+                col_filtro_ativo = col_data_df if col_data_df else df_report.columns[0]
+
+            # Tratamento e filtro de Data baseado na regra correta
+            df_report['DT_FILTRO'] = pd.to_datetime(df_report[col_filtro_ativo], format="%d/%m/%Y", errors='coerce')
+
+            t_ini = pd.to_datetime(b_ini)
+            t_fim = pd.to_datetime(b_fim)
+
+            # Aplica os filtros na tabela que vai para o PDF
+            df_report = df_report[(df_report['DT_FILTRO'] >= t_ini) & (df_report['DT_FILTRO'] <= t_fim)]
+
+            if banco_relatorio != "Todos" and col_banco_df:
                 df_report = df_report[df_report[col_banco_df].str.upper().str.strip() == str(banco_nome).upper()]
 
-            # 1. Filtra pela Descrição (Coluna C)
+            # 1. Filtra pela Descrição
             if busca_desc and col_desc_df:
                 df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
 
             # 2. Filtro pelo Beneficiário (Coluna J)
-            # Garantindo que ele busque especificamente na Coluna J (índice 9)
             if busca_benef:
                 col_benef_nome = df_report.columns[9] # J é o índice 9
                 df_report = df_report[df_report[col_benef_nome].astype(str).str.contains(busca_benef, case=False, na=False)]
@@ -1333,32 +1339,34 @@ if aba == "📋 Relatório PDF":
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
-            # 3. Filtro pelo Status
-            if busca_status != "Todos" and col_status_df:
-                df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
+            # ========================================================
+            # ORDENAÇÃO INTELIGENTE (Data Compra para Cartão, Vencimento para o resto)
+            # ========================================================
+            if banco_relatorio == "Todos":
+                # Se forem vários bancos misturados, cria uma coluna dinâmica por linha
+                def pega_data_linha(row):
+                    b_linha = str(row.get(col_banco_df, '')).upper()
+                    if ("CARTAO" in b_linha or "CARTÃO" in b_linha) and col_compra_df:
+                        return row.get(col_compra_df, row.get(col_data_df))
+                    else:
+                        return row.get(col_data_df)
+                
+                df_report['DT_ORDEM_TEMP'] = df_report.apply(pega_data_linha, axis=1)
+                df_report['DT_ORDEM'] = pd.to_datetime(df_report['DT_ORDEM_TEMP'], format="%d/%m/%Y", errors='coerce')
+            else:
+                df_report['DT_ORDEM'] = pd.to_datetime(df_report[col_filtro_ativo], format="%d/%m/%Y", errors='coerce')
 
-            # ========================================================
-            # ORDENAÇÃO E FILTRAGEM PELA DATA DE COMPRA PARA O PDF
-            # ========================================================
-            col_compra_df = next((c for c in df_report.columns if c.upper() in ['COMPRA', 'DATA COMPRA', 'DT COMPRA', 'DATA_COMPRA']), None)
-            
-            if col_compra_df:
-                # Converte para data temporária para ordenar certinho pela compra
-                df_report['DT_ORDEM'] = pd.to_datetime(df_report[col_compra_df], format="%d/%m/%Y", errors='coerce')
-                df_report = df_report.sort_values(by='DT_ORDEM')
+            df_report = df_report.sort_values(by='DT_ORDEM')
 
             # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
             # ========================================================
             base_inicial = 0.0
             
-            # REGRA 1: Se for Cartão de Crédito, o saldo inicial DEVE vir zerado
-            if "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper():
+            if eh_cartao_geral:
                 base_inicial = 0.0
             else:
-                # REGRA 2: Banco - Pega o Saldo Inicial do Sistema e aplica as movimentações até o dia 17
                 try:
-                    # 3.1 Primeiro, buscamos o Saldo Inicial de Cadastro (Aquele de Abril, ex: R$ 17,07)
                     saldo_sistema_abril = 0.0
                     try:
                         ws_bancos = sh.worksheet("Bancos")
@@ -1382,7 +1390,6 @@ if aba == "📋 Relatório PDF":
                     except:
                         saldo_sistema_abril = 0.0
 
-                    # 3.2 Agora, calculamos a movimentação que aconteceu desde o começo até o dia 17/05
                     df_historico = df_base.copy()
                     col_data_h = next((c for c in df_historico.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
                     col_banco_h = next((c for c in df_historico.columns if c.upper() in ['BANCO', 'CONTA']), None)
@@ -1395,7 +1402,6 @@ if aba == "📋 Relatório PDF":
                     if banco_nome != "Todos os Bancos" and col_banco_h:
                         df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == str(banco_nome).upper()]
                     
-                    # Filtra tudo o que aconteceu estritamente ANTES do dia de início do relatório (antes do dia 18)
                     df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
                     
                     saldo_acumulado_passado = 0.0
@@ -1421,12 +1427,12 @@ if aba == "📋 Relatório PDF":
                         else:
                             saldo_acumulado_passado += val_p
                     
-                    # O saldo inicial real no dia 18 é o saldo base do sistema + as movimentações do passado!
                     base_inicial = saldo_sistema_abril + saldo_acumulado_passado
                 except:
                     base_inicial = 0.0
 
             saldo_anterior = base_inicial 
+
             # ========================================================
             # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO
             # ========================================================
@@ -1446,49 +1452,35 @@ if aba == "📋 Relatório PDF":
             
             df_report['Saldo_Acum'] = saldos_lista
 
-           
             # ========================================================
-            # 5. MONTAGEM DO CABEÇALHO DO PDF (Com Beneficiário Garantido)
+            # 5. MONTAGEM DO CABEÇALHO DO PDF
             # ========================================================
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
             
-            # Pega o valor do beneficiário de onde quer que ele venha na tela
             val_benef = str(locals().get('busca_benef', 'Todos')).strip()
-            
-            # Se não estiver vazio e não for "Todos", imprime obrigatoriamente logo abaixo do título
             if val_benef and val_benef.upper() != "TODOS" and val_benef != "---":
                 pdf.set_font("Arial", 'B', 10)
                 pdf.cell(200, 6, txt=f"BENEFICIARIO: {val_benef.upper()}", ln=1, align="L")
             
             pdf.ln(2)
-            
             pdf.set_font("Arial", '', 10)
             p_inicio = pd.to_datetime(b_ini).strftime('%d/%m/%Y')
             p_fim = pd.to_datetime(b_fim).strftime('%d/%m/%Y')
             
-            # Banco / Cartão Selecionado
-           # Banco / Cartão Selecionado
             pdf.set_font("Arial", 'B', 10)
             pdf.cell(200, 6, txt=f"BANCO / CARTAO: {str(banco_nome).upper()}", ln=1, align="L")
         
-            # Período e Vencimento da Fatura (Dinâmico buscando do Sheets)
-           # Período e Vencimento da Fatura (Busca universal em qualquer DataFrame disponível)
-            eh_cartao = "CARTAO" in str(banco_nome).upper() or "CARTÃO" in str(banco_nome).upper()
-            if eh_cartao:
+            if eh_cartao_geral:
                 dt_fim_obj = pd.to_datetime(b_fim)
-                dia_venc = "20" # Padrão caso falhe tudo
-                
+                dia_venc = "20"
                 try:
-                    # Procura em todas as variáveis do Streamlit por uma que tenha 'Nome do Banco' e 'Dia de Vencimento'
                     for var_name, var_val in list(locals().items()) + list(globals().items()):
                         if isinstance(var_val, pd.DataFrame) and 'Nome do Banco' in var_val.columns and 'Dia de Vencimento' in var_val.columns:
                             banco_busca = str(banco_nome).upper().strip()
-                            # Tenta achar por correspondência exata ou parcial (ex: Mercado Pago)
                             match = var_val[var_val['Nome do Banco'].astype(str).str.upper().str.strip() == banco_busca]
                             if match.empty:
                                 match = var_val[var_val['Nome do Banco'].astype(str).str.upper().str.contains(banco_busca, na=False)]
-                            
                             if not match.empty:
                                 val_venc = match['Dia de Vencimento'].values[0]
                                 if pd.notna(val_venc):
@@ -1502,31 +1494,30 @@ if aba == "📋 Relatório PDF":
             else:
                 pdf.cell(200, 6, txt=f"PERIODO DO RELATORIO: {p_inicio} ate {p_fim}", ln=1, align="L")
             
-            # Saldo Anterior
             txt_saldo_ini = f"R$ {saldo_anterior:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
             pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
             pdf.ln(5)
             
-            # Cabeçalho da Tabela (Mostrando "Dt Compra" na primeira coluna)
+            # --- TÍTULO DA COLUNA DINÂMICO ---
+            nome_coluna_data_pdf = "Dt Compra" if eh_cartao_geral else "Dt Venc/Pag"
+
             pdf.set_font("Arial", 'B', 9)
-            pdf.cell(20, 7, "Dt Compra", 1)
+            pdf.cell(22, 7, nome_coluna_data_pdf, 1)
             pdf.cell(18, 7, "Tipo", 1)
-            pdf.cell(35, 7, "Categoria", 1)
+            pdf.cell(33, 7, "Categoria", 1)
             pdf.cell(45, 7, "Descricao", 1)
             pdf.cell(25, 7, "Valor", 1)
             pdf.cell(32, 7, "Saldo Acum.", 1)
-            pdf.cell(20, 7, "Status", 1)
+            pdf.cell(25, 7, "Status", 1)
             pdf.ln()
+
             # ========================================================
-            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF (Numeração Sequencial por Descrição)
+            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
             if not df_report.empty:
                 desc_col_temp = 'Descrição' if 'Descrição' in df_report.columns else 'Descricao'
                 if desc_col_temp in df_report.columns:
-                    # Padroniza a descrição para maiúsculo para evitar conflitos de digitação
                     df_report['_chave_desc'] = df_report[desc_col_temp].astype(str).str.strip().str.upper()
-                    
-                    # Numera sequencialmente cada ocorrência dessa mesma descrição no relatório
                     df_report['_parc_atual'] = df_report.groupby('_chave_desc').cumcount() + 1
                     df_report['_parc_total'] = df_report.groupby('_chave_desc')['_chave_desc'].transform('count')
                 else:
@@ -1535,22 +1526,25 @@ if aba == "📋 Relatório PDF":
             
             pdf.set_font("Arial", '', 9)
             for index, row in df_report.iterrows():
-                # Puxa estritamente a data da compra para a tabela
-                data_str = str(row.get(col_compra_df, '---')) if col_compra_df else '---'
+                # Puxa a data correta baseada no banco da linha específica
+                b_linha_atual = str(row.get(col_banco_df, '')).upper()
+                is_cartao_linha = "CARTAO" in b_linha_atual or "CARTÃO" in b_linha_atual
+                
+                if is_cartao_linha and col_compra_df:
+                    data_str = str(row.get(col_compra_df, '---'))
+                else:
+                    data_str = str(row.get(col_data_df, '---'))
                 
                 tipo_str = str(row.get('Tipo', '---')).strip()
-                cat_val = str(row.get('Categoria', 'Geral'))[:18]
+                cat_val = str(row.get('Categoria', 'Geral'))[:16]
                 
                 desc_base = str(row.get('Descrição', row.get('Descricao', 'Sem nome'))).strip()
-                
                 p_atual = row.get('_parc_atual', 1)
                 p_total = row.get('_parc_total', 1)
                 
-                # Se a descrição se repetir mais de uma vez no relatório, coloca o formato x/y (Ex: TESTE 1/5)
                 if int(p_total) > 1:
                     desc_val = f"{desc_base} {int(p_atual)}/{int(p_total)}"[:24]
                 else:
-                    # Se for um lançamento único, deixa apenas o nome limpo (ou mude para f'{desc_base} 1/1' se preferir)
                     desc_val = desc_base[:24]
 
                 valor_val = pd.to_numeric(row.get('V_Num', row.get('Valor', 0)), errors='coerce')
@@ -1558,9 +1552,10 @@ if aba == "📋 Relatório PDF":
                 saldo_val = row.get('Saldo_Acum', 0.0)
                 status_val = str(row.get('Status', '-'))
                 
-                if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper():
-                    texto_valor = f"- R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                    cor_valor = (255, 0, 0)
+                # --- VALORES NEGATIVOS DESTACADOS EM VERMELHO COM SINAL ---
+                if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper() or valor_val < 0:
+                    texto_valor = f"- R$ {abs(valor_val):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    cor_valor = (255, 0, 0) # Vermelho
                 else:
                     texto_valor = f"R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                     cor_valor = (0, 0, 0)
@@ -1568,9 +1563,9 @@ if aba == "📋 Relatório PDF":
                 texto_saldo = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                 cor_saldo = (255, 0, 0) if saldo_val < 0 else (0, 0, 0)
 
-                pdf.cell(20, 6, data_str, 1)
+                pdf.cell(22, 6, data_str, 1)
                 pdf.cell(18, 6, tipo_str, 1)
-                pdf.cell(35, 6, cat_val, 1)
+                pdf.cell(33, 6, cat_val, 1)
                 pdf.cell(45, 6, desc_val, 1)
                 
                 pdf.set_text_color(*cor_valor)
@@ -1580,7 +1575,7 @@ if aba == "📋 Relatório PDF":
                 pdf.cell(32, 6, texto_saldo, 1)
                 
                 pdf.set_text_color(0, 0, 0)
-                pdf.cell(20, 6, status_val, 1)
+                pdf.cell(25, 6, status_val, 1)
                 pdf.ln()
 
             pdf_output = pdf.output(dest='S')
@@ -1597,7 +1592,6 @@ if aba == "📋 Relatório PDF":
 
         except Exception as e:
             st.error(f"Erro ao gerar o PDF: {e}")
-
     # =========================================================================
     # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS 4 FILTROS (VISUAL LIMPO)
     # =========================================================================
