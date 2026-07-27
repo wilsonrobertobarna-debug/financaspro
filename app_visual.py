@@ -52,18 +52,9 @@ if not st.session_state.login:
     st.stop()
 
 # ========================================================
-# 2. MENU NO TOPO (SÓ APARECE DEPOIS DE LOGAR)
+# 2. TOPO DO SISTEMA (TÍTULO PRINCIPAL E MENU DE NAVEGAÇÃO)
 # ========================================================
 st.markdown("## 🎮 Painel Wilson")
-st.markdown("""
-<style>
-    /* Oculta completamente a lista de páginas automáticas da barra lateral */
-    [data-testid="stSidebarNav"] {
-        display: none !important;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 
 if 'page' not in st.session_state:
     st.session_state.page = "💰 Finanças & Bancos"
@@ -78,7 +69,7 @@ menu_itens = [
     "📊 Análises & Configurações"
 ]
 
-# Menu otimizado para não poluir o celular
+# Menu otimizado para o celular
 nova_pagina = st.selectbox("Navegue pelo sistema:", menu_itens, index=menu_itens.index(st.session_state.page))
 
 if nova_pagina != st.session_state.page:
@@ -86,52 +77,34 @@ if nova_pagina != st.session_state.page:
     st.rerun()
 
 st.markdown("---")
-st.markdown("""
-<style>
-    /* Remove o espaço em branco excessivo entre os blocos e linhas */
-    hr {
-        margin-top: 0.5rem !important;
-        margin-bottom: 0.5rem !important;
-    }
-    div.element-container {
-        margin-bottom: -0.5rem !important;
-    }
-</style>
-""", unsafe_allow_html=True)
 
 # ========================================================
-# 3. CONTEÚDO DAS PÁGINAS (Com visual limpo e sem títulos repetidos)
+# 3. CONTEÚDO DAS PÁGINAS (SEM SUJEIRA OU TÍTULOS REPETIDOS)
 # ========================================================
 if st.session_state.page == "💰 Finanças & Bancos":
-    st.markdown("## 🎮 Painel Wilson")
-    st.markdown("---")
     # ----------------------------------------------------
     # COLE AQUI TODO O SEU CÓDIGO DO DIA 20 (FINANÇAS)
+    # (Remova qualquer "st.markdown('## 🎮 Painel Wilson')" 
+    # ou títulos antigos que estejam soltos bem no começo dele)
     # ----------------------------------------------------
     pass
 
 elif st.session_state.page == "Pendências":
-    # Espaço reservado para a lógica de Pendências sem poluição no topo
     pass
 
 elif st.session_state.page == "🐾 Milo & Bolt":
-    # Espaço reservado para os pets sem poluição no topo
     pass
 
 elif st.session_state.page == "🚗 Meu Veículo":
-    # Espaço reservado para o veículo sem poluição no topo
     pass
 
 elif st.session_state.page == "📄 WhatsApp":
-    # Espaço reservado para o WhatsApp sem poluição no topo
     pass
 
 elif st.session_state.page == "📋 Relatório PDF":
-    # Aqui entra o código dos filtros do PDF direto, sem st.title repetido!
     pass
 
 elif st.session_state.page == "📊 Análises & Configurações":
-    # Espaço reservado para análises sem poluição no topo
     pass
 
 
