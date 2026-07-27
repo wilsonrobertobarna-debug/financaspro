@@ -1286,7 +1286,8 @@ if aba == "📋 Relatório PDF":
             # 1. INICIALIZAÇÃO DO PDF
             # ========================================================
             from fpdf import FPDF
-            pdf = FPDF()
+            pdf = FPDF(orientation='P', unit='mm', format='A4')
+            pdf.set_margins(left=8, top=10, right=8) # Margem lateral ajustada para dar o respiro
             pdf.add_page()
 
             # ========================================================
