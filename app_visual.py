@@ -1258,11 +1258,21 @@ elif "📄" in aba:
     else:
         rec_v = des_v = rend_v = sobra = 0.0
 
-    # 3. TEXTO FINAL
+   # 3. TEXTO FINAL
+    # Tratando o valor do cartão para garantir que fique negativo e com o emoji vermelho
+    # (Se a variável do cartão no seu código se chamar diferente, ajuste o nome dela aqui dentro)
+    val_cartao_negativo = -abs(cartao_v) if 'cartao_v' in locals() and cartao_v else 0.0
+    cartao_fmt = f"-{m_fmt(abs(val_cartao_negativo))} 🔴" if val_cartao_negativo != 0 else m_fmt(0)
+    
+    # Variável do pendente (substitua 'pendente_v' pelo nome exato da variável de pendentes no seu código, se for diferente)
+    val_pendente = pendente_v if 'pendente_v' in locals() and pendente_v else 0.0
+
     relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"========================================\n"
     relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
     relat += f"DES: {m_fmt(des_v)} | SOBRA: {m_fmt(sobra)}\n"
+    relat += f"💳 Cartão de Crédito: {cartao_fmt}\n"
+    relat += f"⏳ Pendente de Pagamento: {m_fmt(val_pendente)}\n"
     relat += f"========================================\n\n"
     relat += f"SALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}"
     
