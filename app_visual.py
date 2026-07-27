@@ -1256,21 +1256,16 @@ elif "📄" in aba:
         des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
         sobra = rec_v - des_v
 
-        # SOMA DOS PENDENTES NO PERÍODO (contas que vencem no mês e estão pendentes)
+        # Valor pendente total do período (despesas comuns + faturas/cartões pendentes no mês)
         val_pendente = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'].str.upper() == 'PENDENTE') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
     else:
         rec_v = des_v = rend_v = sobra = val_pendente = 0.0
 
-    # 3. TEXTO FINAL
-    # Tratando o valor do cartão (usando a variável 'usado' que o seu loop já calcula)
-    val_cartao_negativo = -abs(usado) if 'usado' in locals() and usado else 0.0
-    cartao_fmt = f"-{m_fmt(abs(val_cartao_negativo))} 🔴" if val_cartao_negativo != 0 else m_fmt(0)
-
+    # 3. TEXTO FINAL (Sem a linha separada de cartão, apenas o Pendente consolidado)
     relat = f"RELATÓRIO WILSON\nPeríodo: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"========================================\n"
     relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
     relat += f"DES: {m_fmt(des_v)} | SOBRA: {m_fmt(sobra)}\n"
-    relat += f"💳 Cartão de Crédito: {cartao_fmt}\n"
     relat += f"⏳ Pendente de Pagamento: {m_fmt(val_pendente)}\n"
     relat += f"========================================\n\n"
     relat += f"SALDOS:\n{saldos_txt}\nTOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}"
