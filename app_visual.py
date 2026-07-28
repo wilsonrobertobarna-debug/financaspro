@@ -539,8 +539,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
     # Um respiro antes de entrar no formulário principal
     st.markdown("")
 
-    # 2. Agora entra o formulário com o restante dos campos e o botão Salvar
-    with st.form("f_novo", clear_on_submit=True):
       # 2. Agora entra o formulário com o restante dos campos e o botão Salvar
     with st.form("f_novo", clear_on_submit=True):
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f", key="val_novo_lancamento")
