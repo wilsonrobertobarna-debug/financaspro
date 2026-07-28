@@ -1359,16 +1359,16 @@ if aba == "📋 Relatório PDF":
 
         periodo_pdf = st.date_input("Período do Relatório:", [primeiro_dia_mes, ultimo_dia_mes], format="DD/MM/YYYY")
 
-   col_rel3, col_rel4, col_rel5 = st.columns(3)
-    with col_rel3:
-        busca_desc = st.text_input("🔍 Pesquisar por Descrição:", "").strip()
-        
-    with col_rel4:
-        # Barrinha de pesquisa limpa por beneficiário (sem campos extras embaixo)
-        busca_benef = st.text_input("👤 Pesquisar por Beneficiário:", "").strip()
-        
-    with col_rel5:
-        busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
+    col_rel3, col_rel4, col_rel5 = st.columns(3)
+        with col_rel3:
+            busca_desc = st.text_input("🔍 Pesquisar por Descrição:", "").strip()
+            
+        with col_rel4:
+            # Barrinha de pesquisa limpa por beneficiário (sem campos extras embaixo)
+            busca_benef = st.text_input("👤 Pesquisar por Beneficiário:", "").strip()
+            
+        with col_rel5:
+            busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
 
     
     # Nova linha para o filtro de Categoria
