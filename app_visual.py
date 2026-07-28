@@ -537,9 +537,18 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         f_par = st.number_input("Parcelas", min_value=1, value=1, key="par_novo_lancamento")
         f_desc = st.text_input("📝 Descrição", key="desc_novo_lancamento")
         f_bnfc = st.text_input("👤 Beneficiário", key="bnfc_novo_lancamento")
-        f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"], key="tip_novo_lancamento")
+       f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"], key="tip_novo_lancamento")
+        
+        # Um respiro leve para desgrudar o tipo da categoria
+        st.markdown("")
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação", "Vale Alimentação", "Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"], key="cat_novo_lancamento") 
+        
+        # Um respiro leve para desgrudar a categoria do status
+        st.markdown("")
         f_sta = st.selectbox("Status", ["Pago", "Pendente"], key="sta_novo_lancamento")
+        
+        # Mais um respiro antes do botão para ele descolar do status
+        st.markdown("<br>", unsafe_allow_html=True)
         
         if st.form_submit_button("Salvar Lançamento"):
             todos_dados = ws_base.get_all_records()
