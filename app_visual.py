@@ -1363,7 +1363,7 @@ if aba == "📋 Relatório PDF":
     with col_rel3:
         busca_desc = st.text_input("🔍 Pesquisar por Descrição:", "").strip()
         
-     with col_rel4:
+    with col_rel4:
         busca_benef = st.text_input("👤 Pesquisar por Beneficiário:", "").strip()
         
     with col_rel5:
