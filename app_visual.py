@@ -1705,8 +1705,10 @@ if aba == "📋 Relatório PDF":
 
         except Exception as e:
             st.error(f"Erro ao gerar o PDF: {e}")
+   
+
     # =========================================================================
-    # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS 4 FILTROS (VISUAL LIMPO)
+    # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS FILTROS (VISUAL LIMPO)
     # =========================================================================
     st.markdown("### 🔍 Lançamentos Filtrados")
 
@@ -1722,7 +1724,7 @@ if aba == "📋 Relatório PDF":
         df_tela['DT_FILTRO'] = pd.to_datetime(df_tela[col_data_df], format="%d/%m/%Y", errors='coerce')
         if isinstance(periodo_pdf, (list, tuple)) and len(periodo_pdf) == 2:
             df_tela = df_tela[(df_tela['DT_FILTRO'] >= pd.to_datetime(periodo_pdf[0])) & 
-                               (df_tela['DT_FILTRO'] <= pd.to_datetime(periodo_pdf[1]))]
+                              (df_tela['DT_FILTRO'] <= pd.to_datetime(periodo_pdf[1]))]
 
     # Aplica Banco na tela
     if banco_relatorio != "Todos" and col_banco_df:
@@ -1732,7 +1734,7 @@ if aba == "📋 Relatório PDF":
     if busca_desc and col_desc_df:
         df_tela = df_tela[df_tela[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
 
-    # Aplica Beneficiário na tela
+    # Aplica Beneficiário na tela (Coluna J)
     if busca_benef:
         col_benef_nome = df_tela.columns[9]  # Coluna J é o índice 9
         df_tela = df_tela[df_tela[col_benef_nome].astype(str).str.contains(busca_benef, case=False, na=False)]
@@ -1749,12 +1751,9 @@ if aba == "📋 Relatório PDF":
     if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
         df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
-   # --- FAXINA RIGOROSA ---
-    # Lista de colunas proibidas
+    # --- FAXINA RIGOROSA ---
     colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
     
-    # Filtra mantendo apenas colunas que NÃO estão na lista proibida 
-    # E que NÃO começam com "DT_" (isso mata o dt_ que está aparecendo)
     colunas_visiveis = [
         c for c in df_tela.columns 
         if c not in colunas_proibidas and not c.upper().startswith('DT_')
