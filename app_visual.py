@@ -1435,6 +1435,7 @@ if aba == "📋 Relatório PDF":
             col_data_df = next((c for c in df_report.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
             col_desc_df = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
             col_status_df = next((c for c in df_report.columns if c.upper() in ['STATUS']), None)
+            col_compra_df = next((c for c in df_report.columns if c.upper() in ['COMPRA', 'DATA COMPRA', 'DT COMPRA']), None)
 
             banco_nome = "Todos os Bancos"
             if banco_relatorio != "Todos" and col_banco_df:
