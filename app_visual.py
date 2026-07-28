@@ -646,6 +646,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
            
     # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
+
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
         lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
@@ -655,7 +656,10 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             item = lista_edit[escolha]
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             
+            # Respiro leve para desgrudar o campo de seleção de cima
+            st.markdown("")
             ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
+            
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
