@@ -1440,12 +1440,7 @@ if aba == "📋 Relatório PDF":
                 df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
 
             if busca_benef:
-                col_benef_nome = df_report.columns[9] 
-                df_report = df_report[df_report[col_benef_nome].astype(str).str.contains(busca_benef, case=False, na=False)]
-
-            if busca_benef:
-                col_benef_nome = next((c for c in df_report.columns if 'BENEFICIÁRIO' in c.upper() or 'BENEFICIARIO' in c.upper()), None)
-                if col_benef_nome:
+                col_benef_nome = df_report.columns[9]  # Coluna J
                 df_report = df_report[df_report[col_benef_nome].astype(str).str.contains(busca_benef, case=False, na=False)]
 
             if busca_status != "Todos" and col_status_df:
