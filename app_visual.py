@@ -541,10 +541,28 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
     # 2. Agora entra o formulário com o restante dos campos e o botão Salvar
     with st.form("f_novo", clear_on_submit=True):
+      # 2. Agora entra o formulário com o restante dos campos e o botão Salvar
+    with st.form("f_novo", clear_on_submit=True):
         f_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f", key="val_novo_lancamento")
         f_par = st.number_input("Parcelas", min_value=1, value=1, key="par_novo_lancamento")
         f_desc = st.text_input("📝 Descrição", key="desc_novo_lancamento")
-        f_bnfc = st.text_input("👤 Beneficiário", key="bnfc_novo_lancamento")
+        
+        # --- BENEFICIÁRIO COM AUTOCOMPLETAR DA COLUNA J ---
+        beneficiarios_unicos = []
+        if not df_base.empty and 'Beneficiário' in df_base.columns:
+            beneficiarios_unicos = sorted([str(x).strip() for x in df_base['Beneficiário'].dropna().unique() if str(x).strip() != ''])
+        
+        # Cria uma lista onde a primeira opção é vazia/digitar novo, seguida do histórico
+        opcoes_beneficiario = [""] + beneficiarios_unicos
+        f_bnfc = st.selectbox("👤 Beneficiário (Histórico)", options=opcoes_beneficiario, key="sb_bnfc_novo_lancamento")
+        
+        # Caso queira digitar um beneficiário totalmente novo que não está na lista
+        f_bnfc_novo = st.text_input("Ou digite um novo Beneficiário:", key="bnfc_novo_texto")
+        
+        # Define qual beneficiário valerá (prioriza o texto livre se preenchido, senão pega o do selectbox)
+        beneficiario_final = f_bnfc_novo.strip() if f_bnfc_novo.strip() else f_bnfc
+        # ------------------------------------------------
+        
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"], key="tip_novo_lancamento")
         
         # Um respiro leve para desgrudar o tipo da categoria
@@ -592,7 +610,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     f_sta,
                     f_compra_str,
                     proximo_id + i,
-                    f_bnfc
+                    beneficiario_final  # Salva certinho na coluna J
                 ])
             
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
