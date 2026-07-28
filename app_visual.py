@@ -1740,7 +1740,7 @@ if aba == "📋 Relatório PDF":
     # Aplica Beneficiário na tela (Coluna J)
 
     if busca_benef:
-        col_benef_nome = df_report.columns[9]  # Índice 9 = Coluna J
+        col_benef_nome = df_report.columns[9]  
         df_report = df_report[df_report[col_benef_nome].astype(str).str.contains(busca_benef, case=False, na=False)]
 
     # Aplica Status na tela
