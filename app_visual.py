@@ -636,27 +636,33 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     atualizar_sessao()
                     st.rerun()
 
-               # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
+           
+    # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
         lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
-        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
              
-        
         if escolha:
             item = lista_edit[escolha]
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
+            
             ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
+            
+            st.markdown("")
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
             ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
+            
+            st.markdown("")
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
             
+            st.markdown("<br>", unsafe_allow_html=True)
             col_ed1, col_ed2 = st.columns(2)
+            
             if col_ed1.button("💾 ATUALIZAR"):
                 id_atual = int(float(item['ID']))
                 
@@ -706,7 +712,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                             if 'ID' in row and pd.notna(row['ID']):
                                 ids_para_excluir.append(int(float(row['ID'])))
                     
-                    # Se não achou por ID exato mas tem linhas correspondentes, apaga de trás para frente na planilha
                     if ids_para_excluir:
                         for id_linha in sorted(list(set(ids_para_excluir)), reverse=True):
                             try:
@@ -714,7 +719,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                             except:
                                 pass
                     else:
-                        # Fallback de segurança caso o ID falhe
                         ws_base.delete_rows(int(float(item['ID'])))
                 else:
                     ws_base.delete_rows(int(float(item['ID'])))
