@@ -475,6 +475,7 @@ st.sidebar.divider()
 aba = st.session_state.page
 
 
+
 # BARRINHA 1: NOVO LANÇAMENTO
 if "expander_lancamento_aberto" not in st.session_state:
     st.session_state.expander_lancamento_aberto = False
@@ -484,7 +485,10 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
     # 1. O Banco fica FORA do formulário para atualizar a tela na mesma hora que você troca
     f_bnc = st.selectbox("Banco", bancos_disponiveis, key="sb_banco_novo_lancamento")
     
-    # Data da Compra também fora ou logo no começo
+    # Um respiro leve para desgrudar o Banco da Data da Compra
+    st.markdown("")
+    
+    # Data da Compra
     f_compra = st.date_input("🛍️ Data da Compra", value=hoje_br, format="DD/MM/YYYY", key="dt_compra_novo_lancamento")
     
     # --- CÁLCULO INTELIGENTE DO VENCIMENTO ---
@@ -525,11 +529,15 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             eh_cartao = False
 
     # --- EXIBIÇÃO E DEFINIÇÃO DO VENCIMENTO ---
+    st.markdown("")
     if eh_cartao:
         st.markdown(f"📅 **Vencimento (Cartão - Fech: {dia_fech} / Venc: {dia_venc}):** `{vencimento_calculado.strftime('%d/%m/%Y')}`")
         t_dat = vencimento_calculado
     else:
         t_dat = st.date_input("📅 Data de Vencimento", value=hoje_br, format="DD/MM/YYYY", key="dt_vencimento_banco_comum")
+
+    # Um respiro antes de entrar no formulário principal
+    st.markdown("")
 
     # 2. Agora entra o formulário com o restante dos campos e o botão Salvar
     with st.form("f_novo", clear_on_submit=True):
