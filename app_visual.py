@@ -1364,12 +1364,30 @@ if aba == "📋 Relatório PDF":
             busca_desc = st.text_input("🔍 Pesquisar por Descrição:", "").strip()
             
     with col_rel4:
-        busca_benef = st.text_input(
-            "👤 Pesquisar por Beneficiário:", 
-            value="", 
-            placeholder="Digite o nome para buscar...", 
-            autocomplete="off"
-        ).strip()
+        # Puxa os beneficiários únicos da coluna correspondente para formar a lista
+        beneficiarios_unicos = []
+        df_temp = df_base if 'df_base' in locals() else df_report
+        
+        # Identifica a coluna de beneficiário de forma segura
+        col_ben = next((c for c in df_temp.columns if 'BENEFICIÁRIO' in c.upper() or 'BENEFICIARIO' in c.upper()), None)
+        if col_ben and not df_temp.empty:
+            nomes_brutos = df_temp[col_ben].dropna().astype(str)
+            unicos_dict = {}
+            for n in nomes_brutos:
+                n_limpo = n.strip()
+                if n_limpo and n_limpo.lower() != 'nan':
+                    chave = n_limpo.lower()
+                    if chave not in unicos_dict:
+                        unicos_dict[chave] = n_limpo
+            beneficiarios_unicos = sorted(list(unicos_dict.values()))
+
+        opcoes_benef = ["Todos"] + beneficiarios_unicos
+        
+        # O selectbox exibe a listagem completa para você escolher o Supermercado X, Y, etc.
+        busca_benef_select = st.selectbox("👤 Filtrar Beneficiário:", options=opcoes_benef, key="sb_beneficiario_rel")
+        
+        # Transforma a escolha em variável de busca
+        busca_benef = "" if busca_benef_select == "Todos" else busca_benef_select
         
     with col_rel5:
             busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
