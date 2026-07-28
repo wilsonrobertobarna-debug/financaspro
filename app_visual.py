@@ -537,7 +537,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         f_par = st.number_input("Parcelas", min_value=1, value=1, key="par_novo_lancamento")
         f_desc = st.text_input("📝 Descrição", key="desc_novo_lancamento")
         f_bnfc = st.text_input("👤 Beneficiário", key="bnfc_novo_lancamento")
-       f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"], key="tip_novo_lancamento")
+        f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"], key="tip_novo_lancamento")
         
         # Um respiro leve para desgrudar o tipo da categoria
         st.markdown("")
