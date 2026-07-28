@@ -1362,8 +1362,34 @@ if aba == "📋 Relatório PDF":
     col_rel3, col_rel4, col_rel5 = st.columns(3)
     with col_rel3:
         busca_desc = st.text_input("🔍 Pesquisar por Descrição:", "").strip()
+        
     with col_rel4:
-        busca_benef = st.text_input("👤 Pesquisar por Beneficiário:", "").strip()
+        # --- BENEFICIÁRIO INTELIGENTE PARA O RELATÓRIO (COM AUTOCOMPLETAR DA COLUNA J) ---
+        beneficiarios_unicos_rel = []
+        if not df_base.empty and 'Beneficiário' in df_base.columns:
+            nomes_brutos_rel = df_base['Beneficiário'].dropna().astype(str)
+            unicos_dict_rel = {}
+            for n in nomes_brutos_rel:
+                n_limpo = n.strip()
+                if n_limpo and n_limpo.lower() != 'nan':
+                    chave = n_limpo.lower()
+                    if chave not in unicos_dict_rel:
+                        unicos_dict_rel[chave] = n_limpo
+            beneficiarios_unicos_rel = sorted(list(unicos_dict_rel.values()))
+            
+        opcoes_beneficiario_rel = ["Todos"] + beneficiarios_unicos_rel
+        busca_benef_select = st.selectbox("👤 Filtrar Beneficiário:", options=opcoes_beneficiario_rel, key="sb_benef_rel")
+        
+        # Campo de texto livre com o autocomplete="off" para sumir com a tarja preta do navegador
+        busca_benef_texto = st.text_input("Ou digite Beneficiário:", "", key="txt_benef_rel", autocomplete="off").strip()
+        
+        # Define qual beneficiário valerá no filtro (prioriza o texto digitado, senão pega o do selectbox)
+        if busca_benef_texto:
+            busca_benef = busca_benef_texto
+        else:
+            busca_benef = "" if busca_benef_select == "Todos" else busca_benef_select
+        # -------------------------------------------------------------------------
+
     with col_rel5:
         busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
 
