@@ -550,12 +550,21 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         #if not df_base.empty and 'Beneficiário' in df_base.columns:
         #    beneficiarios_unicos = sorted([str(x).strip() for x in df_base['Beneficiário'].dropna().unique() if str(x).strip() != ''])
 
-        # --- BENEFICIÁRIO COM AUTOCOMPLETAR DA COLUNA J (SEM REPETIÇÃO) ---
+        # --- BENEFICIÁRIO COM AUTOCOMPLETAR DA COLUNA J (FILTRADO E ÚNICO) ---
         beneficiarios_unicos = []
         if not df_base.empty and 'Beneficiário' in df_base.columns:
-            # Limpa espaços, remove vazios e usa set() para eliminar qualquer duplicada exata
             nomes_brutos = df_base['Beneficiário'].dropna().astype(str)
-            beneficiarios_unicos = sorted(list(set([n.strip() for n in nomes_brutos if n.strip() != ''])))
+            
+            # Dicionário para chavear em minúsculo (evita duplicadas) mas guardar o nome original formatado
+            unicos_dict = {}
+            for n in nomes_brutos:
+                n_limpo = n.strip()
+                if n_limpo and n_limpo.lower() != 'nan':
+                    chave = n_limpo.lower()
+                    if chave not in unicos_dict:
+                        unicos_dict[chave] = n_limpo
+                        
+            beneficiarios_unicos = sorted(list(unicos_dict.values()))
         
         # Cria uma lista onde a primeira opção é vazia/digitar novo, seguida do histórico
         opcoes_beneficiario = [""] + beneficiarios_unicos
