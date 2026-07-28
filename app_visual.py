@@ -1363,9 +1363,8 @@ if aba == "📋 Relatório PDF":
     with col_rel3:
         busca_desc = st.text_input("🔍 Pesquisar por Descrição:", "").strip()
         
-    with col_rel4:
-        # Pesquisa por Beneficiário limpa e sem a tarja preta do navegador
-        busca_benef = st.text_input("👤 Pesquisar por Beneficiário:", "", autocomplete="off").strip()
+     with col_rel4:
+        busca_benef = st.text_input("👤 Pesquisar por Beneficiário:", "").strip()
         
     with col_rel5:
         busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
@@ -1743,7 +1742,7 @@ if aba == "📋 Relatório PDF":
     # Aplica Beneficiário na tela (Coluna J)
 
     if busca_benef:
-        col_benef_nome = df_report.columns[9]  # Coluna J
+        col_benef_nome = df_report.columns[9]  # Índice 9 = Coluna J
         df_report = df_report[df_report[col_benef_nome].astype(str).str.contains(busca_benef, case=False, na=False)]
 
     # Aplica Status na tela
