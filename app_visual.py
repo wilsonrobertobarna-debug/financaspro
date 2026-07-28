@@ -1363,9 +1363,14 @@ if aba == "📋 Relatório PDF":
     with col_rel3:
             busca_desc = st.text_input("🔍 Pesquisar por Descrição:", "").strip()
             
-    with col_rel4:
-            # Barrinha de pesquisa limpa por beneficiário (sem campos extras embaixo)
-            busca_benef = st.text_input("👤 Pesquisar por Beneficiário:", "").strip()
+       with col_rel4:
+        busca_benef = st.text_input(
+            "👤 Pesquisar por Beneficiário:", 
+            value="", 
+            placeholder="Digite o nome para buscar...", 
+            autocomplete="off"
+        ).strip()
+        
     with col_rel5:
             busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
 
