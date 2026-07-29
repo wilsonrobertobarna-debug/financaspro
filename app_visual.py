@@ -1955,12 +1955,18 @@ if aba == "📊 Análises & Configurações":
             )
 
 # -------------------------------------------------------------------------
-# BOTÃO FLUTUANTE: VOLTAR AO TOPO (Blindado e funcional para celular/PC)
+# BOTÃO FLUTUANTE: VOLTAR AO TOPO (Compatível com o motor do Streamlit)
 # -------------------------------------------------------------------------
 st.markdown(
     """
     <div style="position: fixed; bottom: 70px; right: 20px; z-index: 99999;">
-        <button onclick="window.scrollTo({top: 0, behavior: 'smooth'});" style="
+        <button onclick="
+            window.scrollTo({top: 0, behavior: 'smooth'});
+            const mainContainer = window.parent.document.querySelector('.main');
+            if (mainContainer) { mainContainer.scrollTo({top: 0, behavior: 'smooth'}); }
+            const stContainer = window.parent.document.querySelector('.stApp');
+            if (stContainer) { stContainer.scrollTo({top: 0, behavior: 'smooth'}); }
+        " style="
             background-color: #2ecc71; 
             color: white; 
             border: none;
@@ -1973,7 +1979,6 @@ st.markdown(
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.3s;
         " title="Voltar ao topo">⬆️</button>
     </div>
     """,
