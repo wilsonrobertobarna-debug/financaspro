@@ -1349,7 +1349,7 @@ if aba == "📋 Relatório PDF":
     st.markdown("### 📋 Emissão de Relatório Financeiro")
 
     # -------------------------------------------------------------------------
-    # 1. FILTROS DA TELA (Com chaves exclusivas para evitar conflitos no celular)
+    # 1. FILTROS DA TELA (Com chaves exclusivas e espaçamentos blindados)
     # -------------------------------------------------------------------------
     col_rel1, col_rel2 = st.columns(2)
     with col_rel1:
@@ -1365,6 +1365,9 @@ if aba == "📋 Relatório PDF":
             ultimo_dia_mes = hoje_atual.replace(month=hoje_atual.month + 1, day=1) - timedelta(days=1)
 
         periodo_pdf = st.date_input("Período do Relatório:", [primeiro_dia_mes, ultimo_dia_mes], format="DD/MM/YYYY", key="dt_rel_periodo")
+
+    # Espaço respiro para a próxima linha não grudar
+    st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
 
     col_rel3, col_rel4, col_rel5 = st.columns(3)
     with col_rel3:
@@ -1396,7 +1399,9 @@ if aba == "📋 Relatório PDF":
     with col_rel5:
             busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"], key="sb_rel_status")
 
-    # Linha para o filtro de Categoria e Tipo isolados com segurança
+    # Espaço respiro antes dos filtros de Categoria e Tipo
+    st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
+
     col_rel6, col_rel7 = st.columns(2)
     with col_rel6:
         categorias_disponiveis = sorted(df_base['Categoria'].dropna().unique()) if 'Categoria' in df_base.columns else []
