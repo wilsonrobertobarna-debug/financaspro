@@ -1963,12 +1963,13 @@ if aba == "📊 Análises & Configurações":
 # -------------------------------------------------------------------------
 
 # Botão flutuante no canto inferior direito
+# Botão flutuante no canto inferior direito
 st.markdown(
     """
     <style>
     .scroll-top-btn {
         position: fixed;
-        bottom: 20px;
+        bottom: 80px; /* distância do rodapé, aumente conforme necessário */
         right: 20px;
         padding: 12px 18px;
         font-size: 16px;
