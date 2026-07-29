@@ -1357,6 +1357,9 @@ if aba == "📋 Relatório PDF":
         banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel, key="sb_rel_banco")
         
     with col_rel2:
+        # Espaço dedicado para baixar um pouquinho a legenda e o seletor de Período
+        st.markdown("<div style='height: 2px;'></div>", unsafe_allow_html=True)
+        
         hoje_atual = datetime.now()
         primeiro_dia_mes = hoje_atual.replace(day=1)
         if hoje_atual.month == 12:
@@ -1396,7 +1399,7 @@ if aba == "📋 Relatório PDF":
         busca_benef = "" if busca_benef_select == "Todos" else busca_benef_select
         
     with col_rel5:
-            # Espaço dedicado empurrando a legenda do Status para baixo e longe da borda superior
+            # Espaço dedicado empurrando a legenda do Status para baixo
             st.markdown("<div style='height: 2px;'></div>", unsafe_allow_html=True)
             busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"], key="sb_rel_status")
 
