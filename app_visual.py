@@ -10,6 +10,18 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
+# Injeta o script no HTML logo no início
+st.markdown(
+    """
+    <script>
+    function scrollToTop() {
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+    </script>
+    """,
+    unsafe_allow_html=True
+)
+
 
 # Configuração da página
 st.set_page_config(
@@ -1959,19 +1971,6 @@ if aba == "📊 Análises & Configurações":
 # -------------------------------------------------------------------------
 # BOTÃO SUPREMO: VOLTAR AO TOPO (Via Componente HTML do Streamlit)
 # -------------------------------------------------------------------------
-import streamlit as st
-
-# Injeta o script no HTML logo no início
-st.markdown(
-    """
-    <script>
-    function scrollToTop() {
-        window.scrollTo({top: 0, behavior: 'smooth'});
-    }
-    </script>
-    """,
-    unsafe_allow_html=True
-)
 
 # Botão no rodapé que chama a função JS
 st.markdown(
