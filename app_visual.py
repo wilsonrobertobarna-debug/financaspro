@@ -10,20 +10,6 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
-import streamlit as st
-
-# Injeta o script no HTML logo no início
-st.markdown(
-    """
-    <script>
-    function scrollToTop() {
-        window.scrollTo({top: 0, behavior: 'smooth'});
-    }
-    </script>
-    """,
-    unsafe_allow_html=True
-)
-
 # Configuração da página
 st.set_page_config(
     page_title="Painel Wilson",
