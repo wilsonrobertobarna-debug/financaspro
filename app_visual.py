@@ -24,20 +24,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Botão no rodapé que chama a função JS
-st.markdown(
-    """
-    <div style="text-align:center; margin-top:50px;">
-        <button onclick="scrollToTop()" style="padding:10px 20px; font-size:16px;">
-            ⬆️ Voltar ao topo
-        </button>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-
-
 # Configuração da página
 st.set_page_config(
     page_title="Painel Wilson",
