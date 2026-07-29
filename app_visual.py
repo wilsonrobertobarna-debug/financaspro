@@ -1954,24 +1954,27 @@ if aba == "📊 Análises & Configurações":
                 args=(nome,) 
             )
 
-            # -------------------------------------------------------------------------
-# BOTÃO FLUTUANTE: VOLTAR AO TOPO (Otimizado para celular e PC)
+# -------------------------------------------------------------------------
+# BOTÃO FLUTUANTE: VOLTAR AO TOPO (Blindado e funcional para celular/PC)
 # -------------------------------------------------------------------------
 st.markdown(
     """
-    <div id="back-to-top" style="position: fixed; bottom: 25px; right: 25px; z-index: 9999;">
-        <a href="#" style="
+    <div style="position: fixed; bottom: 70px; right: 20px; z-index: 99999;">
+        <button onclick="window.scrollTo({top: 0, behavior: 'smooth'});" style="
             background-color: #2ecc71; 
             color: white; 
-            padding: 10px 14px; 
+            border: none;
+            width: 45px;
+            height: 45px;
             border-radius: 50%; 
-            text-decoration: none; 
-            font-size: 18px; 
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+            cursor: pointer;
+            font-size: 20px; 
+            box-shadow: 0px 4px 12px rgba(0,0,0,0.4);
             display: flex;
             align-items: center;
             justify-content: center;
-        ">⬆️</a>
+            transition: background 0.3s;
+        " title="Voltar ao topo">⬆️</button>
     </div>
     """,
     unsafe_allow_html=True
