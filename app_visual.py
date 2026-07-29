@@ -773,6 +773,15 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 atualizar_sessao()
                 st.rerun()
 
+# -------------------------------------------------------------------------
+# BOTÃO VOLTAR AO TOPO (Na Barra Lateral)
+# -------------------------------------------------------------------------
+with st.sidebar:
+    st.markdown("---")
+    if st.button("⬆️ Voltar ao Topo", use_container_width=True, key="btn_topo_sidebar"):
+        st.rerun()
+        
+
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in st.session_state.page:
     import plotly.graph_objects as go
