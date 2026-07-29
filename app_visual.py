@@ -1349,12 +1349,12 @@ if aba == "📋 Relatório PDF":
     st.markdown("### 📋 Emissão de Relatório Financeiro")
 
     # -------------------------------------------------------------------------
-    # 1. FILTROS DA TELA (Banco, Período, Descrição, Beneficiário, Status e Categoria)
+    # 1. FILTROS DA TELA (Com chaves exclusivas para evitar conflitos no celular)
     # -------------------------------------------------------------------------
     col_rel1, col_rel2 = st.columns(2)
     with col_rel1:
         opcoes_banco_rel = ["Todos"] + list(bancos_disponiveis)
-        banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel)
+        banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel, key="sb_rel_banco")
         
     with col_rel2:
         hoje_atual = datetime.now()
@@ -1364,11 +1364,11 @@ if aba == "📋 Relatório PDF":
         else:
             ultimo_dia_mes = hoje_atual.replace(month=hoje_atual.month + 1, day=1) - timedelta(days=1)
 
-        periodo_pdf = st.date_input("Período do Relatório:", [primeiro_dia_mes, ultimo_dia_mes], format="DD/MM/YYYY")
+        periodo_pdf = st.date_input("Período do Relatório:", [primeiro_dia_mes, ultimo_dia_mes], format="DD/MM/YYYY", key="dt_rel_periodo")
 
     col_rel3, col_rel4, col_rel5 = st.columns(3)
     with col_rel3:
-            busca_desc = st.text_input("🔍 Pesquisar por Descrição:", "").strip()
+            busca_desc = st.text_input("🔍 Pesquisar por Descrição:", "", key="txt_rel_desc").strip()
             
     with col_rel4:
         # Puxa os beneficiários únicos da coluna correspondente para formar a lista
@@ -1390,32 +1390,28 @@ if aba == "📋 Relatório PDF":
 
         opcoes_benef = ["Todos"] + beneficiarios_unicos
         
-        # O selectbox exibe a listagem completa para você escolher o Supermercado X, Y, etc.
         busca_benef_select = st.selectbox("👤 Filtrar Beneficiário:", options=opcoes_benef, key="sb_beneficiario_rel")
-        
-        # Transforma a escolha em variável de busca
         busca_benef = "" if busca_benef_select == "Todos" else busca_benef_select
         
     with col_rel5:
-            busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"])
+            busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"], key="sb_rel_status")
 
-    
-    # Nova linha para o filtro de Categoria
+    # Linha para o filtro de Categoria e Tipo isolados com segurança
     col_rel6, col_rel7 = st.columns(2)
     with col_rel6:
         categorias_disponiveis = sorted(df_base['Categoria'].dropna().unique()) if 'Categoria' in df_base.columns else []
         opcoes_cat_rel = ["Todas"] + list(categorias_disponiveis)
-        busca_categoria = st.selectbox("📂 Filtrar Categoria:", opcoes_cat_rel)
+        busca_categoria = st.selectbox("📂 Filtrar Categoria:", opcoes_cat_rel, key="sb_rel_categoria")
 
     with col_rel7:
         tipos_disponiveis = sorted(df_base['Tipo'].dropna().unique()) if 'Tipo' in df_base.columns else []
         opcoes_tipo_rel = ["Todos"] + list(tipos_disponiveis)
-        busca_tipo = st.selectbox("🏷️ Filtrar Tipo:", opcoes_tipo_rel)
+        busca_tipo = st.selectbox("🏷️ Filtrar Tipo:", opcoes_tipo_rel, key="sb_rel_tipo")
 
     st.markdown("---")
 
     # Botão para processar e gerar o documento / visualizar
-    if st.button("📄 Gerar PDF"):
+    if st.button("📄 Gerar PDF", key="btn_gerar_pdf"):
         try:
             if isinstance(periodo_pdf, (list, tuple)):
                 if len(periodo_pdf) == 2:
@@ -1476,7 +1472,7 @@ if aba == "📋 Relatório PDF":
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
-            # Filtro de Categoria integrado com sucesso
+            # Filtro de Categoria
             if busca_categoria != "Todas" and 'Categoria' in df_report.columns:
                 df_report = df_report[df_report['Categoria'].str.upper().str.strip() == str(busca_categoria).upper()]
 
@@ -1485,7 +1481,7 @@ if aba == "📋 Relatório PDF":
                 df_report = df_report[df_report['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
             # ========================================================
-            # ORDENAÇÃO INTELIGENTE: ORDENA PELA DATA DE COMPRA NO CARTÃO
+            # ORDENAÇÃO INTELIGENTE
             # ========================================================
             if banco_relatorio == "Todos":
                 def pega_data_ordenacao(row):
