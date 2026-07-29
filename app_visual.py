@@ -840,10 +840,11 @@ if "💰" in st.session_state.page:
             # Filtra a base completa pelos meses selecionados
             df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
             
-            # 🔒 EXCLUI AS TRANSFERÊNCIAS ENTRE BANCOS/CONTAS DO FLUXO
-            # (Ajuste 'Transferência' caso o nome exato na sua coluna 'Tipo' seja diferente, ex: 'Transferencia')
-            if not df_fluxo.empty and 'Tipo' in df_fluxo.columns:
-                df_fluxo = df_fluxo[df_fluxo['Tipo'] != 'Transferência']
+            # 🔒 EXCLUI AS TRANSFERÊNCIAS (Olhando pelo campo Categoria ou Descrição onde diz transferência)
+            if not df_fluxo.empty:
+                if 'Categoria' in df_fluxo.columns:
+                    # Remove se a categoria contiver "transferência" (ignorando maiúsculas/minúsculas)
+                    df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
             
             # Prepara os dados para o gráfico
             df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
