@@ -1959,13 +1959,28 @@ if aba == "📊 Análises & Configurações":
 # -------------------------------------------------------------------------
 # BOTÃO SUPREMO: VOLTAR AO TOPO (Via Componente HTML do Streamlit)
 # -------------------------------------------------------------------------
-# Botão no rodapé
-if st.button("⬆️ Voltar ao topo"):
-    st.markdown(
-        """
-        <script>
-            window.scrollTo({top: 0, behavior: 'smooth'});
-        </script>
-        """,
-        unsafe_allow_html=True
-    )
+import streamlit as st
+
+# Injeta o script no HTML logo no início
+st.markdown(
+    """
+    <script>
+    function scrollToTop() {
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+    </script>
+    """,
+    unsafe_allow_html=True
+)
+
+# Botão no rodapé que chama a função JS
+st.markdown(
+    """
+    <div style="text-align:center; margin-top:50px;">
+        <button onclick="scrollToTop()" style="padding:10px 20px; font-size:16px;">
+            ⬆️ Voltar ao topo
+        </button>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
