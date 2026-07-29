@@ -1959,29 +1959,13 @@ if aba == "📊 Análises & Configurações":
 # -------------------------------------------------------------------------
 # BOTÃO SUPREMO: VOLTAR AO TOPO (Via Componente HTML do Streamlit)
 # -------------------------------------------------------------------------
-import streamlit.components.v1 as components
-
-components.html(
-    """
-    <div style="position: fixed; bottom: 25px; right: 20px; z-index: 999999;">
-        <button onclick="
-            window.parent.document.querySelector('.main').scrollTo({top: 0, behavior: 'smooth'});
-        " style="
-            background-color: #2ecc71; 
-            color: white; 
-            border: none;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%; 
-            cursor: pointer;
-            font-size: 20px; 
-            box-shadow: 0px 4px 12px rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            outline: none;
-        ">⬆️</button>
-    </div>
-    """,
-    height=70,
-)
+# Botão no rodapé
+if st.button("⬆️ Voltar ao topo"):
+    st.markdown(
+        """
+        <script>
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        </script>
+        """,
+        unsafe_allow_html=True
+    )
