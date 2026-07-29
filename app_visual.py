@@ -1982,9 +1982,11 @@ st.markdown(
         line-height: 45px;
         transition: background-color 0.3s ease;
         z-index: 9999;
+        opacity: 0.7; /* discreto */
     }
     .scroll-top-btn:hover {
         background-color: #388E3C;
+        opacity: 1;
     }
     </style>
 
