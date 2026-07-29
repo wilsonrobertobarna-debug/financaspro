@@ -1959,28 +1959,15 @@ if aba == "📊 Análises & Configurações":
 # BOTÃO SUPREMO: VOLTAR AO TOPO (Via Componente HTML do Streamlit)
 # -------------------------------------------------------------------------
 
-# Botão fixo no canto inferior direito
+# Botão no rodapé que sobe para o topo
 st.markdown(
     """
-    <style>
-    .scroll-top-btn {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        padding: 10px 20px;
-        font-size: 16px;
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        z-index: 9999;
-    }
-    </style>
-
-    <button class="scroll-top-btn" onclick="window.scrollTo({top: 0, behavior: 'smooth'});">
-        ⬆️ Voltar ao topo
-    </button>
+    <div style="text-align:center; margin-top:50px;">
+        <button style="padding:10px 20px; font-size:16px;"
+                onclick="window.scrollTo({top: 0, behavior: 'smooth'});">
+            ⬆️ Voltar ao topo
+        </button>
+    </div>
     """,
     unsafe_allow_html=True
 )
