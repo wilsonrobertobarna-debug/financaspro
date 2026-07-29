@@ -1961,7 +1961,7 @@ if aba == "📊 Análises & Configurações":
 # -------------------------------------------------------------------------
 # BOTÃO SUPREMO: VOLTAR AO TOPO (Via Componente HTML do Streamlit)
 # -------------------------------------------------------------------------
-# Botão flutuante redondo
+# Botão flutuante redondo minimalista
 st.markdown(
     """
     <style>
@@ -1969,23 +1969,22 @@ st.markdown(
         position: fixed;
         bottom: 80px; /* ajusta para não encobrir a tarja preta */
         right: 20px;
-        width: 50px;
-        height: 50px;
-        background: linear-gradient(135deg, #4CAF50, #2E7D32);
+        width: 45px;
+        height: 45px;
+        background-color: #4CAF50;
         color: white;
         border: none;
         border-radius: 50%;
         cursor: pointer;
         box-shadow: 0px 4px 6px rgba(0,0,0,0.3);
-        font-size: 22px;
+        font-size: 20px;
         text-align: center;
-        line-height: 50px;
-        transition: all 0.3s ease;
+        line-height: 45px;
+        transition: background-color 0.3s ease;
         z-index: 9999;
     }
     .scroll-top-btn:hover {
-        background: linear-gradient(135deg, #66BB6A, #388E3C);
-        transform: scale(1.1);
+        background-color: #388E3C;
     }
     </style>
 
