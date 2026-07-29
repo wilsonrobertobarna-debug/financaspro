@@ -1955,32 +1955,25 @@ if aba == "📊 Análises & Configurações":
             )
 
 # -------------------------------------------------------------------------
-# BOTÃO FLUTUANTE: VOLTAR AO TOPO (Compatível com o motor do Streamlit)
+# BOTÃO FLUTUANTE: VOLTAR AO TOPO (100% Nativo Streamlit)
 # -------------------------------------------------------------------------
 st.markdown(
     """
-    <div style="position: fixed; bottom: 70px; right: 20px; z-index: 99999;">
-        <button onclick="
-            window.scrollTo({top: 0, behavior: 'smooth'});
-            const mainContainer = window.parent.document.querySelector('.main');
-            if (mainContainer) { mainContainer.scrollTo({top: 0, behavior: 'smooth'}); }
-            const stContainer = window.parent.document.querySelector('.stApp');
-            if (stContainer) { stContainer.scrollTo({top: 0, behavior: 'smooth'}); }
-        " style="
-            background-color: #2ecc71; 
-            color: white; 
-            border: none;
-            width: 45px;
-            height: 45px;
-            border-radius: 50%; 
-            cursor: pointer;
-            font-size: 20px; 
-            box-shadow: 0px 4px 12px rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        " title="Voltar ao topo">⬆️</button>
-    </div>
+    <style>
+        /* Fixa o botão flutuante no canto inferior direito, acima do Manage app */
+        div.fixed-top-btn {
+            position: fixed;
+            bottom: 75px;
+            right: 20px;
+            z-index: 99999;
+        }
+    </style>
     """,
     unsafe_allow_html=True
 )
+
+st.markdown('<div class="fixed-top-btn">', unsafe_allow_html=True)
+if st.button("⬆️", key="btn_voltar_topo", help="Voltar ao topo"):
+    # Código em Python que força o topo recarregando levemente o estado ou rodando um script de scroll seguro
+    st.rerun()
+st.markdown('</div>', unsafe_allow_html=True)
