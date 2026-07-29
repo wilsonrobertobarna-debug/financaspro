@@ -1955,26 +1955,36 @@ if aba == "📊 Análises & Configurações":
                 args=(nome,) 
             )
 
+
 # -------------------------------------------------------------------------
-# BOTÃO FLUTUANTE: VOLTAR AO TOPO (100% Nativo Streamlit)
-# -------------------------------------------------------------------------
-# -------------------------------------------------------------------------
-# BOTÃO VOLTAR AO TOPO (Link HTML direto com rolagem suave)
+# BOTÃO FLUTUANTE REAL: VOLTAR AO TOPO (Fixo na tela e funcional)
 # -------------------------------------------------------------------------
 st.markdown(
     """
-    <div style="text-align: right; padding: 20px 0px;">
-        <a href="#_top" style="
+    <div style="position: fixed; bottom: 30px; right: 20px; z-index: 999999;">
+        <button onclick="
+            window.scrollTo({top: 0, behavior: 'smooth'});
+            document.documentElement.scrollTo({top: 0, behavior: 'smooth'});
+            if(window.parent) { 
+                window.parent.scrollTo({top: 0, behavior: 'smooth'}); 
+                const main = window.parent.document.querySelector('.main');
+                if(main) main.scrollTo({top: 0, behavior: 'smooth'});
+            }
+        " style="
             background-color: #2ecc71; 
             color: white; 
-            padding: 10px 18px; 
-            border-radius: 20px; 
-            text-decoration: none; 
-            font-weight: bold; 
-            font-size: 14px;
-            box-shadow: 0px 4px 8px rgba(0,0,0,0.2);
-            display: inline-block;
-        ">⬆️ Voltar ao Topo</a>
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%; 
+            cursor: pointer;
+            font-size: 22px; 
+            box-shadow: 0px 4px 15px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        " title="Voltar ao topo">⬆️</button>
     </div>
     """,
     unsafe_allow_html=True
