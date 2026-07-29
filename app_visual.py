@@ -829,6 +829,7 @@ if "💰" in st.session_state.page:
 
         
         with g2:
+          
             st.write("### 📊 Fluxo Mensal (3 Meses)")
             
             # Cálculo dos 3 meses a partir do mês selecionado
@@ -838,6 +839,11 @@ if "💰" in st.session_state.page:
             
             # Filtra a base completa pelos meses selecionados
             df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
+            
+            # 🔒 EXCLUI AS TRANSFERÊNCIAS ENTRE BANCOS/CONTAS DO FLUXO
+            # (Ajuste 'Transferência' caso o nome exato na sua coluna 'Tipo' seja diferente, ex: 'Transferencia')
+            if not df_fluxo.empty and 'Tipo' in df_fluxo.columns:
+                df_fluxo = df_fluxo[df_fluxo['Tipo'] != 'Transferência']
             
             # Prepara os dados para o gráfico
             df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
