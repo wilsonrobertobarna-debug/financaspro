@@ -1961,15 +1961,13 @@ if aba == "📊 Análises & Configurações":
 # -------------------------------------------------------------------------
 # BOTÃO SUPREMO: VOLTAR AO TOPO (Via Componente HTML do Streamlit)
 # -------------------------------------------------------------------------
-
-# Botão flutuante no canto inferior direito
-# Botão flutuante redondo
+# Botão flutuante com animação de aparecer/desaparecer
 st.markdown(
     """
     <style>
     .scroll-top-btn {
         position: fixed;
-        bottom: 80px; /* ajusta a altura para não encobrir a tarja preta */
+        bottom: 80px; /* ajusta para não encobrir a tarja preta */
         right: 20px;
         width: 50px;
         height: 50px;
@@ -1982,18 +1980,30 @@ st.markdown(
         font-size: 22px;
         text-align: center;
         line-height: 50px;
-        transition: all 0.3s ease;
+        transition: opacity 0.3s ease;
         z-index: 9999;
+        opacity: 0; /* começa invisível */
     }
-    .scroll-top-btn:hover {
-        background: linear-gradient(135deg, #66BB6A, #388E3C);
-        transform: scale(1.1);
+    .scroll-top-btn.show {
+        opacity: 1; /* aparece quando rola */
     }
     </style>
 
     <a href="#top">
-        <button class="scroll-top-btn">⬆️</button>
+        <button id="scrollBtn" class="scroll-top-btn">⬆️</button>
     </a>
+
+    <script>
+    // Mostra/esconde o botão conforme o scroll
+    window.onscroll = function() {
+        var btn = document.getElementById("scrollBtn");
+        if (document.body.scrollTop > 200 || document.documentElement.scrollTop > 200) {
+            btn.classList.add("show");
+        } else {
+            btn.classList.remove("show");
+        }
+    };
+    </script>
     """,
     unsafe_allow_html=True
 )
