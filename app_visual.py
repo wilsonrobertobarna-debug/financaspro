@@ -1959,10 +1959,23 @@ if aba == "📊 Análises & Configurações":
 # BOTÃO FLUTUANTE: VOLTAR AO TOPO (100% Nativo Streamlit)
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
-# BOTÃO VOLTAR AO TOPO (No Rodapé da Página Principal)
+# BOTÃO VOLTAR AO TOPO (Link HTML direto com rolagem suave)
 # -------------------------------------------------------------------------
-st.markdown("<br><br>", unsafe_allow_html=True)
-col_vazio, col_btn_topo = st.columns([3, 1])
-with col_btn_topo:
-    if st.button("⬆️ Topo", use_container_width=True, key="btn_voltar_topo_rodape"):
-        st.rerun()
+st.markdown(
+    """
+    <div style="text-align: right; padding: 20px 0px;">
+        <a href="#_top" style="
+            background-color: #2ecc71; 
+            color: white; 
+            padding: 10px 18px; 
+            border-radius: 20px; 
+            text-decoration: none; 
+            font-weight: bold; 
+            font-size: 14px;
+            box-shadow: 0px 4px 8px rgba(0,0,0,0.2);
+            display: inline-block;
+        ">⬆️ Voltar ao Topo</a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
