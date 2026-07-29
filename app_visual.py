@@ -1366,8 +1366,8 @@ if aba == "📋 Relatório PDF":
 
         periodo_pdf = st.date_input("Período do Relatório:", [primeiro_dia_mes, ultimo_dia_mes], format="DD/MM/YYYY", key="dt_rel_periodo")
 
-    # Espaço respiro para a próxima linha não grudar
-    st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
+    # Respiro seguro entre a linha 1 e a linha 2
+    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
     col_rel3, col_rel4, col_rel5 = st.columns(3)
     with col_rel3:
@@ -1378,7 +1378,6 @@ if aba == "📋 Relatório PDF":
         beneficiarios_unicos = []
         df_temp = df_base if 'df_base' in locals() else df_report
         
-        # Identifica a coluna de beneficiário de forma segura
         col_ben = next((c for c in df_temp.columns if 'BENEFICIÁRIO' in c.upper() or 'BENEFICIARIO' in c.upper()), None)
         if col_ben and not df_temp.empty:
             nomes_brutos = df_temp[col_ben].dropna().astype(str)
@@ -1397,10 +1396,12 @@ if aba == "📋 Relatório PDF":
         busca_benef = "" if busca_benef_select == "Todos" else busca_benef_select
         
     with col_rel5:
+            # Espaço dedicado empurrando a legenda do Status para baixo e longe da borda superior
+            st.markdown("<div style='height: 2px;'></div>", unsafe_allow_html=True)
             busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"], key="sb_rel_status")
 
-    # Espaço respiro antes dos filtros de Categoria e Tipo
-    st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
+    # Respiro seguro antes dos filtros de Categoria e Tipo da última linha
+    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
     col_rel6, col_rel7 = st.columns(2)
     with col_rel6:
@@ -1409,12 +1410,14 @@ if aba == "📋 Relatório PDF":
         busca_categoria = st.selectbox("📂 Filtrar Categoria:", opcoes_cat_rel, key="sb_rel_categoria")
 
     with col_rel7:
+        # Espaço dedicado empurrando a legenda do Tipo para baixo
+        st.markdown("<div style='height: 2px;'></div>", unsafe_allow_html=True)
         tipos_disponiveis = sorted(df_base['Tipo'].dropna().unique()) if 'Tipo' in df_base.columns else []
         opcoes_tipo_rel = ["Todos"] + list(tipos_disponiveis)
         busca_tipo = st.selectbox("🏷️ Filtrar Tipo:", opcoes_tipo_rel, key="sb_rel_tipo")
 
     st.markdown("---")
-
+       
     # Botão para processar e gerar o documento / visualizar
     if st.button("📄 Gerar PDF", key="btn_gerar_pdf"):
         try:
