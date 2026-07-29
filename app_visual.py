@@ -1953,3 +1953,26 @@ if aba == "📊 Análises & Configurações":
                 on_change=atualizar_meta_sheets, 
                 args=(nome,) 
             )
+
+            # -------------------------------------------------------------------------
+# BOTÃO FLUTUANTE: VOLTAR AO TOPO (Otimizado para celular e PC)
+# -------------------------------------------------------------------------
+st.markdown(
+    """
+    <div id="back-to-top" style="position: fixed; bottom: 25px; right: 25px; z-index: 9999;">
+        <a href="#" style="
+            background-color: #2ecc71; 
+            color: white; 
+            padding: 10px 14px; 
+            border-radius: 50%; 
+            text-decoration: none; 
+            font-size: 18px; 
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        ">⬆️</a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
