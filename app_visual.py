@@ -10,6 +10,9 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 
+# Cria um "alvo" no topo
+st.markdown('<a id="top"></a>', unsafe_allow_html=True)
+
 # Configuração da página
 st.set_page_config(
     page_title="Painel Wilson",
@@ -1959,14 +1962,15 @@ if aba == "📊 Análises & Configurações":
 # BOTÃO SUPREMO: VOLTAR AO TOPO (Via Componente HTML do Streamlit)
 # -------------------------------------------------------------------------
 
-# Botão no rodapé que sobe para o topo
+# Botão no rodapé que leva ao topo
 st.markdown(
     """
     <div style="text-align:center; margin-top:50px;">
-        <button style="padding:10px 20px; font-size:16px;"
-                onclick="window.scrollTo({top: 0, behavior: 'smooth'});">
-            ⬆️ Voltar ao topo
-        </button>
+        <a href="#top">
+            <button style="padding:10px 20px; font-size:16px;">
+                ⬆️ Voltar ao topo
+            </button>
+        </a>
     </div>
     """,
     unsafe_allow_html=True
