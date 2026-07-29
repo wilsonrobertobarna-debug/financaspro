@@ -772,14 +772,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                     del st.session_state["selectbox_ajuste"]
                 atualizar_sessao()
                 st.rerun()
-
-# -------------------------------------------------------------------------
-# BOTÃO VOLTAR AO TOPO (Na Barra Lateral)
-# -------------------------------------------------------------------------
-with st.sidebar:
-    st.markdown("---")
-    if st.button("⬆️ Voltar ao Topo", use_container_width=True, key="btn_topo_sidebar"):
-        st.rerun()
         
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
@@ -1966,23 +1958,11 @@ if aba == "📊 Análises & Configurações":
 # -------------------------------------------------------------------------
 # BOTÃO FLUTUANTE: VOLTAR AO TOPO (100% Nativo Streamlit)
 # -------------------------------------------------------------------------
-st.markdown(
-    """
-    <style>
-        /* Fixa o botão flutuante no canto inferior direito, acima do Manage app */
-        div.fixed-top-btn {
-            position: fixed;
-            bottom: 75px;
-            right: 20px;
-            z-index: 99999;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-st.markdown('<div class="fixed-top-btn">', unsafe_allow_html=True)
-if st.button("⬆️", key="btn_voltar_topo", help="Voltar ao topo"):
-    # Código em Python que força o topo recarregando levemente o estado ou rodando um script de scroll seguro
-    st.rerun()
-st.markdown('</div>', unsafe_allow_html=True)
+# -------------------------------------------------------------------------
+# BOTÃO VOLTAR AO TOPO (No Rodapé da Página Principal)
+# -------------------------------------------------------------------------
+st.markdown("<br><br>", unsafe_allow_html=True)
+col_vazio, col_btn_topo = st.columns([3, 1])
+with col_btn_topo:
+    if st.button("⬆️ Topo", use_container_width=True, key="btn_voltar_topo_rodape"):
+        st.rerun()
