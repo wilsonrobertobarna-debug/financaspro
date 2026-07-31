@@ -1781,43 +1781,7 @@ if aba == "📋 Relatório PDF":
             df_tela = df_tela[(df_tela['DT_FILTRO'] >= pd.to_datetime(periodo_pdf[0])) & 
                               (df_tela['DT_FILTRO'] <= pd.to_datetime(periodo_pdf[1]))]
 
-    # Aplica Banco na tela
-    if banco_relatorio != "Todos" and col_banco_df:
-        df_tela = df_tela[df_tela[col_banco_df].str.upper().str.strip() == str(banco_relatorio).upper()]
-
-    # Aplica Descrição na tela
-    if busca_desc and col_desc_df:
-        df_tela = df_tela[df_tela[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
-
-   
-    # Aplica Beneficiário na tela (Coluna J)
-
-    # Aplica Beneficiário na tela
-    if busca_benef:
-        if 'df_tela' in locals() and len(df_tela.columns) > 9:
-            col_benef_nome = df_tela.columns[9]
-            df_tela = df_tela[df_tela[col_benef_nome].astype(str).str.contains(busca_benef, case=False, na=False)]
-
-    # Aplica Status na tela
-    if busca_status != "Todos" and col_status_df:
-        df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
-
-   # Aplica Categoria na tela
-    if 'busca_categoria' in locals() and busca_categoria != "Todas" and 'Categoria' in df_tela.columns:
-        df_tela = df_tela[df_tela['Categoria'].str.upper().str.strip() == str(busca_categoria).upper()]
-
-    # BLINDAGEM DA TELA: Se o usuário NÃO selecionou explicitamente uma categoria de transferência, ocultamos elas por padrão
-    if 'Categoria' in df_tela.columns and (not 'busca_categoria' in locals() or str(busca_categoria).upper() not in ["TRANSFERÊNCIA", "TRANSFERENCIA"]):
-        df_tela = df_tela[~df_tela['Categoria'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
-
-   
-   # Aplica Tipo na tela
-    if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
-        df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
-    
-    # BLINDAGEM DA TELA: Se o tipo selecionado for "Todos", removemos transferências para não poluírem a listagem
-    if 'Tipo' in df_tela.columns and ('busca_tipo' in locals() and busca_tipo == "Todos"):
-        df_tela = df_tela[~df_tela['Tipo'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]# Aplica Banco na tela
+   # Aplica Banco na tela
     if banco_relatorio != "Todos" and col_banco_df:
         df_tela = df_tela[df_tela[col_banco_df].str.upper().str.strip() == str(banco_relatorio).upper()]
 
@@ -1843,15 +1807,15 @@ if aba == "📋 Relatório PDF":
     if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
         df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
-    # BLINDAGEM INTELIGENTE DA TELA: Só oculta transferências se estivermos no modo 100% geral absoluto
-    est_geral_absoluto = (
-        ('banco_relatorio' in locals() and banco_relatorio == "Todos") and 
+    # BLINDAGEM INTELIGENTE DA TELA: Só oculta transferências se Categoria E Tipo estiverem em "Todos"
+    modo_geral_tela = (
         ('busca_categoria' in locals() and busca_categoria == "Todos") and 
         ('busca_tipo' in locals() and busca_tipo == "Todos")
     )
-    if est_geral_absoluto and 'Categoria' in df_tela.columns:
+    if modo_geral_tela and 'Categoria' in df_tela.columns:
         df_tela = df_tela[~df_tela['Categoria'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
 
+    
     # --- FAXINA RIGOROSA ---
     colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
 
