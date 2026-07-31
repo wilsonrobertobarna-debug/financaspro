@@ -1489,11 +1489,11 @@ if aba == "📋 Relatório PDF":
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
-            # Filtro de Categoria
+           # Filtro de Categoria
             if busca_categoria != "Todas" and 'Categoria' in df_report.columns:
                 df_report = df_report[df_report['Categoria'].str.upper().str.strip() == str(busca_categoria).upper()]
 
-            # BLINDAGEM DO PDF: Se o usuário NÃO selecionou explicitamente a categoria de transferência, removemos do relatório
+            # BLINDAGEM DO PDF: Remove transferências se não foram selecionadas explicitamente
             if 'Categoria' in df_report.columns and str(busca_categoria).upper() not in ["TRANSFERÊNCIA", "TRANSFERENCIA"]:
                 df_report = df_report[~df_report['Categoria'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
 
