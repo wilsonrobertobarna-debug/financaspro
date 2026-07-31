@@ -1489,21 +1489,21 @@ if aba == "📋 Relatório PDF":
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
-           # Filtro de Categoria
+            # Filtro de Categoria
             if busca_categoria != "Todas" and 'Categoria' in df_report.columns:
                 df_report = df_report[df_report['Categoria'].str.upper().str.strip() == str(busca_categoria).upper()]
-
-            # BLINDAGEM DO PDF (Categoria): Remove transferências se não foram selecionadas explicitamente
-            if 'Categoria' in df_report.columns and str(busca_categoria).upper() not in ["TRANSFERÊNCIA", "TRANSFERENCIA"]:
-                df_report = df_report[~df_report['Categoria'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
 
             # Aplica Tipo no PDF
             if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_report.columns:
                 df_report = df_report[df_report['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
-            # BLINDAGEM DO PDF (Tipo): Se o tipo selecionado for "Todos", removemos transferências remanescentes
-            if 'Tipo' in df_report.columns and ('busca_tipo' in locals() and busca_tipo == "Todos"):
-                df_report = df_report[~df_report['Tipo'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
+            # BLINDAGEM INTELIGENTE DO PDF: Só oculta transferências se Categoria E Tipo estiverem em "Todos"
+            modo_geral_pdf = (
+                busca_categoria == "Todos" and 
+                (not 'busca_tipo' in locals() or busca_tipo == "Todos")
+            )
+            if modo_geral_pdf and 'Categoria' in df_report.columns:
+                df_report = df_report[~df_report['Categoria'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
 
             # ========================================================
             # ORDENAÇÃO INTELIGENTE
