@@ -1493,6 +1493,10 @@ if aba == "📋 Relatório PDF":
             if busca_categoria != "Todas" and 'Categoria' in df_report.columns:
                 df_report = df_report[df_report['Categoria'].str.upper().str.strip() == str(busca_categoria).upper()]
 
+            # BLINDAGEM DO PDF: Se o usuário NÃO selecionou explicitamente a categoria de transferência, removemos do relatório
+            if 'Categoria' in df_report.columns and str(busca_categoria).upper() not in ["TRANSFERÊNCIA", "TRANSFERENCIA"]:
+                df_report = df_report[~df_report['Categoria'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
+
 
                    # Aplica Tipo na tela
             if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
