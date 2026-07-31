@@ -1415,7 +1415,7 @@ if aba == "📋 Relatório PDF":
         opcoes_cat_rel = ["Todas"] + list(categorias_disponiveis)
         busca_categoria = st.selectbox("📂 Filtrar Categoria:", opcoes_cat_rel, key="sb_rel_categoria")
 
-     with col_rel7:
+    with col_rel7:
         # Espaço dedicado empurrando a legenda do Tipo para baixo
         st.markdown("<div style='height: 2px;'></div>", unsafe_allow_html=True)
         if 'Tipo' in df_base.columns:
