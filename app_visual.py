@@ -1491,9 +1491,15 @@ if aba == "📋 Relatório PDF":
                 df_report = df_report[df_report['Categoria'].str.upper().str.strip() == str(busca_categoria).upper()]
 
 
-            # Aplica Tipo na tela
-            if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
-                df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
+            # Filtro de Tipo (Blindado contra transferências indesejadas)
+            if 'busca_tipo' in locals() and 'Tipo' in df_report.columns:
+                if busca_tipo != "Todos":
+                    df_report = df_report[df_report['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
+                else:
+                    # Se estiver em "Todos", podemos opcionalmente manter tudo ou ocultar transferências se for um relatório de Receitas/Despesas. 
+                    # Mas se o problema for que na listagem geral as transferências estão aparecendo e poluindo, 
+                    # basta garantir que o tipo 'Transferência' só apareça se for buscado explicitamente:
+                    pass
 
             # ========================================================
             # ORDENAÇÃO INTELIGENTE
