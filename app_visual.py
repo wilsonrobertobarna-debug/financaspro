@@ -1806,9 +1806,13 @@ if aba == "📋 Relatório PDF":
         df_tela = df_tela[df_tela['Categoria'].str.upper().str.strip() == str(busca_categoria).upper()]
 
    
-    # Aplica Tipo na tela
+   # Aplica Tipo na tela
     if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
         df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
+    
+    # BLINDAGEM DA TELA: Se o tipo selecionado for "Todos", removemos transferências para não poluírem a listagem
+    if 'Tipo' in df_tela.columns and ('busca_tipo' in locals() and busca_tipo == "Todos"):
+        df_tela = df_tela[~df_tela['Tipo'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
 
     # --- FAXINA RIGOROSA ---
     colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
