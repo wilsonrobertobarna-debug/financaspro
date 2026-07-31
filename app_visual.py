@@ -1415,14 +1415,17 @@ if aba == "📋 Relatório PDF":
         opcoes_cat_rel = ["Todas"] + list(categorias_disponiveis)
         busca_categoria = st.selectbox("📂 Filtrar Categoria:", opcoes_cat_rel, key="sb_rel_categoria")
 
-    with col_rel7:
+     with col_rel7:
         # Espaço dedicado empurrando a legenda do Tipo para baixo
         st.markdown("<div style='height: 2px;'></div>", unsafe_allow_html=True)
-        tipos_disponiveis = sorted(df_base['Tipo'].dropna().unique()) if 'Tipo' in df_base.columns else []
+        if 'Tipo' in df_base.columns:
+            tipos_brutos = df_base['Tipo'].dropna().unique()
+            tipos_disponiveis = sorted([t for t in tipos_brutos if 'TRANSFERÊNCIA' not in str(t).upper() and 'TRANSFERENCIA' not in str(t).upper()])
+        else:
+            tipos_disponiveis = []
         opcoes_tipo_rel = ["Todos"] + list(tipos_disponiveis)
         busca_tipo = st.selectbox("🏷️ Filtrar Tipo:", opcoes_tipo_rel, key="sb_rel_tipo")
-
-    st.markdown("---")
+        st.markdown("---")
        
     # Botão para processar e gerar o documento / visualizar
     if st.button("📄 Gerar PDF", key="btn_gerar_pdf"):
