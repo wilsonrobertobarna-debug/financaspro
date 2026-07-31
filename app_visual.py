@@ -1493,18 +1493,17 @@ if aba == "📋 Relatório PDF":
             if busca_categoria != "Todas" and 'Categoria' in df_report.columns:
                 df_report = df_report[df_report['Categoria'].str.upper().str.strip() == str(busca_categoria).upper()]
 
-            # BLINDAGEM DO PDF: Remove transferências se não foram selecionadas explicitamente
+            # BLINDAGEM DO PDF (Categoria): Remove transferências se não foram selecionadas explicitamente
             if 'Categoria' in df_report.columns and str(busca_categoria).upper() not in ["TRANSFERÊNCIA", "TRANSFERENCIA"]:
                 df_report = df_report[~df_report['Categoria'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
 
+            # Aplica Tipo no PDF
+            if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_report.columns:
+                df_report = df_report[df_report['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
-                   # Aplica Tipo na tela
-            if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
-                df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
-            
-            # BLINDAGEM DA TELA: Se o tipo selecionado for "Todos", removemos transferências para não poluírem a listagem
-            if 'Tipo' in df_tela.columns and ('busca_tipo' in locals() and busca_tipo == "Todos"):
-                df_tela = df_tela[~df_tela['Tipo'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
+            # BLINDAGEM DO PDF (Tipo): Se o tipo selecionado for "Todos", removemos transferências remanescentes
+            if 'Tipo' in df_report.columns and ('busca_tipo' in locals() and busca_tipo == "Todos"):
+                df_report = df_report[~df_report['Tipo'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
 
             # ========================================================
             # ORDENAÇÃO INTELIGENTE
