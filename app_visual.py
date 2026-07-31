@@ -1490,9 +1490,10 @@ if aba == "📋 Relatório PDF":
             if busca_categoria != "Todas" and 'Categoria' in df_report.columns:
                 df_report = df_report[df_report['Categoria'].str.upper().str.strip() == str(busca_categoria).upper()]
 
-            # Filtro de Tipo
-            if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_report.columns:
-                df_report = df_report[df_report['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
+           
+            # Aplica Tipo na tela
+            if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
+                df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
             # ========================================================
             # ORDENAÇÃO INTELIGENTE
