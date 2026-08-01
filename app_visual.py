@@ -1005,6 +1005,7 @@ if "💰" in st.session_state.page:
 
             
 # 7. TABELA FINAL
+       
         st.subheader("🔍 Lançamentos do Mês")
         
         if not df_m_limpo.empty:
@@ -1014,17 +1015,14 @@ if "💰" in st.session_state.page:
             if 'ID' in df_exibicao.columns:
                 df_exibicao = df_exibicao.sort_values(by='ID', ascending=False)
             
-            # AJUSTE DE MENTOR: 
-            # Se você sente que a diferença é de 2, mudamos aqui.
-            ajuste = 2 
-            df_exibicao['Seq.'] = range(len(df_exibicao), 0, -1) # Mantém a sequência decrescente bonitinha
+            # MANTÉM O ID REAL DO SHEETS NA TELA
+            # Exibe a coluna 'ID' diretamente em vez de criar uma sequência numérica temporária
             
-            st.dataframe(df_exibicao[['Seq.', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
+            st.dataframe(df_exibicao[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
                          use_container_width=True, 
                          hide_index=True)
         else:
             st.warning("Base de dados vazia.")
-
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
