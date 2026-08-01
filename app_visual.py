@@ -300,7 +300,6 @@ except:
     ws_bancos = None
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
-# FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
@@ -323,8 +322,10 @@ def carregar_dados_gs():
         
     df['V_Num'] = df['Valor'].apply(p_float)
     df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')    
-    df['Mes_Arms'] = df['DT'].dt.strftime('%m/%y') # ou Mes_Ano conforme seu código
+    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y') # CORRIGIDO AQUI (Removido o 's' extra)
     return df
+    
+ 
 def carregar_bancos_manual_gs():
     if ws_bancos:
         dados = ws_bancos.get_all_values()
