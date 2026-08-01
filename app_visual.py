@@ -786,7 +786,14 @@ if "💰" in st.session_state.page:
     # 1. BARRINHA DE MESES
     meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     mes_atual_hoje = datetime.now().strftime("%b")
-    mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=mes_atual_hoje)
+    #mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=mes_atual_hoje)
+    # Garante que o default do mês existe na lista para evitar que o Streamlit quebre
+    if 'mes_atual_hoje' in locals() and mes_atual_hoje in meses_abreviados:
+        default_mes = mes_atual_hoje
+    else:
+        default_mes = meses_abreviados[0] if meses_abreviados else None
+
+    mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=default_mes)
     
     if not df_base.empty:
         # 2. TRADUÇÃO DO FILTRO
