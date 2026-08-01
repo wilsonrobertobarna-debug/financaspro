@@ -300,19 +300,31 @@ except:
     ws_bancos = None
 
 # FUNÇÕES DE CARREGAMENTO DIRETO
+# FUNÇÕES DE CARREGAMENTO DIRETO
 def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
+    
     df = pd.DataFrame(dados[1:], columns=dados[0])
-    df['ID'] = range(2, len(df) + 2)
+    
+    # GUARDA A LINHA REAL DO GOOGLE SHEETS (Onde 0 no DataFrame é a linha 2 da planilha)
+    # Linha do DF 0 + 2 = Linha 2 do Sheets
+    df['Linha_Sheets'] = range(2, len(df) + 2)
+    
+    # Garante que o ID lido seja o número real gravado na Coluna I da planilha
+    if 'ID' in df.columns:
+        df['ID'] = pd.to_numeric(df['ID'], errors='coerce').fillna(0).astype(int)
+    else:
+        df['ID'] = range(1, len(df) + 1)
+
     def p_float(v):
         try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
         except: return 0.0
+        
     df['V_Num'] = df['Valor'].apply(p_float)
-    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')   
-    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+    df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')    
+    df['Mes_Arms'] = df['DT'].dt.strftime('%m/%y') # ou Mes_Ano conforme seu código
     return df
-
 def carregar_bancos_manual_gs():
     if ws_bancos:
         dados = ws_bancos.get_all_values()
