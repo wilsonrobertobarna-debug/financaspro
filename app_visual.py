@@ -1229,7 +1229,6 @@ elif "🚗" in aba:
         
 
 elif "📄" in aba:
-   elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
     
     # Trava a data de início no primeiro dia do mês atual
