@@ -1229,6 +1229,7 @@ elif "🚗" in aba:
         
 
 elif "📄" in aba:
+   elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
     
     # Trava a data de início no primeiro dia do mês atual
@@ -1239,9 +1240,12 @@ elif "📄" in aba:
     d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY", key="zap_d2")
     
     saldos_txt = ""
-    total_patrimonio = 0.0
+    sub_contas_invest = 0.0
+    sub_cartoes = 0.0
+    sub_vr = 0.0
+    sub_bens_veiculos = 0.0
     
-    # 1. LOOP PELOS BANCOS E CARTÕES
+    # 1. LOOP PELOS BANCOS E ATIVOS
     for b in sorted(bancos_disponiveis):
         valor_b = 0.0      
         tipo_c = ""
@@ -1252,40 +1256,49 @@ elif "📄" in aba:
             for _, row in df_bancos_info.iterrows():
                 if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
                     try:
-                        # B (1): Valor (Limite ou Saldo Inicial)
                         v_raw = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
                         valor_b = float(v_raw) if v_raw and v_raw != 'nan' else 0.0
-                        
-                        # C (2): Tipo (Conta, Cartão, Investimento)
                         tipo_c = str(row.iloc[2]).strip().upper()
                         
-                        # D (3): Fechamento
                         if len(row) >= 4:
                             f_raw = str(row.iloc[3]).replace('R$', '').strip()
                             dia_fech_d = int(float(f_raw)) if f_raw and f_raw != 'nan' else 1
                             
-                        # E (4): Vencimento
                         if len(row) >= 5:
                             ven_raw = str(row.iloc[4]).replace('R$', '').strip()
                             dia_venc_e = int(float(ven_raw)) if ven_raw and ven_raw != 'nan' else 10
                     except: pass
                     break
         
-        # --- LÓGICA DE CARTÃO ---
-        if "CARTA" in tipo_c or "CART" in b.upper():
+        b_up = b.upper()
+        
+        # --- CARTÕES DE CRÉDITO ---
+        if "CARTA" in tipo_c or "CART" in b_up:
             limite_cartao = valor_b
-            
             mask = (df_base['Banco'] == b) & \
                    (df_base['Status'].str.upper() == 'PENDENTE') & \
                    (pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True).dt.date <= d_fim)
 
             usado = df_base.loc[mask, 'V_Num'].sum()
             dispo = limite_cartao - usado
+            sub_cartoes += usado
             
             usado_fmt = f"{m_fmt(usado)} 🔴" if usado > 0 else m_fmt(0)
             saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {usado_fmt} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
         
-        # --- LÓGICA DE CONTA / INVESTIMENTO ---
+        # --- VALE REFEIÇÃO (VR / VA) ---
+        elif "REFEIÇÃO" in tipo_c or "VR" in b_up or "VA" in b_up or "ALIMENTAÇÃO" in b_up:
+            saldo_vr = valor_b
+            sub_vr += saldo_vr
+            saldos_txt += f"🍽️ {b}: {m_fmt(saldo_vr)}\n"
+
+        # --- VEÍCULOS E BENS (T-Cross, Moto Lead, etc.) ---
+        elif "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
+            saldo_bem = valor_b
+            sub_bens_veiculos += saldo_bem
+            saldos_txt += f"🚗 {b}: {m_fmt(saldo_bem)}\n"
+
+        # --- CONTAS CORRENTES E INVESTIMENTOS ---
         else:
             saldo_inicial = valor_b
             mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
@@ -1293,9 +1306,12 @@ elif "📄" in aba:
             des_b = mov_paga[mov_paga['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
             s_final = saldo_inicial + rec_b - des_b
             
+            sub_contas_invest += s_final
             icone = "💰" if "INVEST" in tipo_c else "🏦"
-            saldos_txt += f"{icone} {b}: Saldo: {m_fmt(s_final)}\n"
-            total_patrimonio += s_final
+            saldos_txt += f"{icone} {b}: {m_fmt(s_final)}\n"
+
+    # Patrimônio Total consolidando todas as frentes
+    total_patrimonio = sub_contas_invest + sub_vr + sub_bens_veiculos - sub_cartoes
 
     # 2. RESUMO DO PERÍODO
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
@@ -1316,7 +1332,7 @@ elif "📄" in aba:
     else:
         rec_v = des_v = rend_v = sobra = val_pendente = 0.0
 
-    # 3. MONTAGEM DO TEXTO FINAL
+    # 3. MONTAGEM DO TEXTO FINAL COM OS SUBTOTAIS POR ÚLTIMO ANTES DO PATRIMÔNIO
     relat = f"RELATÓRIO WILSON & FABIANA\n"
     relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"========================================\n"
@@ -1324,12 +1340,17 @@ elif "📄" in aba:
     relat += f"DES: {m_fmt(des_v)} | SOBRA: {m_fmt(sobra)}\n"
     relat += f"⏳ Pendente de Pagamento: {m_fmt(val_pendente)}\n"
     relat += f"========================================\n\n"
-    relat += f"SALDOS:\n{saldos_txt}\n"
-    relat += f"TOTAL PATRIMÔNIO: {m_fmt(total_patrimonio)}"
+    relat += f"SALDOS E CONTAS:\n{saldos_txt}\n"
+    relat += f"----------------------------------------\n"
+    relat += f"📊 Subtotal Contas & Investimentos: {m_fmt(sub_contas_invest)}\n"
+    relat += f"💳 Subtotal Cartões Usados: {m_fmt(sub_cartoes)}\n"
+    relat += f"🍽️ Subtotal Vale Refeição: {m_fmt(sub_vr)}\n"
+    relat += f"🚗 Subtotal T-Cross + Moto Lead: {m_fmt(sub_bens_veiculos)}\n"
+    relat += f"========================================\n"
+    relat += f"💎 PATRIMÔNIO TOTAL: {m_fmt(total_patrimonio)}"
     
-    st.text_area("Copiar Relatório para o WhatsApp", relat, height=300)
+    st.text_area("Copiar Relatório para o WhatsApp", relat, height=360)
     
-    # Botão seguro com urllib codificando certinho os emojis e quebras de linha
     import urllib.parse
     link_zap = f"https://wa.me/?text={urllib.parse.quote(relat)}"
     st.markdown(f'[📲 Enviar Resumo para o WhatsApp]({link_zap})', unsafe_allow_html=True)
