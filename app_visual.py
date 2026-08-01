@@ -783,12 +783,15 @@ if "💰" in st.session_state.page:
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
-    # 1. BARRINHA DE MESES
+# 1. BARRINHA DE MESES
     meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    mes_atual_hoje = datetime.now().strftime("%b")
-    #mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=mes_atual_hoje)
+    
+    # Mapeamento seguro baseado no número do mês atual (evita bug de idioma do servidor em inglês como "Aug")
+    num_mes_atual = datetime.now().month - 1  # 0 a 11
+    mes_atual_hoje = meses_abreviados[num_mes_atual]
+
     # Garante que o default do mês existe na lista para evitar que o Streamlit quebre
-    if 'mes_atual_hoje' in locals() and mes_atual_hoje in meses_abreviados:
+    if mes_atual_hoje in meses_abreviados:
         default_mes = mes_atual_hoje
     else:
         default_mes = meses_abreviados[0] if meses_abreviados else None
