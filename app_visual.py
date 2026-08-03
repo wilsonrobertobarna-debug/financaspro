@@ -756,121 +756,121 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     st.rerun()
            
 
-   # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
+  
 
-with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
-    if not df_base.empty:
-           # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
-           # Monta a lista com ID, Vencimento, Descrição, Beneficiário, Categoria, Tipo e Valor
-           lista_edit = {}
-           for _, r in df_base.iloc[::-1].iterrows():
+# --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
+    with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
+        if not df_base.empty:
+            # Monta a lista com ID, Vencimento, Descrição, Beneficiário, Categoria, Tipo e Valor
+            lista_edit = {}
+            for _, r in df_base.iloc[::-1].iterrows():
                 benef = r.get('Beneficiário', r.get('Beneficiario', 'N/D'))
                 cat = r.get('Categoria', 'N/D')
                 tipo = r.get('Tipo', 'N/D')
                 label = f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']} | Benef: {benef} | Cat: {cat} ({tipo}) | R$ {r['Valor']}"
                 lista_edit[label] = r
 
-           escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
+            escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
                 
-           if escolha:
-               item = lista_edit[escolha]
-               data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
+            if escolha:
+                item = lista_edit[escolha]
+                data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
                 
-               # Respiro leve para desgrudar o campo de seleção de cima
-               st.markdown("")
-               ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
+                # Respiro leve para desgrudar o campo de seleção de cima
+                st.markdown("")
+                ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
                 
-               ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
-               ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
+                ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+                ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
                 
-               # Beneficiário corrigido para buscar e permitir alteração
-               val_benef = item.get('Beneficiário', item.get('Beneficiario', ''))
-               ed_benef = st.text_input("Alterar Beneficiário:", value=str(val_benef))
+                # Beneficiário corrigido para buscar e permitir alteração
+                val_benef = item.get('Beneficiário', item.get('Beneficiario', ''))
+                ed_benef = st.text_input("Alterar Beneficiário:", value=str(val_benef))
                 
-               # Categoria agora usa a lista padrão em formato de seleção segura
-               # (Se o nome da sua lista no código for outro, ex: categorias_disponiveis, ajuste abaixo)
-               cat_atual = str(item.get('Categoria', '')).strip()
-               idx_cat = categorias_disponiveis.index(cat_atual) if cat_atual in categorias_disponiveis else 0
-               ed_cat = st.selectbox("Alterar Categoria:", categorias_disponiveis, index=idx_cat)
+                # Categoria agora usa a lista padrão em formato de seleção segura
+                # (Se o nome da sua lista no código for outro, ex: categorias_disponiveis, ajuste abaixo)
+                cat_atual = str(item.get('Categoria', '')).strip()
+                idx_cat = categorias_disponiveis.index(cat_atual) if cat_atual in categorias_disponiveis else 0
+                ed_cat = st.selectbox("Alterar Categoria:", categorias_disponiveis, index=idx_cat)
                 
-               tipos_opcoes = ["Despesa", "Receita", "Transferência"]
-               tipo_atual = str(item.get('Tipo', 'Despesa')).capitalize()
-               idx_t = tipos_opcoes.index(tipo_atual) if tipo_atual in tipos_opcoes else 0
-               ed_tipo = st.selectbox("Alterar Tipo:", tipos_opcoes, index=idx_t)
+                tipos_opcoes = ["Despesa", "Receita", "Transferência"]
+                tipo_atual = str(item.get('Tipo', 'Despesa')).capitalize()
+                idx_t = tipos_opcoes.index(tipo_atual) if tipo_atual in tipos_opcoes else 0
+                ed_tipo = st.selectbox("Alterar Tipo:", tipos_opcoes, index=idx_t)
 
-               st.markdown("")
-               idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
-               ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
+                st.markdown("")
+                idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
+                ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
                 
-               st.markdown("")
-               status_opcoes = ["Pago", "Pendente"]
-               index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
-               ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
+                st.markdown("")
+                status_opcoes = ["Pago", "Pendente"]
+                index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
+                ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
                 
-               st.markdown("<br>", unsafe_allow_html=True)
-               col_ed1, col_ed2 = st.columns(2)
+                st.markdown("<br>", unsafe_allow_html=True)
+                col_ed1, col_ed2 = st.columns(2)
                 
-               if col_ed1.button("💾 ATUALIZAR"):
-                   id_alvo = int(float(item['ID']))
+                if col_ed1.button("💾 ATUALIZAR"):
+                    id_alvo = int(float(item['ID']))
                     
-                   # Varre a planilha linha por linha para achar o número exato da linha pelo ID
-                   todos_registros = ws_base.get_all_values()
-                   linhas_para_atualizar = []
+                    # Varre a planilha linha por linha para achar o número exato da linha pelo ID
+                    todos_registros = ws_base.get_all_values()
+                    linhas_para_atualizar = []
                     
-                   for idx_linha, row_values in enumerate(todos_registros[1:], start=2):
-                       try:
-                           # A coluna do ID é a 9ª (índice 8)
-                           if len(row_values) >= 9 and int(float(row_values[8])) == id_alvo:
-                               linhas_para_atualizar.append(idx_linha)
-                       except:
-                           pass
+                    for idx_linha, row_values in enumerate(todos_registros[1:], start=2):
+                        try:
+                            # A coluna do ID é a 9ª (índice 8)
+                            if len(row_values) >= 9 and int(float(row_values[8])) == id_alvo:
+                                linhas_para_atualizar.append(idx_linha)
+                        except:
+                            pass
                     
-                   if not linhas_para_atualizar:
-                       linhas_para_atualizar = [int(float(item.get('linha_planilha', id_alvo)))]
+                    if not linhas_para_atualizar:
+                        linhas_para_atualizar = [int(float(item.get('linha_planilha', id_alvo)))]
 
-                   # Atenção aos índices das colunas no Google Sheets (ajuste se a ordem for diferente):
-                   # 1: Data, 2: Valor, 3: Descrição, 4: Beneficiário, 5: Categoria, 6: Banco, 7: Status, 8: Tipo, 9: ID
-                   for linha_id in linhas_para_atualizar:
-                       ws_base.update_cell(linha_id, 1, ed_dat.strftime("%d/%m/%Y"))
-                       ws_base.update_cell(linha_id, 2, f"{ed_val:.2f}".replace('.', ','))
-                       ws_base.update_cell(linha_id, 3, ed_desc)
-                       ws_base.update_cell(linha_id, 4, ed_benef)  # Beneficiário atualizado
-                       ws_base.update_cell(linha_id, 5, ed_cat)    # Categoria atualizada
-                       ws_base.update_cell(linha_id, 6, ed_bnc)    # Banco
-                       ws_base.update_cell(linha_id, 7, ed_sta)    # Status
-                       ws_base.update_cell(linha_id, 8, ed_tipo)   # Tipo
+                    # Atenção aos índices das colunas no Google Sheets (ajuste se a ordem for diferente):
+                    # 1: Data, 2: Valor, 3: Descrição, 4: Beneficiário, 5: Categoria, 6: Banco, 7: Status, 8: Tipo, 9: ID
+                    for linha_id in linhas_para_atualizar:
+                        ws_base.update_cell(linha_id, 1, ed_dat.strftime("%d/%m/%Y"))
+                        ws_base.update_cell(linha_id, 2, f"{ed_val:.2f}".replace('.', ','))
+                        ws_base.update_cell(linha_id, 3, ed_desc)
+                        ws_base.update_cell(linha_id, 4, ed_benef)  # Beneficiário atualizado
+                        ws_base.update_cell(linha_id, 5, ed_cat)    # Categoria atualizada
+                        ws_base.update_cell(linha_id, 6, ed_bnc)    # Banco
+                        ws_base.update_cell(linha_id, 7, ed_sta)    # Status
+                        ws_base.update_cell(linha_id, 8, ed_tipo)   # Tipo
                     
-                   st.toast("✅ Atualização sincronizada com sucesso!", icon="💰")
-                   if "selectbox_ajuste" in st.session_state:
-                       del st.session_state["selectbox_ajuste"]
-                   atualizar_sessao()
-                   st.rerun()
+                    st.toast("✅ Atualização sincronizada com sucesso!", icon="💰")
+                    if "selectbox_ajuste" in st.session_state:
+                        del st.session_state["selectbox_ajuste"]
+                    atualizar_sessao()
+                    st.rerun()
                     
-               if col_ed2.button("🚨 EXCLUIR"):
-                   id_alvo = int(float(item['ID']))
+                if col_ed2.button("🚨 EXCLUIR"):
+                    id_alvo = int(float(item['ID']))
                     
-                   todos_registros = ws_base.get_all_values()
-                   linhas_para_excluir = []
+                    todos_registros = ws_base.get_all_values()
+                    linhas_para_excluir = []
                     
-                   for idx_linha, row_values in enumerate(todos_registros[1:], start=2):
-                       try:
-                           if len(row_values) >= 9 and int(float(row_values[8])) == id_alvo:
-                               linhas_para_excluir.append(idx_linha)
-                       except:
-                           pass
+                    for idx_linha, row_values in enumerate(todos_registros[1:], start=2):
+                        try:
+                            if len(row_values) >= 9 and int(float(row_values[8])) == id_alvo:
+                                linhas_para_excluir.append(idx_linha)
+                        except:
+                            pass
                     
-                   if linhas_para_excluir:
-                       for linha_id in sorted(list(set(linhas_para_excluir)), reverse=True):
-                           try:
-                               ws_base.delete_rows(linha_id)
-                           except:
-                               pass
+                    if linhas_para_excluir:
+                        for linha_id in sorted(list(set(linhas_para_excluir)), reverse=True):
+                            try:
+                                ws_base.delete_rows(linha_id)
+                            except:
+                                pass
                     
-                   st.toast("✅ Lançamento excluído com sucesso!", icon="💰")
-                   if "selectbox_ajuste" in st.session_state:
-                       del st.session_state["selectbox_ajuste"]
-                   atualizar_sessao()
-                   st.rerun()
+                    st.toast("✅ Lançamento excluído com sucesso!", icon="💰")
+                    if "selectbox_ajuste" in st.session_state:
+                        del st.session_state["selectbox_ajuste"]
+                    atualizar_sessao()
+                    st.rerun()
                     
                 if col_ed2.button("🚨 EXCLUIR"):
                     id_alvo = int(float(item['ID']))
