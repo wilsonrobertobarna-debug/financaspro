@@ -687,105 +687,102 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
        
     # --- BARRINHA 2: TRANSFERÊNCIA ---
-    # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
-        with st.form("f_transf", clear_on_submit=True):
-            t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY")
-            t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
-            t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
+        t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY", key="t_dat_key")
+        t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f", key="t_val_key")
+        t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis, key="transf_origem_select")
+        
+        st.markdown("")
+        t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis, key="transf_destino_select")
+        
+        # --- LEITURA DA MOEDA DIRETO DA ABA DE BANCOS (Coluna F / Índice 5) ---
+        try:
+            dados_bancos = ws_bancos.get_all_values()
+            dict_moedas_bancos = {}
+            for linha in dados_bancos[1:]:  # Pula o cabeçalho
+                if len(linha) >= 1:
+                    nome_banco = linha[0]
+                    moeda_banco = linha[5].strip().upper() if len(linha) > 5 and linha[5].strip() else "BRL"
+                    dict_moedas_bancos[nome_banco] = moeda_banco
+        except:
+            dict_moedas_bancos = {}
+
+        moeda_origem = dict_moedas_bancos.get(t_orig, "BRL")
+        moeda_destino = dict_moedas_bancos.get(t_dest, "BRL")
+
+        # Variáveis de câmbio padrão
+        t_valor_final = t_val
+        t_taxa = 1.0
+
+        # Se as moedas forem diferentes, abre os campos de câmbio interativos
+        if moeda_origem != moeda_destino:
+            st.markdown(f"💱 **Câmbio Detectado: {moeda_origem} ➔ {moeda_destino}**")
+            t_taxa = st.number_input("Taxa de Câmbio", min_value=0.0001, value=1.0, format="%.4f", key="input_taxa_cambio")
             
-            st.markdown("")
-            t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
-            
-            # --- LEITURA DA MOEDA DIRETO DA ABA DE BANCOS (Coluna F / Índice 5) ---
-            try:
-                dados_bancos = ws_bancos.get_all_values()
-                dict_moedas_bancos = {}
-                for linha in dados_bancos[1:]:  # Pula o cabeçalho
-                    if len(linha) >= 1:
-                        nome_banco = linha[0]
-                        moeda_banco = linha[5].strip().upper() if len(linha) > 5 and linha[5].strip() else "BRL"
-                        dict_moedas_bancos[nome_banco] = moeda_banco
-            except:
-                dict_moedas_bancos = {}
+            sugestao_destino = t_val * t_taxa if moeda_origem == "BRL" else t_val / t_taxa
+            t_valor_final = st.number_input(f"Valor Final na Conta de Destino ({moeda_destino})", min_value=0.0, value=float(sugestao_destino), format="%.2f", key="input_valor_final_cambio")
+        # --------------------------------------------------------------------
 
-            moeda_origem = dict_moedas_bancos.get(t_orig, "BRL")
-            moeda_destino = dict_moedas_bancos.get(t_dest, "BRL")
-
-            # Variáveis de câmbio padrão
-            t_valor_final = t_val
-            t_taxa = 1.0
-
-            # Se as moedas forem diferentes, abre os campos de câmbio no formulário
-            if moeda_origem != moeda_destino:
-                st.markdown(f"💱 **Câmbio Detectado: {moeda_origem} ➔ {moeda_destino}**")
-                t_taxa = st.number_input("Taxa de Câmbio", min_value=0.0001, value=1.0, format="%.4f")
+        st.markdown("")
+        t_desc = st.text_input("Nota", key="input_nota_transf")
+        
+        st.markdown("")
+        # Campo para repetir a transferência/aplicação mensalmente (1 = vez única)
+        t_meses = st.number_input("Repetir por quantos meses? (1 = Única)", min_value=1, max_value=60, value=1, step=1, key="input_meses_transf")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # Botão normal (fora do form) para garantir que pega os valores digitados nos inputs de câmbio
+        if st.button("TRANSFERIR", key="btn_executar_transf"):
+            if t_orig == t_dest: 
+                st.error("Escolha bancos diferentes!")
+            else:
+                import pandas as pd
+                from dateutil.relativedelta import relativedelta
                 
-                # Sugere o valor de destino baseado na taxa, mas deixa editável
-                sugestao_destino = t_val * t_taxa if moeda_origem == "BRL" else t_val / t_taxa
-                t_valor_final = st.number_input(f"Valor Final na Conta de Destino ({moeda_destino})", min_value=0.0, value=float(sugestao_destino), format="%.2f")
-            # --------------------------------------------------------------------
-
-            st.markdown("")
-            t_desc = st.text_input("Nota")
-            
-            st.markdown("")
-            # Campo para repetir a transferência/aplicação mensalmente (1 = vez única)
-            t_meses = st.number_input("Repetir por quantos meses? (1 = Única)", min_value=1, max_value=60, value=1, step=1)
-            
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.form_submit_button("TRANSFERIR"):
-                if t_orig == t_dest: 
-                    st.error("Escolha bancos diferentes!")
-                else:
-                    import pandas as pd
-                    from dateutil.relativedelta import relativedelta
-                    
-                    # 1. Busca dados para calcular o próximo ID de forma segura de uma só vez
-                    todos_dados = ws_base.get_all_records()
-                    if todos_dados:
-                        df_temp = pd.DataFrame(todos_dados)
-                        if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
-                            proximo_id = int(df_temp['ID'].max()) + 1
-                        else:
-                            proximo_id = 1
+                # 1. Busca dados para calcular o próximo ID de forma segura de uma só vez
+                todos_dados = ws_base.get_all_records()
+                if todos_dados:
+                    df_temp = pd.DataFrame(todos_dados)
+                    if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
+                        proximo_id = int(df_temp['ID'].max()) + 1
                     else:
                         proximo_id = 1
+                else:
+                    proximo_id = 1
+                
+                # 2. Loop para gerar a transferência para cada mês selecionado
+                for i in range(t_meses):
+                    # Avança os meses se for recorrente
+                    data_atual = t_dat + relativedelta(months=i)
                     
-                    # 2. Loop para gerar a transferência para cada mês selecionado
-                    for i in range(t_meses):
-                        # Avança os meses se for recorrente
-                        data_atual = t_dat + relativedelta(months=i)
-                        
-                        v_str_orig = f"{t_val:.2f}".replace('.', ',')
-                        v_str_dest = f"{t_valor_final:.2f}".replace('.', ',')
-                        d_str = data_atual.strftime("%d/%m/%Y")
-                        
-                        # Define o status: "Pago" apenas para o primeiro mês, "Pendente" para os futuros
-                        status_transf = "Pago" if i == 0 else "Pendente"
-                        
-                        # Identifica a parcela se for mais de 1 mês
-                        if t_meses > 1:
-                            desc_transf = f"TR ({i+1}/{t_meses}): {t_desc}".strip() if t_desc else f"TR ({i+1}/{t_meses}): Transferência recorrente"
-                        else:
-                            desc_transf = f"TR: {t_desc}".strip() if t_desc else "TR: Transferência entre contas"
-                        
-                        # MUDANÇA AQUI: Usamos o mesmo 'proximo_id' para as duas pontas da transferência do mês
-                        id_transferencia = proximo_id
-                        proximo_id += 1 # Incrementa apenas 1 para o próximo registro/mês
-                        
-                        # Salva as duas pontas na planilha compartilhando exatamente o mesmo ID
-                        # Ponta de Saída (Origem) usa o valor original, Ponta de Entrada (Destino) usa o valor final com câmbio aplicado
-                        ws_base.append_row([d_str, v_str_orig, desc_transf, "Transferência", "Despesa", t_orig, status_transf, d_str, id_transferencia, ""])
-                        ws_base.append_row([d_str, v_str_dest, desc_transf, "Transferência", "Receita", t_dest, status_transf, d_str, id_transferencia, ""])
+                    v_str_orig = f"{t_val:.2f}".replace('.', ',')
+                    v_str_dest = f"{t_valor_final:.2f}".replace('.', ',')
+                    d_str = data_atual.strftime("%d/%m/%Y")
                     
+                    # Define o status: "Pago" apenas para o primeiro mês, "Pendente" para os futuros
+                    status_transf = "Pago" if i == 0 else "Pendente"
+                    
+                    # Identifica a parcela se for mais de 1 mês
                     if t_meses > 1:
-                        st.toast(f"✅ {t_meses} transferências recorrentes geradas com ID único!", icon="💰")
+                        desc_transf = f"TR ({i+1}/{t_meses}): {t_desc}".strip() if t_desc else f"TR ({i+1}/{t_meses}): Transferência recorrente"
                     else:
-                        st.toast("✅ Transferência sincronizada com ID único!", icon="💰")
-                        
-                    atualizar_sessao()
-                    st.rerun()
+                        desc_transf = f"TR: {t_desc}".strip() if t_desc else "TR: Transferência entre contas"
+                    
+                    id_transferencia = proximo_id
+                    proximo_id += 1 
+                    
+                    # SALVA AS DUAS PONTAS: Origem usa o valor original, Destino usa o valor convertido (t_valor_final)
+                    ws_base.append_row([d_str, v_str_orig, desc_transf, "Transferência", "Despesa", t_orig, status_transf, d_str, id_transferencia, ""])
+                    ws_base.append_row([d_str, v_str_dest, desc_transf, "Transferência", "Receita", t_dest, status_transf, d_str, id_transferencia, ""])
+                
+                if t_meses > 1:
+                    st.toast(f"✅ {t_meses} transferências recorrentes geradas com ID único!", icon="💰")
+                else:
+                    st.toast("✅ Transferência sincronizada com ID único!", icon="💰")
+                    
+                atualizar_sessao()
+                st.rerun()
            
 
   
