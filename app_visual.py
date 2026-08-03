@@ -812,6 +812,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 
                 cat_atual = str(item.get('Categoria', '')).strip()
                 idx_cat = lista_categorias_padrao.index(cat_atual) if cat_atual in lista_categorias_padrao else 0
+                # Respiro leve para desgrudar do beneficiário de cima
+                st.markdown("")
                 ed_cat = st.selectbox("Alterar Categoria:", lista_categorias_padrao, index=idx_cat)
                 
                 tipos_opcoes = ["Despesa", "Receita", "Transferência"]
