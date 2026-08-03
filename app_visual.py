@@ -334,7 +334,7 @@ def carregar_bancos_manual_gs():
     return pd.DataFrame()
     
 
-   # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
+    # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
     df = carregar_dados_gs()
     df_bancos = carregar_bancos_manual_gs()
@@ -368,23 +368,26 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     
                     b_up = str(nome_banco).upper()
                     
-                    # --- IDENTIFICAÇÃO DE CARTÃO DE CRÉDITO ---
+                    # --- IDENTIFICAÇÃO DE CARTÃO DE CRÉDITO (Focado no mês atual) ---
                     if "CARTA" in tipo_c or "CART" in b_up:
                         limite_cartao = saldo_inicial
-                        # Pega as despesas pendentes/usadas do cartão até hoje
+                        
+                        # Pega as despesas pendentes do cartão filtrando pelo MÊS E ANO ATUAIS
                         mask = (df['Banco'] == nome_banco) & \
                                (df['Status'].str.upper() == 'PENDENTE') & \
-                               (df['DT'] <= hoje)
+                               (df['DT'].dt.month == hoje.month) & \
+                               (df['DT'].dt.year == hoje.year)
+                               
                         usado = df.loc[mask, 'V_Num'].sum()
                         dispo = limite_cartao - usado
                         
-                        # Formatação com negativo e bolinha vermelha se houver uso
+                        # Formatação com negativo e bolinha vermelha se houver uso no mês
                         if usado > 0:
                             val_exibicao = f"-{formatar_moeda(usado)} 🔴"
                         else:
                             val_exibicao = formatar_moeda(0)
                             
-                        st.metric(label=f"💳 {nome_banco} (Usado)", value=val_exibicao)
+                        st.metric(label=f"💳 {nome_banco} (Usado Mês)", value=val_exibicao)
                     
                     # --- VALE REFEIÇÃO / BENS / CONTAS NORMAIS ---
                     elif "REFEIÇÃO" in tipo_c or "VR" in b_up or "VA" in b_up or "ALIMENTAÇÃO" in b_up:
