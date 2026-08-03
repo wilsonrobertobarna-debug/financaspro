@@ -332,8 +332,9 @@ def carregar_bancos_manual_gs():
         if len(dados) > 1:
             return pd.DataFrame(dados[1:], columns=dados[0])
     return pd.DataFrame()
+    
 
-# --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
+   # --- RELATÓRIO BANCÁRIO (OCULTO NA TELA INICIAL) ---
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
     df = carregar_dados_gs()
     df_bancos = carregar_bancos_manual_gs()
@@ -360,23 +361,53 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
             
             for j, (index, row) in enumerate(linha.iterrows()):
                 with cols[j]:
-                    nome_banco = row['Nome do Banco']
-                    saldo_inicial = float(str(row['Saldo Inicial']).replace('.', '').replace(',', '.'))
+                    nome_banco = row.iloc[0] if len(row) > 0 else 'Banco'
+                    val_str = str(row.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
+                    saldo_inicial = float(val_str) if val_str and val_str != 'nan' else 0.0
+                    tipo_c = str(row.iloc[2]).strip().upper() if len(row) > 2 else ''
                     
-                    # 3. Filtrar transações deste banco até hoje
-                    filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
-                    df_banco_atual = df[filtro]
+                    b_up = str(nome_banco).upper()
                     
-                    # 4. Cálculo inteligente: 
-                    # Soma tudo se for 'Receita' ou 'Transferência' (entrada)
-                    # Subtrai se for 'Despesa'
-                    # Verifique na sua planilha se o nome na coluna 'Tipo' é exatamente 'Despesa'
-                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
-                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+                    # --- IDENTIFICAÇÃO DE CARTÃO DE CRÉDITO ---
+                    if "CARTA" in tipo_c or "CART" in b_up:
+                        limite_cartao = saldo_inicial
+                        # Pega as despesas pendentes/usadas do cartão até hoje
+                        mask = (df['Banco'] == nome_banco) & \
+                               (df['Status'].str.upper() == 'PENDENTE') & \
+                               (df['DT'] <= hoje)
+                        usado = df.loc[mask, 'V_Num'].sum()
+                        dispo = limite_cartao - usado
+                        
+                        # Formatação com negativo e bolinha vermelha se houver uso
+                        if usado > 0:
+                            val_exibicao = f"-{formatar_moeda(usado)} 🔴"
+                        else:
+                            val_exibicao = formatar_moeda(0)
+                            
+                        st.metric(label=f"💳 {nome_banco} (Usado)", value=val_exibicao)
                     
-                    saldo_atual = saldo_inicial + entradas - saidas
-                    
-                    st.metric(label=nome_banco, value=formatar_moeda(saldo_atual))
+                    # --- VALE REFEIÇÃO / BENS / CONTAS NORMAIS ---
+                    elif "REFEIÇÃO" in tipo_c or "VR" in b_up or "VA" in b_up or "ALIMENTAÇÃO" in b_up:
+                        saldo_vr = saldo_inicial
+                        st.metric(label=f"🍽️ {nome_banco}", value=formatar_moeda(saldo_vr))
+                        
+                    elif "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
+                        saldo_bem = saldo_inicial
+                        st.metric(label=f"🚗 {nome_banco}", value=formatar_moeda(saldo_bem))
+                        
+                    else:
+                        # 3. Filtrar transações deste banco até hoje (Conta Corrente / Investimento)
+                        filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
+                        df_banco_atual = df[filtro]
+                        
+                        entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+                        saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+                        
+                        saldo_atual = saldo_inicial + entradas - saidas
+                        icone = "💰" if "INVEST" in tipo_c else "🏦"
+                        
+                        st.metric(label=f"{icone} {nome_banco}", value=formatar_moeda(saldo_atual))
+
 # INICIALIZA O CACHE NA SESSÃO
 if 'df_base' not in st.session_state:
     st.session_state['df_base'] = carregar_dados_gs()
@@ -402,6 +433,7 @@ if 'df_base' not in st.session_state:
 # Agora, as variáveis sempre terão o conteúdo que foi carregado
 df_base = st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
+
 
 # INTEGRAÇÃO DE AVISOS NO WHATSAPP VIA TWILIO
 def enviar_whatsapp_pendencias(df):
