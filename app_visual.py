@@ -759,7 +759,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
   
 
 # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
-       with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
+    with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         if not df_base.empty:
             # Monta a lista com ID, Vencimento, Descrição, Beneficiário, Categoria, Tipo e Valor
             lista_edit = {}
