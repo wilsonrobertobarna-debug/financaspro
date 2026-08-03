@@ -614,11 +614,14 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     if chave not in unicos_dict:
                         unicos_dict[chave] = n_limpo
                         
-            beneficiarios_unicos = sorted(list(unicos_dict.values()))
+           beneficiarios_unicos = sorted(list(unicos_dict.values()))
         
         # Cria uma lista onde a primeira opção é vazia/digitar novo, seguida do histórico
         opcoes_beneficiario = [""] + beneficiarios_unicos
         f_bnfc = st.selectbox("👤 Beneficiário (Histórico)", options=opcoes_beneficiario, key="sb_bnfc_novo_lancamento")
+        
+        # Respiro visual para desgrudar da barrinha/campo acima
+        st.markdown("")
         
         # Caso queira digitar um beneficiário totalmente novo que não está na lista
         f_bnfc_novo = st.text_input("Ou digite um novo Beneficiário:", key="bnfc_novo_texto")
