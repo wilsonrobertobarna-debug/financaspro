@@ -685,9 +685,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.rerun()
             
             
-       # --- BARRINHA 2: TRANSFERÊNCIA ---
-    with st.sidebar.expander("💸 Transferência", expanded=False):
-        with st.form("f_transf", clear_on_submit=True):
         # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
         with st.form("f_transf", clear_on_submit=True):
