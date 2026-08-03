@@ -783,9 +783,23 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
                 ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
                 
-                # Beneficiário corrigido para buscar e permitir alteração
-                val_benef = item.get('Beneficiário', item.get('Beneficiario', ''))
-                ed_benef = st.text_input("Alterar Beneficiário:", value=str(val_benef))
+                # Coleta todos os beneficiários únicos já cadastrados na base para montar a lista de busca
+                beneficiarios_existentes = []
+                if 'Beneficiário' in df_base.columns:
+                    beneficiarios_existentes = df_base['Beneficiário'].dropna().astype(str).str.strip().unique().tolist()
+                elif 'Beneficiario' in df_base.columns:
+                    beneficiarios_existentes = df_base['Beneficiario'].dropna().astype(str).str.strip().unique().tolist()
+                
+                beneficiarios_existentes = sorted([b for b in beneficiarios_existentes if b and b != 'N/D'])
+                
+                val_benef_atual = str(item.get('Beneficiário', item.get('Beneficiario', ''))).strip()
+                if val_benef_atual not in beneficiarios_existentes and val_benef_atual:
+                    beneficiarios_existentes.insert(0, val_benef_atual)
+                
+                idx_benef = beneficiarios_existentes.index(val_benef_atual) if val_benef_atual in beneficiarios_existentes else 0
+                
+                st.markdown("")
+                ed_benef = st.selectbox("Alterar Beneficiário:", beneficiarios_existentes if beneficiarios_existentes else [val_benef_atual], index=idx_benef)
                 
                 # Lista padrão de categorias idêntica à do cadastro novo
                 lista_categorias_padrao = [
@@ -803,7 +817,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 tipos_opcoes = ["Despesa", "Receita", "Transferência"]
                 tipo_atual = str(item.get('Tipo', 'Despesa')).capitalize()
                 idx_t = tipos_opcoes.index(tipo_atual) if tipo_atual in tipos_opcoes else 0
-                # Respiro leve para desgrudar do campo de cima
+                
                 st.markdown("")
                 ed_tipo = st.selectbox("Alterar Tipo:", tipos_opcoes, index=idx_t)
 
@@ -882,6 +896,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                         del st.session_state["selectbox_ajuste"]
                     atualizar_sessao()
                     st.rerun()
+
+
         
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
