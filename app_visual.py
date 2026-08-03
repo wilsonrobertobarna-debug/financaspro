@@ -687,6 +687,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
        
     # --- BARRINHA 2: TRANSFERÊNCIA ---
+    # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
         with st.form("f_transf", clear_on_submit=True):
             t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY")
@@ -696,6 +697,35 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.markdown("")
             t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis)
             
+            # --- LEITURA DA MOEDA DIRETO DA ABA DE BANCOS (Coluna F / Índice 5) ---
+            try:
+                dados_bancos = ws_bancos.get_all_values()
+                dict_moedas_bancos = {}
+                for linha in dados_bancos[1:]:  # Pula o cabeçalho
+                    if len(linha) >= 1:
+                        nome_banco = linha[0]
+                        moeda_banco = linha[5].strip().upper() if len(linha) > 5 and linha[5].strip() else "BRL"
+                        dict_moedas_bancos[nome_banco] = moeda_banco
+            except:
+                dict_moedas_bancos = {}
+
+            moeda_origem = dict_moedas_bancos.get(t_orig, "BRL")
+            moeda_destino = dict_moedas_bancos.get(t_dest, "BRL")
+
+            # Variáveis de câmbio padrão
+            t_valor_final = t_val
+            t_taxa = 1.0
+
+            # Se as moedas forem diferentes, abre os campos de câmbio no formulário
+            if moeda_origem != moeda_destino:
+                st.markdown(f"💱 **Câmbio Detectado: {moeda_origem} ➔ {moeda_destino}**")
+                t_taxa = st.number_input("Taxa de Câmbio", min_value=0.0001, value=1.0, format="%.4f")
+                
+                # Sugere o valor de destino baseado na taxa, mas deixa editável
+                sugestao_destino = t_val * t_taxa if moeda_origem == "BRL" else t_val / t_taxa
+                t_valor_final = st.number_input(f"Valor Final na Conta de Destino ({moeda_destino})", min_value=0.0, value=float(sugestao_destino), format="%.2f")
+            # --------------------------------------------------------------------
+
             st.markdown("")
             t_desc = st.text_input("Nota")
             
@@ -727,7 +757,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                         # Avança os meses se for recorrente
                         data_atual = t_dat + relativedelta(months=i)
                         
-                        v_str = f"{t_val:.2f}".replace('.', ',')
+                        v_str_orig = f"{t_val:.2f}".replace('.', ',')
+                        v_str_dest = f"{t_valor_final:.2f}".replace('.', ',')
                         d_str = data_atual.strftime("%d/%m/%Y")
                         
                         # Define o status: "Pago" apenas para o primeiro mês, "Pendente" para os futuros
@@ -744,8 +775,9 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                         proximo_id += 1 # Incrementa apenas 1 para o próximo registro/mês
                         
                         # Salva as duas pontas na planilha compartilhando exatamente o mesmo ID
-                        ws_base.append_row([d_str, v_str, desc_transf, "Transferência", "Despesa", t_orig, status_transf, d_str, id_transferencia, ""])
-                        ws_base.append_row([d_str, v_str, desc_transf, "Transferência", "Receita", t_dest, status_transf, d_str, id_transferencia, ""])
+                        # Ponta de Saída (Origem) usa o valor original, Ponta de Entrada (Destino) usa o valor final com câmbio aplicado
+                        ws_base.append_row([d_str, v_str_orig, desc_transf, "Transferência", "Despesa", t_orig, status_transf, d_str, id_transferencia, ""])
+                        ws_base.append_row([d_str, v_str_dest, desc_transf, "Transferência", "Receita", t_dest, status_transf, d_str, id_transferencia, ""])
                     
                     if t_meses > 1:
                         st.toast(f"✅ {t_meses} transferências recorrentes geradas com ID único!", icon="💰")
