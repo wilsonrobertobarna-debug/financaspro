@@ -803,6 +803,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 tipos_opcoes = ["Despesa", "Receita", "Transferência"]
                 tipo_atual = str(item.get('Tipo', 'Despesa')).capitalize()
                 idx_t = tipos_opcoes.index(tipo_atual) if tipo_atual in tipos_opcoes else 0
+                # Respiro leve para desgrudar do campo de cima
+                st.markdown("")
                 ed_tipo = st.selectbox("Alterar Tipo:", tipos_opcoes, index=idx_t)
 
                 st.markdown("")
