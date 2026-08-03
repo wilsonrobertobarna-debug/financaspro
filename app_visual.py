@@ -858,11 +858,11 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                         ws_base.update_cell(linha_id, 1, ed_dat.strftime("%d/%m/%Y"))
                         ws_base.update_cell(linha_id, 2, f"{ed_val:.2f}".replace('.', ','))
                         ws_base.update_cell(linha_id, 3, ed_desc)
-                        ws_base.update_cell(linha_id, 4, ed_benef)
-                        ws_base.update_cell(linha_id, 5, ed_cat)
+                        ws_base.update_cell(linha_id, 4, ed_cat)
+                        ws_base.update_cell(linha_id, 5, ed_tipo)
                         ws_base.update_cell(linha_id, 6, ed_bnc)
                         ws_base.update_cell(linha_id, 7, ed_sta)
-                        ws_base.update_cell(linha_id, 8, ed_tipo)
+                        ws_base.update_cell(linha_id, 11, ed_benef)
                     
                     st.toast("✅ Atualização sincronizada com sucesso!", icon="💰")
                     if "selectbox_ajuste" in st.session_state:
