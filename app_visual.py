@@ -759,7 +759,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
   
 
 # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
-    with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
+       with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         if not df_base.empty:
             # Monta a lista com ID, Vencimento, Descrição, Beneficiário, Categoria, Tipo e Valor
             lista_edit = {}
@@ -787,11 +787,18 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 val_benef = item.get('Beneficiário', item.get('Beneficiario', ''))
                 ed_benef = st.text_input("Alterar Beneficiário:", value=str(val_benef))
                 
-                # Categoria agora usa a lista padrão em formato de seleção segura
-                # (Se o nome da sua lista no código for outro, ex: categorias_disponiveis, ajuste abaixo)
+                # Lista padrão de categorias idêntica à do cadastro novo
+                lista_categorias_padrao = [
+                    "Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", "Aplicação", 
+                    "Vale Alimentação", "Restaurante", "Celular", "Anuidade", "Seguro", "Internet", 
+                    "Vestuário", "Salário", "Reembolso", "Moradia", "Saúde", "Taxas", "Depósito", 
+                    "Plano Assistencial", "Transporte", "Previdência", "Outros", "Pet: Milo", 
+                    "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"
+                ]
+                
                 cat_atual = str(item.get('Categoria', '')).strip()
-                idx_cat = categorias_disponiveis.index(cat_atual) if cat_atual in categorias_disponiveis else 0
-                ed_cat = st.selectbox("Alterar Categoria:", categorias_disponiveis, index=idx_cat)
+                idx_cat = lista_categorias_padrao.index(cat_atual) if cat_atual in lista_categorias_padrao else 0
+                ed_cat = st.selectbox("Alterar Categoria:", lista_categorias_padrao, index=idx_cat)
                 
                 tipos_opcoes = ["Despesa", "Receita", "Transferência"]
                 tipo_atual = str(item.get('Tipo', 'Despesa')).capitalize()
@@ -828,45 +835,18 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     if not linhas_para_atualizar:
                         linhas_para_atualizar = [int(float(item.get('linha_planilha', id_alvo)))]
 
-                    # Atenção aos índices das colunas no Google Sheets (ajuste se a ordem for diferente):
-                    # 1: Data, 2: Valor, 3: Descrição, 4: Beneficiário, 5: Categoria, 6: Banco, 7: Status, 8: Tipo, 9: ID
+                    # Atualiza as colunas na planilha: 1:Data, 2:Valor, 3:Desc, 4:Beneficiario, 5:Categoria, 6:Banco, 7:Status, 8:Tipo
                     for linha_id in linhas_para_atualizar:
                         ws_base.update_cell(linha_id, 1, ed_dat.strftime("%d/%m/%Y"))
                         ws_base.update_cell(linha_id, 2, f"{ed_val:.2f}".replace('.', ','))
                         ws_base.update_cell(linha_id, 3, ed_desc)
-                        ws_base.update_cell(linha_id, 4, ed_benef)  # Beneficiário atualizado
-                        ws_base.update_cell(linha_id, 5, ed_cat)    # Categoria atualizada
-                        ws_base.update_cell(linha_id, 6, ed_bnc)    # Banco
-                        ws_base.update_cell(linha_id, 7, ed_sta)    # Status
-                        ws_base.update_cell(linha_id, 8, ed_tipo)   # Tipo
+                        ws_base.update_cell(linha_id, 4, ed_benef)
+                        ws_base.update_cell(linha_id, 5, ed_cat)
+                        ws_base.update_cell(linha_id, 6, ed_bnc)
+                        ws_base.update_cell(linha_id, 7, ed_sta)
+                        ws_base.update_cell(linha_id, 8, ed_tipo)
                     
                     st.toast("✅ Atualização sincronizada com sucesso!", icon="💰")
-                    if "selectbox_ajuste" in st.session_state:
-                        del st.session_state["selectbox_ajuste"]
-                    atualizar_sessao()
-                    st.rerun()
-                    
-                if col_ed2.button("🚨 EXCLUIR"):
-                    id_alvo = int(float(item['ID']))
-                    
-                    todos_registros = ws_base.get_all_values()
-                    linhas_para_excluir = []
-                    
-                    for idx_linha, row_values in enumerate(todos_registros[1:], start=2):
-                        try:
-                            if len(row_values) >= 9 and int(float(row_values[8])) == id_alvo:
-                                linhas_para_excluir.append(idx_linha)
-                        except:
-                            pass
-                    
-                    if linhas_para_excluir:
-                        for linha_id in sorted(list(set(linhas_para_excluir)), reverse=True):
-                            try:
-                                ws_base.delete_rows(linha_id)
-                            except:
-                                pass
-                    
-                    st.toast("✅ Lançamento excluído com sucesso!", icon="💰")
                     if "selectbox_ajuste" in st.session_state:
                         del st.session_state["selectbox_ajuste"]
                     atualizar_sessao()
