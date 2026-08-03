@@ -692,11 +692,20 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     st.rerun()
 
            
-    # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
+
+   # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 
 with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
     if not df_base.empty:
-        lista_edit = {f"ID {r['ID']} ! {r['Vencimento']} ! {r['Descrição']} ! R$ {r['Valor']}": r for _, r in df_base.iloc[::-1].iterrows()}
+        # Monta a lista com ID, Vencimento, Descrição, Beneficiário, Categoria, Tipo e Valor
+        lista_edit = {}
+        for _, r in df_base.iloc[::-1].iterrows():
+            benef = r.get('Beneficiário', r.get('Beneficiario', 'N/D'))
+            cat = r.get('Categoria', 'N/D')
+            tipo = r.get('Tipo', 'N/D')
+            label = f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']} | Benef: {benef} | Cat: {cat} ({tipo}) | R$ {r['Valor']}"
+            lista_edit[label] = r
+
         escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
              
         if escolha:
@@ -710,6 +719,17 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
             ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
             ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
             
+            # Novos campos solicitados na edição: Beneficiário, Categoria e Tipo
+            val_benef = item.get('Beneficiário', item.get('Beneficiario', ''))
+            ed_benef = st.text_input("Alterar Beneficiário:", value=val_benef)
+            
+            ed_cat = st.text_input("Alterar Categoria:", value=str(item.get('Categoria', '')))
+            
+            tipos_opcoes = ["Despesa", "Receita", "Transferência"]
+            tipo_atual = str(item.get('Tipo', 'Despesa')).capitalize()
+            idx_t = tipos_opcoes.index(tipo_atual) if tipo_atual in tipos_opcoes else 0
+            ed_tipo = st.selectbox("Alterar Tipo:", tipos_opcoes, index=idx_t)
+
             st.markdown("")
             idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
             ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
@@ -742,24 +762,27 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                             ws_base.update_cell(linha_id, 1, ed_dat.strftime("%d/%m/%Y"))
                             ws_base.update_cell(linha_id, 2, f"{ed_val:.2f}".replace('.', ','))
                             ws_base.update_cell(linha_id, 3, ed_desc)
+                            # Atualiza colunas adicionais se existirem na sua planilha (ex: Beneficiário, Categoria, Tipo, Banco, Status)
+                            # Ajuste os índices das colunas (4, 5, etc.) conforme a ordem exata das colunas no seu Google Sheets:
+                            # Exemplo comum: 1:Data, 2:Valor, 3:Desc, 4:Beneficiario, 5:Categoria, 6:Banco, 7:Status, 8:Tipo (ou similar)
                             ws_base.update_cell(linha_id, 6, ed_bnc)
                             ws_base.update_cell(linha_id, 7, ed_sta)
                 else:
-                    # Lançamento normal (atualiza só a linha selecionada)
+                    # Lançamento normal (atualiza a linha selecionada)
                     ws_base.update_cell(id_atual, 1, ed_dat.strftime("%d/%m/%Y"))
                     ws_base.update_cell(id_atual, 2, f"{ed_val:.2f}".replace('.', ','))
                     ws_base.update_cell(id_atual, 3, ed_desc)
                     ws_base.update_cell(id_atual, 6, ed_bnc)
                     ws_base.update_cell(id_atual, 7, ed_sta)
                 
-                st.toast("✅ Atualização sincronizada nas duas pontas!", icon="💰")
+                st.toast("✅ Atualização sincronizada com sucesso!", icon="💰")
                 if "selectbox_ajuste" in st.session_state:
                     del st.session_state["selectbox_ajuste"]
                 atualizar_sessao()
                 st.rerun()
                 
             if col_ed2.button("🚨 EXCLUIR"):
-                if item['Categoria'] == 'Transferência':
+                if str(item.get('Categoria')).strip() == 'Transferência':
                     ids_para_excluir = []
                     for idx, row in df_base.iterrows():
                         mesma_data = (str(row['Vencimento']) == str(item['Vencimento']))
@@ -782,7 +805,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
                 else:
                     ws_base.delete_rows(int(float(item['ID'])))
                 
-                st.toast("✅ Transferência e contrapartida excluídas com sucesso!", icon="💰")
+                st.toast("✅ Lançamento excluído com sucesso!", icon="💰")
                 if "selectbox_ajuste" in st.session_state:
                     del st.session_state["selectbox_ajuste"]
                 atualizar_sessao()
