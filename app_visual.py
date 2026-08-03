@@ -685,7 +685,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.rerun()
             
             
-        # --- BARRINHA 2: TRANSFERÊNCIA ---
+ 
+           # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
         with st.form("f_transf", clear_on_submit=True):
             t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY")
@@ -729,6 +730,9 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                         v_str = f"{t_val:.2f}".replace('.', ',')
                         d_str = data_atual.strftime("%d/%m/%Y")
                         
+                        # Define o status: "Pago" apenas para o primeiro mês, "Pendente" para os futuros
+                        status_transf = "Pago" if i == 0 else "Pendente"
+                        
                         # Identifica a parcela se for mais de 1 mês
                         if t_meses > 1:
                             desc_transf = f"TR ({i+1}/{t_meses}): {t_desc}".strip() if t_desc else f"TR ({i+1}/{t_meses}): Transferência recorrente"
@@ -740,18 +744,17 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                         id_destino = proximo_id + 1
                         proximo_id += 2 # Incrementa 2 para o próximo par
                         
-                        # Salva as duas pontas na planilha
-                        ws_base.append_row([d_str, v_str, desc_transf, "Transferência", "Despesa", t_orig, "Pago", d_str, id_origem, ""])
-                        ws_base.append_row([d_str, v_str, desc_transf, "Transferência", "Receita", t_dest, "Pago", d_str, id_destino, ""])
+                        # Salva as duas pontas na planilha com o status correto
+                        ws_base.append_row([d_str, v_str, desc_transf, "Transferência", "Despesa", t_orig, status_transf, d_str, id_origem, ""])
+                        ws_base.append_row([d_str, v_str, desc_transf, "Transferência", "Receita", t_dest, status_transf, d_str, id_destino, ""])
                     
                     if t_meses > 1:
-                        st.toast(f"✅ {t_meses} transferências recorrentes sincronizadas!", icon="💰")
+                        st.toast(f"✅ {t_meses} transferências recorrentes geradas (1ª paga, futuras pendentes)!", icon="💰")
                     else:
                         st.toast("✅ Transferência sincronizada nas duas pontas!", icon="💰")
                         
                     atualizar_sessao()
                     st.rerun()
-
            
 
    # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
