@@ -862,7 +862,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                         ws_base.update_cell(linha_id, 5, ed_tipo)
                         ws_base.update_cell(linha_id, 6, ed_bnc)
                         ws_base.update_cell(linha_id, 7, ed_sta)
-                        ws_base.update_cell(linha_id, 11, ed_benef)
+                        ws_base.update_cell(linha_id, 10, ed_benef)
                     
                     st.toast("✅ Atualização sincronizada com sucesso!", icon="💰")
                     if "selectbox_ajuste" in st.session_state:
