@@ -688,7 +688,10 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
        # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
         with st.form("f_transf", clear_on_submit=True):
-            t_dat = st.date_input("Data", datetime.now(), format="DD/MM/YYYY")
+        # --- BARRINHA 2: TRANSFERÊNCIA ---
+    with st.sidebar.expander("💸 Transferência", expanded=False):
+        with st.form("f_transf", clear_on_submit=True):
+            t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY")
             t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f")
             t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis)
             
@@ -698,15 +701,21 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.markdown("")
             t_desc = st.text_input("Nota")
             
+            st.markdown("")
+            # Campo para repetir a transferência/aplicação mensalmente (1 = vez única)
+            t_meses = st.number_input("Repetir por quantos meses? (1 = Única)", min_value=1, max_value=60, value=1, step=1)
+            
             st.markdown("<br>", unsafe_allow_html=True)
             if st.form_submit_button("TRANSFERIR"):
                 if t_orig == t_dest: 
                     st.error("Escolha bancos diferentes!")
                 else:
-                    # 1. Calcula o próximo ID de forma segura
+                    import pandas as pd
+                    from dateutil.relativedelta import relativedelta
+                    
+                    # 1. Busca dados para calcular o próximo ID de forma segura de uma só vez
                     todos_dados = ws_base.get_all_records()
                     if todos_dados:
-                        import pandas as pd
                         df_temp = pd.DataFrame(todos_dados)
                         if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
                             proximo_id = int(df_temp['ID'].max()) + 1
@@ -715,17 +724,34 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     else:
                         proximo_id = 1
                     
-                    v_str = f"{t_val:.2f}".replace('.', ',')
-                    d_str = t_dat.strftime("%d/%m/%Y")
+                    # 2. Loop para gerar a transferência para cada mês selecionado
+                    for i in range(t_meses):
+                        # Avança os meses se for recorrente
+                        data_atual = t_dat + relativedelta(months=i)
+                        
+                        v_str = f"{t_val:.2f}".replace('.', ',')
+                        d_str = data_atual.strftime("%d/%m/%Y")
+                        
+                        # Identifica a parcela se for mais de 1 mês
+                        if t_meses > 1:
+                            desc_transf = f"TR ({i+1}/{t_meses}): {t_desc}".strip() if t_desc else f"TR ({i+1}/{t_meses}): Transferência recorrente"
+                        else:
+                            desc_transf = f"TR: {t_desc}".strip() if t_desc else "TR: Transferência entre contas"
+                        
+                        # IDs sequenciais para o par (Origem e Destino) de cada mês
+                        id_origem = proximo_id
+                        id_destino = proximo_id + 1
+                        proximo_id += 2 # Incrementa 2 para o próximo par
+                        
+                        # Salva as duas pontas na planilha
+                        ws_base.append_row([d_str, v_str, desc_transf, "Transferência", "Despesa", t_orig, "Pago", d_str, id_origem, ""])
+                        ws_base.append_row([d_str, v_str, desc_transf, "Transferência", "Receita", t_dest, "Pago", d_str, id_destino, ""])
                     
-                    # Descrição unificada para identificar o par da transferência facilmente
-                    desc_transf = f"TR: {t_desc}".strip() if t_desc else "TR: Transferência entre contas"
-                    
-                    # 2. Salva as duas pontas na planilha com IDs sequenciais (Origem e Destino)
-                    ws_base.append_row([d_str, v_str, desc_transf, "Transferência", "Despesa", t_orig, "Pago", d_str, proximo_id, ""])
-                    ws_base.append_row([d_str, v_str, desc_transf, "Transferência", "Receita", t_dest, "Pago", d_str, proximo_id + 1, ""])
-                    
-                    st.toast("✅ Transferência sincronizada nas duas pontas!", icon="💰")
+                    if t_meses > 1:
+                        st.toast(f"✅ {t_meses} transferências recorrentes sincronizadas!", icon="💰")
+                    else:
+                        st.toast("✅ Transferência sincronizada nas duas pontas!", icon="💰")
+                        
                     atualizar_sessao()
                     st.rerun()
 
