@@ -685,8 +685,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.rerun()
             
             
- 
-           # --- BARRINHA 2: TRANSFERÊNCIA ---
+       
+            # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
         with st.form("f_transf", clear_on_submit=True):
             t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY")
@@ -739,19 +739,18 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                         else:
                             desc_transf = f"TR: {t_desc}".strip() if t_desc else "TR: Transferência entre contas"
                         
-                        # IDs sequenciais para o par (Origem e Destino) de cada mês
-                        id_origem = proximo_id
-                        id_destino = proximo_id + 1
-                        proximo_id += 2 # Incrementa 2 para o próximo par
+                        # MUDANÇA AQUI: Usamos o mesmo 'proximo_id' para as duas pontas da transferência do mês
+                        id_transferencia = proximo_id
+                        proximo_id += 1 # Incrementa apenas 1 para o próximo registro/mês
                         
-                        # Salva as duas pontas na planilha com o status correto
-                        ws_base.append_row([d_str, v_str, desc_transf, "Transferência", "Despesa", t_orig, status_transf, d_str, id_origem, ""])
-                        ws_base.append_row([d_str, v_str, desc_transf, "Transferência", "Receita", t_dest, status_transf, d_str, id_destino, ""])
+                        # Salva as duas pontas na planilha compartilhando exatamente o mesmo ID
+                        ws_base.append_row([d_str, v_str, desc_transf, "Transferência", "Despesa", t_orig, status_transf, d_str, id_transferencia, ""])
+                        ws_base.append_row([d_str, v_str, desc_transf, "Transferência", "Receita", t_dest, status_transf, d_str, id_transferencia, ""])
                     
                     if t_meses > 1:
-                        st.toast(f"✅ {t_meses} transferências recorrentes geradas (1ª paga, futuras pendentes)!", icon="💰")
+                        st.toast(f"✅ {t_meses} transferências recorrentes geradas com ID único!", icon="💰")
                     else:
-                        st.toast("✅ Transferência sincronizada nas duas pontas!", icon="💰")
+                        st.toast("✅ Transferência sincronizada com ID único!", icon="💰")
                         
                     atualizar_sessao()
                     st.rerun()
