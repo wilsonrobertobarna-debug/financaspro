@@ -714,23 +714,29 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         t_valor_final = t_val
         t_taxa = 1.0
 
-        # Se as moedas forem diferentes, gerencia o câmbio com inteligência de estado
+        # Se as moedas forem diferentes, gerencia o câmbio
         if moeda_origem != moeda_destino:
             st.markdown(f"💱 **Câmbio Detectado: {moeda_origem} ➔ {moeda_destino}**")
             
-            # Inicializa a taxa no session_state se não existir ou se mudou de moeda
+            # Inicializa a taxa se não existir
             if "taxa_cambio_val" not in st.session_state:
                 st.session_state["taxa_cambio_val"] = 1.0
 
             t_taxa = st.number_input("Taxa de Câmbio", min_value=0.0001, format="%.4f", key="taxa_cambio_val")
             
-            # Calcula o valor sugerido com base na taxa digitada
-            if moeda_origem == "BRL":
-                sugestao_destino = t_val * t_taxa
+            # Calcula o valor convertido com base na taxa
+            if moeda_origem == "BRL" and moeda_destino != "BRL":
+                # Ex: Saindo de Real para Dólar (divide pelo câmbio ou usa a proporção correta)
+                # Se 1 USD = X BRL, então Dólar = Real / Câmbio (ou dependendo de como você digita a taxa)
+                # Vamos garantir que o cálculo respeite a lógica de conversão:
+                t_valor_final = t_val / t_taxa if t_taxa > 0 else t_val
+            elif moeda_origem != "BRL" and moeda_destino == "BRL":
+                t_valor_final = t_val * t_taxa
             else:
-                sugestao_destino = t_val / t_taxa if t_taxa > 0 else 0.0
+                t_valor_final = t_val * t_taxa if moeda_origem == "BRL" else t_val / t_taxa
 
-            t_valor_final = st.number_input(f"Valor Final na Conta de Destino ({moeda_destino})", min_value=0.0, value=float(sugestao_destino), format="%.2f", key="input_valor_final_cambio")
+            st.info(f"💡 Valor convertido calculado para o destino: **{t_valor_final:.2f} {moeda_destino}**")
+        
         # --------------------------------------------------------------------
 
         st.markdown("")
@@ -781,7 +787,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     id_transferencia = proximo_id
                     proximo_id += 1 
                     
-                    # SALVA AS DUAS PONTAS: Origem usa o valor original, Destino usa o valor convertido (t_valor_final)
+                    # SALVA AS DUAS PONTAS: Origem usa o valor original (t_val), Destino usa o valor convertido (t_valor_final)
                     ws_base.append_row([d_str, v_str_orig, desc_transf, "Transferência", "Despesa", t_orig, status_transf, d_str, id_transferencia, ""])
                     ws_base.append_row([d_str, v_str_dest, desc_transf, "Transferência", "Receita", t_dest, status_transf, d_str, id_transferencia, ""])
                 
