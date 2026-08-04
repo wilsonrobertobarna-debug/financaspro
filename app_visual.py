@@ -710,6 +710,9 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.session_state["input_nota_transf"] = ""
             st.session_state["input_meses_transf"] = 1
             st.session_state["taxa_cambio_val"] = 1.0
+            # Reseta o destino para o primeiro banco disponível (ou limpa a chave)
+            if bancos_disponiveis:
+                st.session_state["transf_destino_select"] = bancos_disponiveis[0]
             st.session_state["gatilho_limpar_transf"] = False
 
         t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY", key="t_dat_key")
@@ -808,7 +811,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 else:
                     st.toast("✅ Transferência sincronizada com ID único!", icon="💰")
                 
-                # Ativa o gatilho para limpar na próxima re-execução do script
+                # Ativa o gatilho para limpar todos os campos e resetar o destino na próxima re-execução
                 st.session_state["gatilho_limpar_transf"] = True
                 atualizar_sessao()
                 st.rerun()
