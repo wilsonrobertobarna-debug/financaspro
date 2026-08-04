@@ -686,7 +686,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
             
        
-    # --- BARRINHA 2: TRANSFERÊNCIA ---
+   # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
         t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY", key="t_dat_key")
         t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f", key="t_val_key")
@@ -710,16 +710,26 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         moeda_origem = dict_moedas_bancos.get(t_orig, "BRL")
         moeda_destino = dict_moedas_bancos.get(t_dest, "BRL")
 
-        # Variáveis de câmbio padrão
+        # Variáveis padrão
         t_valor_final = t_val
         t_taxa = 1.0
 
-        # Se as moedas forem diferentes, abre os campos de câmbio interativos
+        # Se as moedas forem diferentes, gerencia o câmbio com inteligência de estado
         if moeda_origem != moeda_destino:
             st.markdown(f"💱 **Câmbio Detectado: {moeda_origem} ➔ {moeda_destino}**")
-            t_taxa = st.number_input("Taxa de Câmbio", min_value=0.0001, value=1.0, format="%.4f", key="input_taxa_cambio")
             
-            sugestao_destino = t_val * t_taxa if moeda_origem == "BRL" else t_val / t_taxa
+            # Inicializa a taxa no session_state se não existir ou se mudou de moeda
+            if "taxa_cambio_val" not in st.session_state:
+                st.session_state["taxa_cambio_val"] = 1.0
+
+            t_taxa = st.number_input("Taxa de Câmbio", min_value=0.0001, format="%.4f", key="taxa_cambio_val")
+            
+            # Calcula o valor sugerido com base na taxa digitada
+            if moeda_origem == "BRL":
+                sugestao_destino = t_val * t_taxa
+            else:
+                sugestao_destino = t_val / t_taxa if t_taxa > 0 else 0.0
+
             t_valor_final = st.number_input(f"Valor Final na Conta de Destino ({moeda_destino})", min_value=0.0, value=float(sugestao_destino), format="%.2f", key="input_valor_final_cambio")
         # --------------------------------------------------------------------
 
@@ -732,7 +742,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Botão normal (fora do form) para garantir que pega os valores digitados nos inputs de câmbio
         if st.button("TRANSFERIR", key="btn_executar_transf"):
             if t_orig == t_dest: 
                 st.error("Escolha bancos diferentes!")
