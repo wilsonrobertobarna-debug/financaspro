@@ -701,7 +701,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
             
        
-   # --- BARRINHA 2: TRANSFERÊNCIA ---
+ # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
         t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY", key="t_dat_key")
         t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f", key="t_val_key")
@@ -731,6 +731,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
         # Se as moedas forem diferentes, gerencia o câmbio
         if moeda_origem != moeda_destino:
+            # Espaçamento adicionado para evitar que grude na tarja acima
+            st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(f"💱 **Câmbio Detectado: {moeda_origem} ➔ {moeda_destino}**")
             
             # Inicializa a taxa se não existir
@@ -741,9 +743,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
             # Calcula o valor convertido com base na taxa
             if moeda_origem == "BRL" and moeda_destino != "BRL":
-                # Ex: Saindo de Real para Dólar (divide pelo câmbio ou usa a proporção correta)
-                # Se 1 USD = X BRL, então Dólar = Real / Câmbio (ou dependendo de como você digita a taxa)
-                # Vamos garantir que o cálculo respeite a lógica de conversão:
                 t_valor_final = t_val / t_taxa if t_taxa > 0 else t_val
             elif moeda_origem != "BRL" and moeda_destino == "BRL":
                 t_valor_final = t_val * t_taxa
@@ -810,7 +809,14 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     st.toast(f"✅ {t_meses} transferências recorrentes geradas com ID único!", icon="💰")
                 else:
                     st.toast("✅ Transferência sincronizada com ID único!", icon="💰")
-                    
+                
+                # Zera os campos limpando as chaves do session_state antes do rerun
+                st.session_state["t_val_key"] = 0.0
+                st.session_state["input_nota_transf"] = ""
+                st.session_state["input_meses_transf"] = 1
+                if "taxa_cambio_val" in st.session_state:
+                    st.session_state["taxa_cambio_val"] = 1.0
+
                 atualizar_sessao()
                 st.rerun()
            
