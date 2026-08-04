@@ -701,8 +701,17 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
             
        
- # --- BARRINHA 2: TRANSFERÊNCIA ---
+# --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
+        
+        # Inicializa as chaves no session_state se não existirem
+        if "t_val_key" not in st.session_state:
+            st.session_state["t_val_key"] = 0.0
+        if "input_nota_transf" not in st.session_state:
+            st.session_state["input_nota_transf"] = ""
+        if "input_meses_transf" not in st.session_state:
+            st.session_state["input_meses_transf"] = 1
+
         t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY", key="t_dat_key")
         t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f", key="t_val_key")
         t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis, key="transf_origem_select")
@@ -731,17 +740,14 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
         # Se as moedas forem diferentes, gerencia o câmbio
         if moeda_origem != moeda_destino:
-            # Espaçamento adicionado para evitar que grude na tarja acima
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(f"💱 **Câmbio Detectado: {moeda_origem} ➔ {moeda_destino}**")
             
-            # Inicializa a taxa se não existir
             if "taxa_cambio_val" not in st.session_state:
                 st.session_state["taxa_cambio_val"] = 1.0
 
             t_taxa = st.number_input("Taxa de Câmbio", min_value=0.0001, format="%.4f", key="taxa_cambio_val")
             
-            # Calcula o valor convertido com base na taxa
             if moeda_origem == "BRL" and moeda_destino != "BRL":
                 t_valor_final = t_val / t_taxa if t_taxa > 0 else t_val
             elif moeda_origem != "BRL" and moeda_destino == "BRL":
@@ -751,14 +757,11 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
             st.info(f"💡 Valor convertido calculado para o destino: **{t_valor_final:.2f} {moeda_destino}**")
         
-        # --------------------------------------------------------------------
-
         st.markdown("")
         t_desc = st.text_input("Nota", key="input_nota_transf")
         
         st.markdown("")
-        # Campo para repetir a transferência/aplicação mensalmente (1 = vez única)
-        t_meses = st.number_input("Repetir por quantos meses? (1 = Única)", min_value=1, max_value=60, value=1, step=1, key="input_meses_transf")
+        t_meses = st.number_input("Repetir por quantos meses? (1 = Única)", min_value=1, max_value=60, step=1, key="input_meses_transf")
         
         st.markdown("<br>", unsafe_allow_html=True)
         
@@ -769,7 +772,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 import pandas as pd
                 from dateutil.relativedelta import relativedelta
                 
-                # 1. Busca dados para calcular o próximo ID de forma segura de uma só vez
                 todos_dados = ws_base.get_all_records()
                 if todos_dados:
                     df_temp = pd.DataFrame(todos_dados)
@@ -780,19 +782,15 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 else:
                     proximo_id = 1
                 
-                # 2. Loop para gerar a transferência para cada mês selecionado
                 for i in range(t_meses):
-                    # Avança os meses se for recorrente
                     data_atual = t_dat + relativedelta(months=i)
                     
                     v_str_orig = f"{t_val:.2f}".replace('.', ',')
                     v_str_dest = f"{t_valor_final:.2f}".replace('.', ',')
                     d_str = data_atual.strftime("%d/%m/%Y")
                     
-                    # Define o status: "Pago" apenas para o primeiro mês, "Pendente" para os futuros
                     status_transf = "Pago" if i == 0 else "Pendente"
                     
-                    # Identifica a parcela se for mais de 1 mês
                     if t_meses > 1:
                         desc_transf = f"TR ({i+1}/{t_meses}): {t_desc}".strip() if t_desc else f"TR ({i+1}/{t_meses}): Transferência recorrente"
                     else:
@@ -801,7 +799,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     id_transferencia = proximo_id
                     proximo_id += 1 
                     
-                    # SALVA AS DUAS PONTAS: Origem usa o valor original (t_val), Destino usa o valor convertido (t_valor_final)
                     ws_base.append_row([d_str, v_str_orig, desc_transf, "Transferência", "Despesa", t_orig, status_transf, d_str, id_transferencia, ""])
                     ws_base.append_row([d_str, v_str_dest, desc_transf, "Transferência", "Receita", t_dest, status_transf, d_str, id_transferencia, ""])
                 
@@ -810,7 +807,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 else:
                     st.toast("✅ Transferência sincronizada com ID único!", icon="💰")
                 
-                # Zera os campos limpando as chaves do session_state antes do rerun
+                # Reseta os valores das chaves para limpa-los na próxima execução antes dos inputs renderizarem
                 st.session_state["t_val_key"] = 0.0
                 st.session_state["input_nota_transf"] = ""
                 st.session_state["input_meses_transf"] = 1
