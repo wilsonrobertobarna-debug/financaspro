@@ -704,13 +704,13 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
         
-        # Inicializa as chaves no session_state se não existirem
-        if "t_val_key" not in st.session_state:
+        # Verifica se precisamos resetar os campos antes de criar os widgets
+        if st.session_state.get("gatilho_limpar_transf", False):
             st.session_state["t_val_key"] = 0.0
-        if "input_nota_transf" not in st.session_state:
             st.session_state["input_nota_transf"] = ""
-        if "input_meses_transf" not in st.session_state:
             st.session_state["input_meses_transf"] = 1
+            st.session_state["taxa_cambio_val"] = 1.0
+            st.session_state["gatilho_limpar_transf"] = False
 
         t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY", key="t_dat_key")
         t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f", key="t_val_key")
@@ -807,13 +807,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 else:
                     st.toast("✅ Transferência sincronizada com ID único!", icon="💰")
                 
-                # Reseta os valores das chaves para limpa-los na próxima execução antes dos inputs renderizarem
-                st.session_state["t_val_key"] = 0.0
-                st.session_state["input_nota_transf"] = ""
-                st.session_state["input_meses_transf"] = 1
-                if "taxa_cambio_val" in st.session_state:
-                    st.session_state["taxa_cambio_val"] = 1.0
-
+                # Ativa o gatilho de limpeza para o próximo ciclo e recarrega
+                st.session_state["gatilho_limpar_transf"] = True
                 atualizar_sessao()
                 st.rerun()
            
