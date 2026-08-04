@@ -704,7 +704,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
         
-        # Verifica se precisamos resetar os campos antes de criar os widgets
+        # Verifica se o gatilho de limpeza está ativo antes de desenhar os inputs
         if st.session_state.get("gatilho_limpar_transf", False):
             st.session_state["t_val_key"] = 0.0
             st.session_state["input_nota_transf"] = ""
@@ -740,6 +740,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
         # Se as moedas forem diferentes, gerencia o câmbio
         if moeda_origem != moeda_destino:
+            # Espaçamento para evitar que grude na tarja acima
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(f"💱 **Câmbio Detectado: {moeda_origem} ➔ {moeda_destino}**")
             
@@ -807,7 +808,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 else:
                     st.toast("✅ Transferência sincronizada com ID único!", icon="💰")
                 
-                # Ativa o gatilho de limpeza para o próximo ciclo e recarrega
+                # Ativa o gatilho para limpar na próxima re-execução do script
                 st.session_state["gatilho_limpar_transf"] = True
                 atualizar_sessao()
                 st.rerun()
