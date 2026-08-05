@@ -819,9 +819,15 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
   
 
-# --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
+      # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
     with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=False):
         if not df_base.empty:
+            # Inicializa o controle de reset do ajuste se não existir
+            if "reset_ajuste" not in st.session_state:
+                st.session_state["reset_ajuste"] = 0
+            
+            r_ajuste = st.session_state["reset_ajuste"]
+
             # Monta a lista com ID, Vencimento, Descrição, Beneficiário, Categoria, Tipo e Valor
             lista_edit = {}
             for _, r in df_base.iloc[::-1].iterrows():
@@ -831,7 +837,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 label = f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']} | Benef: {benef} | Cat: {cat} ({tipo}) | R$ {r['Valor']}"
                 lista_edit[label] = r
 
-            escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key="selectbox_ajuste")
+            escolha = st.selectbox("Selecione para Alterar/Excluir:", [""] + list(lista_edit.keys()), key=f"selectbox_ajuste_{r_ajuste}")
                 
             if escolha:
                 item = lista_edit[escolha]
@@ -839,10 +845,10 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 
                 # Respiro leve para desgrudar o campo de seleção de cima
                 st.markdown("")
-                ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY", key="ed_dat_key")
+                ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY", key=f"ed_dat_key_{r_ajuste}")
                 
-                ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f", key="ed_val_key")
-                ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'], key="ed_desc_key")
+                ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f", key=f"ed_val_key_{r_ajuste}")
+                ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'], key=f"ed_desc_key_{r_ajuste}")
                 
                 # Identifica se é uma transferência para tratar os campos de beneficiário e categoria de forma limpa
                 tipo_atual_str = str(item.get('Tipo', '')).capitalize()
@@ -869,7 +875,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     # Se for transferência, não exibe beneficiário poluído
                     ed_benef = ""
                 else:
-                    ed_benef = st.selectbox("Alterar Beneficiário:", beneficiarios_existentes if beneficiarios_existentes else [val_benef_atual], index=idx_benef, key="ed_benef_key")
+                    ed_benef = st.selectbox("Alterar Beneficiário:", beneficiarios_existentes if beneficiarios_existentes else [val_benef_atual], index=idx_benef, key=f"ed_benef_key_{r_ajuste}")
                 
                 # Lista padrão de categorias idêntica à do cadastro novo
                 lista_categorias_padrao = [
@@ -885,28 +891,28 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 
                 # Respiro leve para desgrudar do campo de cima
                 st.markdown("")
-                ed_cat = st.selectbox("Alterar Categoria:", lista_categorias_padrao, index=idx_cat, key="ed_cat_key")
+                ed_cat = st.selectbox("Alterar Categoria:", lista_categorias_padrao, index=idx_cat, key=f"ed_cat_key_{r_ajuste}")
                 
                 tipos_opcoes = ["Despesa", "Receita", "Transferência"]
                 tipo_atual = "Transferência" if eh_transf else str(item.get('Tipo', 'Despesa')).capitalize()
                 idx_t = tipos_opcoes.index(tipo_atual) if tipo_atual in tipos_opcoes else 0
                 
                 st.markdown("")
-                ed_tipo = st.selectbox("Alterar Tipo:", tipos_opcoes, index=idx_t, key="ed_tipo_key")
+                ed_tipo = st.selectbox("Alterar Tipo:", tipos_opcoes, index=idx_t, key=f"ed_tipo_key_{r_ajuste}")
 
                 st.markdown("")
                 idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
-                ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b, key="ed_bnc_key")
+                ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b, key=f"ed_bnc_key_{r_ajuste}")
                 
                 st.markdown("")
                 status_opcoes = ["Pago", "Pendente"]
                 index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
-                ed_sta = st.selectbox("Status:", status_opcoes, index=index_status, key="ed_sta_key")
+                ed_sta = st.selectbox("Status:", status_opcoes, index=index_status, key=f"ed_sta_key_{r_ajuste}")
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 col_ed1, col_ed2 = st.columns(2)
                 
-                if col_ed1.button("💾 ATUALIZAR", key="btn_atualizar_lancamento"):
+                if col_ed1.button("💾 ATUALIZAR", key=f"btn_atualizar_lancamento_{r_ajuste}"):
                     id_alvo = int(float(item['ID']))
                     
                     # Varre a planilha linha por linha para achar o número exato da linha pelo ID
@@ -937,14 +943,12 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     
                     st.toast("✅ Atualização sincronizada com sucesso!", icon="💰")
                     
-                    # Zera a seleção do selectbox de ajuste para fechar/limpar o painel
-                    if "selectbox_ajuste" in st.session_state:
-                        del st.session_state["selectbox_ajuste"]
-                        
+                    # Incrementa o reset para limpar e recriar os campos zerados
+                    st.session_state["reset_ajuste"] += 1
                     atualizar_sessao()
                     st.rerun()
                     
-                if col_ed2.button("🚨 EXCLUIR", key="btn_excluir_lancamento"):
+                if col_ed2.button("🚨 EXCLUIR", key=f"btn_excluir_lancamento_{r_ajuste}"):
                     id_alvo = int(float(item['ID']))
                     
                     # Varre a planilha para encontrar todas as linhas físicas que possuem este mesmo ID
@@ -967,13 +971,10 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     
                     st.toast("✅ Lançamento excluído com sucesso!", icon="💰")
                     
-                    # Zera a seleção do selectbox de ajuste para fechar/limpar o painel
-                    if "selectbox_ajuste" in st.session_state:
-                        del st.session_state["selectbox_ajuste"]
-                        
+                    # Incrementa o reset para limpar e recriar os campos zerados
+                    st.session_state["reset_ajuste"] += 1
                     atualizar_sessao()
                     st.rerun()
-
 
         
 
