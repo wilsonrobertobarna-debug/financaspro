@@ -1422,9 +1422,27 @@ elif "📄" in aba:
     # Trava a data de início no primeiro dia do mês atual
     primeiro_dia_mes = hoje_br.replace(day=1)
     
-    c1, c2 = st.columns(2)
+    # Linha de Filtros (Período, Beneficiário e Categoria)
+    c1, c2, c3, c4 = st.columns(4)
     d_ini = c1.date_input("Início", primeiro_dia_mes, format="DD/MM/YYYY", key="zap_d1")
     d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY", key="zap_d2")
+    
+    # Coleta lista de beneficiários únicos para o selectbox de filtro
+    beneficiarios_filtro = ["Todos"]
+    if 'Beneficiário' in df_base.columns:
+        beneficiarios_filtro += sorted([b for b in df_base['Beneficiário'].dropna().astype(str).str.strip().unique() if b and b != 'N/D'])
+    elif 'Beneficiario' in df_base.columns:
+        beneficiarios_filtro += sorted([b for b in df_base['Beneficiario'].dropna().astype(str).str.strip().unique() if b and b != 'N/D'])
+    
+    f_benef = c3.selectbox("Filtrar Beneficiário", beneficiarios_filtro, key="zap_f_benef")
+    
+    # Lista de categorias padrão para o filtro
+    lista_categorias_filtro = ["Todas", "Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", "Aplicação", 
+                               "Vale Alimentação", "Restaurante", "Celular", "Anuidade", "Seguro", "Internet", 
+                               "Vestuário", "Salário", "Reembolso", "Moradia", "Saúde", "Taxas", "Depósito", 
+                               "Plano Assistencial", "Transporte", "Previdência", "Outros", "Pet: Milo", 
+                               "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção", "Transferência"]
+    f_cat = c4.selectbox("Filtrar Categoria", lista_categorias_filtro, key="zap_f_cat")
     
     saldos_txt = ""
     sub_contas_invest = 0.0
@@ -1479,7 +1497,7 @@ elif "📄" in aba:
             sub_vr += saldo_vr
             saldos_txt += f"🍽️ {b}: {m_fmt(saldo_vr)}\n"
 
-        # --- VEÍCULOS E BENS (T-Cross, Moto Lead, etc.) ---
+        # --- VEÍCULOS E BENS ---
         elif "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
             saldo_bem = valor_b
             sub_bens_veiculos += saldo_bem
@@ -1500,9 +1518,20 @@ elif "📄" in aba:
     # Patrimônio Total consolidando todas as frentes
     total_patrimonio = sub_contas_invest + sub_vr + sub_bens_veiculos - sub_cartoes
 
-    # 2. RESUMO DO PERÍODO
+    # 2. RESUMO DO PERÍODO COM APLICABILIDADE DOS FILTROS DE BENEFICIÁRIO E CATEGORIA
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
+
+    # Aplica filtro de beneficiário se selecionado
+    if f_benef != "Todos":
+        if 'Beneficiário' in df_per.columns:
+            df_per = df_per[df_per['Beneficiário'].astype(str).str.strip() == f_benef]
+        elif 'Beneficiario' in df_per.columns:
+            df_per = df_per[df_per['Beneficiario'].astype(str).str.strip() == f_benef]
+
+    # Aplica filtro de categoria se selecionada
+    if f_cat != "Todas":
+        df_per = df_per[df_per['Categoria'].astype(str).str.strip() == f_cat]
 
     if not df_per.empty:
         df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
@@ -1519,9 +1548,13 @@ elif "📄" in aba:
     else:
         rec_v = des_v = rend_v = sobra = val_pendente = 0.0
 
-    # 3. MONTAGEM DO TEXTO FINAL COM OS SUBTOTAIS POR ÚLTIMO ANTES DO PATRIMÔNIO
+    # 3. MONTAGEM DO TEXTO FINAL COM OS FILTROS APLICADOS
     relat = f"RELATÓRIO WILSON & FABIANA\n"
     relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
+    if f_benef != "Todos":
+        relat += f"Beneficiário: {f_benef}\n"
+    if f_cat != "Todas":
+        relat += f"Categoria: {f_cat}\n"
     relat += f"========================================\n"
     relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
     relat += f"DES: {m_fmt(des_v)} | SOBRA: {m_fmt(sobra)}\n"
@@ -1541,6 +1574,7 @@ elif "📄" in aba:
     import urllib.parse
     link_zap = f"https://wa.me/?text={urllib.parse.quote(relat)}"
     st.markdown(f'[📲 Enviar Resumo para o WhatsApp]({link_zap})', unsafe_allow_html=True)
+      
 
 
 if aba == "📋 Relatório PDF":
