@@ -453,8 +453,7 @@ df_bancos_info = st.session_state['df_bancos_info']
 
 
 # INTEGRAÇÃO DE AVISOS NO WHATSAPP VIA TWILIO (REGRA QUINZENAL)
-def enviar_whatsapp_pendencias(df):
-   # FUNÇÃO DE DIAGNÓSTICO DO WHATSAPP
+
 def enviar_whatsapp_pendencias(df):
     now = datetime.now()
     dia_atual = now.day
