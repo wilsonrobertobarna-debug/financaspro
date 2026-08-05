@@ -1542,27 +1542,23 @@ elif "📄" in aba:
     link_zap = f"https://wa.me/?text={urllib.parse.quote(relat)}"
     st.markdown(f'[📲 Enviar Resumo para o WhatsApp]({link_zap})', unsafe_allow_html=True)
 
-   # ==========================================
+    # ==========================================
     # 4. NOVA SEÇÃO: BUSCA E ENVIO DE LANÇAMENTO ESPECÍFICO
     # ==========================================
     st.markdown("---")
     st.subheader("🔍 Buscar Lançamento Específico para Enviar no WhatsApp")
 
-    # Inicializa o estado da sessão para os filtros se não existirem
-    if "bus_d1" not in st.session_state:
-        st.session_state["bus_d1"] = primeiro_dia_mes
-    if "bus_d2" not in st.session_state:
-        st.session_state["bus_d2"] = hoje_br
-    if "bus_benef" not in st.session_state:
-        st.session_state["bus_benef"] = "Todos"
-    if "bus_cat" not in st.session_state:
-        st.session_state["bus_cat"] = "Todas"
+    # Sistema de controle de versão/reset para os filtros (evita o erro do Streamlit)
+    if "reset_busca" not in st.session_state:
+        st.session_state["reset_busca"] = 0
 
     col_b1, col_b2, col_b3 = st.columns(3)
     
-    # Período de busca específico vinculados ao session_state
-    bs_ini = col_b1.date_input("Início (Busca)", format="DD/MM/YYYY", key="bus_d1")
-    bs_fim = col_b2.date_input("Fim (Busca)", format="DD/MM/YYYY", key="bus_d2")
+    # Usamos o contador no sufixo da key para forçar o reset limpo dos inputs
+    r_id = st.session_state["reset_busca"]
+    
+    bs_ini = col_b1.date_input("Início (Busca)", primeiro_dia_mes, format="DD/MM/YYYY", key=f"bus_d1_{r_id}")
+    bs_fim = col_b2.date_input("Fim (Busca)", hoje_br, format="DD/MM/YYYY", key=f"bus_d2_{r_id}")
     
     # Coleta lista de beneficiários únicos
     beneficiarios_busca = ["Todos"]
@@ -1571,7 +1567,7 @@ elif "📄" in aba:
     elif 'Beneficiario' in df_base.columns:
         beneficiarios_busca += sorted([b for b in df_base['Beneficiario'].dropna().astype(str).str.strip().unique() if b and b != 'N/D'])
     
-    sel_beneficiario = col_b3.selectbox("Filtrar Beneficiário", beneficiarios_busca, key="bus_benef")
+    sel_beneficiario = col_b3.selectbox("Filtrar Beneficiário", beneficiarios_busca, key=f"bus_benef_{r_id}")
 
     # Lista de categorias padrão
     lista_cat_busca = ["Todas", "Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", "Aplicação", 
@@ -1580,17 +1576,12 @@ elif "📄" in aba:
                        "Plano Assistencial", "Transporte", "Previdência", "Outros", "Pet: Milo", 
                        "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção", "Transferência"]
     
-    sel_categoria = st.selectbox("Filtrar Categoria", lista_cat_busca, key="bus_cat")
+    sel_categoria = st.selectbox("Filtrar Categoria", lista_cat_busca, key=f"bus_cat_{r_id}")
 
-    # Botão para limpar a busca e resetar os filtros
+    # Botão para limpar a busca, sumir com o card e resetar os filtros
     st.write("")
     if st.button("🔄 Limpar Busca e Filtros", key="btn_limpar_busca"):
-        st.session_state["bus_d1"] = primeiro_dia_mes
-        st.session_state["bus_d2"] = hoje_br
-        st.session_state["bus_benef"] = "Todos"
-        st.session_state["bus_cat"] = "Todas"
-        if "select_lanc_especifico" in st.session_state:
-            st.session_state["select_lanc_especifico"] = "Selecione um lançamento..."
+        st.session_state["reset_busca"] += 1  # Incrementa o ID para recriar os widgets limpos
         st.rerun()
 
     # Filtra o dataframe com base nos critérios escolhidos
@@ -1617,7 +1608,7 @@ elif "📄" in aba:
 
         st.write("")
         opcoes_select = ["Selecione um lançamento..."] + list(lista_lanc_encontrar.keys())
-        escolha_lanc = st.selectbox("Selecione o Lançamento para Enviar:", opcoes_select, key="select_lanc_especifico")
+        escolha_lanc = st.selectbox("Selecione o Lançamento para Enviar:", opcoes_select, key=f"select_lanc_especifico_{r_id}")
 
         if escolha_lanc and escolha_lanc != "Selecione um lançamento...":
             item_esp = lista_lanc_encontrar[escolha_lanc]
@@ -1636,7 +1627,7 @@ elif "📄" in aba:
             card_lanc += f"========================================\n"
 
             st.write("") 
-            st.text_area("Card do Lançamento para Copiar", card_lanc, height=200, key="txt_card_esp")
+            st.text_area("Card do Lançamento para Copiar", card_lanc, height=200, key=f"txt_card_esp_{r_id}")
 
             link_zap_lanc = f"https://wa.me/?text={urllib.parse.quote(card_lanc)}"
             st.markdown(f'[📲 Enviar este Lançamento para o WhatsApp]({link_zap_lanc})', unsafe_allow_html=True)
