@@ -1572,7 +1572,7 @@ elif "📄" in aba:
     
     sel_categoria = st.selectbox("Filtrar Categoria", lista_cat_busca, key="bus_cat")
 
-    # Filtra o dataframe com base nos critérios escolhidos
+  # Filtra o dataframe com base nos critérios escolhidos
     df_busca_lanc = df_base[(df_base['DT_ONLY'] >= bs_ini) & (df_base['DT_ONLY'] <= bs_fim)].copy()
 
     if sel_beneficiario != "Todos":
@@ -1594,6 +1594,8 @@ elif "📄" in aba:
             label_lanc = f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']} | Benef: {benef} | Cat: {cat} ({tipo}) | R$ {r['Valor']}"
             lista_lanc_encontrar[label_lanc] = r
 
+        # Respiro visual antes do selectbox
+        st.write("")
         escolha_lanc = st.selectbox("Selecione o Lançamento para Enviar:", [""] + list(lista_lanc_encontrar.keys()), key="select_lanc_especifico")
 
         if escolha_lanc:
@@ -1619,6 +1621,7 @@ elif "📄" in aba:
             link_zap_lanc = f"https://wa.me/?text={urllib.parse.quote(card_lanc)}"
             st.markdown(f'[📲 Enviar este Lançamento para o WhatsApp]({link_zap_lanc})', unsafe_allow_html=True)
     else:
+        st.write("")
         st.info("Nenhum lançamento encontrado com os filtros selecionados no período.")
       
 
