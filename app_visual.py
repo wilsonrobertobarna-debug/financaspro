@@ -564,9 +564,7 @@ if st.sidebar.button("📲 Testar Envio WhatsApp"):
     st.session_state['forcar_envio_wa'] = True
     if 'last_wa_date' in st.session_state:
         del st.session_state['last_wa_date']
-    enviar_whatsapp_pendencias(df_base)
-    st.toast("Disparo de teste do WhatsApp executado!", icon="📱")
-    st.rerun()
+    # Removemos o st.rerun daqui para a mensagem aparecer na tela!
 
 st.sidebar.divider()
 
