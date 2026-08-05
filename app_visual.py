@@ -897,17 +897,29 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 with st.form(key=f"form_ajuste_{item['ID']}"):
                     st.markdown("")
                     ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
+                    
+                    st.markdown("")
                     ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f")
+                    
+                    st.markdown("")
                     ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'])
                     
                     if eh_transf:
                         ed_benef = ""
                     else:
+                        st.markdown("")
                         ed_benef = st.selectbox("Alterar Beneficiário:", beneficiarios_existentes if beneficiarios_existentes else [val_benef_atual], index=idx_benef)
                     
+                    st.markdown("")
                     ed_cat = st.selectbox("Alterar Categoria:", lista_categorias_padrao, index=idx_cat)
+                    
+                    st.markdown("")
                     ed_tipo = st.selectbox("Alterar Tipo:", tipos_opcoes, index=idx_t)
+                    
+                    st.markdown("")
                     ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
+                    
+                    st.markdown("")
                     ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
                     
                     st.markdown("<br>", unsafe_allow_html=True)
@@ -969,7 +981,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                         st.session_state["selectbox_ajuste_val"] = ""
                         atualizar_sessao()
                         st.rerun()
-
         
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
