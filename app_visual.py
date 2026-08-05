@@ -1542,17 +1542,27 @@ elif "📄" in aba:
     link_zap = f"https://wa.me/?text={urllib.parse.quote(relat)}"
     st.markdown(f'[📲 Enviar Resumo para o WhatsApp]({link_zap})', unsafe_allow_html=True)
 
-    # ==========================================
+   # ==========================================
     # 4. NOVA SEÇÃO: BUSCA E ENVIO DE LANÇAMENTO ESPECÍFICO
     # ==========================================
     st.markdown("---")
     st.subheader("🔍 Buscar Lançamento Específico para Enviar no WhatsApp")
 
+    # Inicializa o estado da sessão para os filtros se não existirem
+    if "bus_d1" not in st.session_state:
+        st.session_state["bus_d1"] = primeiro_dia_mes
+    if "bus_d2" not in st.session_state:
+        st.session_state["bus_d2"] = hoje_br
+    if "bus_benef" not in st.session_state:
+        st.session_state["bus_benef"] = "Todos"
+    if "bus_cat" not in st.session_state:
+        st.session_state["bus_cat"] = "Todas"
+
     col_b1, col_b2, col_b3 = st.columns(3)
     
-    # Período de busca específico para os lançamentos
-    bs_ini = col_b1.date_input("Início (Busca)", primeiro_dia_mes, format="DD/MM/YYYY", key="bus_d1")
-    bs_fim = col_b2.date_input("Fim (Busca)", hoje_br, format="DD/MM/YYYY", key="bus_d2")
+    # Período de busca específico vinculados ao session_state
+    bs_ini = col_b1.date_input("Início (Busca)", format="DD/MM/YYYY", key="bus_d1")
+    bs_fim = col_b2.date_input("Fim (Busca)", format="DD/MM/YYYY", key="bus_d2")
     
     # Coleta lista de beneficiários únicos
     beneficiarios_busca = ["Todos"]
@@ -1572,7 +1582,18 @@ elif "📄" in aba:
     
     sel_categoria = st.selectbox("Filtrar Categoria", lista_cat_busca, key="bus_cat")
 
-  # Filtra o dataframe com base nos critérios escolhidos
+    # Botão para limpar a busca e resetar os filtros
+    st.write("")
+    if st.button("🔄 Limpar Busca e Filtros", key="btn_limpar_busca"):
+        st.session_state["bus_d1"] = primeiro_dia_mes
+        st.session_state["bus_d2"] = hoje_br
+        st.session_state["bus_benef"] = "Todos"
+        st.session_state["bus_cat"] = "Todas"
+        if "select_lanc_especifico" in st.session_state:
+            st.session_state["select_lanc_especifico"] = "Selecione um lançamento..."
+        st.rerun()
+
+    # Filtra o dataframe com base nos critérios escolhidos
     df_busca_lanc = df_base[(df_base['DT_ONLY'] >= bs_ini) & (df_base['DT_ONLY'] <= bs_fim)].copy()
 
     if sel_beneficiario != "Todos":
@@ -1594,11 +1615,11 @@ elif "📄" in aba:
             label_lanc = f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']} | Benef: {benef} | Cat: {cat} ({tipo}) | R$ {r['Valor']}"
             lista_lanc_encontrar[label_lanc] = r
 
-        # Respiro visual antes do selectbox
         st.write("")
-        escolha_lanc = st.selectbox("Selecione o Lançamento para Enviar:", [""] + list(lista_lanc_encontrar.keys()), key="select_lanc_especifico")
+        opcoes_select = ["Selecione um lançamento..."] + list(lista_lanc_encontrar.keys())
+        escolha_lanc = st.selectbox("Selecione o Lançamento para Enviar:", opcoes_select, key="select_lanc_especifico")
 
-        if escolha_lanc:
+        if escolha_lanc and escolha_lanc != "Selecione um lançamento...":
             item_esp = lista_lanc_encontrar[escolha_lanc]
             
             # Monta o card formatado específico do lançamento
@@ -1614,7 +1635,6 @@ elif "📄" in aba:
             card_lanc += f"📋 *Tipo:* {item_esp.get('Tipo', 'N/D')} | *Status:* {item_esp['Status']}\n"
             card_lanc += f"========================================\n"
 
-            # Respiro visual entre o selectbox e o campo de texto
             st.write("") 
             st.text_area("Card do Lançamento para Copiar", card_lanc, height=200, key="txt_card_esp")
 
