@@ -452,11 +452,13 @@ df_bancos_info = st.session_state['df_bancos_info']
 
 
 
-
-# INTEGRAÇÃO DE AVISOS NO WHATSAPP VIA TWILIO
+# INTEGRAÇÃO DE AVISOS NO WHATSAPP VIA TWILIO (REGRA QUINZENAL)
 def enviar_whatsapp_pendencias(df):
     now = datetime.now()
-    if now.hour >= 8:
+    dia_atual = now.day
+    
+    # Verifica se hoje é dia 1 ou dia 16 (ou se você quiser disparar, respeitando a trava de 1 envio por dia)
+    if dia_atual in [1, 16]:
         if 'last_wa_date' not in st.session_state or st.session_state['last_wa_date'] != now.date():
             twilio_secrets = st.secrets.get("twilio", {})
             sid = twilio_secrets.get("account_sid")
@@ -468,22 +470,50 @@ def enviar_whatsapp_pendencias(df):
                 try:
                     from twilio.rest import Client
                     client_tw = Client(sid, token)
-                    df_aviso = df[df['Status'] == 'Pendente'].copy()
+                    
+                    # Define a janela da quinzena
+                    if dia_atual == 1:
+                        data_inicio = now.replace(day=1)
+                        data_fim = now.replace(day=15)
+                        periodo_nome = "Início do Mês (Vencimentos de 01 a 15)"
+                    else:
+                        data_inicio = now.replace(day=16)
+                        if now.month == 12:
+                            proximo_mes = now.replace(year=now.year + 1, month=1, day=1)
+                        else:
+                            proximo_mes = now.replace(month=now.month + 1, day=1)
+                        data_fim = proximo_mes - timedelta(days=1)
+                        periodo_nome = "Segunda Quinzena (Vencimentos de 16 em diante)"
+
+                    # Filtra lançamentos pendentes que possuem a coluna de data datetime 'DT'
+                    df_aviso = df[(df['Status'] == 'Pendente') & (df['DT'].notnull())].copy()
+                    
                     if not df_aviso.empty:
-                        df_aviso['Dias'] = (df_aviso['DT'] - pd.to_datetime(now)).dt.days
-                        df_venc = df_aviso[df_aviso['Dias'].isin([0, 1, 3]) | (df_aviso['Dias'] < 0)].copy()
-                        if not df_venc.empty:
-                            mensagem = "🔔 *Aviso de Pendências - FinançasPro*\n\n"
-                            for _, row in df_venc.iterrows():
-                                if row['Dias'] < 0:
-                                    mensagem += f"⚠️ Lançamento Atrasado: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
-                                elif row['Dias'] == 0:
-                                    mensagem += f"⚠️ Vence Hoje: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
-                                elif row['Dias'] == 1:
-                                    mensagem += f"🚨 Vence Amanhã: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
-                                elif row['Dias'] == 3:
-                                    mensagem += f"⚠️ Vence em 3 dias: {row['Data']} - {row['Descrição']} no valor de {m_fmt(row['V_Num'])} ({row['Banco']})\n"
+                        # Filtra apenas os lançamentos que caem dentro da quinzena correspondente
+                        df_quinzena = df_aviso[
+                            (df_aviso['DT'].dt.date >= data_inicio.date()) & 
+                            (df_aviso['DT'].dt.date <= data_fim.date())
+                        ].copy()
+
+                        if not df_quinzena.empty:
+                            # Ordena por data
+                            df_quinzena = df_quinzena.sort_values(by='DT')
                             
+                            mensagem = f"🔔 *FinançasPro: Alerta Quinzena*\n*({periodo_nome})*\n\n"
+                            total_quinc = 0.0
+                            
+                            for _, row in df_quinzena.iterrows():
+                                data_fmt = row.get('Data', row['DT'].strftime('%d/%m/%Y'))
+                                desc = row.get('Descrição', 'Sem descrição')
+                                valor = row.get('V_Num', 0.0)
+                                banco = row.get('Banco', 'N/D')
+                                
+                                mensagem += f"📌 *{desc}*\n   📅 Venc: {data_fmt} | {m_fmt(valor)} | Banco: {banco}\n\n"
+                                total_quinc += float(valor)
+
+                            mensagem += f"💰 *Total previsto no período: {m_fmt(total_quinc)}*\n"
+                            mensagem += "Acesse o FinançasPro para organizar seus pagamentos!"
+
                             client_tw.messages.create(body=mensagem, from_=w_from, to=w_to)
                             st.session_state['last_wa_date'] = now.date()
                 except Exception as e:
