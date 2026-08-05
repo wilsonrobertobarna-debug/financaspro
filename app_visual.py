@@ -1419,30 +1419,15 @@ elif "🚗" in aba:
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
     
+  elif "📄" in aba:
+    st.title("📄 Relatório WhatsApp")
+    
     # Trava a data de início no primeiro dia do mês atual
     primeiro_dia_mes = hoje_br.replace(day=1)
     
-    # Linha de Filtros (Período, Beneficiário e Categoria)
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2 = st.columns(2)
     d_ini = c1.date_input("Início", primeiro_dia_mes, format="DD/MM/YYYY", key="zap_d1")
     d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY", key="zap_d2")
-    
-    # Coleta lista de beneficiários únicos para o selectbox de filtro
-    beneficiarios_filtro = ["Todos"]
-    if 'Beneficiário' in df_base.columns:
-        beneficiarios_filtro += sorted([b for b in df_base['Beneficiário'].dropna().astype(str).str.strip().unique() if b and b != 'N/D'])
-    elif 'Beneficiario' in df_base.columns:
-        beneficiarios_filtro += sorted([b for b in df_base['Beneficiario'].dropna().astype(str).str.strip().unique() if b and b != 'N/D'])
-    
-    f_benef = c3.selectbox("Filtrar Beneficiário", beneficiarios_filtro, key="zap_f_benef")
-    
-    # Lista de categorias padrão para o filtro
-    lista_categorias_filtro = ["Todas", "Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", "Aplicação", 
-                               "Vale Alimentação", "Restaurante", "Celular", "Anuidade", "Seguro", "Internet", 
-                               "Vestuário", "Salário", "Reembolso", "Moradia", "Saúde", "Taxas", "Depósito", 
-                               "Plano Assistencial", "Transporte", "Previdência", "Outros", "Pet: Milo", 
-                               "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção", "Transferência"]
-    f_cat = c4.selectbox("Filtrar Categoria", lista_categorias_filtro, key="zap_f_cat")
     
     saldos_txt = ""
     sub_contas_invest = 0.0
@@ -1518,20 +1503,9 @@ elif "📄" in aba:
     # Patrimônio Total consolidando todas as frentes
     total_patrimonio = sub_contas_invest + sub_vr + sub_bens_veiculos - sub_cartoes
 
-    # 2. RESUMO DO PERÍODO COM APLICABILIDADE DOS FILTROS DE BENEFICIÁRIO E CATEGORIA
+    # 2. RESUMO DO PERÍODO ORIGINAL
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
-
-    # Aplica filtro de beneficiário se selecionado
-    if f_benef != "Todos":
-        if 'Beneficiário' in df_per.columns:
-            df_per = df_per[df_per['Beneficiário'].astype(str).str.strip() == f_benef]
-        elif 'Beneficiario' in df_per.columns:
-            df_per = df_per[df_per['Beneficiario'].astype(str).str.strip() == f_benef]
-
-    # Aplica filtro de categoria se selecionada
-    if f_cat != "Todas":
-        df_per = df_per[df_per['Categoria'].astype(str).str.strip() == f_cat]
 
     if not df_per.empty:
         df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
@@ -1548,13 +1522,9 @@ elif "📄" in aba:
     else:
         rec_v = des_v = rend_v = sobra = val_pendente = 0.0
 
-    # 3. MONTAGEM DO TEXTO FINAL COM OS FILTROS APLICADOS
+    # 3. MONTAGEM DO TEXTO ORIGINAL DO RELATÓRIO
     relat = f"RELATÓRIO WILSON & FABIANA\n"
     relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
-    if f_benef != "Todos":
-        relat += f"Beneficiário: {f_benef}\n"
-    if f_cat != "Todas":
-        relat += f"Categoria: {f_cat}\n"
     relat += f"========================================\n"
     relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
     relat += f"DES: {m_fmt(des_v)} | SOBRA: {m_fmt(sobra)}\n"
@@ -1574,6 +1544,83 @@ elif "📄" in aba:
     import urllib.parse
     link_zap = f"https://wa.me/?text={urllib.parse.quote(relat)}"
     st.markdown(f'[📲 Enviar Resumo para o WhatsApp]({link_zap})', unsafe_allow_html=True)
+
+    # ==========================================
+    # 4. NOVA SEÇÃO: BUSCA E ENVIO DE LANÇAMENTO ESPECÍFICO
+    # ==========================================
+    st.markdown("---")
+    st.subheader("🔍 Buscar Lançamento Específico para Enviar no WhatsApp")
+
+    col_b1, col_b2, col_b3 = st.columns(3)
+    
+    # Período de busca específico para os lançamentos
+    bs_ini = col_b1.date_input("Início (Busca)", primeiro_dia_mes, format="DD/MM/YYYY", key="bus_d1")
+    bs_fim = col_b2.date_input("Fim (Busca)", hoje_br, format="DD/MM/YYYY", key="bus_d2")
+    
+    # Coleta lista de beneficiários únicos
+    beneficiarios_busca = ["Todos"]
+    if 'Beneficiário' in df_base.columns:
+        beneficiarios_busca += sorted([b for b in df_base['Beneficiário'].dropna().astype(str).str.strip().unique() if b and b != 'N/D'])
+    elif 'Beneficiario' in df_base.columns:
+        beneficiarios_busca += sorted([b for b in df_base['Beneficiario'].dropna().astype(str).str.strip().unique() if b and b != 'N/D'])
+    
+    sel_beneficiario = col_b3.selectbox("Filtrar Beneficiário", beneficiarios_busca, key="bus_benef")
+
+    # Lista de categorias padrão
+    lista_cat_busca = ["Todas", "Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", "Aplicação", 
+                       "Vale Alimentação", "Restaurante", "Celular", "Anuidade", "Seguro", "Internet", 
+                       "Vestuário", "Salário", "Reembolso", "Moradia", "Saúde", "Taxas", "Depósito", 
+                       "Plano Assistencial", "Transporte", "Previdência", "Outros", "Pet: Milo", 
+                       "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção", "Transferência"]
+    
+    sel_categoria = st.selectbox("Filtrar Categoria", lista_cat_busca, key="bus_cat")
+
+    # Filtra o dataframe com base nos critérios escolhidos
+    df_busca_lanc = df_base[(df_base['DT_ONLY'] >= bs_ini) & (df_base['DT_ONLY'] <= bs_fim)].copy()
+
+    if sel_beneficiario != "Todos":
+        if 'Beneficiário' in df_busca_lanc.columns:
+            df_busca_lanc = df_busca_lanc[df_busca_lanc['Beneficiário'].astype(str).str.strip() == sel_beneficiario]
+        elif 'Beneficiario' in df_busca_lanc.columns:
+            df_busca_lanc = df_busca_lanc[df_busca_lanc['Beneficiario'].astype(str).str.strip() == sel_beneficiario]
+
+    if sel_categoria != "Todas":
+        df_busca_lanc = df_busca_lanc[df_busca_lanc['Categoria'].astype(str).str.strip() == sel_categoria]
+
+    if not df_busca_lanc.empty:
+        # Monta um dicionário para o selectbox com os detalhes do lançamento
+        lista_lanc_encontrar = {}
+        for _, r in df_busca_lanc.iloc[::-1].iterrows():
+            benef = r.get('Beneficiário', r.get('Beneficiario', 'N/D'))
+            cat = r.get('Categoria', 'N/D')
+            tipo = r.get('Tipo', 'N/D')
+            label_lanc = f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']} | Benef: {benef} | Cat: {cat} ({tipo}) | R$ {r['Valor']}"
+            lista_lanc_encontrar[label_lanc] = r
+
+        escolha_lanc = st.selectbox("Selecione o Lançamento para Enviar:", [""] + list(lista_lanc_encontrar.keys()), key="select_lanc_especifico")
+
+        if escolha_lanc:
+            item_esp = lista_lanc_encontrar[escolha_lanc]
+            
+            # Monta o card formatado específico do lançamento
+            benef_esp = item_esp.get('Beneficiário', item_esp.get('Beneficiario', 'N/D'))
+            card_lanc = f"📌 *LANÇAMENTO - WILSON & FABIANA*\n"
+            card_lanc += f"========================================\n"
+            card_lanc += f"📝 *Descrição:* {item_esp['Descrição']}\n"
+            card_lanc += f"💰 *Valor:* R$ {item_esp['Valor']}\n"
+            card_lanc += f"📅 *Vencimento:* {item_esp['Vencimento']}\n"
+            card_lanc += f"🏦 *Banco:* {item_esp['Banco']}\n"
+            card_lanc += f"🏷️ *Categoria:* {item_esp.get('Categoria', 'N/D')}\n"
+            card_lanc += f"👤 *Beneficiário:* {benef_esp}\n"
+            card_lanc += f"📋 *Tipo:* {item_esp.get('Tipo', 'N/D')} | *Status:* {item_esp['Status']}\n"
+            card_lanc += f"========================================\n"
+
+            st.text_area("Card do Lançamento para Copiar", card_lanc, height=200, key="txt_card_esp")
+
+            link_zap_lanc = f"https://wa.me/?text={urllib.parse.quote(card_lanc)}"
+            st.markdown(f'[📲 Enviar este Lançamento para o WhatsApp]({link_zap_lanc})', unsafe_allow_html=True)
+    else:
+        st.info("Nenhum lançamento encontrado com os filtros selecionados no período.")
       
 
 
