@@ -454,72 +454,86 @@ df_bancos_info = st.session_state['df_bancos_info']
 
 # INTEGRAÇÃO DE AVISOS NO WHATSAPP VIA TWILIO (REGRA QUINZENAL)
 def enviar_whatsapp_pendencias(df):
+   # FUNÇÃO DE DIAGNÓSTICO DO WHATSAPP
+def enviar_whatsapp_pendencias(df):
     now = datetime.now()
     dia_atual = now.day
     
-    # Verifica se hoje é dia 1 ou dia 16 (ou se você quiser disparar, respeitando a trava de 1 envio por dia)
-    if dia_atual in [1, 16]:
-        if 'last_wa_date' not in st.session_state or st.session_state['last_wa_date'] != now.date():
-            twilio_secrets = st.secrets.get("twilio", {})
-            sid = twilio_secrets.get("account_sid")
-            token = twilio_secrets.get("auth_token")
-            w_from = twilio_secrets.get("whatsapp_from")
-            w_to = twilio_secrets.get("whatsapp_to")
+    # Se o botão de teste foi apertado, vamos mostrar o que está acontecendo
+    if st.session_state.get('forcar_envio_wa', False):
+        twilio_secrets = st.secrets.get("twilio", {})
+        sid = twilio_secrets.get("account_sid")
+        token = twilio_secrets.get("auth_token")
+        w_from = twilio_secrets.get("whatsapp_from")
+        w_to = twilio_secrets.get("whatsapp_to")
+        
+        # 1. Testa se as chaves foram lidas
+        if not sid or not token or not w_from or not w_to:
+            st.error("❌ Erro: As chaves do Twilio não foram encontradas no secrets.toml!")
+            st.session_state['forcar_envio_wa'] = False
+            return
+        
+        try:
+            from twilio.rest import Client
+            client_tw = Client(sid, token)
             
-            if sid and token and w_from and w_to:
-                try:
-                    from twilio.rest import Client
-                    client_tw = Client(sid, token)
-                    
-                    # Define a janela da quinzena
-                    if dia_atual == 1:
-                        data_inicio = now.replace(day=1)
-                        data_fim = now.replace(day=15)
-                        periodo_nome = "Início do Mês (Vencimentos de 01 a 15)"
-                    else:
-                        data_inicio = now.replace(day=16)
-                        if now.month == 12:
-                            proximo_mes = now.replace(year=now.year + 1, month=1, day=1)
-                        else:
-                            proximo_mes = now.replace(month=now.month + 1, day=1)
-                        data_fim = proximo_mes - timedelta(days=1)
-                        periodo_nome = "Segunda Quinzena (Vencimentos de 16 em diante)"
+            # Define a janela da quinzena
+            if 1 <= dia_atual <= 15:
+                data_inicio = now.replace(day=1)
+                data_fim = now.replace(day=15)
+                periodo_nome = "Início do Mês (Vencimentos de 01 a 15)"
+            else:
+                data_inicio = now.replace(day=16)
+                if now.month == 12:
+                    proximo_mes = now.replace(year=now.year + 1, month=1, day=1)
+                else:
+                    proximo_mes = now.replace(month=now.month + 1, day=1)
+                data_fim = proximo_mes - timedelta(days=1)
+                periodo_nome = "Segunda Quinzena (Vencimentos de 16 em diante)"
 
-                    # Filtra lançamentos pendentes que possuem a coluna de data datetime 'DT'
-                    df_aviso = df[(df['Status'] == 'Pendente') & (df['DT'].notnull())].copy()
-                    
-                    if not df_aviso.empty:
-                        # Filtra apenas os lançamentos que caem dentro da quinzena correspondente
-                        df_quinzena = df_aviso[
-                            (df_aviso['DT'].dt.date >= data_inicio.date()) & 
-                            (df_aviso['DT'].dt.date <= data_fim.date())
-                        ].copy()
+            df_aviso = df[(df['Status'] == 'Pendente') & (df['DT'].notnull())].copy()
+            
+            if df_aviso.empty:
+                st.warning("⚠️ O Twilio está conectado, mas **não há nenhuma conta com o status 'Pendente'** na sua planilha.")
+                st.session_state['forcar_envio_wa'] = False
+                return
 
-                        if not df_quinzena.empty:
-                            # Ordena por data
-                            df_quinzena = df_quinzena.sort_values(by='DT')
-                            
-                            mensagem = f"🔔 *FinançasPro: Alerta Quinzena*\n*({periodo_nome})*\n\n"
-                            total_quinc = 0.0
-                            
-                            for _, row in df_quinzena.iterrows():
-                                data_fmt = row.get('Data', row['DT'].strftime('%d/%m/%Y'))
-                                desc = row.get('Descrição', 'Sem descrição')
-                                valor = row.get('V_Num', 0.0)
-                                banco = row.get('Banco', 'N/D')
-                                
-                                mensagem += f"📌 *{desc}*\n   📅 Venc: {data_fmt} | {m_fmt(valor)} | Banco: {banco}\n\n"
-                                total_quinc += float(valor)
+            df_quinzena = df_aviso[
+                (df_aviso['DT'].dt.date >= data_inicio.date()) & 
+                (df_aviso['DT'].dt.date <= data_fim.date())
+            ].copy()
 
-                            mensagem += f"💰 *Total previsto no período: {m_fmt(total_quinc)}*\n"
-                            mensagem += "Acesse o FinançasPro para organizar seus pagamentos!"
+            if df_quinzena.empty:
+                st.warning(f"⚠️ O Twilio está conectado, mas **não há contas pendentes para esta quinzena** ({periodo_nome}).")
+                st.session_state['forcar_envio_wa'] = False
+                return
 
-                            client_tw.messages.create(body=mensagem, from_=w_from, to=w_to)
-                            st.session_state['last_wa_date'] = now.date()
-                except Exception as e:
-                    pass
+            # Se chegou aqui, tem tudo certo! Vamos montar e disparar
+            df_quinzena = df_quinzena.sort_values(by='DT')
+            mensagem = f"🔔 *FinançasPro: Alerta Quinzena*\n*({periodo_nome})*\n\n"
+            total_quinc = 0.0
+            
+            for _, row in df_quinzena.iterrows():
+                data_fmt = row.get('Data', row['DT'].strftime('%d/%m/%Y'))
+                desc = row.get('Descrição', 'Sem descrição')
+                valor = row.get('V_Num', 0.0)
+                banco = row.get('Banco', 'N/D')
+                
+                mensagem += f"📌 *{desc}*\n   📅 Venc: {data_fmt} | {m_fmt(valor)} | Banco: {banco}\n\n"
+                total_quinc += float(valor)
 
-enviar_whatsapp_pendencias(df_base)
+            mensagem += f"💰 *Total previsto no período: {m_fmt(total_quinc)}*\n"
+            mensagem += "Acesse o FinançasPro para organizar seus pagamentos!"
+
+            # Envia de fato
+            client_tw.messages.create(body=mensagem, from_=w_from, to=w_to)
+            st.success("🚀 Mensagem do WhatsApp disparada com sucesso para o seu celular!")
+            st.session_state['last_wa_date'] = now.date()
+            
+        except Exception as e:
+            st.error(f"❌ Erro técnico ao enviar pelo Twilio: {e}")
+        
+        st.session_state['forcar_envio_wa'] = False
 
 # CARREGA OS BANCOS DINAMICAMENTE DA PLANILHA OU USA OS PADRÕES
 if not df_bancos_info.empty:
