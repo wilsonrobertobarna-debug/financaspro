@@ -954,7 +954,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                             ws_base.update_cell(linha_id, 10, ed_benef if not eh_transf else "")
                         
                         st.toast("✅ Atualização sincronizada com sucesso!", icon="💰")
-                        st.session_state["selectbox_ajuste_val"] = ""
+                        # Removemos a alteração direta da key aqui para evitar o erro do Streamlit
                         atualizar_sessao()
                         st.rerun()
                         
@@ -978,7 +978,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                                     pass
                         
                         st.toast("✅ Lançamento excluído com sucesso!", icon="💰")
-                        st.session_state["selectbox_ajuste_val"] = ""
+                        # Removemos a alteração direta da key aqui também
                         atualizar_sessao()
                         st.rerun()
         
