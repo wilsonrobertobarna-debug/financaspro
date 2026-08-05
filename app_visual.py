@@ -546,7 +546,18 @@ if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     st.cache_data.clear()
     st.rerun()
 
+# 📲 BOTÃO PARA TESTAR O WHATSAPP A HORA QUE QUISER
+if st.sidebar.button("📲 Testar Envio WhatsApp"):
+    st.session_state['forcar_envio_wa'] = True
+    if 'last_wa_date' in st.session_state:
+        del st.session_state['last_wa_date']
+    enviar_whatsapp_pendencias(df_base)
+    st.toast("Disparo de teste do WhatsApp executado!", icon="📱")
+    st.rerun()
+
 st.sidebar.divider()
+
+
 
 if 'page' not in st.session_state:
     st.session_state.page = "💰 Finanças & Bancos"
