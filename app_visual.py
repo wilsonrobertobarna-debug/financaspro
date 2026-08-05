@@ -1612,6 +1612,8 @@ elif "📄" in aba:
             card_lanc += f"📋 *Tipo:* {item_esp.get('Tipo', 'N/D')} | *Status:* {item_esp['Status']}\n"
             card_lanc += f"========================================\n"
 
+            # Respiro visual entre o selectbox e o campo de texto
+            st.write("") 
             st.text_area("Card do Lançamento para Copiar", card_lanc, height=200, key="txt_card_esp")
 
             link_zap_lanc = f"https://wa.me/?text={urllib.parse.quote(card_lanc)}"
