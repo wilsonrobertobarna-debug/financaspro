@@ -1027,11 +1027,12 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                             linhas_para_atualizar = [int(float(item.get('linha_planilha', id_alvo)))]
 
                         for linha_id in linhas_para_atualizar:
-                            # Passa a data formatada
-                            ws_base.update_cell(linha_id, 1, ed_dat.strftime("%d/%m/%Y"))
+                            # Força a data como texto com apóstrofo para alinhar à esquerda igual ao lançamento novo
+                            ws_base.update_cell(linha_id, 1, f"'{ed_dat.strftime('%d/%m/%Y')}")
                             
-                            # Passa o valor como número float (removendo a formatação de texto com vírgula para o Sheets alinhar à direita e somar direito)
-                            ws_base.update_cell(linha_id, 2, float(ed_val))
+                            # Força o valor como texto com vírgula e apóstrofo para alinhar à esquerda igual ao lançamento novo
+                            v_str_ed = f"'{ed_val:.2f}".replace('.', ',')
+                            ws_base.update_cell(linha_id, 2, v_str_ed)
                             
                             ws_base.update_cell(linha_id, 3, ed_desc)
                             ws_base.update_cell(linha_id, 4, ed_cat)
@@ -1039,6 +1040,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                             ws_base.update_cell(linha_id, 6, ed_bnc)
                             ws_base.update_cell(linha_id, 7, ed_sta)
                             ws_base.update_cell(linha_id, 10, ed_benef if not eh_transf else "")
+
                         
                         st.toast("✅ Atualização sincronizada com sucesso!", icon="💰")
                         # Removemos a alteração direta da key aqui para evitar o erro do Streamlit
