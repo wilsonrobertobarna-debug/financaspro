@@ -509,22 +509,8 @@ def enviar_whatsapp_pendencias(df):
 
             # Se chegou aqui, tem tudo certo! Vamos montar e disparar
             df_quinzena = df_quinzena.sort_values(by='DT')
-            mensagem = f"🔔 *FinançasPro: Alerta Quinzena*\n*({periodo_nome})*\n\n"
-            total_quinc = 0.0
             
-            for _, row in df_quinzena.iterrows():
-                data_fmt = row.get('Data', row['DT'].strftime('%d/%m/%Y'))
-                desc = row.get('Descrição', 'Sem descrição')
-                valor = row.get('V_Num', 0.0)
-                banco = row.get('Banco', 'N/D')
-                
-                mensagem += f"📌 *{desc}*\n   📅 Venc: {data_fmt} | {m_fmt(valor)} | Banco: {banco}\n\n"
-                total_quinc += float(valor)
-
-            mensagem += f"💰 *Total previsto no período: {m_fmt(total_quinc)}*\n"
-            mensagem += "Acesse o FinançasPro para organizar seus pagamentos!"
-
-           # Envia de fato usando o Template aprovado do Twilio Sandbox
+            # Envia de fato usando o Template aprovado do Twilio Sandbox
             client_tw.messages.create(
                 from_=w_from,
                 to=w_to,
@@ -532,6 +518,7 @@ def enviar_whatsapp_pendencias(df):
                 content_variables='{"1":"12/1","2":"3pm"}'
             )
             st.success(f"🚀 Mensagem do WhatsApp disparada com sucesso para {w_to}!")
+            st.session_state['last_wa_date'] = now.date()
             
         except Exception as e:
             st.error(f"❌ Erro técnico ao enviar pelo Twilio: {e}")
@@ -555,6 +542,12 @@ def get_valor_pendente(df):
     df_p = df[(df['Status'] == 'Pendente') & (df['DT'].dt.date <= end_of_month.date())]
     return df_p['V_Num'].sum()
 
+# ==========================================
+# CHAMADA OBRIGATÓRIA DA FUNÇÃO NO FLUXO PRINCIPAL
+# ==========================================
+if 'df_base' in locals() or 'df_base' in globals():
+    enviar_whatsapp_pendencias(df_base)
+
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 
@@ -568,10 +561,9 @@ if st.sidebar.button("📲 Testar Envio WhatsApp"):
     st.session_state['forcar_envio_wa'] = True
     if 'last_wa_date' in st.session_state:
         del st.session_state['last_wa_date']
-    # Removemos o st.rerun daqui para a mensagem aparecer na tela!
+    st.rerun()  # Dar o rerun aqui agora vai forçar o app a recarregar e executar a função logo acima!
 
 st.sidebar.divider()
-
 
 
 if 'page' not in st.session_state:
