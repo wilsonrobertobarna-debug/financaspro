@@ -727,7 +727,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         st.markdown("<br>", unsafe_allow_html=True)
         
             
-          if st.form_submit_button("Salvar Lançamento"):
+        if st.form_submit_button("Salvar Lançamento"):
             # --- 🛡️ TRAVA DE SEGURANÇA CONTRA CAMPOS VAZIOS ---
             if f_val <= 0:
                 st.warning("⚠️ O campo 'Valor' deve ser maior que zero!")
