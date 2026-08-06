@@ -1027,8 +1027,12 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                             linhas_para_atualizar = [int(float(item.get('linha_planilha', id_alvo)))]
 
                         for linha_id in linhas_para_atualizar:
+                            # Passa a data formatada
                             ws_base.update_cell(linha_id, 1, ed_dat.strftime("%d/%m/%Y"))
-                            ws_base.update_cell(linha_id, 2, f"{ed_val:.2f}".replace('.', ','))
+                            
+                            # Passa o valor como número float (removendo a formatação de texto com vírgula para o Sheets alinhar à direita e somar direito)
+                            ws_base.update_cell(linha_id, 2, float(ed_val))
+                            
                             ws_base.update_cell(linha_id, 3, ed_desc)
                             ws_base.update_cell(linha_id, 4, ed_cat)
                             ws_base.update_cell(linha_id, 5, ed_tipo)
