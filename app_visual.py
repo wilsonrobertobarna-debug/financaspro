@@ -726,7 +726,22 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         # Mais um respiro antes do botão para ele descolar do status
         st.markdown("<br>", unsafe_allow_html=True)
         
-        if st.form_submit_button("Salvar Lançamento"):
+            
+          if st.form_submit_button("Salvar Lançamento"):
+            # --- 🛡️ TRAVA DE SEGURANÇA CONTRA CAMPOS VAZIOS ---
+            if f_val <= 0:
+                st.warning("⚠️ O campo 'Valor' deve ser maior que zero!")
+                st.stop()
+            
+            if not f_desc.strip():
+                st.warning("⚠️ O campo 'Descrição' não pode ficar em branco!")
+                st.stop()
+                
+            if not beneficiario_final.strip():
+                st.warning("⚠️ Selecione um Beneficiário no histórico ou digite um novo no campo abaixo!")
+                st.stop()
+            # ---------------------------------------------------
+
             todos_dados = ws_base.get_all_records()
             
             if todos_dados:
