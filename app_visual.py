@@ -507,17 +507,30 @@ def enviar_whatsapp_pendencias(df):
                 st.session_state['forcar_envio_wa'] = False
                 return
 
-            # Se chegou aqui, tem tudo certo! Vamos montar e disparar
+          # Se chegou aqui, tem tudo certo! Vamos montar e disparar
             df_quinzena = df_quinzena.sort_values(by='DT')
+            mensagem = f"🔔 *FinançasPro: Alerta Quinzena*\n*({periodo_nome})*\n\n"
+            total_quinc = 0.0
             
-            # Envia de fato usando o Template aprovado do Twilio Sandbox
+            for _, row in df_quinzena.iterrows():
+                data_fmt = row.get('Data', row['DT'].strftime('%d/%m/%Y'))
+                desc = row.get('Descrição', 'Sem descrição')
+                valor = row.get('V_Num', 0.0)
+                banco = row.get('Banco', 'N/D')
+                
+                mensagem += f"📌 *{desc}*\n    📅 Venc: {data_fmt} | {m_fmt(valor)} | Banco: {banco}\n\n"
+                total_quinc += float(valor)
+
+            mensagem += f"💰 *Total previsto no período: {m_fmt(total_quinc)}*\n"
+            mensagem += "Acesse o FinançasPro para organizar seus pagamentos!"
+
+            # Envia a sua mensagem personalizada com a lista de contas
             client_tw.messages.create(
+                body=mensagem,
                 from_=w_from,
-                to=w_to,
-                content_sid='HXb5b62575e6e4ff6129ad7c8efe1f983e',
-                content_variables='{"1":"12/1","2":"3pm"}'
+                to=w_to
             )
-            st.success(f"🚀 Mensagem do WhatsApp disparada com sucesso para {w_to}!")
+            st.success(f"🚀 Lista de contas pendentes disparada com sucesso para {w_to}!")
             st.session_state['last_wa_date'] = now.date()
             
         except Exception as e:
