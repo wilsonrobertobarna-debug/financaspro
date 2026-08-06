@@ -524,10 +524,9 @@ def enviar_whatsapp_pendencias(df):
             mensagem += f"💰 *Total previsto no período: {m_fmt(total_quinc)}*\n"
             mensagem += "Acesse o FinançasPro para organizar seus pagamentos!"
 
-            # Envia de fato
+           # Envia de fato
             client_tw.messages.create(body=mensagem, from_=w_from, to=w_to)
             st.success("🚀 Mensagem do WhatsApp disparada com sucesso para o seu celular!")
-            st.session_state['last_wa_date'] = now.date()
             
         except Exception as e:
             st.error(f"❌ Erro técnico ao enviar pelo Twilio: {e}")
