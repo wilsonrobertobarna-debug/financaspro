@@ -518,13 +518,21 @@ def enviar_whatsapp_pendencias(df):
                 valor = row.get('V_Num', 0.0)
                 banco = row.get('Banco', 'N/D')
                 
-                mensagem += f"📌 *{desc}*\n    📅 Venc: {data_fmt} | {m_fmt(valor)} | Banco: {banco}\n\n"
+                # Monta a linha da conta
+                linha = f"📌 *{desc}*\n    📅 Venc: {data_fmt} | {m_fmt(valor)} | Banco: {banco}\n\n"
+                
+                # Proteção contra o limite de 1600 caracteres do Twilio
+                if len(mensagem) + len(linha) > 1500:
+                    mensagem += "⚠️ *[Lista resumida por limite de tamanho]*\n\n"
+                    break
+                    
+                mensagem += linha
                 total_quinc += float(valor)
 
             mensagem += f"💰 *Total previsto no período: {m_fmt(total_quinc)}*\n"
             mensagem += "Acesse o FinançasPro para organizar seus pagamentos!"
 
-            # Envia a sua mensagem personalizada com a lista de contas
+            # Envia a mensagem com segurança dentro do limite
             client_tw.messages.create(
                 body=mensagem,
                 from_=w_from,
@@ -537,7 +545,6 @@ def enviar_whatsapp_pendencias(df):
             st.error(f"❌ Erro técnico ao enviar pelo Twilio: {e}")
         
         st.session_state['forcar_envio_wa'] = False
-
 # CARREGA OS BANCOS DINAMICAMENTE DA PLANILHA OU USA OS PADRÕES
 if not df_bancos_info.empty:
     bancos_disponiveis = [str(x) for x in df_bancos_info.iloc[:, 0].tolist() if str(x).strip() != ""]
