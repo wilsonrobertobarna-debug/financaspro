@@ -798,10 +798,10 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 st.session_state["transf_destino_select"] = bancos_disponiveis[0]
             st.session_state["gatilho_limpar_transf"] = False
 
-            # Define o fuso horário de São Paulo
-        tz_sp = pytz.timezone('America/Sao_Paulo')
-        data_hoje = datetime.now(tz_sp).date()
-
+                    # Define o fuso horário de São Paulo
+            tz_sp = pytz.timezone('America/Sao_Paulo')
+            data_hoje = datetime.now(tz_sp).date()
+            
         t_dat = st.date_input("Data Inicial", data_hoje, format="DD/MM/YYYY", key="t_dat_key")
 
         #t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY", key="t_dat_key")
