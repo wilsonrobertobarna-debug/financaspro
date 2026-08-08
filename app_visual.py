@@ -10,7 +10,7 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 from datetime import datetime
-import pytz
+from datetime import datetime, timezone, timedelta
 
 # Cria um "alvo" no topo
 st.markdown('<a id="top"></a>', unsafe_allow_html=True)
@@ -801,8 +801,9 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.session_state["gatilho_limpar_transf"] = False
 
         # Define o fuso horário de São Paulo
-        tz_sp = pytz.timezone('America/Sao_Paulo')
-        data_hoje = datetime.now(tz_sp).date()
+        # Fuso horário do Brasil (UTC-3)
+        fuso_br = timezone(timedelta(hours=-3))
+        data_hoje = datetime.now(fuso_br).date()
         
         t_dat = st.date_input("Data Inicial", data_hoje, format="DD/MM/YYYY", key="t_dat_key")
 
