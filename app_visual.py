@@ -802,7 +802,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             tz_sp = pytz.timezone('America/Sao_Paulo')
             data_hoje = datetime.now(tz_sp).date()
             
-        t_dat = st.date_input("Data Inicial", data_hoje, format="DD/MM/YYYY", key="t_dat_key")
+            t_dat = st.date_input("Data Inicial", data_hoje, format="DD/MM/YYYY", key="t_dat_key")
 
         #t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY", key="t_dat_key")
         t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f", key="t_val_key")
