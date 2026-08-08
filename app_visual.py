@@ -308,8 +308,10 @@ def carregar_dados_gs():
     
     df = pd.DataFrame(dados[1:], columns=dados[0])
     
-    # GUARDA A LINHA REAL DO GOOGLE SHEETS (Onde 0 no DataFrame é a linha 2 da planilha)
-    # Linha do DF 0 + 2 = Linha 2 do Sheets
+    # Limpa espaços em branco dos nomes das colunas para evitar erros de leitura
+    df.columns = [str(c).strip() for c in df.columns]
+    
+    # GUARDA A LINHA REAL DO GOOGLE SHEETS
     df['Linha_Sheets'] = range(2, len(df) + 2)
     
     # Garante que o ID lido seja o número real gravado na Coluna I da planilha
@@ -319,12 +321,24 @@ def carregar_dados_gs():
         df['ID'] = range(1, len(df) + 1)
 
     def p_float(v):
-        try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
-        except: return 0.0
+        try:
+            # Limpa espaços e trata possíveis nulos ou vazios
+            v_str = str(v).replace('R$', '').replace('.', '').replace(',', '.').strip()
+            if not v_str or v_str.lower() == 'nan':
+                return 0.0
+            return float(v_str)
+        except: 
+            return 0.0
         
     df['V_Num'] = df['Valor'].apply(p_float)
+    
+    # Garante que as colunas de texto cruciais não tenham espaços invisíveis nas pontas
+    for col_texto in ['Tipo', 'Status', 'Categoria', 'Banco']:
+        if col_texto in df.columns:
+            df[col_texto] = df[col_texto].astype(str).str.strip()
+
     df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')    
-    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y') # CORRIGIDO AQUI (Removido o 's' extra)
+    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
     return df
     
  
