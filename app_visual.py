@@ -1626,7 +1626,7 @@ elif "📄" in aba:
         df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
         df_per['C_UP'] = df_per['Categoria'].astype(str).str.upper().str.strip()
         
-       mask_rend = (df_per['T_UP'].str.contains('REND', na=False)) | (df_per['C_UP'].str.contains('REND', na=False))
+        mask_rend = (df_per['T_UP'].str.contains('REND', na=False)) | (df_per['C_UP'].str.contains('REND', na=False))
         rend_v = df_per[mask_rend & (df_per['Status'] == 'Pago')]['V_Num'].sum()
         
         # Filtro seguro: ignora apenas se a categoria for exatamente transferência (com ou sem acento)
