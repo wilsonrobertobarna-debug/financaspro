@@ -1105,7 +1105,6 @@ if "💰" in st.session_state.page:
 # 1. BARRINHA DE MESES E SEMÁFORO LADO A LADO
     meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
-    # Mapeamento seguro baseado no número do mês atual
     num_mes_atual = datetime.now().month - 1  # 0 a 11
     mes_atual_hoje = meses_abreviados[num_mes_atual]
 
@@ -1114,33 +1113,29 @@ if "💰" in st.session_state.page:
     else:
         default_mes = meses_abreviados[0] if meses_abreviados else None
 
-    # Criando as colunas: Barrinha na esquerda, Espaço no meio, Semáforo na direita
+    # Criando as colunas principais do topo
     col_meses, col_espaco, col_semaforo = st.columns([4, 0.8, 2.5])
 
     with col_meses:
         mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=default_mes)
         
-    # Variáveis padrão caso a base esteja vazia
     receita_total = gasto_total = rendimento = pendente = saldo_geral = 0.0
 
     if not df_base.empty and mes_atual:
-        # 2. TRADUÇÃO DO FILTRO
         mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
                    "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
         filtro_mes = f"{mes_map[mes_atual]}/26"
         
-        # Filtra os dados do mês
         df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-        # 3. CÁLCULOS
         receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
         gasto_total = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
         pendente = df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()
         saldo_geral = (receita_total + rendimento) - gasto_total
 
-    # 4. LÓGICA E EXIBIÇÃO DO SEMÁFORO
+    # Exibição do semáforo isolado na coluna da direita
     with col_semaforo:
         st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True) 
         
@@ -1163,7 +1158,11 @@ if "💰" in st.session_state.page:
             </div>
         """, unsafe_allow_html=True)
 
-    # 5. EXIBIÇÃO DO SALDO GERAL
+    # ==========================================================
+    # AQUI AS COLUNAS DO TOPO ACABAM. TUDO ABAIXO VOLTA PARA A TELA TODA.
+    # ==========================================================
+
+    # Exibição do Saldo Geral (Largura total)
     cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
     st.markdown(f"""
         <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo}; margin-top: 15px;">
@@ -1171,6 +1170,8 @@ if "💰" in st.session_state.page:
             <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
         </div>
     """, unsafe_allow_html=True)
+
+    st.divider()
 
     st.divider()
 
