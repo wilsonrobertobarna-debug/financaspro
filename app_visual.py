@@ -1102,22 +1102,29 @@ if "💰" in st.session_state.page:
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
-# 1. BARRINHA DE MESES
+
+   # 1. BARRINHA DE MESES E SEMÁFORO LADO A LADO
     meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
-    # Mapeamento seguro baseado no número do mês atual (evita bug de idioma do servidor em inglês como "Aug")
+    # Mapeamento seguro baseado no número do mês atual
     num_mes_atual = datetime.now().month - 1  # 0 a 11
     mes_atual_hoje = meses_abreviados[num_mes_atual]
 
-    # Garante que o default do mês existe na lista para evitar que o Streamlit quebre
     if mes_atual_hoje in meses_abreviados:
         default_mes = mes_atual_hoje
     else:
         default_mes = meses_abreviados[0] if meses_abreviados else None
 
-    mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=default_mes)
-    
-    if not df_base.empty:
+    # Criando as colunas: Barrinha na esquerda (proporção 4), Espaço no meio (proporção 0.8), Semáforo na direita (proporção 2.5)
+    col_meses, col_espaco, col_semaforo = st.columns([4, 0.8, 2.5])
+
+    with col_meses:
+        mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=default_mes)
+        
+    # Variáveis padrão caso a base esteja vazia
+    receita_total = gasto_total = rendimento = pendente = saldo_geral = 0.0
+
+    if not df_base.empty and mes_atual:
         # 2. TRADUÇÃO DO FILTRO
         mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
                    "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
@@ -1134,16 +1141,37 @@ if "💰" in st.session_state.page:
         pendente = df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()
         saldo_geral = (receita_total + rendimento) - gasto_total
 
-        # 4. EXIBIÇÃO DO SALDO
-        # 4. EXIBIÇÃO DO SALDO
-        cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
+    # 4. LÓGICA E EXIBIÇÃO DO SEMÁFORO (Na coluna da direita, alinhado com a barrinha)
+    with col_semaforo:
+        st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True) # Pequeno ajuste vertical para alinhar com o seletor
+        
+        if receita_total > 0:
+            percentual_gasto = (gasto_total / receita_total) * 100
+        else:
+            percentual_gasto = 0
+
+        if gasto_total > receita_total and receita_total > 0:
+            semaforo_html = "<span style='font-size: 1.1rem; font-weight: bold; color: #e74c3c;'>🔴 Vermelho</span>"
+        elif percentual_gasto >= 80:
+            semaforo_html = "<span style='font-size: 1.1rem; font-weight: bold; color: #f39c12;'>🟡 Amarelo</span>"
+        else:
+            semaforo_html = "<span style='font-size: 1.1rem; font-weight: bold; color: #2ecc71;'>🟢 Verde</span>"
+
         st.markdown(f"""
-            <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
-                <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
-                <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
+            <div style="background-color: #f8f9fb; padding: 8px 12px; border-radius: 8px; border: 1px solid #e1e4e8; text-align: center;">
+                <p style="margin: 0; font-size: 0.75rem; color: #666; font-weight: bold;">STATUS DO MÊS</p>
+                <div style="margin-top: 2px;">{semaforo_html}</div>
             </div>
         """, unsafe_allow_html=True)
 
+    # 5. EXIBIÇÃO DO SALDO GERAL (Abaixo)
+    cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
+    st.markdown(f"""
+        <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo}; margin-top: 15px;">
+            <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
+            <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
+        </div>
+    """, unsafe_allow_html=True)
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
         c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
