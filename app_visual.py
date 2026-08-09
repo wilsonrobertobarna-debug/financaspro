@@ -1121,6 +1121,26 @@ if "💰" in st.session_state.page:
             </div>
         """, unsafe_allow_html=True)
 
+        # 🚦 SEMÁFORO DO MÊS (Verde, Amarelo ou Vermelho)
+    if receita_total > 0:
+        percentual_gasto = (gasto_total / receita_total) * 100
+    else:
+        percentual_gasto = 0
+
+    if gasto_total > receita_total and receita_total > 0:
+        semaforo_html = "<span style='font-size: 1.1rem; font-weight: bold; color: #e74c3c;'>🔴 Vermelho (Gastou mais que recebeu)</span>"
+    elif percentual_gasto >= 80:
+        semaforo_html = "<span style='font-size: 1.1rem; font-weight: bold; color: #f39c12;'>🟡 Amarelo (Atenção aos gastos - 80%+)</span>"
+    else:
+        semaforo_html = "<span style='font-size: 1.1rem; font-weight: bold; color: #2ecc71;'>🟢 Verde (Tudo sob controle)</span>"
+
+    st.markdown(f"""
+        <div style="background-color: #f8f9fb; padding: 10px 15px; border-radius: 8px; border: 1px solid #e1e4e8; text-align: center; margin-top: 10px; margin-bottom: 15px;">
+            <p style="margin: 0; font-size: 0.75rem; color: #666; font-weight: bold;">STATUS DO MÊS</p>
+            <div style="margin-top: 4px;">{semaforo_html}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
         c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
