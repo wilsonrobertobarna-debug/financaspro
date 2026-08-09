@@ -1104,9 +1104,9 @@ if "💰" in st.session_state.page:
 
 
       # 1. BARRINHA DE MESES E SEMÁFORO LADO A LADO
-        meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
         
-        # Mapeamento seguro baseado no número do mês atual
+      # Mapeamento seguro baseado no número do mês atual
         num_mes_atual = datetime.now().month - 1  # 0 a 11
         mes_atual_hoje = meses_abreviados[num_mes_atual]
     
