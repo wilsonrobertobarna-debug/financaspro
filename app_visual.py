@@ -1691,8 +1691,8 @@ elif "📄" in aba:
     lista_cat_busca = ["Todas", "Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", "Aplicação", 
                        "Vale Alimentação", "Restaurante", "Celular", "Anuidade", "Seguro", "Internet", 
                        "Vestuário", "Salário", "Reembolso", "Moradia", "Saúde", "Taxas", "Depósito", 
-                       "Plano Assistencial", "Transporte", "Previdência", "Outros", "Pet: Milo", 
-                       "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção", "Transferência"]
+                       "Plano Assistencial", "Previdência", "Outros", "Pet: Milo", 
+                       "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção", "Transferência", "Transporte"]
     
     sel_categoria = st.selectbox("Filtrar Categoria", lista_cat_busca, key=f"bus_cat_{r_id}")
 
