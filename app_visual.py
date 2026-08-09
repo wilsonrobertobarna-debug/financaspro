@@ -1103,7 +1103,7 @@ if "💰" in st.session_state.page:
     st.subheader("🛡️ FinançasPro Wilson")
 
 
-   # 1. BARRINHA DE MESES E SEMÁFORO LADO A LADO
+  # 1. BARRINHA DE MESES E SEMÁFORO LADO A LADO
     meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
     # Mapeamento seguro baseado no número do mês atual
@@ -1163,6 +1163,15 @@ if "💰" in st.session_state.page:
                 <div style="margin-top: 2px;">{semaforo_html}</div>
             </div>
         """, unsafe_allow_html=True)
+
+    # 5. EXIBIÇÃO DO SALDO GERAL (Abaixo)
+    cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
+    st.markdown(f"""
+        <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo}; margin-top: 15px;">
+            <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
+            <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
+        </div>
+    """, unsafe_allow_html=True)
 
     # 5. EXIBIÇÃO DO SALDO GERAL (Abaixo)
     cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
