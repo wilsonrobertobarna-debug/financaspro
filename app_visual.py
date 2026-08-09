@@ -1181,7 +1181,7 @@ if "💰" in st.session_state.page:
             <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
         </div>
     """, unsafe_allow_html=True)
-      c1, c2, c3, c4 = st.columns(4)
+        c1, c2, c3, c4 = st.columns(4)
         c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
         c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
         c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
