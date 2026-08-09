@@ -1115,7 +1115,7 @@ if "💰" in st.session_state.page:
     else:
         default_mes = meses_abreviados[0] if meses_abreviados else None
 
-    # Criando as colunas: Barrinha na esquerda (proporção 4), Espaço no meio (proporção 0.8), Semáforo na direita (proporção 2.5)
+    # Criando as colunas: Barrinha na esquerda, Espaço no meio, Semáforo na direita
     col_meses, col_espaco, col_semaforo = st.columns([4, 0.8, 2.5])
 
     with col_meses:
@@ -1141,9 +1141,9 @@ if "💰" in st.session_state.page:
         pendente = df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()
         saldo_geral = (receita_total + rendimento) - gasto_total
 
-    # 4. LÓGICA E EXIBIÇÃO DO SEMÁFORO (Na coluna da direita, alinhado com a barrinha)
+    # 4. LÓGICA E EXIBIÇÃO DO SEMÁFORO
     with col_semaforo:
-        st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True) # Pequeno ajuste vertical para alinhar com o seletor
+        st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True) 
         
         if receita_total > 0:
             percentual_gasto = (gasto_total / receita_total) * 100
@@ -1164,14 +1164,16 @@ if "💰" in st.session_state.page:
             </div>
         """, unsafe_allow_html=True)
 
-    # 5. EXIBIÇÃO DO SALDO GERAL (Abaixo)
+    # 5. EXIBIÇÃO DO SALDO GERAL
     cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
     st.markdown(f"""
         <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo}; margin-top: 15px;">
             <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
             <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
         </div>
-    """, unsafe_allow_html=True)    
+    """, unsafe_allow_html=True)
+
+    
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
         c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
