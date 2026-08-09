@@ -1606,11 +1606,14 @@ elif "📄" in aba:
         mask_rend = (df_per['T_UP'].str.contains('REND', na=False)) | (df_per['C_UP'].str.contains('REND', na=False))
         rend_v = df_per[mask_rend & (df_per['Status'] == 'Pago')]['V_Num'].sum()
         
-        rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
-        des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
+        # Filtro seguro: ignora apenas se a categoria for exatamente transferência (com ou sem acento)
+        filtro_transf = df_per['C_UP'].isin(['TRANSFERÊNCIA', 'TRANSFERENCIA'])
+        
+        rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (~filtro_transf)]['V_Num'].sum()
+        des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (~filtro_transf)]['V_Num'].sum()
         sobra = rec_v - des_v
 
-        val_pendente = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'].str.upper() == 'PENDENTE') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
+        val_pendente = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'].str.upper() == 'PENDENTE') & (~filtro_transf)]['V_Num'].sum()
     else:
         rec_v = des_v = rend_v = sobra = val_pendente = 0.0
 
