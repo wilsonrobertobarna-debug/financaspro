@@ -1164,23 +1164,7 @@ if "💰" in st.session_state.page:
             </div>
         """, unsafe_allow_html=True)
 
-    # 5. EXIBIÇÃO DO SALDO GERAL
-    cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
-    st.markdown(f"""
-        <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo}; margin-top: 15px;">
-            <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
-            <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
-        </div>
-    """, unsafe_allow_html=True)
-
-    
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
-        c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
-        c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
-        c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
-        st.divider()
-
+ 
         # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
         g1, g2 = st.columns(2)
         with g1:
