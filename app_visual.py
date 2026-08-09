@@ -1102,8 +1102,7 @@ if "💰" in st.session_state.page:
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
-
-    # 1. BARRINHA DE MESES E SEMÁFORO LADO A LADO
+# 1. BARRINHA DE MESES E SEMÁFORO LADO A LADO
     meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
     # Mapeamento seguro baseado no número do mês atual
@@ -1164,32 +1163,36 @@ if "💰" in st.session_state.page:
             </div>
         """, unsafe_allow_html=True)
 
- 
-        # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
-        g1, g2 = st.columns(2)
-        with g1:
-            st.write("### 🍕 Gastos por Categoria")
+    # 5. EXIBIÇÃO DO SALDO GERAL
+    cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
+    st.markdown(f"""
+        <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo}; margin-top: 15px;">
+            <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
+            <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.divider()
+
+    # 6. GRÁFICOS DE APOIO (Pizza e Fluxo - Fora do semáforo, alinhados direitinho)
+    g1, g2 = st.columns(2)
+    with g1:
+        st.write("### 🍕 Gastos por Categoria")
+        if not df_base.empty and mes_atual:
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             if not df_p.empty:
                 st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', hole=0.4), use_container_width=True)
 
-        
-        with g2:
-          
-            st.write("### 📊 Fluxo Mensal (3 Meses)")
-            
-            # Cálculo dos 3 meses a partir do mês selecionado
+    with g2:
+        st.write("### 📊 Fluxo Mensal (3 Meses)")
+        if not df_base.empty and mes_atual:
             idx = meses_abreviados.index(mes_atual)
             meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
             filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
             
-            # Filtra a base completa pelos meses selecionados
             df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
-            
-            # 🔒 EXCLUI AS TRANSFERÊNCIAS (Olhando pelo campo Categoria ou Descrição onde diz transferência)
             if not df_fluxo.empty:
                 if 'Categoria' in df_fluxo.columns:
-                    # Remove se a categoria contiver "transferência" (ignorando maiúsculas/minúsculas)
                     df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
             
             # Prepara os dados para o gráfico
