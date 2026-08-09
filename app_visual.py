@@ -9,8 +9,6 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
-from datetime import datetime
-from datetime import datetime, timezone, timedelta
 
 # Cria um "alvo" no topo
 st.markdown('<a id="top"></a>', unsafe_allow_html=True)
@@ -308,10 +306,8 @@ def carregar_dados_gs():
     
     df = pd.DataFrame(dados[1:], columns=dados[0])
     
-    # Limpa espaços em branco dos nomes das colunas para evitar erros de leitura
-    df.columns = [str(c).strip() for c in df.columns]
-    
-    # GUARDA A LINHA REAL DO GOOGLE SHEETS
+    # GUARDA A LINHA REAL DO GOOGLE SHEETS (Onde 0 no DataFrame é a linha 2 da planilha)
+    # Linha do DF 0 + 2 = Linha 2 do Sheets
     df['Linha_Sheets'] = range(2, len(df) + 2)
     
     # Garante que o ID lido seja o número real gravado na Coluna I da planilha
@@ -321,24 +317,12 @@ def carregar_dados_gs():
         df['ID'] = range(1, len(df) + 1)
 
     def p_float(v):
-        try:
-            # Limpa espaços e trata possíveis nulos ou vazios
-            v_str = str(v).replace('R$', '').replace('.', '').replace(',', '.').strip()
-            if not v_str or v_str.lower() == 'nan':
-                return 0.0
-            return float(v_str)
-        except: 
-            return 0.0
+        try: return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
+        except: return 0.0
         
     df['V_Num'] = df['Valor'].apply(p_float)
-    
-    # Garante que as colunas de texto cruciais não tenham espaços invisíveis nas pontas
-    for col_texto in ['Tipo', 'Status', 'Categoria', 'Banco']:
-        if col_texto in df.columns:
-            df[col_texto] = df[col_texto].astype(str).str.strip()
-
     df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')    
-    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y') # CORRIGIDO AQUI (Removido o 's' extra)
     return df
     
  
@@ -733,7 +717,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         
         # Um respiro leve para desgrudar o tipo da categoria
         st.markdown("")
-        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", "Aplicação", "Vale Alimentação", "Restaurante", "Celular", "Anuidade", "Seguro", "Internet", "Vestuário", "Salário", "Reembolso", "Moradia", "Saúde", "Taxas", "Depósito", "Plano Assistencial", "Transporte", "Previdência", "Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"], key="cat_novo_lancamento") 
+        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação", "Vale Alimentação", "Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"], key="cat_novo_lancamento") 
         
         # Um respiro leve para desgrudar a categoria do status
         st.markdown("")
@@ -814,14 +798,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 st.session_state["transf_destino_select"] = bancos_disponiveis[0]
             st.session_state["gatilho_limpar_transf"] = False
 
-        # Define o fuso horário de São Paulo
-        # Fuso horário do Brasil (UTC-3)
-        fuso_br = timezone(timedelta(hours=-3))
-        data_hoje = datetime.now(fuso_br).date()
-        
-        t_dat = st.date_input("Data Inicial", data_hoje, format="DD/MM/YYYY", key="t_dat_key")
-
-        #t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY", key="t_dat_key")
+        t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY", key="t_dat_key")
         t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f", key="t_val_key")
         t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis, key="transf_origem_select")
         
@@ -1102,98 +1079,80 @@ if "💰" in st.session_state.page:
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
-# 1. BARRINHA DE MESES E SEMÁFORO LADO A LADO
+# 1. BARRINHA DE MESES
     meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
     
+    # Mapeamento seguro baseado no número do mês atual (evita bug de idioma do servidor em inglês como "Aug")
     num_mes_atual = datetime.now().month - 1  # 0 a 11
     mes_atual_hoje = meses_abreviados[num_mes_atual]
 
+    # Garante que o default do mês existe na lista para evitar que o Streamlit quebre
     if mes_atual_hoje in meses_abreviados:
         default_mes = mes_atual_hoje
     else:
         default_mes = meses_abreviados[0] if meses_abreviados else None
 
-    # Criando as colunas principais do topo
-    col_meses, col_espaco, col_semaforo = st.columns([4, 0.8, 2.5])
-
-    with col_meses:
-        mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=default_mes)
-        
-    receita_total = gasto_total = rendimento = pendente = saldo_geral = 0.0
-
-    if not df_base.empty and mes_atual:
+    mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=default_mes)
+    
+    if not df_base.empty:
+        # 2. TRADUÇÃO DO FILTRO
         mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
                    "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
         filtro_mes = f"{mes_map[mes_atual]}/26"
         
+        # Filtra os dados do mês
         df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
         df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
+        # 3. CÁLCULOS
         receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
         gasto_total = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
         pendente = df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()
         saldo_geral = (receita_total + rendimento) - gasto_total
 
-    # Exibição do semáforo isolado na coluna da direita
-    with col_semaforo:
-        st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True) 
-        
-        if receita_total > 0:
-            percentual_gasto = (gasto_total / receita_total) * 100
-        else:
-            percentual_gasto = 0
-
-        if gasto_total > receita_total and receita_total > 0:
-            semaforo_html = "<span style='font-size: 1.1rem; font-weight: bold; color: #e74c3c;'>🔴 Vermelho</span>"
-        elif percentual_gasto >= 80:
-            semaforo_html = "<span style='font-size: 1.1rem; font-weight: bold; color: #f39c12;'>🟡 Amarelo</span>"
-        else:
-            semaforo_html = "<span style='font-size: 1.1rem; font-weight: bold; color: #2ecc71;'>🟢 Verde</span>"
-
+        # 4. EXIBIÇÃO DO SALDO
+        # 4. EXIBIÇÃO DO SALDO
+        cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
         st.markdown(f"""
-            <div style="background-color: #f8f9fb; padding: 8px 12px; border-radius: 8px; border: 1px solid #e1e4e8; text-align: center;">
-                <p style="margin: 0; font-size: 0.75rem; color: #666; font-weight: bold;">STATUS DO MÊS</p>
-                <div style="margin-top: 2px;">{semaforo_html}</div>
+            <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo};">
+                <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
+                <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
             </div>
         """, unsafe_allow_html=True)
 
-    # ==========================================================
-    # AQUI AS COLUNAS DO TOPO ACABAM. TUDO ABAIXO VOLTA PARA A TELA TODA.
-    # ==========================================================
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
+        c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
+        c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
+        c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
+        st.divider()
 
-    # Exibição do Saldo Geral (Largura total)
-    cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
-    st.markdown(f"""
-        <div style="text-align: center; background-color: #f8f9fb; padding: 15px; border-radius: 10px; border-left: 5px solid {cor_saldo}; margin-top: 15px;">
-            <p style="margin: 0; font-size: 1rem; color: #666; font-weight: bold;">SALDO DISPONÍVEL</p>
-            <h1 style="margin: 0; color: {cor_saldo}; font-size: 2.5rem;">R$ {saldo_geral:,.2f}</h1>
-        </div>
-    """, unsafe_allow_html=True)
-
-    st.divider()
-
-    st.divider()
-
-    # 6. GRÁFICOS DE APOIO (Pizza e Fluxo - Fora do semáforo, alinhados direitinho)
-    g1, g2 = st.columns(2)
-    with g1:
-        st.write("### 🍕 Gastos por Categoria")
-        if not df_base.empty and mes_atual:
+        # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
+        g1, g2 = st.columns(2)
+        with g1:
+            st.write("### 🍕 Gastos por Categoria")
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             if not df_p.empty:
                 st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', hole=0.4), use_container_width=True)
 
-    with g2:
-        st.write("### 📊 Fluxo Mensal (3 Meses)")
-        if not df_base.empty and mes_atual:
+        
+        with g2:
+          
+            st.write("### 📊 Fluxo Mensal (3 Meses)")
+            
+            # Cálculo dos 3 meses a partir do mês selecionado
             idx = meses_abreviados.index(mes_atual)
             meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
             filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
             
+            # Filtra a base completa pelos meses selecionados
             df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
+            
+            # 🔒 EXCLUI AS TRANSFERÊNCIAS (Olhando pelo campo Categoria ou Descrição onde diz transferência)
             if not df_fluxo.empty:
                 if 'Categoria' in df_fluxo.columns:
+                    # Remove se a categoria contiver "transferência" (ignorando maiúsculas/minúsculas)
                     df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
             
             # Prepara os dados para o gráfico
@@ -1647,14 +1606,11 @@ elif "📄" in aba:
         mask_rend = (df_per['T_UP'].str.contains('REND', na=False)) | (df_per['C_UP'].str.contains('REND', na=False))
         rend_v = df_per[mask_rend & (df_per['Status'] == 'Pago')]['V_Num'].sum()
         
-        # Filtro seguro: ignora apenas se a categoria for exatamente transferência (com ou sem acento)
-        filtro_transf = df_per['C_UP'].isin(['TRANSFERÊNCIA', 'TRANSFERENCIA'])
-        
-        rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (~filtro_transf)]['V_Num'].sum()
-        des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (~filtro_transf)]['V_Num'].sum()
+        rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
+        des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
         sobra = rec_v - des_v
 
-        val_pendente = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'].str.upper() == 'PENDENTE') & (~filtro_transf)]['V_Num'].sum()
+        val_pendente = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'].str.upper() == 'PENDENTE') & (~df_per['C_UP'].str.contains('TRANS', na=False))]['V_Num'].sum()
     else:
         rec_v = des_v = rend_v = sobra = val_pendente = 0.0
 
@@ -1712,8 +1668,8 @@ elif "📄" in aba:
     lista_cat_busca = ["Todas", "Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", "Aplicação", 
                        "Vale Alimentação", "Restaurante", "Celular", "Anuidade", "Seguro", "Internet", 
                        "Vestuário", "Salário", "Reembolso", "Moradia", "Saúde", "Taxas", "Depósito", 
-                       "Plano Assistencial", "Previdência", "Outros", "Pet: Milo", 
-                       "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção", "Transferência", "Transporte"]
+                       "Plano Assistencial", "Transporte", "Previdência", "Outros", "Pet: Milo", 
+                       "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção", "Transferência"]
     
     sel_categoria = st.selectbox("Filtrar Categoria", lista_cat_busca, key=f"bus_cat_{r_id}")
 
