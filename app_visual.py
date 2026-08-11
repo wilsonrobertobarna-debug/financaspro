@@ -10,7 +10,6 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 from datetime import datetime
-import pytz
 fuso_br = pytz.timezone('America/Sao_Paulo')
 data_hoje_br = datetime.now(fuso_br).date()
 
