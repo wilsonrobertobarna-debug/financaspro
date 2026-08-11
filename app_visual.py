@@ -789,21 +789,24 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
        
 # --- BARRINHA 2: TRANSFERÊNCIA ---
-    with st.sidebar.expander("💸 Transferência", expanded=False):
-        
-        # Verifica se o gatilho de limpeza está ativo antes de desenhar os inputs
-        if st.session_state.get("gatilho_limpar_transf", False):
-            st.session_state["t_val_key"] = 0.0
-            st.session_state["input_nota_transf"] = ""
-            st.session_state["input_meses_transf"] = 1
-            st.session_state["taxa_cambio_val"] = 1.0
-            # Reseta o destino para o primeiro banco disponível (ou limpa a chave)
-            if bancos_disponiveis:
-                st.session_state["transf_destino_select"] = bancos_disponiveis[0]
-            st.session_state["gatilho_limpar_transf"] = False
+    with st.sidebar.expander("💸 Transferência", expanded=False):           
+            # GARANTE A DATA ATUAL NO FUSO DE SÃO PAULO USANDO NATIVO DO PYTHON
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
+            data_hoje_br = datetime.now(ZoneInfo("America/Sao_Paulo")).date()
 
-        #t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY", key="t_dat_key")
+            # Verifica se o gatilho de limpeza está ativo antes de desenhar os inputs
+            if st.session_state.get("gatilho_limpar_transf", False):
+                st.session_state["t_val_key"] = 0.0
+                st.session_state["input_nota_transf"] = ""
+                st.session_state["input_meses_transf"] = 1
+                st.session_state["taxa_cambio_val"] = 1.0
+                if bancos_disponiveis:
+                    st.session_state["transf_destino_select"] = bancos_disponiveis[0]
+                st.session_state["gatilho_limpar_transf"] = False
+
         t_dat = st.date_input("Data Inicial", value=data_hoje_br, format="DD/MM/YYYY", key="t_dat_key")
+        #t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY", key="t_dat_key")
         t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f", key="t_val_key")
         t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis, key="transf_origem_select")
         
