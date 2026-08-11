@@ -10,8 +10,8 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 from datetime import datetime
-fuso_br = pytz.timezone('America/Sao_Paulo')
-data_hoje_br = datetime.now(fuso_br).date()
+#fuso_br = pytz.timezone('America/Sao_Paulo')
+#data_hoje_br = datetime.now(fuso_br).date()
 
 # Cria um "alvo" no topo
 st.markdown('<a id="top"></a>', unsafe_allow_html=True)
