@@ -1350,11 +1350,13 @@ if "💰" in st.session_state.page:
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
         
-    # --- FILTROS UNIFICADOS ---
-    c1, c2, c3 = st.columns(3)
-    filtro_banco = c1.multiselect("Filtrar Banco/Cartão:", sorted(bancos_disponiveis), key="banco_pend")
-    busca_desc = c2.text_input("Buscar Descrição:", key="desc_pend")
-    periodo = c3.date_input("Período:", (datetime.now().replace(day=1), datetime.now()), format="DD/MM/YYYY", key="data_pend")
+# --- FILTROS UNIFICADOS ---
+    # Agora com 4 colunas para caber o Beneficiário
+    c1, c2, c3, c4 = st.columns(4)
+    filtro_banco = c1.multiselect("Banco/Cartão:", sorted(bancos_disponiveis), key="banco_pend")
+    busca_desc = c2.text_input("Descrição:", key="desc_pend")
+    busca_benef = c3.text_input("Beneficiário:", key="benef_pend") # <-- NOVO FILTRO
+    periodo = c4.date_input("Período:", (datetime.now().replace(day=1), datetime.now()), format="DD/MM/YYYY", key="data_pend")
 
     # --- PROCESSAMENTO ---
     df_v = df_base[df_base['Status'].astype(str).str.strip().str.lower() == 'pendente'].copy()
@@ -1365,13 +1367,19 @@ elif "Pendências" in aba:
         df_v = df_v[df_v['Banco'].isin(filtro_banco)]
     if busca_desc:
         df_v = df_v[df_v['Descrição'].str.contains(busca_desc, case=False, na=False)]
+    if busca_benef: # <-- LÓGICA DO NOVO FILTRO
+        # Certifique-se que o nome da coluna no seu Sheets é exatamente 'Beneficiário'
+        df_v = df_v[df_v['Beneficiário'].str.contains(busca_benef, case=False, na=False)]
         
     if isinstance(periodo, tuple) and len(periodo) == 2:
         df_v = df_v[(df_v['Data_Formatada'].dt.date >= periodo[0]) & (df_v['Data_Formatada'].dt.date <= periodo[1])]
 
-        # --- EXIBIÇÃO ---
+     # --- EXIBIÇÃO (Ajuste aqui para incluir o beneficiário na tabela) ---
         st.write(f"### Lançamentos Encontrados: {len(df_v)}")
-        df_display = df_v[['ID', 'Vencimento', 'Banco', 'Descrição', 'Valor', 'Categoria']].copy()
+        
+        # Adicionei 'Beneficiário' na lista de colunas abaixo:
+        df_display = df_v[['ID', 'Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor', 'Categoria']].copy()
+        
         df_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_display.iloc[::-1], use_container_width=True, hide_index=True)
 
