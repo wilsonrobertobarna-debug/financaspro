@@ -9,6 +9,10 @@ from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
+from datetime import datetime
+import pytz
+fuso_br = pytz.timezone('America/Sao_Paulo')
+data_hoje_br = datetime.now(fuso_br).date()
 
 # Cria um "alvo" no topo
 st.markdown('<a id="top"></a>', unsafe_allow_html=True)
@@ -798,7 +802,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 st.session_state["transf_destino_select"] = bancos_disponiveis[0]
             st.session_state["gatilho_limpar_transf"] = False
 
-        t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY", key="t_dat_key")
+        #t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY", key="t_dat_key")
+        t_dat = st.date_input("Data Inicial", value=data_hoje_br, format="DD/MM/YYYY", key="t_dat_key")
         t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f", key="t_val_key")
         t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis, key="transf_origem_select")
         
