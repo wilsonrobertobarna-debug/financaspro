@@ -862,7 +862,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-       if st.button("TRANSFERIR", key="btn_executar_transferencia_sidebar"):
+        if st.button("TRANSFERIR", key="btn_executar_transferencia_sidebar"):
             if t_orig == t_dest: 
                 st.error("Escolha bancos diferentes!")
             else:
