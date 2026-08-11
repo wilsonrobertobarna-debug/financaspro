@@ -18,7 +18,7 @@ st.markdown('<a id="top"></a>', unsafe_allow_html=True)
 
 # Configuração da página
 st.set_page_config(
-    page_title="Painell Wilson",
+    page_title="Painel Wilson",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
