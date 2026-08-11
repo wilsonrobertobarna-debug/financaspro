@@ -788,27 +788,26 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
        
 # --- BARRINHA 2: TRANSFERÊNCIA ---
-        with st.sidebar.expander("💸 Transferência", expanded=False):
-            
-            # GARANTE A DATA ATUAL NO FUSO DE SÃO PAULO USANDO NATIVO DO PYTHON
-            from datetime import datetime
-            from zoneinfo import ZoneInfo
-            data_hoje_br = datetime.now(ZoneInfo("America/Sao_Paulo")).date()
+    with st.sidebar.expander("💸 Transferência", expanded=False):
+        
+        # GARANTE A DATA ATUAL NO FUSO DE SÃO PAULO USANDO NATIVO DO PYTHON
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        data_hoje_br = datetime.now(ZoneInfo("America/Sao_Paulo")).date()
 
-            # Verifica se o gatilho de limpeza está ativo antes de desenhar os inputs
-            if st.session_state.get("gatilho_limpar_transf", False):
-                st.session_state["t_val_key"] = 0.0
-                st.session_state["input_nota_transf"] = ""
-                st.session_state["input_meses_transf"] = 1
-                st.session_state["taxa_cambio_val"] = 1.0
-                if bancos_disponiveis:
-                    st.session_state["transf_destino_select"] = bancos_disponiveis[0]
-                st.session_state["gatilho_limpar_transf"] = False
+        # Verifica se o gatilho de limpeza está ativo antes de desenhar os inputs
+        if st.session_state.get("gatilho_limpar_transf", False):
+            st.session_state["t_val_key"] = 0.0
+            st.session_state["input_nota_transf"] = ""
+            st.session_state["input_meses_transf"] = 1
+            st.session_state["taxa_cambio_val"] = 1.0
+            if bancos_disponiveis:
+                st.session_state["transf_destino_select"] = bancos_disponiveis[0]
+            st.session_state["gatilho_limpar_transf"] = False
 
-            t_dat = st.date_input("Data Inicial", value=data_hoje_br, format="DD/MM/YYYY", key="t_dat_key")
-
-
-        #t_dat = st.date_input("Data Inicial", datetime.now(), format="DD/MM/YYYY", key="t_dat_key")
+        # ÚNICA definição de data com chave exclusiva para evitar conflito
+        t_dat = st.date_input("Data Inicial", value=data_hoje_br, format="DD/MM/YYYY", key="t_dat_key")
+        
         t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f", key="t_val_key")
         t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis, key="transf_origem_select")
         
@@ -836,7 +835,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
         # Se as moedas forem diferentes, gerencia o câmbio
         if moeda_origem != moeda_destino:
-            # Espaçamento para evitar que grude na tarja acima
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(f"💱 **Câmbio Detectado: {moeda_origem} ➔ {moeda_destino}**")
             
@@ -904,7 +902,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 else:
                     st.toast("✅ Transferência sincronizada com ID único!", icon="💰")
                 
-                # Ativa o gatilho para limpar todos os campos e resetar o destino na próxima re-execução
                 st.session_state["gatilho_limpar_transf"] = True
                 atualizar_sessao()
                 st.rerun()
