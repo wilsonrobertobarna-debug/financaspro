@@ -1633,8 +1633,10 @@ elif "📄" in aba:
             usado_fmt = f"{m_fmt(usado)} 🔴" if usado > 0 else m_fmt(0)
             saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {usado_fmt} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
         
-        # --- VALE REFEIÇÃO / ALIMENTAÇÃO (VR / VA) ---
-        elif "REFEIÇÃO" in tipo_c or "REFEICAO" in tipo_c or "ALIMENTAÇÃO" in tipo_c or "ALIMENTACAO" in tipo_c or "VR" in b_up or "VA" in b_up or "VALE" in b_up or "VR" in tipo_c or "VA" in tipo_c or "VR" in b or "VA" in b:
+       
+            # --- VALE REFEIÇÃO / ALIMENTAÇÃO (VR / VA) ---
+        # Verificamos primeiro no nome do banco (b_up), pois sabemos que o tipo está como "Corrente"
+        if "VR" in b_up or "VA" in b_up or "VALE" in b_up or "REFEIÇÃO" in b_up or "REFEICAO" in b_up or "ALIMENTAÇÃO" in b_up or "ALIMENTACAO" in b_up:
             sub_vr_brl += valor_b
             saldos_txt += f"🍽️ {b}: {m_fmt(valor_b)}\n"
 
