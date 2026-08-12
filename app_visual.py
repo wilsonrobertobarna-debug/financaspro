@@ -1587,11 +1587,21 @@ elif "📄" in aba:
             for _, row in df_bancos_info.iterrows():
                 if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
                     try:
-                        v_raw = str(row.iloc[1]).replace('R$', '').replace('U$', '').replace('€', '').replace('.', '').replace(',', '.').strip()
-                        valor_b = float(v_raw) if v_raw and v_raw != 'nan' else 0.0
+                        # Leitura e limpeza segura de valores com Regex
+                        import re
+                        raw_val = str(row.iloc[1]).strip()
+                        clean_val = re.sub(r'[^\d,.-]', '', raw_val)
+                        
+                        if ',' in clean_val and '.' in clean_val:
+                            clean_val = clean_val.replace('.', '').replace(',', '.')
+                        elif ',' in clean_val:
+                            clean_val = clean_val.replace(',', '.')
+                        
+                        valor_b = float(clean_val) if clean_val else 0.0
+                        
                         tipo_c = str(row.iloc[2]).strip().upper()
                         
-                        # Tenta ler a moeda (Coluna 6 ou índice 5 se existir, senão assume BRL)
+                        # Tenta ler a moeda (Coluna F / Índice 5)
                         if len(row) >= 6:
                             m_raw = str(row.iloc[5]).strip().upper()
                             if m_raw in ["USD", "EUR", "BRL"]:
