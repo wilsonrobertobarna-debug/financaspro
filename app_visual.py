@@ -1633,11 +1633,11 @@ elif "📄" in aba:
             usado_fmt = f"{m_fmt(usado)} 🔴" if usado > 0 else m_fmt(0)
             saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {usado_fmt} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
         
-        # --- VALE REFEIÇÃO (VR / VA) ---
-        #elif "REFEIÇÃO" in tipo_c or "VR" in b_up or "VA" in b_up or "ALIMENTAÇÃO" in b_up:
-            #saldo_vr = valor_b
-            #sub_vr_brl += saldo_vr
-            #saldos_txt += f"🍽️ {b}: {m_fmt(saldo_vr)}\n"
+          --- VALE REFEIÇÃO (VR / VA) ---
+         elif "REFEIÇÃO" in tipo_c or "VR" in b_up or "VA" in b_up or "ALIMENTAÇÃO" in b_up:
+            saldo_vr = valor_b
+            sub_vr_brl += saldo_vr
+            saldos_txt += f"🍽️ {b}: {m_fmt(saldo_vr)}\n"
 
         # --- VEÍCULOS E BENS ---
         elif "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
@@ -1711,7 +1711,7 @@ elif "📄" in aba:
     if sub_contas_invest_usd > 0: relat += f"📊 Subtotal Contas & Invest. (USD): {m_fmt_usd(sub_contas_invest_usd)}\n"
     if sub_contas_invest_eur > 0: relat += f"📊 Subtotal Contas & Invest. (EUR): {m_fmt_eur(sub_contas_invest_eur)}\n"
     relat += f"💳 Subtotal Cartões Usados: {m_fmt(sub_cartoes_brl)}\n"
-    #relat += f"🍽️ Subtotal Vale Refeição: {m_fmt(sub_vr_brl)}\n"
+    relat += f"🍽️ Subtotal Vale Refeição: {m_fmt(sub_vr_brl)}\n"
     relat += f"🚗 Subtotal T-Cross + Moto Lead (BRL): {m_fmt(sub_bens_veiculos_brl)}\n"
     if sub_bens_veiculos_usd > 0: relat += f"🚗 Subtotal Bens (USD): {m_fmt_usd(sub_bens_veiculos_usd)}\n"
     if sub_bens_veiculos_eur > 0: relat += f"🚗 Subtotal Bens (EUR): {m_fmt_eur(sub_bens_veiculos_eur)}\n"
