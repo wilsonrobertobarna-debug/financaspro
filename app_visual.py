@@ -1613,7 +1613,7 @@ elif "📄" in aba:
         
         b_up = b.upper()
         
-        # --- 1. VALE REFEIÇÃO / ALIMENTAÇÃO (Não é cartão, é saldo direto) ---
+       # --- 1. VALE REFEIÇÃO / ALIMENTAÇÃO ---
         if "VR" in b_up or "VA" in b_up or "VALE" in b_up or "REFEIÇÃO" in b_up or "REFEICAO" in b_up or "ALIMENTAÇÃO" in b_up or "ALIMENTACAO" in b_up:
             sub_vr_brl += valor_b
             saldos_txt += f"🍽️ {b}: {m_fmt(valor_b)}\n"
@@ -1625,10 +1625,15 @@ elif "📄" in aba:
                    (df_base['Status'].str.upper() == 'PENDENTE') & \
                    (pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True).dt.date <= d_fim)
             usado = df_base.loc[mask, 'V_Num'].sum()
-            saldo_real = valor_b - usado
+            
+            disponivel = valor_b - usado
             sub_cartoes_brl += usado
-            saldos_txt += f"🏦 {b}: {m_fmt(saldo_real)} (Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Venc: {dia_venc_e})\n"
-            continue 
+            
+            # Restaura a bolinha vermelha quando há valor usado > 0
+            alerta_usado = f"{m_fmt(usado)} 🔴" if usado > 0 else m_fmt(0)
+            
+            saldos_txt += f"🏦 {b}: {m_fmt(disponivel)} (Limite: {m_fmt(valor_b)} | Usado: {alerta_usado} | Venc: {dia_venc_e})\n"
+            continue
         
         # --- 3. VEÍCULOS E BENS ---
         elif "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
