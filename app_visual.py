@@ -1550,6 +1550,8 @@ elif "🚗" in aba:
 
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
+elif "📄" in aba:
+    st.title("📄 Relatório WhatsApp")
     
     # Trava a data de início no primeiro dia do mês atual
     primeiro_dia_mes = hoje_br.replace(day=1)
@@ -1633,12 +1635,10 @@ elif "📄" in aba:
             usado_fmt = f"{m_fmt(usado)} 🔴" if usado > 0 else m_fmt(0)
             saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {usado_fmt} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
         
-
         # --- VALE REFEIÇÃO / ALIMENTAÇÃO (VR / VA) ---
-        elif "REFEIÇÃO" in tipo_c or "ALIMENTAÇÃO" in tipo_c or "VR" in b_up or "VA" in b_up or "VALE" in b_up or "REFEICAO" in tipo_c or "ALIMENTACAO" in tipo_c:
-            saldo_vr = valor_b
-            sub_vr_brl += saldo_vr
-            saldos_txt += f"🍽️ {b}: {m_fmt(saldo_vr)}\n"
+        elif "REFEIÇÃO" in tipo_c or "REFEICAO" in tipo_c or "ALIMENTAÇÃO" in tipo_c or "ALIMENTACAO" in tipo_c or "VR" in b_up or "VA" in b_up or "VALE" in b_up or "VR" in tipo_c or "VA" in tipo_c:
+            sub_vr_brl += valor_b
+            saldos_txt += f"🍽️ {b}: {m_fmt(valor_b)}\n"
 
         # --- VEÍCULOS E BENS ---
         elif "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
@@ -1672,7 +1672,7 @@ elif "📄" in aba:
                 sub_contas_invest_brl += s_final
                 saldos_txt += f"{icone} {b}: {m_fmt(s_final)}\n"
 
-    # Patrimônios Totais Separados por Moeda
+    # Patrimônios Totais Separados por Moeda (O VR entra no patrimônio em Real)
     patrimonio_brl = sub_contas_invest_brl + sub_vr_brl + sub_bens_veiculos_brl - sub_cartoes_brl
     patrimonio_usd = sub_contas_invest_usd + sub_bens_veiculos_usd
     patrimonio_eur = sub_contas_invest_eur + sub_bens_veiculos_eur
@@ -1727,7 +1727,6 @@ elif "📄" in aba:
     import urllib.parse
     link_zap = f"https://wa.me/?text={urllib.parse.quote(relat)}"
     st.markdown(f'[📲 Enviar Resumo para o WhatsApp]({link_zap})', unsafe_allow_html=True)
-
 
     
     # ==========================================
