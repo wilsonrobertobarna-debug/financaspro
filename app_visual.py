@@ -1623,13 +1623,21 @@ elif "📄" in aba:
             
         # --- 2. CARTÕES ---
         elif "CARTA" in tipo_c or "CART" in b_up:
+            # Filtro para somar apenas o que é PENDENTE e está dentro do vencimento
             mask = (df_base['Banco'] == b) & \
                    (df_base['Status'].str.upper() == 'PENDENTE') & \
                    (pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True).dt.date <= d_fim)
+            
             usado = df_base.loc[mask, 'V_Num'].sum()
+            
+            # Cálculo do disponível: Limite cadastrado (valor_b) - O que já foi gasto (usado)
+            disponivel = valor_b - usado
+            
             sub_cartoes_brl += usado
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {f'{m_fmt(usado)} 🔴' if usado > 0 else m_fmt(0)} (Venc: {dia_venc_e})\n"
-            continue # <--- ADICIONADO: Pula para o próximo banco
+            
+            # Exibição: Mostra o limite, o que foi usado e o quanto sobra
+            saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado) if usado > 0 else 'R$ 0,00'} 🔴 | Disp: {m_fmt(disponivel)} (Venc: {dia_venc_e})\n"
+            continue
         
         # --- 3. VEÍCULOS E BENS ---
         elif "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
