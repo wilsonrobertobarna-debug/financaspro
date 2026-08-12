@@ -1634,7 +1634,7 @@ elif "📄" in aba:
             saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {usado_fmt} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
         
         # --- VALE REFEIÇÃO / ALIMENTAÇÃO (VR / VA) ---
-        elif "REFEIÇÃO" in tipo_c or "REFEICAO" in tipo_c or "ALIMENTAÇÃO" in tipo_c or "ALIMENTACAO" in tipo_c or "VR" in b_up or "VA" in b_up or "VALE" in b_up or "VR" in tipo_c or "VA" in tipo_c:
+        elif "REFEIÇÃO" in tipo_c or "REFEICAO" in tipo_c or "ALIMENTAÇÃO" in tipo_c or "ALIMENTACAO" in tipo_c or "VR" in b_up or "VA" in b_up or "VALE" in b_up or "VR" in tipo_c or "VA" in tipo_c or "VR" in b or "VA" in b:
             sub_vr_brl += valor_b
             saldos_txt += f"🍽️ {b}: {m_fmt(valor_b)}\n"
 
@@ -1670,7 +1670,7 @@ elif "📄" in aba:
                 sub_contas_invest_brl += s_final
                 saldos_txt += f"{icone} {b}: {m_fmt(s_final)}\n"
 
-    # Patrimônios Totais Separados por Moeda (O VR entra no patrimônio em Real)
+    # Patrimônios Totais Separados por Moeda
     patrimonio_brl = sub_contas_invest_brl + sub_vr_brl + sub_bens_veiculos_brl - sub_cartoes_brl
     patrimonio_usd = sub_contas_invest_usd + sub_bens_veiculos_usd
     patrimonio_eur = sub_contas_invest_eur + sub_bens_veiculos_eur
