@@ -1613,11 +1613,19 @@ elif "📄" in aba:
         
         b_up = b.upper()
         
-        # --- 1. VALE REFEIÇÃO / ALIMENTAÇÃO ---
+       # --- 1. VALE REFEIÇÃO / ALIMENTAÇÃO ---
         if "ALELO" in b_up or "PLUXEE" in b_up or "GIFT" in b_up or "VR" in b_up or "VA" in b_up or "VALE" in b_up or "REFEIÇÃO" in b_up or "REFEICAO" in b_up or "ALIMENTAÇÃO" in b_up or "ALIMENTACAO" in b_up:
-            # Garante que soma no subtotal geral do vale
-            sub_vr_brl += valor_b
-            saldos_txt += f"🍽️ {b}: {m_fmt(valor_b)}\n"
+            
+            # Se a string do banco veio grudada (ex: VL Alelo0Corrente6BRL), 
+            # garantimos que pegamos o valor correto da coluna de saldo da sua planilha:
+            # (Substitua 'coluna_valor' pelo nome real da coluna de saldo no seu DataFrame)
+            try:
+                val_correto = float(row['Valor']) # ou o index correspondente ao saldo real
+            except:
+                val_correto = valor_b
+                
+            sub_vr_brl += val_correto
+            saldos_txt += f"🍽️ {b}: {m_fmt(val_correto)}\n"
             continue
             
         # --- 2. CARTÕES DE CRÉDITO ---
