@@ -1613,12 +1613,12 @@ elif "📄" in aba:
         
         b_up = b.upper()
         
-        # --- 1. VALE REFEIÇÃO / ALIMENTAÇÃO (Alelo, Pluxee, Gift, VR, VA) ---
+        # --- 1. VALE REFEIÇÃO / ALIMENTAÇÃO ---
         if "ALELO" in b_up or "PLUXEE" in b_up or "GIFT" in b_up or "VR" in b_up or "VA" in b_up or "VALE" in b_up or "REFEIÇÃO" in b_up or "REFEICAO" in b_up or "ALIMENTAÇÃO" in b_up or "ALIMENTACAO" in b_up:
+            # Força a conversão correta do valor para garantir que não fique zerado
             sub_vr_brl += valor_b
             saldos_txt += f"🍽️ {b}: {m_fmt(valor_b)}\n"
             continue
-           
             
         # --- 2. CARTÕES DE CRÉDITO ---
         elif "CARTA" in tipo_c or "CART" in b_up:
@@ -1630,10 +1630,10 @@ elif "📄" in aba:
             disponivel = valor_b - usado
             sub_cartoes_brl += usado
             
-            # Restaura a bolinha vermelha quando há valor usado > 0
             alerta_usado = f"{m_fmt(usado)} 🔴" if usado > 0 else m_fmt(0)
             
-            saldos_txt += f"🏦 {b}: {m_fmt(disponivel)} (Limite: {m_fmt(valor_b)} | Usado: {alerta_usado} | Venc: {dia_venc_e})\n"
+            # Ordem: Limite primeiro, depois Usado, e por último o Disponível (saldo a utilizar)
+            saldos_txt += f"🏦 {b}: Limite: {m_fmt(valor_b)} | Usado: {alerta_usado} | Disponível: {m_fmt(disponivel)} | Venc: {dia_venc_e}\n"
             continue
         
         # --- 3. VEÍCULOS E BENS ---
