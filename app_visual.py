@@ -1575,7 +1575,7 @@ elif "📄" in aba:
     def m_fmt_usd(n): return f"U$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
     def m_fmt_eur(n): return f"€ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-    # 1. LOOP PELOS BANCOS E ATIVOS
+   # 1. LOOP PELOS BANCOS E ATIVOS
     for b in sorted(bancos_disponiveis):
         valor_b = 0.0      
         tipo_c = ""
@@ -1613,40 +1613,31 @@ elif "📄" in aba:
         
         b_up = b.upper()
         
-        # --- ESTRUTURA CORRIGIDA PARA NÃO DUPLICAR ---
-        
-        # --- 1. VALE REFEIÇÃO ---
+        # --- 1. VALE REFEIÇÃO / ALIMENTAÇÃO (Não é cartão, é saldo direto) ---
         if "VR" in b_up or "VA" in b_up or "VALE" in b_up or "REFEIÇÃO" in b_up or "REFEICAO" in b_up or "ALIMENTAÇÃO" in b_up or "ALIMENTACAO" in b_up:
             sub_vr_brl += valor_b
             saldos_txt += f"🍽️ {b}: {m_fmt(valor_b)}\n"
-            continue # <--- ADICIONADO: Pula para o próximo banco
+            continue
             
-        # --- 2. CARTÕES ---
+        # --- 2. CARTÕES DE CRÉDITO ---
         elif "CARTA" in tipo_c or "CART" in b_up:
-            # Filtro para somar apenas o que é PENDENTE e está dentro do vencimento
             mask = (df_base['Banco'] == b) & \
                    (df_base['Status'].str.upper() == 'PENDENTE') & \
                    (pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True).dt.date <= d_fim)
-            
             usado = df_base.loc[mask, 'V_Num'].sum()
-            
-            # Cálculo do disponível: Limite cadastrado (valor_b) - O que já foi gasto (usado)
-            disponivel = valor_b - usado
-            
+            saldo_real = valor_b - usado
             sub_cartoes_brl += usado
-            
-            # Exibição: Mostra o limite, o que foi usado e o quanto sobra
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado) if usado > 0 else 'R$ 0,00'} 🔴 | Disp: {m_fmt(disponivel)} (Venc: {dia_venc_e})\n"
-            continue
+            saldos_txt += f"🏦 {b}: {m_fmt(saldo_real)} (Limite: {m_fmt(valor_b)} | Usado: {m_fmt(usado)} | Venc: {dia_venc_e})\n"
+            continue 
         
         # --- 3. VEÍCULOS E BENS ---
         elif "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
             if moeda_b == "USD": sub_bens_veiculos_usd += valor_b; saldos_txt += f"🚗 {b}: {m_fmt_usd(valor_b)}\n"
             elif moeda_b == "EUR": sub_bens_veiculos_eur += valor_b; saldos_txt += f"🚗 {b}: {m_fmt_eur(valor_b)}\n"
             else: sub_bens_veiculos_brl += valor_b; saldos_txt += f"🚗 {b}: {m_fmt(valor_b)}\n"
-            continue # <--- ADICIONADO: Pula para o próximo banco
+            continue
 
-        # 4. Por fim, o resto entra como CONTA CORRENTE / INVEST
+        # --- 4. CONTAS CORRENTES E INVESTIMENTOS (Default) ---
         else:
             mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
             rec_b = mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
@@ -1656,7 +1647,7 @@ elif "📄" in aba:
             if moeda_b == "USD": sub_contas_invest_usd += s_final; saldos_txt += f"{icone} {b}: {m_fmt_usd(s_final)}\n"
             elif moeda_b == "EUR": sub_contas_invest_eur += s_final; saldos_txt += f"{icone} {b}: {m_fmt_eur(s_final)}\n"
             else: sub_contas_invest_brl += s_final; saldos_txt += f"{icone} {b}: {m_fmt(s_final)}\n"
-
+                
     # Cálculos Patrimônio
     patrimonio_brl = sub_contas_invest_brl + sub_vr_brl + sub_bens_veiculos_brl - sub_cartoes_brl
     patrimonio_usd = sub_contas_invest_usd + sub_bens_veiculos_usd
