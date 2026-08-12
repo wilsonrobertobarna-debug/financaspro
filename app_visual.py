@@ -1634,10 +1634,10 @@ elif "📄" in aba:
             saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {usado_fmt} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
         
         # --- VALE REFEIÇÃO (VR / VA) ---
-        elif "REFEIÇÃO" in tipo_c or "VR" in b_up or "VA" in b_up or "ALIMENTAÇÃO" in b_up:
-            saldo_vr = valor_b
-            sub_vr_brl += saldo_vr
-            saldos_txt += f"🍽️ {b}: {m_fmt(saldo_vr)}\n"
+        #elif "REFEIÇÃO" in tipo_c or "VR" in b_up or "VA" in b_up or "ALIMENTAÇÃO" in b_up:
+            #saldo_vr = valor_b
+            #sub_vr_brl += saldo_vr
+            #saldos_txt += f"🍽️ {b}: {m_fmt(saldo_vr)}\n"
 
         # --- VEÍCULOS E BENS ---
         elif "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
