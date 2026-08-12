@@ -1613,11 +1613,12 @@ elif "📄" in aba:
         
         b_up = b.upper()
         
-       # --- 1. VALE REFEIÇÃO / ALIMENTAÇÃO ---
-        if "VR" in b_up or "VA" in b_up or "VALE" in b_up or "REFEIÇÃO" in b_up or "REFEICAO" in b_up or "ALIMENTAÇÃO" in b_up or "ALIMENTACAO" in b_up:
+        # --- 1. VALE REFEIÇÃO / ALIMENTAÇÃO (Alelo, Pluxee, Gift, VR, VA) ---
+        if "ALELO" in b_up or "PLUXEE" in b_up or "GIFT" in b_up or "VR" in b_up or "VA" in b_up or "VALE" in b_up or "REFEIÇÃO" in b_up or "REFEICAO" in b_up or "ALIMENTAÇÃO" in b_up or "ALIMENTACAO" in b_up:
             sub_vr_brl += valor_b
             saldos_txt += f"🍽️ {b}: {m_fmt(valor_b)}\n"
             continue
+           
             
         # --- 2. CARTÕES DE CRÉDITO ---
         elif "CARTA" in tipo_c or "CART" in b_up:
