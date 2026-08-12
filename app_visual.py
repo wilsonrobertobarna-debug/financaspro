@@ -1615,7 +1615,7 @@ elif "📄" in aba:
         
         # --- 1. VALE REFEIÇÃO / ALIMENTAÇÃO ---
         if "ALELO" in b_up or "PLUXEE" in b_up or "GIFT" in b_up or "VR" in b_up or "VA" in b_up or "VALE" in b_up or "REFEIÇÃO" in b_up or "REFEICAO" in b_up or "ALIMENTAÇÃO" in b_up or "ALIMENTACAO" in b_up:
-            # Força a conversão correta do valor para garantir que não fique zerado
+            # Garante que soma no subtotal geral do vale
             sub_vr_brl += valor_b
             saldos_txt += f"🍽️ {b}: {m_fmt(valor_b)}\n"
             continue
