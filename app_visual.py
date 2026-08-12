@@ -1613,20 +1613,15 @@ elif "📄" in aba:
         
         b_up = b.upper()
         
-       # --- 1. VALE REFEIÇÃO / ALIMENTAÇÃO ---
+      # --- [PRIMEIRO O SCRIPT LÊ E CONVERTE O VALOR PADRÃO DO BANCO] ---
+        # (Aqui o seu código já pegou a linha, limpou a string e transformou em 'valor_b' real)
+        
+        # --- DEPOIS VOCÊ SEPARA: É VALE REFEIÇÃO / ALIMENTAÇÃO? ---
         if "ALELO" in b_up or "PLUXEE" in b_up or "GIFT" in b_up or "VR" in b_up or "VA" in b_up or "VALE" in b_up or "REFEIÇÃO" in b_up or "REFEICAO" in b_up or "ALIMENTAÇÃO" in b_up or "ALIMENTACAO" in b_up:
             
-            # Se a string do banco veio grudada (ex: VL Alelo0Corrente6BRL), 
-            # garantimos que pegamos o valor correto da coluna de saldo da sua planilha:
-            # (Substitua 'coluna_valor' pelo nome real da coluna de saldo no seu DataFrame)
-            try:
-                val_correto = float(row['Valor']) # ou o index correspondente ao saldo real
-            except:
-                val_correto = valor_b
-                
-            sub_vr_brl += val_correto
-            saldos_txt += f"🍽️ {b}: {m_fmt(val_correto)}\n"
-            continue
+            sub_vr_brl += valor_b  # Aqui ele usa o valor_b já limpo e correto do banco!
+            saldos_txt += f"🍽️ {b}: {m_fmt(valor_b)}\n"
+            continue  # Pula para o próximo loop para não somar de novo nas contas correntes
             
         # --- 2. CARTÕES DE CRÉDITO ---
         elif "CARTA" in tipo_c or "CART" in b_up:
