@@ -1711,7 +1711,7 @@ elif "📄" in aba:
     if sub_contas_invest_usd > 0: relat += f"📊 Subtotal Contas & Invest. (USD): {m_fmt_usd(sub_contas_invest_usd)}\n"
     if sub_contas_invest_eur > 0: relat += f"📊 Subtotal Contas & Invest. (EUR): {m_fmt_eur(sub_contas_invest_eur)}\n"
     relat += f"💳 Subtotal Cartões Usados: {m_fmt(sub_cartoes_brl)}\n"
-    #relat += f"🍽️ Subtotal Vale Refeição: {m_fmt(sub_vr_brl)}\n"
+    relat += f"🍽️ Subtotal Vale Refeição: {m_fmt(sub_vr_brl)}\n"
     relat += f"🚗 Subtotal T-Cross + Moto Lead (BRL): {m_fmt(sub_bens_veiculos_brl)}\n"
     if sub_bens_veiculos_usd > 0: relat += f"🚗 Subtotal Bens (USD): {m_fmt_usd(sub_bens_veiculos_usd)}\n"
     if sub_bens_veiculos_eur > 0: relat += f"🚗 Subtotal Bens (EUR): {m_fmt_eur(sub_bens_veiculos_eur)}\n"
