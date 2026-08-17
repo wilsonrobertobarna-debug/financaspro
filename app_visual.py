@@ -972,8 +972,15 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     "Plano Assistencial", "Transporte", "Previdência", "Outros", "Pet: Milo", 
                     "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção", "Transferência"
                 ]
+                #cat_atual = "Transferência" if eh_transf else str(item.get('Categoria', '')).strip()
+                #idx_cat = lista_categorias_padrao.index(cat_atual) if cat_atual in lista_categorias_padrao else 0
                 cat_atual = "Transferência" if eh_transf else str(item.get('Categoria', '')).strip()
-                idx_cat = lista_categorias_padrao.index(cat_atual) if cat_atual in lista_categorias_padrao else 0
+                # Procura ignorando maiúsculas/minúsculas e espaços extras
+                idx_cat = 0
+                for idx, cat_padrao in enumerate(lista_categorias_padrao):
+                    if cat_padrao.strip().lower() == cat_atual.lower():
+                        idx_cat = idx
+                        break
 
                 tipos_opcoes = ["Despesa", "Receita", "Transferência"]
                 tipo_atual = "Transferência" if eh_transf else str(item.get('Tipo', 'Despesa')).capitalize()
