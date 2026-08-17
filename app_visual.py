@@ -1402,6 +1402,45 @@ elif "Pendências" in aba:
         df_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_display.iloc[::-1], use_container_width=True, hide_index=True)
 
+        # ==========================================
+        # --- CONFERÊNCIA RÁPIDA DE SALDOS AQUI ---
+        # ==========================================
+        st.markdown("---")
+        st.markdown("### 📊 Saldos e Contas Atuais")
+        
+        df_bancos_resumo = carregar_bancos_manual_gs()
+        if not df_bancos_resumo.empty:
+            cols_resumo = st.columns(min(len(df_bancos_resumo), 4))
+            for j, (idx_b, row_b) in enumerate(df_bancos_resumo.iterrows()):
+                b_nome = row_b.iloc[0] if len(row_b) > 0 else 'Banco'
+                b_val_str = str(row_b.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row_b) > 1 else '0'
+                b_saldo_ini = float(b_val_str) if b_val_str and b_val_str != 'nan' else 0.0
+                b_tipo = str(row_b.iloc[2]).strip().upper() if len(row_b) > 2 else ''
+                b_up = str(b_nome).upper()
+                
+                # Identifica se é cartão para calcular o uso do mês
+                if "CARTA" in b_tipo or "CART" in b_up:
+                    mask_cart = (df_base['Banco'] == b_nome) & \
+                                (df_base['Status'].str.upper() == 'PENDENTE') & \
+                                (pd.to_datetime(df_base['Vencimento'], dayfirst=True, errors='coerce').dt.month == datetime.now().month) & \
+                                (pd.to_datetime(df_base['Vencimento'], dayfirst=True, errors='coerce').dt.year == datetime.now().year)
+                    usado_cart = df_base.loc[mask_cart, 'V_Num'].sum()
+                    lbl_txt = f"💳 {b_nome} (Usado)"
+                    val_txt = f"-R$ {usado_cart:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                else:
+                    # Conta corrente / outros
+                    filtro_cc = (df_base['Banco'] == b_nome) & ((df_base['Status'].str.upper() == 'PAGO') | (df_base['Status'] == ''))
+                    df_cc_atual = df_base[filtro_cc]
+                    ent = df_cc_atual[df_cc_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+                    sai = df_cc_atual[df_cc_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+                    saldo_final = b_saldo_ini + ent - sai
+                    lbl_txt = f"🏦 {b_nome}"
+                    val_txt = f"R$ {saldo_final:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                
+                with cols_resumo[j % len(cols_resumo)]:
+                    st.metric(label=lbl_txt, value=val_txt)
+        st.markdown("---")
+
         # --- BOTÃO DE BAIXA ---
         if not df_v.empty:
             #nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
