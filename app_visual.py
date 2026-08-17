@@ -884,7 +884,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     v_str_dest = f"{t_valor_final:.2f}".replace('.', ',')
                     d_str = data_atual.strftime("%d/%m/%Y")
                     
-                    status_transf = "Pago" if i == 0 else "Pendente"
+                    #status_transf = "Pago" if i == 0 else "Pendente"
+                    status_transf = "Pendente"
                     
                     if t_meses > 1:
                         desc_transf = f"TR ({i+1}/{t_meses}): {t_desc}".strip() if t_desc else f"TR ({i+1}/{t_meses}): Transferência recorrente"
