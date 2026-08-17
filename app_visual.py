@@ -1402,7 +1402,13 @@ elif "Pendências" in aba:
 
         # --- BOTÃO DE BAIXA ---
         if not df_v.empty:
-            nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
+            #nova_data = st.date_input("Data de pagamento para baixa:", datetime.now(), key="data_baixa_pend")
+            nova_data = st.date_input(
+            "Data de pagamento para baixa:", 
+            datetime.now(), 
+            format="DD/MM/YYYY", 
+            key="data_baixa_pend"
+)
             if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_final"):
                 headers = ws_base.row_values(1)
                 idx_status = headers.index('Status') + 1
