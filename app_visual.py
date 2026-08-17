@@ -982,9 +982,16 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                         idx_cat = idx
                         break
 
+                #tipos_opcoes = ["Despesa", "Receita", "Transferência"]
+                #tipo_atual = "Transferência" if eh_transf else str(item.get('Tipo', 'Despesa')).capitalize()
+                #idx_t = tipos_opcoes.index(tipo_atual) if tipo_atual in tipos_opcoes else 0
                 tipos_opcoes = ["Despesa", "Receita", "Transferência"]
-                tipo_atual = "Transferência" if eh_transf else str(item.get('Tipo', 'Despesa')).capitalize()
-                idx_t = tipos_opcoes.index(tipo_atual) if tipo_atual in tipos_opcoes else 0
+                tipo_atual = "Transferência" if eh_transf else str(item.get('Tipo', 'Despesa')).strip().capitalize()
+                idx_t = 0
+                for idx, t_opcao in enumerate(tipos_opcoes):
+                    if t_opcao.strip().lower() == tipo_atual.lower():
+                        idx_t = idx
+                        break
 
                 idx_b = bancos_disponiveis.index(item['Banco']) if item['Banco'] in bancos_disponiveis else 0
 
