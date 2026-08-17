@@ -1412,7 +1412,8 @@ elif "Pendências" in aba:
                 for idx_df, row in df_v.iterrows():
                     linha_sheets = int(idx_df) + 2
                     ws_base.update_cell(linha_sheets, idx_status, "Pago")
-                    ws_base.update_cell(linha_sheets, idx_venc, nova_data.strftime("%d/%m/%Y"))
+                    #ws_base.update_cell(linha_sheets, idx_venc, nova_data.strftime("%d/%m/%Y"))
+                    ws_base.update_cell(linha_sheets, idx_venc, f"'{nova_data.strftime('%d/%m/%Y')}")
                     sucessos += 1
                 
                 st.toast(f"✅ {sucessos} itens baixados!", icon="💰")
