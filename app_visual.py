@@ -416,7 +416,9 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                         
                     else:
                         # 3. Filtrar transações deste banco até hoje (Conta Corrente / Investimento)
-                        filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
+                        #filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
+                        #df_banco_atual = df[filtro]
+                        filtro = (df['Banco'] == nome_banco)
                         df_banco_atual = df[filtro]
                         
                         entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
