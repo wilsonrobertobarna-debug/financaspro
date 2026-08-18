@@ -1442,8 +1442,7 @@ elif "Pendências" in aba:
                         lbl_txt = f"🏦 {b_nome}"
                         val_txt = f"R$ {saldo_final:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                     
-                   
-                        with cols_resumo[j]:
+                    with cols_resumo[j]:
                         st.metric(label=lbl_txt, value=val_txt)
         st.markdown("---")
         
