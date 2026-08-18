@@ -1403,49 +1403,55 @@ elif "Pendências" in aba:
         st.dataframe(df_display.iloc[::-1], use_container_width=True, hide_index=True)
 
         # ==========================================
-        # --- CONFERÊNCIA RÁPIDA DE SALDOS ---
+        # --- CONFERÊNCIA RÁPIDA DE SALDOS (APENAS OS BANCOS DA TELA) ---
         # ==========================================
         st.markdown("---")
-        st.markdown("### 📊 Saldos e Contas Atuais")
+        st.markdown("### 📊 Saldos dos Bancos na Tela de Pendências")
         
         df_bancos_resumo = carregar_bancos_manual_gs()
-        if not df_bancos_resumo.empty:
-            bancos_lista = list(df_bancos_resumo.iterrows())
-            for i in range(0, len(bancos_lista), 4):
-                bloco = bancos_lista[i:i+4]
-                cols_resumo = st.columns(len(bloco))
-                
-                for j, (idx_b, row_b) in enumerate(bloco):
-                    b_nome = row_b.iloc[0] if len(row_b) > 0 else 'Banco'
-                    b_val_str = str(row_b.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row_b) > 1 else '0'
-                    b_saldo_ini = float(b_val_str) if b_val_str and b_val_str != 'nan' else 0.0
-                    b_tipo = str(row_b.iloc[2]).strip().upper() if len(row_b) > 2 else ''
-                    b_up = str(b_nome).upper()
+        if not df_bancos_resumo.empty and not df_v.empty:
+            # Pega apenas os nomes dos bancos que estão presentes nos lançamentos filtrados acima
+            bancos_na_tela = df_v['Banco'].dropna().unique()
+            
+            # Filtra o resumo geral para manter apenas os bancos que aparecem na tela
+            df_bancos_filtrado = df_bancos_resumo[df_bancos_resumo.iloc[:, 0].isin(bancos_na_tela)]
+            
+            if not df_bancos_filtrado.empty:
+                bancos_lista = list(df_bancos_filtrado.iterrows())
+                for i in range(0, len(bancos_lista), 4):
+                    bloco = bancos_lista[i:i+4]
+                    cols_resumo = st.columns(len(bloco))
                     
-                    # Identifica se é cartão para calcular o uso do mês
-                    if "CARTA" in b_tipo or "CART" in b_up:
-                        mask_cart = (df_base['Banco'] == b_nome) & \
-                                    (df_base['Status'].str.upper() == 'PENDENTE') & \
-                                    (pd.to_datetime(df_base['Vencimento'], dayfirst=True, errors='coerce').dt.month == datetime.now().month) & \
-                                    (pd.to_datetime(df_base['Vencimento'], dayfirst=True, errors='coerce').dt.year == datetime.now().year)
-                        usado_cart = df_base.loc[mask_cart, 'V_Num'].sum()
-                        lbl_txt = f"💳 {b_nome} (Usado)"
-                        val_txt = f"-R$ {usado_cart:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                    else:
-                        # Conta corrente / outros: considera todas as movimentações
-                        filtro_cc = (df_base['Banco'] == b_nome)
-                        df_cc_atual = df_base[filtro_cc]
-                        ent = df_cc_atual[df_cc_atual['Tipo'].str.upper().isin(['RECEITA', 'TRANSFERÊNCIA'])]['V_Num'].sum()
-                        sai = df_cc_atual[df_cc_atual['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
-                        saldo_final = b_saldo_ini + ent - sai
-                        lbl_txt = f"🏦 {b_nome}"
-                        val_txt = f"R$ {saldo_final:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                    
-                    with cols_resumo[j]:
-                        st.metric(label=lbl_txt, value=val_txt)
+                    for j, (idx_b, row_b) in enumerate(bloco):
+                        b_nome = row_b.iloc[0] if len(row_b) > 0 else 'Banco'
+                        b_val_str = str(row_b.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row_b) > 1 else '0'
+                        b_saldo_ini = float(b_val_str) if b_val_str and b_val_str != 'nan' else 0.0
+                        b_tipo = str(row_b.iloc[2]).strip().upper() if len(row_b) > 2 else ''
+                        b_up = str(b_nome).upper()
+                        
+                        # Identifica se é cartão para calcular o uso do mês
+                        if "CARTA" in b_tipo or "CART" in b_up:
+                            mask_cart = (df_base['Banco'] == b_nome) & \
+                                        (df_base['Status'].str.upper() == 'PENDENTE') & \
+                                        (pd.to_datetime(df_base['Vencimento'], dayfirst=True, errors='coerce').dt.month == datetime.now().month) & \
+                                        (pd.to_datetime(df_base['Vencimento'], dayfirst=True, errors='coerce').dt.year == datetime.now().year)
+                            usado_cart = df_base.loc[mask_cart, 'V_Num'].sum()
+                            lbl_txt = f"💳 {b_nome} (Usado)"
+                            val_txt = f"-R$ {usado_cart:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                        else:
+                            # Conta corrente / outros: considera todas as movimentações
+                            filtro_cc = (df_base['Banco'] == b_nome)
+                            df_cc_atual = df_base[filtro_cc]
+                            ent = df_cc_atual[df_cc_atual['Tipo'].str.upper().isin(['RECEITA', 'TRANSFERÊNCIA'])]['V_Num'].sum()
+                            sai = df_cc_atual[df_cc_atual['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
+                            saldo_final = b_saldo_ini + ent - sai
+                            lbl_txt = f"🏦 {b_nome}"
+                            val_txt = f"R$ {saldo_final:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                        
+                        with cols_resumo[j]:
+                            st.metric(label=lbl_txt, value=val_txt)
 
         st.markdown("---")
-
         # --- BOTÃO DE BAIXA ---
         if not df_v.empty:
             nova_data = st.date_input(
