@@ -1001,6 +1001,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
 
                 # Usando um form para encapsular e sincronizar os dados perfeitamente sem conflito de keys
+                # Usando um form para encapsular e sincronizar os dados perfeitamente sem conflito de keys
                 with st.form(key=f"form_ajuste_{item['ID']}"):
                     st.markdown("")
                     ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
@@ -1017,14 +1018,18 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                         st.markdown("")
                         ed_benef = st.selectbox("Alterar Beneficiário:", beneficiarios_existentes if beneficiarios_existentes else [val_benef_atual], index=idx_benef)
                     
+                    # --- CAMPOS TRAVADOS PARA PROTEGER OS SALDOS E CATEGORIAS ---
                     st.markdown("")
-                    ed_cat = st.selectbox("Alterar Categoria:", lista_categorias_padrao, index=idx_cat)
+                    st.text_input("Categoria (Fixo / Não editável)", value=item.get('Categoria', ''), disabled=True)
+                    ed_cat = item.get('Categoria', '') # Mantém o original ao salvar
                     
                     st.markdown("")
-                    ed_tipo = st.selectbox("Alterar Tipo:", tipos_opcoes, index=idx_t)
+                    st.text_input("Tipo (Fixo / Não editável)", value=item.get('Tipo', ''), disabled=True)
+                    ed_tipo = item.get('Tipo', '') # Mantém o original ao salvar
                     
                     st.markdown("")
-                    ed_bnc = st.selectbox("Alterar Banco:", bancos_disponiveis, index=idx_b)
+                    st.text_input("Banco (Fixo / Não editável)", value=item.get('Banco', ''), disabled=True)
+                    ed_bnc = item.get('Banco', '') # Mantém o original ao salvar
                     
                     st.markdown("")
                     ed_sta = st.selectbox("Status:", status_opcoes, index=index_status)
@@ -1051,23 +1056,21 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                             linhas_para_atualizar = [int(float(item.get('linha_planilha', id_alvo)))]
 
                         for linha_id in linhas_para_atualizar:
-                            # Força a data como texto com apóstrofo para alinhar à esquerda igual ao lançamento novo
+                            # Força a data como texto com apóstrofo
                             ws_base.update_cell(linha_id, 1, f"'{ed_dat.strftime('%d/%m/%Y')}")
                             
-                            # Força o valor como texto com vírgula e apóstrofo para alinhar à esquerda igual ao lançamento novo
+                            # Força o valor como texto com vírgula e apóstrofo
                             v_str_ed = f"'{ed_val:.2f}".replace('.', ',')
                             ws_base.update_cell(linha_id, 2, v_str_ed)
                             
                             ws_base.update_cell(linha_id, 3, ed_desc)
-                            ws_base.update_cell(linha_id, 4, ed_cat)
-                            ws_base.update_cell(linha_id, 5, ed_tipo)
-                            ws_base.update_cell(linha_id, 6, ed_bnc)
+                            ws_base.update_cell(linha_id, 4, ed_cat)  # Usa o original travado
+                            ws_base.update_cell(linha_id, 5, ed_tipo) # Usa o original travado
+                            ws_base.update_cell(linha_id, 6, ed_bnc)  # Usa o original travado
                             ws_base.update_cell(linha_id, 7, ed_sta)
                             ws_base.update_cell(linha_id, 10, ed_benef if not eh_transf else "")
 
-                        
                         st.toast("✅ Atualização sincronizada com sucesso!", icon="💰")
-                        # Removemos a alteração direta da key aqui para evitar o erro do Streamlit
                         atualizar_sessao()
                         st.rerun()
                         
