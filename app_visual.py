@@ -958,8 +958,14 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
         )
             
         if escolha:
+            if escolha:
             item = lista_edit[escolha]
             item_id = item['ID']
+            
+            # CRIA UM CONTAINER ÚNICO PARA ESTE ID
+            container_edicao = st.container()
+            with container_edicao:
+                # O restante do seu código vem aqui, mas tudo indentado dentro deste container...
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             
             # Identifica se é uma transferência para tratar os campos de forma limpa
