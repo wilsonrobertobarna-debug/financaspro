@@ -976,9 +976,20 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
             
             beneficiarios_existentes = sorted([b for b in beneficiarios_existentes if b and b != 'N/D'])
             val_benef_atual = "" if eh_transf else str(item.get('Beneficiário', item.get('Beneficiario', ''))).strip()
-            if val_benef_atual not in beneficiarios_existentes and val_benef_atual:
+            
+            # Se o beneficiário atual do lançamento não estiver na lista geral, adiciona no topo
+            if val_benef_atual and val_benef_atual not in beneficiarios_existentes:
                 beneficiarios_existentes.insert(0, val_benef_atual)
-            idx_benef = beneficiarios_existentes.index(val_benef_atual) if val_benef_atual in beneficiarios_existentes else 0
+            
+            # Garante que a lista nunca fique totalmente vazia para evitar erro de índice
+            if not beneficiarios_existentes:
+                beneficiarios_existentes = [val_benef_atual if val_benef_atual else "Geral"]
+
+            # Descobre o índice com segurança absoluta (evita IndexError)
+            try:
+                idx_benef = beneficiarios_existentes.index(val_benef_atual) if val_benef_atual in beneficiarios_existentes else 0
+            except (ValueError, TypeError):
+                idx_benef = 0
 
             # Status opções
             status_opcoes = ["Pago", "Pendente"]
