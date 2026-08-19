@@ -960,6 +960,10 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
         if escolha:
             item = lista_edit[escolha]
             item_id = item['ID']
+
+            # CRIA UM CONTAINER ÚNICO PARA ESTE ID
+            container_edicao = st.container()
+            with container_edicao:
                 # O restante do seu código vem aqui, mas tudo indentado dentro deste container...
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             
@@ -1012,18 +1016,21 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
                 st.markdown("")
                 ed_benef = st.selectbox("Alterar Beneficiário:", beneficiarios_existentes if beneficiarios_existentes else [val_benef_atual], index=idx_benef, key=f"ed_benef_{item_id}")
             
-            # --- CAMPOS TRAVADOS PARA PROTEGER OS SALDOS E CATEGORIAS ---
+           # --- CAMPOS TRAVADOS (BLINDADOS E SEM CHAVES CONFLITANTES) ---
             st.markdown("")
-            st.text_input("Categoria (Fixo / Não editável)", value=item.get('Categoria', ''), disabled=True, key=f"ed_cat_txt_{item_id}")
-            ed_cat = item.get('Categoria', '') # Mantém o original ao salvar
+            val_cat = str(item.get('Categoria', ''))
+            st.text_input("Categoria (Fixo / Não editável)", value=val_cat, disabled=True)
+            ed_cat = val_cat # Mantém o original ao salvar
             
             st.markdown("")
-            st.text_input("Tipo (Fixo / Não editável)", value=item.get('Tipo', ''), disabled=True, key=f"ed_tipo_txt_{item_id}")
-            ed_tipo = item.get('Tipo', '') # Mantém o original ao salvar
+            val_tipo = str(item.get('Tipo', ''))
+            st.text_input("Tipo (Fixo / Não editável)", value=val_tipo, disabled=True)
+            ed_tipo = val_tipo # Mantém o original ao salvar
             
             st.markdown("")
-            st.text_input("Banco (Fixo / Não editável)", value=item.get('Banco', ''), disabled=True, key=f"ed_bnc_txt_{item_id}")
-            ed_bnc = item.get('Banco', '') # Mantém o original ao salvar
+            val_bnc = str(item.get('Banco', ''))
+            st.text_input("Banco (Fixo / Não editável)", value=val_bnc, disabled=True)
+            ed_bnc = val_bnc # Mantém o original ao salvar
             
             st.markdown("")
             ed_sta = st.selectbox("Status:", status_opcoes, index=index_status, key=f"ed_sta_{item_id}")
