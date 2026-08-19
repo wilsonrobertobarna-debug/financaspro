@@ -958,7 +958,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
         )
             
         if escolha:
-            if escolha:
             item = lista_edit[escolha]
             item_id = item['ID']
             
