@@ -917,7 +917,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
   
 
- # --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
+# --- BARRINHA 3: AJUSTE / EXCLUSÃO ---
 # Controla a abertura do expander para não fechar sozinho após o rerun
 if "abrir_expander" not in st.session_state:
     st.session_state["abrir_expander"] = False
@@ -959,6 +959,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
             
         if escolha:
             item = lista_edit[escolha]
+            item_id = item['ID']
             data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
             
             # Identifica se é uma transferência para tratar os campos de forma limpa
@@ -1009,8 +1010,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
 
-            # Usando um form para encapsular e sincronizar os dados perfeitamente sem conflito de keys
-            with st.form(key=f"form_ajuste_{item['ID']}"):
+            # Usando um form com key dinâmica baseada no ID para evitar travamentos
+            with st.form(key=f"form_ajuste_{item_id}"):
                 st.markdown("")
                 ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY")
                 
@@ -1049,7 +1050,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
                 submitted_excluir = col_ed2.form_submit_button("🚨 EXCLUIR")
 
                 if submitted_atualizar:
-                    id_alvo = int(float(item['ID']))
+                    id_alvo = int(float(item_id))
                     todos_registros = ws_base.get_all_values()
                     linhas_para_atualizar = []
                     
@@ -1085,7 +1086,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
                     st.rerun()
                     
                 if submitted_excluir:
-                    id_alvo = int(float(item['ID']))
+                    id_alvo = int(float(item_id))
                     todos_registros = ws_base.get_all_values()
                     linhas_para_excluir = []
                     
@@ -1108,6 +1109,8 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
                     st.session_state["selectbox_ajuste_val"] = ""
                     atualizar_sessao()
                     st.rerun()
+
+
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in st.session_state.page:
