@@ -1442,11 +1442,21 @@ elif "Pendências" in aba:
                             lbl_txt = f"💳 {b_nome} (Usado)"
                             val_txt = f"-R$ {usado_cart:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                         else:
-                            # Conta corrente / outros: considera todas as movimentações
+                            # --- BLOCO AJUSTADO: CONSIDERA APENAS DATA <= HOJE ---
                             filtro_cc = (df_base['Banco'] == b_nome)
-                            df_cc_atual = df_base[filtro_cc]
-                            ent = df_cc_atual[df_cc_atual['Tipo'].str.upper().isin(['RECEITA', 'TRANSFERÊNCIA'])]['V_Num'].sum()
-                            sai = df_cc_atual[df_cc_atual['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
+                            df_cc_atual = df_base[filtro_cc].copy()
+                            
+                            # Converte vencimento para datetime para filtrar
+                            df_cc_atual['Vencimento_DT'] = pd.to_datetime(df_cc_atual['Vencimento'], dayfirst=True, errors='coerce')
+                            hoje = pd.Timestamp.now().normalize()
+                            
+                            # Filtra apenas o que é passado ou hoje
+                            df_cc_filtrado = df_cc_atual[df_cc_atual['Vencimento_DT'] <= hoje]
+                            
+                            # Calcula saldo usando o filtro de data
+                            ent = df_cc_filtrado[df_cc_filtrado['Tipo'].str.upper().isin(['RECEITA', 'TRANSFERÊNCIA'])]['V_Num'].sum()
+                            sai = df_cc_filtrado[df_cc_filtrado['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
+                            
                             saldo_final = b_saldo_ini + ent - sai
                             lbl_txt = f"🏦 {b_nome}"
                             val_txt = f"R$ {saldo_final:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
