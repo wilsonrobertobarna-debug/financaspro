@@ -1058,10 +1058,24 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
                     todos_registros = ws_base.get_all_values()
                     linhas_para_atualizar = []
                     
+                    # Se for transferência, precisamos achar AS DUAS PONTAS (mesma descrição e data, mas bancos/tipos opostos)
+                    # Se for normal, acha apenas pelo ID exato
                     for idx_linha, row_values in enumerate(todos_registros[1:], start=2):
                         try:
-                            if len(row_values) >= 9 and int(float(row_values[8])) == id_alvo:
-                                linhas_para_atualizar.append(idx_linha)
+                            if len(row_values) >= 9:
+                                row_id = int(float(row_values[8]))
+                                if row_id == id_alvo:
+                                    linhas_para_atualizar.append(idx_linha)
+                                    
+                                # Se for transferência, procura também a linha irmã (mesma descrição, mesmo valor e data)
+                                if eh_transf and len(row_values) >= 3:
+                                    if row_values[2] == item.get('Descrição', ''):
+                                        # Verifica se é a outra ponta da transferência
+                                        if idx_linha not in linhas_para_atualizar:
+                                            # Checa se o valor bate
+                                            val_limpo_row = row_values[1].replace('R$', '').replace('.', '').replace(',', '.').strip()
+                                            if float(val_limpo_row or 0) == float(item.get('V_Num', 0)):
+                                                linhas_para_atualizar.append(idx_linha)
                         except:
                             pass
                     
@@ -1069,23 +1083,26 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
                         linhas_para_atualizar = [int(float(item.get('linha_planilha', id_alvo)))]
 
                     for linha_id in linhas_para_atualizar:
-                        # Data e Valor sempre atualizam
+                        # Recupera os dados originais desta linha específica da planilha para não misturar as pontas
+                        row_atual = todos_registros[linha_id - 1]
+                        orig_cat = row_atual[3] if len(row_atual) > 3 else ''
+                        orig_tipo = row_atual[4] if len(row_atual) > 4 else ''
+                        orig_banco = row_atual[5] if len(row_atual) > 5 else ''
+
+                        # Data e Valor sempre atualizam nas pontas da transferência (ou no lançamento normal)
                         ws_base.update_cell(linha_id, 1, f"'{ed_dat.strftime('%d/%m/%Y')}")
                         v_str_ed = f"'{ed_val:.2f}".replace('.', ',')
                         ws_base.update_cell(linha_id, 2, v_str_ed)
-                        
-                        # Descrição atualiza
                         ws_base.update_cell(linha_id, 3, ed_desc)
                         
-                        # --- TRAVA DE SEGURANÇA PARA TRANSFERÊNCIA ---
                         if eh_transf:
-                            # Se for transferência, FORÇA o valor original da planilha
-                            # para não deixar alterar Categoria, Tipo ou Banco acidentalmente
-                            ws_base.update_cell(linha_id, 4, str(item.get('Categoria', '')))
-                            ws_base.update_cell(linha_id, 5, str(item.get('Tipo', '')))
-                            ws_base.update_cell(linha_id, 6, str(item.get('Banco', '')))
+                            # TRAVA ABSOLUTA PARA TRANSFERÊNCIA: 
+                            # Mantém rigorosamente o Banco, Categoria e Tipo originais de cada ponta
+                            ws_base.update_cell(linha_id, 4, orig_cat)
+                            ws_base.update_cell(linha_id, 5, orig_tipo)
+                            ws_base.update_cell(linha_id, 6, orig_banco)
                         else:
-                            # Se for lançamento normal, aceita as alterações dos campos editáveis
+                            # Lançamento normal aceita alteração
                             ws_base.update_cell(linha_id, 4, ed_cat)
                             ws_base.update_cell(linha_id, 5, ed_tipo)
                             ws_base.update_cell(linha_id, 6, ed_bnc)
@@ -1095,7 +1112,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
 
                     st.toast("✅ Atualização sincronizada com segurança!", icon="💰")
                     st.session_state["abrir_expander"] = True
-                    st.session_state["selectbox_ajuste_val"] = ""
+                    # Removida a linha que causava o erro do Streamlit (selectbox_ajuste_val)
                     atualizar_sessao()
                     st.rerun()
                     
