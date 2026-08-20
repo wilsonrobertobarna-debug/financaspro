@@ -1121,10 +1121,20 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
                     todos_registros = ws_base.get_all_values()
                     linhas_para_excluir = []
                     
+                    # Se for transferência, procura as duas pontas para excluir junto (mesma descrição e valor)
                     for idx_linha, row_values in enumerate(todos_registros[1:], start=2):
                         try:
-                            if len(row_values) >= 9 and int(float(row_values[8])) == id_alvo:
-                                linhas_para_excluir.append(idx_linha)
+                            if len(row_values) >= 9:
+                                row_id = int(float(row_values[8]))
+                                if row_id == id_alvo:
+                                    linhas_para_excluir.append(idx_linha)
+                                    
+                                if eh_transf and len(row_values) >= 3:
+                                    if row_values[2] == item.get('Descrição', ''):
+                                        if idx_linha not in linhas_para_excluir:
+                                            val_limpo_row = row_values[1].replace('R$', '').replace('.', '').replace(',', '.').strip()
+                                            if float(val_limpo_row or 0) == float(item.get('V_Num', 0)):
+                                                linhas_para_excluir.append(idx_linha)
                         except:
                             pass
                     
@@ -1137,7 +1147,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
                     
                     st.toast("✅ Lançamento excluído com sucesso!", icon="💰")
                     st.session_state["abrir_expander"] = True
-                    st.session_state["selectbox_ajuste_val"] = ""
+                    # LINHA REMOVIDA DAQUI TAMBÉM PARA EVITAR A TELA COR DE ROSA
                     atualizar_sessao()
                     st.rerun()
 
