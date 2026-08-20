@@ -963,12 +963,17 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
         # --- TESTE CLÍNICO DE DIAGNÓSTICO ---
         st.warning(f"DEBUG: Tipo -> {item.get('Tipo')} | Descrição -> {item.get('Descrição')} | ID -> {item_id}")
             # ------------------------------------
-        data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
+        # Blindagem de data para evitar crash se a string vier corrompida
+            try:
+                data_atual_dt = datetime.strptime(str(item['Vencimento']).strip(), "%d/%m/%Y")
+            except Exception as e:
+                st.error(f"Erro na data: {e} | Valor: {item.get('Vencimento')}")
+                data_atual_dt = datetime.today()
 
-        # CRIA UM CONTAINER ÚNICO PARA ESTE ID
-        container_edicao = st.container()
-        with container_edicao:
-                # O restante do seu código vem aqui, mas tudo indentado dentro deste container...
+            # CRIA UM CONTAINER ÚNICO PARA ESTE ID
+            container_edicao = st.container()
+            with container_edicao:
+                st.success("Container aberto com sucesso! Renderizando inputs...")
             
             
             # Identifica se é uma transferência para tratar os campos de forma limpa
