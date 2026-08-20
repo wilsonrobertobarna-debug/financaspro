@@ -957,22 +957,27 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
             on_change=abrir_gaveta
         )
             
-    if escolha:
-        item = lista_edit[escolha]
-        item_id = item['ID']
-        # --- TESTE CLÍNICO DE DIAGNÓSTICO ---
-        st.warning(f"DEBUG: Tipo -> {item.get('Tipo')} | Descrição -> {item.get('Descrição')} | ID -> {item_id}")
-        # Blindagem de data para evitar crash se a string vier corrompida
-        try:
-            data_atual_dt = datetime.strptime(str(item['Vencimento']).strip(), "%d/%m/%Y")
-        except Exception as e:
-            st.error(f"Erro na data: {e} | Valor: {item.get('Vencimento')}")
-            data_atual_dt = datetime.today()
+    #if escolha:
+        if escolha:
+            item = lista_edit[escolha]
+            item_id = item['ID']
+            
+            st.warning(f"DEBUG 1: ID {item_id} lido com sucesso.")
 
-            # CRIA UM CONTAINER ÚNICO PARA ESTE ID
+            # Tenta ler a data de forma totalmente blindada
+            venc_bruto = item.get('Vencimento', '')
+            st.warning(f"DEBUG 2: Vencimento bruto é '{venc_bruto}'. Tentando converter...")
+
+            try:
+                data_atual_dt = datetime.strptime(str(venc_bruto).strip(), "%d/%m/%Y")
+                st.warning(f"DEBUG 3: Data convertida com sucesso para {data_atual_dt}")
+            except Exception as e:
+                st.error(f"ERRO FATAL NA DATA: {e}")
+                data_atual_dt = datetime.today()
+
             container_edicao = st.container()
             with container_edicao:
-                st.success("Container aberto com sucesso! Renderizando inputs...")
+                st.success("DEBUG 4: Entrou no container com sucesso!")
             
             
             # Identifica se é uma transferência para tratar os campos de forma limpa
