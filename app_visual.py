@@ -978,7 +978,14 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
             container_edicao = st.container()
             with container_edicao:
                 st.success("DEBUG 4: Entrou no container com sucesso!")
-            
+                
+                # --- INPUTS BLINDADOS ---
+                # Usando chaves curtas e limpas sem concatenações complexas
+                ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, key=f"d_{item_id}")
+                ed_val = st.number_input("Alterar Valor:", value=float(item.get('V_Num', 0.0)), key=f"v_{item_id}")
+                ed_desc = st.text_input("Alterar Descrição:", value=str(item.get('Descrição', '')), key=f"s_{item_id}")
+                
+                st.info("Inputs renderizados com sucesso!")            
             
             # Identifica se é uma transferência para tratar os campos de forma limpa
             tipo_atual_str = str(item.get('Tipo', '')).capitalize()
