@@ -957,37 +957,18 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
             on_change=abrir_gaveta
         )
             
-    #if escolha:
         if escolha:
             item = lista_edit[escolha]
             item_id = item['ID']
             
-            st.warning(f"DEBUG 1: ID {item_id} lido com sucesso.")
-
-            # Tenta ler a data de forma totalmente blindada
+            # Conversão segura da data
             venc_bruto = item.get('Vencimento', '')
-            st.warning(f"DEBUG 2: Vencimento bruto é '{venc_bruto}'. Tentando converter...")
-
             try:
                 data_atual_dt = datetime.strptime(str(venc_bruto).strip(), "%d/%m/%Y")
-                st.warning(f"DEBUG 3: Data convertida com sucesso para {data_atual_dt}")
-            except Exception as e:
-                st.error(f"ERRO FATAL NA DATA: {e}")
+            except Exception:
                 data_atual_dt = datetime.today()
 
-            container_edicao = st.container()
-            with container_edicao:
-                st.success("DEBUG 4: Entrou no container com sucesso!")
-                
-                # --- INPUTS BLINDADOS ---
-                # Usando chaves curtas e limpas sem concatenações complexas
-                ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, key=f"d_{item_id}")
-                ed_val = st.number_input("Alterar Valor:", value=float(item.get('V_Num', 0.0)), key=f"v_{item_id}")
-                ed_desc = st.text_input("Alterar Descrição:", value=str(item.get('Descrição', '')), key=f"s_{item_id}")
-                
-                st.info("Inputs renderizados com sucesso!")            
-            
-            # Identifica se é uma transferência para tratar os campos de forma limpa
+            # Identifica se é uma transferência
             tipo_atual_str = str(item.get('Tipo', '')).capitalize()
             desc_atual_str = str(item.get('Descrição', ''))
             eh_transf = ("Transferência" in tipo_atual_str) or ("TR:" in desc_atual_str) or ("TR (" in desc_atual_str)
@@ -1002,127 +983,131 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
             beneficiarios_existentes = sorted([b for b in beneficiarios_existentes if b and b != 'N/D'])
             val_benef_atual = "" if eh_transf else str(item.get('Beneficiário', item.get('Beneficiario', ''))).strip()
             
-            # Se o beneficiário atual do lançamento não estiver na lista geral, adiciona no topo
             if val_benef_atual and val_benef_atual not in beneficiarios_existentes:
                 beneficiarios_existentes.insert(0, val_benef_atual)
             
-            # Garante que a lista nunca fique totalmente vazia para evitar erro de índice
             if not beneficiarios_existentes:
                 beneficiarios_existentes = [val_benef_atual if val_benef_atual else "Geral"]
 
-            # Descobre o índice com segurança absoluta (evita IndexError)
             try:
                 idx_benef = beneficiarios_existentes.index(val_benef_atual) if val_benef_atual in beneficiarios_existentes else 0
             except (ValueError, TypeError):
                 idx_benef = 0
 
-            # Status opções
             status_opcoes = ["Pago", "Pendente"]
             index_status = status_opcoes.index(item['Status']) if item['Status'] in status_opcoes else 0
 
-            # --- SEM ST.FORM: Inputs totalmente livres e com chaves únicas baseadas no ID ---
-            st.markdown("")
-            ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY", key=f"ed_dat_{item_id}")
-            
-            st.markdown("")
-            ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f", key=f"ed_val_{item_id}")
-            
-            st.markdown("")
-            ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'], key=f"ed_desc_{item_id}")
-            
-            if eh_transf:
-                ed_benef = ""
-            else:
-                st.markdown("")
-                ed_benef = st.selectbox("Alterar Beneficiário:", beneficiarios_existentes if beneficiarios_existentes else [val_benef_atual], index=idx_benef, key=f"ed_benef_{item_id}")
-            
-           # --- CAMPOS TRAVADOS (BLINDADOS E SEM CHAVES CONFLITANTES) ---
-            st.markdown("")
-            val_cat = str(item.get('Categoria', ''))
-            st.text_input("Categoria (Fixo / Não editável)", value=val_cat, disabled=True)
-            ed_cat = val_cat # Mantém o original ao salvar
-            
-            st.markdown("")
-            val_tipo = str(item.get('Tipo', ''))
-            st.text_input("Tipo (Fixo / Não editável)", value=val_tipo, disabled=True)
-            ed_tipo = val_tipo # Mantém o original ao salvar
-            
-            st.markdown("")
-            val_bnc = str(item.get('Banco', ''))
-            st.text_input("Banco (Fixo / Não editável)", value=val_bnc, disabled=True)
-            ed_bnc = val_bnc # Mantém o original ao salvar
-            
-            st.markdown("")
-            ed_sta = st.selectbox("Status:", status_opcoes, index=index_status, key=f"ed_sta_{item_id}")
-            
-            st.markdown("<br>", unsafe_allow_html=True)
-            col_ed1, col_ed2 = st.columns(2)
-            
-            # Botões diretos (sem form_submit_button)
-            submitted_atualizar = col_ed1.button("💾 ATUALIZAR", key=f"btn_upd_{item_id}")
-            submitted_excluir = col_ed2.button("🚨 EXCLUIR", key=f"btn_del_{item_id}")
-
-            if submitted_atualizar:
-                id_alvo = int(float(item_id))
-                todos_registros = ws_base.get_all_values()
-                linhas_para_atualizar = []
+            container_edicao = st.container()
+            with container_edicao:
                 
-                for idx_linha, row_values in enumerate(todos_registros[1:], start=2):
-                    try:
-                        if len(row_values) >= 9 and int(float(row_values[8])) == id_alvo:
-                            linhas_para_atualizar.append(idx_linha)
-                    except:
-                        pass
-                
-                if not linhas_para_atualizar:
-                    linhas_para_atualizar = [int(float(item.get('linha_planilha', id_alvo)))]
-
-                for linha_id in linhas_para_atualizar:
-                    # Força a data como texto com apóstrofo
-                    ws_base.update_cell(linha_id, 1, f"'{ed_dat.strftime('%d/%m/%Y')}")
+                # --- CAMPOS DINÂMICOS CONFORME O TIPO DE LANÇAMENTO ---
+                if eh_transf:
+                    # MODO TRANSFERÊNCIA: Apenas Data e Valor abertos, o resto travado
+                    st.info("ℹ️ Transferência: Apenas Data e Valor editáveis.")
                     
-                    # Força o valor como texto com vírgula e apóstrofo
-                    v_str_ed = f"'{ed_val:.2f}".replace('.', ',')
-                    ws_base.update_cell(linha_id, 2, v_str_ed)
+                    st.markdown("")
+                    ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY", key=f"ed_dat_{item_id}")
                     
-                    ws_base.update_cell(linha_id, 3, ed_desc)
-                    ws_base.update_cell(linha_id, 4, ed_cat)  # Usa o original travado
-                    ws_base.update_cell(linha_id, 5, ed_tipo) # Usa o original travado
-                    ws_base.update_cell(linha_id, 6, ed_bnc)  # Usa o original travado
-                    ws_base.update_cell(linha_id, 7, ed_sta)
-                    ws_base.update_cell(linha_id, 10, ed_benef if not eh_transf else "")
+                    st.markdown("")
+                    ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f", key=f"ed_val_{item_id}")
+                    
+                    # Variáveis fixas para transferência
+                    ed_desc = item['Descrição']
+                    ed_benef = ""
+                    val_cat = str(item.get('Categoria', ''))
+                    val_tipo = str(item.get('Tipo', ''))
+                    val_bnc = str(item.get('Banco', ''))
+                    ed_cat, ed_tipo, ed_bnc = val_cat, val_tipo, val_bnc
+                    ed_sta = item.get('Status', 'Pago')
+                    
+                else:
+                    # MODO LANÇAMENTO NORMAL: TUDO ABERTO E EDITÁVEL!
+                    st.markdown("")
+                    ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY", key=f"ed_dat_{item_id}")
+                    
+                    st.markdown("")
+                    ed_val = st.number_input("Alterar Valor:", value=float(item['V_Num']), step=0.01, format="%.2f", key=f"ed_val_{item_id}")
+                    
+                    st.markdown("")
+                    ed_desc = st.text_input("Alterar Descrição:", value=item['Descrição'], key=f"ed_desc_{item_id}")
+                    
+                    st.markdown("")
+                    ed_benef = st.selectbox("Alterar Beneficiário:", beneficiarios_existentes, index=idx_benef, key=f"ed_benef_{item_id}")
+                    
+                    st.markdown("")
+                    ed_cat = st.text_input("Alterar Categoria:", value=str(item.get('Categoria', '')), key=f"ed_cat_{item_id}")
+                    
+                    st.markdown("")
+                    ed_tipo = st.text_input("Alterar Tipo:", value=str(item.get('Tipo', '')), key=f"ed_tipo_{item_id}")
+                    
+                    st.markdown("")
+                    ed_bnc = st.text_input("Alterar Banco:", value=str(item.get('Banco', '')), key=f"ed_bnc_{item_id}")
+                    
+                    st.markdown("")
+                    ed_sta = st.selectbox("Status:", status_opcoes, index=index_status, key=f"ed_sta_{item_id}")
 
-                st.toast("✅ Atualização sincronizada com sucesso!", icon="💰")
-                st.session_state["abrir_expander"] = True
-                st.session_state["selectbox_ajuste_val"] = ""
-                atualizar_sessao()
-                st.rerun()
+                st.markdown("<br>", unsafe_allow_html=True)
+                col_ed1, col_ed2 = st.columns(2)
                 
-            if submitted_excluir:
-                id_alvo = int(float(item_id))
-                todos_registros = ws_base.get_all_values()
-                linhas_para_excluir = []
-                
-                for idx_linha, row_values in enumerate(todos_registros[1:], start=2):
-                    try:
-                        if len(row_values) >= 9 and int(float(row_values[8])) == id_alvo:
-                            linhas_para_excluir.append(idx_linha)
-                    except:
-                        pass
-                
-                if linhas_para_excluir:
-                    for linha_id in sorted(list(set(linhas_para_excluir)), reverse=True):
+                submitted_atualizar = col_ed1.button("💾 ATUALIZAR", key=f"btn_upd_{item_id}")
+                submitted_excluir = col_ed2.button("🚨 EXCLUIR", key=f"btn_del_{item_id}")
+
+                if submitted_atualizar:
+                    id_alvo = int(float(item_id))
+                    todos_registros = ws_base.get_all_values()
+                    linhas_para_atualizar = []
+                    
+                    for idx_linha, row_values in enumerate(todos_registros[1:], start=2):
                         try:
-                            ws_base.delete_rows(linha_id)
+                            if len(row_values) >= 9 and int(float(row_values[8])) == id_alvo:
+                                linhas_para_atualizar.append(idx_linha)
                         except:
                             pass
-                
-                st.toast("✅ Lançamento excluído com sucesso!", icon="💰")
-                st.session_state["abrir_expander"] = True
-                st.session_state["selectbox_ajuste_val"] = ""
-                atualizar_sessao()
-                st.rerun()
+                    
+                    if not linhas_para_atualizar:
+                        linhas_para_atualizar = [int(float(item.get('linha_planilha', id_alvo)))]
 
+                    for linha_id in linhas_para_atualizar:
+                        ws_base.update_cell(linha_id, 1, f"'{ed_dat.strftime('%d/%m/%Y')}")
+                        v_str_ed = f"'{ed_val:.2f}".replace('.', ',')
+                        ws_base.update_cell(linha_id, 2, v_str_ed)
+                        ws_base.update_cell(linha_id, 3, ed_desc)
+                        ws_base.update_cell(linha_id, 4, ed_cat)
+                        ws_base.update_cell(linha_id, 5, ed_tipo)
+                        ws_base.update_cell(linha_id, 6, ed_bnc)
+                        ws_base.update_cell(linha_id, 7, ed_sta)
+                        ws_base.update_cell(linha_id, 10, ed_benef if not eh_transf else "")
+
+                    st.toast("✅ Atualização sincronizada com sucesso!", icon="💰")
+                    st.session_state["abrir_expander"] = True
+                    st.session_state["selectbox_ajuste_val"] = ""
+                    atualizar_sessao()
+                    st.rerun()
+                    
+                if submitted_excluir:
+                    id_alvo = int(float(item_id))
+                    todos_registros = ws_base.get_all_values()
+                    linhas_para_excluir = []
+                    
+                    for idx_linha, row_values in enumerate(todos_registros[1:], start=2):
+                        try:
+                            if len(row_values) >= 9 and int(float(row_values[8])) == id_alvo:
+                                linhas_para_excluir.append(idx_linha)
+                        except:
+                            pass
+                    
+                    if linhas_para_excluir:
+                        for linha_id in sorted(list(set(linhas_para_excluir)), reverse=True):
+                            try:
+                                ws_base.delete_rows(linha_id)
+                            except:
+                                pass
+                    
+                    st.toast("✅ Lançamento excluído com sucesso!", icon="💰")
+                    st.session_state["abrir_expander"] = True
+                    st.session_state["selectbox_ajuste_val"] = ""
+                    atualizar_sessao()
+                    st.rerun()
 
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
