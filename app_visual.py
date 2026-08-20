@@ -1069,17 +1069,31 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
                         linhas_para_atualizar = [int(float(item.get('linha_planilha', id_alvo)))]
 
                     for linha_id in linhas_para_atualizar:
+                        # Data e Valor sempre atualizam
                         ws_base.update_cell(linha_id, 1, f"'{ed_dat.strftime('%d/%m/%Y')}")
                         v_str_ed = f"'{ed_val:.2f}".replace('.', ',')
                         ws_base.update_cell(linha_id, 2, v_str_ed)
+                        
+                        # Descrição atualiza
                         ws_base.update_cell(linha_id, 3, ed_desc)
-                        ws_base.update_cell(linha_id, 4, ed_cat)
-                        ws_base.update_cell(linha_id, 5, ed_tipo)
-                        ws_base.update_cell(linha_id, 6, ed_bnc)
+                        
+                        # --- TRAVA DE SEGURANÇA PARA TRANSFERÊNCIA ---
+                        if eh_transf:
+                            # Se for transferência, FORÇA o valor original da planilha
+                            # para não deixar alterar Categoria, Tipo ou Banco acidentalmente
+                            ws_base.update_cell(linha_id, 4, str(item.get('Categoria', '')))
+                            ws_base.update_cell(linha_id, 5, str(item.get('Tipo', '')))
+                            ws_base.update_cell(linha_id, 6, str(item.get('Banco', '')))
+                        else:
+                            # Se for lançamento normal, aceita as alterações dos campos editáveis
+                            ws_base.update_cell(linha_id, 4, ed_cat)
+                            ws_base.update_cell(linha_id, 5, ed_tipo)
+                            ws_base.update_cell(linha_id, 6, ed_bnc)
+                        
                         ws_base.update_cell(linha_id, 7, ed_sta)
                         ws_base.update_cell(linha_id, 10, ed_benef if not eh_transf else "")
 
-                    st.toast("✅ Atualização sincronizada com sucesso!", icon="💰")
+                    st.toast("✅ Atualização sincronizada com segurança!", icon="💰")
                     st.session_state["abrir_expander"] = True
                     st.session_state["selectbox_ajuste_val"] = ""
                     atualizar_sessao()
