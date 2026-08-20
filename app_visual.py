@@ -960,6 +960,9 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
     if escolha:
         item = lista_edit[escolha]
         item_id = item['ID']
+        # --- TESTE CLÍNICO DE DIAGNÓSTICO ---
+        st.warning(f"DEBUG: Tipo -> {item.get('Tipo')} | Descrição -> {item.get('Descrição')} | ID -> {item_id}")
+            # ------------------------------------
         data_atual_dt = datetime.strptime(item['Vencimento'], "%d/%m/%Y")
 
         # CRIA UM CONTAINER ÚNICO PARA ESTE ID
