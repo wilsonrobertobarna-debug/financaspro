@@ -1002,8 +1002,9 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
                 
                 # --- CAMPOS DINÂMICOS CONFORME O TIPO DE LANÇAMENTO ---
                 if eh_transf:
-                    # MODO TRANSFERÊNCIA: Apenas Data e Valor abertos, o resto travado
-                    st.info("ℹ️ Transferência: Apenas Data e Valor editáveis.")
+                  
+                    # MODO TRANSFERÊNCIA: Mostra um resumo claro de origem/destino e libera Data e Valor
+                    st.info(f"🔄 **Editando Transferência**\n\n*{item.get('Descrição', '')}*\n* De: **{item.get('Banco', '')}** | Valor original: **R$ {item.get('Valor', '')}**")
                     
                     st.markdown("")
                     ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY", key=f"ed_dat_{item_id}")
