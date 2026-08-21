@@ -1495,18 +1495,23 @@ elif "Pendências" in aba:
                             lbl_txt = f"💳 {b_nome} (Usado)"
                             val_txt = f"-R$ {usado_cart:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                         else:
-                            # --- BLOCO AJUSTADO: CONSIDERA APENAS DATA <= HOJE ---
+                            # --- BLOCO CORRIGIDO: CONSIDERA ATÉ A DATA FINAL DO FILTRO DA TELA ---
                             filtro_cc = (df_base['Banco'] == b_nome)
                             df_cc_atual = df_base[filtro_cc].copy()
                             
                             # Converte vencimento para datetime para filtrar
                             df_cc_atual['Vencimento_DT'] = pd.to_datetime(df_cc_atual['Vencimento'], dayfirst=True, errors='coerce')
-                            hoje = pd.Timestamp.now().normalize()
                             
-                            # Filtra apenas o que é passado ou hoje
-                            df_cc_filtrado = df_cc_atual[df_cc_atual['Vencimento_DT'] <= hoje]
+                            # Pega a data limite com base no filtro de período escolhido na tela (c4.date_input)
+                            if isinstance(periodo, tuple) and len(periodo) == 2:
+                                data_limite = pd.Timestamp(periodo[1])
+                            else:
+                                data_limite = pd.Timestamp.now().normalize()
                             
-                            # Calcula saldo usando o filtro de data
+                            # Filtra tudo o que acontece até a data final selecionada no filtro
+                            df_cc_filtrado = df_cc_atual[df_cc_atual['Vencimento_DT'] <= data_limite]
+                            
+                            # Calcula saldo usando o filtro correto de data
                             ent = df_cc_filtrado[df_cc_filtrado['Tipo'].str.upper().isin(['RECEITA', 'TRANSFERÊNCIA'])]['V_Num'].sum()
                             sai = df_cc_filtrado[df_cc_filtrado['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
                             
