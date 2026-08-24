@@ -1458,27 +1458,44 @@ elif "Pendências" in aba:
         df_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-        # ==========================================
+       # ==========================================
         # --- CONFERÊNCIA RÁPIDA DE SALDOS (ATUALIZADO) ---
         # ==========================================
         st.markdown("---")
         st.markdown("### 📊 Saldos dos Bancos na Tela de Pendências")
         
         df_bancos_resumo = carregar_bancos_manual_gs()
-        if not df_bancos_resumo.empty:
-            # Pega todos os bancos disponíveis ou os que estão na tela
-            bancos_alvo = df_v['Banco'].dropna().unique() if not df_v.empty else df_bancos_resumo.iloc[:, 0].dropna().unique()
+        if not df_bancos_resumo.empty and not df_v.empty:
+            # Descobre a data limite com base no filtro de período da tela
+            if isinstance(periodo, tuple) and len(periodo) == 2:
+                data_inicio = pd.Timestamp(periodo[0])
+                data_limite = pd.Timestamp(periodo[1])
+            else:
+                data_inicio = pd.Timestamp.now().normalize()
+                data_limite = pd.Timestamp.now().normalize()
+
+            # Converte vencimento para datetime no df_v para filtrar o período certo
+            df_v_aux = df_v.copy()
+            df_v_aux['Venc_DT'] = pd.to_datetime(df_v_aux['Vencimento'], dayfirst=True, errors='coerce')
+            
+            # Filtra lançamentos dentro do período e que estejam PENDENTES
+            mask_periodo_pendente = (df_v_aux['Venc_DT'] >= data_inicio) & \
+                                    (df_v_aux['Venc_DT'] <= data_limite) & \
+                                    (df_v_aux['Status'].str.upper() == 'PENDENTE')
+            
+            df_pendentes_periodo = df_v_aux[mask_periodo_pendente]
+            
+            # Se o usuário selecionou um banco específico no filtro da tela, respeita ele.
+            # Se deixou em branco, pega apenas os bancos que possuem pendências no período filtrado.
+            if banco_selecionado:  # substitua 'banco_selecionado' pela variável real do seu multiselect de banco se o nome for diferente
+                bancos_alvo = [banco_selecionado] if isinstance(banco_selecionado, str) else banco_selecionado
+            else:
+                bancos_alvo = df_pendentes_periodo['Banco'].dropna().unique()
             
             df_bancos_filtrado = df_bancos_resumo[df_bancos_resumo.iloc[:, 0].isin(bancos_alvo)]
             
             if not df_bancos_filtrado.empty:
                 bancos_lista = list(df_bancos_filtrado.iterrows())
-                
-                # Descobre a data limite com base no filtro de período da tela
-                if isinstance(periodo, tuple) and len(periodo) == 2:
-                    data_limite = pd.Timestamp(periodo[1])
-                else:
-                    data_limite = pd.Timestamp.now().normalize()
 
                 for i in range(0, len(bancos_lista), 4):
                     bloco = bancos_lista[i:i+4]
@@ -1492,22 +1509,16 @@ elif "Pendências" in aba:
                         b_up = str(b_nome).upper()
                         
                         if "CARTA" in b_tipo or "CART" in b_up:
-                            # Para cartões, soma os lançamentos pendentes do mês selecionado
-                            mask_cart = (df_base['Banco'] == b_nome) & \
-                                        (df_base['Status'].str.upper() == 'PENDENTE') & \
-                                        (pd.to_datetime(df_base['Vencimento'], dayfirst=True, errors='coerce').dt.month == data_limite.month) & \
-                                        (pd.to_datetime(df_base['Vencimento'], dayfirst=True, errors='coerce').dt.year == data_limite.year)
-                            usado_cart = df_base.loc[mask_cart, 'V_Num'].sum()
+                            # Para cartões, soma os lançamentos pendentes do período selecionado
+                            mask_cart = (df_pendentes_periodo['Banco'] == b_nome)
+                            usado_cart = df_pendentes_periodo.loc[mask_cart, 'V_Num'].sum()
                             lbl_txt = f"💳 {b_nome} (Usado)"
                             val_txt = f"-R$ {usado_cart:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                         else:
-                            # Para Contas Correntes: Pega todo o histórico do banco até a data limite selecionada no filtro
+                            # Para Contas Correntes: Pega o histórico até a data limite selecionada
                             filtro_cc = (df_base['Banco'] == b_nome)
                             df_cc_atual = df_base[filtro_cc].copy()
-                            
                             df_cc_atual['Vencimento_DT'] = pd.to_datetime(df_cc_atual['Vencimento'], dayfirst=True, errors='coerce')
-                            
-                            # Filtra todas as movimentações até o final do período escolhido (ex: 30/09/2026)
                             df_cc_filtrado = df_cc_atual[df_cc_atual['Vencimento_DT'] <= data_limite]
                             
                             ent = df_cc_filtrado[df_cc_filtrado['Tipo'].str.upper().isin(['RECEITA', 'TRANSFERÊNCIA'])]['V_Num'].sum()
@@ -1519,6 +1530,8 @@ elif "Pendências" in aba:
                         
                         with cols_resumo[j]:
                             st.metric(label=lbl_txt, value=val_txt)
+        else:
+            st.info("Nenhum banco com pendências no período selecionado.")
                             
         st.markdown("---")
         # --- BOTÃO DE BAIXA ---
