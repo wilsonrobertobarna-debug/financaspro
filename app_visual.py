@@ -1485,12 +1485,15 @@ elif "Pendências" in aba:
             
             df_pendentes_periodo = df_v_aux[mask_periodo_pendente]
             
-            # REGRA DE SELEÇÃO:
-            # Se escolheu um banco específico, usa ele.
-            # Se deixou em branco/todos, pega SOMENTE os bancos que têm lançamentos pendentes no período.
-            if filtro_banco and len(filtro_banco) > 0:
+           # REGRA DE SELEÇÃO:
+            # Pega todos os bancos cadastrados para saber o total possível
+            todos_os_bancos_cadastrados = df_bancos_resumo.iloc[:, 0].dropna().unique()
+
+            # Se o usuário selecionou um ou mais bancos específicos (mas NÃO todos)
+            if filtro_banco and len(filtro_banco) > 0 and set(filtro_banco) != set(todos_os_bancos_cadastrados):
                 bancos_alvo = [filtro_banco] if isinstance(filtro_banco, str) else filtro_banco
             else:
+                # Se deixou em branco ou selecionou TODOS, pega SOMENTE os bancos com pendência no período
                 bancos_alvo = df_pendentes_periodo['Banco'].dropna().unique()
             
             # Filtra o resumo para manter APENAS os bancos que estão na lista de alvos (com pendência ou selecionados)
