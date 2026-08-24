@@ -1458,7 +1458,7 @@ elif "Pendências" in aba:
         df_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-       # ==========================================
+      # ==========================================
         # --- CONFERÊNCIA RÁPIDA DE SALDOS (ATUALIZADO) ---
         # ==========================================
         st.markdown("---")
@@ -1485,16 +1485,15 @@ elif "Pendências" in aba:
             
             df_pendentes_periodo = df_v_aux[mask_periodo_pendente]
             
-            # REGRA DE SELEÇÃO DE BANCOS:
-            # 1. Se o usuário escolheu um banco específico, mostra só ele.
-            # 2. Se deixou em branco ou escolheu "Todos", mostra APENAS os bancos que têm lançamentos pendentes no período.
+            # REGRA DE SELEÇÃO:
+            # Se escolheu um banco específico, usa ele.
+            # Se deixou em branco/todos, pega SOMENTE os bancos que têm lançamentos pendentes no período.
             if filtro_banco and len(filtro_banco) > 0:
-                # Se for multiselect ou selectbox preenchido
                 bancos_alvo = [filtro_banco] if isinstance(filtro_banco, str) else filtro_banco
             else:
-                # Pega unicamente os bancos que aparecem nos lançamentos pendentes do período
                 bancos_alvo = df_pendentes_periodo['Banco'].dropna().unique()
             
+            # Filtra o resumo para manter APENAS os bancos que estão na lista de alvos (com pendência ou selecionados)
             df_bancos_filtrado = df_bancos_resumo[df_bancos_resumo.iloc[:, 0].isin(bancos_alvo)]
             
             if not df_bancos_filtrado.empty:
@@ -1533,6 +1532,8 @@ elif "Pendências" in aba:
                         
                         with cols_resumo[j]:
                             st.metric(label=lbl_txt, value=val_txt)
+            else:
+                st.info("Nenhum banco com pendências no período selecionado.")
         else:
             st.info("Nenhum banco com pendências no período selecionado.")
                             
