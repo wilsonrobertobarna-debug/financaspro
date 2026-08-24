@@ -1487,8 +1487,8 @@ elif "Pendências" in aba:
             
             # Se o usuário selecionou um banco específico no filtro da tela, respeita ele.
             # Se deixou em branco, pega apenas os bancos que possuem pendências no período filtrado.
-            if banco_selecionado:  # substitua 'banco_selecionado' pela variável real do seu multiselect de banco se o nome for diferente
-                bancos_alvo = [banco_selecionado] if isinstance(banco_selecionado, str) else banco_selecionado
+            if filtro_banco:
+                bancos_alvo = [filtro_banco] if isinstance(filtro_banco, str) else filtro_banco
             else:
                 bancos_alvo = df_pendentes_periodo['Banco'].dropna().unique()
             
