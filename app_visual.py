@@ -1022,6 +1022,7 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
                     ed_sta = item.get('Status', 'Pago')
                     
                 else:
+                    else:
                     # MODO LANÇAMENTO NORMAL: TUDO ABERTO E EDITÁVEL!
                     st.markdown("")
                     ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY", key=f"ed_dat_{item_id}")
@@ -1035,14 +1036,60 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
                     st.markdown("")
                     ed_benef = st.selectbox("Alterar Beneficiário:", beneficiarios_existentes, index=idx_benef, key=f"ed_benef_{item_id}")
                     
+                    # --- CATEGORIA COM PESQUISA ---
+                    categorias_existentes = sorted([c for c in df_base['Categoria'].dropna().astype(str).str.strip().unique().tolist() if c and c != 'N/D'])
+                    val_cat_atual = str(item.get('Categoria', '')).strip()
+                    if val_cat_atual and val_cat_atual not in categorias_existentes:
+                        categorias_existentes.insert(0, val_cat_atual)
+                    if not categorias_existentes:
+                        categorias_existentes = [val_cat_atual if val_cat_atual else "Geral"]
+                    try:
+                        idx_cat = categorias_existentes.index(val_cat_atual) if val_cat_atual in categorias_existentes else 0
+                    except (ValueError, TypeError):
+                        idx_cat = 0
+
                     st.markdown("")
-                    ed_cat = st.text_input("Alterar Categoria:", value=str(item.get('Categoria', '')), key=f"ed_cat_{item_id}")
+                    ed_cat = st.selectbox("Alterar Categoria:", categorias_existentes, index=idx_cat, key=f"ed_cat_{item_id}")
                     
+                    # --- TIPO COM PESQUISA ---
+                    tipos_existentes = sorted([t for t in df_base['Tipo'].dropna().astype(str).str.strip().unique().tolist() if t and t != 'N/D'])
+                    val_tipo_atual = str(item.get('Tipo', '')).strip()
+                    if val_tipo_atual and val_tipo_atual not in tipos_existentes:
+                        tipos_existentes.insert(0, val_tipo_atual)
+                    if not tipos_existentes:
+                        tipos_existentes = [val_tipo_atual if val_tipo_atual else "Despesa"]
+                    try:
+                        idx_tipo = tipos_existentes.index(val_tipo_atual) if val_tipo_atual in tipos_existentes else 0
+                    except (ValueError, TypeError):
+                        idx_tipo = 0
+
                     st.markdown("")
-                    ed_tipo = st.text_input("Alterar Tipo:", value=str(item.get('Tipo', '')), key=f"ed_tipo_{item_id}")
+                    ed_tipo = st.selectbox("Alterar Tipo:", tipos_existentes, index=idx_tipo, key=f"ed_tipo_{item_id}")
                     
+                    # --- BANCO COM PESQUISA ---
+                    bancos_existentes = []
+                    try:
+                        df_b_temp = carregar_bancos_manual_gs()
+                        if not df_b_temp.empty:
+                            bancos_existentes = sorted(df_b_temp.iloc[:, 0].dropna().astype(str).str.strip().unique().tolist())
+                    except:
+                        pass
+                    
+                    if not bancos_existentes and 'Banco' in df_base.columns:
+                        bancos_existentes = sorted(df_base['Banco'].dropna().astype(str).str.strip().unique().tolist())
+                    
+                    val_bnc_atual = str(item.get('Banco', '')).strip()
+                    if val_bnc_atual and val_bnc_atual not in bancos_existentes:
+                        bancos_existentes.insert(0, val_bnc_atual)
+                    if not bancos_existentes:
+                        bancos_existentes = [val_bnc_atual if val_bnc_atual else "Geral"]
+                    try:
+                        idx_bnc = bancos_existentes.index(val_bnc_atual) if val_bnc_atual in bancos_existentes else 0
+                    except (ValueError, TypeError):
+                        idx_bnc = 0
+
                     st.markdown("")
-                    ed_bnc = st.text_input("Alterar Banco:", value=str(item.get('Banco', '')), key=f"ed_bnc_{item_id}")
+                    ed_bnc = st.selectbox("Alterar Banco:", bancos_existentes, index=idx_bnc, key=f"ed_bnc_{item_id}")
                     
                     st.markdown("")
                     ed_sta = st.selectbox("Status:", status_opcoes, index=index_status, key=f"ed_sta_{item_id}")
