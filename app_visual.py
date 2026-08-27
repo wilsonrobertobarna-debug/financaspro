@@ -1022,7 +1022,6 @@ with st.sidebar.expander("⚙️ Ajustar Lançamento", expanded=st.session_state
                     ed_sta = item.get('Status', 'Pago')
                     
                 else:
-                    else:
                     # MODO LANÇAMENTO NORMAL: TUDO ABERTO E EDITÁVEL!
                     st.markdown("")
                     ed_dat = st.date_input("Alterar Vencimento:", value=data_atual_dt, format="DD/MM/YYYY", key=f"ed_dat_{item_id}")
