@@ -1358,15 +1358,21 @@ if "💰" in st.session_state.page:
         mes_atual_num = mes_map[mes_atual]
         mes_anterior_num = mes_atual_num - 1 if mes_atual_num > 1 else 12
         
+  
         # 2. Preparar os dados (convertendo a coluna de vencimento para data)
-
         df_comp = df_base.copy()
         
         # --- BLOCO DE SEGURANÇA PARA DATAS ---
         df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
         
-        # Correção aqui: era .co e agora é .copy()
-        df_comp = df_comp[df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num])].copy()
+        # Pega o ano atual para garantir que estamos olhando 2026
+        ano_atual = pd.Timestamp.now().year
+        
+        # Filtra os meses anterior e atual dentro do ano correto
+        df_comp = df_comp[
+            (df_comp['Vencimento'].dt.year == ano_atual) & 
+            (df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num]))
+        ].copy()
         
        # 4. Tabela dinâmica
         df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
