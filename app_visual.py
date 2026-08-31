@@ -1243,11 +1243,13 @@ if "💰" in st.session_state.page:
     if not mes_atual or mes_atual not in mes_map:
         mes_atual = default_mes
 
-    if not df_base.empty:
+if not df_base.empty:
         filtro_mes = f"{mes_map.get(mes_atual, '08')}/26"
-
         
-        # --- IDENTIFICAÇÃO DE BANCOS EM MOEDA ESTRANGEIRA (Versão Blindada) ---
+        # Filtra os dados do mês
+        df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
+        
+        # --- IDENTIFICAÇÃO DE BANCOS EM MOEDA ESTRANGEIRA ---
         bancos_estrangeiros = []
         if "df_bancos_info" in locals() and not df_bancos_info.empty:
             for _, r_b in df_bancos_info.iterrows():
