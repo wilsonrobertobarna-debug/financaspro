@@ -1922,9 +1922,22 @@ elif "📄" in aba:
     patrimonio_usd = sub_contas_invest_usd + sub_bens_veiculos_usd
     patrimonio_eur = sub_contas_invest_eur + sub_bens_veiculos_eur
 
-    # 2. RESUMO DO PERÍODO ORIGINAL
+    # Identifica quais bancos são estrangeiros para isolar dos cálculos em Reais
+    bancos_estrangeiros_zap = []
+    if not df_bancos_info.empty:
+        for _, row_b in df_bancos_info.iterrows():
+            if len(row_b) >= 6:
+                m_val = str(row_b.iloc[5]).strip().upper()
+                if m_val in ["USD", "EUR"]:
+                    bancos_estrangeiros_zap.append(str(row_b.iloc[0]).strip())
+
+# 2. RESUMO DO PERÍODO ORIGINAL (Excluindo Bancos Estrangeiros)
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
+
+    # Remove transações de bancos estrangeiros do resumo em Reais
+    if bancos_estrangeiros_zap:
+        df_per = df_per[~df_per['Banco'].isin(bancos_estrangeiros_zap)]
 
     if not df_per.empty:
         df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
@@ -1957,7 +1970,6 @@ elif "📄" in aba:
     if sub_contas_invest_usd > 0: relat += f"📊 Subtotal Contas & Invest. (USD): {m_fmt_usd(sub_contas_invest_usd)}\n"
     if sub_contas_invest_eur > 0: relat += f"📊 Subtotal Contas & Invest. (EUR): {m_fmt_eur(sub_contas_invest_eur)}\n"
     relat += f"💳 Subtotal Cartões Usados: {m_fmt(sub_cartoes_brl)}\n"
-    #relat += f"🍽️ Subtotal Vale Refeição: {m_fmt(sub_vr_brl)}\n"
     relat += f"🚗 Subtotal T-Cross + Moto Lead (BRL): {m_fmt(sub_bens_veiculos_brl)}\n"
     if sub_bens_veiculos_usd > 0: relat += f"🚗 Subtotal Bens (USD): {m_fmt_usd(sub_bens_veiculos_usd)}\n"
     if sub_bens_veiculos_eur > 0: relat += f"🚗 Subtotal Bens (EUR): {m_fmt_eur(sub_bens_veiculos_eur)}\n"
@@ -1968,10 +1980,6 @@ elif "📄" in aba:
     if patrimonio_eur > 0: relat += f"🇪🇺 Euro: {m_fmt_eur(patrimonio_eur)}"
     
     st.text_area("Copiar Relatório para o WhatsApp", relat, height=380)
-    
-    import urllib.parse
-    link_zap = f"https://wa.me/?text={urllib.parse.quote(relat)}"
-    st.markdown(f'[📲 Enviar Resumo para o WhatsApp]({link_zap})', unsafe_allow_html=True)
 
 
     
