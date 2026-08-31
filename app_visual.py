@@ -1243,7 +1243,7 @@ if "💰" in st.session_state.page:
     if not mes_atual or mes_atual not in mes_map:
         mes_atual = default_mes
 
-if not df_base.empty:
+    if not df_base.empty:
         filtro_mes = f"{mes_map.get(mes_atual, '08')}/26"
         
         # Filtra os dados do mês
