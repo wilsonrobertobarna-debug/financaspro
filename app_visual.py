@@ -1230,13 +1230,27 @@ if "💰" in st.session_state.page:
         
         # Filtra os dados do mês
         df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
-        df_m_limpo = df_m[(df_m['Categoria'] != 'Transferência') & (df_m['Status'] == 'Pago')]
         
-        # 3. CÁLCULOS
+        # --- IDENTIFICAÇÃO DE BANCOS EM MOEDA ESTRANGEIRA ---
+        bancos_estrangeiros = []
+        if 'df_bancos_info' in locals() and not df_bancos_info.empty:
+            for _, r_b in df_bancos_info.iterrows():
+                if len(r_b) > 5 and str(r_b.iloc[5]).strip().upper() in ["USD", "EUR"]:
+                    bancos_estrangeiros.append(str(r_b.iloc[0]).strip())
+
+        # Isola no painel principal APENAS o que NÃO é de banco estrangeiro (ou seja, foca no Real/BRL)
+        if bancos_estrangeiros:
+            df_m_br = df_m[~df_m['Banco'].isin(bancos_estrangeiros)].copy()
+        else:
+            df_m_br = df_m.copy()
+
+        df_m_limpo = df_m_br[(df_m_br['Categoria'] != 'Transferência') & (df_m_br['Status'] == 'Pago')]
+        
+        # 3. CÁLCULOS (Agora rodando 100% seguros em Reais)
         receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
         gasto_total = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-        pendente = df_m[df_m['Status'] == 'Pendente']['V_Num'].sum()
+        pendente = df_m_br[df_m_br['Status'] == 'Pendente']['V_Num'].sum()
         saldo_geral = (receita_total + rendimento) - gasto_total
 
         # 4. EXIBIÇÃO DO SALDO
