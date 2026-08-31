@@ -1232,15 +1232,14 @@ if "💰" in st.session_state.page:
     else:
         default_mes = meses_abreviados[0] if meses_abreviados else None  
     
-        mes_atual = st.pills(
+mes_atual = st.pills(
         "Período:",
         meses_abreviados,
         selection_mode="single",
         default=default_mes,
     )
 
-    # Proteção caso nenhum mês venha selecionado
-    if not mes_atual:
+    if not mes_atual or mes_atual not in mes_map:
         mes_atual = meses_abreviados[datetime.now().month - 1]
 
     if not df_base.empty:
@@ -1248,7 +1247,7 @@ if "💰" in st.session_state.page:
             "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
             "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
         }
-        filtro_mes = f"{mes_map[mes_atual]}/26"
+        filtro_mes = f"{mes_map.get(mes_atual, '08')}/26"
         
         # --- IDENTIFICAÇÃO DE BANCOS EM MOEDA ESTRANGEIRA (Versão Blindada) ---
         bancos_estrangeiros = []
