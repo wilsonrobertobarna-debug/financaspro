@@ -1220,18 +1220,19 @@ if "💰" in st.session_state.page:
     st.subheader("🛡️ FinançasPro Wilson")
 
 # 1. BARRINHA DE MESES
-    meses_abreviados = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    
-    # Mapeamento seguro baseado no número do mês atual (evita bug de idioma do servidor em inglês como "Aug")
-    num_mes_atual = datetime.now().month - 1  # 0 a 11
-    mes_atual_hoje = meses_abreviados[num_mes_atual]
+    meses_abreviados = [
+        "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
+        "Jul", "Ago", "Set", "Out", "Nov", "Dez"
+    ]
 
-    # Garante que o default do mês existe na lista para evitar que o Streamlit quebre
-    if mes_atual_hoje in meses_abreviados:
-        default_mes = mes_atual_hoje
-    else:
-        default_mes = meses_abreviados[0] if meses_abreviados else None  
-    
+    num_mes_atual = datetime.now().month - 1
+    default_mes = meses_abreviados[num_mes_atual] if meses_abreviados else "Jan"
+
+    mes_map = {
+        "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
+        "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
+    }
+
     mes_atual = st.pills(
         "Período:",
         meses_abreviados,
@@ -1240,14 +1241,10 @@ if "💰" in st.session_state.page:
     )
 
     if not mes_atual or mes_atual not in mes_map:
-        mes_atual = meses_abreviados[datetime.now().month - 1]
+        mes_atual = default_mes
 
     if not df_base.empty:
-        mes_map = {
-            "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
-            "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
-        }
-        filtro_mes = f"{mes_map.get(mes_atual, '08')}/26"  
+        filtro_mes = f"{mes_map.get(mes_atual, '08')}/26"
 
         
         # --- IDENTIFICAÇÃO DE BANCOS EM MOEDA ESTRANGEIRA (Versão Blindada) ---
