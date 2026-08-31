@@ -495,7 +495,7 @@ def enviar_whatsapp_pendencias(df):
                 periodo_nome = "Segunda Quinzena (Vencimentos de 16 em diante)"
 
             # Identifica e isola os bancos estrangeiros no WhatsApp
-            bancos_estrangeiros = []
+           bancos_estrangeiros = []
             if 'df_bancos_info' in globals() and not df_bancos_info.empty:
                 for _, r_b in df_bancos_info.iterrows():
                     if len(r_b) > 5 and str(r_b.iloc[5]).strip().upper() in ["USD", "EUR"]:
