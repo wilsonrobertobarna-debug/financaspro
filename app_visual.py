@@ -1824,6 +1824,7 @@ elif "📄" in aba:
     def m_fmt_eur(n): return f"€ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
     # 1. LOOP PELOS BANCOS E ATIVOS
+    # 1. LOOP PELOS BANCOS E ATIVOS
     for b in sorted(bancos_disponiveis):
         valor_b = 0.0      
         tipo_c = ""
@@ -1864,7 +1865,7 @@ elif "📄" in aba:
                             dia_venc_e = int(float(ven_raw)) if ven_raw and ven_raw != 'nan' else 10
                     except: pass
                     break
-        
+
         b_up = b.upper()
         
         # --- CARTÕES DE CRÉDITO ---
@@ -1876,17 +1877,14 @@ elif "📄" in aba:
 
             usado = df_base.loc[mask, 'V_Num'].sum()
             dispo = limite_cartao - usado
-            sub_cartoes_brl += usado
+            
+            # ATENÇÃO: Só soma no subtotal BRL se a moeda do cartão for Real
+            if moeda_b == "BRL":
+                sub_cartoes_brl += usado
             
             usado_fmt = f"{m_fmt(usado)} 🔴" if usado > 0 else m_fmt(0)
             saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {usado_fmt} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
         
-        # --- VALE REFEIÇÃO (VR / VA) ---
-        #elif "REFEIÇÃO" in tipo_c or "VR" in b_up or "VA" in b_up or "ALIMENTAÇÃO" in b_up:
-            #saldo_vr = valor_b
-            #sub_vr_brl += saldo_vr
-            #saldos_txt += f"🍽️ {b}: {m_fmt(saldo_vr)}\n"
-
         # --- VEÍCULOS E BENS ---
         elif "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
             saldo_bem = valor_b
