@@ -464,26 +464,23 @@ df_bancos_info = st.session_state['df_bancos_info']
 def enviar_whatsapp_pendencias(df):
     now = datetime.now()
     dia_atual = now.day
-    
-    # Se o botão de teste foi apertado, vamos mostrar o que está acontecendo
+
     if st.session_state.get('forcar_envio_wa', False):
         twilio_secrets = st.secrets.get("twilio", {})
         sid = twilio_secrets.get("account_sid")
         token = twilio_secrets.get("auth_token")
         w_from = twilio_secrets.get("whatsapp_from")
         w_to = twilio_secrets.get("whatsapp_to")
-        
-        # 1. Testa se as chaves foram lidas
+
         if not sid or not token or not w_from or not w_to:
             st.error("❌ Erro: As chaves do Twilio não foram encontradas no secrets.toml!")
             st.session_state['forcar_envio_wa'] = False
             return
-        
+
         try:
             from twilio.rest import Client
             client_tw = Client(sid, token)
-            
-            # Define a janela da quinzena
+
             if 1 <= dia_atual <= 15:
                 data_inicio = now.replace(day=1)
                 data_fim = now.replace(day=15)
@@ -497,10 +494,20 @@ def enviar_whatsapp_pendencias(df):
                 data_fim = proximo_mes - timedelta(days=1)
                 periodo_nome = "Segunda Quinzena (Vencimentos de 16 em diante)"
 
+            # Identifica e isola os bancos estrangeiros no WhatsApp
+            bancos_estrangeiros = []
+            if 'df_bancos_info' in globals() and not df_bancos_info.empty:
+                for _, r_b in df_bancos_info.iterrows():
+                    if len(r_b) > 5 and str(r_b.iloc[5]).strip().upper() in ["USD", "EUR"]:
+                        bancos_estrangeiros.append(str(r_b.iloc[0]).strip())
+
             df_aviso = df[(df['Status'] == 'Pendente') & (df['DT'].notnull())].copy()
-            
+
+            if bancos_estrangeiros:
+                df_aviso = df_aviso[~df_aviso['Banco'].isin(bancos_estrangeiros)]
+
             if df_aviso.empty:
-                st.warning("⚠️ O Twilio está conectado, mas **não há nenhuma conta com o status 'Pendente'** na sua planilha.")
+                st.warning("⚠️ O Twilio está conectado, mas **não há nenhuma conta com o status 'Pendente'** em Reais na sua planilha.")
                 st.session_state['forcar_envio_wa'] = False
                 return
 
@@ -510,27 +517,25 @@ def enviar_whatsapp_pendencias(df):
             ].copy()
 
             if df_quinzena.empty:
-                st.warning(f"⚠️ O Twilio está conectado, mas **não há contas pendentes para esta quinzena** ({periodo_nome}).")
+                st.warning(f"⚠️ O Twilio está conectado, mas **não há contas pendentes para esta quinzena** em Reais ({periodo_nome}).")
                 st.session_state['forcar_envio_wa'] = False
                 return
 
-          # Se chegou aqui, tem tudo certo! Vamos montar e disparar
             df_quinzena = df_quinzena.sort_values(by='DT')
             mensagem = f"🔔 *FinançasPro: Alerta Quinzena*\n*({periodo_nome})*\n\n"
             total_quinc = 0.0
             contador = 0
-            
+
             for _, row in df_quinzena.iterrows():
                 data_fmt = row.get('Data', row['DT'].strftime('%d/%m/%Y'))
                 desc = row.get('Descrição', 'Sem descrição')
                 valor = row.get('V_Num', 0.0)
                 banco = row.get('Banco', 'N/D')
-                
-                # Vamos limitar a até 5 contas por mensagem para garantir leveza e segurança
+
                 if contador >= 5:
                     mensagem += "⚠️ *Existem mais contas no período. Acesse o app para ver a lista completa.*\n\n"
                     break
-                
+
                 mensagem += f"📌 *{desc}*\n    📅 Venc: {data_fmt} | {m_fmt(valor)} | Banco: {banco}\n\n"
                 total_quinc += float(valor)
                 contador += 1
@@ -538,7 +543,6 @@ def enviar_whatsapp_pendencias(df):
             mensagem += f"💰 *Total previsto: {m_fmt(total_quinc)}*\n"
             mensagem += "Acesse o FinançasPro para gerenciar tudo!"
 
-            # Envia a mensagem enxuta e segura dentro do limite
             client_tw.messages.create(
                 body=mensagem,
                 from_=w_from,
@@ -546,10 +550,10 @@ def enviar_whatsapp_pendencias(df):
             )
             st.success(f"🚀 Alerta resumido disparado com sucesso para {w_to}!")
             st.session_state['last_wa_date'] = now.date()
-            
+
         except Exception as e:
             st.error(f"❌ Erro técnico ao enviar pelo Twilio: {e}")
-        
+
         st.session_state['forcar_envio_wa'] = False
         
 # CARREGA OS BANCOS DINAMICAMENTE DA PLANILHA OU USA OS PADRÕES
