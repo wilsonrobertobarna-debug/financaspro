@@ -1232,7 +1232,7 @@ if "💰" in st.session_state.page:
     else:
         default_mes = meses_abreviados[0] if meses_abreviados else None  
     
- mes_atual = st.pills(
+  mes_atual = st.pills(
         "Período:",
         meses_abreviados,
         selection_mode="single",
