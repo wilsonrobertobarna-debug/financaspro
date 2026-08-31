@@ -1230,16 +1230,26 @@ if "💰" in st.session_state.page:
     if mes_atual_hoje in meses_abreviados:
         default_mes = mes_atual_hoje
     else:
-        default_mes = meses_abreviados[0] if meses_abreviados else None
-
-    mes_atual = st.pills("Período:", meses_abreviados, selection_mode="single", default=default_mes)
+        default_mes = meses_abreviados[0] if meses_abreviados else None  
     
 if not df_base.empty:
-        # 2. TRADUÇÃO DO FILTRO
-        mes_map = {"Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
-                   "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"}
-        filtro_mes = f"{mes_map[mes_atual]}/26"
-        
+        mes_atual = st.pills(
+        "Período:",
+        meses_abreviados,
+        selection_mode="single",
+        default=default_mes,
+    )
+
+    # Proteção caso nenhum mês venha selecionado
+    if not mes_atual:
+        mes_atual = meses_abreviados[datetime.now().month - 1]
+
+    if not df_base.empty:
+        mes_map = {
+            "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
+            "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
+        }
+        filtro_mes = f"{mes_map[mes_atual]}/26"        
         # Filtra os dados do mês
         df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
         
