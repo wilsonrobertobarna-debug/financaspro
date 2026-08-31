@@ -309,11 +309,8 @@ def carregar_dados_gs():
     
     df = pd.DataFrame(dados[1:], columns=dados[0])
     
-    # GUARDA A LINHA REAL DO GOOGLE SHEETS (Onde 0 no DataFrame é a linha 2 da planilha)
-    # Linha do DF 0 + 2 = Linha 2 do Sheets
     df['Linha_Sheets'] = range(2, len(df) + 2)
     
-    # Garante que o ID lido seja o número real gravado na Coluna I da planilha
     if 'ID' in df.columns:
         df['ID'] = pd.to_numeric(df['ID'], errors='coerce').fillna(0).astype(int)
     else:
@@ -325,7 +322,12 @@ def carregar_dados_gs():
         
     df['V_Num'] = df['Valor'].apply(p_float)
     df['DT'] = pd.to_datetime(df['Vencimento'], dayfirst=True, errors='coerce')    
-    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y') # CORRIGIDO AQUI (Removido o 's' extra)
+    df['Mes_Ano'] = df['DT'].dt.strftime('%m/%y')
+    
+    # Garante que a coluna Banco existe e está limpa
+    if 'Banco' not in df.columns:
+        df['Banco'] = 'Dinheiro'
+        
     return df
     
  
