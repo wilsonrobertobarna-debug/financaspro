@@ -522,7 +522,15 @@ def enviar_whatsapp_pendencias(df):
                 return
 
             df_quinzena = df_quinzena.sort_values(by='DT')
-            mensagem = f"🔔 *FinançasPro: Alerta Quinzena*\n*({periodo_nome})*\n\n"
+            
+            # Cabeçalho ajustado usando apenas os dados filtrados em Reais (BRL)
+            mensagem = f"🛡️ *RELATÓRIO WILSON & FABIANA*\n"
+            mensagem += f"Período: {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}\n"
+            mensagem += f"========================================\n"
+            mensagem += f"REC: {m_fmt(rec_mes)} | REND: {m_fmt(rend_mes)} (Info)\n"
+            mensagem += f"DES: {m_fmt(des_mes)} | SOBRA: {m_fmt(sobra_mes)}\n"
+            mensagem += f"========================================\n\n"
+            mensagem += f"🔔 *Alerta Quinzena* *({periodo_nome})*\n\n"
             total_quinc = 0.0
             contador = 0
 
