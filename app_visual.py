@@ -1269,10 +1269,13 @@ if "💰" in st.session_state.page:
         receita_total = df_m_limpo[df_m_limpo['Tipo'] == 'Receita']['V_Num'].sum()
         gasto_total = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         rendimento = df_m_limpo[df_m_limpo['Tipo'] == 'Rendimento']['V_Num'].sum()
-        pendente = df_m_br[df_m_br['Status'] == 'Pendente']['V_Num'].sum()
+        
+        # Separando o pendente em Contas a Pagar e Contas a Receber
+        contas_a_pagar = df_m_br[(df_m_br['Status'] == 'Pendente') & (df_m_br['Tipo'] == 'Despesa')]['V_Num'].sum()
+        contas_a_receber = df_m_br[(df_m_br['Status'] == 'Pendente') & (df_m_br['Tipo'] == 'Receita')]['V_Num'].sum()
+        
         saldo_geral = (receita_total + rendimento) - gasto_total
 
-        # 4. EXIBIÇÃO DO SALDO
         # 4. EXIBIÇÃO DO SALDO
         cor_saldo = "#2ecc71" if saldo_geral >= 0 else "#e74c3c"
         st.markdown(f"""
@@ -1282,7 +1285,7 @@ if "💰" in st.session_state.page:
             </div>
         """, unsafe_allow_html=True)
     
-            # 🚦 SEMÁFORO DO MÊS (Verde, Amarelo ou Vermelho)
+        # 🚦 SEMÁFORO DO MÊS (Verde, Amarelo ou Vermelho)
         if receita_total > 0:
             percentual_gasto = (gasto_total / receita_total) * 100
         else:
@@ -1302,11 +1305,13 @@ if "💰" in st.session_state.page:
             </div>
         """, unsafe_allow_html=True)
 
-        c1, c2, c3, c4 = st.columns(4)
+        # Atualizado para 5 colunas para caber tudo limpinho
+        c1, c2, c3, c4, c5 = st.columns(5)
         c1.metric("📈 Receita", f"R$ {receita_total:,.2f}")
         c2.metric("📉 Gasto", f"R$ {gasto_total:,.2f}")
         c3.metric("💰 Rendimento", f"R$ {rendimento:,.2f}")
-        c4.metric("⏳ Pendente", f"R$ {pendente:,.2f}")
+        c4.metric("🔴 A Pagar", f"R$ {abs(contas_a_pagar):,.2f}")
+        c5.metric("🟢 A Receber", f"R$ {contas_a_receber:,.2f}")
         st.divider()
 
         # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
