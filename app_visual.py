@@ -1962,12 +1962,17 @@ elif "📄" in aba:
         rec_v = des_v = rend_v = sobra = val_pendente = 0.0
 
     # 3. MONTAGEM DO TEXTO DO RELATÓRIO
+    # Calculando separadamente o que é a pagar e o que é a receber para o relatório
+    pagar_pendente = df_m_br[(df_m_br['Status'] == 'Pendente') & (df_m_br['Tipo'] == 'Despesa')]['V_Num'].sum()
+    receber_pendente = df_m_br[(df_m_br['Status'] == 'Pendente') & (df_m_br['Tipo'] == 'Receita')]['V_Num'].sum()
+
     relat = f"RELATÓRIO WILSON & FABIANA\n"
     relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
     relat += f"========================================\n"
     relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
     relat += f"DES: {m_fmt(des_v)} | SOBRA: {m_fmt(sobra)}\n"
-    relat += f"⏳ Pendente de Pagamento: {m_fmt(val_pendente)}\n"
+    relat += f"🔴 A Pagar: {m_fmt(abs(pagar_pendente))}\n"
+    relat += f"🟢 A Receber: {m_fmt(receber_pendente)}\n"
     relat += f"========================================\n\n"
     relat += f"SALDOS E CONTAS:\n{saldos_txt}\n"
     relat += f"----------------------------------------\n"
