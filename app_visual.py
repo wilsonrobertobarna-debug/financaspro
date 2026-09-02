@@ -2798,7 +2798,7 @@ if aba == "📊 Análises & Configurações":
         # --- DIVISÓRIA VISUAL ---
         st.markdown("---")
 
-        # --- PARTE 2: LIMITES E METAS DE CARTÃO DE CRÉDITO ---
+       # --- PARTE 2: LIMITES E METAS DE CARTÃO DE CRÉDITO ---
         st.markdown("### 💳 Controle de Gastos por Cartão")
         
         cartoes_dados = [
@@ -2811,28 +2811,31 @@ if aba == "📊 Análises & Configurações":
         for item in cartoes_dados:
             nome_cartao = item["nome"]
             limite_oficial = item["limite_banco"]
+            key_meta = f"meta_cartao_{nome_cartao}"
+            
+            # Garante que a chave existe no session_state para não resetar
+            if key_meta not in st.session_state:
+                st.session_state[key_meta] = 0.0
             
             st.markdown(f"**{nome_cartao}** *(Limite Total no Banco: R$ {limite_oficial:,.2f})*")
             
             c1, c2 = st.columns(2)
             
-            # Campo para a meta/teto de uso que você quer estipular
-            key_meta = f"meta_cartao_{nome_cartao}"
+            # Input conectado diretamente ao session_state sem perder o foco/valor
             c1.number_input(
                 f"Meta de Gasto (Teto)", 
-                value=float(st.session_state.get(key_meta, 0.0)), 
-                key=key_meta,
-                step=100.0
+                min_value=0.0,
+                step=100.0,
+                key=key_meta
             )
             
-            # Exibe o limite oficial apenas informativo ou para consulta rápida ao lado
             c2.text_input(
                 "Limite Oficial Cadastrado",
                 value=f"R$ {limite_oficial:,.2f}",
                 disabled=True,
                 key=f"info_limite_{nome_cartao}"
             )
-            st.markdown("") # Espaçamento leve entre os cartões
+            st.markdown("")
 
 # -------------------------------------------------------------------------
 # BOTÃO SUPREMO: VOLTAR AO TOPO (Via Componente HTML do Streamlit)
