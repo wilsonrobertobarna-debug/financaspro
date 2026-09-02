@@ -2689,9 +2689,10 @@ if aba == "📊 Análises & Configurações":
         
     st.divider()
     
-   # 4. FORMULÁRIO: CONFIGURAR METAS
-    with st.expander("🎯 Configurar Metas", expanded=False):
-        # 1. Garante que os dados estão carregados
+ # 4. FORMULÁRIO: CONFIGURAR METAS E LIMITES DE CARTÃO
+    with st.expander("🎯 Configurar Metas e Limites de Cartões", expanded=False):
+        # --- PARTE 1: METAS POR CATEGORIA ---
+        st.markdown("### 📊 Metas por Categoria")
         if 'df_metas_config' not in st.session_state:
             try:
                 st.session_state['df_metas_config'] = pd.DataFrame(sh.worksheet("Meta").get_all_records())
@@ -2699,10 +2700,8 @@ if aba == "📊 Análises & Configurações":
                 st.session_state['df_metas_config'] = pd.DataFrame(columns=['Nome da Meta', 'Valor Alvo'])
         
         df_metas = st.session_state['df_metas_config']
-        cols = st.columns(3) # Cria 3 colunas para os campos não ficarem um embaixo do outro
+        cols_meta = st.columns(3)
         
-        # 2. Cria os campos de input automaticamente para cada meta da planilha
-     
         for index, row in df_metas.iterrows():
             nome = row['Nome da Meta']
             valor_raw = row.get('Valor Alvo', 0)
@@ -2714,13 +2713,37 @@ if aba == "📊 Análises & Configurações":
             except:
                 valor_alvo = 0.0 
 
-            # AQUI ESTÁ A MÁGICA: O input agora está conectado ao 'on_change'
-            cols[index % 3].number_input(
+            cols_meta[index % 3].number_input(
                 f"Meta: {nome}", 
                 value=float(st.session_state.get(f"m_{nome}", valor_alvo)), 
                 key=f"m_{nome}",
                 on_change=atualizar_meta_sheets, 
                 args=(nome,) 
+            )
+
+        # --- DIVISÓRIA VISUAL ---
+        st.markdown("---")
+
+        # --- PARTE 2: LIMITES DE CARTÃO DE CRÉDITO ---
+        st.markdown("### 💳 Limites de Gastos por Cartão")
+        
+        # Pega a lista de cartões disponíveis no seu sistema (ajuste o nome da coluna/dataframe se necessário)
+        try:
+            df_cartoes_config = pd.DataFrame(sh.worksheet("Cartoes").get_all_records())
+            lista_cartoes = df_cartoes_config['Cartao'].unique() if 'Cartao' in df_cartoes_config.columns else ["Nubank", "Itaú", "Inter"]
+        except:
+            lista_cartoes = ["Nubank", "Itaú", "Inter"] # Fallback de segurança
+
+        cols_cartao = st.columns(3)
+        for index, cartao in enumerate(lista_cartoes):
+            # Chave única para o limite do cartão no session_state
+            key_cartao = f"limite_cartao_{cartao}"
+            
+            cols_cartao[index % 3].number_input(
+                f"Limite: {cartao}", 
+                value=float(st.session_state.get(key_cartao, 0.0)), 
+                key=key_cartao,
+                step=100.0
             )
 
 
