@@ -1390,6 +1390,74 @@ if "💰" in st.session_state.page:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
+        # --- NOVO: GRÁFICO DE METAS POR CARTÃO DE CRÉDITO COM SEMÁFORO ---
+        st.markdown("---")
+        st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
+        
+        # Lista dos seus cartões cadastrados
+        lista_cartoes_controle = [
+            "Mastercard - Inter",
+            "Mastercard - 8112",
+            "Visa Gold - 0132",
+            "Visa - Mercado Pago"
+        ]
+        
+        # Filtra os lançamentos do mês atual onde o 'Nome do Banco' é um dos cartões de crédito
+        df_cartoes_graph = df_m[df_m['Nome do Banco'].isin(lista_cartoes_controle)].groupby('Nome do Banco')['V_Num'].sum().reset_index()
+        
+        # Garante que todos os cartões apareçam no gráfico, mesmo que o gasto seja zero no mês
+        df_todos_cartoes = pd.DataFrame({'Nome do Banco': lista_cartoes_controle})
+        df_cartoes_graph = pd.merge(df_todos_cartoes, df_cartoes_graph, on='Nome do Banco', how='left').fillna({'V_Num': 0.0})
+        
+        if not df_cartoes_graph.empty:
+            # Puxa a meta (teto) definida nas configurações para cada cartão
+            df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].apply(lambda c: st.session_state.get(f"meta_cartao_{c}", 0.0))
+            
+            # Monta o gráfico de barras (Realizado vs Meta)
+            fig_cartao = go.Figure()
+            fig_cartao.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['V_Num'], name='Gasto Realizado', marker_color='#e74c3c'))
+            fig_cartao.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['Meta'], name='Meta (Teto)', marker_color='#3498db', opacity=0.5))
+            
+            fig_cartao.update_layout(barmode='group', height=330, margin=dict(t=30, b=10, l=0, r=0))
+            st.plotly_chart(fig_cartao, use_container_width=True)
+            
+            # Exibe as bolinhas do semáforo logo abaixo do gráfico para cada cartão
+            st.markdown("##### 🚦 Status de Utilização dos Cartões")
+            cols_status = st.columns(len(lista_cartoes_controle))
+            
+            for idx, row in df_cartoes_graph.iterrows():
+                cartao_nome = row['Nome do Banco']
+                gasto_real = row['V_Num']
+                meta_teto = row['Meta']
+                
+                # Evita divisão por zero caso a meta não tenha sido cadastrada ainda
+                if meta_teto > 0:
+                    percentual = (gasto_real / meta_teto) * 100
+                else:
+                    percentual = 0.0 if gasto_real == 0 else 100.0
+                
+                # Lógica do semáforo: 
+                # Verde (< 80%), Amarelo (80% a 100%), Vermelho (> 100% - Tô na lona)
+                if percentual <= 80:
+                    bolinha = "🟢"
+                    status_txt = "OK"
+                elif percentual <= 100:
+                    bolinha = "🟡"
+                    status_txt = "Atenção"
+                else:
+                    bolinha = "🔴"
+                    status_txt = "Tô na lona"
+                
+                # Exibe a métrica limpinha na coluna correspondente
+                with cols_status[idx % len(cols_status)]:
+                    st.metric(
+                        label=cartao_nome,
+                        value=f"R$ {gasto_real:,.2f}",
+                        delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
+                    )
+        else:
+            st.info("Nenhum lançamento encontrado para os cartões neste mês.")
+
                                         # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA O SEU CÓDIGO) ---
         st.subheader("🔄 Comparativo: Mês Anterior vs. Mês Atual")
         
