@@ -1963,8 +1963,11 @@ elif "📄" in aba:
 
     # 3. MONTAGEM DO TEXTO DO RELATÓRIO
     # Calculando separadamente o que é a pagar e o que é a receber para o relatório
-    pagar_pendente = df_m_br[(df_m_br['Status'] == 'Pendente') & (df_m_br['Tipo'] == 'Despesa')]['V_Num'].sum()
-    receber_pendente = df_m_br[(df_m_br['Status'] == 'Pendente') & (df_m_br['Tipo'] == 'Receita')]['V_Num'].sum()
+    if not df_per.empty:
+        pagar_pendente = df_per[(df_per['Status'].str.upper() == 'PENDENTE') & (df_per['T_UP'] == 'DESPESA')]['V_Num'].sum()
+        receber_pendente = df_per[(df_per['Status'].str.upper() == 'PENDENTE') & (df_per['T_UP'] == 'RECEITA')]['V_Num'].sum()
+    else:
+        pagar_pendente = receber_pendente = 0.0
 
     relat = f"RELATÓRIO WILSON & FABIANA\n"
     relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
