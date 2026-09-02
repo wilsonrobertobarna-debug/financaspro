@@ -2801,6 +2801,15 @@ if aba == "📊 Análises & Configurações":
        # --- PARTE 2: LIMITES E METAS DE CARTÃO DE CRÉDITO ---
         st.markdown("### 💳 Controle de Gastos por Cartão")
         
+        # Garante um dicionário centralizado para guardar as metas dos cartões na sessão
+        if 'dict_metas_cartoes' not in st.session_state:
+            st.session_state['dict_metas_cartoes'] = {
+                "Mastercard - Inter": 0.0,
+                "Mastercard - 8112": 0.0,
+                "Visa Gold - 0132": 0.0,
+                "Visa - Mercado Pago": 0.0
+            }
+
         cartoes_dados = [
             {"nome": "Mastercard - Inter", "limite_banco": 19300.0},
             {"nome": "Mastercard - 8112", "limite_banco": 27100.0},
@@ -2811,23 +2820,25 @@ if aba == "📊 Análises & Configurações":
         for item in cartoes_dados:
             nome_cartao = item["nome"]
             limite_oficial = item["limite_banco"]
-            key_meta = f"meta_cartao_{nome_cartao}"
-            
-            # Garante que a chave existe no session_state para não resetar
-            if key_meta not in st.session_state:
-                st.session_state[key_meta] = 0.0
             
             st.markdown(f"**{nome_cartao}** *(Limite Total no Banco: R$ {limite_oficial:,.2f})*")
             
             c1, c2 = st.columns(2)
             
-            # Input conectado diretamente ao session_state sem perder o foco/valor
-            c1.number_input(
+            # Pega o valor atual do dicionário de forma segura
+            valor_atual = float(st.session_state['dict_metas_cartoes'].get(nome_cartao, 0.0))
+            
+            # Input que atualiza direto o dicionário na sessão
+            novo_valor = c1.number_input(
                 f"Meta de Gasto (Teto)", 
+                value=valor_atual,
                 min_value=0.0,
                 step=100.0,
-                key=key_meta
+                key=f"input_meta_{nome_cartao}"
             )
+            
+            # Salva instantaneamente no dicionário central
+            st.session_state['dict_metas_cartoes'][nome_cartao] = novo_valor
             
             c2.text_input(
                 "Limite Oficial Cadastrado",
