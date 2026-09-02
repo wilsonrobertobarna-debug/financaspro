@@ -1391,30 +1391,35 @@ if "💰" in st.session_state.page:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
        # =========================================================================
-        # 💳 GRÁFICO DE CARTÕES E O SEMÁFORO DE UTILIZAÇÃO (CORRIGIDO)
+        # 💳 GRÁFICO DE CARTÕES E O SEMÁFORO DE UTILIZAÇÃO (BUSCA FLEXÍVEL)
         # =========================================================================
         st.markdown("---")
         st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
         
-        lista_cartoes_controle = [
-            "Mastercard - Inter",
-            "Mastercard - 8112",
-            "Visa Gold - 0132",
-            "Visa - Mercado Pago"
-        ]
-        
-        # Identifica automaticamente qual coluna representa o banco/cartão no seu dataframe
+        # Identifica a coluna correta do banco/cartão
         coluna_banco = next((col for col in ['Nome do Banco', 'Banco', 'Instituição', 'Conta'] if col in df_m.columns), None)
         
-        if coluna_banco:
-            df_cartoes_graph = df_m[df_m[coluna_banco].isin(lista_cartoes_controle)].groupby(coluna_banco)['V_Num'].sum().reset_index()
-            # Padroniza o nome da coluna para o restante do código
-            df_cartoes_graph = df_cartoes_graph.rename(columns={coluna_banco: 'Nome do Banco'})
+        # Mapeamento dos cartões com palavras-chave únicas para busca flexível
+        mapeamento_cartoes = {
+            "Mastercard - Inter": "Inter",
+            "Mastercard - 8112": "8112",
+            "Visa Gold - 0132": "0132",
+            "Visa - Mercado Pago": "Mercado Pago"
+        }
+        
+        lista_cartoes_controle = list(mapeamento_cartoes.keys())
+        dados_cartoes_calculados = []
+        
+        if coluna_banco and not df_m.empty:
+            for nome_oficial, termo_busca in mapeamento_cartoes.items():
+                # Filtra linhas onde a coluna do banco contém o termo do cartão (ignorando maiúsculas/minúsculas)
+                mask = df_m[coluna_banco].astype(str).str.contains(termo_busca, case=False, na=False)
+                gasto_total = df_m[mask]['V_Num'].sum()
+                dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total})
         else:
-            df_cartoes_graph = pd.DataFrame(columns=['Nome do Banco', 'V_Num'])
+            dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle]
             
-        df_todos_cartoes = pd.DataFrame({'Nome do Banco': lista_cartoes_controle})
-        df_cartoes_graph = pd.merge(df_todos_cartoes, df_cartoes_graph, on='Nome do Banco', how='left').fillna({'V_Num': 0.0})
+        df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
         if not df_cartoes_graph.empty:
             df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].apply(lambda c: st.session_state.get(f"meta_cartao_{c}", 0.0))
@@ -1457,6 +1462,7 @@ if "💰" in st.session_state.page:
                     )
         else:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
+        # =========================================================================
         # =========================================================================
                                         # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA O SEU CÓDIGO) ---
         st.subheader("🔄 Comparativo: Mês Anterior vs. Mês Atual")
