@@ -2724,28 +2724,41 @@ if aba == "📊 Análises & Configurações":
         # --- DIVISÓRIA VISUAL ---
         st.markdown("---")
 
-        # --- PARTE 2: LIMITES DE CARTÃO DE CRÉDITO ---
-        st.markdown("### 💳 Limites de Gastos por Cartão")
+        # --- PARTE 2: LIMITES E METAS DE CARTÃO DE CRÉDITO ---
+        st.markdown("### 💳 Controle de Gastos por Cartão")
         
-        # Pega a lista de cartões disponíveis no seu sistema (ajuste o nome da coluna/dataframe se necessário)
-        try:
-            df_cartoes_config = pd.DataFrame(sh.worksheet("Cartoes").get_all_records())
-            lista_cartoes = df_cartoes_config['Cartao'].unique() if 'Cartao' in df_cartoes_config.columns else ["Nubank", "Itaú", "Inter"]
-        except:
-            lista_cartoes = ["Nubank", "Itaú", "Inter"] # Fallback de segurança
+        cartoes_dados = [
+            {"nome": "Mastercard - Inter", "limite_banco": 19300.0},
+            {"nome": "Mastercard - 8112", "limite_banco": 27100.0},
+            {"nome": "Visa Gold - 0132", "limite_banco": 22600.0},
+            {"nome": "Visa - Mercado Pago", "limite_banco": 5600.0}
+        ]
 
-        cols_cartao = st.columns(3)
-        for index, cartao in enumerate(lista_cartoes):
-            # Chave única para o limite do cartão no session_state
-            key_cartao = f"limite_cartao_{cartao}"
+        for item in cartoes_dados:
+            nome_cartao = item["nome"]
+            limite_oficial = item["limite_banco"]
             
-            cols_cartao[index % 3].number_input(
-                f"Limite: {cartao}", 
-                value=float(st.session_state.get(key_cartao, 0.0)), 
-                key=key_cartao,
+            st.markdown(f"**{nome_cartao}** *(Limite Total no Banco: R$ {limite_oficial:,.2f})*")
+            
+            c1, c2 = st.columns(2)
+            
+            # Campo para a meta/teto de uso que você quer estipular
+            key_meta = f"meta_cartao_{nome_cartao}"
+            c1.number_input(
+                f"Meta de Gasto (Teto)", 
+                value=float(st.session_state.get(key_meta, 0.0)), 
+                key=key_meta,
                 step=100.0
             )
-
+            
+            # Exibe o limite oficial apenas informativo ou para consulta rápida ao lado
+            c2.text_input(
+                "Limite Oficial Cadastrado",
+                value=f"R$ {limite_oficial:,.2f}",
+                disabled=True,
+                key=f"info_limite_{nome_cartao}"
+            )
+            st.markdown("") # Espaçamento leve entre os cartões
 
 # -------------------------------------------------------------------------
 # BOTÃO SUPREMO: VOLTAR AO TOPO (Via Componente HTML do Streamlit)
