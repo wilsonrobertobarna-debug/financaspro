@@ -1285,16 +1285,19 @@ if "💰" in st.session_state.page:
             </div>
         """, unsafe_allow_html=True)
     
-        # 🚦 SEMÁFORO DO MÊS (Verde, Amarelo ou Vermelho)
-        if receita_total > 0:
-            percentual_gasto = (gasto_total / receita_total) * 100
+       # 🚦 SEMÁFORO DO MÊS (Considerando o compromisso real: Gastos pagos + A Pagar)
+        gasto_comprometido = gasto_total + abs(contas_a_pagar)
+        receita_total_prevista = receita_total + contas_a_receber
+
+        if receita_total_prevista > 0:
+            percentual_gasto = (gasto_comprometido / receita_total_prevista) * 100
         else:
-            percentual_gasto = 0
-    
-        if gasto_total > receita_total and receita_total > 0:
-            semaforo_html = "<span style='font-size: 1.1rem; font-weight: bold; color: #e74c3c;'>🔴 Vermelho (Gastou mais que recebeu)</span>"
+            percentual_gasto = 100 if gasto_comprometido > 0 else 0
+
+        if gasto_comprometido > receita_total_prevista and receita_total_prevista > 0:
+            semaforo_html = "<span style='font-size: 1.1rem; font-weight: bold; color: #e74c3c;'>🔴 Vermelho (Compromissos maiores que as receitas)</span>"
         elif percentual_gasto >= 80:
-            semaforo_html = "<span style='font-size: 1.1rem; font-weight: bold; color: #f39c12;'>🟡 Amarelo (Atenção aos gastos - 80%+)</span>"
+            semaforo_html = "<span style='font-size: 1.1rem; font-weight: bold; color: #f39c12;'>🟡 Amarelo (Atenção aos compromissos - 80%+)</span>"
         else:
             semaforo_html = "<span style='font-size: 1.1rem; font-weight: bold; color: #2ecc71;'>🟢 Verde (Tudo sob controle)</span>"
     
