@@ -1428,21 +1428,18 @@ if "💰" in st.session_state.page:
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
         if not df_cartoes_graph.empty:
-            # Puxa a meta direto do dicionário blindado da sessão com segurança de texto
+            # Puxa a meta direto do dicionário blindado da sessão com busca 100% tolerante
             dict_metas = st.session_state.get('dict_metas_cartoes', {})
             
             def buscar_meta_tolerante(nome):
-                # Tenta exato
-                if nome in dict_metas:
-                    return float(dict_metas[nome])
-                # Tenta buscar ignorando pequenas variações de digitação/espaços
+                # Limpa espaços e normaliza para comparar sem erro
+                nome_limpo = str(nome).strip().lower()
                 for k, v in dict_metas.items():
-                    if k.strip().lower() == nome.strip().lower():
+                    if k.strip().lower() == nome_limpo:
                         return float(v)
                 return 0.0
 
             df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].apply(buscar_meta_tolerante)
-
             # 🔍 ADICIONE ESTA LINHA SÓ PARA A GENTE VER O QUE ESTÁ VINDO:
             st.write("DEBUG - DataFrame dos Cartões:", df_cartoes_graph)
             st.write("DEBUG - Dicionário de Metas na Sessão:", dict_metas)
