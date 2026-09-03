@@ -1442,6 +1442,10 @@ if "💰" in st.session_state.page:
                 return 0.0
 
             df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].apply(buscar_meta_tolerante)
+
+            # 🔍 ADICIONE ESTA LINHA SÓ PARA A GENTE VER O QUE ESTÁ VINDO:
+            st.write("DEBUG - DataFrame dos Cartões:", df_cartoes_graph)
+            st.write("DEBUG - Dicionário de Metas na Sessão:", dict_metas)
             
             fig_cartao = go.Figure()
             fig_cartao.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['V_Num'], name='Gasto Realizado', marker_color='#e74c3c'))
