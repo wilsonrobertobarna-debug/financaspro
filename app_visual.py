@@ -2823,7 +2823,7 @@ if aba == "📊 Análises & Configurações":
             {"nome": "Mastercard - Inter", "limite_banco": 19300.0},
             {"nome": "Mastercard - 8112", "limite_banco": 27100.0},
             {"nome": "Visa Gold - 0132", "limite_banco": 22600.0},
-            {"nome": "Visa - Mercado Pago", "limite_banco": 5600.0}
+            {"nome": "Visa - Mercado Pago", "limite_banco": 5600.0},
             {"nome": "Itau - Golden", "limite_banco": 8330.0}
         ]
 
