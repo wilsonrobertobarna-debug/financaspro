@@ -1422,7 +1422,9 @@ if "💰" in st.session_state.page:
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
         if not df_cartoes_graph.empty:
-            df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].apply(lambda c: st.session_state.get(f"meta_cartao_{c}", 0.0))
+            # Puxa a meta direto do dicionário blindado da sessão
+            dict_metas = st.session_state.get('dict_metas_cartoes', {})
+            df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].apply(lambda c: float(dict_metas.get(c, 0.0)))
             
             fig_cartao = go.Figure()
             fig_cartao.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['V_Num'], name='Gasto Realizado', marker_color='#e74c3c'))
