@@ -1427,23 +1427,29 @@ if "💰" in st.session_state.page:
             
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
-        if not df_cartoes_graph.empty:
-            # Puxa a meta direto do dicionário blindado da sessão com busca 100% tolerante
-            dict_metas = st.session_state.get('dict_metas_cartoes', {})
-            
-            def buscar_meta_tolerante(nome):
-                # Limpa espaços e normaliza para comparar sem erro
-                nome_limpo = str(nome).strip().lower()
-                for k, v in dict_metas.items():
-                    if k.strip().lower() == nome_limpo:
-                        return float(v)
-                return 0.0
+        # Garante que o dicionário de metas existe na sessão
+        if 'dict_metas_cartoes' not in st.session_state:
+            st.session_state['dict_metas_cartoes'] = {
+                "Master Card - Inter": 4000.0,
+                "Master Card - 8112": 600.0,
+                "Visa Golden - 0132": 1000.0,
+                "Visa - Mercado Pago": 1200.0,
+                "Itau - Golden": 200.0
+            }
 
-            df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].apply(buscar_meta_tolerante)
-            # 🔍 ADICIONE ESTA LINHA SÓ PARA A GENTE VER O QUE ESTÁ VINDO:
-            st.write("DEBUG - DataFrame dos Cartões:", df_cartoes_graph)
-            st.write("DEBUG - Dicionário de Metas na Sessão:", dict_metas)
-            
+        dict_metas = st.session_state['dict_metas_cartoes']
+
+        # Atribui a meta buscando com tolerância total a espaços/maiúsculas
+        def buscar_meta_tolerante(nome):
+            nome_limpo = str(nome).strip().lower()
+            for k, v in dict_metas.items():
+                if k.strip().lower() == nome_limpo:
+                    return float(v)
+            return 0.0
+
+        df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].apply(buscar_meta_tolerante)
+        
+        if not df_cartoes_graph.empty:
             fig_cartao = go.Figure()
             fig_cartao.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['V_Num'], name='Gasto Realizado', marker_color='#e74c3c'))
             fig_cartao.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['Meta'], name='Meta (Teto)', marker_color='#3498db', opacity=0.5))
