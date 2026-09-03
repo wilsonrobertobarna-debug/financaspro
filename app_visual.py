@@ -1400,11 +1400,12 @@ if "💰" in st.session_state.page:
         coluna_banco = next((col for col in ['Nome do Banco', 'Banco', 'Instituição', 'Conta'] if col in df_m.columns), None)
         
         # Mapeamento dos cartões com palavras-chave únicas para busca flexível
-        mapeamento_cartoes = {
+       mapeamento_cartoes = {
             "Mastercard - Inter": "Inter",
             "Mastercard - 8112": "8112",
             "Visa Gold - 0132": "0132",
-            "Visa - Mercado Pago": "Mercado Pago"
+            "Visa - Mercado Pago": "Mercado Pago",
+            "Itaú - Golden": "Golden"
         }
         
         lista_cartoes_controle = list(mapeamento_cartoes.keys())
@@ -2808,13 +2809,14 @@ if aba == "📊 Análises & Configurações":
        # --- PARTE 2: LIMITES E METAS DE CARTÃO DE CRÉDITO ---
         st.markdown("### 💳 Controle de Gastos por Cartão")
         
-        # Garante um dicionário centralizado para guardar as metas dos cartões na sessão
+       # Garante um dicionário centralizado para guardar as metas dos cartões na sessão
         if 'dict_metas_cartoes' not in st.session_state:
             st.session_state['dict_metas_cartoes'] = {
-                "Mastercard - Inter": 0.0,
-                "Mastercard - 8112": 0.0,
-                "Visa Gold - 0132": 0.0,
-                "Visa - Mercado Pago": 0.0
+                "Mastercard - Inter": 4000.0,
+                "Mastercard - 8112": 600.0,
+                "Visa Gold - 0132": 1000.0,
+                "Visa - Mercado Pago": 1200.0,
+                "Itaú - Golden": 200.0
             }
 
         cartoes_dados = [
@@ -2822,6 +2824,7 @@ if aba == "📊 Análises & Configurações":
             {"nome": "Mastercard - 8112", "limite_banco": 27100.0},
             {"nome": "Visa Gold - 0132", "limite_banco": 22600.0},
             {"nome": "Visa - Mercado Pago", "limite_banco": 5600.0}
+            {"nome": "Itau - Golden", "limite_banco": 8330.0}
         ]
 
         for item in cartoes_dados:
