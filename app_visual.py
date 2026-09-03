@@ -1401,11 +1401,11 @@ if "💰" in st.session_state.page:
         
         # Mapeamento dos cartões com palavras-chave únicas para busca flexível
         mapeamento_cartoes = {
-            "Mastercard - Inter": "Inter",
-            "Mastercard - 8112": "8112",
-            "Visa Gold - 0132": "0132",
+            "Master Card - Inter": "Inter",
+            "Master Card - 8112": "8112",
+            "Visa Golden - 0132": "0132",
             "Visa - Mercado Pago": "Mercado Pago",
-            "Itaú - Golden": "Golden"
+            "Itau - Golden": "Golden"
         }
         
         lista_cartoes_controle = list(mapeamento_cartoes.keys())
@@ -2831,7 +2831,7 @@ if aba == "📊 Análises & Configurações":
                 "Mastercard - 8112": 600.0,
                 "Visa Gold - 0132": 1000.0,
                 "Visa - Mercado Pago": 1200.0,
-                "Itaú - Golden": 200.0
+                "Itau - Golden": 200.0
             }
 
         cartoes_dados = [
