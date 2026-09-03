@@ -1412,8 +1412,13 @@ if "💰" in st.session_state.page:
         
         if coluna_banco and not df_m.empty:
             for nome_oficial, termo_busca in mapeamento_cartoes.items():
-                # Filtra linhas onde a coluna do banco contém o termo do cartão (ignorando maiúsculas/minúsculas)
-                mask = df_m[coluna_banco].astype(str).str.contains(termo_busca, case=False, na=False)
+                # Garante que pega apenas Despesas que contenham o termo do cartão
+                mask = (df_m['Tipo'] == 'Despesa') & (df_m[coluna_banco].astype(str).str.contains(termo_busca, case=False, na=False))
+                
+                # Trava de segurança específica para o Inter não misturar com outras pendências da conta corrente
+                if termo_busca == "Inter":
+                    mask = mask & (df_m[coluna_banco].astype(str).str.contains("Cartão", case=False, na=False)) & (~df_m[coluna_banco].astype(str).str.contains("Pendência|Boleto|Empréstimo", case=False, na=False))
+                
                 gasto_total = df_m[mask]['V_Num'].sum()
                 dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total})
         else:
