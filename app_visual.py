@@ -1490,34 +1490,54 @@ if "💰" in st.session_state.page:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
         # =========================================================================
         # =========================================================================
-                                        # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA O SEU CÓDIGO) ---
-        st.subheader("🔄 Comparativo: Mês Anterior vs. Mês Atual")
         
-        # 1. Obter o número do mês atual a partir da sua seleção
-        # O seu 'mes_map' já tem a relação, vamos usar isso:
+        # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA 3 MESES) ---
+        st.subheader("🔄 Comparativo: 3 Meses (Retrasado, Anterior e Atual)")
+        
+        # 1. Obter o número do mês atual a partir da seleção
         mes_map = {"Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6, 
                    "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12}
         
         mes_atual_num = mes_map[mes_atual]
-        mes_anterior_num = mes_atual_num - 1 if mes_atual_num > 1 else 12
         
-  
+        # Cálculo seguro dos 3 meses (lida com a virada de ano se necessário)
+        if mes_atual_num == 1:
+            mes_anterior_num = 12
+            mes_retrasado_num = 11
+        elif mes_atual_num == 2:
+            mes_anterior_num = 1
+            mes_retrasado_num = 12
+        else:
+            mes_anterior_num = mes_atual_num - 1
+            mes_retrasado_num = mes_atual_num - 2
+
         # 2. Preparar os dados (convertendo a coluna de vencimento para data)
         df_comp = df_base.copy()
         
         # --- BLOCO DE SEGURANÇA PARA DATAS ---
         df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
         
-        # Pega o ano atual para garantir que estamos olhando 2026
         ano_atual = pd.Timestamp.now().year
         
-        # Filtra os meses anterior e atual dentro do ano correto
-        df_comp = df_comp[
-            (df_comp['Vencimento'].dt.year == ano_atual) & 
-            (df_comp['Vencimento'].dt.month.isin([mes_anterior_num, mes_atual_num]))
-        ].copy()
+        # Filtra os 3 meses contemplando a virada de ano se houver
+        meses_alvo = [mes_retrasado_num, mes_anterior_num, mes_atual_num]
         
-       # 4. Tabela dinâmica
+        # Se envolver dezembro/novembro do ano anterior quando estamos em janeiro/fevereiro:
+        if 12 in meses_alvo and mes_atual_num in [1, 2]:
+            # Lógica para pegar o ano passado para os meses que recuaram para o ano anterior
+            df_comp = df_comp[
+                ((df_comp['Vencimento'].dt.year == ano_atual) & (df_comp['Vencimento'].dt.month.isin(meses_alvo))) |
+                ((df_comp['Vencimento'].dt.year == ano_atual - 1) & (df_comp['Vencimento'].dt.month.isin(meses_alvo)))
+            ].copy()
+        else:
+            df_comp = df_comp[
+                (df_comp['Vencimento'].dt.year == ano_atual) & 
+                (df_comp['Vencimento'].dt.month.isin(meses_alvo))
+            ].copy()
+        
+        # 3. Criar uma coluna auxiliar 'Ano-Mes' ou usar diretamente o mês formatado para evitar conflitos de anos iguais
+        # Vamos extrair o mês no formato numérico mas garantir que o pivot traga as 3 colunas fixas:
+        # Para simplificar o pivot por número do mês (1 a 12), vamos garantir que os 3 meses apareçam:
         df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
             index='Categoria', 
             columns=df_comp['Vencimento'].dt.month, 
@@ -1525,24 +1545,50 @@ if "💰" in st.session_state.page:
             aggfunc='sum'
         ).fillna(0)
         
-        # 5. Renomeia as colunas
-        colunas_renomeadas = {mes_anterior_num: "Mês Anterior", mes_atual_num: "Mês Atual"}
+        # Garante que as colunas dos 3 meses existam no DataFrame mesmo se alguma estiver zerada
+        for m in [mes_retrasado_num, mes_anterior_num, mes_atual_num]:
+            if m not in df_pivot.columns:
+                df_pivot[m] = 0.0
+
+        # Mapeamento dos nomes dos meses para as colunas reais
+        nomes_meses_inv = {v: k for k, v in mes_map.items()}
+        col_retrasado_nome = nomes_meses_inv[mes_retrasado_num]
+        col_anterior_nome = nomes_meses_inv[mes_anterior_num]
+        col_atual_nome = nomes_meses_inv[mes_atual_num]
+
+        colunas_renomeadas = {
+            mes_retrasado_num: col_retrasado_nome, 
+            mes_anterior_num: col_anterior_nome, 
+            mes_atual_num: col_atual_nome
+        }
         df_pivot = df_pivot.rename(columns=colunas_renomeadas)
         
-        # 6. Cálculo da variação
-        if "Mês Anterior" in df_pivot.columns and "Mês Atual" in df_pivot.columns:
-            df_pivot['Variação (%)'] = ((df_pivot["Mês Atual"] - df_pivot["Mês Anterior"]) / df_pivot["Mês Anterior"] * 100).replace([float('inf'), -float('inf')], 0).fillna(0)
+        # Mantém apenas as 3 colunas de interesse na ordem cronológica correta
+        df_pivot = df_pivot[[col_retrasado_nome, col_anterior_nome, col_atual_nome]]
 
-        # --- DEFINIÇÃO DA FORMATAÇÃO (Para resolver o NameError) ---
+        # 6. Cálculo das variações percentuais
+        # Variação 1: Retrasado -> Anterior
+        df_pivot['Var. Retr.➔Ant. (%)'] = (
+            (df_pivot[col_anterior_nome] - df_pivot[col_retrasado_nome]) / df_pivot[col_retrasado_nome]
+        ).replace([float('inf'), -float('inf')], 0).fillna(0) * 100
+
+        # Variação 2: Anterior -> Atual
+        df_pivot['Var. Ant.➔Atual (%)'] = (
+            (df_pivot[col_atual_nome] - df_pivot[col_anterior_nome]) / df_pivot[col_anterior_nome]
+        ).replace([float('inf'), -float('inf')], 0).fillna(0) * 100
+
+        # --- DEFINIÇÃO DA FORMATAÇÃO ---
         formatacao = {
-            "Mês Anterior": "{:.2f}",
-            "Mês Atual": "{:.2f}",
-            "Variação (%)": "{:.2f}%"
+            col_retrasado_nome: "{:.2f}",
+            col_anterior_nome: "{:.2f}",
+            col_atual_nome: "{:.2f}",
+            "Var. Retr.➔Ant. (%)": "{:.2f}%",
+            "Var. Ant.➔Atual (%)": "{:.2f}%"
         }
 
-        # Agora o st.dataframe vai encontrar a variável formatacao
+        # Exibição no Streamlit
         st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
-        # Aplicamos o estilo (o .style.format aplica o que definimos no dicionário)
+        
         
         # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
         st.subheader("🔔 Monitor de Pendências do Período")
