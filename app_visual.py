@@ -1317,6 +1317,33 @@ if "💰" in st.session_state.page:
         c5.metric("🟢 A Receber", f"R$ {contas_a_receber:,.2f}")
         st.divider()
 
+        # --- ITEM 3: PREVISÃO DE FIM DE MÊS (PROJEÇÃO) ---
+        # Filtra as despesas do mês atual selecionado
+        mes_atual_num = int(mes_map.get(mes_atual, '08'))
+        ano_atual = datetime.now().year
+        
+        df_mes_atual_proj = df_base[(df_base['Tipo'] == 'Despesa') & (df_base['DT'].dt.month == mes_atual_num) & (df_base['DT'].dt.year == ano_atual)].copy()
+        
+        dia_hoje = datetime.now().day if datetime.now().month == mes_atual_num and datetime.now().year == ano_atual else (30 if mes_atual_num in [4,6,9,11] else (28 if mes_atual_num == 2 else 31))
+        total_dias_mes = pd.Timestamp(ano_atual, mes_atual_num, 1).days_in_month
+        
+        gasto_atual_ate_hoje = df_mes_atual_proj['V_Num'].sum()
+        
+        if dia_hoje > 0 and gasto_atual_ate_hoje > 0 and datetime.now().month == mes_atual_num:
+            media_diaria = gasto_atual_ate_hoje / max(datetime.now().day, 1)
+            projecao_total = media_diaria * total_dias_mes
+        else:
+            projecao_total = gasto_atual_ate_hoje
+
+        # Exibição da Projeção na tela principal
+        cp1, cp2, cp3 = st.columns(3)
+        cp1.metric("🔮 Projeção Fim do Mês", f"R$ {projecao_total:,.2f}")
+        cp2.metric("📊 Média Diária (Até Hoje)", f"R$ {(gasto_atual_ate_hoje / max(datetime.now().day, 1) if datetime.now().month == mes_atual_num else 0):,.2f}")
+        cp3.metric("📅 Dias Restantes", f"{max(0, total_dias_mes - datetime.now().day) if datetime.now().month == mes_atual_num else 0} dias")
+        st.divider()
+
+        
+
         # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
         g1, g2 = st.columns(2)
         with g1:
