@@ -1318,13 +1318,12 @@ if "💰" in st.session_state.page:
         st.divider()
 
        # --- ITEM 3 BLINDADO: PREVISÃO DE FIM DE MÊS (PROJEÇÃO) ---
-        # Usa diretamente o df_m_limpo que já está perfeitamente filtrado para o mês atual na tela!
+        ano_atual = datetime.now().year
         gasto_atual_mes = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         
         dia_hoje = datetime.now().day
         total_dias_mes = pd.Timestamp(ano_atual, int(mes_map.get(mes_atual, '09')), 1).days_in_month
         
-        # Se estivermos olhando o mês atual, calcula a média pelos dias que já passaram. Se for outro mês, usa o mês fechado.
         if datetime.now().month == int(mes_map.get(mes_atual, '09')):
             dias_base = max(dia_hoje, 1)
         else:
