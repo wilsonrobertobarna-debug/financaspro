@@ -760,7 +760,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 st.warning("⚠️ Selecione um Beneficiário no histórico ou digite um novo no campo abaixo!")
                 st.stop()
             # ---------------------------------------------------
-            # --- 🛡️ ITEM 4: ALERTA DE DUPLICIDADE ---
+            # --- 🛡️ ITEM 4: AVISO COM DUPLA CONFIRMAÇÃO DE DUPLICIDADE ---
             if not df_base.empty:
                 duplicado = df_base[
                     (df_base['V_Num'] == float(f_val)) & 
@@ -768,8 +768,13 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     (df_base['Descrição'].astype(str).str.strip().str.lower() == f_desc.strip().lower())
                 ]
                 
-                if not duplicado.empty:
-                    st.warning(f"⚠️ **Atenção:** Já existe um lançamento idêntico cadastrado ({f_desc} - R$ {f_val:,.2f} para {t_dat.strftime('%d/%m/%Y')})!")
+                if not duplicado.empty and not st.session_state.get('confirmou_duplicado', False):
+                    st.session_state.confirmou_duplicado = True
+                    st.warning(f"⚠️ **Atenção:** Já existe um lançamento idêntico ({f_desc} - R$ {f_val:,.2f} para {t_dat.strftime('%d/%m/%Y')}). Se tiver certeza, clique em **Salvar Lançamento** novamente para confirmar!")
+                    st.stop()
+                
+                # Reseta a confirmação após passar para o salvamento real
+                st.session_state.confirmou_duplicado = False
 
             todos_dados = ws_base.get_all_records()
             
