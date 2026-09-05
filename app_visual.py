@@ -820,12 +820,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
             
-            # --- COLOCA ESTAS LINHAS AQUI PARA LIMPAR OS CAMPOS APÓS SALVAR ---
-            st.session_state["val_novo_lancamento"] = 0.0
-            st.session_state["desc_novo_lancamento"] = ""
-            st.session_state["par_novo_lancamento"] = 1
-            st.session_state["ignorar_duplicidade"] = False
-            # -----------------------------------------------------------------
+            # Reseta apenas o sinalizador de duplicidade para o próximo cadastro
+            st.session_state.ignorar_duplicidade = False
             
             atualizar_sessao()
             st.rerun()
