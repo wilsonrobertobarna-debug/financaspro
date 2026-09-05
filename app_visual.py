@@ -692,7 +692,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
     st.markdown("")
 
    # 2. Agora entra o formulário com o restante dos campos e o botão Salvar
-    with st.form("f_novo", clear_on_submit=True):
+    with st.form("f_novo"):
         f_val = st.number_input("Valor", min_value=-100000.0, value=0.0, step=0.01, format="%.2f", key="val_novo_lancamento")
         f_par = st.number_input("Parcelas", min_value=1, value=1, key="par_novo_lancamento")
         f_desc = st.text_input("📝 Descrição", key="desc_novo_lancamento")
@@ -815,10 +815,18 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     f_sta,
                     f_compra_str,
                     proximo_id + i,
-                    beneficiario_final  # Salva certinho na coluna J
+                    beneficiario_final  
                 ])
             
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
+            
+            # --- COLOCA ESTAS LINHAS AQUI PARA LIMPAR OS CAMPOS APÓS SALVAR ---
+            st.session_state["val_novo_lancamento"] = 0.0
+            st.session_state["desc_novo_lancamento"] = ""
+            st.session_state["par_novo_lancamento"] = 1
+            st.session_state["ignorar_duplicidade"] = False
+            # -----------------------------------------------------------------
+            
             atualizar_sessao()
             st.rerun()
             
