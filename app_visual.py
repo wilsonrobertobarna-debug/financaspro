@@ -760,21 +760,29 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 st.warning("⚠️ Selecione um Beneficiário no histórico ou digite um novo no campo abaixo!")
                 st.stop()
             # ---------------------------------------------------
-            # --- 🛡️ ITEM 4: AVISO COM DUPLA CONFIRMAÇÃO DE DUPLICIDADE ---
-            if not df_base.empty:
+            # --- 🛡️ ITEM 4: CONTROLE INTELIGENTE DE DUPLICIDADE ---
+            if not df_base.empty and not st.session_state.get('ignorar_duplicidade', False):
                 duplicado = df_base[
                     (df_base['V_Num'] == float(f_val)) & 
                     (df_base['DT'].dt.date == t_dat) & 
                     (df_base['Descrição'].astype(str).str.strip().str.lower() == f_desc.strip().lower())
                 ]
                 
-                if not duplicado.empty and not st.session_state.get('confirmou_duplicado', False):
-                    st.session_state.confirmou_duplicado = True
-                    st.warning(f"⚠️ **Atenção:** Já existe um lançamento idêntico ({f_desc} - R$ {f_val:,.2f} para {t_dat.strftime('%d/%m/%Y')}). Se tiver certeza, clique em **Salvar Lançamento** novamente para confirmar!")
+                if not duplicado.empty:
+                    st.warning(f"⚠️ **Atenção:** Já existe um lançamento idêntico ({f_desc} - R$ {f_val:,.2f} para {t_dat.strftime('%d/%m/%Y')})!")
+                    
+                    col_sim, col_nao = st.columns(2)
+                    with col_sim:
+                        if st.button("✅ Salvar Mesmo Assim", key="btn_confirma_dup"):
+                            st.session_state.ignorar_duplicidade = True
+                            st.rerun()
+                    with col_nao:
+                        if st.button("❌ Cancelar", key="btn_cancela_dup"):
+                            st.stop()
                     st.stop()
-                
-                # Reseta a confirmação após passar para o salvamento real
-                st.session_state.confirmou_duplicado = False
+            
+            # Reseta o sinalizador para o próximo lançamento normal
+            st.session_state.ignorar_duplicidade = False
 
             todos_dados = ws_base.get_all_records()
             
