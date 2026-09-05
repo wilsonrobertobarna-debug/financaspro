@@ -736,7 +736,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         
         # Um respiro leve para desgrudar o tipo da categoria
         st.markdown("")
-        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água","Assinatura","Rendimento","Aplicação", "Vale Alimentação", "Restaurante","Celular","Anuidade","Seguro", "Internet","Vestuário","Salário","Reembolso","Moradia", "Saúde","Taxas","Depósito","Plano Assistencial","Transporte","Previdência","Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção"], key="cat_novo_lancamento") 
+        f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", "Aplicação", "Vale Alimentação", "Restaurante", "Celular", "Anuidade", "Seguro", "Internet", "Vestuário", "Salário", "Reembolso", "Moradia", "Saúde", "Taxas", "Depósito", "Plano Assistencial", "Transporte", "Previdência", "Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Educação", "Manutenção"], key="cat_novo_lancamento") 
         
         # Um respiro leve para desgrudar a categoria do status
         st.markdown("")
