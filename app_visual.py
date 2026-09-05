@@ -771,7 +771,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 if not duplicado.empty:
                     st.warning(f"⚠️ **Atenção:** Já existe um lançamento idêntico ({f_desc} - R$ {f_val:,.2f} para {t_dat.strftime('%d/%m/%Y')}).")
                     
-                    # Usamos um checkbox de confirmação que não quebra o layout do formulário
                     confirma_dup = st.checkbox("Sim, quero duplicar este lançamento mesmo assim", key="chk_confirma_dup")
                     
                     if not confirma_dup:
@@ -780,8 +779,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     else:
                         st.session_state.ignorar_duplicidade = True
             
-            # Reseta o sinalizador após prosseguir
-            st.session_state.ignorar_duplicidade = False
             todos_dados = ws_base.get_all_records()
             
             if todos_dados:
@@ -820,8 +817,12 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
             
-            # Reseta apenas o sinalizador de duplicidade para o próximo cadastro
+            # Reseta o sinalizador para o próximo cadastro
             st.session_state.ignorar_duplicidade = False
+            
+            # Pausa de 1 segundo para o Google Sheets processar a gravação antes de atualizar a sessão
+            import time
+            time.sleep(1)
             
             atualizar_sessao()
             st.rerun()
