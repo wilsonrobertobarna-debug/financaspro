@@ -857,23 +857,30 @@ with st.sidebar.expander("📢 Central de Notificações"):
         senha_app = "xbud ssyt bpwu ntrx"
         destinatario = "wilsonrobertobarna@gmail.com"
         
-        # Exemplo de como puxar dados do seu DataFrame (ajuste os nomes das colunas se necessário)
         try:
-            total_geral = df['Valor'].sum() if 'Valor' in df.columns else 0
+            # Puxa o DataFrame direto do session_state do Streamlit
+            df_atual = st.session_state.get('df', None)
             
-            # Monta o texto dinâmico com os dados reais
-            assunto = "FinançasPro - Resumo de Pagamentos"
-            corpo = f"""Olá, Wilson! Segue o resumo atualizado do seu sistema FinançasPro:
+            if df_atual is not None and not df_atual.empty and 'Valor' in df_atual.columns:
+                # Converte para numérico para garantir a soma correta
+                df_temp = df_atual.copy()
+                df_temp['Valor'] = pd.to_numeric(df_temp['Valor'], errors='coerce').fillna(0)
+                
+                total_geral = df_temp['Valor'].sum()
+                total_registros = len(df_temp)
+                
+                corpo = f"""Olá, Wilson! Segue o resumo atualizado do seu sistema FinançasPro:
 
-- Total geral movimentado/cadastrado: R$ {total_geral:,.2f}
-- Total de registros na base: {len(df)}
+- Total geral acumulado: R$ {total_geral:,.2f}
+- Total de lançamentos na base: {total_registros}
 
 Mensagem gerada automaticamente pelo seu sistema FinançasPro.
 """
-        except Exception as err:
-            corpo = "Olá! Segue o resumo das notificações do seu sistema FinançasPro."
+            else:
+                corpo = "Olá, Wilson! O sistema FinançasPro está operando, mas a tabela de dados está vazia ou a coluna 'Valor' não foi localizada."
 
-        try:
+            assunto = "FinançasPro - Resumo de Pagamentos"
+
             import smtplib
             from email.mime.text import MIMEText
             from email.mime.multipart import MIMEMultipart
