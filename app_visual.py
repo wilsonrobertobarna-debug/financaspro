@@ -1537,121 +1537,146 @@ if "💰" in st.session_state.page:
         else:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
         # =========================================================================
-        # =========================================================================
+     # =========================================================================
         
-        # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA 3 MESES) ---
-        st.subheader("🔄 Comparativo: 3 Meses (Retrasado, Anterior e Atual)")
-        
-        # 1. Obter o número do mês atual a partir da seleção
-        mes_map = {"Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6, 
-                   "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12}
-        
-        mes_atual_num = mes_map[mes_atual]
-        
-        # Cálculo seguro dos 3 meses (lida com a virada de ano se necessário)
-        if mes_atual_num == 1:
-            mes_anterior_num = 12
-            mes_retrasado_num = 11
-        elif mes_atual_num == 2:
-            mes_anterior_num = 1
-            mes_retrasado_num = 12
-        else:
-            mes_anterior_num = mes_atual_num - 1
-            mes_retrasado_num = mes_atual_num - 2
+    # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA 3 MESES COM DETALHAMENTO) ---
+    st.subheader("🔄 Comparativo: 3 Meses (Retrasado, Anterior e Atual)")
+    
+    # Seletor de Visão: Visão Geral por Categoria ou Visão Detalhada por Item
+    modo_visao = st.radio(
+        "Modo de Visualização do Comparativo:",
+        ["Visão Geral (Por Categoria)", "Visão Detalhada (Desmembrar Categoria Específica)"],
+        horizontal=True,
+        key="radio_modo_visao_comparativo"
+    )
+    
+    # 1. Obter o número do mês atual a partir da seleção
+    mes_map = {"Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6, 
+               "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12}
+    
+    mes_atual_num = mes_map[mes_atual]
+    
+    # Cálculo seguro dos 3 meses (lida com a virada de ano se necessário)
+    if mes_atual_num == 1:
+        mes_anterior_num = 12
+        mes_retrasado_num = 11
+    elif mes_atual_num == 2:
+        mes_anterior_num = 1
+        mes_retrasado_num = 12
+    else:
+        mes_anterior_num = mes_atual_num - 1
+        mes_retrasado_num = mes_atual_num - 2
 
-        # 2. Preparar os dados (convertendo a coluna de vencimento para data)
-        df_comp = df_base.copy()
-        
-        # --- BLOCO DE SEGURANÇA PARA DATAS ---
-        df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
-        
-        ano_atual = pd.Timestamp.now().year
-        
-        # Filtra os 3 meses contemplando a virada de ano se houver
-        meses_alvo = [mes_retrasado_num, mes_anterior_num, mes_atual_num]
-        
-        # Se envolver dezembro/novembro do ano anterior quando estamos em janeiro/fevereiro:
-        if 12 in meses_alvo and mes_atual_num in [1, 2]:
-            # Lógica para pegar o ano passado para os meses que recuaram para o ano anterior
-            df_comp = df_comp[
-                ((df_comp['Vencimento'].dt.year == ano_atual) & (df_comp['Vencimento'].dt.month.isin(meses_alvo))) |
-                ((df_comp['Vencimento'].dt.year == ano_atual - 1) & (df_comp['Vencimento'].dt.month.isin(meses_alvo)))
-            ].copy()
-        else:
-            df_comp = df_comp[
-                (df_comp['Vencimento'].dt.year == ano_atual) & 
-                (df_comp['Vencimento'].dt.month.isin(meses_alvo))
-            ].copy()
-        
-        # 3. Criar uma coluna auxiliar 'Ano-Mes' ou usar diretamente o mês formatado para evitar conflitos de anos iguais
-        # Vamos extrair o mês no formato numérico mas garantir que o pivot traga as 3 colunas fixas:
-        # Para simplificar o pivot por número do mês (1 a 12), vamos garantir que os 3 meses apareçam:
-        df_pivot = df_comp[df_comp['Tipo'] == 'Despesa'].pivot_table(
-            index='Categoria', 
-            columns=df_comp['Vencimento'].dt.month, 
-            values='V_Num', 
-            aggfunc='sum'
-        ).fillna(0)
-        
-        # Garante que as colunas dos 3 meses existam no DataFrame mesmo se alguma estiver zerada
-        for m in [mes_retrasado_num, mes_anterior_num, mes_atual_num]:
-            if m not in df_pivot.columns:
-                df_pivot[m] = 0.0
+    # 2. Preparar os dados (convertendo a coluna de vencimento para data)
+    df_comp = df_base.copy()
+    
+    # --- BLOCO DE SEGURANÇA PARA DATAS ---
+    df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
+    
+    ano_atual = pd.Timestamp.now().year
+    
+    # Filtra os 3 meses contemplando a virada de ano se houver
+    meses_alvo = [mes_retrasado_num, mes_anterior_num, mes_atual_num]
+    
+    if 12 in meses_alvo and mes_atual_num in [1, 2]:
+        df_comp = df_comp[
+            ((df_comp['Vencimento'].dt.year == ano_atual) & (df_comp['Vencimento'].dt.month.isin(meses_alvo))) |
+            ((df_comp['Vencimento'].dt.year == ano_atual - 1) & (df_comp['Vencimento'].dt.month.isin(meses_alvo)))
+        ].copy()
+    else:
+        df_comp = df_comp[
+            (df_comp['Vencimento'].dt.year == ano_atual) & 
+            (df_comp['Vencimento'].dt.month.isin(meses_alvo))
+        ].copy()
+    
+    # Filtramos apenas despesas
+    df_comp = df_comp[df_comp['Tipo'] == 'Despesa']
 
-        # Mapeamento dos nomes dos meses para as colunas reais
-        nomes_meses_inv = {v: k for k, v in mes_map.items()}
-        col_retrasado_nome = nomes_meses_inv[mes_retrasado_num]
-        col_anterior_nome = nomes_meses_inv[mes_anterior_num]
-        col_atual_nome = nomes_meses_inv[mes_atual_num]
-
-        colunas_renomeadas = {
-            mes_retrasado_num: col_retrasado_nome, 
-            mes_anterior_num: col_anterior_nome, 
-            mes_atual_num: col_atual_nome
-        }
-        df_pivot = df_pivot.rename(columns=colunas_renomeadas)
+    # 3. Lógica do Pivot dependendo da escolha de visualização
+    if modo_visao == "Visão Detalhada (Desmembrar Categoria Específica)":
+        # Pega a lista de categorias disponíveis para o usuário escolher qual deseja abrir o raio-x
+        categorias_disponiveis = sorted(df_comp['Categoria'].dropna().unique().tolist())
         
-        # Mantém apenas as 3 colunas de interesse na ordem cronológica correta
-        df_pivot = df_pivot[[col_retrasado_nome, col_anterior_nome, col_atual_nome]]
+        # Cria um selectbox para escolher qual categoria desmembrar (ex: "Moradia")
+        cat_selecionada = st.selectbox(
+            "Selecione a Categoria para Detalhar:",
+            categorias_disponiveis,
+            key="select_cat_detalhe_comp"
+        )
+        
+        # Filtra apenas os lançamentos da categoria escolhida
+        df_comp = df_comp[df_comp['Categoria'] == cat_selecionada]
+        
+        # O índice do pivot passa a ser a Descrição (ou Beneficiário/Item específico) para ver Água, Luz, Aluguel separados
+        index_pivot = 'Descrição'
+    else:
+        # Visão padrão agrupada por Categoria
+        index_pivot = 'Categoria'
 
-        # 6. Cálculo das variações percentuais
-        # Variação 1: Retrasado -> Anterior
-        df_pivot['Var. Retr.➔Ant. (%)'] = (
-            (df_pivot[col_anterior_nome] - df_pivot[col_retrasado_nome]) / df_pivot[col_retrasado_nome]
-        ).replace([float('inf'), -float('inf')], 0).fillna(0) * 100
+    # Cria o pivot table com base no nível escolhido
+    df_pivot = df_comp.pivot_table(
+        index=index_pivot, 
+        columns=df_comp['Vencimento'].dt.month, 
+        values='V_Num', 
+        aggfunc='sum'
+    ).fillna(0)
+    
+    # Garante que as colunas dos 3 meses existam no DataFrame mesmo se alguma estiver zerada
+    for m in [mes_retrasado_num, mes_anterior_num, mes_atual_num]:
+        if m not in df_pivot.columns:
+            df_pivot[m] = 0.0
 
-        # Variação 2: Anterior -> Atual
-        df_pivot['Var. Ant.➔Atual (%)'] = (
-            (df_pivot[col_atual_nome] - df_pivot[col_anterior_nome]) / df_pivot[col_anterior_nome]
-        ).replace([float('inf'), -float('inf')], 0).fillna(0) * 100
+    # Mapeamento dos nomes dos meses para as colunas reais
+    nomes_meses_inv = {v: k for k, v in mes_map.items()}
+    col_retrasado_nome = nomes_meses_inv[mes_retrasado_num]
+    col_anterior_nome = nomes_meses_inv[mes_anterior_num]
+    col_atual_nome = nomes_meses_inv[mes_atual_num]
 
-        # --- DEFINIÇÃO DA FORMATAÇÃO ---
-        formatacao = {
-            col_retrasado_nome: "{:.2f}",
-            col_anterior_nome: "{:.2f}",
-            col_atual_nome: "{:.2f}",
-            "Var. Retr.➔Ant. (%)": "{:.2f}%",
-            "Var. Ant.➔Atual (%)": "{:.2f}%"
-        }
+    colunas_renomeadas = {
+        mes_retrasado_num: col_retrasado_nome, 
+        mes_anterior_num: col_anterior_nome, 
+        mes_atual_num: col_atual_nome
+    }
+    df_pivot = df_pivot.rename(columns=colunas_renomeadas)
+    
+    # Mantém apenas as 3 colunas de interesse na ordem cronológica correta
+    df_pivot = df_pivot[[col_retrasado_nome, col_anterior_nome, col_atual_nome]]
 
-        # Exibição no Streamlit
-        st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
+    # 6. Cálculo das variações percentuais
+    df_pivot['Var. Retr.➔Ant. (%)'] = (
+        (df_pivot[col_anterior_nome] - df_pivot[col_retrasado_nome]) / df_pivot[col_retrasado_nome]
+    ).replace([float('inf'), -float('inf')], 0).fillna(0) * 100
+
+    df_pivot['Var. Ant.➔Atual (%)'] = (
+        (df_pivot[col_atual_nome] - df_pivot[col_anterior_nome]) / df_pivot[col_anterior_nome]
+    ).replace([float('inf'), -float('inf')], 0).fillna(0) * 100
+
+    # --- DEFINIÇÃO DA FORMATAÇÃO ---
+    formatacao = {
+        col_retrasado_nome: "{:.2f}",
+        col_anterior_nome: "{:.2f}",
+        col_atual_nome: "{:.2f}",
+        "Var. Retr.➔Ant. (%)": "{:.2f}%",
+        "Var. Ant.➔Atual (%)": "{:.2f}%"
+    }
+
+    # Exibição no Streamlit
+    st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         
         
-        # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
-        st.subheader("🔔 Monitor de Pendências do Período")
+    # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
+    st.subheader("🔔 Monitor de Pendências do Período")
+    
+    # Filtra apenas o que está pendente E pertence ao mês selecionado
+    df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == filtro_mes)]
+    
+    if not df_pendente_mes.empty:
+        st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
         
-        # Filtra apenas o que está pendente E pertence ao mês selecionado
-        # Usamos 'filtro_mes' que você já definiu no seu código anterior!
-        df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == filtro_mes)]
-        
-        if not df_pendente_mes.empty:
-            st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
-            
-            # Exibe as pendências do mês
-            st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','Banco','Valor', 'Categoria']], use_container_width=True)
-        else:
-            st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
+        # Exibe as pendências do mês
+        st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','Banco','Valor', 'Categoria']], use_container_width=True)
+    else:
+        st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
         
         
             # --- AQUI COMEÇA O WILSONBOT ---
