@@ -854,7 +854,7 @@ with st.sidebar.expander("📢 Central de Notificações"):
    # Botão de E-mail com Resumo Dinâmico
     if st.button("📧 Enviar Resumo por E-mail", key="btn_email"):
         remetente = "wilsonrobertobarna@gmail.com"
-        senha_app = "sua_senha_de_app_16_letras"
+        senha_app = "xbud ssyt bpwu ntrx"
         destinatario = "wilsonrobertobarna@gmail.com"
         
         # Exemplo de como puxar dados do seu DataFrame (ajuste os nomes das colunas se necessário)
