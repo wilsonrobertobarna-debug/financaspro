@@ -851,14 +851,27 @@ with st.sidebar.expander("📢 Central de Notificações"):
         
     st.markdown("---")
     
-    # Botão de E-mail
+   # Botão de E-mail com Resumo Dinâmico
     if st.button("📧 Enviar Resumo por E-mail", key="btn_email"):
         remetente = "wilsonrobertobarna@gmail.com"
-        senha_app = "xbud ssyt bpwu ntrx"
+        senha_app = "sua_senha_de_app_16_letras"
         destinatario = "wilsonrobertobarna@gmail.com"
         
-        assunto = "FinançasPro - Resumo de Pagamentos"
-        corpo = "Olá! Segue o resumo das notificações do seu sistema FinançasPro."
+        # Exemplo de como puxar dados do seu DataFrame (ajuste os nomes das colunas se necessário)
+        try:
+            total_geral = df['Valor'].sum() if 'Valor' in df.columns else 0
+            
+            # Monta o texto dinâmico com os dados reais
+            assunto = "FinançasPro - Resumo de Pagamentos"
+            corpo = f"""Olá, Wilson! Segue o resumo atualizado do seu sistema FinançasPro:
+
+- Total geral movimentado/cadastrado: R$ {total_geral:,.2f}
+- Total de registros na base: {len(df)}
+
+Mensagem gerada automaticamente pelo seu sistema FinançasPro.
+"""
+        except Exception as err:
+            corpo = "Olá! Segue o resumo das notificações do seu sistema FinançasPro."
 
         try:
             import smtplib
@@ -877,9 +890,9 @@ with st.sidebar.expander("📢 Central de Notificações"):
             servidor.sendmail(remetente, destinatario, msg.as_string())
             servidor.quit()
             
-            st.success("✅ E-mail enviado com sucesso!")
+            st.sidebar.success("✅ E-mail com resumo enviado com sucesso!")
         except Exception as e:
-            st.error(f"❌ Erro ao enviar e-mail: {e}")
+            st.sidebar.error(f"❌ Erro ao enviar e-mail: {e}")
             
             
        
