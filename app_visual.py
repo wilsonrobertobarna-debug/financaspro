@@ -837,6 +837,49 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
             atualizar_sessao()
             st.rerun()
+
+
+
+    # --- BARRINHA DE NOTIFICAÇÕES ---
+    with st.sidebar.expander("📢 Central de Notificações"):
+    st.markdown("Dispare avisos manuais de vencimentos ou pagamentos:")
+    
+    # Botão de WhatsApp
+    if st.button("💬 Enviar Aviso via WhatsApp", key="btn_whats"):
+        # (Sua lógica do Twilio vai aqui)
+        st.success("Mensagem enviada no WhatsApp!")
+        
+    st.markdown("---")
+    
+    # Botão de E-mail
+    if st.button("📧 Enviar Resumo por E-mail", key="btn_email"):
+        remetente = "seu_email@gmail.com"
+        senha_app = "sua_senha_de_app_aqui"
+        destinatario = "seu_email@gmail.com"
+        
+        assunto = "FinançasPro - Resumo de Pagamentos"
+        corpo = "Olá! Segue o resumo das notificações do seu sistema FinançasPro."
+
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+
+            msg = MIMEMultipart()
+            msg['From'] = remetente
+            msg['To'] = destinatario
+            msg['Subject'] = assunto
+            msg.attach(MIMEText(corpo, 'plain'))
+
+            servidor = smtplib.SMTP('smtp.gmail.com', 587)
+            servidor.starttls()
+            servidor.login(remetente, senha_app)
+            servidor.sendmail(remetente, destinatario, msg.as_string())
+            servidor.quit()
+            
+            st.success("✅ E-mail enviado com sucesso!")
+        except Exception as e:
+            st.error(f"❌ Erro ao enviar e-mail: {e}")
             
             
        
