@@ -632,6 +632,16 @@ aba = st.session_state.page
 if "expander_lancamento_aberto" not in st.session_state:
     st.session_state.expander_lancamento_aberto = False
 
+# --- GATILHO DE LIMPEZA DO FORMULÁRIO ---
+if st.session_state.get('limpar_form_pendente', False):
+    st.session_state['val_novo_lancamento'] = 0.0
+    st.session_state['par_novo_lancamento'] = 1
+    st.session_state['desc_novo_lancamento'] = ""
+    st.session_state['bnfc_novo_texto'] = ""
+    if 'sb_bnfc_novo_lancamento' in st.session_state:
+        st.session_state['sb_bnfc_novo_lancamento'] = ""
+    st.session_state['limpar_form_pendente'] = False
+
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
     
     # 1. O Banco fica FORA do formulário para atualizar a tela na mesma hora que você troca
@@ -815,22 +825,16 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     beneficiario_final  
                 ])
             
+            # Ativa o gatilho para limpar os campos na próxima recarga
+            st.session_state['limpar_form_pendente'] = True
+            
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
             
-            # Reseta o sinalizador para o próximo cadastro
+            # Reseta o sinalizador de duplicidade
             st.session_state.ignorar_duplicidade = False
             
-            # Pausa de 1 segundo para o Google Sheets processar a gravação antes de atualizar a sessão
             import time
             time.sleep(1)
-
-            # Limpa os campos do formulário redefinindo as chaves no session_state
-            st.session_state['val_novo_lancamento'] = 0.0
-            st.session_state['par_novo_lancamento'] = 1
-            st.session_state['desc_novo_lancamento'] = ""
-            st.session_state['bnfc_novo_texto'] = ""
-            if 'sb_bnfc_novo_lancamento' in st.session_state:
-                st.session_state['sb_bnfc_novo_lancamento'] = ""
             
             atualizar_sessao()
             st.rerun()
