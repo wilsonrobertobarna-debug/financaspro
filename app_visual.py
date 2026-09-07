@@ -632,21 +632,15 @@ aba = st.session_state.page
 if "expander_lancamento_aberto" not in st.session_state:
     st.session_state.expander_lancamento_aberto = False
 
-# --- GATILHO DE LIMPEZA DO FORMULÁRIO (DELETA AS CHAVES PARA REINICIAR DO ZERO) ---
+# --- GATILHO DE LIMPEZA DO FORMULÁRIO (ATRIBUIÇÃO SEGURA) ---
 if st.session_state.get('limpar_form_pendente', False):
-    chaves_para_limpar = [
-        'val_novo_lancamento', 
-        'par_novo_lancamento', 
-        'desc_novo_lancamento', 
-        'bnfc_novo_texto', 
-        'sb_bnfc_novo_lancamento'
-    ]
-    for chave in chaves_para_limpar:
-        if chave in st.session_state:
-            del st.session_state[chave]
-            
+    st.session_state['val_novo_lancamento'] = 0.0
+    st.session_state['par_novo_lancamento'] = 1
+    st.session_state['desc_novo_lancamento'] = ""
+    st.session_state['bnfc_novo_texto'] = ""
+    st.session_state['sb_bnfc_novo_lancamento'] = ""
     st.session_state['limpar_form_pendente'] = False
-# ---------------------------------------------------------------------------------
+# -------------------------------------------------------------
 
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
     
@@ -831,16 +825,15 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     beneficiario_final  
                 ])
             
-            # Ativa o gatilho para limpar os campos na próxima recarga
-            st.session_state['limpar_form_pendente'] = True
-            
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
             
-            # Reseta o sinalizador de duplicidade
+            # Ativa o gatilho para limpar os campos na próxima recarga
+            st.session_state['limpar_form_pendente'] = True
             st.session_state.ignorar_duplicidade = False
             
+            # Pausa de 1.5 segundos para aliviar a API do Google Sheets e evitar o erro de requisição
             import time
-            time.sleep(1)
+            time.sleep(1.5)
             
             atualizar_sessao()
             st.rerun()
