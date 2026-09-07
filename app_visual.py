@@ -1594,7 +1594,7 @@ if "💰" in st.session_state.page:
     # Filtramos apenas despesas
     df_comp = df_comp[df_comp['Tipo'] == 'Despesa']
 
-    # 4. Se a visão detalhada estiver ativa, exibe obrigatoriamente a caixa de seleção da categoria
+   # 4. Se a visão detalhada estiver ativa, exibe obrigatoriamente a caixa de seleção da categoria
     if modo_visao == "Visão Detalhada (Desmembrar Categoria Específica)":
         # Pega todas as categorias de despesa disponíveis na base geral ou no período
         categorias_disponiveis = sorted(df_base[df_base['Tipo'] == 'Despesa']['Categoria'].dropna().unique().tolist())
@@ -1607,7 +1607,9 @@ if "💰" in st.session_state.page:
             )
             # Filtra os dados dos 3 meses apenas para a categoria escolhida
             df_comp = df_comp[df_comp['Categoria'] == cat_selecionada]
-            index_pivot = 'Descrição'
+            
+            # AGRUPAMENTO POR BENEFICIÁRIO: Junta as parcelas e itens pelo fornecedor/beneficiário
+            index_pivot = 'Beneficiário'
         else:
             st.info("Nenhuma categoria encontrada.")
             index_pivot = 'Categoria'
