@@ -823,6 +823,14 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             # Pausa de 1 segundo para o Google Sheets processar a gravação antes de atualizar a sessão
             import time
             time.sleep(1)
+
+            # Limpa os campos do formulário redefinindo as chaves no session_state
+            st.session_state['val_novo_lancamento'] = 0.0
+            st.session_state['par_novo_lancamento'] = 1
+            st.session_state['desc_novo_lancamento'] = ""
+            st.session_state['bnfc_novo_texto'] = ""
+            if 'sb_bnfc_novo_lancamento' in st.session_state:
+                st.session_state['sb_bnfc_novo_lancamento'] = ""
             
             atualizar_sessao()
             st.rerun()
