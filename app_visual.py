@@ -1536,13 +1536,15 @@ if "💰" in st.session_state.page:
                     )
         else:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
-        # =========================================================================
      # =========================================================================
+     # =========================================================================
+        
+# =========================================================================
         
     # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA 3 MESES COM DETALHAMENTO) ---
     st.subheader("🔄 Comparativo: 3 Meses (Retrasado, Anterior e Atual)")
     
-    # Seletor de Visão: Visão Geral por Categoria ou Visão Detalhada por Item
+    # 1. Seletor de Visão (Radio)
     modo_visao = st.radio(
         "Modo de Visualização do Comparativo:",
         ["Visão Geral (Por Categoria)", "Visão Detalhada (Desmembrar Categoria Específica)"],
@@ -1550,7 +1552,7 @@ if "💰" in st.session_state.page:
         key="radio_modo_visao_comparativo"
     )
     
-    # 1. Obter o número do mês atual a partir da seleção
+    # 2. Obter o número do mês atual a partir da seleção
     mes_map = {"Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6, 
                "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12}
     
@@ -1567,7 +1569,7 @@ if "💰" in st.session_state.page:
         mes_anterior_num = mes_atual_num - 1
         mes_retrasado_num = mes_atual_num - 2
 
-    # 2. Preparar os dados (convertendo a coluna de vencimento para data)
+    # 3. Preparar os dados (convertendo a coluna de vencimento para data)
     df_comp = df_base.copy()
     
     # --- BLOCO DE SEGURANÇA PARA DATAS ---
@@ -1592,32 +1594,26 @@ if "💰" in st.session_state.page:
     # Filtramos apenas despesas
     df_comp = df_comp[df_comp['Tipo'] == 'Despesa']
 
-   # 3. Lógica do Pivot dependendo da escolha de visualização
+    # 4. Se a visão detalhada estiver ativa, exibe obrigatoriamente a caixa de seleção da categoria
     if modo_visao == "Visão Detalhada (Desmembrar Categoria Específica)":
-        # Pega todas as categorias de despesa presentes no dataset filtrado ou na base
-        categorias_disponiveis = sorted(df_comp['Categoria'].dropna().unique().tolist())
+        # Pega todas as categorias de despesa disponíveis na base geral ou no período
+        categorias_disponiveis = sorted(df_base[df_base['Tipo'] == 'Despesa']['Categoria'].dropna().unique().tolist())
         
-        # Fallback de segurança: se por acaso a lista vier vazia para o período, pega do dataset geral
-        if not categorias_disponiveis and 'df_base' in locals():
-            categorias_disponiveis = sorted(df_base[df_base['Tipo'] == 'Despesa']['Categoria'].dropna().unique().tolist())
-            
         if categorias_disponiveis:
-            # Cria um selectbox para escolher qual categoria desmembrar (ex: "Moradia")
             cat_selecionada = st.selectbox(
-                "Selecione a Categoria para Detalhar:",
+                "📂 Selecione a Categoria para Detalhar:",
                 categorias_disponiveis,
                 key="select_cat_detalhe_comp"
             )
-            
-            # Filtra os dados dos 3 meses APENAS para a categoria escolhida
+            # Filtra os dados dos 3 meses apenas para a categoria escolhida
             df_comp = df_comp[df_comp['Categoria'] == cat_selecionada]
             index_pivot = 'Descrição'
         else:
-            st.info("Nenhuma categoria de despesa encontrada para o período selecionado.")
+            st.info("Nenhuma categoria encontrada.")
             index_pivot = 'Categoria'
     else:
-        # Visão padrão agrupada por Categoria
         index_pivot = 'Categoria'
+
     # Cria o pivot table com base no nível escolhido
     df_pivot = df_comp.pivot_table(
         index=index_pivot, 
