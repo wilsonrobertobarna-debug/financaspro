@@ -851,7 +851,7 @@ with st.sidebar.expander("📢 Central de Notificações"):
         
     st.markdown("---")
     
-   # Botão de E-mail com Resumo Detalhado do Dia
+   # Botão de E-mail com Resumo Detalhado do Dia (Com Tipo, Data, Beneficiário, Descrição e Valor)
     if st.button("📧 Enviar Resumo por E-mail", key="btn_email"):
         remetente = "wilsonrobertobarna@gmail.com"
         senha_app = "xbud ssyt bpwu ntrx"
@@ -864,7 +864,7 @@ with st.sidebar.expander("📢 Central de Notificações"):
                 import datetime
                 hoje = datetime.date.today()
                 
-                # Filtra apenas os lançamentos de hoje usando a coluna 'DT' que sua função cria
+                # Filtra apenas os lançamentos de hoje usando a coluna 'DT'
                 if 'DT' in df_atual.columns:
                     df_hoje = df_atual[df_atual['DT'].dt.date == hoje]
                 else:
@@ -884,7 +884,8 @@ with st.sidebar.expander("📢 Central de Notificações"):
                 if not df_hoje.empty:
                     total_hoje = 0
                     for index, row in df_hoje.iterrows():
-                        # Puxa os dados das colunas (garanta que os nomes abaixo batem com os da sua planilha)
+                        # Puxa os dados das colunas
+                        tipo_lanc = row.get('Tipo', row.get('Tipo de Lançamento', 'Despesa/Receita'))
                         data_lanc = row.get('Vencimento', row.get('Data', 'Data não informada'))
                         beneficiario = row.get('Beneficiário', row.get('Favorecido', 'Não informado'))
                         descricao = row.get('Descrição', row.get('Historico', 'Sem descrição'))
@@ -892,14 +893,15 @@ with st.sidebar.expander("📢 Central de Notificações"):
                         
                         total_hoje += valor
                         
-                        # Formata a linha de cada lançamento
-                        corpo += f"• Data: {data_lanc}\n"
+                        # Formata a linha de cada lançamento incluindo o Tipo
+                        corpo += f"• [{tipo_lanc}]\n"
+                        corpo += f"  Data: {data_lanc}\n"
                         corpo += f"  Beneficiário: {beneficiario}\n"
                         corpo += f"  Descrição: {descricao}\n"
                         corpo += f"  Valor: R$ {formata_br(valor)}\n"
                         corpo += "----------------------------------------\n"
                     
-                    corpo += f"\nTotal dos pagamentos de hoje: R$ {formata_br(total_hoje)}\n"
+                    corpo += f"\nTotal movimentado hoje: R$ {formata_br(total_hoje)}\n"
                     corpo += f"Total de registros: {len(df_hoje)}\n"
                 else:
                     corpo += "Nenhum lançamento registrado para hoje.\n"
