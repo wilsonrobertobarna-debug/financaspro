@@ -1344,13 +1344,20 @@ if "💰" in st.session_state.page:
         st.divider()
 
        # --- ITEM 3 BLINDADO: PREVISÃO DE FIM DE MÊS (PROJEÇÃO) ---
-        ano_atual = datetime.now().year
+        from datetime import datetime
+        import pytz
+        
+        # Garante o fuso horário correto do Brasil (evita virada antecipada às 21h)
+        fuso_br = pytz.timezone('America/Sao_Paulo')
+        agora_br = datetime.now(fuso_br)
+        
+        ano_atual = agora_br.year
         gasto_atual_mes = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa']['V_Num'].sum()
         
-        dia_hoje = datetime.now().day
+        dia_hoje = agora_br.day
         total_dias_mes = pd.Timestamp(ano_atual, int(mes_map.get(mes_atual, '09')), 1).days_in_month
         
-        if datetime.now().month == int(mes_map.get(mes_atual, '09')):
+        if agora_br.month == int(mes_map.get(mes_atual, '09')):
             dias_base = max(dia_hoje, 1)
         else:
             dias_base = total_dias_mes
