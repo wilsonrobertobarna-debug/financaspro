@@ -840,8 +840,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
 
 
-    # --- BARRINHA DE NOTIFICAÇÕES ---
-    with st.sidebar.expander("📢 Central de Notificações"):
+ # --- BARRINHA DE NOTIFICAÇÕES ---
+with st.sidebar.expander("📢 Central de Notificações"):
     st.markdown("Dispare avisos manuais de vencimentos ou pagamentos:")
     
     # Botão de WhatsApp
