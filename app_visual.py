@@ -851,31 +851,64 @@ with st.sidebar.expander("📢 Central de Notificações"):
         
     st.markdown("---")
     
-   # Botão de E-mail com Resumo Dinâmico
+   # Botão de E-mail com Resumo Detalhado do Dia
     if st.button("📧 Enviar Resumo por E-mail", key="btn_email"):
         remetente = "wilsonrobertobarna@gmail.com"
         senha_app = "xbud ssyt bpwu ntrx"
         destinatario = "wilsonrobertobarna@gmail.com"
         
         try:
-            # Chama a sua função para carregar os dados atualizados direto do Google Sheets
             df_atual = carregar_dados_gs()
             
-            if df_atual is not None and not df_atual.empty and 'V_Num' in df_atual.columns:
-                total_geral = df_atual['V_Num'].sum()
-                total_registros = len(df_atual)
+            if df_atual is not None and not df_atual.empty:
+                import datetime
+                hoje = datetime.date.today()
                 
-                corpo = f"""Olá, Wilson! Segue o resumo atualizado do seu sistema FinançasPro:
+                # Filtra apenas os lançamentos de hoje usando a coluna 'DT' que sua função cria
+                if 'DT' in df_atual.columns:
+                    df_hoje = df_atual[df_atual['DT'].dt.date == hoje]
+                else:
+                    df_hoje = pd.DataFrame()
+                
+                # Função para formatar valores no padrão brasileiro
+                def formata_br(v):
+                    try:
+                        s = f"{float(v):,.2f}"
+                        return s.replace(",", "X").replace(".", ",").replace("X", ".")
+                    except:
+                        return "0,00"
 
-- Total geral acumulado: R$ {total_geral:,.2f}
-- Total de lançamentos na base: {total_registros}
+                # Monta o corpo do e-mail com os detalhes
+                corpo = f"Olá, Wilson! Segue o extrato detalhado dos lançamentos de hoje ({hoje.strftime('%d/%m/%Y')}):\n\n"
+                
+                if not df_hoje.empty:
+                    total_hoje = 0
+                    for index, row in df_hoje.iterrows():
+                        # Puxa os dados das colunas (garanta que os nomes abaixo batem com os da sua planilha)
+                        data_lanc = row.get('Vencimento', row.get('Data', 'Data não informada'))
+                        beneficiario = row.get('Beneficiário', row.get('Favorecido', 'Não informado'))
+                        descricao = row.get('Descrição', row.get('Historico', 'Sem descrição'))
+                        valor = row.get('V_Num', 0)
+                        
+                        total_hoje += valor
+                        
+                        # Formata a linha de cada lançamento
+                        corpo += f"• Data: {data_lanc}\n"
+                        corpo += f"  Beneficiário: {beneficiario}\n"
+                        corpo += f"  Descrição: {descricao}\n"
+                        corpo += f"  Valor: R$ {formata_br(valor)}\n"
+                        corpo += "----------------------------------------\n"
+                    
+                    corpo += f"\nTotal dos pagamentos de hoje: R$ {formata_br(total_hoje)}\n"
+                    corpo += f"Total de registros: {len(df_hoje)}\n"
+                else:
+                    corpo += "Nenhum lançamento registrado para hoje.\n"
 
-Mensagem gerada automaticamente pelo seu sistema FinançasPro.
-"""
+                corpo += "\nMensagem gerada automaticamente pelo seu sistema FinançasPro."
             else:
-                corpo = "Olá, Wilson! O sistema FinançasPro está operando, mas a planilha retornou vazia ou sem registros."
+                corpo = "Olá, Wilson! O sistema FinançasPro está operando, mas a planilha retornou vazia."
 
-            assunto = "FinançasPro - Resumo de Pagamentos"
+            assunto = f"FinançasPro - Extrato do Dia ({datetime.date.today().strftime('%d/%m/%Y')})"
 
             import smtplib
             from email.mime.text import MIMEText
@@ -885,7 +918,7 @@ Mensagem gerada automaticamente pelo seu sistema FinançasPro.
             msg['From'] = remetente
             msg['To'] = destinatario
             msg['Subject'] = assunto
-            msg.attach(MIMEText(corpo, 'plain'))
+            msg.attach(MIMEText(corpo, 'plain', 'utf-8'))
 
             servidor = smtplib.SMTP('smtp.gmail.com', 587)
             servidor.starttls()
@@ -893,7 +926,7 @@ Mensagem gerada automaticamente pelo seu sistema FinançasPro.
             servidor.sendmail(remetente, destinatario, msg.as_string())
             servidor.quit()
             
-            st.sidebar.success("✅ E-mail com resumo enviado com sucesso!")
+            st.sidebar.success("✅ E-mail detalhado enviado com sucesso!")
         except Exception as e:
             st.sidebar.error(f"❌ Erro ao enviar e-mail: {e}")
             
