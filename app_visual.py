@@ -1344,11 +1344,10 @@ if "💰" in st.session_state.page:
         st.divider()
 
        # --- ITEM 3 BLINDADO: PREVISÃO DE FIM DE MÊS (PROJEÇÃO) ---
-        from datetime import datetime
-        import pytz
+        from datetime import datetime, timezone, timedelta
         
-        # Garante o fuso horário correto do Brasil (evita virada antecipada às 21h)
-        fuso_br = pytz.timezone('America/Sao_Paulo')
+        # Fuso horário fixo de Brasília (UTC-3) usando apenas recursos nativos do Python
+        fuso_br = timezone(timedelta(hours=-3))
         agora_br = datetime.now(fuso_br)
         
         ano_atual = agora_br.year
