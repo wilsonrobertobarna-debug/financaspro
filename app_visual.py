@@ -1594,8 +1594,8 @@ if "💰" in st.session_state.page:
 
     # 3. Lógica do Pivot dependendo da escolha de visualização
     if modo_visao == "Visão Detalhada (Desmembrar Categoria Específica)":
-        # Pega a lista de categorias disponíveis para o usuário escolher qual deseja abrir o raio-x
-        categorias_disponiveis = sorted(df_comp['Categoria'].dropna().unique().tolist())
+        # Pega a lista de TODAS as categorias disponíveis no df_base (ou df_comp) para não sumir nenhuma
+        categorias_disponiveis = sorted(df_base[df_base['Tipo'] == 'Despesa']['Categoria'].dropna().unique().tolist())
         
         # Cria um selectbox para escolher qual categoria desmembrar (ex: "Moradia")
         cat_selecionada = st.selectbox(
@@ -1604,10 +1604,10 @@ if "💰" in st.session_state.page:
             key="select_cat_detalhe_comp"
         )
         
-        # Filtra apenas os lançamentos da categoria escolhida
+        # Filtra os dados dos 3 meses APENAS para a categoria que o Wilson escolheu
         df_comp = df_comp[df_comp['Categoria'] == cat_selecionada]
         
-        # O índice do pivot passa a ser a Descrição (ou Beneficiário/Item específico) para ver Água, Luz, Aluguel separados
+        # O índice do pivot passa a ser a Descrição para ver os itens separados (Água, Luz, etc.)
         index_pivot = 'Descrição'
     else:
         # Visão padrão agrupada por Categoria
