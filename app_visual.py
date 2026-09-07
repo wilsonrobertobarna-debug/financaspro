@@ -632,15 +632,21 @@ aba = st.session_state.page
 if "expander_lancamento_aberto" not in st.session_state:
     st.session_state.expander_lancamento_aberto = False
 
-# --- GATILHO DE LIMPEZA DO FORMULÁRIO ---
+# --- GATILHO DE LIMPEZA DO FORMULÁRIO (DELETA AS CHAVES PARA REINICIAR DO ZERO) ---
 if st.session_state.get('limpar_form_pendente', False):
-    st.session_state['val_novo_lancamento'] = 0.0
-    st.session_state['par_novo_lancamento'] = 1
-    st.session_state['desc_novo_lancamento'] = ""
-    st.session_state['bnfc_novo_texto'] = ""
-    if 'sb_bnfc_novo_lancamento' in st.session_state:
-        st.session_state['sb_bnfc_novo_lancamento'] = ""
+    chaves_para_limpar = [
+        'val_novo_lancamento', 
+        'par_novo_lancamento', 
+        'desc_novo_lancamento', 
+        'bnfc_novo_texto', 
+        'sb_bnfc_novo_lancamento'
+    ]
+    for chave in chaves_para_limpar:
+        if chave in st.session_state:
+            del st.session_state[chave]
+            
     st.session_state['limpar_form_pendente'] = False
+# ---------------------------------------------------------------------------------
 
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
     
