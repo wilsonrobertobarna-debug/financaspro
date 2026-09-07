@@ -854,7 +854,7 @@ with st.sidebar.expander("📢 Central de Notificações"):
     # Botão de E-mail
     if st.button("📧 Enviar Resumo por E-mail", key="btn_email"):
         remetente = "wilsonrobertobarna@gmail.com"
-        senha_app = "vjbvuyirgcxljlme"
+        senha_app = "xbud ssyt bpwu ntrx"
         destinatario = "wilsonrobertobarna@gmail.com"
         
         assunto = "FinançasPro - Resumo de Pagamentos"
