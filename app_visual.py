@@ -851,7 +851,7 @@ with st.sidebar.expander("📢 Central de Notificações"):
         
     st.markdown("---")
     
-   # Botão de E-mail com Resumo Detalhado do Dia (Com Tipo, Data, Beneficiário, Descrição e Valor)
+   # Botão de E-mail com Resumo Detalhado do Dia em HTML (Com Cores por Tipo)
     if st.button("📧 Enviar Resumo por E-mail", key="btn_email"):
         remetente = "wilsonrobertobarna@gmail.com"
         senha_app = "xbud ssyt bpwu ntrx"
@@ -864,13 +864,11 @@ with st.sidebar.expander("📢 Central de Notificações"):
                 import datetime
                 hoje = datetime.date.today()
                 
-                # Filtra apenas os lançamentos de hoje usando a coluna 'DT'
                 if 'DT' in df_atual.columns:
                     df_hoje = df_atual[df_atual['DT'].dt.date == hoje]
                 else:
                     df_hoje = pd.DataFrame()
                 
-                # Função para formatar valores no padrão brasileiro
                 def formata_br(v):
                     try:
                         s = f"{float(v):,.2f}"
@@ -878,14 +876,19 @@ with st.sidebar.expander("📢 Central de Notificações"):
                     except:
                         return "0,00"
 
-                # Monta o corpo do e-mail com os detalhes
-                corpo = f"Olá, Wilson! Segue o extrato detalhado dos lançamentos de hoje ({hoje.strftime('%d/%m/%Y')}):\n\n"
+                # Monta o corpo do e-mail em HTML para suportar cores
+                html_corpo = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+                    <h2 style="color: #1f4e78;">FinançasPro - Extrato do Dia ({hoje.strftime('%d/%m/%Y')})</h2>
+                    <p>Olá, Wilson! Segue o extrato detalhado dos lançamentos de hoje:</p>
+                    <hr style="border: none; border-top: 1px solid #ccc;">
+                """
                 
                 if not df_hoje.empty:
                     total_hoje = 0
                     for index, row in df_hoje.iterrows():
-                        # Puxa os dados das colunas
-                        tipo_lanc = row.get('Tipo', row.get('Tipo de Lançamento', 'Despesa/Receita'))
+                        tipo_lanc = str(row.get('Tipo', row.get('Tipo de Lançamento', 'Despesa'))).strip().lower()
                         data_lanc = row.get('Vencimento', row.get('Data', 'Data não informada'))
                         beneficiario = row.get('Beneficiário', row.get('Favorecido', 'Não informado'))
                         descricao = row.get('Descrição', row.get('Historico', 'Sem descrição'))
@@ -893,22 +896,42 @@ with st.sidebar.expander("📢 Central de Notificações"):
                         
                         total_hoje += valor
                         
-                        # Formata a linha de cada lançamento incluindo o Tipo
-                        corpo += f"• [{tipo_lanc}]\n"
-                        corpo += f"  Data: {data_lanc}\n"
-                        corpo += f"  Beneficiário: {beneficiario}\n"
-                        corpo += f"  Descrição: {descricao}\n"
-                        corpo += f"  Valor: R$ {formata_br(valor)}\n"
-                        corpo += "----------------------------------------\n"
+                        # Define a cor com base no tipo de lançamento
+                        if 'receita' in tipo_lanc:
+                            cor_tipo = "#27ae60"  # Verde
+                            tipo_texto = "RECEITA"
+                        elif 'rendimento' in tipo_lanc:
+                            cor_tipo = "#2980b9"  # Azul
+                            tipo_texto = "RENDIMENTO"
+                        else:
+                            cor_tipo = "#c0392b"  # Vermelho (Despesa)
+                            tipo_texto = "DESPESA"
+                        
+                        html_corpo += f"""
+                        <div style="margin-bottom: 15px; padding: 10px; background-color: #f9f9f9; border-left: 4px solid {cor_tipo};">
+                            <span style="color: {cor_tipo}; font-weight: bold; font-size: 14px;">[{tipo_texto}]</span><br>
+                            <b>Data:</b> {data_lanc}<br>
+                            <b>Beneficiário:</b> {beneficiario}<br>
+                            <b>Descrição:</b> {descricao}<br>
+                            <b>Valor:</b> R$ {formata_br(valor)}
+                        </div>
+                        """
                     
-                    corpo += f"\nTotal movimentado hoje: R$ {formata_br(total_hoje)}\n"
-                    corpo += f"Total de registros: {len(df_hoje)}\n"
+                    html_corpo += f"""
+                    <hr style="border: none; border-top: 1px solid #ccc;">
+                    <p><b>Total movimentado hoje:</b> R$ {formata_br(total_hoje)}<br>
+                    <b>Total de registros:</b> {len(df_hoje)}</p>
+                    """
                 else:
-                    corpo += "Nenhum lançamento registrado para hoje.\n"
+                    html_corpo += "<p>Nenhum lançamento registrado para hoje.</p>"
 
-                corpo += "\nMensagem gerada automaticamente pelo seu sistema FinançasPro."
+                html_corpo += """
+                    <br><p style="font-size: 12px; color: #7f8c8d;">Mensagem gerada automaticamente pelo seu sistema FinançasPro.</p>
+                </body>
+                </html>
+                """
             else:
-                corpo = "Olá, Wilson! O sistema FinançasPro está operando, mas a planilha retornou vazia."
+                html_corpo = "<p>Olá, Wilson! O sistema FinançasPro está operando, mas a planilha retornou vazia.</p>"
 
             assunto = f"FinançasPro - Extrato do Dia ({datetime.date.today().strftime('%d/%m/%Y')})"
 
@@ -920,7 +943,9 @@ with st.sidebar.expander("📢 Central de Notificações"):
             msg['From'] = remetente
             msg['To'] = destinatario
             msg['Subject'] = assunto
-            msg.attach(MIMEText(corpo, 'plain', 'utf-8'))
+            
+            # Anexa o conteúdo como HTML ('html' em vez de 'plain')
+            msg.attach(MIMEText(html_corpo, 'html', 'utf-8'))
 
             servidor = smtplib.SMTP('smtp.gmail.com', 587)
             servidor.starttls()
@@ -928,7 +953,7 @@ with st.sidebar.expander("📢 Central de Notificações"):
             servidor.sendmail(remetente, destinatario, msg.as_string())
             servidor.quit()
             
-            st.sidebar.success("✅ E-mail detalhado enviado com sucesso!")
+            st.sidebar.success("✅ E-mail formatado enviado com sucesso!")
         except Exception as e:
             st.sidebar.error(f"❌ Erro ao enviar e-mail: {e}")
             
