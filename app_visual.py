@@ -1592,27 +1592,32 @@ if "💰" in st.session_state.page:
     # Filtramos apenas despesas
     df_comp = df_comp[df_comp['Tipo'] == 'Despesa']
 
-    # 3. Lógica do Pivot dependendo da escolha de visualização
+   # 3. Lógica do Pivot dependendo da escolha de visualização
     if modo_visao == "Visão Detalhada (Desmembrar Categoria Específica)":
-        # Pega a lista de TODAS as categorias disponíveis no df_base (ou df_comp) para não sumir nenhuma
-        categorias_disponiveis = sorted(df_base[df_base['Tipo'] == 'Despesa']['Categoria'].dropna().unique().tolist())
+        # Pega todas as categorias de despesa presentes no dataset filtrado ou na base
+        categorias_disponiveis = sorted(df_comp['Categoria'].dropna().unique().tolist())
         
-        # Cria um selectbox para escolher qual categoria desmembrar (ex: "Moradia")
-        cat_selecionada = st.selectbox(
-            "Selecione a Categoria para Detalhar:",
-            categorias_disponiveis,
-            key="select_cat_detalhe_comp"
-        )
-        
-        # Filtra os dados dos 3 meses APENAS para a categoria que o Wilson escolheu
-        df_comp = df_comp[df_comp['Categoria'] == cat_selecionada]
-        
-        # O índice do pivot passa a ser a Descrição para ver os itens separados (Água, Luz, etc.)
-        index_pivot = 'Descrição'
+        # Fallback de segurança: se por acaso a lista vier vazia para o período, pega do dataset geral
+        if not categorias_disponiveis and 'df_base' in locals():
+            categorias_disponiveis = sorted(df_base[df_base['Tipo'] == 'Despesa']['Categoria'].dropna().unique().tolist())
+            
+        if categorias_disponiveis:
+            # Cria um selectbox para escolher qual categoria desmembrar (ex: "Moradia")
+            cat_selecionada = st.selectbox(
+                "Selecione a Categoria para Detalhar:",
+                categorias_disponiveis,
+                key="select_cat_detalhe_comp"
+            )
+            
+            # Filtra os dados dos 3 meses APENAS para a categoria escolhida
+            df_comp = df_comp[df_comp['Categoria'] == cat_selecionada]
+            index_pivot = 'Descrição'
+        else:
+            st.info("Nenhuma categoria de despesa encontrada para o período selecionado.")
+            index_pivot = 'Categoria'
     else:
         # Visão padrão agrupada por Categoria
         index_pivot = 'Categoria'
-
     # Cria o pivot table com base no nível escolhido
     df_pivot = df_comp.pivot_table(
         index=index_pivot, 
