@@ -858,16 +858,12 @@ with st.sidebar.expander("📢 Central de Notificações"):
         destinatario = "wilsonrobertobarna@gmail.com"
         
         try:
-            # Puxa o DataFrame direto do session_state do Streamlit
-            df_atual = st.session_state.get('df', None)
+            # Chama a sua função para carregar os dados atualizados direto do Google Sheets
+            df_atual = carregar_dados_gs()
             
-            if df_atual is not None and not df_atual.empty and 'Valor' in df_atual.columns:
-                # Converte para numérico para garantir a soma correta
-                df_temp = df_atual.copy()
-                df_temp['Valor'] = pd.to_numeric(df_temp['Valor'], errors='coerce').fillna(0)
-                
-                total_geral = df_temp['Valor'].sum()
-                total_registros = len(df_temp)
+            if df_atual is not None and not df_atual.empty and 'V_Num' in df_atual.columns:
+                total_geral = df_atual['V_Num'].sum()
+                total_registros = len(df_atual)
                 
                 corpo = f"""Olá, Wilson! Segue o resumo atualizado do seu sistema FinançasPro:
 
@@ -877,7 +873,7 @@ with st.sidebar.expander("📢 Central de Notificações"):
 Mensagem gerada automaticamente pelo seu sistema FinançasPro.
 """
             else:
-                corpo = "Olá, Wilson! O sistema FinançasPro está operando, mas a tabela de dados está vazia ou a coluna 'Valor' não foi localizada."
+                corpo = "Olá, Wilson! O sistema FinançasPro está operando, mas a planilha retornou vazia ou sem registros."
 
             assunto = "FinançasPro - Resumo de Pagamentos"
 
