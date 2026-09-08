@@ -840,16 +840,90 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
 
 
- # --- BARRINHA DE NOTIFICAÇÕES ---
-with st.sidebar.expander("📢 Central de Notificações"):
-    st.markdown("Dispare avisos manuais de vencimentos ou pagamentos:")
-    
-    # Botão de WhatsApp
-    if st.button("💬 Enviar Aviso via WhatsApp", key="btn_whats"):
-        # (Sua lógica do Twilio vai aqui)
-        st.success("Mensagem enviada no WhatsApp!")
+# --- BARRINHA DE NOTIFICAÇÕES ---
+    with st.sidebar.expander("📢 Central de Notificações"):
+        st.markdown("Dispare avisos manuais de vencimentos ou pagamentos:")
         
-    st.markdown("---")
+        # Botão de WhatsApp
+        if st.button("💬 Enviar Aviso via WhatsApp", key="btn_whats"):
+            # Credenciais puxadas de forma segura do Streamlit Secrets
+            account_sid = st.secrets["TWILIO_ACCOUNT_SID"]
+            auth_token = st.secrets["TWILIO_AUTH_TOKEN"]
+            whatsapp_remetente = "whatsapp:+19994894920"
+            whatsapp_destino = "whatsapp:+5519999013540"
+            
+            try:
+                df_atual = carregar_dados_gs()
+                
+                if df_atual is not None and not df_atual.empty:
+                    import datetime
+                    hoje = datetime.date.today()
+                    
+                    if 'DT' in df_atual.columns:
+                        df_hoje = df_atual[df_atual['DT'].dt.date == hoje]
+                    else:
+                        df_hoje = pd.DataFrame()
+                    
+                    def formata_br(v):
+                        try:
+                            s = f"{float(v):,.2f}"
+                            return s.replace(",", "X").replace(".", ",").replace("X", ".")
+                        except:
+                            return "0,00"
+
+                    # Monta a mensagem limpa em texto puro para o WhatsApp
+                    texto_whats = f"*FinançasPro - Extrato do Dia ({hoje.strftime('%d/%m/%Y')})*\n\n"
+                    texto_whats += "Olá, Wilson! Segue o extrato detalhado de hoje:\n\n"
+                    
+                    if not df_hoje.empty:
+                        total_entradas = 0
+                        total_saidas = 0
+                        
+                        for index, row in df_hoje.iterrows():
+                            tipo_lanc = str(row.get('Tipo', row.get('Tipo de Lançamento', 'Despesa'))).strip().upper()
+                            data_lanc = row.get('Vencimento', row.get('Data', 'Data não informada'))
+                            beneficiario = row.get('Beneficiário', row.get('Favorecido', 'Não informado'))
+                            descricao = row.get('Descrição', row.get('Historico', 'Sem descrição'))
+                            valor = row.get('V_Num', 0)
+                            
+                            if 'RECEITA' in tipo_lanc or 'RENDIMENTO' in tipo_lanc:
+                                total_entradas += valor
+                            else:
+                                total_saidas += valor
+                            
+                            texto_whats += f"• *[{tipo_lanc}]*\n"
+                            texto_whats += f"  Data: {data_lanc}\n"
+                            texto_whats += f"  Beneficiário: {beneficiario}\n"
+                            texto_whats += f"  Descrição: {descricao}\n"
+                            texto_whats += f"  Valor: R$ {formata_br(valor)}\n"
+                            texto_whats += "----------------------------------------\n"
+                        
+                        texto_whats += f"\n*Total de Entradas:* R$ {formata_br(total_entradas)}\n"
+                        texto_whats += f"*Total de Saídas:* R$ {formata_br(total_saidas)}\n"
+                        texto_whats += f"*Total de registros:* {len(df_hoje)}\n"
+                    else:
+                        texto_whats += "Nenhum lançamento registrado para hoje.\n"
+
+                    texto_whats += "\n_Mensagem gerada automaticamente pelo seu sistema FinançasPro._"
+                    
+                    # Disparo via Twilio
+                    from twilio.rest import Client
+                    client = Client(account_sid, auth_token)
+                    
+                    message = client.messages.create(
+                        body=texto_whats,
+                        from_=whatsapp_remetente,
+                        to=whatsapp_destino
+                    )
+                    
+                    st.success("✅ Mensagem enviada no WhatsApp!")
+                else:
+                    st.warning("⚠️ Planilha vazia ou sem dados para enviar.")
+                    
+            except Exception as e:
+                st.error(f"❌ Erro ao enviar WhatsApp: {e}")
+                
+        st.markdown("---")
     
    # Botão de E-mail com Resumo Detalhado do Dia em HTML (Com Cores por Tipo)
     if st.button("📧 Enviar Resumo por E-mail", key="btn_email"):
