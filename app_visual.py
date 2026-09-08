@@ -1591,6 +1591,7 @@ if "💰" in st.session_state.page:
                 )
         
         with g2:
+            with g2:
             st.write("### 📊 Fluxo Mensal (3 Meses)")
             
             # Cálculo dos 3 meses a partir do mês selecionado
@@ -1601,17 +1602,30 @@ if "💰" in st.session_state.page:
             # Filtra a base completa pelos meses selecionados
             df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
             
-            # (Insira aqui o seu código que gera a figura de fluxo, ex: fig_fluxo = ...)
-            
-            # Renderização com o travamento para o celular:
-            st.plotly_chart(
-                fig_fluxo, 
-                use_container_width=True,
-                config={
-                    'staticPlot': True,
-                    'displayModeBar': False
-                }
-            )
+            if not df_fluxo.empty:
+                # Exemplo padrão de agrupamento para o gráfico de fluxo (ajuste se o seu nome de coluna for diferente)
+                df_fluxo_grouped = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
+                
+                # Cria a figura que estava faltando
+                fig_fluxo = px.bar(
+                    df_fluxo_grouped, 
+                    x='Mes_Ano', 
+                    y='V_Num', 
+                    color='Tipo', 
+                    barmode='group'
+                )
+                
+                # Exibe o gráfico travado para o dedo rolar a tela no celular
+                st.plotly_chart(
+                    fig_fluxo, 
+                    use_container_width=True,
+                    config={
+                        'staticPlot': True,
+                        'displayModeBar': False
+                    }
+                )
+            else:
+                st.info("Sem dados suficientes para o fluxo dos últimos 3 meses.")
             
             # Se você já tiver o código do gráfico da g2 logo abaixo, lembre-se de aplicar o config nele também:
             # st.plotly_chart(fig_fluxo, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
