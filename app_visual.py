@@ -876,7 +876,6 @@ with st.sidebar.expander("📢 Central de Notificações"):
                     except:
                         return "0,00"
 
-                # Monta o corpo do e-mail em HTML para suportar cores
                 html_corpo = f"""
                 <html>
                 <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
@@ -886,7 +885,9 @@ with st.sidebar.expander("📢 Central de Notificações"):
                 """
                 
                 if not df_hoje.empty:
-                    total_hoje = 0
+                    total_entradas = 0
+                    total_saidas = 0
+                    
                     for index, row in df_hoje.iterrows():
                         tipo_lanc = str(row.get('Tipo', row.get('Tipo de Lançamento', 'Despesa'))).strip().lower()
                         data_lanc = row.get('Vencimento', row.get('Data', 'Data não informada'))
@@ -894,9 +895,13 @@ with st.sidebar.expander("📢 Central de Notificações"):
                         descricao = row.get('Descrição', row.get('Historico', 'Sem descrição'))
                         valor = row.get('V_Num', 0)
                         
-                        total_hoje += valor
+                        # Separa a soma entre Entradas (Receita/Rendimento) e Saídas (Despesa)
+                        if 'receita' in tipo_lanc or 'rendimento' in tipo_lanc:
+                            total_entradas += valor
+                        else:
+                            total_saidas += valor
                         
-                        # Define a cor com base no tipo de lançamento
+                        # Define a cor e o texto do tipo
                         if 'receita' in tipo_lanc:
                             cor_tipo = "#27ae60"  # Verde
                             tipo_texto = "RECEITA"
@@ -904,7 +909,7 @@ with st.sidebar.expander("📢 Central de Notificações"):
                             cor_tipo = "#2980b9"  # Azul
                             tipo_texto = "RENDIMENTO"
                         else:
-                            cor_tipo = "#c0392b"  # Vermelho (Despesa)
+                            cor_tipo = "#c0392b"  # Vermelho
                             tipo_texto = "DESPESA"
                         
                         html_corpo += f"""
@@ -919,8 +924,11 @@ with st.sidebar.expander("📢 Central de Notificações"):
                     
                     html_corpo += f"""
                     <hr style="border: none; border-top: 1px solid #ccc;">
-                    <p><b>Total movimentado hoje:</b> R$ {formata_br(total_hoje)}<br>
-                    <b>Total de registros:</b> {len(df_hoje)}</p>
+                    <p>
+                        <b>Total de Entradas:</b> <span style="color: #27ae60;">R$ {formata_br(total_entradas)}</span><br>
+                        <b>Total de Saídas:</b> <span style="color: #c0392b;">R$ {formata_br(total_saidas)}</span><br>
+                        <b>Total de registros:</b> {len(df_hoje)}
+                    </p>
                     """
                 else:
                     html_corpo += "<p>Nenhum lançamento registrado para hoje.</p>"
@@ -943,8 +951,6 @@ with st.sidebar.expander("📢 Central de Notificações"):
             msg['From'] = remetente
             msg['To'] = destinatario
             msg['Subject'] = assunto
-            
-            # Anexa o conteúdo como HTML ('html' em vez de 'plain')
             msg.attach(MIMEText(html_corpo, 'html', 'utf-8'))
 
             servidor = smtplib.SMTP('smtp.gmail.com', 587)
@@ -953,10 +959,9 @@ with st.sidebar.expander("📢 Central de Notificações"):
             servidor.sendmail(remetente, destinatario, msg.as_string())
             servidor.quit()
             
-            st.sidebar.success("✅ E-mail formatado enviado com sucesso!")
+            st.sidebar.success("✅ E-mail com totais separados enviado com sucesso!")
         except Exception as e:
-            st.sidebar.error(f"❌ Erro ao enviar e-mail: {e}")
-            
+            st.sidebar.error(f"❌ Erro ao enviar e-mail: {e}")            
             
        
 # --- BARRINHA 2: TRANSFERÊNCIA ---
