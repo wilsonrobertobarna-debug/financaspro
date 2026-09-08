@@ -1645,10 +1645,9 @@ if "💰" in st.session_state.page:
                 st.info("Aguardando dados para o período...")
                 
 
-# 6. NOVO: GRÁFICO DE METAS (Vamos usar o df_m direto para testar)
+# 6. NOVO: GRÁFICO DE METAS
         st.subheader("🎯 Metas vs Realizado (Despesas)")
         
-        # Teste: use df_m em vez de df_m_limpo
         df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
         
         if not df_metas_graph.empty:
@@ -1659,20 +1658,28 @@ if "💰" in st.session_state.page:
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
             
             fig_m.update_layout(barmode='group', height=350, margin=dict(t=30, b=10, l=0, r=0))
-            st.plotly_chart(fig_m, use_container_width=True)
+            
+            # Exibe travado para rolar lisinho no celular
+            st.plotly_chart(
+                fig_m, 
+                use_container_width=True,
+                config={
+                    'staticPlot': True,
+                    'displayModeBar': False
+                }
+            )
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-       # =========================================================================
-        # 💳 GRÁFICO DE CARTÕES E O SEMÁFORO DE UTILIZAÇÃO (BUSCA FLEXÍVEL)
+        
+        # =========================================================================
+        # 💳 GRÁFICO DE CARTÕES E O SEMÁFORO DE UTILIZAÇÃO
         # =========================================================================
         st.markdown("---")
         st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
         
-        # Identifica a coluna correta do banco/cartão
         coluna_banco = next((col for col in ['Nome do Banco', 'Banco', 'Instituição', 'Conta'] if col in df_m.columns), None)
         
-        # Mapeamento dos cartões com palavras-chave únicas para busca flexível
         mapeamento_cartoes = {
             "Master Card - Inter": "Inter",
             "Master Card - 8112": "8112",
@@ -1686,10 +1693,8 @@ if "💰" in st.session_state.page:
         
         if coluna_banco and not df_m.empty:
             for nome_oficial, termo_busca in mapeamento_cartoes.items():
-                # Garante que pega apenas Despesas que contenham o termo do cartão
                 mask = (df_m['Tipo'] == 'Despesa') & (df_m[coluna_banco].astype(str).str.contains(termo_busca, case=False, na=False))
                 
-                # Trava de segurança específica para o Inter não misturar com outras pendências da conta corrente
                 if termo_busca == "Inter":
                     mask = mask & (df_m[coluna_banco].astype(str).str.contains("Cartão", case=False, na=False)) & (~df_m[coluna_banco].astype(str).str.contains("Pendência|Boleto|Empréstimo", case=False, na=False))
                 
@@ -1700,7 +1705,6 @@ if "💰" in st.session_state.page:
             
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
-        # Garante que o dicionário de metas existe na sessão
         if 'dict_metas_cartoes' not in st.session_state:
             st.session_state['dict_metas_cartoes'] = {
                 "Master Card - Inter": 4000.0,
@@ -1711,8 +1715,18 @@ if "💰" in st.session_state.page:
             }
 
         dict_metas = st.session_state['dict_metas_cartoes']
+        
+        # (Se você já gera a sua `fig_cartoes` logo abaixo, adicione o config nela também:)
+        # st.plotly_chart(
+        #     fig_cartoes, 
+        #     use_container_width=True,
+        #     config={
+        #         'staticPlot': True,
+        #         'displayModeBar': False
+        #     }
+        # )
 
-        # Atribui a meta buscando com tolerância total a espaços/maiúsculas
+# Atribui a meta buscando com tolerância total a espaços/maiúsculas
         def buscar_meta_tolerante(nome):
             nome_limpo = str(nome).strip().lower()
             for k, v in dict_metas.items():
@@ -1728,7 +1742,16 @@ if "💰" in st.session_state.page:
             fig_cartao.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['Meta'], name='Meta (Teto)', marker_color='#3498db', opacity=0.5))
             
             fig_cartao.update_layout(barmode='group', height=330, margin=dict(t=30, b=10, l=0, r=0))
-            st.plotly_chart(fig_cartao, use_container_width=True)
+            
+            # 🔒 Adicionado o config aqui para destravar a rolagem do celular
+            st.plotly_chart(
+                fig_cartao, 
+                use_container_width=True,
+                config={
+                    'staticPlot': True,
+                    'displayModeBar': False
+                }
+            )
             
             st.markdown("##### 🚦 Status de Utilização dos Cartões")
             cols_status = st.columns(len(lista_cartoes_controle))
