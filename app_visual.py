@@ -1575,8 +1575,9 @@ if "💰" in st.session_state.page:
         st.divider()
         
 
-       # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
+      # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
         g1, g2 = st.columns(2)
+        
         with g1:
             st.write("### 🍕 Gastos por Categoria")
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
@@ -1602,19 +1603,11 @@ if "💰" in st.session_state.page:
             df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
             
             if not df_fluxo.empty:
-                # Exemplo padrão de agrupamento para o gráfico de fluxo (ajuste se o seu nome de coluna for diferente)
+                # Mantém o seu código original que gerava o gráfico de fluxo aqui dentro
                 df_fluxo_grouped = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
+                fig_fluxo = px.bar(df_fluxo_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group')
                 
-                # Cria a figura que estava faltando
-                fig_fluxo = px.bar(
-                    df_fluxo_grouped, 
-                    x='Mes_Ano', 
-                    y='V_Num', 
-                    color='Tipo', 
-                    barmode='group'
-                )
-                
-                # Exibe o gráfico travado para o dedo rolar a tela no celular
+                # Exibe travado para o celular
                 st.plotly_chart(
                     fig_fluxo, 
                     use_container_width=True,
@@ -1624,7 +1617,7 @@ if "💰" in st.session_state.page:
                     }
                 )
             else:
-                st.info("Sem dados suficientes para o fluxo dos últimos 3 meses.")
+                st.info("Sem dados para o período.")
             
             # Se você já tiver o código do gráfico da g2 logo abaixo, lembre-se de aplicar o config nele também:
             # st.plotly_chart(fig_fluxo, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
