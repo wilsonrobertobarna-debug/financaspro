@@ -844,7 +844,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
     with st.sidebar.expander("📢 Central de Notificações"):
         st.markdown("Dispare avisos manuais de vencimentos ou pagamentos:")
         
-       import urllib.parse
+import urllib.parse
 
 # Botão de WhatsApp
 if st.button("💬 Gerar Link para o WhatsApp", key="btn_whats"):
