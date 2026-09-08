@@ -1591,7 +1591,6 @@ if "💰" in st.session_state.page:
                 )
         
         with g2:
-            with g2:
             st.write("### 📊 Fluxo Mensal (3 Meses)")
             
             # Cálculo dos 3 meses a partir do mês selecionado
