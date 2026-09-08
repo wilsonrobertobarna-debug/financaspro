@@ -846,11 +846,11 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         
         # Botão de WhatsApp
         if st.button("💬 Enviar Aviso via WhatsApp", key="btn_whats"):
-            # Credenciais puxadas de forma segura do Streamlit Secrets
-            account_sid = st.secrets["TWILIO_ACCOUNT_SID"]
-            auth_token = st.secrets["TWILIO_AUTH_TOKEN"]
-            whatsapp_remetente = "whatsapp:+19994894920"
-            whatsapp_destino = "whatsapp:+5519999013540"
+           # Puxa os dados organizados na seção [twilio] do painel do Streamlit
+            account_sid = st.secrets["twilio"]["account_sid"]
+            auth_token = st.secrets["twilio"]["auth_token"]
+            whatsapp_remetente = st.secrets["twilio"]["whatsapp_from"]
+            whatsapp_destino = st.secrets["twilio"]["whatsapp_to"]
             
             try:
                 df_atual = carregar_dados_gs()
