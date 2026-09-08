@@ -1601,6 +1601,18 @@ if "💰" in st.session_state.page:
             # Filtra a base completa pelos meses selecionados
             df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
             
+            # (Insira aqui o seu código que gera a figura de fluxo, ex: fig_fluxo = ...)
+            
+            # Renderização com o travamento para o celular:
+            st.plotly_chart(
+                fig_fluxo, 
+                use_container_width=True,
+                config={
+                    'staticPlot': True,
+                    'displayModeBar': False
+                }
+            )
+            
             # Se você já tiver o código do gráfico da g2 logo abaixo, lembre-se de aplicar o config nele também:
             # st.plotly_chart(fig_fluxo, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
             
