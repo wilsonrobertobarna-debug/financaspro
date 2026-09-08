@@ -1592,6 +1592,7 @@ if "💰" in st.session_state.page:
                 )
         
         with g2:
+           with g2:
             st.write("### 📊 Fluxo Mensal (3 Meses)")
             
             # Cálculo dos 3 meses a partir do mês selecionado
@@ -1602,37 +1603,16 @@ if "💰" in st.session_state.page:
             # Filtra a base completa pelos meses selecionados
             df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
             
-            if not df_fluxo.empty:
-                # Mantém o seu código original que gerava o gráfico de fluxo aqui dentro
-                df_fluxo_grouped = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
-                fig_fluxo = px.bar(df_fluxo_grouped, x='Mes_Ano', y='V_Num', color='Tipo', barmode='group')
-                
-                # Exibe travado para o celular
-                st.plotly_chart(
-                    fig_fluxo, 
-                    use_container_width=True,
-                    config={
-                        'staticPlot': True,
-                        'displayModeBar': False
-                    }
-                )
-            else:
-                st.info("Sem dados para o período.")
-            
-            # Se você já tiver o código do gráfico da g2 logo abaixo, lembre-se de aplicar o config nele também:
-            # st.plotly_chart(fig_fluxo, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
-            
-            # 🔒 EXCLUI AS TRANSFERÊNCIAS (Olhando pelo campo Categoria ou Descrição onde diz transferência)
+            # 🔒 EXCLUI AS TRANSFERÊNCIAS (Olhando pelo campo Categoria)
             if not df_fluxo.empty:
                 if 'Categoria' in df_fluxo.columns:
-                    # Remove se a categoria contiver "transferência" (ignorando maiúsculas/minúsculas)
                     df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
             
             # Prepara os dados para o gráfico
             df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
             
             if not df_f.empty:
-                # Gráfico com cores fixas e layout limpo
+                # Gráfico com cores fixas, layout limpo e valores nas barras
                 fig_fluxo = px.bar(
                     df_f, 
                     x='Mes_Ano', 
@@ -1644,14 +1624,23 @@ if "💰" in st.session_state.page:
                         'Despesa': '#e74c3c', 
                         'Rendimento': '#3498db'
                     },
-                    text_auto='.2s' # Adiciona o valor em cima da barra
+                    text_auto='.2s'
                 )
                 fig_fluxo.update_layout(
                     height=350, 
                     margin=dict(t=30, b=10, l=0, r=0),
                     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                 )
-                st.plotly_chart(fig_fluxo, use_container_width=True)
+                
+                # Exibe o gráfico definitivo e travado para rolar a tela no celular
+                st.plotly_chart(
+                    fig_fluxo, 
+                    use_container_width=True,
+                    config={
+                        'staticPlot': True,
+                        'displayModeBar': False
+                    }
+                )
             else:
                 st.info("Aguardando dados para o período...")
                 
