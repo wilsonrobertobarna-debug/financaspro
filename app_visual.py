@@ -841,88 +841,88 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
 
 # --- BARRINHA DE NOTIFICAÇÕES ---
-    with st.sidebar.expander("📢 Central de Notificações"):
-        st.markdown("Dispare avisos manuais de vencimentos ou pagamentos:")
-        
-import urllib.parse
-
-# Botão de WhatsApp
-if st.button("💬 Gerar Link para o WhatsApp", key="btn_whats"):
-    try:
-        df_atual = carregar_dados_gs()
-        
-        if df_atual is not None and not df_atual.empty:
-            import datetime
-            hoje = datetime.date.today()
-            
-            if 'DT' in df_atual.columns:
-                df_hoje = df_atual[df_atual['DT'].dt.date == hoje]
-            else:
-                df_hoje = pd.DataFrame()
-            
-            def formata_br(v):
-                try:
-                    s = f"{float(v):,.2f}"
-                    return s.replace(",", "X").replace(".", ",").replace("X", ".")
-                except:
-                    return "0,00"
-
-            # Monta a mensagem limpa em texto puro para o WhatsApp
-            texto_whats = f"*FinançasPro - Extrato do Dia ({hoje.strftime('%d/%m/%Y')})*\n\n"
-            texto_whats += "Olá, Wilson! Segue o extrato detalhado de hoje:\n\n"
-            
-            if not df_hoje.empty:
-                total_entradas = 0
-                total_saidas = 0
-                
-                for index, row in df_hoje.iterrows():
-                    tipo_lanc = str(row.get('Tipo', row.get('Tipo de Lançamento', 'Despesa'))).strip().upper()
-                    data_lanc = row.get('Vencimento', row.get('Data', 'Data não informada'))
-                    beneficiario = row.get('Beneficiário', row.get('Favorecido', 'Não informado'))
-                    descricao = row.get('Descrição', row.get('Historico', 'Sem descrição'))
-                    valor = row.get('V_Num', 0)
-                    
-                    if 'RECEITA' in tipo_lanc or 'RENDIMENTO' in tipo_lanc:
-                        total_entradas += valor
-                    else:
-                        total_saidas += valor
-                    
-                    texto_whats += f"• *[{tipo_lanc}]*\n"
-                    texto_whats += f"  Data: {data_lanc}\n"
-                    texto_whats += f"  Beneficiário: {beneficiario}\n"
-                    texto_whats += f"  Descrição: {descricao}\n"
-                    texto_whats += f"  Valor: R$ {formata_br(valor)}\n"
-                    texto_whats += "----------------------------------------\n"
-                
-                texto_whats += f"\n*Total de Entradas:* R$ {formata_br(total_entradas)}\n"
-                texto_whats += f"*Total de Saídas:* R$ {formata_br(total_saidas)}\n"
-                texto_whats += f"*Total de registros:* {len(df_hoje)}\n"
-            else:
-                texto_whats += "Nenhum lançamento registrado para hoje.\n"
-
-            texto_whats += "\n_Mensagem gerada automaticamente pelo seu sistema FinançasPro._"
-            
-            # Codifica o texto para o link universal do WhatsApp
-            texto_codificado = urllib.parse.quote(texto_whats)
-            link_whatsapp = f"https://api.whatsapp.com/send?text={texto_codificado}"
-            
-            st.success("✅ Extrato gerado com sucesso!")
-            
-            # Exibe o botão verde bonito que abre o WhatsApp na hora
-            st.markdown(
-                f'<a href="{link_whatsapp}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:12px 20px; border-radius:5px; cursor:pointer; font-weight:bold; font-size:16px; width:100%;">🚀 Abrir no WhatsApp</button></a>',
-                unsafe_allow_html=True
-            )
-        else:
-            st.warning("⚠️ Planilha vazia ou sem dados para enviar.")
-            
-    except Exception as e:
-        st.error(f"❌ Erro ao gerar link do WhatsApp: {e}")
-        
-st.markdown("---")
+with st.sidebar.expander("📢 Central de Notificações"):
+    st.markdown("Dispare avisos manuais de vencimentos ou pagamentos:")
     
-   # Botão de E-mail com Resumo Detalhado do Dia em HTML (Com Cores por Tipo)
-   if st.button("📧 Enviar Resumo por E-mail", key="btn_email"):
+    import urllib.parse
+
+    # Botão de WhatsApp
+    if st.button("💬 Gerar Link para o WhatsApp", key="btn_whats"):
+        try:
+            df_atual = carregar_dados_gs()
+            
+            if df_atual is not None and not df_atual.empty:
+                import datetime
+                hoje = datetime.date.today()
+                
+                if 'DT' in df_atual.columns:
+                    df_hoje = df_atual[df_atual['DT'].dt.date == hoje]
+                else:
+                    df_hoje = pd.DataFrame()
+                
+                def formata_br(v):
+                    try:
+                        s = f"{float(v):,.2f}"
+                        return s.replace(",", "X").replace(".", ",").replace("X", ".")
+                    except:
+                        return "0,00"
+
+                # Monta a mensagem limpa em texto puro para o WhatsApp
+                texto_whats = f"*FinançasPro - Extrato do Dia ({hoje.strftime('%d/%m/%Y')})*\n\n"
+                texto_whats += "Olá, Wilson! Segue o extrato detalhado de hoje:\n\n"
+                
+                if not df_hoje.empty:
+                    total_entradas = 0
+                    total_saidas = 0
+                    
+                    for index, row in df_hoje.iterrows():
+                        tipo_lanc = str(row.get('Tipo', row.get('Tipo de Lançamento', 'Despesa'))).strip().upper()
+                        data_lanc = row.get('Vencimento', row.get('Data', 'Data não informada'))
+                        beneficiario = row.get('Beneficiário', row.get('Favorecido', 'Não informado'))
+                        descricao = row.get('Descrição', row.get('Historico', 'Sem descrição'))
+                        valor = row.get('V_Num', 0)
+                        
+                        if 'RECEITA' in tipo_lanc or 'RENDIMENTO' in tipo_lanc:
+                            total_entradas += valor
+                        else:
+                            total_saidas += valor
+                        
+                        texto_whats += f"• *[{tipo_lanc}]*\n"
+                        texto_whats += f"  Data: {data_lanc}\n"
+                        texto_whats += f"  Beneficiário: {beneficiario}\n"
+                        texto_whats += f"  Descrição: {descricao}\n"
+                        texto_whats += f"  Valor: R$ {formata_br(valor)}\n"
+                        texto_whats += "----------------------------------------\n"
+                    
+                    texto_whats += f"\n*Total de Entradas:* R$ {formata_br(total_entradas)}\n"
+                    texto_whats += f"*Total de Saídas:* R$ {formata_br(total_saidas)}\n"
+                    texto_whats += f"*Total de registros:* {len(df_hoje)}\n"
+                else:
+                    texto_whats += "Nenhum lançamento registrado para hoje.\n"
+
+                texto_whats += "\n_Mensagem gerada automaticamente pelo seu sistema FinançasPro._"
+                
+                # Codifica o texto para o link universal do WhatsApp
+                texto_codificado = urllib.parse.quote(texto_whats)
+                link_whatsapp = f"https://api.whatsapp.com/send?text={texto_codificado}"
+                
+                st.success("✅ Extrato gerado com sucesso!")
+                
+                # Exibe o botão verde bonito que abre o WhatsApp na hora
+                st.markdown(
+                    f'<a href="{link_whatsapp}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:12px 20px; border-radius:5px; cursor:pointer; font-weight:bold; font-size:16px; width:100%;">🚀 Abrir no WhatsApp</button></a>',
+                    unsafe_allow_html=True
+                )
+            else:
+                st.warning("⚠️ Planilha vazia ou sem dados para enviar.")
+                
+        except Exception as e:
+            st.error(f"❌ Erro ao gerar link do WhatsApp: {e}")
+            
+    st.markdown("---")
+        
+    # Botão de E-mail com Resumo Detalhado do Dia em HTML (Com Cores por Tipo)
+    if st.button("📧 Enviar Resumo por E-mail", key="btn_email"):
         remetente = "wilsonrobertobarna@gmail.com"
         senha_app = "xbud ssyt bpwu ntrx"
         destinatario = "wilsonrobertobarna@gmail.com"
@@ -1032,7 +1032,6 @@ st.markdown("---")
             st.sidebar.success("✅ E-mail com totais separados enviado com sucesso!")
         except Exception as e:
             st.sidebar.error(f"❌ Erro ao enviar e-mail: {e}")            
-            
        
 # --- BARRINHA 2: TRANSFERÊNCIA ---
     with st.sidebar.expander("💸 Transferência", expanded=False):
