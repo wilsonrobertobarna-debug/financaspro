@@ -922,7 +922,7 @@ if st.button("💬 Gerar Link para o WhatsApp", key="btn_whats"):
 st.markdown("---")
     
    # Botão de E-mail com Resumo Detalhado do Dia em HTML (Com Cores por Tipo)
-    if st.button("📧 Enviar Resumo por E-mail", key="btn_email"):
+if st.button("📧 Enviar Resumo por E-mail", key="btn_email"):
         remetente = "wilsonrobertobarna@gmail.com"
         senha_app = "xbud ssyt bpwu ntrx"
         destinatario = "wilsonrobertobarna@gmail.com"
