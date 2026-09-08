@@ -1575,17 +1575,22 @@ if "💰" in st.session_state.page:
         st.divider()
         
 
-        # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
+       # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
         g1, g2 = st.columns(2)
         with g1:
             st.write("### 🍕 Gastos por Categoria")
             df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
             if not df_p.empty:
-                st.plotly_chart(px.pie(df_p, values='V_Num', names='Categoria', hole=0.4), use_container_width=True)
-
+                st.plotly_chart(
+                    px.pie(df_p, values='V_Num', names='Categoria', hole=0.4), 
+                    use_container_width=True,
+                    config={
+                        'staticPlot': True,
+                        'displayModeBar': False
+                    }
+                )
         
         with g2:
-          
             st.write("### 📊 Fluxo Mensal (3 Meses)")
             
             # Cálculo dos 3 meses a partir do mês selecionado
@@ -1595,6 +1600,9 @@ if "💰" in st.session_state.page:
             
             # Filtra a base completa pelos meses selecionados
             df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
+            
+            # Se você já tiver o código do gráfico da g2 logo abaixo, lembre-se de aplicar o config nele também:
+            # st.plotly_chart(fig_fluxo, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
             
             # 🔒 EXCLUI AS TRANSFERÊNCIAS (Olhando pelo campo Categoria ou Descrição onde diz transferência)
             if not df_fluxo.empty:
