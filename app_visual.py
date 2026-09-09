@@ -3290,22 +3290,22 @@ if aba == "📊 Análises & Configurações":
             )
             st.markdown("")
 
-        # 4. Botão de Salvamento Direto no Sheets
+        # 4. Botão de Salvamento Direto no Sheets (Coluna A = Cartão, Coluna B = Meta)
         if st.button("💾 Salvar Metas dos Cartões na Planilha", type="primary"):
             try:
                 if ws_metas is None:
                     ws_metas = sh.worksheet("Metas")
                 
-                # Monta os dados atualizados
+                # Prepara os dados: Cabeçalho na linha 1, e os cartões nas linhas seguintes
                 lista_para_atualizar = [["Cartao", "Meta"]]
                 for c_nome, c_val in st.session_state['dict_metas_cartoes'].items():
                     lista_para_atualizar.append([c_nome, c_val])
                 
-                # Grava usando update direto na célula A1
+                # Limpa a aba e escreve bloco a bloco a partir da célula A1
                 ws_metas.clear()
-                ws_metas.update("A1", lista_para_atualizar)
+                ws_metas.update(range_name='A1', values=lista_para_atualizar)
                 
-                st.success("Metas gravadas com sucesso na planilha e aplicadas no sistema!")
+                st.success("Metas gravadas com sucesso nas colunas A e B da planilha!")
                 st.rerun()
             except Exception as e:
                 st.error(f"Erro ao salvar no Google Sheets: {e}")
