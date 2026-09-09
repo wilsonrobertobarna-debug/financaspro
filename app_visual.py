@@ -3288,17 +3288,24 @@ if aba == "📊 Análises & Configurações":
             )
             st.markdown("")
 
-        # 4. Botão para salvar permanentemente na planilha do Google Sheets
+       # 4. Botão para salvar permanentemente na planilha do Google Sheets e atualizar gráficos
         if st.button("💾 Salvar Metas dos Cartões na Planilha", type="primary"):
             try:
                 ws_metas = sh.worksheet("Metas")
+                
+                # Prepara a matriz de dados (Cabeçalho + 5 cartões)
                 lista_para_atualizar = [["Cartao", "Meta"]]
                 for c_nome, c_val in st.session_state['dict_metas_cartoes'].items():
                     lista_para_atualizar.append([c_nome, c_val])
                 
-                ws_metas.clear()
-                ws_metas.update(lista_para_atualizar)
-                st.success("Metas gravadas com sucesso na planilha e salvas no sistema!")
+                # Grava de forma limpa e direta na aba Metas (intervalo A1 até B6)
+                ws_metas.batch_clear(["A1:B10"])
+                ws_metas.update("A1", lista_para_atualizar)
+                
+                st.success("Metas gravadas com sucesso na planilha e no gráfico!")
+                
+                # Força o recarregamento imediato para o gráfico puxar os novos valores da sessão/planilha
+                st.rerun()
             except Exception as e:
                 st.error(f"Erro ao salvar no Google Sheets: {e}")
 # -------------------------------------------------------------------------
