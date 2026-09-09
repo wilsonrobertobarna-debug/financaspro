@@ -2740,7 +2740,7 @@ if aba == "📋 Relatório PDF":
 
             df_report = df_report.sort_values(by='DT_ORDEM')
 
-            # ========================================================
+           # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
             # ========================================================
             base_inicial = 0.0
@@ -2780,7 +2780,14 @@ if aba == "📋 Relatório PDF":
                 if banco_nome != "Todos os Bancos" and col_banco_h:
                     df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == str(banco_nome).upper()]
                 
-                df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
+                # SE FOR CARTÃO: Pega apenas o mês imediatamente anterior (ex: Setembro para a fatura de Outubro)
+                # SE FOR CONTA COMUM: Acumula todo o histórico anterior
+                if eh_cartao_geral:
+                    t_ini_mes_ant = (t_ini - pd.DateOffset(months=1)).replace(day=1)
+                    t_fim_mes_ant = t_ini - pd.Timedelta(days=1)
+                    df_antes_do_periodo = df_historico[(df_historico['DT_HIST'] >= t_ini_mes_ant) & (df_historico['DT_HIST'] <= t_fim_mes_ant)]
+                else:
+                    df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
                 
                 saldo_acumulado_passado = 0.0
                 for _, r_pass in df_antes_do_periodo.iterrows():
@@ -2805,11 +2812,15 @@ if aba == "📋 Relatório PDF":
                     else:
                         saldo_acumulado_passado += val_p
                 
-                base_inicial = saldo_sistema_abril + saldo_acumulado_passado
+                # Para cartão, o saldo inicial não puxa o saldo em dinheiro da conta do banco (saldo_sistema_abril)
+                if eh_cartao_geral:
+                    base_inicial = saldo_acumulado_passado
+                else:
+                    base_inicial = saldo_sistema_abril + saldo_acumulado_passado
             except:
                 base_inicial = 0.0
 
-            saldo_anterior = base_inicial 
+            saldo_anterior = base_inicial
 
             # ========================================================
             # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO
