@@ -3201,9 +3201,19 @@ if aba == "📊 Análises & Configurações":
         # --- DIVISÓRIA VISUAL ---
         st.markdown("---")
 
-   # --- PARTE 2: LIMITES E METAS DE CARTÃO DE CRÉDITO ---
+       # --- PARTE 2: LIMITES E METAS DE CARTÃO DE CRÉDITO ---
         st.markdown("### 💳 Controle de Gastos por Cartão")
         
+       # Garante um dicionário centralizado para guardar as metas dos cartões na sessão
+        if 'dict_metas_cartoes' not in st.session_state:
+            st.session_state['dict_metas_cartoes'] = {
+                "Mastercard - Inter": 4000.0,
+                "Mastercard - 8112": 600.0,
+                "Visa Gold - 0132": 1000.0,
+                "Visa - Mercado Pago": 1200.0,
+                "Itau - Golden": 200.0
+            }
+
         cartoes_dados = [
             {"nome": "Mastercard - Inter", "limite_banco": 19300.0},
             {"nome": "Mastercard - 8112", "limite_banco": 27100.0},
@@ -3212,56 +3222,6 @@ if aba == "📊 Análises & Configurações":
             {"nome": "Itau - Golden", "limite_banco": 8330.0}
         ]
 
-        # 1. Conexão blindada com a aba "Metas"
-        dict_metas_salvas = {}
-        ws_metas = None
-        
-        try:
-            # Tenta achar a aba "Metas"
-            ws_metas = sh.worksheet("Metas")
-            dados_metas = ws_metas.get_all_values()
-            if len(dados_metas) > 1:
-                for linha in dados_metas[1:]:
-                    if len(linha) >= 2:
-                        c_nome = str(linha[0]).strip()
-                        c_val_str = str(linha[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
-                        try:
-                            c_val = float(c_val_str)
-                        except:
-                            c_val = 0.0
-                        dict_metas_salvas[c_nome] = c_val
-        except Exception:
-            try:
-                # Se não existir, cria a aba nova agora
-                ws_metas = sh.add_worksheet(title="Metas", rows="100", cols="5")
-                ws_metas.append_row(["Cartao", "Meta"])
-            except Exception as err:
-                st.error(f"Erro crítico ao acessar a aba Metas no Google Sheets: {err}")
-
-        # 2. Inicializa o session_state
-        if 'dict_metas_cartoes' not in st.session_state:
-            st.session_state['dict_metas_cartoes'] = {}
-
-        padroes_iniciais = {
-            "Mastercard - Inter": 4000.0,
-            "Mastercard - 8112": 600.0,
-            "Visa Gold - 0132": 1000.0,
-            "Visa - Mercado Pago": 1200.0,
-            "Itau - Golden": 200.0
-        }
-
-        for item in cartoes_dados:
-            c_nome = item["nome"]
-            valor_salvo_sheet = dict_metas_salvas.get(c_nome)
-            
-            if valor_salvo_sheet is not None and valor_salvo_sheet > 0:
-                val_inicial = valor_salvo_sheet
-            else:
-                val_inicial = st.session_state['dict_metas_cartoes'].get(c_nome, padroes_iniciais.get(c_nome, 0.0))
-                
-            st.session_state['dict_metas_cartoes'][c_nome] = val_inicial
-
-        # 3. Desenha os inputs na tela
         for item in cartoes_dados:
             nome_cartao = item["nome"]
             limite_oficial = item["limite_banco"]
@@ -3270,8 +3230,10 @@ if aba == "📊 Análises & Configurações":
             
             c1, c2 = st.columns(2)
             
+            # Pega o valor atual do dicionário de forma segura
             valor_atual = float(st.session_state['dict_metas_cartoes'].get(nome_cartao, 0.0))
             
+            # Input que atualiza direto o dicionário na sessão
             novo_valor = c1.number_input(
                 f"Meta de Gasto (Teto)", 
                 value=valor_atual,
@@ -3280,6 +3242,7 @@ if aba == "📊 Análises & Configurações":
                 key=f"input_meta_{nome_cartao}"
             )
             
+            # Salva instantaneamente no dicionário central
             st.session_state['dict_metas_cartoes'][nome_cartao] = novo_valor
             
             c2.text_input(
@@ -3290,25 +3253,6 @@ if aba == "📊 Análises & Configurações":
             )
             st.markdown("")
 
-        # 4. Botão de Salvamento Direto no Sheets
-        if st.button("💾 Salvar Metas dos Cartões na Planilha", type="primary"):
-            try:
-                if ws_metas is None:
-                    ws_metas = sh.worksheet("Metas")
-                
-                # Monta os dados atualizados
-                lista_para_atualizar = [["Cartao", "Meta"]]
-                for c_nome, c_val in st.session_state['dict_metas_cartoes'].items():
-                    lista_para_atualizar.append([c_nome, c_val])
-                
-                # Grava usando update direto na célula A1
-                ws_metas.clear()
-                ws_metas.update("A1", lista_para_atualizar)
-                
-                st.success("Metas gravadas com sucesso na planilha e aplicadas no sistema!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Erro ao salvar no Google Sheets: {e}")
 # -------------------------------------------------------------------------
 # BOTÃO SUPREMO: VOLTAR AO TOPO (Via Componente HTML do Streamlit)
 # -------------------------------------------------------------------------
