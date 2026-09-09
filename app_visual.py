@@ -1965,42 +1965,27 @@ if "💰" in st.session_state.page:
             st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
 
             
-# 7. TABELA FINAL - COM TRAVA DE SEGURANÇA
+# 7. TABELA FINAL
     st.write("---")
     st.subheader("🔍 Lançamentos do Mês")
-    st.write("DEBUG: O código entrou na Tabela Final com sucesso!")
     
-    try:
-        # Verifica se df_m_limpo existe
-        if 'df_m_limpo' in locals():
-            st.write(f"DEBUG: df_m_limpo existe e tem {len(df_m_limpo)} linhas.")
-        else:
-            st.error("DEBUG ERRO: df_m_limpo não existe neste escopo!")
-            df_m_limpo = pd.DataFrame()
+    if 'df_m_limpo' in locals() and not df_m_limpo.empty:
+        df_exibicao = df_m_limpo.copy()
         
-        if not df_m_limpo.empty:
-            df_exibicao = df_m_limpo.copy()
-            
-            # Ordenação segura do ID
-            if 'ID' in df_exibicao.columns:
-                df_exibicao = df_exibicao.sort_values(by='ID', ascending=False)
-            
-            # Exibição protegida
-            st.dataframe(
-                df_exibicao[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
-                use_container_width=True, 
-                hide_index=True
-            )
-            st.write("DEBUG: Tabela renderizada com sucesso!")
-        else:
-            st.warning("A base de dados `df_m_limpo` está vazia para este mês.")
-            
-    except Exception as e:
-        st.error(f"DEBUG ERRO FATAL NA TABELA: {e}")
+        # Ordenação pelo ID do maior para o menor para o mais recente ficar no topo
+        if 'ID' in df_exibicao.columns:
+            df_exibicao = df_exibicao.sort_values(by='ID', ascending=False)
+        
+        st.dataframe(
+            df_exibicao[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
+            use_container_width=True, 
+            hide_index=True
+        )
+    else:
+        st.warning("A base de dados `df_m_limpo` está vazia para este mês.")
 
 elif "Pendências" in aba:
-    st.title("📋 Lançamentos Pendentes")
-        
+    st.title("📋 Lançamentos Pendentes")        
 # --- FILTROS UNIFICADOS ---
     c1, c2, c3, c4 = st.columns(4)
     filtro_banco = c1.multiselect("Banco/Cartão:", sorted(bancos_disponiveis), key="banco_pend")
