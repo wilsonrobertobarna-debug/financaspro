@@ -1968,6 +1968,9 @@ if "💰" in st.session_state.page:
 # 7. TABELA FINAL
        
         st.subheader("🔍 Lançamentos do Mês")
+
+        # 🔎 COLE AQUI O TESTE RÁPIDO:
+        st.write("DEBUG - Conteúdo de df_m_limpo:", df_m_limpo)
         
         if not df_m_limpo.empty:
             df_exibicao = df_m_limpo.copy()
