@@ -1672,7 +1672,7 @@ if "💰" in st.session_state.page:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
         
-        # =========================================================================
+       # =========================================================================
         # 💳 GRÁFICO DE CARTÕES E O SEMÁFORO DE UTILIZAÇÃO
         # =========================================================================
         st.markdown("---")
@@ -1680,10 +1680,11 @@ if "💰" in st.session_state.page:
         
         coluna_banco = next((col for col in ['Nome do Banco', 'Banco', 'Instituição', 'Conta'] if col in df_m.columns), None)
         
+        # Mapeamento oficial sincronizado com os nomes exatos das metas
         mapeamento_cartoes = {
-            "Master Card - Inter": "Inter",
-            "Master Card - 8112": "8112",
-            "Visa Golden - 0132": "0132",
+            "Mastercard - Inter": "Inter",
+            "Mastercard - 8112": "8112",
+            "Visa Gold - 0132": "0132",
             "Visa - Mercado Pago": "Mercado Pago",
             "Itau - Golden": "Golden"
         }
@@ -1705,28 +1706,19 @@ if "💰" in st.session_state.page:
             
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
+        # Garante que puxa o dicionário atualizado da sessão (sem valores fixos antigos)
         if 'dict_metas_cartoes' not in st.session_state:
             st.session_state['dict_metas_cartoes'] = {
-                "Master Card - Inter": 4000.0,
-                "Master Card - 8112": 600.0,
-                "Visa Golden - 0132": 1000.0,
+                "Mastercard - Inter": 4000.0,
+                "Mastercard - 8112": 600.0,
+                "Visa Gold - 0132": 1000.0,
                 "Visa - Mercado Pago": 1200.0,
                 "Itau - Golden": 200.0
             }
 
         dict_metas = st.session_state['dict_metas_cartoes']
-        
-        # (Se você já gera a sua `fig_cartoes` logo abaixo, adicione o config nela também:)
-        # st.plotly_chart(
-        #     fig_cartoes, 
-        #     use_container_width=True,
-        #     config={
-        #         'staticPlot': True,
-        #         'displayModeBar': False
-        #     }
-        # )
 
-# Atribui a meta buscando com tolerância total a espaços/maiúsculas
+        # Atribui a meta buscando com tolerância total a espaços/maiúsculas
         def buscar_meta_tolerante(nome):
             nome_limpo = str(nome).strip().lower()
             for k, v in dict_metas.items():
@@ -1743,7 +1735,6 @@ if "💰" in st.session_state.page:
             
             fig_cartao.update_layout(barmode='group', height=330, margin=dict(t=30, b=10, l=0, r=0))
             
-            # 🔒 Adicionado o config aqui para destravar a rolagem do celular
             st.plotly_chart(
                 fig_cartao, 
                 use_container_width=True,
@@ -1787,7 +1778,6 @@ if "💰" in st.session_state.page:
      # =========================================================================
      # =========================================================================
         
-# =========================================================================
         
     # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA 3 MESES COM DETALHAMENTO) ---
     st.subheader("🔄 Comparativo: 3 Meses (Retrasado, Anterior e Atual)")
