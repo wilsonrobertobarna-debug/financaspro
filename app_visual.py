@@ -3201,17 +3201,40 @@ if aba == "📊 Análises & Configurações":
         # --- DIVISÓRIA VISUAL ---
         st.markdown("---")
 
-       # --- PARTE 2: LIMITES E METAS DE CARTÃO DE CRÉDITO ---
+      # --- PARTE 2: LIMITES E METAS DE CARTÃO DE CRÉDITO ---
         st.markdown("### 💳 Controle de Gastos por Cartão")
         
-       # Garante um dicionário centralizado para guardar as metas dos cartões na sessão
+        # 1. Carrega ou cria a aba "Metas" direto do Google Sheets de forma segura
+        try:
+            ws_metas = sh.worksheet("Metas")
+            dados_metas = ws_metas.get_all_values()
+            if len(dados_metas) > 1:
+                df_metas_sheets = pd.DataFrame(dados_metas[1:], columns=dados_metas[0])
+            else:
+                df_metas_sheets = pd.DataFrame(columns=["Cartao", "Meta"])
+        except:
+            # Se a aba não existir, cria vazia
+            df_metas_sheets = pd.DataFrame(columns=["Cartao", "Meta"])
+
+        # Transforma o DataFrame do Sheets em um dicionário para o app usar na tela
+        dict_metas_salvas = {}
+        if not df_metas_sheets.empty and 'Cartao' in df_metas_sheets.columns and 'Meta' in df_metas_sheets.columns:
+            for _, r in df_metas_sheets.iterrows():
+                c_nome = str(r['Cartao']).strip()
+                try:
+                    c_val = float(str(r['Meta']).replace('R$', '').replace('.', '').replace(',', '.').strip())
+                except:
+                    c_val = 0.0
+                dict_metas_salvas[c_nome] = c_val
+
+        # Garante a sessão sincronizada com o que veio do Sheets
         if 'dict_metas_cartoes' not in st.session_state:
             st.session_state['dict_metas_cartoes'] = {
-                "Mastercard - Inter": 4000.0,
-                "Mastercard - 8112": 600.0,
-                "Visa Gold - 0132": 1000.0,
-                "Visa - Mercado Pago": 1200.0,
-                "Itau - Golden": 200.0
+                "Mastercard - Inter": dict_metas_salvas.get("Mastercard - Inter", 4000.0),
+                "Mastercard - 8112": dict_metas_salvas.get("Mastercard - 8112", 600.0),
+                "Visa Gold - 0132": dict_metas_salvas.get("Visa Gold - 0132", 1000.0),
+                "Visa - Mercado Pago": dict_metas_salvas.get("Visa - Mercado Pago", 1200.0),
+                "Itau - Golden": dict_metas_salvas.get("Itau - Golden", 200.0)
             }
 
         cartoes_dados = [
@@ -3230,10 +3253,8 @@ if aba == "📊 Análises & Configurações":
             
             c1, c2 = st.columns(2)
             
-            # Pega o valor atual do dicionário de forma segura
             valor_atual = float(st.session_state['dict_metas_cartoes'].get(nome_cartao, 0.0))
             
-            # Input que atualiza direto o dicionário na sessão
             novo_valor = c1.number_input(
                 f"Meta de Gasto (Teto)", 
                 value=valor_atual,
@@ -3242,7 +3263,6 @@ if aba == "📊 Análises & Configurações":
                 key=f"input_meta_{nome_cartao}"
             )
             
-            # Salva instantaneamente no dicionário central
             st.session_state['dict_metas_cartoes'][nome_cartao] = novo_valor
             
             c2.text_input(
@@ -3252,6 +3272,20 @@ if aba == "📊 Análises & Configurações":
                 key=f"info_limite_{nome_cartao}"
             )
             st.markdown("")
+
+        # 2. Botão para salvar permanentemente na planilha do Google Sheets sem precisar abri-la
+        if st.button("💾 Salvar Metas dos Cartões na Planilha", type="primary"):
+            try:
+                # Prepara os dados atualizados para mandar pro Sheets
+                lista_para_atualizar = [["Cartao", "Meta"]]
+                for c_nome, c_val in st.session_state['dict_metas_cartoes'].items():
+                    lista_para_atualizar.append([c_nome, c_val])
+                
+                ws_metas.clear()
+                ws_metas.update(lista_para_atualizar)
+                st.success("Metas gravadas com sucesso na planilha e salvas no sistema!")
+            except Exception as e:
+                st.error(f"Erro ao salvar no Google Sheets: {e}")
 
 # -------------------------------------------------------------------------
 # BOTÃO SUPREMO: VOLTAR AO TOPO (Via Componente HTML do Streamlit)
