@@ -3201,46 +3201,9 @@ if aba == "📊 Análises & Configurações":
         # --- DIVISÓRIA VISUAL ---
         st.markdown("---")
 
-     # --- PARTE 2: LIMITES E METAS DE CARTÃO DE CRÉDITO ---
+   # --- PARTE 2: LIMITES E METAS DE CARTÃO DE CRÉDITO ---
         st.markdown("### 💳 Controle de Gastos por Cartão")
         
-        # 1. Garante a conexão e leitura segura da aba "Metas" do Google Sheets
-        dict_metas_salvas = {}
-        try:
-            ws_metas = sh.worksheet("Metas")
-            dados_metas = ws_metas.get_all_values()
-            if len(dados_metas) > 1:
-                df_metas_sheets = pd.DataFrame(dados_metas[1:], columns=dados_metas[0])
-                for _, r in df_metas_sheets.iterrows():
-                    c_nome = str(r.iloc[0]).strip()
-                    try:
-                        c_val = float(str(r.iloc[1]).replace('R$', '').replace('.', '').replace(',', '.').strip())
-                    except:
-                        c_val = 0.0
-                    dict_metas_salvas[c_nome] = c_val
-        except Exception:
-            try:
-                # Se a aba não existir, tenta criar automaticamente
-                ws_metas = sh.add_worksheet(title="Metas", rows="100", cols="2")
-                ws_metas.append_row(["Cartao", "Meta"])
-            except:
-                pass
-
-        # Garante a sessão sincronizada
-        if 'dict_metas_cartoes' not in st.session_state:
-            st.session_state['dict_metas_cartoes'] = {
-                "Mastercard - Inter": dict_metas_salvas.get("Mastercard - Inter", 4000.0),
-                "Mastercard - 8112": dict_metas_salvas.get("Mastercard - 8112", 600.0),
-                "Visa Gold - 0132": dict_metas_salvas.get("Visa Gold - 0132", 1000.0),
-                "Visa - Mercado Pago": dict_metas_salvas.get("Visa - Mercado Pago", 1200.0),
-                "Itau - Golden": dict_metas_salvas.get("Itau - Golden", 200.0)
-            }
-        else:
-            # Atualiza com o que veio da planilha se já existir na sessão
-            for k, v in dict_metas_salvas.items():
-                if k in st.session_state['dict_metas_cartoes'] and v > 0:
-                    st.session_state['dict_metas_cartoes'][k] = v
-
         cartoes_dados = [
             {"nome": "Mastercard - Inter", "limite_banco": 19300.0},
             {"nome": "Mastercard - 8112", "limite_banco": 27100.0},
@@ -3249,6 +3212,53 @@ if aba == "📊 Análises & Configurações":
             {"nome": "Itau - Golden", "limite_banco": 8330.0}
         ]
 
+        # 1. Garante a conexão e leitura segura da aba "Metas" do Google Sheets
+        dict_metas_salvas = {}
+        try:
+            ws_metas = sh.worksheet("Metas")
+            dados_metas = ws_metas.get_all_values()
+            if len(dados_metas) > 1:
+                # Pula o cabeçalho e varre linha por linha procurando o nome do cartão
+                for linha in dados_metas[1:]:
+                    if len(linha) >= 2:
+                        c_nome = str(linha[0]).strip()
+                        c_val_str = str(linha[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                        try:
+                            c_val = float(c_val_str)
+                        except:
+                            c_val = 0.0
+                        dict_metas_salvas[c_nome] = c_val
+        except Exception:
+            try:
+                ws_metas = sh.add_worksheet(title="Metas", rows="100", cols="2")
+                ws_metas.append_row(["Cartao", "Meta"])
+            except:
+                pass
+
+        # 2. Inicializa o session_state garantindo os valores padrão caso a planilha esteja vazia
+        if 'dict_metas_cartoes' not in st.session_state:
+            st.session_state['dict_metas_cartoes'] = {}
+
+        for item in cartoes_dados:
+            c_nome = item["nome"]
+            # Prioriza o que veio do Sheets, senão pega o padrão inicial de segurança
+            padroes_iniciais = {
+                "Mastercard - Inter": 4000.0,
+                "Mastercard - 8112": 600.0,
+                "Visa Gold - 0132": 1000.0,
+                "Visa - Mercado Pago": 1200.0,
+                "Itau - Golden": 200.0
+            }
+            
+            valor_salvo_sheet = dict_metas_salvas.get(c_nome)
+            if valor_salvo_sheet is not None and valor_salvo_sheet > 0:
+                val_inicial = valor_salvo_sheet
+            else:
+                val_inicial = st.session_state['dict_metas_cartoes'].get(c_nome, padroes_iniciais.get(c_nome, 0.0))
+                
+            st.session_state['dict_metas_cartoes'][c_nome] = val_inicial
+
+        # 3. Desenha os inputs na tela para cada cartão
         for item in cartoes_dados:
             nome_cartao = item["nome"]
             limite_oficial = item["limite_banco"]
@@ -3267,6 +3277,7 @@ if aba == "📊 Análises & Configurações":
                 key=f"input_meta_{nome_cartao}"
             )
             
+            # Atualiza a sessão na mesma hora que o usuário mexe no número
             st.session_state['dict_metas_cartoes'][nome_cartao] = novo_valor
             
             c2.text_input(
@@ -3277,7 +3288,7 @@ if aba == "📊 Análises & Configurações":
             )
             st.markdown("")
 
-        # 2. Botão para salvar permanentemente na planilha do Google Sheets
+        # 4. Botão para salvar permanentemente na planilha do Google Sheets
         if st.button("💾 Salvar Metas dos Cartões na Planilha", type="primary"):
             try:
                 ws_metas = sh.worksheet("Metas")
