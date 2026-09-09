@@ -1966,27 +1966,25 @@ if "💰" in st.session_state.page:
 
             
 # 7. TABELA FINAL
-       
         st.subheader("🔍 Lançamentos do Mês")
-
-        # 🔎 COLE AQUI O TESTE RÁPIDO:
-        st.write("DEBUG - Conteúdo de df_m_limpo:", df_m_limpo)
         
+        # Teste de fogo para ver se a variável existe
+        if 'df_m_limpo' in locals():
+            st.write(f"A variável existe! Linhas nela: {len(df_m_limpo)}")
+        else:
+            st.error("A variável df_m_limpo NEM EXISTE neste ponto do código!")
+            
         if not df_m_limpo.empty:
             df_exibicao = df_m_limpo.copy()
-            
             # Ordena pelo ID do maior para o menor para o mais recente ficar sempre no topo
             if 'ID' in df_exibicao.columns:
                 df_exibicao = df_exibicao.sort_values(by='ID', ascending=False)
-            
-            # MANTÉM O ID REAL DO SHEETS NA TELA
-            # Exibe a coluna 'ID' diretamente em vez de criar uma sequência numérica temporária
             
             st.dataframe(df_exibicao[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
                          use_container_width=True, 
                          hide_index=True)
         else:
-            st.warning("Base de dados vazia.")
+            st.warning("Base de dados vazia para este mês.")
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")
