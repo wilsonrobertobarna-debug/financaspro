@@ -3204,6 +3204,7 @@ if aba == "📊 Análises & Configurações":
      # --- PARTE 2: LIMITES E METAS DE CARTÃO DE CRÉDITO ---
         st.markdown("### 💳 Controle de Gastos por Cartão")
         
+        # Lista mestre oficial dos cartões (imutável para evitar duplicidade)
         cartoes_dados = [
             {"nome": "Mastercard - Inter", "limite_banco": 19300.0},
             {"nome": "Mastercard - 8112", "limite_banco": 27100.0},
@@ -3212,7 +3213,15 @@ if aba == "📊 Análises & Configurações":
             {"nome": "Itau - Golden", "limite_banco": 8330.0}
         ]
 
-        # 1. Conexão blindada com a aba correta "Metas_Cartoes"
+        padroes_iniciais = {
+            "Mastercard - Inter": 4000.0,
+            "Mastercard - 8112": 600.0,
+            "Visa Gold - 0132": 1000.0,
+            "Visa - Mercado Pago": 1200.0,
+            "Itau - Golden": 200.0
+        }
+
+        # 1. Conexão e leitura segura da aba "Metas_Cartoes"
         dict_metas_salvas = {}
         ws_metas = None
         
@@ -3228,38 +3237,32 @@ if aba == "📊 Análises & Configurações":
                             c_val = float(c_val_str)
                         except:
                             c_val = 0.0
-                        dict_metas_salvas[c_nome] = c_val
+                        # Só aceita se o cartão estiver na nossa lista oficial
+                        if c_nome in padroes_iniciais:
+                            dict_metas_salvas[c_nome] = c_val
         except Exception:
             try:
-                ws_metas = sh.add_worksheet(title="Metas_Cartoes", rows="100", cols="5")
+                ws_metas = sh.add_worksheet(title="Metas_Cartoes", rows="10", cols="2")
                 ws_metas.append_row(["Cartao", "Meta"])
             except Exception as err:
-                st.error(f"Erro crítico ao acessar a aba Metas_Cartoes no Google Sheets: {err}")
+                st.error(f"Erro ao acessar a aba Metas_Cartoes: {err}")
 
-        # 2. Inicializa o session_state
+        # 2. Inicializa o session_state garantindo os 5 cartões exatos
         if 'dict_metas_cartoes' not in st.session_state:
             st.session_state['dict_metas_cartoes'] = {}
 
-        padroes_iniciais = {
-            "Mastercard - Inter": 4000.0,
-            "Mastercard - 8112": 600.0,
-            "Visa Gold - 0132": 1000.0,
-            "Visa - Mercado Pago": 1200.0,
-            "Itau - Golden": 200.0
-        }
-
         for item in cartoes_dados:
             c_nome = item["nome"]
-            valor_salvo_sheet = dict_metas_salvas.get(c_nome)
+            valor_salvo = dict_metas_salvas.get(c_nome)
             
-            if valor_salvo_sheet is not None and valor_salvo_sheet > 0:
-                val_inicial = valor_salvo_sheet
+            if valor_salvo is not None and valor_salvo > 0:
+                val_inicial = valor_salvo
             else:
                 val_inicial = st.session_state['dict_metas_cartoes'].get(c_nome, padroes_iniciais.get(c_nome, 0.0))
                 
             st.session_state['dict_metas_cartoes'][c_nome] = val_inicial
 
-        # 3. Desenha os inputs na tela
+        # 3. Desenha os inputs na tela para os 5 cartões oficiais
         for item in cartoes_dados:
             nome_cartao = item["nome"]
             limite_oficial = item["limite_banco"]
@@ -3288,26 +3291,27 @@ if aba == "📊 Análises & Configurações":
             )
             st.markdown("")
 
-       # 4. Botão de Salvamento Organizado (Coluna A = Cartão, Coluna B = Meta)
+        # 4. Botão de Salvamento Blindado (Força a gravação limpa apenas dos 5 cartões)
         if st.button("💾 Salvar Metas dos Cartões na Planilha", type="primary"):
             try:
                 if ws_metas is None:
                     ws_metas = sh.worksheet("Metas_Cartoes")
                 
-                # Prepara a matriz exata: Cabeçalho + linhas limpas
+                # Monta estritamente com os 5 cartões da lista oficial
                 lista_para_atualizar = [["Cartao", "Meta"]]
-                for c_nome, c_val in st.session_state['dict_metas_cartoes'].items():
+                for item in cartoes_dados:
+                    c_nome = item["nome"]
+                    c_val = st.session_state['dict_metas_cartoes'].get(c_nome, 0.0)
                     lista_para_atualizar.append([c_nome, c_val])
                 
-                # Limpa tudo e atualiza o intervalo A1:B com os dados formatados
+                # Limpa a aba inteira e reescreve perfeitamente nas colunas A e B
                 ws_metas.clear()
                 ws_metas.update('A1', lista_para_atualizar)
                 
-                st.success("Metas gravadas e organizadas com sucesso na aba Metas_Cartoes!")
+                st.success("Metas salvas com sucesso na planilha e aplicadas no gráfico!")
                 st.rerun()
             except Exception as e:
                 st.error(f"Erro ao salvar no Google Sheets: {e}")
-
 # -------------------------------------------------------------------------
 # BOTÃO SUPREMO: VOLTAR AO TOPO (Via Componente HTML do Streamlit)
 # -------------------------------------------------------------------------
