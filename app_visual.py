@@ -2897,7 +2897,8 @@ if aba == "📋 Relatório PDF":
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF (MOSTRA DATA DA COMPRA)
             # ========================================================
             if not df_report.empty:
-                desc_col_temp = 'Descrição' if 'Descrição' in df_report.columns else 'Descricao'
+                col_benef_real = df_report.columns[9] if len(df_report.columns) > 9 else 'Beneficiario'
+                desc_col_temp = col_benef_real
                 if desc_col_temp in df_report.columns:
                     df_report['_chave_desc'] = df_report[desc_col_temp].astype(str).str.strip().str.upper()
                     df_report['_parc_atual'] = df_report.groupby('_chave_desc').cumcount() + 1
@@ -2920,7 +2921,8 @@ if aba == "📋 Relatório PDF":
                 tipo_str = str(row.get('Tipo', '---')).strip()
                 cat_val = str(row.get('Categoria', 'Geral'))[:16]
                 
-                desc_base = str(row.get('Descrição', row.get('Descricao', 'Sem nome'))).strip()
+                col_benef_real = df_report.columns[9] if len(df_report.columns) > 9 else 'Beneficiario'
+                desc_base = str(row.get(col_benef_real, row.get('Beneficiario', 'Sem nome'))).strip()
                 p_atual = row.get('_parc_atual', 1)
                 p_total = row.get('_parc_total', 1)
                 
@@ -2948,10 +2950,10 @@ if aba == "📋 Relatório PDF":
                 pdf.cell(22, 6, data_str, 1)
                 pdf.cell(18, 6, tipo_str, 1)
                 pdf.cell(33, 6, cat_val, 1)
-                pdf.cell(45, 6, desc_val, 1)
+                pdf.cell(48, 6, desc_val, 1)  # Largura ajustada para 48 para bater com o cabeçalho
                 
                 pdf.set_text_color(*cor_valor)
-                pdf.cell(25, 6, texto_valor, 1)
+                pdf.cell(22, 6, texto_valor, 1)  # Largura ajustada para 22 para bater com o cabeçalho
                 
                 pdf.set_text_color(*cor_saldo)
                 pdf.cell(32, 6, texto_saldo, 1)
