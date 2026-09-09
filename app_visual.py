@@ -3212,13 +3212,15 @@ if aba == "📊 Análises & Configurações":
             {"nome": "Itau - Golden", "limite_banco": 8330.0}
         ]
 
-        # 1. Garante a conexão e leitura segura da aba "Metas" do Google Sheets
+        # 1. Conexão blindada com a aba "Metas"
         dict_metas_salvas = {}
+        ws_metas = None
+        
         try:
+            # Tenta achar a aba "Metas"
             ws_metas = sh.worksheet("Metas")
             dados_metas = ws_metas.get_all_values()
             if len(dados_metas) > 1:
-                # Pula o cabeçalho e varre linha por linha procurando o nome do cartão
                 for linha in dados_metas[1:]:
                     if len(linha) >= 2:
                         c_nome = str(linha[0]).strip()
@@ -3230,27 +3232,28 @@ if aba == "📊 Análises & Configurações":
                         dict_metas_salvas[c_nome] = c_val
         except Exception:
             try:
-                ws_metas = sh.add_worksheet(title="Metas", rows="100", cols="2")
+                # Se não existir, cria a aba nova agora
+                ws_metas = sh.add_worksheet(title="Metas", rows="100", cols="5")
                 ws_metas.append_row(["Cartao", "Meta"])
-            except:
-                pass
+            except Exception as err:
+                st.error(f"Erro crítico ao acessar a aba Metas no Google Sheets: {err}")
 
-        # 2. Inicializa o session_state garantindo os valores padrão caso a planilha esteja vazia
+        # 2. Inicializa o session_state
         if 'dict_metas_cartoes' not in st.session_state:
             st.session_state['dict_metas_cartoes'] = {}
 
+        padroes_iniciais = {
+            "Mastercard - Inter": 4000.0,
+            "Mastercard - 8112": 600.0,
+            "Visa Gold - 0132": 1000.0,
+            "Visa - Mercado Pago": 1200.0,
+            "Itau - Golden": 200.0
+        }
+
         for item in cartoes_dados:
             c_nome = item["nome"]
-            # Prioriza o que veio do Sheets, senão pega o padrão inicial de segurança
-            padroes_iniciais = {
-                "Mastercard - Inter": 4000.0,
-                "Mastercard - 8112": 600.0,
-                "Visa Gold - 0132": 1000.0,
-                "Visa - Mercado Pago": 1200.0,
-                "Itau - Golden": 200.0
-            }
-            
             valor_salvo_sheet = dict_metas_salvas.get(c_nome)
+            
             if valor_salvo_sheet is not None and valor_salvo_sheet > 0:
                 val_inicial = valor_salvo_sheet
             else:
@@ -3258,7 +3261,7 @@ if aba == "📊 Análises & Configurações":
                 
             st.session_state['dict_metas_cartoes'][c_nome] = val_inicial
 
-        # 3. Desenha os inputs na tela para cada cartão
+        # 3. Desenha os inputs na tela
         for item in cartoes_dados:
             nome_cartao = item["nome"]
             limite_oficial = item["limite_banco"]
@@ -3277,7 +3280,6 @@ if aba == "📊 Análises & Configurações":
                 key=f"input_meta_{nome_cartao}"
             )
             
-            # Atualiza a sessão na mesma hora que o usuário mexe no número
             st.session_state['dict_metas_cartoes'][nome_cartao] = novo_valor
             
             c2.text_input(
@@ -3288,23 +3290,22 @@ if aba == "📊 Análises & Configurações":
             )
             st.markdown("")
 
-       # 4. Botão para salvar permanentemente na planilha do Google Sheets e atualizar gráficos
+        # 4. Botão de Salvamento Direto no Sheets
         if st.button("💾 Salvar Metas dos Cartões na Planilha", type="primary"):
             try:
-                ws_metas = sh.worksheet("Metas")
+                if ws_metas is None:
+                    ws_metas = sh.worksheet("Metas")
                 
-                # Prepara a matriz de dados (Cabeçalho + 5 cartões)
+                # Monta os dados atualizados
                 lista_para_atualizar = [["Cartao", "Meta"]]
                 for c_nome, c_val in st.session_state['dict_metas_cartoes'].items():
                     lista_para_atualizar.append([c_nome, c_val])
                 
-                # Grava de forma limpa e direta na aba Metas (intervalo A1 até B6)
-                ws_metas.batch_clear(["A1:B10"])
+                # Grava usando update direto na célula A1
+                ws_metas.clear()
                 ws_metas.update("A1", lista_para_atualizar)
                 
-                st.success("Metas gravadas com sucesso na planilha e no gráfico!")
-                
-                # Força o recarregamento imediato para o gráfico puxar os novos valores da sessão/planilha
+                st.success("Metas gravadas com sucesso na planilha e aplicadas no sistema!")
                 st.rerun()
             except Exception as e:
                 st.error(f"Erro ao salvar no Google Sheets: {e}")
