@@ -3201,7 +3201,7 @@ if aba == "📊 Análises & Configurações":
         # --- DIVISÓRIA VISUAL ---
         st.markdown("---")
 
-      # --- PARTE 2: LIMITES E METAS DE CARTÃO DE CRÉDITO ---
+     # --- PARTE 2: LIMITES E METAS DE CARTÃO DE CRÉDITO ---
         st.markdown("### 💳 Controle de Gastos por Cartão")
         
         cartoes_dados = [
@@ -3212,13 +3212,12 @@ if aba == "📊 Análises & Configurações":
             {"nome": "Itau - Golden", "limite_banco": 8330.0}
         ]
 
-        # 1. Conexão blindada com a aba "Metas"
+        # 1. Conexão blindada com a aba correta "Metas_Cartoes"
         dict_metas_salvas = {}
         ws_metas = None
         
         try:
-            # Tenta achar a aba "Metas"
-            ws_metas = sh.worksheet("Metas")
+            ws_metas = sh.worksheet("Metas_Cartoes")
             dados_metas = ws_metas.get_all_values()
             if len(dados_metas) > 1:
                 for linha in dados_metas[1:]:
@@ -3232,11 +3231,10 @@ if aba == "📊 Análises & Configurações":
                         dict_metas_salvas[c_nome] = c_val
         except Exception:
             try:
-                # Se não existir, cria a aba nova agora
-                ws_metas = sh.add_worksheet(title="Metas", rows="100", cols="5")
+                ws_metas = sh.add_worksheet(title="Metas_Cartoes", rows="100", cols="5")
                 ws_metas.append_row(["Cartao", "Meta"])
             except Exception as err:
-                st.error(f"Erro crítico ao acessar a aba Metas no Google Sheets: {err}")
+                st.error(f"Erro crítico ao acessar a aba Metas_Cartoes no Google Sheets: {err}")
 
         # 2. Inicializa o session_state
         if 'dict_metas_cartoes' not in st.session_state:
@@ -3290,24 +3288,18 @@ if aba == "📊 Análises & Configurações":
             )
             st.markdown("")
 
-       
-        # 4. Botão de Salvamento Blindado (Linha por linha, sem erro de versão)
+        # 4. Botão de Salvamento Direto na aba Metas_Cartoes
         if st.button("💾 Salvar Metas dos Cartões na Planilha", type="primary"):
             try:
                 if ws_metas is None:
-                    ws_metas = sh.worksheet("Metas")
+                    ws_metas = sh.worksheet("Metas_Cartoes")
                 
-                # Limpa a aba inteira
                 ws_metas.clear()
-                
-                # Insere o cabeçalho
                 ws_metas.append_row(["Cartao", "Meta"])
-                
-                # Insere cada cartão e valor sequencialmente
                 for c_nome, c_val in st.session_state['dict_metas_cartoes'].items():
                     ws_metas.append_row([c_nome, c_val])
                 
-                st.success("Metas gravadas com sucesso no Google Sheets!")
+                st.success("Metas gravadas com sucesso na aba Metas_Cartoes do Google Sheets!")
                 st.rerun()
             except Exception as e:
                 st.error(f"Erro ao salvar no Google Sheets: {e}")
