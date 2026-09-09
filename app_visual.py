@@ -2744,74 +2744,70 @@ if aba == "📋 Relatório PDF":
             # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
             # ========================================================
             base_inicial = 0.0
-            
-            if eh_cartao_geral:
-                base_inicial = 0.0
-            else:
+            try:
+                saldo_sistema_abril = 0.0
                 try:
-                    saldo_sistema_abril = 0.0
-                    try:
-                        ws_bancos = sh.worksheet("Bancos")
-                        dados_bancos = ws_bancos.get_all_values()
-                        df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
-                        
-                        col_banco_cad = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
-                        col_saldo_cad = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
-                        
-                        if banco_nome != "Todos os Bancos":
-                            linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome.upper()]
-                            if not linha_banco.empty:
-                                val_cru = str(linha_banco.iloc[0][col_saldo_cad]).strip()
-                                import re
-                                val_limpo = re.sub(r'[^\d.,-]', '', val_cru)
-                                if '.' in val_limpo and ',' in val_limpo:
-                                    val_limpo = val_limpo.replace('.', '').replace(',', '.')
-                                elif ',' in val_limpo:
-                                    val_limpo = val_limpo.replace(',', '.')
-                                saldo_sistema_abril = float(val_limpo)
-                    except:
-                        saldo_sistema_abril = 0.0
-
-                    df_historico = df_base.copy()
-                    col_data_h = next((c for c in df_historico.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
-                    col_banco_h = next((c for c in df_historico.columns if c.upper() in ['BANCO', 'CONTA']), None)
+                    ws_bancos = sh.worksheet("Bancos")
+                    dados_bancos = ws_bancos.get_all_values()
+                    df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
                     
-                    if col_data_h:
-                        df_historico['DT_HIST'] = pd.to_datetime(df_historico[col_data_h], format="%d/%m/%Y", errors='coerce')
-                    else:
-                        df_historico['DT_HIST'] = pd.to_datetime(df_historico.index, errors='coerce')
-                        
-                    if banco_nome != "Todos os Bancos" and col_banco_h:
-                        df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == str(banco_nome).upper()]
+                    col_banco_cad = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
+                    col_saldo_cad = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
                     
-                    df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
-                    
-                    saldo_acumulado_passado = 0.0
-                    for _, r_pass in df_antes_do_periodo.iterrows():
-                        val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
-                        
-                        if isinstance(val_p_cru, str):
+                    if banco_nome != "Todos os Bancos":
+                        linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome.upper()]
+                        if not linha_banco.empty:
+                            val_cru = str(linha_banco.iloc[0][col_saldo_cad]).strip()
                             import re
-                            val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
-                            if '.' in val_p_limpo and ',' in val_p_limpo:
-                                val_p_limpo = val_p_limpo.replace('.', '').replace(',', '.')
-                            elif ',' in val_p_limpo:
-                                val_p_limpo = val_p_limpo.replace(',', '.')
-                            val_p = pd.to_numeric(val_p_limpo, errors='coerce')
-                        else:
-                            val_p = pd.to_numeric(val_p_cru, errors='coerce')
-                            
-                        if pd.isna(val_p): val_p = 0.0
-                        
-                        tipo_p = str(r_pass.get('Tipo', '')).upper().strip()
-                        if "DESPESA" in tipo_p or "GASTO" in tipo_p:
-                            saldo_acumulado_passado -= val_p
-                        else:
-                            saldo_acumulado_passado += val_p
-                    
-                    base_inicial = saldo_sistema_abril + saldo_acumulado_passado
+                            val_limpo = re.sub(r'[^\d.,-]', '', val_cru)
+                            if '.' in val_limpo and ',' in val_limpo:
+                                val_limpo = val_limpo.replace('.', '').replace(',', '.')
+                            elif ',' in val_limpo:
+                                val_limpo = val_limpo.replace(',', '.')
+                            saldo_sistema_abril = float(val_limpo)
                 except:
-                    base_inicial = 0.0
+                    saldo_sistema_abril = 0.0
+
+                df_historico = df_base.copy()
+                col_data_h = next((c for c in df_historico.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+                col_banco_h = next((c for c in df_historico.columns if c.upper() in ['BANCO', 'CONTA']), None)
+                
+                if col_data_h:
+                    df_historico['DT_HIST'] = pd.to_datetime(df_historico[col_data_h], format="%d/%m/%Y", errors='coerce')
+                else:
+                    df_historico['DT_HIST'] = pd.to_datetime(df_historico.index, errors='coerce')
+                
+                if banco_nome != "Todos os Bancos" and col_banco_h:
+                    df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == str(banco_nome).upper()]
+                
+                df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
+                
+                saldo_acumulado_passado = 0.0
+                for _, r_pass in df_antes_do_periodo.iterrows():
+                    val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
+                    
+                    if isinstance(val_p_cru, str):
+                        import re
+                        val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
+                        if '.' in val_p_limpo and ',' in val_p_limpo:
+                            val_p_limpo = val_p_limpo.replace('.', '').replace(',', '.')
+                        elif ',' in val_p_limpo:
+                            val_p_limpo = val_p_limpo.replace(',', '.')
+                        val_p = pd.to_numeric(val_p_limpo, errors='coerce')
+                    else:
+                        val_p = pd.to_numeric(val_p_cru, errors='coerce')
+                        
+                    if pd.isna(val_p): val_p = 0.0
+                    
+                    tipo_p = str(r_pass.get('Tipo', '')).upper().strip()
+                    if "DESPESA" in tipo_p or "GASTO" in tipo_p:
+                        saldo_acumulado_passado -= val_p
+                    else:
+                        saldo_acumulado_passado += val_p
+                
+                base_inicial = saldo_sistema_abril + saldo_acumulado_passado
+            except:
+                base_inicial = 0.0
 
             saldo_anterior = base_inicial 
 
