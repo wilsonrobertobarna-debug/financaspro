@@ -2887,8 +2887,8 @@ if aba == "📋 Relatório PDF":
             pdf.cell(22, 7, nome_coluna_data_pdf, 1)
             pdf.cell(18, 7, "Tipo", 1)
             pdf.cell(33, 7, "Categoria", 1)
-            pdf.cell(45, 7, "Descricao", 1)
-            pdf.cell(25, 7, "Valor", 1)
+            pdf.cell(48, 7, "Beneficiario", 1)  # Mudado de Descricao para Beneficiario (largura ajustada para 48)
+            pdf.cell(22, 7, "Valor", 1)        # Ajustado para 22 para fechar a largura da página
             pdf.cell(32, 7, "Saldo Acum.", 1)
             pdf.cell(25, 7, "Status", 1)
             pdf.ln()
