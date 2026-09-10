@@ -3191,10 +3191,9 @@ if aba == "📊 Análises & Configurações":
         # --- DIVISÓRIA VISUAL ---
         st.markdown("---")
 
-     # --- PARTE 2: LIMITES E METAS DE CARTÃO DE CRÉDITO ---
-        st.markdown("### 💳 Controle de Gastos por Cartão")
-        
-      # Lista mestre oficial dos cartões e padrões iniciais
+    # =========================================================================
+        # 💳 CARREGAMENTO E SINCRONIZAÇÃO OBRIGATÓRIA ANTES DO GRÁFICO
+        # =========================================================================
         cartoes_dados = [
             {"nome": "Mastercard - Inter", "limite_banco": 19300.0},
             {"nome": "Mastercard - 8112", "limite_banco": 27100.0},
@@ -3211,24 +3210,19 @@ if aba == "📊 Análises & Configurações":
             "Itau - Golden": 200.0
         }
 
-        # Inicializa a sessão se não existir
-        if 'dict_metas_cartoes' not in st.session_state:
-            st.session_state['dict_metas_cartoes'] = padroes_iniciais.copy()
-
-        # LEITURA FRESCA DO GOOGLE SHEETS (Ignora cache)
+        # 1. FORÇA A LEITURA DO GOOGLE SHEETS IMEDIATAMENTE AO RECARREGAR (F5)
+        dict_metas_reais = padroes_iniciais.copy()
         try:
             ws_metas = sh.worksheet("Metas_Cartoes")
-            # Força o gspread a buscar os dados atualizados da nuvem
             dados_metas = ws_metas.get_all_values()
             
             if len(dados_metas) > 1:
-                dict_lido_da_planilha = {}
                 for linha in dados_metas[1:]:
                     if len(linha) >= 2:
                         c_nome = str(linha[0]).strip()
                         c_val_str = str(linha[1]).strip()
                         
-                        # Limpeza robusta para converter qualquer formato de número
+                        # Limpeza robusta para converter qualquer formato numérico
                         c_val_str = c_val_str.replace('R$', '').replace(' ', '')
                         if ',' in c_val_str and '.' in c_val_str:
                             c_val_str = c_val_str.replace('.', '').replace(',', '.')
@@ -3240,24 +3234,19 @@ if aba == "📊 Análises & Configurações":
                         except:
                             c_val = 0.0
                         
-                        if c_nome in padroes_iniciais:
-                            dict_lido_da_planilha[c_nome] = c_val
-                
-                # Se leu dados válidos da planilha, atualiza a sessão com eles
-                if dict_lido_da_planilha:
-                    for c_nome in padroes_iniciais:
-                        if c_nome in dict_lido_da_planilha:
-                            st.session_state['dict_metas_cartoes'][c_nome] = dict_lido_da_planilha[c_nome]
-        except Exception as err:
-            st.error(f"Erro ao ler aba Metas_Cartoes: {err}")
+                        if c_nome in padroes_iniciais and c_val > 0:
+                            dict_metas_reais[c_nome] = c_val
+        except Exception:
+            pass
 
-        # Garante que todos os 5 cartões oficiais tenham valor na sessão
-        for item in cartoes_dados:
-            c_nome = item["nome"]
-            if c_nome not in st.session_state['dict_metas_cartoes'] or st.session_state['dict_metas_cartoes'][c_nome] <= 0:
-                st.session_state['dict_metas_cartoes'][c_nome] = padroes_iniciais.get(c_nome, 0.0)
+        # 2. Atualiza o session_state com o que VEIO DA PLANILHA (Garante que o F5 não apague)
+        st.session_state['dict_metas_cartoes'] = dict_metas_reais.copy()
 
-        # 3. Desenha os inputs na tela para os 5 cartões oficiais
+        # =========================================================================
+        # 💳 DESENHA OS INPUTS DE CONFIGURAÇÃO NA TELA
+        # =========================================================================
+        st.markdown("### 💳 Controle de Gastos por Cartão")
+        
         for item in cartoes_dados:
             nome_cartao = item["nome"]
             limite_oficial = item["limite_banco"]
@@ -3266,7 +3255,7 @@ if aba == "📊 Análises & Configurações":
             
             c1, c2 = st.columns(2)
             
-            valor_atual = float(st.session_state['dict_metas_cartoes'].get(nome_cartao, 0.0))
+            valor_atual = float(st.session_state['dict_metas_cartoes'].get(nome_cartao, padroes_iniciais.get(nome_cartao, 0.0)))
             
             novo_valor = c1.number_input(
                 f"Meta de Gasto (Teto)", 
@@ -3286,7 +3275,7 @@ if aba == "📊 Análises & Configurações":
             )
             st.markdown("")
 
-       # Botão de Salvamento
+        # Botão de Salvamento
         if st.button("💾 Salvar Metas dos Cartões na Planilha", type="primary"):
             try:
                 if ws_metas is None:
