@@ -3181,8 +3181,11 @@ if aba == "📊 Análises & Configurações":
         # --- DIVISÓRIA VISUAL ---
         st.markdown("---")
 
-    # =========================================================================
+        # =========================================================================
         # 💳 CARREGAMENTO E SINCRONIZAÇÃO FORÇADA (ANTI-CACHE F5)
+        # =========================================================================
+        # =========================================================================
+        # 💳 CARREGAMENTO OBRIGATÓRIO DIRETAMENTE DO GOOGLE SHEETS
         # =========================================================================
         cartoes_dados = [
             {"nome": "Mastercard - Inter", "limite_banco": 19300.0},
@@ -3200,8 +3203,11 @@ if aba == "📊 Análises & Configurações":
             "Itau - Golden": 200.0
         }
 
-        # 1. Lê a planilha PRIMEIRO e atualiza a fonte da verdade
-        dict_metas_reais = padroes_iniciais.copy()
+        # Garante que a sessão existe com a base padrão inicialmente
+        if 'dict_metas_cartoes' not in st.session_state:
+            st.session_state['dict_metas_cartoes'] = padroes_iniciais.copy()
+
+        # FORÇA A LEITURA DA PLANILHA EM TODA EXECUÇÃO (SEM DEPENDER DE CACHE)
         ws_metas = None
         try:
             ws_metas = sh.worksheet("Metas_Cartoes")
@@ -3213,6 +3219,7 @@ if aba == "📊 Análises & Configurações":
                         c_nome = str(linha[0]).strip()
                         c_val_str = str(linha[1]).strip()
                         
+                        # Tratamento universal de números (remove R$, troca vírgula por ponto)
                         c_val_str = c_val_str.replace('R$', '').replace(' ', '')
                         if ',' in c_val_str and '.' in c_val_str:
                             c_val_str = c_val_str.replace('.', '').replace(',', '.')
@@ -3224,11 +3231,16 @@ if aba == "📊 Análises & Configurações":
                         except:
                             c_val = 0.0
                         
+                        # Se achou o cartão oficial na planilha, atualiza o session_state com o valor real
                         if c_nome in padroes_iniciais and c_val > 0:
-                            dict_metas_reais[c_nome] = c_val
+                            st.session_state['dict_metas_cartoes'][c_nome] = c_val
         except Exception:
-            pass
-
+            try:
+                # Se a aba não existir, cria ela automaticamente
+                ws_metas = sh.add_worksheet(title="Metas_Cartoes", rows="10", cols="2")
+                ws_metas.append_row(["Cartao", "Meta"])
+            except:
+                pass
         # 2. Atualiza a sessão principal
         st.session_state['dict_metas_cartoes'] = dict_metas_reais.copy()
 
