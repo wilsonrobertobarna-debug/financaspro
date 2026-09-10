@@ -3286,20 +3286,18 @@ if aba == "📊 Análises & Configurações":
             )
             st.markdown("")
 
-        # 4. Botão de Salvamento Blindado (Força a gravação limpa apenas dos 5 cartões)
+       # Botão de Salvamento
         if st.button("💾 Salvar Metas dos Cartões na Planilha", type="primary"):
             try:
                 if ws_metas is None:
                     ws_metas = sh.worksheet("Metas_Cartoes")
                 
-                # Monta estritamente com os 5 cartões da lista oficial
                 lista_para_atualizar = [["Cartao", "Meta"]]
                 for item in cartoes_dados:
                     c_nome = item["nome"]
                     c_val = st.session_state['dict_metas_cartoes'].get(c_nome, 0.0)
                     lista_para_atualizar.append([c_nome, c_val])
                 
-                # Limpa a aba inteira e reescreve perfeitamente nas colunas A e B
                 ws_metas.clear()
                 ws_metas.update('A1', lista_para_atualizar)
                 
