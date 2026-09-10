@@ -3211,39 +3211,50 @@ if aba == "📊 Análises & Configurações":
             "Itau - Golden": 200.0
         }
 
-        # Inicializa o session_state se não existir
+        # Inicializa a sessão se não existir
         if 'dict_metas_cartoes' not in st.session_state:
             st.session_state['dict_metas_cartoes'] = padroes_iniciais.copy()
 
-        # Conexão, leitura rigorosa e atualização forçada do Sheets para a sessão
-        ws_metas = None
+        # LEITURA FRESCA DO GOOGLE SHEETS (Ignora cache)
         try:
             ws_metas = sh.worksheet("Metas_Cartoes")
+            # Força o gspread a buscar os dados atualizados da nuvem
             dados_metas = ws_metas.get_all_values()
+            
             if len(dados_metas) > 1:
+                dict_lido_da_planilha = {}
                 for linha in dados_metas[1:]:
                     if len(linha) >= 2:
                         c_nome = str(linha[0]).strip()
-                        c_val_str = str(linha[1]).replace('R$', '').replace('.', '').replace(',', '.').strip()
+                        c_val_str = str(linha[1]).strip()
+                        
+                        # Limpeza robusta para converter qualquer formato de número
+                        c_val_str = c_val_str.replace('R$', '').replace(' ', '')
+                        if ',' in c_val_str and '.' in c_val_str:
+                            c_val_str = c_val_str.replace('.', '').replace(',', '.')
+                        elif ',' in c_val_str:
+                            c_val_str = c_val_str.replace(',', '.')
+                            
                         try:
                             c_val = float(c_val_str)
                         except:
                             c_val = 0.0
                         
-                        # Atualiza diretamente na sessão o que está gravado na planilha
                         if c_nome in padroes_iniciais:
-                            st.session_state['dict_metas_cartoes'][c_nome] = c_val
-        except Exception:
-            try:
-                ws_metas = sh.add_worksheet(title="Metas_Cartoes", rows="10", cols="2")
-                ws_metas.append_row(["Cartao", "Meta"])
-            except Exception as err:
-                st.error(f"Erro ao acessar a aba Metas_Cartoes: {err}")
+                            dict_lido_da_planilha[c_nome] = c_val
+                
+                # Se leu dados válidos da planilha, atualiza a sessão com eles
+                if dict_lido_da_planilha:
+                    for c_nome in padroes_iniciais:
+                        if c_nome in dict_lido_da_planilha:
+                            st.session_state['dict_metas_cartoes'][c_nome] = dict_lido_da_planilha[c_nome]
+        except Exception as err:
+            st.error(f"Erro ao ler aba Metas_Cartoes: {err}")
 
         # Garante que todos os 5 cartões oficiais tenham valor na sessão
         for item in cartoes_dados:
             c_nome = item["nome"]
-            if c_nome not in st.session_state['dict_metas_cartoes']:
+            if c_nome not in st.session_state['dict_metas_cartoes'] or st.session_state['dict_metas_cartoes'][c_nome] <= 0:
                 st.session_state['dict_metas_cartoes'][c_nome] = padroes_iniciais.get(c_nome, 0.0)
 
         # 3. Desenha os inputs na tela para os 5 cartões oficiais
