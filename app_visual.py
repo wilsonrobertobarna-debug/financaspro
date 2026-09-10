@@ -1703,8 +1703,8 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle]
             
- # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (COM FALLBACK SEGURO PARA A PLANILHA)
+# =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (MAPEAMENTO SEGURO E DIRETO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1713,27 +1713,30 @@ if "💰" in st.session_state.page:
             st.session_state['dict_metas_cartoes'] = {}
 
         dict_metas = st.session_state['dict_metas_cartoes']
-        
-        # Mapeia as metas da sessão; se algum cartão não estiver na sessão, tenta ler direto do Sheets na hora
-        metas_finais = []
-        for nome_cartao in df_cartoes_graph['Nome do Banco']:
-            valor_meta = dict_metas.get(nome_cartao, 0.0)
-            if valor_meta == 0.0:
-                # Segurança extra: se não achou na sessão, tenta buscar fresco da planilha
-                try:
-                    ws_metas = sh.worksheet("Metas_Cartoes")
-                    dados_metas = ws_metas.get_all_values()
-                    if len(dados_metas) > 1:
-                        for linha in dados_metas[1:]:
-                            if len(linha) >= 2 and str(linha[0]).strip() == nome_cartao:
-                                c_val_str = str(linha[1]).strip().replace('R$', '').replace(' ', '').replace(',', '.')
-                                valor_meta = float(c_val_str)
-                                break
-                except:
-                    pass
-            metas_finais.append(valor_meta)
 
-        df_cartoes_graph['Meta'] = metas_finais
+        # Se por algum motivo a sessão estiver vazia, tenta puxar direto do Sheets uma única vez para o dicionário inteiro
+        if not dict_metas:
+            try:
+                ws_metas = sh.worksheet("Metas_Cartoes")
+                dados_metas = ws_metas.get_all_values()
+                if len(dados_metas) > 1:
+                    for linha in dados_metas[1:]:
+                        if len(linha) >= 2:
+                            c_nome = str(linha[0]).strip()
+                            c_val_str = str(linha[1]).strip().replace('R$', '').replace(' ', '')
+                            if ',' in c_val_str and '.' in c_val_str:
+                                c_val_str = c_val_str.replace('.', '').replace(',', '.')
+                            elif ',' in c_val_str:
+                                c_val_str = c_val_str.replace(',', '.')
+                            try:
+                                dict_metas[c_nome] = float(c_val_str)
+                            except:
+                                pass
+            except:
+                pass
+
+        # Aplica o mapeamento seguro em lote no DataFrame
+        df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
         if not df_cartoes_graph.empty:
             fig_cartoes = go.Figure()
