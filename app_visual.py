@@ -1714,7 +1714,7 @@ if "💰" in st.session_state.page:
                 "Mastercard - Inter": 4000.0,
                 "Mastercard - 8112": 600.0,
                 "Visa Gold - 0132": 1000.0,
-                "Visa - Mercado Pago": 1200.0,
+                "Visa - Mercado Pago": 5000.0,
                 "Itau - Golden": 200.0
             }
 
