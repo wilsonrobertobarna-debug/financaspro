@@ -1672,15 +1672,14 @@ if "💰" in st.session_state.page:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
         
-    # =========================================================================
-        # 💳 GRÁFICO DE CARTÕES E O SEMÁFORO DE UTILIZAÇÃO
+       # =========================================================================
+        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO
         # =========================================================================
         st.markdown("---")
         st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
         
         coluna_banco = next((col for col in ['Nome do Banco', 'Banco', 'Instituição', 'Conta'] if col in df_m.columns), None)
         
-        # Mapeamento oficial sincronizado com os nomes exatos das metas
         mapeamento_cartoes = {
             "Mastercard - Inter": "Inter",
             "Mastercard - 8112": "8112",
@@ -1706,7 +1705,6 @@ if "💰" in st.session_state.page:
             
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
-        # Garante que a sessão existe e puxa estritamente o que foi carregado da planilha no topo
         if 'dict_metas_cartoes' not in st.session_state:
             st.session_state['dict_metas_cartoes'] = {
                 "Mastercard - Inter": 4000.0,
@@ -1716,13 +1714,9 @@ if "💰" in st.session_state.page:
                 "Itau - Golden": 200.0
             }
 
-        # CONECTANDO A META REAL AO GRÁFICO: Mapeia direto pelo nome oficial do cartão
         dict_metas = st.session_state['dict_metas_cartoes']
         df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
- 
-        # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES
-        # =========================================================================
+
         if not df_cartoes_graph.empty:
             fig_cartoes = go.Figure()
             fig_cartoes.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
@@ -1738,9 +1732,6 @@ if "💰" in st.session_state.page:
                     'displayModeBar': False
                 }
             )
-        else:
-            st.info("Sem dados de cartões para exibir no gráfico.")
-            
             
             st.markdown("##### 🚦 Status de Utilização dos Cartões")
             cols_status = st.columns(len(lista_cartoes_controle))
@@ -1770,9 +1761,10 @@ if "💰" in st.session_state.page:
                         label=cartao_nome,
                         value=f"R$ {gasto_real:,.2f}",
                         delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
-                 )
+                    )
         else:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
+            
      # =========================================================================
      # =========================================================================
         
