@@ -1703,25 +1703,16 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle]
             
-        # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (100% CONECTADO AO SHEETS)
+   # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (DIRETO DA PLANILHA/SESSÃO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
-        # Garante que a sessão existe, puxando sempre o dicionário oficial atualizado
-        if 'dict_metas_cartoes' not in st.session_state:
-            st.session_state['dict_metas_cartoes'] = {
-                "Mastercard - Inter": 4000.0,
-                "Mastercard - 8112": 600.0,
-                "Visa Gold - 0132": 1000.0,
-                "Visa - Mercado Pago": 5000.0,
-                "Itau - Golden": 200.0
-            }
-
-        # Garante que a estrutura da sessão existe, mas buscando da planilha ou usando um dicionário vazio seguro
+        # Se por acaso a sessão não existir, inicializa vazia (sem valores fixos enganosos)
         if 'dict_metas_cartoes' not in st.session_state:
             st.session_state['dict_metas_cartoes'] = {}
 
+        # Mapeia estritamente o que está na sessão (alimentada pelo Google Sheets)
         dict_metas = st.session_state['dict_metas_cartoes']
         df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
