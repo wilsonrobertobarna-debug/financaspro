@@ -1672,7 +1672,7 @@ if "💰" in st.session_state.page:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
         
-        # =========================================================================
+    # =========================================================================
         # 💳 GRÁFICO DE CARTÕES E O SEMÁFORO DE UTILIZAÇÃO
         # =========================================================================
         st.markdown("---")
