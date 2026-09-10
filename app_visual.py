@@ -1703,17 +1703,22 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle]
             
+        # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (100% CONECTADO AO SHEETS)
+        # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
+        # Garante que a sessão existe, puxando sempre o dicionário oficial atualizado
         if 'dict_metas_cartoes' not in st.session_state:
             st.session_state['dict_metas_cartoes'] = {
                 "Mastercard - Inter": 4000.0,
                 "Mastercard - 8112": 600.0,
                 "Visa Gold - 0132": 1000.0,
-                "Visa - Mercado Pago": 5000.0,
+                "Visa - Mercado Pago": 1200.0,
                 "Itau - Golden": 200.0
             }
 
+        # Conecta diretamente a sessão (que foi alimentada pelo Sheets no topo) ao gráfico
         dict_metas = st.session_state['dict_metas_cartoes']
         df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
