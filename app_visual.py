@@ -3242,8 +3242,8 @@ if aba == "📊 Análises & Configurações":
         # Atualiza a sessão com os dados consolidados da planilha
         st.session_state['dict_metas_cartoes'] = dict_metas_reais.copy()
 
-        # =========================================================================
-        # 💳 DESENHA OS INPUTS FORÇANDO A LEITURA DA SESSÃO (QUE VEIO DO SHEETS)
+       # =========================================================================
+        # 💳 DESENHA OS INPUTS COM CHAVE DINÂMICA (ZERA O CACHE DO F5)
         # =========================================================================
         st.markdown("### 💳 Controle de Gastos por Cartão")
         
@@ -3255,29 +3255,29 @@ if aba == "📊 Análises & Configurações":
             
             c1, c2 = st.columns(2)
             
-            # Pega estritamente o valor que veio da planilha/sessão
+            # Pega o valor oficial que veio do Google Sheets
             valor_atual = float(st.session_state['dict_metas_cartoes'].get(nome_cartao, 0.0))
             
-            key_widget = f"input_meta_{nome_cartao}"
-            
-            # BLINDAGEM ANTI-F5: Atualiza o estado interno do widget antes de criá-lo
-            st.session_state[key_widget] = valor_atual
+            # CRIANDO UMA CHAVE ÚNICA BASEADA NO VALOR PARA MATAR O CACHE DO F5
+            # Isso obriga o Streamlit a destruir o widget antigo e criar um novo com o valor real da planilha
+            key_widget = f"input_meta_{nome_cartao}_{valor_atual}"
             
             novo_valor = c1.number_input(
                 f"Meta de Gasto (Teto)", 
+                value=valor_atual,
                 min_value=0.0,
                 step=100.0,
                 key=key_widget
             )
             
-            # Atualiza o dicionário oficial com o valor digitado/carregado
+            # Atualiza a sessão com o valor atual do input
             st.session_state['dict_metas_cartoes'][nome_cartao] = novo_valor
             
             c2.text_input(
                 "Limite Oficial Cadastrado",
                 value=f"R$ {limite_oficial:,.2f}",
                 disabled=True,
-                key=f"info_limite_{nome_cartao}"
+                key=f"info_limite_{nome_cartao}_{valor_atual}"
             )
             st.markdown("")
 
