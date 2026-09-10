@@ -3192,7 +3192,7 @@ if aba == "📊 Análises & Configurações":
         st.markdown("---")
 
     # =========================================================================
-        # 💳 CARREGAMENTO E SINCRONIZAÇÃO OBRIGATÓRIA ANTES DO GRÁFICO
+        # 💳 CARREGAMENTO E SINCRONIZAÇÃO FORÇADA ANTES DOS WIDGETS
         # =========================================================================
         cartoes_dados = [
             {"nome": "Mastercard - Inter", "limite_banco": 19300.0},
@@ -3210,8 +3210,9 @@ if aba == "📊 Análises & Configurações":
             "Itau - Golden": 200.0
         }
 
-        # 1. FORÇA A LEITURA DO GOOGLE SHEETS IMEDIATAMENTE AO RECARREGAR (F5)
+        # 1. Lê estritamente o Google Sheets primeiro
         dict_metas_reais = padroes_iniciais.copy()
+        ws_metas = None
         try:
             ws_metas = sh.worksheet("Metas_Cartoes")
             dados_metas = ws_metas.get_all_values()
@@ -3222,7 +3223,6 @@ if aba == "📊 Análises & Configurações":
                         c_nome = str(linha[0]).strip()
                         c_val_str = str(linha[1]).strip()
                         
-                        # Limpeza robusta para converter qualquer formato numérico
                         c_val_str = c_val_str.replace('R$', '').replace(' ', '')
                         if ',' in c_val_str and '.' in c_val_str:
                             c_val_str = c_val_str.replace('.', '').replace(',', '.')
@@ -3239,11 +3239,11 @@ if aba == "📊 Análises & Configurações":
         except Exception:
             pass
 
-        # 2. Atualiza o session_state com o que VEIO DA PLANILHA (Garante que o F5 não apague)
+        # 2. Atualiza a sessão geral com os dados reais
         st.session_state['dict_metas_cartoes'] = dict_metas_reais.copy()
 
         # =========================================================================
-        # 💳 DESENHA OS INPUTS DE CONFIGURAÇÃO NA TELA
+        # 💳 DESENHA OS INPUTS (Limpando o cache do widget para aceitar o Sheets)
         # =========================================================================
         st.markdown("### 💳 Controle de Gastos por Cartão")
         
@@ -3255,14 +3255,21 @@ if aba == "📊 Análises & Configurações":
             
             c1, c2 = st.columns(2)
             
-            valor_atual = float(st.session_state['dict_metas_cartoes'].get(nome_cartao, padroes_iniciais.get(nome_cartao, 0.0)))
+            valor_alvo = float(st.session_state['dict_metas_cartoes'].get(nome_cartao, padroes_iniciais.get(nome_cartao, 0.0)))
+            
+            # CHAVE ÚNICA DO WIDGET
+            key_widget = f"input_meta_{nome_cartao}"
+            
+            # TRUQUE DO STREAMLIT: Se o valor da sessão divergir do widget guardado, atualiza o cache do widget
+            if key_widget in st.session_state and st.session_state[key_widget] != valor_alvo:
+                st.session_state[key_widget] = valor_alvo
             
             novo_valor = c1.number_input(
                 f"Meta de Gasto (Teto)", 
-                value=valor_atual,
+                value=valor_alvo,
                 min_value=0.0,
                 step=100.0,
-                key=f"input_meta_{nome_cartao}"
+                key=key_widget
             )
             
             st.session_state['dict_metas_cartoes'][nome_cartao] = novo_valor
