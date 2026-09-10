@@ -3194,7 +3194,7 @@ if aba == "📊 Análises & Configurações":
      # --- PARTE 2: LIMITES E METAS DE CARTÃO DE CRÉDITO ---
         st.markdown("### 💳 Controle de Gastos por Cartão")
         
-        # Lista mestre oficial dos cartões (imutável para evitar duplicidade)
+      # Lista mestre oficial dos cartões e padrões iniciais
         cartoes_dados = [
             {"nome": "Mastercard - Inter", "limite_banco": 19300.0},
             {"nome": "Mastercard - 8112", "limite_banco": 27100.0},
@@ -3211,10 +3211,12 @@ if aba == "📊 Análises & Configurações":
             "Itau - Golden": 200.0
         }
 
-        # 1. Conexão e leitura segura da aba "Metas_Cartoes"
-        dict_metas_salvas = {}
+        # Inicializa o session_state se não existir
+        if 'dict_metas_cartoes' not in st.session_state:
+            st.session_state['dict_metas_cartoes'] = padroes_iniciais.copy()
+
+        # Conexão, leitura rigorosa e atualização forçada do Sheets para a sessão
         ws_metas = None
-        
         try:
             ws_metas = sh.worksheet("Metas_Cartoes")
             dados_metas = ws_metas.get_all_values()
@@ -3227,9 +3229,10 @@ if aba == "📊 Análises & Configurações":
                             c_val = float(c_val_str)
                         except:
                             c_val = 0.0
-                        # Só aceita se o cartão estiver na nossa lista oficial
+                        
+                        # Atualiza diretamente na sessão o que está gravado na planilha
                         if c_nome in padroes_iniciais:
-                            dict_metas_salvas[c_nome] = c_val
+                            st.session_state['dict_metas_cartoes'][c_nome] = c_val
         except Exception:
             try:
                 ws_metas = sh.add_worksheet(title="Metas_Cartoes", rows="10", cols="2")
@@ -3237,20 +3240,11 @@ if aba == "📊 Análises & Configurações":
             except Exception as err:
                 st.error(f"Erro ao acessar a aba Metas_Cartoes: {err}")
 
-        # 2. Inicializa o session_state garantindo os 5 cartões exatos
-        if 'dict_metas_cartoes' not in st.session_state:
-            st.session_state['dict_metas_cartoes'] = {}
-
+        # Garante que todos os 5 cartões oficiais tenham valor na sessão
         for item in cartoes_dados:
             c_nome = item["nome"]
-            valor_salvo = dict_metas_salvas.get(c_nome)
-            
-            if valor_salvo is not None and valor_salvo > 0:
-                val_inicial = valor_salvo
-            else:
-                val_inicial = st.session_state['dict_metas_cartoes'].get(c_nome, padroes_iniciais.get(c_nome, 0.0))
-                
-            st.session_state['dict_metas_cartoes'][c_nome] = val_inicial
+            if c_nome not in st.session_state['dict_metas_cartoes']:
+                st.session_state['dict_metas_cartoes'][c_nome] = padroes_iniciais.get(c_nome, 0.0)
 
         # 3. Desenha os inputs na tela para os 5 cartões oficiais
         for item in cartoes_dados:
