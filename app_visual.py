@@ -1672,7 +1672,7 @@ if "💰" in st.session_state.page:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
         
-       # =========================================================================
+        # =========================================================================
         # 💳 GRÁFICO DE CARTÕES E O SEMÁFORO DE UTILIZAÇÃO
         # =========================================================================
         st.markdown("---")
@@ -1706,7 +1706,7 @@ if "💰" in st.session_state.page:
             
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
-        # Garante que puxa o dicionário atualizado da sessão (sem valores fixos antigos)
+        # Garante que a sessão existe e puxa estritamente o que foi carregado da planilha no topo
         if 'dict_metas_cartoes' not in st.session_state:
             st.session_state['dict_metas_cartoes'] = {
                 "Mastercard - Inter": 4000.0,
@@ -1716,33 +1716,30 @@ if "💰" in st.session_state.page:
                 "Itau - Golden": 200.0
             }
 
+        # CONECTANDO A META REAL AO GRÁFICO: Mapeia direto pelo nome oficial do cartão
         dict_metas = st.session_state['dict_metas_cartoes']
+        df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
-        # Atribui a meta buscando com tolerância total a espaços/maiúsculas
-        def buscar_meta_tolerante(nome):
-            nome_limpo = str(nome).strip().lower()
-            for k, v in dict_metas.items():
-                if k.strip().lower() == nome_limpo:
-                    return float(v)
-            return 0.0
-
-        df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].apply(buscar_meta_tolerante)
-        
+        # =========================================================================
+        # RENDERIZAÇÃO DO GRÁFICO DE CARTÕES
+        # =========================================================================
         if not df_cartoes_graph.empty:
-            fig_cartao = go.Figure()
-            fig_cartao.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['V_Num'], name='Gasto Realizado', marker_color='#e74c3c'))
-            fig_cartao.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['Meta'], name='Meta (Teto)', marker_color='#3498db', opacity=0.5))
+            fig_cartoes = go.Figure()
+            fig_cartoes.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
+            fig_cartoes.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
             
-            fig_cartao.update_layout(barmode='group', height=330, margin=dict(t=30, b=10, l=0, r=0))
+            fig_cartoes.update_layout(barmode='group', height=350, margin=dict(t=30, b=10, l=0, r=0))
             
             st.plotly_chart(
-                fig_cartao, 
+                fig_cartoes, 
                 use_container_width=True,
                 config={
                     'staticPlot': True,
                     'displayModeBar': False
                 }
             )
+        else:
+            st.info("Sem dados de cartões para exibir no gráfico.")
             
             st.markdown("##### 🚦 Status de Utilização dos Cartões")
             cols_status = st.columns(len(lista_cartoes_controle))
