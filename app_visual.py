@@ -1770,8 +1770,8 @@ if "💰" in st.session_state.page:
                         label=cartao_nome,
                         value=f"R$ {gasto_real:,.2f}",
                         delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
-                )
-        else:
+                 )
+     else:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
      # =========================================================================
      # =========================================================================
