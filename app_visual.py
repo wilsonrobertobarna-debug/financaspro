@@ -3192,7 +3192,7 @@ if aba == "📊 Análises & Configurações":
         st.markdown("---")
 
     # =========================================================================
-        # 💳 CARREGAMENTO E SINCRONIZAÇÃO FORÇADA ANTES DOS WIDGETS
+        # 💳 CARREGAMENTO E SINCRONIZAÇÃO FORÇADA (ANTI-CACHE F5)
         # =========================================================================
         cartoes_dados = [
             {"nome": "Mastercard - Inter", "limite_banco": 19300.0},
@@ -3210,7 +3210,7 @@ if aba == "📊 Análises & Configurações":
             "Itau - Golden": 200.0
         }
 
-        # 1. Lê estritamente o Google Sheets primeiro
+        # 1. Lê a planilha PRIMEIRO e atualiza a fonte da verdade
         dict_metas_reais = padroes_iniciais.copy()
         ws_metas = None
         try:
@@ -3239,11 +3239,11 @@ if aba == "📊 Análises & Configurações":
         except Exception:
             pass
 
-        # 2. Atualiza a sessão geral com os dados reais
+        # 2. Atualiza a sessão principal
         st.session_state['dict_metas_cartoes'] = dict_metas_reais.copy()
 
         # =========================================================================
-        # 💳 DESENHA OS INPUTS (Limpando o cache do widget para aceitar o Sheets)
+        # 💳 DESENHA OS INPUTS FORÇANDO O VALOR DA PLANILHA NO WIDGET
         # =========================================================================
         st.markdown("### 💳 Controle de Gastos por Cartão")
         
@@ -3255,18 +3255,14 @@ if aba == "📊 Análises & Configurações":
             
             c1, c2 = st.columns(2)
             
-            valor_alvo = float(st.session_state['dict_metas_cartoes'].get(nome_cartao, padroes_iniciais.get(nome_cartao, 0.0)))
-            
-            # CHAVE ÚNICA DO WIDGET
+            valor_real_sheets = float(st.session_state['dict_metas_cartoes'].get(nome_cartao, padroes_iniciais.get(nome_cartao, 0.0)))
             key_widget = f"input_meta_{nome_cartao}"
             
-            # TRUQUE DO STREAMLIT: Se o valor da sessão divergir do widget guardado, atualiza o cache do widget
-            if key_widget in st.session_state and st.session_state[key_widget] != valor_alvo:
-                st.session_state[key_widget] = valor_alvo
+            # FORÇA o estado interno do widget do Streamlit a aceitar o valor do Sheets ANTES de criar o input
+            st.session_state[key_widget] = valor_real_sheets
             
             novo_valor = c1.number_input(
                 f"Meta de Gasto (Teto)", 
-                value=valor_alvo,
                 min_value=0.0,
                 step=100.0,
                 key=key_widget
