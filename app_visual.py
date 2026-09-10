@@ -1718,7 +1718,10 @@ if "💰" in st.session_state.page:
                 "Itau - Golden": 200.0
             }
 
-        # Conecta diretamente a sessão (que foi alimentada pelo Sheets no topo) ao gráfico
+        # Garante que a estrutura da sessão existe, mas buscando da planilha ou usando um dicionário vazio seguro
+        if 'dict_metas_cartoes' not in st.session_state:
+            st.session_state['dict_metas_cartoes'] = {}
+
         dict_metas = st.session_state['dict_metas_cartoes']
         df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
