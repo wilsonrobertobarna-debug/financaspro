@@ -1719,9 +1719,9 @@ if "💰" in st.session_state.page:
         # CONECTANDO A META REAL AO GRÁFICO: Mapeia direto pelo nome oficial do cartão
         dict_metas = st.session_state['dict_metas_cartoes']
         df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
-
+ 
         # =========================================================================
-        # RENDERIZAÇÃO DO GRÁFICO DE CARTÕES
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES
         # =========================================================================
         if not df_cartoes_graph.empty:
             fig_cartoes = go.Figure()
@@ -1740,6 +1740,7 @@ if "💰" in st.session_state.page:
             )
         else:
             st.info("Sem dados de cartões para exibir no gráfico.")
+            
             
             st.markdown("##### 🚦 Status de Utilização dos Cartões")
             cols_status = st.columns(len(lista_cartoes_controle))
