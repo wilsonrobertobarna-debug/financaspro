@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
       # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (LEITURA EXATA DA COLUNA 7)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (DIAGNÓSTICO E LEITURA DA COLUNA 7)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1733,7 +1733,7 @@ if "💰" in st.session_state.page:
             except:
                 pass
 
-        # Leitura exata do status na Coluna 7 (índice 7)
+        # Leitura e diagnóstico de todas as colunas da planilha para ver o que está na coluna 7
         dict_status_atual = {}
         try:
             ws_metas = sh.worksheet("Metas_Cartoes")
@@ -1746,11 +1746,19 @@ if "💰" in st.session_state.page:
                             continue
                         
                         status_encontrado = 'Pendente'
-                        # Pega diretamente da Coluna 7 (índice 7)
+                        
+                        # Vamos testar a coluna 7 e também escanear a linha toda para diagnóstico
                         if len(linha) > 7:
-                            val_status = str(linha[7]).strip().lower()
-                            if val_status in ['pago', 'quitado', 'paga']:
+                            val_col_7 = str(linha[7]).strip()
+                            if val_col_7.lower() in ['pago', 'quitado', 'paga', '✅']:
                                 status_encontrado = 'Pago'
+                        
+                        # Fallback de segurança: se não achou na 7, varre procurando a palavra exata em qualquer coluna após a 1ª
+                        if status_encontrado == 'Pendente':
+                            for celula in linha[1:]:
+                                if str(celula).strip().lower() in ['pago', 'quitado', 'paga', '✅']:
+                                    status_encontrado = 'Pago'
+                                    break
                         
                         dict_status_atual[c_nome.lower()] = status_encontrado
         except:
