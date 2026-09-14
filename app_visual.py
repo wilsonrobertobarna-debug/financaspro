@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (VALIDAÇÃO PRECISA POR DATA)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (VALIDAÇÃO DE TODAS AS LINHAS)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1770,9 +1770,10 @@ if "💰" in st.session_state.page:
         "Itau - Golden": "itau gold"
     }
 
-    status_cartoes_mes = {}
+    # Estrutura para rastrear transações por cartão
+    rastreio_cartoes = {}
     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-        status_cartoes_mes[cartao_grafico] = "Pendente"
+        rastreio_cartoes[cartao_grafico] = {"encontrou": False, "todos_pagos": True}
 
     try:
         mes_selecionado_str = str(
@@ -1807,7 +1808,6 @@ if "💰" in st.session_state.page:
             if len(dados_lanc) > 1:
                 for linha in dados_lanc[1:]:
                     if len(linha) >= 7:
-                        # Extrai o mês diretamente da coluna de data (Coluna A = índice 0)
                         data_str = str(linha[0]).strip()
                         partes_data = data_str.replace('-', '/').replace('.', '/').split('/')
                         mes_da_linha = partes_data[1] if len(partes_data) >= 2 else ""
@@ -1820,8 +1820,9 @@ if "💰" in st.session_state.page:
                             for cartao_grafico in df_cartoes_graph['Nome do Banco']:
                                 termo_alvo = termos_cartoes.get(cartao_grafico, limpar_texto(cartao_grafico))
                                 if termo_alvo in texto_linha_completo:
-                                    if is_pago:
-                                        status_cartoes_mes[cartao_grafico] = "Pago"
+                                    rastreio_cartoes[cartao_grafico]["encontrou"] = True
+                                    if not is_pago:
+                                        rastreio_cartoes[cartao_grafico]["todos_pagos"] = False
     except Exception as e:
         pass
 
@@ -1830,15 +1831,17 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        status_fatura = status_cartoes_mes.get(cartao_nome, "Pendente")
-
-        if status_fatura == 'Pago':
+        dados_cartao = rastreio_cartoes.get(cartao_nome, {"encontrou": False, "todos_pagos": False})
+        
+        # Só marca como Pago se encontrou lançamentos e todos estão pagos
+        if dados_cartao["encontrou"] and dados_cartao["todos_pagos"]:
+            status_fatura = "Pago"
             cor_status = "#2e7d32" 
             emoji_status = "✅"
         else:
+            status_fatura = "Pendente"
             cor_status = "#d32f2f" 
             emoji_status = "⏳"
-            status_fatura = "Pendente"
         
         if meta_teto > 0:
             percentual = (gasto_real / meta_teto) * 100
