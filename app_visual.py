@@ -1703,8 +1703,8 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
-# =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (TERMOS EXATOS DA PLANILHA)
+      # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (BUSCA FLEXÍVEL)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1762,13 +1762,13 @@ if "💰" in st.session_state.page:
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
         return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").split())
 
-    # Termos baseados exatamente no padrão que aparece na aba Lançamentos
+    # Termos flexíveis focados nos números e identificadores únicos
     termos_cartoes = {
-        "Mastercard - Inter": "cartao mastercard inter",
-        "Mastercard - 8112": "cartao mastercard 8112",
-        "Visa Gold - 0132": "cartao visa gold 0132",
-        "Visa - Mercado Pago": "cartao visa mercado pago",
-        "Itau - Golden": "cartao itau gold"
+        "Mastercard - Inter": "inter",
+        "Mastercard - 8112": "8112",
+        "Visa Gold - 0132": "0132",
+        "Visa - Mercado Pago": "mercado pago",
+        "Itau - Golden": "itau gold"
     }
 
     rastreio_cartoes = {}
