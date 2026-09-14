@@ -1931,40 +1931,54 @@ if "💰" in st.session_state.page:
         st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
         
         
-            # --- AQUI COMEÇA O WILSONBOT ---
-        st.subheader("🤖 Consultor WilsonBot")
+    # =================================================================v
+    # --- AQUI COMEÇA O WILSONBOT (Logo abaixo do gráfico de cartões) ---
+    # =================================================================v
+    st.subheader("🤖 Consultor WilsonBot")
+    
+    # Analisa o mês atual (utilizando o seu dataframe filtrado do mês)
+    if 'df_m' in locals() and not df_m.empty:
+        df_atual = df_m
+    else:
+        df_atual = df_base.copy() # Fallback de segurança caso o df_m não esteja no escopo
         
-        # Analisa o mês atual
-        df_atual = df_m # Usamos o seu df filtrado que já está pronto
-        filtro_exclusao = (df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(['Transferência']))
-        total_gasto = df_atual[filtro_exclusao]['V_Num'].sum()
-        
-        # Analisa a média dos últimos 3 meses
-        # Nota: Ajustei para filtrar só Despesas na média também, para ficar mais preciso
-        df_despesas_totais = df_base[df_base['Tipo'] == 'Despesa']
+    filtro_exclusao = (df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(['Transferência']))
+    total_gasto = df_atual[filtro_exclusao]['V_Num'].sum()
+    
+    # Analisa a média dos últimos 3 meses usando a coluna Mes_Ano ou a data
+    df_despesas_totais = df_base[df_base['Tipo'] == 'Despesa'].copy()
+    
+    if 'Mes_Ano' in df_despesas_totais.columns and not df_despesas_totais.empty:
         meses_passados = df_despesas_totais.groupby('Mes_Ano')['V_Num'].sum().tail(3).mean()
+    else:
+        # Caso a coluna Mes_Ano não exista diretamente, criamos ela na hora com segurança
+        df_despesas_totais['DT_Temp'] = pd.to_datetime(df_despesas_totais['DT'], format='%d/%m/%Y', errors='coerce')
+        df_despesas_totais['Mes_Ano_Temp'] = df_despesas_totais['DT_Temp'].dt.to_period('M')
+        meses_passados = df_despesas_totais.groupby('Mes_Ano_Temp')['V_Num'].sum().tail(3).mean()
 
-        if total_gasto > meses_passados:
-            st.warning(f"⚠️ **Atenção, Wilson!** Seus gastos este mês estão R$ {(total_gasto - meses_passados):,.2f} acima da sua média dos últimos 3 meses.")
-        else:
-            st.success("✅ **Parabéns!** Seus gastos estão controlados e abaixo da sua média recente.")
+    # Se a média vier vazia ou NaN, evitamos erro definindo 0
+    if pd.isna(meses_passados):
+        meses_passados = 0.0
 
-        
-        # Identifica o maior vilão (Excluindo Transferências e Ajustes)
-        # Filtramos 'Despesa' E que a categoria NÃO ESTEJA na lista de exclusão
-        categorias_para_ignorar = ['Transferência', 'Ajuste']
-        
-        df_filtrado = df_atual[(df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(categorias_para_ignorar))]
-        
-        df_vilao = df_filtrado.groupby('Categoria')['V_Num'].sum()
-        
-        if not df_vilao.empty:
-            maior_gasto = df_vilao.idxmax()
-            valor_maior = df_vilao.max()
-            st.info(f"💡 **Dica de Ouro:** Sua categoria de maior gasto este mês é '{maior_gasto}', totalizando R$ {valor_maior:,.2f}. Considere revisar esses custos para o próximo mês!")
-        else:
-            st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
+    if total_gasto > meses_passados and meses_passados > 0:
+        st.warning(f"⚠️ **Atenção, Wilson!** Seus gastos este mês estão R$ {(total_gasto - meses_passados):,.2f} acima da sua média dos últimos 3 meses.")
+    else:
+        st.success("✅ **Parabéns!** Seus gastos estão controlados e abaixo da sua média recente.")
 
+    # Identifica o maior vilão (Excluindo Transferências e Ajustes)
+    categorias_para_ignorar = ['Transferência', 'Ajuste']
+    df_filtrado = df_atual[(df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(categorias_para_ignorar))]
+    
+    df_vilao = df_filtrado.groupby('Categoria')['V_Num'].sum()
+    
+    if not df_vilao.empty:
+        maior_gasto = df_vilao.idxmax()
+        valor_maior = df_vilao.max()
+        st.info(f"💡 **Dica de Ouro:** Sua categoria de maior gasto este mês é '{maior_gasto}', totalizando R$ {valor_maior:,.2f}. Considere revisar esses custos para o próximo mês!")
+    else:
+        st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
+
+    st.divider()
             
 # 7. TABELA FINAL
     st.write("---")
