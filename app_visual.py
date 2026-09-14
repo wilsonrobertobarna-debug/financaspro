@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (LEITURA DIRETA F E G)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (LÓGICA INVERTIDA SEGURA)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1762,7 +1762,7 @@ if "💰" in st.session_state.page:
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
         return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").split())
 
-    # Mapeamento dos termos para encontrar na Coluna F (índice 5)
+    # Termos para identificar cada cartão na Coluna F (índice 5)
     termos_cartoes = {
         "Mastercard - Inter": "inter",
         "Mastercard - 8112": "8112",
@@ -1773,9 +1773,9 @@ if "💰" in st.session_state.page:
 
     status_cartoes_mes = {}
     
-    # Inicializa todos como pendentes por padrão
+    # Inicializa todos como "Pago" por padrão
     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-        status_cartoes_mes[cartao_grafico] = "Pendente"
+        status_cartoes_mes[cartao_grafico] = "Pago"
 
     try:
         ws_lancamentos = None
@@ -1789,9 +1789,6 @@ if "💰" in st.session_state.page:
         if ws_lancamentos:
             dados_lanc = ws_lancamentos.get_all_values()
             
-            # Dicionário para acumular o status de cada cartão encontrado: {cartao: [lista de booleanos de pagamento]}
-            rastreio_geral = {c: [] for c in df_cartoes_graph['Nome do Banco']}
-            
             # Começa da linha 2 (índice 1), pulando o cabeçalho
             if len(dados_lanc) > 1:
                 for linha in dados_lanc[1:]:
@@ -1799,19 +1796,14 @@ if "💰" in st.session_state.page:
                         banco_col_f = limpar_texto(linha[5])  # Coluna F (índice 5) = Banco
                         status_col_g = limpar_texto(linha[6]) # Coluna G (índice 6) = Status
                         
-                        is_pago = "pag" in status_col_g
+                        # Se a coluna G contiver termos indicando pendência (ou não estiver paga)
+                        is_pendente = "pend" in status_col_g or not status_col_g or "abert" in status_col_g
 
                         for cartao_grafico in df_cartoes_graph['Nome do Banco']:
                             termo = termos_cartoes.get(cartao_grafico, "")
                             if termo and termo in banco_col_f:
-                                rastreio_geral[cartao_grafico].append(is_pago)
-
-            # Regra: se o cartão tem lançamentos e todos estão marcados como pagos na Coluna G -> "Pago", senão "Pendente"
-            for cartao_grafico, lista_pagamentos in rastreio_geral.items():
-                if lista_pagamentos and all(lista_pagamentos):
-                    status_cartoes_mes[cartao_grafico] = "Pago"
-                else:
-                    status_cartoes_mes[cartao_grafico] = "Pendente"
+                                if is_pendente:
+                                    status_cartoes_mes[cartao_grafico] = "Pendente"
     except Exception as e:
         pass
 
@@ -1820,7 +1812,7 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        status_fatura = status_cartoes_mes.get(cartao_nome, "Pendente")
+        status_fatura = status_cartoes_mes.get(cartao_nome, "Pago")
 
         if status_fatura == 'Pago':
             cor_status = "#2e7d32" 
