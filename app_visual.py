@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (COMPARAÇÃO EXATA NA COLUNA A)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (BUSCA PRECISA EM TODAS AS COLUNAS)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1767,7 +1767,7 @@ if "💰" in st.session_state.page:
         if not txt:
             return ""
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
-        # Remove hífens, barras e espaços duplicados para padronizar perfeitamente
+        # Padroniza removendo hífens, barras e espaços extras
         return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").replace("cartao", "").split())
 
     mes_limpo = limpar_texto(mes_atual_tela)
@@ -1812,26 +1812,27 @@ if "💰" in st.session_state.page:
                         status_val = str(linha[6]).strip() # Coluna G = Status
                         linha_texto = limpar_texto(" ".join([str(c) for c in linha]))
                         
-                        # 1. Verifica se a linha pertence estritamente ao mês selecionado na tela
+                        # 1. Confere se a linha pertence ao mês selecionado na tela
                         pertence_ao_mes = any(termo in linha_texto for termo in termos_mes)
                         
                         if pertence_ao_mes:
-                            # 2. Pega o nome do cartão estritamente na primeira coluna (Coluna A, índice 0) onde fica o banco/cartão
-                            cartao_celula = str(linha[0]).strip()
-                            if cartao_celula:
-                                cartao_lido_limpo = limpar_texto(cartao_celula)
-                                
-                                # Compara com os cartões ativos no gráfico
-                                for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                                    c_graf_limpo = limpar_texto(cartao_grafico)
+                            # 2. Varre as colunas A até F procurando o nome exato do cartão
+                            for celula in linha[:6]:
+                                celula_txt = str(celula).strip()
+                                if len(celula_txt) > 2:
+                                    cartao_lido_limpo = limpar_texto(celula_txt)
                                     
-                                    # Validação restrita: os nomes limpos devem ser idênticos (ex: "itau golden" == "itau golden")
-                                    if c_graf_limpo == cartao_lido_limpo:
-                                        is_pago = "pag" in limpar_texto(status_val)
-                                        if is_pago:
-                                            status_cartoes_mes[c_graf_limpo] = "Pago"
-                                        elif c_graf_limpo not in status_cartoes_mes:
-                                            status_cartoes_mes[c_graf_limpo] = "Pendente"
+                                    # Compara com cada cartão ativo no gráfico
+                                    for cartao_grafico in df_cartoes_graph['Nome do Banco']:
+                                        c_graf_limpo = limpar_texto(cartao_grafico)
+                                        
+                                        # Exige que os nomes limpos batam exatamente (ex: "itau golden" == "itau golden")
+                                        if c_graf_limpo == cartao_lido_limpo:
+                                            is_pago = "pag" in limpar_texto(status_val)
+                                            if is_pago:
+                                                status_cartoes_mes[c_graf_limpo] = "Pago"
+                                            elif c_graf_limpo not in status_cartoes_mes:
+                                                status_cartoes_mes[c_graf_limpo] = "Pendente"
     except Exception as e:
         pass
 
