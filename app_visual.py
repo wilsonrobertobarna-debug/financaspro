@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (VALIDAÇÃO DE TODAS AS LINHAS)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (TERMOS EXATOS DA PLANILHA)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1762,15 +1762,15 @@ if "💰" in st.session_state.page:
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
         return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").split())
 
+    # Termos baseados exatamente no padrão que aparece na aba Lançamentos
     termos_cartoes = {
-        "Mastercard - Inter": "inter",
-        "Mastercard - 8112": "8112",
-        "Visa Gold - 0132": "0132",
-        "Visa - Mercado Pago": "mercado pago",
-        "Itau - Golden": "itau gold"
+        "Mastercard - Inter": "cartao mastercard inter",
+        "Mastercard - 8112": "cartao mastercard 8112",
+        "Visa Gold - 0132": "cartao visa gold 0132",
+        "Visa - Mercado Pago": "cartao visa mercado pago",
+        "Itau - Golden": "cartao itau gold"
     }
 
-    # Estrutura para rastrear transações por cartão
     rastreio_cartoes = {}
     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
         rastreio_cartoes[cartao_grafico] = {"encontrou": False, "todos_pagos": True}
@@ -1833,7 +1833,6 @@ if "💰" in st.session_state.page:
         
         dados_cartao = rastreio_cartoes.get(cartao_nome, {"encontrou": False, "todos_pagos": False})
         
-        # Só marca como Pago se encontrou lançamentos e todos estão pagos
         if dados_cartao["encontrou"] and dados_cartao["todos_pagos"]:
             status_fatura = "Pago"
             cor_status = "#2e7d32" 
