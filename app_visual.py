@@ -1672,7 +1672,7 @@ if "💰" in st.session_state.page:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
         
-        # =========================================================================
+       # =========================================================================
         # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO
         # =========================================================================
         st.markdown("---")
@@ -1701,203 +1701,90 @@ if "💰" in st.session_state.page:
                 gasto_total = df_m[mask]['V_Num'].sum()
                 dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total})
         else:
-            dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
-             
+            dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle]
+            
 # =========================================================================
-# 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (BASEADO NA COLUNA A - VENCIMENTO)
-# =========================================================================
-df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
-
-# Dicionário de metas
-if 'dict_metas_cartoes' not in st.session_state:
-    st.session_state['dict_metas_cartoes'] = {}
-dict_metas = st.session_state['dict_metas_cartoes']
-
-if not dict_metas:
-    try:
-        ws_metas = sh.worksheet("Metas_Cartoes")
-        dados_metas = ws_metas.get_all_values()
-        if len(dados_metas) > 1:
-            for linha in dados_metas[1:]:
-                if len(linha) >= 2:
-                    c_nome = str(linha[0]).strip()
-                    c_val_str = str(linha[1]).strip().replace('R$', '').replace(' ', '')
-                    if ',' in c_val_str and '.' in c_val_str:
-                        c_val_str = c_val_str.replace('.', '').replace(',', '.')
-                    elif ',' in c_val_str:
-                        c_val_str = c_val_str.replace(',', '.')
-                    try:
-                        dict_metas[c_nome] = float(c_val_str)
-                    except:
-                        pass
-    except:
-        pass
-
-# Aplica o mapeamento seguro em lote no DataFrame
-df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
-
-if not df_cartoes_graph.empty:
-    fig_cartoes = go.Figure()
-    fig_cartoes.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
-    fig_cartoes.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
-    
-    fig_cartoes.update_layout(barmode='group', height=350, margin=dict(t=30, b=10, l=0, r=0))
-    
-    st.plotly_chart(
-        fig_cartoes, 
-        use_container_width=True,
-        config={
-            'staticPlot': True,
-            'displayModeBar': False
-        }
-    )
-
-st.markdown("##### 🚦 Status de Utilização dos Cartões")
-cols_status = st.columns(len(lista_cartoes_controle))
-
-import unicodedata
-def limpar_texto(txt):
-    if not txt:
-        return ""
-    sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
-    return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").split())
-
-# Termos mais flexíveis para casar com a Coluna F
-termos_cartoes = {
-    "Mastercard - Inter": ["inter", "mastercard"],
-    "Mastercard - 8112": ["8112", "mastercard"],
-    "Visa Gold - 0132": ["0132", "visa", "gold"],
-    "Visa - Mercado Pago": ["mercado", "pago", "visa"],
-    "Itau - Golden": ["itau", "golden", "visa"]
-}
-
-status_cartoes_mes = {}
-for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-    status_cartoes_mes[cartao_grafico] = "Pendente"
-
-auditoria_vencimento = []
-
-try:
-    # Descobre qual é o mês selecionado atualmente na tela
-    mes_ativo = "setembro"
-    for k in ['mes_selecionado', 'mes', 'mes_atual', 'selected_month']:
-        if k in st.session_state and st.session_state[k]:
-            mes_ativo = str(st.session_state[k]).strip().lower()
-            break
-    
-    meses_map = {
-        'janeiro': '01', 'fevereiro': '02', 'marco': '03', 'abril': '04',
-        'maio': '05', 'junho': '06', 'julho': '07', 'agosto': '08',
-        'setembro': '09', 'outubro': '10', 'novembro': '11', 'dezembro': '12'
-    }
-    num_mes_alvo = meses_map.get(mes_ativo, '09')
-
-    ws_lancamentos = None
-    for aba in sh.worksheets():
-        if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
-            ws_lancamentos = aba
-            break
-    if not ws_lancamentos:
-        ws_lancamentos = sh.worksheet("LANÇAMENTOS")
-
-    if ws_lancamentos:
-        dados_lanc = ws_lancamentos.get_all_values()
-        registro_faturas = {cartao: [] for cartao in df_cartoes_graph['Nome do Banco']}
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (MAPEAMENTO SEGURO E DIRETO)
+        # =========================================================================
+        df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
-        if len(dados_lanc) > 1:
-            for idx_linha, linha in enumerate(dados_lanc[1:], start=2):
-                if len(linha) >= 7:
-                    vencimento_str = str(linha[0]).strip()
-                    try:
-                        dt_venc = pd.to_datetime(vencimento_str, dayfirst=True, errors='coerce')
-                        mes_vencimento = dt_venc.strftime("%m") if not pd.isna(dt_venc) else ""
-                    except:
-                        mes_vencimento = ""
-                    
-                    if mes_vencimento == num_mes_alvo:
-                        banco_col_f = limpar_texto(linha[5])  # Coluna F
-                        status_col_g = limpar_texto(linha[6]) # Coluna G
-                        
-                        is_pago = "pag" in status_col_g
+        # Garante que a sessão existe
+        if 'dict_metas_cartoes' not in st.session_state:
+            st.session_state['dict_metas_cartoes'] = {}
 
-                        for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                            possiveis_termos = termos_cartoes.get(cartao_grafico, [])
-                            if any(termo in banco_col_f for termo in possiveis_termos):
-                                registro_faturas[cartao_grafico].append(is_pago)
-                                auditoria_vencimento.append({
-                                    "Linha": idx_linha,
-                                    "Cartão": cartao_grafico,
-                                    "Vencimento (Col A)": vencimento_str,
-                                    "Banco (Col F)": linha[5],
-                                    "Status (Col G)": linha[6],
-                                    "Pago?": is_pago
-                                })
+        dict_metas = st.session_state['dict_metas_cartoes']
 
-        # Avalia o status final para cada cartão
-        for cartao_grafico, lista_status in registro_faturas.items():
-            if not lista_status:
-                status_cartoes_mes[cartao_grafico] = "Sem lançamentos"
-            elif all(lista_status):
-                status_cartoes_mes[cartao_grafico] = "Pago"
-            else:
-                status_cartoes_mes[cartao_grafico] = "Pendente"
-except Exception as e:
-    pass
+        # Se por algum motivo a sessão estiver vazia, tenta puxar direto do Sheets uma única vez para o dicionário inteiro
+        if not dict_metas:
+            try:
+                ws_metas = sh.worksheet("Metas_Cartoes")
+                dados_metas = ws_metas.get_all_values()
+                if len(dados_metas) > 1:
+                    for linha in dados_metas[1:]:
+                        if len(linha) >= 2:
+                            c_nome = str(linha[0]).strip()
+                            c_val_str = str(linha[1]).strip().replace('R$', '').replace(' ', '')
+                            if ',' in c_val_str and '.' in c_val_str:
+                                c_val_str = c_val_str.replace('.', '').replace(',', '.')
+                            elif ',' in c_val_str:
+                                c_val_str = c_val_str.replace(',', '.')
+                            try:
+                                dict_metas[c_nome] = float(c_val_str)
+                            except:
+                                pass
+            except:
+                pass
 
-# Painel Raio-X
-with st.expander(f"🔍 [Raio-X Vencimento Coluna A] Mês Ativo: {mes_ativo.upper()}"):
-    if auditoria_vencimento:
-        st.dataframe(pd.DataFrame(auditoria_vencimento))
-    else:
-        st.warning("Nenhum lançamento encontrado com data de vencimento neste mês para os cartões.")
+        # Aplica o mapeamento seguro em lote no DataFrame
+        df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
-for idx, row in df_cartoes_graph.iterrows():
-    cartao_nome = str(row['Nome do Banco']).strip()
-    gasto_real = row['V_Num']
-    meta_teto = row['Meta']
-    
-    status_fatura = status_cartoes_mes.get(cartao_nome, "Pendente")
-
-    if status_fatura == 'Pago':
-        cor_status = "#2e7d32" 
-        emoji_status = "✅"
-    elif status_fatura == 'Sem lançamentos':
-        cor_status = "#616161"
-        emoji_status = "➖"
-    else:
-        cor_status = "#d32f2f" 
-        emoji_status = "⏳"
-    
-    if meta_teto > 0:
-        percentual = (gasto_real / meta_teto) * 100
-    else:
-        percentual = 0.0 if gasto_real == 0 else 100.0
-    
-    if percentual <= 80:
-        bolinha = "🟢"
-        status_txt = "OK"
-    elif percentual <= 100:
-        bolinha = "🟡"
-        status_txt = "Atenção"
-    else:
-        bolinha = "🔴"
-        status_txt = "Tô na lona"
-    
-    with cols_status[idx % len(cols_status)]:
-        st.metric(
-            label=cartao_nome,
-            value=f"R$ {gasto_real:,.2f}",
-            delta=f"{bolinha} {percentual:.1f}% ({status_txt})"
-        )
-        st.markdown(
-            f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 10px; color: {cor_status}; font-weight: bold;'>"
-            f"{emoji_status} {status_fatura}"
-            f"</div>", 
-            unsafe_allow_html=True
-        )
-else:
-    if df_cartoes_graph.empty:
-        st.info("Nenhum lançamento encontrado para os cartões neste mês.")
+        if not df_cartoes_graph.empty:
+            fig_cartoes = go.Figure()
+            fig_cartoes.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
+            fig_cartoes.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
+            
+            fig_cartoes.update_layout(barmode='group', height=350, margin=dict(t=30, b=10, l=0, r=0))
+            
+            st.plotly_chart(
+                fig_cartoes, 
+                use_container_width=True,
+                config={
+                    'staticPlot': True,
+                    'displayModeBar': False
+                }
+            )
+            
+            st.markdown("##### 🚦 Status de Utilização dos Cartões")
+            cols_status = st.columns(len(lista_cartoes_controle))
+            
+            for idx, row in df_cartoes_graph.iterrows():
+                cartao_nome = row['Nome do Banco']
+                gasto_real = row['V_Num']
+                meta_teto = row['Meta']
+                
+                if meta_teto > 0:
+                    percentual = (gasto_real / meta_teto) * 100
+                else:
+                    percentual = 0.0 if gasto_real == 0 else 100.0
+                
+                if percentual <= 80:
+                    bolinha = "🟢"
+                    status_txt = "OK"
+                elif percentual <= 100:
+                    bolinha = "🟡"
+                    status_txt = "Atenção"
+                else:
+                    bolinha = "🔴"
+                    status_txt = "Tô na lona"
+                
+                with cols_status[idx % len(cols_status)]:
+                    st.metric(
+                        label=cartao_nome,
+                        value=f"R$ {gasto_real:,.2f}",
+                        delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
+                    )
+        else:
+            st.info("Nenhum lançamento encontrado para os cartões neste mês.")
             
      # =========================================================================
      # =========================================================================
@@ -2044,54 +1931,40 @@ else:
         st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
         
         
-    # =================================================================v
-    # --- AQUI COMEÇA O WILSONBOT (Logo abaixo do gráfico de cartões) ---
-    # =================================================================v
-    st.subheader("🤖 Consultor WilsonBot")
-    
-    # Analisa o mês atual (utilizando o seu dataframe filtrado do mês)
-    if 'df_m' in locals() and not df_m.empty:
-        df_atual = df_m
-    else:
-        df_atual = df_base.copy() # Fallback de segurança caso o df_m não esteja no escopo
+            # --- AQUI COMEÇA O WILSONBOT ---
+        st.subheader("🤖 Consultor WilsonBot")
         
-    filtro_exclusao = (df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(['Transferência']))
-    total_gasto = df_atual[filtro_exclusao]['V_Num'].sum()
-    
-    # Analisa a média dos últimos 3 meses usando a coluna Mes_Ano ou a data
-    df_despesas_totais = df_base[df_base['Tipo'] == 'Despesa'].copy()
-    
-    if 'Mes_Ano' in df_despesas_totais.columns and not df_despesas_totais.empty:
+        # Analisa o mês atual
+        df_atual = df_m # Usamos o seu df filtrado que já está pronto
+        filtro_exclusao = (df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(['Transferência']))
+        total_gasto = df_atual[filtro_exclusao]['V_Num'].sum()
+        
+        # Analisa a média dos últimos 3 meses
+        # Nota: Ajustei para filtrar só Despesas na média também, para ficar mais preciso
+        df_despesas_totais = df_base[df_base['Tipo'] == 'Despesa']
         meses_passados = df_despesas_totais.groupby('Mes_Ano')['V_Num'].sum().tail(3).mean()
-    else:
-        # Caso a coluna Mes_Ano não exista diretamente, criamos ela na hora com segurança
-        df_despesas_totais['DT_Temp'] = pd.to_datetime(df_despesas_totais['DT'], format='%d/%m/%Y', errors='coerce')
-        df_despesas_totais['Mes_Ano_Temp'] = df_despesas_totais['DT_Temp'].dt.to_period('M')
-        meses_passados = df_despesas_totais.groupby('Mes_Ano_Temp')['V_Num'].sum().tail(3).mean()
 
-    # Se a média vier vazia ou NaN, evitamos erro definindo 0
-    if pd.isna(meses_passados):
-        meses_passados = 0.0
+        if total_gasto > meses_passados:
+            st.warning(f"⚠️ **Atenção, Wilson!** Seus gastos este mês estão R$ {(total_gasto - meses_passados):,.2f} acima da sua média dos últimos 3 meses.")
+        else:
+            st.success("✅ **Parabéns!** Seus gastos estão controlados e abaixo da sua média recente.")
 
-    if total_gasto > meses_passados and meses_passados > 0:
-        st.warning(f"⚠️ **Atenção, Wilson!** Seus gastos este mês estão R$ {(total_gasto - meses_passados):,.2f} acima da sua média dos últimos 3 meses.")
-    else:
-        st.success("✅ **Parabéns!** Seus gastos estão controlados e abaixo da sua média recente.")
+        
+        # Identifica o maior vilão (Excluindo Transferências e Ajustes)
+        # Filtramos 'Despesa' E que a categoria NÃO ESTEJA na lista de exclusão
+        categorias_para_ignorar = ['Transferência', 'Ajuste']
+        
+        df_filtrado = df_atual[(df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(categorias_para_ignorar))]
+        
+        df_vilao = df_filtrado.groupby('Categoria')['V_Num'].sum()
+        
+        if not df_vilao.empty:
+            maior_gasto = df_vilao.idxmax()
+            valor_maior = df_vilao.max()
+            st.info(f"💡 **Dica de Ouro:** Sua categoria de maior gasto este mês é '{maior_gasto}', totalizando R$ {valor_maior:,.2f}. Considere revisar esses custos para o próximo mês!")
+        else:
+            st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
 
-    # Identifica o maior vilão (Excluindo Transferências e Ajustes)
-    categorias_para_ignorar = ['Transferência', 'Ajuste']
-    df_filtrado = df_atual[(df_atual['Tipo'] == 'Despesa') & (~df_atual['Categoria'].isin(categorias_para_ignorar))]
-    
-    df_vilao = df_filtrado.groupby('Categoria')['V_Num'].sum()
-    
-    if not df_vilao.empty:
-        maior_gasto = df_vilao.idxmax()
-        valor_maior = df_vilao.max()
-        st.info(f"💡 **Dica de Ouro:** Sua categoria de maior gasto este mês é '{maior_gasto}', totalizando R$ {valor_maior:,.2f}. Considere revisar esses custos para o próximo mês!")
-    else:
-        st.info("💡 **Dica de Ouro:** Tudo certo! Não foram detectadas despesas recorrentes além de transferências internas.")
-
-    st.divider()
             
 # 7. TABELA FINAL
     st.write("---")
@@ -2112,7 +1985,7 @@ else:
     else:
         st.warning("A base de dados `df_m_limpo` está vazia para este mês.")
 
-    elif "Pendências" in aba:
+elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")        
 # --- FILTROS UNIFICADOS ---
     c1, c2, c3, c4 = st.columns(4)
