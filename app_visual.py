@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
    # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (MAPEAMENTO DIRETO E SEGURO)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (STATUS DINÂMICO VIA DF_M)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1755,22 +1755,26 @@ if "💰" in st.session_state.page:
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
-    # Dicionário de status com mais de um cartão pago para teste
-    status_faturas_dict = {
-        "Visa Gold - 0132": "Pago",
-        "Mastercard - Inter": "Pago",
-        "Mastercard - 8112": "Pendente",
-        "Visa - Mercado Pago": "Pendente",
-        "Itau - Golden": "Pendente"
-    }
-    
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = row['Nome do Banco']
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # Busca o status exato pelo nome do cartão no dicionário
-        status_fatura = status_faturas_dict.get(cartao_nome, "Pendente")
+        # BUSCA DINÂMICA SEGURA EM DF_M (Procura o valor exato 'pago' nas linhas do cartão, ignorando o nome do banco)
+        status_fatura = 'Pendente'
+        if 'df_m' in locals() and not df_m.empty:
+            col_cartao = next((c for c in ['Nome do Banco', 'Cartão', 'Banco'] if c in df_m.columns), None)
+            if col_cartao:
+                lancamentos_banco = df_m[df_m[col_cartao].astype(str).str.strip().str.lower() == str(cartao_nome).strip().lower()]
+                if not lancamentos_banco.empty:
+                    for _, l_row in lancamentos_banco.iterrows():
+                        # Varre as colunas da linha, ignorando a coluna do nome do banco para evitar falso positivo do Mercado Pago
+                        for col, val in l_row.items():
+                            if col != col_cartao and isinstance(val, str) and val.strip().lower() in ['pago', 'quitado', 'paga']:
+                                status_fatura = 'Pago'
+                                break
+                        if status_fatura == 'Pago':
+                            break
 
         # Define a cor do selo de status
         if status_fatura.lower() == 'pago':
