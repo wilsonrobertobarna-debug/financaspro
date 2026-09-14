@@ -1816,8 +1816,7 @@ if "💰" in st.session_state.page:
             )
     else:
         if df_cartoes_graph.empty:
-            st.info("Nenhum lançamento encontrado para os cartões neste mês.")
-            
+            st.info("Nenhum lançamento encontrado para os cartões neste mês.")            
             
      # =========================================================================
      # =========================================================================
