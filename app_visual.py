@@ -1703,8 +1703,8 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
-   # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (STATUS DINÂMICO VIA DF_M)
+  # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (LEITURA EXATA DA COLUNA 7 DE METAS)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1733,6 +1733,28 @@ if "💰" in st.session_state.page:
             except:
                 pass
 
+        # Leitura direta do status na Coluna 7 (índice 7) da aba Metas_Cartoes
+        dict_status_atual = {}
+        try:
+            ws_metas = sh.worksheet("Metas_Cartoes")
+            dados_metas = ws_metas.get_all_values()
+            if len(dados_metas) > 1:
+                for linha in dados_metas[1:]:
+                    if len(linha) >= 1:
+                        c_nome = str(linha[0]).strip()
+                        if not c_nome:
+                            continue
+                        
+                        status_fatura_lido = "Pendente"
+                        if len(linha) > 7:
+                            val_col7 = str(linha[7]).strip().lower()
+                            if val_col7 in ['pago', 'quitado', 'paga', '✅']:
+                                status_fatura_lido = "Pago"
+                        
+                        dict_status_atual[c_nome.lower()] = status_fatura_lido
+        except:
+            pass
+
         # Aplica o mapeamento seguro em lote no DataFrame
         df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
@@ -1760,21 +1782,8 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # BUSCA DINÂMICA SEGURA EM DF_M (Procura o valor exato 'pago' nas linhas do cartão, ignorando o nome do banco)
-        status_fatura = 'Pendente'
-        if 'df_m' in locals() and not df_m.empty:
-            col_cartao = next((c for c in ['Nome do Banco', 'Cartão', 'Banco'] if c in df_m.columns), None)
-            if col_cartao:
-                lancamentos_banco = df_m[df_m[col_cartao].astype(str).str.strip().str.lower() == str(cartao_nome).strip().lower()]
-                if not lancamentos_banco.empty:
-                    for _, l_row in lancamentos_banco.iterrows():
-                        # Varre as colunas da linha, ignorando a coluna do nome do banco para evitar falso positivo do Mercado Pago
-                        for col, val in l_row.items():
-                            if col != col_cartao and isinstance(val, str) and val.strip().lower() in ['pago', 'quitado', 'paga']:
-                                status_fatura = 'Pago'
-                                break
-                        if status_fatura == 'Pago':
-                            break
+        # Puxa o status correspondente do dicionário mapeado da Coluna 7
+        status_fatura = dict_status_atual.get(str(cartao_nome).strip().lower(), 'Pendente')
 
         # Define a cor do selo de status
         if status_fatura.lower() == 'pago':
