@@ -1703,8 +1703,8 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
-        # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (BUSCA EXATA DE STATUS)
+      # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (LEITURA EXATA DA COLUNA 7)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1733,7 +1733,7 @@ if "💰" in st.session_state.page:
             except:
                 pass
 
-        # Leitura precisa: ignora o nome do cartão (coluna 0) e busca valor exato
+        # Leitura exata do status na Coluna 7 (índice 7)
         dict_status_atual = {}
         try:
             ws_metas = sh.worksheet("Metas_Cartoes")
@@ -1746,15 +1746,11 @@ if "💰" in st.session_state.page:
                             continue
                         
                         status_encontrado = 'Pendente'
-                        # Verifica especificamente a Coluna G (índice 6) ou varre a partir da coluna 2 para frente
-                        if len(linha) > 6 and str(linha[6]).strip().lower() in ['pago', 'quitado', 'paga']:
-                            status_encontrado = 'Pago'
-                        else:
-                            # Varre as colunas após o nome e valor (evitando pegar o nome do banco)
-                            for celula in linha[2:]:
-                                if celula and str(celula).strip().lower() in ['pago', 'quitado', 'paga']:
-                                    status_encontrado = 'Pago'
-                                    break
+                        # Pega diretamente da Coluna 7 (índice 7)
+                        if len(linha) > 7:
+                            val_status = str(linha[7]).strip().lower()
+                            if val_status in ['pago', 'quitado', 'paga']:
+                                status_encontrado = 'Pago'
                         
                         dict_status_atual[c_nome.lower()] = status_encontrado
         except:
