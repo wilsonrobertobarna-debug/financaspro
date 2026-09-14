@@ -1703,8 +1703,8 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
- # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (LEITURA DA COLUNA F)
+# =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (COM DEBUG)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1762,11 +1762,10 @@ if "💰" in st.session_state.page:
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
         return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").split())
 
-    # Mapeamento robusto relacionando o nome do gráfico aos trechos contidos na Coluna F
     termos_cartoes = {
         "Mastercard - Inter": ["inter"],
         "Mastercard - 8112": ["8112"],
-        "Visa Gold - 0132": ["0132", "visa gold"],
+        "Visa Gold - 0132": ["0132"],
         "Visa - Mercado Pago": ["mercado pago", "mercadopago"],
         "Itau - Golden": ["itau"]
     }
@@ -1774,6 +1773,8 @@ if "💰" in st.session_state.page:
     rastreio_cartoes = {}
     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
         rastreio_cartoes[cartao_grafico] = {"encontrou": False, "todos_pagos": True}
+
+    debug_registros = []
 
     try:
         mes_selecionado_str = str(
@@ -1808,28 +1809,32 @@ if "💰" in st.session_state.page:
             if len(dados_lanc) > 1:
                 for linha in dados_lanc[1:]:
                     if len(linha) >= 7:
-                        # Coluna A (Data/Vencimento) = índice 0
                         data_str = str(linha[0]).strip()
                         partes_data = data_str.replace('-', '/').replace('.', '/').split('/')
                         mes_da_linha = partes_data[1] if len(partes_data) >= 2 else ""
                         
+                        # Vamos capturar tudo o que bate com o mês alvo para inspecionar
                         if mes_da_linha == num_mes_alvo:
-                            banco_linha = limpar_texto(linha[5]) if len(linha) > 5 else "" # Coluna F = Banco
-                            status_val = str(linha[6]).strip() # Coluna G = Status
+                            banco_linha = str(linha[5]).strip() if len(linha) > 5 else ""
+                            status_val = str(linha[6]).strip()
+                            debug_registros.append(f"Data: {data_str} | Banco(Col F): '{banco_linha}' | Status(Col G): '{status_val}'")
+                            
                             is_pago = "pag" in limpar_texto(status_val)
+                            banco_limpo = limpar_texto(banco_linha)
                             
                             for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                                chaves_possiveis = termos_cartoes.get(cartao_grafico, [limpar_texto(cartao_grafico)])
-                                
-                                # Verifica se a coluna F da linha pertence a este cartão
-                                pertence_ao_cartao = any(chave in banco_linha for chave in chaves_possiveis)
-                                
-                                if pertence_ao_cartao:
+                                chaves = termos_cartoes.get(cartao_grafico, [])
+                                if any(chave in banco_limpo for chave in chaves):
                                     rastreio_cartoes[cartao_grafico]["encontrou"] = True
                                     if not is_pago:
                                         rastreio_cartoes[cartao_grafico]["todos_pagos"] = False
     except Exception as e:
-        pass
+        debug_registros.append(f"Erro: {str(e)}")
+
+    # Exibe na tela o que o código leu para você conferir na hora
+    with st.expander("🔍 [DEBUG] Inspecionar Linhas Lidas da Planilha para este Mês"):
+        st.write(f"Mês Alvo Buscado (Número): {num_mes_alvo}")
+        st.write(debug_registros if debug_registros else "Nenhuma linha encontrada com esse mês na Coluna A.")
 
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = str(row['Nome do Banco']).strip()
