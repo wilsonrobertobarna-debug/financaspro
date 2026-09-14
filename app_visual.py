@@ -1703,22 +1703,17 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle]
             
-    # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (MAPEAMENTO SEGURO E DIRETO)
+      # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (MAPEAMENTO SEGURO E DINÂMICO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
-        # Garante que as sessões existem
+        # Dicionário de metas (cacheado pois a meta geral muda pouco)
         if 'dict_metas_cartoes' not in st.session_state:
             st.session_state['dict_metas_cartoes'] = {}
-        if 'dict_status_cartoes' not in st.session_state:
-            st.session_state['dict_status_cartoes'] = {}
-
         dict_metas = st.session_state['dict_metas_cartoes']
-        dict_status = st.session_state['dict_status_cartoes']
 
-        # Se por algum motivo a sessão estiver vazia, puxa direto do Sheets (Metas e Coluna G para Status)
-        if not dict_metas or not dict_status:
+        if not dict_metas:
             try:
                 ws_metas = sh.worksheet("Metas_Cartoes")
                 dados_metas = ws_metas.get_all_values()
@@ -1735,15 +1730,25 @@ if "💰" in st.session_state.page:
                                 dict_metas[c_nome] = float(c_val_str)
                             except:
                                 pass
-                            
-                            # Captura o Status da Coluna G (índice 6) com segurança
-                            if len(linha) > 6:
-                                c_status = str(linha[6]).strip()
-                                dict_status[c_nome] = c_status if c_status else 'Pendente'
-                            else:
-                                dict_status[c_nome] = 'Pendente'
             except:
                 pass
+
+        # Lê o status da Coluna G diretamente da planilha a cada execução (sem cache travado)
+        dict_status_atual = {}
+        try:
+            ws_metas = sh.worksheet("Metas_Cartoes")
+            dados_metas = ws_metas.get_all_values()
+            if len(dados_metas) > 1:
+                for linha in dados_metas[1:]:
+                    if len(linha) >= 1:
+                        c_nome = str(linha[0]).strip()
+                        # Pega o status da Coluna G (índice 6) se existir
+                        if len(linha) > 6:
+                            c_status = str(linha[6]).strip()
+                            if c_status:
+                                dict_status_atual[c_nome] = c_status
+        except:
+            pass
 
         # Aplica o mapeamento seguro em lote no DataFrame
         df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
@@ -1772,8 +1777,8 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # Puxa o status real mapeado da Coluna G do Sheets
-        status_fatura = dict_status.get(cartao_nome, 'Pendente')
+        # Puxa o status dinâmico da planilha para este cartão
+        status_fatura = dict_status_atual.get(cartao_nome, 'Pendente')
         if not status_fatura or str(status_fatura).strip() == '':
             status_fatura = 'Pendente'
 
