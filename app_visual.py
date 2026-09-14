@@ -1702,9 +1702,8 @@ if "💰" in st.session_state.page:
                 dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total})
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle]
-            
-        # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (STATUS DINÂMICO POR MÊS)
+      # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (BUSCA BLINDADA DE STATUS)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1733,6 +1732,29 @@ if "💰" in st.session_state.page:
             except:
                 pass
 
+        # Leitura universal do status: varre todas as colunas de cada linha na aba Metas_Cartoes
+        dict_status_atual = {}
+        try:
+            ws_metas = sh.worksheet("Metas_Cartoes")
+            dados_metas = ws_metas.get_all_values()
+            if len(dados_metas) > 1:
+                for linha in dados_metas[1:]:
+                    if len(linha) >= 1:
+                        c_nome = str(linha[0]).strip()
+                        if not c_nome:
+                            continue
+                        
+                        status_encontrado = 'Pendente'
+                        # Verifica se a palavra 'pago' existe em qualquer célula da linha deste cartão
+                        for celula in linha:
+                            if celula and 'pago' in str(celula).strip().lower():
+                                status_encontrado = 'Pago'
+                                break
+                        
+                        dict_status_atual[c_nome.lower()] = status_encontrado
+        except:
+            pass
+
         # Aplica o mapeamento seguro em lote no DataFrame
         df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
@@ -1760,22 +1782,8 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # BUSCA DINÂMICA DO STATUS NA BASE DO MÊS SELECIONADO (df_m)
-        status_fatura = 'Pendente'
-        if 'df_m' in locals() and not df_m.empty:
-            col_cartao = next((c for c in ['Nome do Banco', 'Cartão', 'Banco'] if c in df_m.columns), None)
-            if col_cartao:
-                # Filtra os lançamentos do mês correspondentes a este cartão
-                lancamentos_banco = df_m[df_m[col_cartao].astype(str).str.strip().str.lower() == str(cartao_nome).strip().lower()]
-                if not lancamentos_banco.empty:
-                    # Verifica se alguma linha deste cartão no mês possui status 'Pago'
-                    for _, l_row in lancamentos_banco.iterrows():
-                        for val in l_row.values:
-                            if isinstance(val, str) and val.strip().lower() == 'pago':
-                                status_fatura = 'Pago'
-                                break
-                        if status_fatura == 'Pago':
-                            break
+        # Puxa o status utilizando o nome do cartão normalizado
+        status_fatura = dict_status_atual.get(str(cartao_nome).strip().lower(), 'Pendente')
 
         # Define a cor do selo de status
         if status_fatura.lower() == 'pago':
