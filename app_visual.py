@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (INTEGRADO AO MÊS ATIVO)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (BASEADO NA COLUNA A - VENCIMENTO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1775,45 +1775,65 @@ if "💰" in st.session_state.page:
     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
         status_cartoes_mes[cartao_grafico] = "Pendente"
 
-    auditoria_status = []
+    auditoria_vencimento = []
 
     try:
-        # Pega as linhas filtradas que o aplicativo já usou para montar os gráficos do mês
-        linhas_mes_ativo = []
-        if 'dados_filtrados_mes' in locals() and dados_filtrados_mes:
-            linhas_mes_ativo = dados_filtrados_mes
-        elif 'df_filtrado' in locals() and hasattr(df_filtrado, 'values'):
-            linhas_mes_ativo = df_filtrado.values.tolist()
-        elif 'df_mes' in locals() and hasattr(df_mes, 'values'):
-            linhas_mes_ativo = df_mes.values.tolist()
+        # Descobre qual é o mês selecionado atualmente na tela
+        mes_ativo = "setembro"
+        for k in ['mes_selecionado', 'mes', 'mes_atual', 'selected_month']:
+            if k in st.session_state and st.session_state[k]:
+                mes_ativo = str(st.session_state[k]).strip().lower()
+                break
+        
+        meses_map = {
+            'janeiro': '01', 'fevereiro': '02', 'marco': '03', 'abril': '04',
+            'maio': '05', 'junho': '06', 'julho': '07', 'agosto': '08',
+            'setembro': '09', 'outubro': '10', 'novembro': '11', 'dezembro': '12'
+        }
+        num_mes_alvo = meses_map.get(mes_ativo, '09')
 
-        registro_faturas = {cartao: [] for cartao in df_cartoes_graph['Nome do Banco']}
+        ws_lancamentos = None
+        for aba in sh.worksheets():
+            if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
+                ws_lancamentos = aba
+                break
+        if not ws_lancamentos:
+            ws_lancamentos = sh.worksheet("LANÇAMENTOS")
 
-        if linhas_mes_ativo:
-            for linha in linhas_mes_ativo:
-                if hasattr(linha, 'tolist'):
-                    linha = linha.tolist()
-                elif not isinstance(linha, (list, tuple)):
-                    continue
-                
-                if len(linha) >= 7:
-                    banco_col_f = limpar_texto(linha[5])  # Coluna F (índice 5) = Banco
-                    status_col_g = limpar_texto(linha[6]) # Coluna G (índice 6) = Status
-                    
-                    is_pago = "pag" in status_col_g
+        if ws_lancamentos:
+            dados_lanc = ws_lancamentos.get_all_values()
+            registro_faturas = {cartao: [] for cartao in df_cartoes_graph['Nome do Banco']}
+            
+            # Começa da linha 2 (índice 1), pulando o cabeçalho
+            if len(dados_lanc) > 1:
+                for idx_linha, linha in enumerate(dados_lanc[1:], start=2):
+                    if len(linha) >= 7:
+                        # Coluna A (Vencimento) = índice 0 -> extrai o mês da data de vencimento
+                        vencimento_str = str(linha[0]).strip()
+                        partes = vencimento_str.replace('-', '/').replace('.', '/').split('/')
+                        mes_vencimento = partes[1] if len(partes) >= 2 else ""
+                        
+                        # Processa apenas se a data de vencimento pertencer ao mês selecionado na tela
+                        if mes_vencimento == num_mes_alvo:
+                            banco_col_f = limpar_texto(linha[5])  # Coluna F (índice 5) = Banco
+                            status_col_g = limpar_texto(linha[6]) # Coluna G (índice 6) = Status
+                            
+                            is_pago = "pag" in status_col_g
 
-                    for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                        possiveis_termos = termos_cartoes.get(cartao_grafico, [])
-                        if any(termo in banco_col_f for termo in possiveis_termos):
-                            registro_faturas[cartao_grafico].append(is_pago)
-                            auditoria_status.append({
-                                "Cartão": cartao_grafico,
-                                "Banco Lido (Col F)": str(linha[5]),
-                                "Status Lido (Col G)": str(linha[6]),
-                                "Pago?": is_pago
-                            })
+                            for cartao_grafico in df_cartoes_graph['Nome do Banco']:
+                                possiveis_termos = termos_cartoes.get(cartao_grafico, [])
+                                if any(termo in banco_col_f for termo in possiveis_termos):
+                                    registro_faturas[cartao_grafico].append(is_pago)
+                                    auditoria_vencimento.append({
+                                        "Linha": idx_linha,
+                                        "Cartão": cartao_grafico,
+                                        "Vencimento (Col A)": vencimento_str,
+                                        "Banco (Col F)": linha[5],
+                                        "Status (Col G)": linha[6],
+                                        "Pago?": is_pago
+                                    })
 
-            # Avalia status final de cada cartão do mês
+            # Avalia o status final para cada cartão do mês com base no vencimento
             for cartao_grafico, lista_status in registro_faturas.items():
                 if lista_status and all(lista_status):
                     status_cartoes_mes[cartao_grafico] = "Pago"
@@ -1822,12 +1842,12 @@ if "💰" in st.session_state.page:
     except Exception as e:
         pass
 
-    # Painel Raio-X para conferir o que veio dos dados filtrados do mês
-    with st.expander("🔍 [Raio-X de Status do Mês Ativo]"):
-        if auditoria_status:
-            st.dataframe(pd.DataFrame(auditoria_status))
+    # Painel Raio-X para conferir os vencimentos do mês
+    with st.expander(f"🔍 [Raio-X Vencimento Coluna A] Mês Ativo: {mes_ativo.upper()}"):
+        if auditoria_vencimento:
+            st.dataframe(pd.DataFrame(auditoria_vencimento))
         else:
-            st.warning("Nenhum lançamento encontrado nas variáveis filtradas do mês para os cartões.")
+            st.warning("Nenhum lançamento encontrado com data de vencimento neste mês para os cartões.")
 
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = str(row['Nome do Banco']).strip()
