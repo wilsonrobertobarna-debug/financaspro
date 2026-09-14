@@ -1791,11 +1791,17 @@ if "💰" in st.session_state.page:
         
         # Procura o status na planilha preenchida pelo usuário (ignorando maiúsculas/minúsculas)
         # Procura o status na planilha preenchida pelo usuário (ignorando a palavra "Cartão" e maiúsculas/minúsculas)
+        # Procura o status na planilha limpando acentos, maiúsculas e a palavra "Cartão"
         status_fatura = "Pendente"
-        cartao_limpo = cartao_nome.lower().replace("cartão", "").replace("cartao", "").strip()
+        
+        import unicodedata
+        def remover_acentos(txt):
+            return ''.join(c for c in unicodedata.normalize('NFD', txt) if unicodedata.category(c) != 'Mn')
+            
+        cartao_limpo = remover_acentos(cartao_nome.lower()).replace("cartao", "").strip()
         
         for c_cadastrado, estado in status_faturas_dict.items():
-            c_cadastrado_limpo = c_cadastrado.lower().replace("cartão", "").replace("cartao", "").strip()
+            c_cadastrado_limpo = remover_acentos(c_cadastrado.lower()).replace("cartao", "").strip()
             
             if cartao_limpo in c_cadastrado_limpo or c_cadastrado_limpo in cartao_limpo:
                 if "pag" in estado.lower():
