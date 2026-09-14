@@ -3067,7 +3067,7 @@ if aba == "📊 Análises & Configurações":
     
    
    # 1. GRÁFICO: EVOLUÇÃO DO SALDO ACUMULADO
-         st.subheader("📈 Evolução do Saldo Acumulado")
+    st.subheader("📈 Evolução do Saldo Acumulado")
         
         # Certifique-se de que o df_base não está vazio
         if not df_base.empty:
