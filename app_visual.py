@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (CORREÇÃO DEFINITIVA DE STATUS E MESES)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (BUSCA PRECISA NA COLUNA DE CARTÕES)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1767,12 +1767,10 @@ if "💰" in st.session_state.page:
         if not txt:
             return ""
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
-        # Padroniza removendo hífens, pontuações extras e convertendo para minúsculas
         return sem_acento.lower().replace("-", " ").replace("/", " ").replace("cartao", "").strip()
 
     mes_limpo = limpar_texto(mes_atual_tela)
     
-    # Mapeamento completo dos meses para identificar datas em formato texto ou numérico nas linhas
     meses_dict = {
         'janeiro': ['01', '1', 'janeiro', 'jan'],
         'fevereiro': ['02', '2', 'fevereiro', 'fev'],
@@ -1808,25 +1806,29 @@ if "💰" in st.session_state.page:
         if ws_lancamentos:
             dados_aba = ws_lancamentos.get_all_values()
             if len(dados_aba) > 1:
+                # Descobre dinamicamente onde está a coluna de Status (Coluna G = índice 6)
                 for linha in dados_aba[1:]:
                     if len(linha) >= 7:
                         status_val = str(linha[6]).strip() # Coluna G
                         linha_texto = limpar_texto(" ".join([str(c) for c in linha]))
                         
-                        # Confere estritamente se a linha pertence ao mês selecionado
                         pertence_ao_mes = any(termo in linha_texto for termo in termos_mes)
                         
                         if pertence_ao_mes:
-                            for celula in linha[:6]:
+                            # Varre apenas as colunas onde os nomes dos cartões costumam ficar (ex: Colunas A até D, índices 0 a 3)
+                            for celula in linha[:4]:
                                 celula_txt = str(celula).strip()
                                 if len(celula_txt) > 2:
                                     chave = limpar_texto(celula_txt)
-                                    if chave and not any(m in chave for m in ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']):
-                                        is_pago = "pag" in limpar_texto(status_val)
-                                        if is_pago:
-                                            status_faturas_dict[chave] = "Pago"
-                                        elif chave not in status_faturas_dict:
-                                            status_faturas_dict[chave] = "Pendente"
+                                    # Verifica se o texto da célula realmente se parece com o nome de um dos cartões cadastrados
+                                    for cartao_ctrl in lista_cartoes_controle:
+                                        cartao_ctrl_limpo = limpar_texto(cartao_ctrl)
+                                        if chave in cartao_ctrl_limpo or cartao_ctrl_limpo in chave:
+                                            is_pago = "pag" in limpar_texto(status_val)
+                                            if is_pago:
+                                                status_faturas_dict[cartao_ctrl_limpo] = "Pago"
+                                            elif cartao_ctrl_limpo not in status_faturas_dict:
+                                                status_faturas_dict[cartao_ctrl_limpo] = "Pendente"
     except Exception as e:
         pass
 
@@ -1835,20 +1837,8 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        status_fatura = "Pendente"
         cartao_limpo = limpar_texto(cartao_nome)
-        
-        # Cruzamento flexível que ignora hífens e compara palavras-chave (ex: "itau golden" bate com "itau - golden")
-        palavras_cartao = set(cartao_limpo.split())
-        
-        for c_cadastrado, estado in status_faturas_dict.items():
-            palavras_cad = set(c_cadastrado.split())
-            
-            # Se todas as palavras do cartão constam no cadastro ou vice-versa, encontrou o match exato
-            if palavras_cartao and (palavras_cartao.issubset(palavras_cad) or palavras_cad.issubset(palavras_cartao) or cartao_limpo == c_cadastrado):
-                if estado == "Pago":
-                    status_fatura = "Pago"
-                break
+        status_fatura = status_faturas_dict.get(cartao_limpo, "Pendente")
 
         if status_fatura == 'Pago':
             cor_status = "#2e7d32" 
