@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (CONTROLE MÊS A MÊS BLINDADO)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (STATUS DINÂMICO DOS OUTROS CARTÕES)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1753,18 +1753,17 @@ if "💰" in st.session_state.page:
             )
             
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
+    cols_status = st.columns(len(lista_cartoes_controle))
     
-    # Tenta capturar o mês de todas as formas possíveis no session_state
-    mes_atual_tela = None
-    for chave_possivel in ['mes_selecionado', 'mes', 'mes_atual', 'selected_month', 'selectbox_mes']:
-        if chave_possivel in st.session_state and st.session_state[chave_possivel]:
-            mes_atual_tela = str(st.session_state[chave_possivel]).capitalize().strip()
-            break
-            
-    if not mes_atual_tela:
-        mes_atual_tela = "Setembro" # Fallback caso nenhuma chave seja encontrada
-
-    # Dicionário centralizado por mês (adicione ou remova "Pago" onde quiser)
+    # Identifica o mês atual selecionado na tela
+    mes_atual_tela = str(
+        st.session_state.get('mes_selecionado') or 
+        st.session_state.get('mes') or 
+        st.session_state.get('mes_atual') or 
+        'Setembro'
+    ).capitalize().strip()
+    
+    # DICIONÁRIO COMPLETO MÊS A MÊS: Configure aqui quais cartões estão pagos ou pendentes em cada período
     status_por_mes = {
         "Janeiro": {},
         "Fevereiro": {},
@@ -1774,35 +1773,37 @@ if "💰" in st.session_state.page:
         "Junho": {},
         "Julho": {},
         "Agosto": {
-            "Visa Gold - 0132": "Pago",
             "Mastercard - Inter": "Pago"
         },
         "Setembro": {
-            "Visa Gold - 0132": "Pago"
+            # Adicione aqui outros cartões que estiverem pagos em setembro, ex: "Mastercard - Inter": "Pago"
         },
         "Outubro": {},
         "Novembro": {},
         "Dezembro": {}
     }
     
-    # Pega estritamente o mês atual. Se o mês não estiver explicitamente mapeado, retorna dicionário vazio (tudo pendente)
     status_faturas_dict = status_por_mes.get(mes_atual_tela, {})
     
-    cols_status = st.columns(len(lista_cartoes_controle))
-    
     for idx, row in df_cartoes_graph.iterrows():
-        cartao_nome = row['Nome do Banco']
+        cartao_nome = str(row['Nome do Banco']).strip()
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # VERIFICAÇÃO BLINDADA: Só é 'Pago' se estiver explicitamente escrito no mês correto
-        status_fatura = "Pendente"
-        for cartao_cadastrado, estado in status_faturas_dict.items():
-            if cartao_cadastrado.lower() in str(cartao_nome).lower() and estado.lower() == 'pago':
-                status_fatura = "Pago"
-                break
+        # REGRA INTELIGENTE:
+        # 1. O Visa Gold - 0132 é sempre "Pago" em qualquer mês.
+        # 2. Os demais cartões seguem o dicionário do mês (se estiverem lá, ficam "Pago", senão ficam "Pendente").
+        if "0132" in cartao_nome or "visa gold" in cartao_nome.lower():
+            status_fatura = "Pago"
+        else:
+            # Procura no dicionário do mês (ignorando maiúsculas/minúsculas)
+            status_fatura = "Pendente"
+            for c_cadastrado, estado in status_faturas_dict.items():
+                if c_cadastrado.lower() in cartao_nome.lower() and str(estado).strip().lower() == 'pago':
+                    status_fatura = "Pago"
+                    break
 
-        # Define a cor e o emoji do selo
+        # Define a cor e o emoji do selo com base no status final
         if status_fatura == 'Pago':
             cor_status = "#2e7d32" # Verde escuro
             emoji_status = "✅"
