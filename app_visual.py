@@ -1703,8 +1703,8 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
-      # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (DIAGNÓSTICO E LEITURA DA COLUNA 7)
+     # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (MAPEAMENTO DIRETO E SEGURO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1733,37 +1733,6 @@ if "💰" in st.session_state.page:
             except:
                 pass
 
-        # Leitura e diagnóstico de todas as colunas da planilha para ver o que está na coluna 7
-        dict_status_atual = {}
-        try:
-            ws_metas = sh.worksheet("Metas_Cartoes")
-            dados_metas = ws_metas.get_all_values()
-            if len(dados_metas) > 1:
-                for linha in dados_metas[1:]:
-                    if len(linha) >= 1:
-                        c_nome = str(linha[0]).strip()
-                        if not c_nome:
-                            continue
-                        
-                        status_encontrado = 'Pendente'
-                        
-                        # Vamos testar a coluna 7 e também escanear a linha toda para diagnóstico
-                        if len(linha) > 7:
-                            val_col_7 = str(linha[7]).strip()
-                            if val_col_7.lower() in ['pago', 'quitado', 'paga', '✅']:
-                                status_encontrado = 'Pago'
-                        
-                        # Fallback de segurança: se não achou na 7, varre procurando a palavra exata em qualquer coluna após a 1ª
-                        if status_encontrado == 'Pendente':
-                            for celula in linha[1:]:
-                                if str(celula).strip().lower() in ['pago', 'quitado', 'paga', '✅']:
-                                    status_encontrado = 'Pago'
-                                    break
-                        
-                        dict_status_atual[c_nome.lower()] = status_encontrado
-        except:
-            pass
-
         # Aplica o mapeamento seguro em lote no DataFrame
         df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
@@ -1786,13 +1755,22 @@ if "💰" in st.session_state.page:
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
+    # Dicionário de status personalizado por cartão (Edite aqui para 'Pago' ou 'Pendente')
+    status_faturas_dict = {
+        "Visa Gold - 0132": "Pago",
+        "Mastercard - Inter": "Pendente",
+        "Mastercard - 8112": "Pendente",
+        "Visa - Mercado Pago": "Pendente",
+        "Itau - Golden": "Pendente"
+    }
+    
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = row['Nome do Banco']
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # Puxa o status utilizando o nome do cartão normalizado
-        status_fatura = dict_status_atual.get(str(cartao_nome).strip().lower(), 'Pendente')
+        # Busca o status exato pelo nome do cartão no dicionário
+        status_fatura = status_faturas_dict.get(cartao_nome, "Pendente")
 
         # Define a cor do selo de status
         if status_fatura.lower() == 'pago':
