@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (FILTRANDO POR MÊS + F & G)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (LEITURA DIRETA F E G)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1762,7 +1762,7 @@ if "💰" in st.session_state.page:
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
         return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").split())
 
-    # Mapeamento exato dos termos na Coluna F (índice 5)
+    # Mapeamento dos termos para encontrar na Coluna F (índice 5)
     termos_cartoes = {
         "Mastercard - Inter": "inter",
         "Mastercard - 8112": "8112",
@@ -1772,29 +1772,12 @@ if "💰" in st.session_state.page:
     }
 
     status_cartoes_mes = {}
-    detalhes_diagnostico = {}
-
+    
+    # Inicializa todos como pendentes por padrão
     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
         status_cartoes_mes[cartao_grafico] = "Pendente"
-        detalhes_diagnostico[cartao_grafico] = {"linhas_mes": 0, "pagos": 0, "pendentes": 0}
 
     try:
-        # Descobre qual é o mês selecionado atualmente na tela
-        mes_selecionado_str = limpar_texto(
-            str(st.session_state.get('mes_selecionado') or 
-                st.session_state.get('mes') or 
-                st.session_state.get('mes_atual') or 
-                'setembro')
-        )
-        
-        meses_map = {
-            'janeiro': '01', 'fevereiro': '02', 'marco': '03', 'abril': '04',
-            'maio': '05', 'junho': '06', 'julho': '07', 'agosto': '08',
-            'setembro': '09', 'outubro': '10', 'novembro': '11', 'dezembro': '12'
-        }
-        
-        num_mes_alvo = meses_map.get(mes_selecionado_str, '09')
-
         ws_lancamentos = None
         for aba in sh.worksheets():
             if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
@@ -1805,45 +1788,32 @@ if "💰" in st.session_state.page:
 
         if ws_lancamentos:
             dados_lanc = ws_lancamentos.get_all_values()
+            
+            # Dicionário para acumular o status de cada cartão encontrado: {cartao: [lista de booleanos de pagamento]}
+            rastreio_geral = {c: [] for c in df_cartoes_graph['Nome do Banco']}
+            
             # Começa da linha 2 (índice 1), pulando o cabeçalho
             if len(dados_lanc) > 1:
                 for linha in dados_lanc[1:]:
                     if len(linha) >= 7:
-                        # Coluna A (Data) = índice 0 -> extrai o mês da data
-                        data_str = str(linha[0]).strip()
-                        partes_data = data_str.replace('-', '/').replace('.', '/').split('/')
-                        mes_da_linha = partes_data[1] if len(partes_data) >= 2 else ""
+                        banco_col_f = limpar_texto(linha[5])  # Coluna F (índice 5) = Banco
+                        status_col_g = limpar_texto(linha[6]) # Coluna G (índice 6) = Status
                         
-                        # Processa apenas se a linha pertencer estritamente ao mês selecionado na tela
-                        if mes_da_linha == num_mes_alvo:
-                            banco_col_f = limpar_texto(linha[5])  # Coluna F (índice 5) = Banco
-                            status_col_g = limpar_texto(linha[6]) # Coluna G (índice 6) = Status
-                            
-                            is_pago = "pag" in status_col_g
+                        is_pago = "pag" in status_col_g
 
-                            for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                                termo_chave = termos_cartoes.get(cartao_grafico, "")
-                                
-                                if termo_chave and termo_chave in banco_col_f:
-                                    detalhes_diagnostico[cartao_grafico]["linhas_mes"] += 1
-                                    if is_pago:
-                                        detalhes_diagnostico[cartao_grafico]["pagos"] += 1
-                                    else:
-                                        detalhes_diagnostico[cartao_grafico]["pendentes"] += 1
+                        for cartao_grafico in df_cartoes_graph['Nome do Banco']:
+                            termo = termos_cartoes.get(cartao_grafico, "")
+                            if termo and termo in banco_col_f:
+                                rastreio_geral[cartao_grafico].append(is_pago)
 
-                # Regra final: se encontrou lançamentos no mês e todos estão pagos -> "Pago", senão -> "Pendente"
-                for cartao_grafico, info in detalhes_diagnostico.items():
-                    if info["linhas_mes"] > 0 and info["pendentes"] == 0 and info["pagos"] > 0:
-                        status_cartoes_mes[cartao_grafico] = "Pago"
-                    else:
-                        status_cartoes_mes[cartao_grafico] = "Pendente"
+            # Regra: se o cartão tem lançamentos e todos estão marcados como pagos na Coluna G -> "Pago", senão "Pendente"
+            for cartao_grafico, lista_pagamentos in rastreio_geral.items():
+                if lista_pagamentos and all(lista_pagamentos):
+                    status_cartoes_mes[cartao_grafico] = "Pago"
+                else:
+                    status_cartoes_mes[cartao_grafico] = "Pendente"
     except Exception as e:
         pass
-
-    # Painel para conferirmos a leitura do mês ativo nas colunas F e G
-    with st.expander("🔍 [Depuração F & G por Mês]"):
-        st.write(f"Mês Alvo: {num_mes_alvo}")
-        st.write(detalhes_diagnostico)
 
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = str(row['Nome do Banco']).strip()
@@ -1889,7 +1859,6 @@ if "💰" in st.session_state.page:
     else:
         if df_cartoes_graph.empty:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
-
             
      # =========================================================================
      # =========================================================================
