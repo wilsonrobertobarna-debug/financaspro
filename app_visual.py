@@ -1703,8 +1703,8 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
-      # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (COM DIAGNÓSTICO)
+     # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (BUSCA FLEXÍVEL DE ABA)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1760,37 +1760,47 @@ if "💰" in st.session_state.page:
         st.session_state.get('mes') or 
         st.session_state.get('mes_atual') or 
         'Setembro'
-    ).capitalize().strip()
+    ).lower().strip()
     
     import unicodedata
     def remover_acentos(txt):
         return ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
 
-    # LEITURA E DIAGNÓSTICO NA TELA
+    # LEITURA INTELIGENTE: Procura a aba correta mesmo se tiver número ou formato diferente
     status_faturas_dict = {}
     registros_lidos = []
     
     try:
-        ws_mes = sh.worksheet(mes_atual_tela)
-        dados_aba = ws_mes.get_all_values()
-        if len(dados_aba) > 1:
-            for linha in dados_aba[1:]:
-                if len(linha) >= 7:
-                    status_val = str(linha[6]).strip()
-                    for celula in linha[:6]:
-                        celula_txt = str(celula).strip()
-                        if celula_txt:
-                            chave = remover_acentos(celula_txt.lower()).replace("cartao", "").strip()
-                            status_faturas_dict[chave] = status_val
-                            registros_lidos.append(f"Cartão: '{celula_txt}' | Status na Coluna G: '{status_val}'")
-    except Exception as e:
-        st.error(f"Erro ao ler aba {mes_atual_tela}: {e}")
+        # Pega todas as abas da planilha
+        lista_abas = sh.worksheets()
+        ws_escolhida = None
+        
+        # Procura a aba que contém o nome do mês atual (ex: "setembro")
+        mes_limpo = remover_acentos(mes_atual_tela)
+        for aba in lista_abas:
+            nome_aba_limpo = remover_acentos(aba.title.lower())
+            if mes_limpo in nome_aba_limpo:
+                ws_escolhida = aba
+                break
+        
+        # Se não achar pelo mês, tenta pegar a primeira aba de lançamentos ou dados
+        if not ws_escolhida and lista_abas:
+            ws_escolhida = lista_abas[0]
 
-    # Exibe na tela do Streamlit o que ele conseguiu ler da planilha para conferirmos
-    with st.expander("🔍 Clique aqui para ver o diagnóstico de leitura da planilha"):
-        st.write(f"Mês Lido: **{mes_atual_tela}**")
-        st.write("Dados encontrados na planilha:")
-        st.write(registros_lidos if registros_lidos else "Nenhum dado encontrado nas colunas A-F / G.")
+        if ws_escolhida:
+            dados_aba = ws_escolhida.get_all_values()
+            if len(dados_aba) > 1:
+                for linha in dados_aba[1:]:
+                    if len(linha) >= 7:
+                        status_val = str(linha[6]).strip() # Coluna G
+                        for celula in linha[:6]: # Colunas A a F
+                            celula_txt = str(celula).strip()
+                            if celula_txt:
+                                chave = remover_acentos(celula_txt.lower()).replace("cartao", "").strip()
+                                status_faturas_dict[chave] = status_val
+                                registros_lidos.append(f"Cartão: '{celula_txt}' | Status Coluna G: '{status_val}'")
+    except Exception as e:
+        pass
 
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = str(row['Nome do Banco']).strip()
