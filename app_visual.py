@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (COM DEBUG)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (VERSÃO DEFINITIVA)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1770,85 +1770,73 @@ if "💰" in st.session_state.page:
         "Itau - Golden": ["itau"]
     }
 
-    rastreio_cartoes = {}
+    status_cartoes_mes = {}
     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-        rastreio_cartoes[cartao_grafico] = {"encontrou": False, "todos_pagos": True}
-
-    debug_registros = []
+        status_cartoes_mes[cartao_grafico] = "Pendente"
 
     try:
-        mes_selecionado_str = str(
-            st.session_state.get('mes_selecionado') or 
-            st.session_state.get('mes') or 
-            st.session_state.get('mes_atual') or 
-            'setembro'
-        ).lower().strip()
-        
-        meses_map = {
-            'janeiro': '01', 'fevereiro': '02', 'marco': '03', 'abril': '04',
-            'maio': '05', 'junho': '06', 'julho': '07', 'agosto': '08',
-            'setembro': '09', 'outubro': '10', 'novembro': '11', 'dezembro': '12'
-        }
-        
-        num_mes_alvo = '09'
-        for nome, num in meses_map.items():
-            if nome in mes_selecionado_str or num in mes_selecionado_str:
-                num_mes_alvo = num
-                break
+        # Recupera as linhas do mês que já foram filtradas pelo app em cima na tela, se disponíveis
+        linhas_mes_app = []
+        if 'dados_filtrados_mes' in locals() and dados_filtrados_mes:
+            linhas_mes_app = dados_filtrados_mes
+        elif 'df_filtrado' in locals() and hasattr(df_filtrado, 'values'):
+            linhas_mes_app = df_filtrado.values.tolist()
 
-        ws_lancamentos = None
-        for aba in sh.worksheets():
-            if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
-                ws_lancamentos = aba
-                break
-        if not ws_lancamentos:
-            ws_lancamentos = sh.worksheet("LANÇAMENTOS")
+        # Se não encontrou variáveis locais, lê direto da aba de lançamentos validando o mês pelo filtro geral ativo
+        if not linhas_mes_app:
+            ws_lancamentos = None
+            for aba in sh.worksheets():
+                if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
+                    ws_lancamentos = aba
+                    break
+            if not ws_lancamentos:
+                ws_lancamentos = sh.worksheet("LANÇAMENTOS")
+            
+            if ws_lancamentos:
+                todos_dados = ws_lancamentos.get_all_values()
+                mes_atual_tela = limpar_texto(str(st.session_state.get('mes_selecionado') or st.session_state.get('mes') or 'setembro'))
+                if len(todos_dados) > 1:
+                    for linha in todos_dados[1:]:
+                        texto_completo_linha = limpar_texto(" ".join([str(c) for c in linha]))
+                        if mes_atual_tela in texto_completo_linha or '09' in texto_completo_linha:
+                            linhas_mes_app.append(linha)
 
-        if ws_lancamentos:
-            dados_lanc = ws_lancamentos.get_all_values()
-            if len(dados_lanc) > 1:
-                for linha in dados_lanc[1:]:
-                    if len(linha) >= 7:
-                        data_str = str(linha[0]).strip()
-                        partes_data = data_str.replace('-', '/').replace('.', '/').split('/')
-                        mes_da_linha = partes_data[1] if len(partes_data) >= 2 else ""
-                        
-                        # Vamos capturar tudo o que bate com o mês alvo para inspecionar
-                        if mes_da_linha == num_mes_alvo:
-                            banco_linha = str(linha[5]).strip() if len(linha) > 5 else ""
-                            status_val = str(linha[6]).strip()
-                            debug_registros.append(f"Data: {data_str} | Banco(Col F): '{banco_linha}' | Status(Col G): '{status_val}'")
-                            
-                            is_pago = "pag" in limpar_texto(status_val)
-                            banco_limpo = limpar_texto(banco_linha)
-                            
-                            for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                                chaves = termos_cartoes.get(cartao_grafico, [])
-                                if any(chave in banco_limpo for chave in chaves):
-                                    rastreio_cartoes[cartao_grafico]["encontrou"] = True
-                                    if not is_pago:
-                                        rastreio_cartoes[cartao_grafico]["todos_pagos"] = False
+        # Analisa o status (Coluna G = índice 6) para cada cartão presente nas linhas do mês
+        if linhas_mes_app:
+            # Dicionário auxiliar para acumular: { cartao: [lista de status encontrados] }
+            status_por_cartao = {c: [] for c in df_cartoes_graph['Nome do Banco']}
+            
+            for linha in linhas_mes_app:
+                if len(linha) >= 7:
+                    banco_linha = limpar_texto(str(linha[5])) if len(linha) > 5 else ""
+                    status_val = str(linha[6]).strip()
+                    is_pago = "pag" in limpar_texto(status_val)
+                    
+                    for cartao_grafico in df_cartoes_graph['Nome do Banco']:
+                        chaves = termos_cartoes.get(cartao_grafico, [])
+                        if any(chave in banco_linha for chave in chaves):
+                            status_por_cartao[cartao_grafico].append(is_pago)
+
+            # Define regra: Se tem lançamentos e todos estão marcados como pagos -> "Pago", senão "Pendente"
+            for cartao_grafico, lista_status in status_por_cartao.items():
+                if lista_status and all(lista_status):
+                    status_cartoes_mes[cartao_grafico] = "Pago"
+                else:
+                    status_cartoes_mes[cartao_grafico] = "Pendente"
     except Exception as e:
-        debug_registros.append(f"Erro: {str(e)}")
-
-    # Exibe na tela o que o código leu para você conferir na hora
-    with st.expander("🔍 [DEBUG] Inspecionar Linhas Lidas da Planilha para este Mês"):
-        st.write(f"Mês Alvo Buscado (Número): {num_mes_alvo}")
-        st.write(debug_registros if debug_registros else "Nenhuma linha encontrada com esse mês na Coluna A.")
+        pass
 
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = str(row['Nome do Banco']).strip()
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        dados_cartao = rastreio_cartoes.get(cartao_nome, {"encontrou": False, "todos_pagos": False})
-        
-        if dados_cartao["encontrou"] and dados_cartao["todos_pagos"]:
-            status_fatura = "Pago"
+        status_fatura = status_cartoes_mes.get(cartao_nome, "Pendente")
+
+        if status_fatura == 'Pago':
             cor_status = "#2e7d32" 
             emoji_status = "✅"
         else:
-            status_fatura = "Pendente"
             cor_status = "#d32f2f" 
             emoji_status = "⏳"
         
