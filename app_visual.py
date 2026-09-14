@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (PADRÃO ROBUSTO PARA CARTÕES COM NÚMEROS)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (MAPEAMENTO PRECISO POR APELIDO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1767,7 +1767,6 @@ if "💰" in st.session_state.page:
         if not txt:
             return ""
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
-        # Remove a palavra 'cartao', hífens, barras e espaços extras para alinhar perfeitamente nomes compostos com números
         return " ".join(sem_acento.lower().replace("cartao", "").replace("-", " ").replace("/", " ").split())
 
     mes_limpo = limpar_texto(mes_atual_tela)
@@ -1816,34 +1815,36 @@ if "💰" in st.session_state.page:
                         pertence_ao_mes = any(termo in texto_verificacao for termo in termos_mes)
                         
                         if pertence_ao_mes:
-                            # Varre as colunas textuais (A até F)
-                            for celula in linha[:6]:
-                                celula_txt = str(celula).strip()
-                                if len(celula_txt) > 2:
-                                    cartao_lido_limpo = limpar_texto(celula_txt)
+                            # Concatena o texto das colunas A até F da linha atual para inspeção
+                            linha_texto_cartoes = limpar_texto(" ".join([str(linha[i]) for i in range(min(6, len(linha)))]))
+                            
+                            is_pago = "pag" in limpar_texto(status_val)
+                            
+                            # Verifica cada cartão do gráfico e define palavras-chave estritas para evitar falsos positivos
+                            for cartao_grafico in df_cartoes_graph['Nome do Banco']:
+                                c_graf_limpo = limpar_texto(cartao_grafico)
+                                
+                                # Define termos obrigatórios exclusivos para cada cartão
+                                match_encontrado = False
+                                if "itau" in c_graf_limpo and "golden" in c_graf_limpo:
+                                    # Para o Itaú Golden, exige estritamente que ambas as palavras apareçam na linha
+                                    match_encontrado = "itau" in linha_texto_cartoes and "golden" in linha_texto_cartoes
+                                elif "8112" in c_graf_limpo:
+                                    match_encontrado = "8112" in linha_texto_cartoes
+                                elif "0132" in c_graf_limpo:
+                                    match_encontrado = "0132" in linha_texto_cartoes
+                                else:
+                                    # Para os demais, valida se o nome base do cartão está na linha
+                                    palavras_chave = [p for p in c_graf_limpo.split() if len(p) > 2]
+                                    if palavras_chave and all(p in linha_texto_cartoes for p in palavras_chave):
+                                        match_encontrado = True
+
+                                if match_encontrado:
+                                    if c_graf_limpo not in status_cartoes_mes:
+                                        status_cartoes_mes[c_graf_limpo] = "Pendente"
                                     
-                                    for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                                        c_graf_limpo = limpar_texto(cartao_grafico)
-                                        
-                                        # Extrai os números identificadores (ex: '0132', '8112', 'golden') se houverem
-                                        tokens_graf = set(c_graf_limpo.split())
-                                        tokens_lidos = set(cartao_lido_limpo.split())
-                                        
-                                        # Condição de correspondência robusta: 
-                                        # 1. Se compartilham o número final/termo chave específico (ex: '0132', '8112', 'golden')
-                                        # 2. Ou se um texto limpo está totalmente contido no outro
-                                        comum = tokens_graf.intersection(tokens_lidos)
-                                        termos_ignorar = {'visa', 'mastercard', 'banco', 'itau', 'de', 'do'}
-                                        comum_relevante = comum - termos_ignorar
-                                        
-                                        if len(comum_relevante) > 0 or c_graf_limpo in cartao_lido_limpo or cartao_lido_limpo in c_graf_limpo:
-                                            is_pago = "pag" in limpar_texto(status_val)
-                                            
-                                            if c_graf_limpo not in status_cartoes_mes:
-                                                status_cartoes_mes[c_graf_limpo] = "Pendente"
-                                            
-                                            if is_pago:
-                                                status_cartoes_mes[c_graf_limpo] = "Pago"
+                                    if is_pago:
+                                        status_cartoes_mes[c_graf_limpo] = "Pago"
     except Exception as e:
         pass
 
@@ -1853,17 +1854,7 @@ if "💰" in st.session_state.page:
         meta_teto = row['Meta']
         
         cartao_limpo = limpar_texto(cartao_nome)
-        
-        # Busca o status considerando correspondência por tokens ou substrings
-        status_fatura = "Pendente"
-        tokens_cartao = set(cartao_limpo.split())
-        
-        for chave_map, estado_map in status_cartoes_mes.items():
-            tokens_map = set(chave_map.split())
-            if tokens_cartao.intersection(tokens_map) or cartao_limpo in chave_map or chave_map in cartao_limpo:
-                if estado_map == "Pago":
-                    status_fatura = "Pago"
-                    break
+        status_fatura = status_cartoes_mes.get(cartao_limpo, "Pendente")
 
         if status_fatura == 'Pago':
             cor_status = "#2e7d32" 
