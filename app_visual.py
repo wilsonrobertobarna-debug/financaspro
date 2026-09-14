@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (LEITURA DIRETA LANÇAMENTOS F & G)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (COM RAIO-X F & G)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1762,12 +1762,11 @@ if "💰" in st.session_state.page:
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
         return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").split())
 
-    # Mapeamento estrito para a Coluna F (índice 5)
     termos_cartoes = {
-        "Mastercard - Inter": ["inter", "mastercard inter"],
+        "Mastercard - Inter": ["inter"],
         "Mastercard - 8112": ["8112"],
-        "Visa Gold - 0132": ["0132", "visa gold"],
-        "Visa - Mercado Pago": ["mercado pago", "visa mercado"],
+        "Visa Gold - 0132": ["0132"],
+        "Visa - Mercado Pago": ["mercado pago"],
         "Itau - Golden": ["itau", "golden"]
     }
 
@@ -1775,8 +1774,10 @@ if "💰" in st.session_state.page:
     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
         status_cartoes_mes[cartao_grafico] = "Pendente"
 
+    # Ferramenta de auditoria para visualizarmos exatamente o que o código enxergou
+    auditoria_leituras = []
+
     try:
-        # Identifica o mês ativo na sessão
         mes_ativo = "setembro"
         for k in ['mes_selecionado', 'mes', 'mes_atual', 'selected_month']:
             if k in st.session_state and st.session_state[k]:
@@ -1800,22 +1801,21 @@ if "💰" in st.session_state.page:
 
         if ws_lancamentos:
             dados_lanc = ws_lancamentos.get_all_values()
-            
-            # Dicionário para rastrear os pagamentos de cada cartão no mês ativo
             registro_faturas = {cartao: [] for cartao in df_cartoes_graph['Nome do Banco']}
             
-            # Começa da linha 2 (índice 1), pulando o cabeçalho da linha 1
             if len(dados_lanc) > 1:
-                for linha in dados_lanc[1:]:
+                for idx_linha, linha in enumerate(dados_lanc[1:], start=2):
                     if len(linha) >= 7:
-                        # Coluna A (Data) = índice 0 -> filtra pelo mês ativo
                         data_str = str(linha[0]).strip()
                         partes = data_str.replace('-', '/').replace('.', '/').split('/')
                         mes_linha = partes[1] if len(partes) >= 2 else ""
                         
                         if mes_linha == num_mes_alvo:
-                            banco_col_f = limpar_texto(linha[5])  # Coluna F (índice 5) = Banco
-                            status_col_g = limpar_texto(linha[6]) # Coluna G (índice 6) = Status
+                            val_col_f = str(linha[5])  # Coluna F crua
+                            val_col_g = str(linha[6])  # Coluna G crua
+                            
+                            banco_col_f = limpar_texto(val_col_f)
+                            status_col_g = limpar_texto(val_col_g)
                             
                             is_pago = "pag" in status_col_g
 
@@ -1823,15 +1823,31 @@ if "💰" in st.session_state.page:
                                 possiveis_termos = termos_cartoes.get(cartao_grafico, [])
                                 if any(termo in banco_col_f for termo in possiveis_termos):
                                     registro_faturas[cartao_grafico].append(is_pago)
+                                    auditoria_leituras.append({
+                                        "Linha Planilha": idx_linha,
+                                        "Cartão Mapeado": cartao_grafico,
+                                        "Coluna F (Texto Lido)": val_col_f,
+                                        "Coluna G (Status Lido)": val_col_g,
+                                        "Considerado Pago?": is_pago
+                                    })
 
-            # Avalia o status: se encontrou lançamentos no mês e todos estão pagos -> "Pago", senão "Pendente"
             for cartao_grafico, lista_status in registro_faturas.items():
                 if lista_status and all(lista_status):
                     status_cartoes_mes[cartao_grafico] = "Pago"
                 else:
                     status_cartoes_mes[cartao_grafico] = "Pendente"
     except Exception as e:
-        pass
+        auditoria_leituras.append({"Erro": str(e)})
+
+    # =========================================================================
+    # 🔍 PAINEL DE INSPEÇÃO VISUAL NA TELA
+    # =========================================================================
+    with st.expander(f"🔍 [Raio-X] O que o código leu na planilha para o mês: {mes_ativo.upper()} (Alvo: {num_mes_alvo})"):
+        st.write(f"**Total de correspondências encontradas no mês:** {len(auditoria_leituras)}")
+        if auditoria_leituras:
+            st.dataframe(pd.DataFrame(auditoria_leituras))
+        else:
+            st.warning("Nenhuma linha da planilha correspondeu ao mês ativo ou aos termos dos cartões.")
 
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = str(row['Nome do Banco']).strip()
