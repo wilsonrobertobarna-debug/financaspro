@@ -1703,8 +1703,8 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
- # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (LANÇAMENTOS + FILTRO DE MÊS)
+# =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (CORREÇÃO DEFINITIVA DE STATUS E MESES)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1755,7 +1755,6 @@ if "💰" in st.session_state.page:
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
-    # Identifica o mês selecionado na tela
     mes_atual_tela = str(
         st.session_state.get('mes_selecionado') or 
         st.session_state.get('mes') or 
@@ -1764,12 +1763,16 @@ if "💰" in st.session_state.page:
     ).lower().strip()
     
     import unicodedata
-    def remover_acentos(txt):
-        return ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
+    def limpar_texto(txt):
+        if not txt:
+            return ""
+        sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
+        # Padroniza removendo hífens, pontuações extras e convertendo para minúsculas
+        return sem_acento.lower().replace("-", " ").replace("/", " ").replace("cartao", "").strip()
 
-    mes_limpo = remover_acentos(mes_atual_tela)
+    mes_limpo = limpar_texto(mes_atual_tela)
     
-    # Mapeamento de meses para números caso a planilha use formato numérico (ex: 09 ou 9)
+    # Mapeamento completo dos meses para identificar datas em formato texto ou numérico nas linhas
     meses_dict = {
         'janeiro': ['01', '1', 'janeiro', 'jan'],
         'fevereiro': ['02', '2', 'fevereiro', 'fev'],
@@ -1785,18 +1788,17 @@ if "💰" in st.session_state.page:
         'dezembro': ['12', '12', 'dezembro', 'dez']
     }
     
-    termos_busca_mes = [mes_limpo]
+    termos_mes = [mes_limpo]
     for k, v in meses_dict.items():
         if k in mes_limpo or mes_limpo in k:
-            termos_busca_mes.extend(v)
+            termos_mes.extend(v)
 
-    # LEITURA DA ABA LANÇAMENTOS COM FILTRO INTELIGENTE DE MÊS
     status_faturas_dict = {}
     
     try:
         ws_lancamentos = None
         for aba in sh.worksheets():
-            if remover_acentos(aba.title).lower() in ["lancamentos", "lançamentos"]:
+            if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
                 ws_lancamentos = aba
                 break
         
@@ -1808,23 +1810,22 @@ if "💰" in st.session_state.page:
             if len(dados_aba) > 1:
                 for linha in dados_aba[1:]:
                     if len(linha) >= 7:
-                        status_val = str(linha[6]).strip() # Coluna G = Status
+                        status_val = str(linha[6]).strip() # Coluna G
+                        linha_texto = limpar_texto(" ".join([str(c) for c in linha]))
                         
-                        # Junta o texto da linha para checar se pertence ao mês selecionado
-                        linha_texto = remover_acentos(" ".join([str(c) for c in linha]).lower())
-                        
-                        # Confere se algum termo do mês atual está presente nesta linha
-                        pertence_ao_mes = any(termo in linha_texto for termo in termos_busca_mes)
+                        # Confere estritamente se a linha pertence ao mês selecionado
+                        pertence_ao_mes = any(termo in linha_texto for termo in termos_mes)
                         
                         if pertence_ao_mes:
                             for celula in linha[:6]:
                                 celula_txt = str(celula).strip()
-                                if celula_txt:
-                                    chave = remover_acentos(celula_txt.lower()).replace("cartao", "").strip()
-                                    if "pag" in remover_acentos(status_val.lower()):
-                                        status_faturas_dict[chave] = "Pago"
-                                    else:
-                                        if chave not in status_faturas_dict:
+                                if len(celula_txt) > 2:
+                                    chave = limpar_texto(celula_txt)
+                                    if chave and not any(m in chave for m in ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']):
+                                        is_pago = "pag" in limpar_texto(status_val)
+                                        if is_pago:
+                                            status_faturas_dict[chave] = "Pago"
+                                        elif chave not in status_faturas_dict:
                                             status_faturas_dict[chave] = "Pendente"
     except Exception as e:
         pass
@@ -1835,10 +1836,16 @@ if "💰" in st.session_state.page:
         meta_teto = row['Meta']
         
         status_fatura = "Pendente"
-        cartao_limpo = remover_acentos(cartao_nome.lower()).replace("cartao", "").strip()
+        cartao_limpo = limpar_texto(cartao_nome)
+        
+        # Cruzamento flexível que ignora hífens e compara palavras-chave (ex: "itau golden" bate com "itau - golden")
+        palavras_cartao = set(cartao_limpo.split())
         
         for c_cadastrado, estado in status_faturas_dict.items():
-            if cartao_limpo in c_cadastrado or c_cadastrado in cartao_limpo:
+            palavras_cad = set(c_cadastrado.split())
+            
+            # Se todas as palavras do cartão constam no cadastro ou vice-versa, encontrou o match exato
+            if palavras_cartao and (palavras_cartao.issubset(palavras_cad) or palavras_cad.issubset(palavras_cartao) or cartao_limpo == c_cadastrado):
                 if estado == "Pago":
                     status_fatura = "Pago"
                 break
