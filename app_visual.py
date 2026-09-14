@@ -1762,25 +1762,27 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-      # BUSCA PRECISA DE STATUS NA COLUNA G (Índice 6)
+    # BUSCA PRECISA DE STATUS NA COLUNA G COM DEBUGAÇÃO
         status_fatura = 'Pendente'
         if 'df_m' in locals() and not df_m.empty:
-            # Tenta encontrar a coluna pelo nome ou pelo índice da Coluna G (posição 6)
             col_cartao = next((c for c in ['Nome do Banco', 'Cartão', 'Banco'] if c in df_m.columns), None)
             
             if col_cartao:
                 lancamentos_banco = df_m[df_m[col_cartao] == cartao_nome]
                 if not lancamentos_banco.empty:
-                    # Verifica se existe coluna 'Status' ou pega diretamente pela posição da Coluna G (iloc[:, 6])
+                    # Pega os valores da coluna G (ou Status) para ver o que tem lá
                     if 'Status' in lancamentos_banco.columns:
-                        tem_pago = lancamentos_banco['Status'].astype(str).str.strip().str.lower().eq('pago').any()
+                        valores_status = lancamentos_banco['Status'].astype(str).tolist()
                     else:
-                        # Pega a 7ª coluna (Coluna G) com segurança
-                        tem_pago = lancamentos_banco.iloc[:, 6].astype(str).str.strip().str.lower().eq('pago').any()
-                        
+                        valores_status = lancamentos_banco.iloc[:, 6].astype(str).tolist()
+                    
+                    # Mostra no terminal do app o que o Python encontrou para este cartão
+                    print(f"Cartão: {cartao_nome} | Valores na Coluna G/Status: {valores_status}")
+                    
+                    # Verifica se algum valor contém a palavra 'pago' (ignorando maiúsculas/minúsculas e espaços)
+                    tem_pago = any('pago' in v.lower() for v in valores_status)
                     if tem_pago:
-                        status_fatura = 'Pago'
-        
+                        status_fatura = 'Pago'        
         # Fallback para a linha do gráfico caso venha direto do row
         if status_fatura == 'Pendente':
             for col_cand in ['Status', df_cartoes_graph.columns[6] if len(df_cartoes_graph.columns) > 6 else '']:
