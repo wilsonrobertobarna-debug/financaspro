@@ -1898,7 +1898,6 @@ for idx, row in df_cartoes_graph.iterrows():
 else:
     if df_cartoes_graph.empty:
         st.info("Nenhum lançamento encontrado para os cartões neste mês.")
-
             
      # =========================================================================
      # =========================================================================
