@@ -1754,7 +1754,7 @@ if "💰" in st.session_state.page:
                 }
             )
             
-            st.markdown("##### 🚦 Status de Utilização dos Cartões")
+ st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
     for idx, row in df_cartoes_graph.iterrows():
@@ -1762,12 +1762,24 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # Captura o status da fatura (Pago/Pendente)
-        status_fatura = str(row.get('Status', 'Pendente')).strip()
-        if not status_fatura or status_fatura.lower() == 'nan':
-            status_fatura = 'Pendente'
+        # BUSCA PRECISA DE STATUS: Olha na base geral do mês (df_m) se há algum registro Pago para este banco
+        status_fatura = 'Pendente'
+        if 'df_m' in locals() and not df_m.empty:
+            # Filtra lançamentos deste banco específico no mês atual
+            lancamentos_banco = df_m[df_m['Nome do Banco'] == cartao_nome]
+            if not lancamentos_banco.empty:
+                # Se pelo menos um registro estiver como 'Pago' (ignorando maiúsculas/minúsculas), o cartão é considerado Pago
+                tem_pago = lancamentos_banco['Status'].astype(str).str.strip().str.lower().eq('pago').any()
+                if tem_pago:
+                    status_fatura = 'Pago'
         
-        # Define a cor do selo de status (Verde para Pago, Laranja para Pendente)
+        # Fallback caso o df_m não esteja no escopo, tenta pegar direto da linha do graph
+        if status_fatura == 'Pendente' and 'Status' in row:
+            val_linha = str(row['Status']).strip().lower()
+            if val_linha == 'pago':
+                status_fatura = 'Pago'
+
+        # Define a cor do selo de status
         if status_fatura.lower() == 'pago':
             cor_status = "#2e7d32" # Verde escuro
             emoji_status = "✅"
@@ -1791,13 +1803,11 @@ if "💰" in st.session_state.page:
             status_txt = "Tô na lona"
         
         with cols_status[idx % len(cols_status)]:
-            # Exibe a métrica com o valor principal e o status menor logo abaixo/ao lado estilizado
             st.metric(
                 label=cartao_nome,
                 value=f"R$ {gasto_real:,.2f}",
                 delta=f"{bolinha} {percentual:.1f}% ({status_txt})"
             )
-            # Legenda menorzinha e discreta para o Status (Pago/Pendente)
             st.markdown(
                 f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 10px; color: {cor_status}; font-weight: bold;'>"
                 f"{emoji_status} {status_fatura}"
@@ -1805,7 +1815,8 @@ if "💰" in st.session_state.page:
                 unsafe_allow_html=True
             )
     else:
-      st.info("Nenhum lançamento encontrado para os cartões neste mês.")
+        if df_cartoes_graph.empty:
+            st.info("Nenhum lançamento encontrado para os cartões neste mês.")
             
             
      # =========================================================================
