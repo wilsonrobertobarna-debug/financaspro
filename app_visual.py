@@ -1754,7 +1754,7 @@ if "💰" in st.session_state.page:
                 }
             )
             
-    st.markdown("##### 🚦 Status de Utilização dos Cartões")
+   st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
     for idx, row in df_cartoes_graph.iterrows():
@@ -1762,33 +1762,20 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-    # BUSCA PRECISA DE STATUS NA COLUNA G COM DEBUGAÇÃO
+        # Puxa o status direto da Coluna G (índice 6) da linha do cartão
         status_fatura = 'Pendente'
-        if 'df_m' in locals() and not df_m.empty:
-            col_cartao = next((c for c in ['Nome do Banco', 'Cartão', 'Banco'] if c in df_m.columns), None)
+        try:
+            # Tenta pegar pela coluna 'Status' ou pela 7ª coluna (índice 6)
+            if 'Status' in row:
+                val = str(row['Status']).strip()
+            else:
+                val = str(row.iloc[6]).strip()
             
-            if col_cartao:
-                lancamentos_banco = df_m[df_m[col_cartao] == cartao_nome]
-                if not lancamentos_banco.empty:
-                    # Pega os valores da coluna G (ou Status) para ver o que tem lá
-                    if 'Status' in lancamentos_banco.columns:
-                        valores_status = lancamentos_banco['Status'].astype(str).tolist()
-                    else:
-                        valores_status = lancamentos_banco.iloc[:, 6].astype(str).tolist()
-                    
-                    # Mostra no terminal do app o que o Python encontrou para este cartão
-                    print(f"Cartão: {cartao_nome} | Valores na Coluna G/Status: {valores_status}")
-                    
-                    # Verifica se algum valor contém a palavra 'pago' (ignorando maiúsculas/minúsculas e espaços)
-                    tem_pago = any('pago' in v.lower() for v in valores_status)
-                    if tem_pago:
-                        status_fatura = 'Pago'        
-        # Fallback para a linha do gráfico caso venha direto do row
-        if status_fatura == 'Pendente':
-            for col_cand in ['Status', df_cartoes_graph.columns[6] if len(df_cartoes_graph.columns) > 6 else '']:
-                if col_cand and col_cand in row and str(row[col_cand]).strip().lower() == 'pago':
-                    status_fatura = 'Pago'
-                    break
+            if val.lower() == 'pago':
+                status_fatura = 'Pago'
+        except Exception:
+            pass
+
         # Define a cor do selo de status
         if status_fatura.lower() == 'pago':
             cor_status = "#2e7d32" # Verde escuro
@@ -1826,7 +1813,7 @@ if "💰" in st.session_state.page:
             )
     else:
         if df_cartoes_graph.empty:
-            st.info("Nenhum lançamento encontrado para os cartões neste mês.")            
+            st.info("Nenhum lançamento encontrado para os cartões neste mês.")       
             
      # =========================================================================
      # =========================================================================
