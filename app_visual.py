@@ -1672,7 +1672,7 @@ if "💰" in st.session_state.page:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
         
-       # =========================================================================
+        # =========================================================================
         # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO
         # =========================================================================
         st.markdown("---")
@@ -1703,8 +1703,8 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle]
             
-   # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (MAPEAMENTO ROBUSTO DE STATUS)
+        # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (STATUS DINÂMICO POR MÊS)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1733,34 +1733,6 @@ if "💰" in st.session_state.page:
             except:
                 pass
 
-        # Leitura blindada do status (Normaliza nomes e varre a linha se necessário)
-        dict_status_atual = {}
-        try:
-            ws_metas = sh.worksheet("Metas_Cartoes")
-            dados_metas = ws_metas.get_all_values()
-            if len(dados_metas) > 1:
-                for linha in dados_metas[1:]:
-                    if len(linha) >= 1:
-                        c_nome = str(linha[0]).strip()
-                        if not c_nome:
-                            continue
-                        
-                        # Procura o status na Coluna G (índice 6) ou em qualquer célula da linha que seja 'pago'
-                        status_encontrado = 'Pendente'
-                        if len(linha) > 6 and str(linha[6]).strip().lower() == 'pago':
-                            status_encontrado = 'Pago'
-                        else:
-                            # Varre a linha inteira caso a coluna G tenha deslocado
-                            for celula in linha:
-                                if str(celula).strip().lower() == 'pago':
-                                    status_encontrado = 'Pago'
-                                    break
-                        
-                        # Salva usando chave normalizada (sem diferenciar maiúsculas/minúsculas)
-                        dict_status_atual[c_nome.lower()] = status_encontrado
-        except:
-            pass
-
         # Aplica o mapeamento seguro em lote no DataFrame
         df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
@@ -1788,8 +1760,22 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # Busca o status usando o nome do cartão normalizado
-        status_fatura = dict_status_atual.get(str(cartao_nome).strip().lower(), 'Pendente')
+        # BUSCA DINÂMICA DO STATUS NA BASE DO MÊS SELECIONADO (df_m)
+        status_fatura = 'Pendente'
+        if 'df_m' in locals() and not df_m.empty:
+            col_cartao = next((c for c in ['Nome do Banco', 'Cartão', 'Banco'] if c in df_m.columns), None)
+            if col_cartao:
+                # Filtra os lançamentos do mês correspondentes a este cartão
+                lancamentos_banco = df_m[df_m[col_cartao].astype(str).str.strip().str.lower() == str(cartao_nome).strip().lower()]
+                if not lancamentos_banco.empty:
+                    # Verifica se alguma linha deste cartão no mês possui status 'Pago'
+                    for _, l_row in lancamentos_banco.iterrows():
+                        for val in l_row.values:
+                            if isinstance(val, str) and val.strip().lower() == 'pago':
+                                status_fatura = 'Pago'
+                                break
+                        if status_fatura == 'Pago':
+                            break
 
         # Define a cor do selo de status
         if status_fatura.lower() == 'pago':
