@@ -1790,9 +1790,14 @@ if "💰" in st.session_state.page:
         meta_teto = row['Meta']
         
         # Procura o status na planilha preenchida pelo usuário (ignorando maiúsculas/minúsculas)
+        # Procura o status na planilha preenchida pelo usuário (ignorando a palavra "Cartão" e maiúsculas/minúsculas)
         status_fatura = "Pendente"
+        cartao_limpo = cartao_nome.lower().replace("cartão", "").replace("cartao", "").strip()
+        
         for c_cadastrado, estado in status_faturas_dict.items():
-            if c_cadastrado in cartao_nome.lower() or cartao_nome.lower() in c_cadastrado:
+            c_cadastrado_limpo = c_cadastrado.lower().replace("cartão", "").replace("cartao", "").strip()
+            
+            if cartao_limpo in c_cadastrado_limpo or c_cadastrado_limpo in cartao_limpo:
                 if "pag" in estado.lower():
                     status_fatura = "Pago"
                 break
