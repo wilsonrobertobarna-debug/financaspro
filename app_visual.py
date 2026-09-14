@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (BUSCA PRECISA NA COLUNA DE CARTÕES)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (CRUZAMENTO FLEXÍVEL DE NOMES)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1806,29 +1806,27 @@ if "💰" in st.session_state.page:
         if ws_lancamentos:
             dados_aba = ws_lancamentos.get_all_values()
             if len(dados_aba) > 1:
-                # Descobre dinamicamente onde está a coluna de Status (Coluna G = índice 6)
                 for linha in dados_aba[1:]:
                     if len(linha) >= 7:
-                        status_val = str(linha[6]).strip() # Coluna G
+                        status_val = str(linha[6]).strip() # Coluna G = Status
                         linha_texto = limpar_texto(" ".join([str(c) for c in linha]))
                         
                         pertence_ao_mes = any(termo in linha_texto for termo in termos_mes)
                         
                         if pertence_ao_mes:
-                            # Varre apenas as colunas onde os nomes dos cartões costumam ficar (ex: Colunas A até D, índices 0 a 3)
-                            for celula in linha[:4]:
+                            # Varre as primeiras colunas onde o nome do cartão costuma aparecer
+                            for celula in linha[:6]:
                                 celula_txt = str(celula).strip()
                                 if len(celula_txt) > 2:
-                                    chave = limpar_texto(celula_txt)
-                                    # Verifica se o texto da célula realmente se parece com o nome de um dos cartões cadastrados
-                                    for cartao_ctrl in lista_cartoes_controle:
-                                        cartao_ctrl_limpo = limpar_texto(cartao_ctrl)
-                                        if chave in cartao_ctrl_limpo or cartao_ctrl_limpo in chave:
-                                            is_pago = "pag" in limpar_texto(status_val)
-                                            if is_pago:
-                                                status_faturas_dict[cartao_ctrl_limpo] = "Pago"
-                                            elif cartao_ctrl_limpo not in status_faturas_dict:
-                                                status_faturas_dict[cartao_ctrl_limpo] = "Pendente"
+                                    chave_lida = limpar_texto(celula_txt)
+                                    if not any(m in chave_lida for m in ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']):
+                                        is_pago = "pag" in limpar_texto(status_val)
+                                        
+                                        # Guarda o status associado a essa chave lida na planilha
+                                        if is_pago:
+                                            status_faturas_dict[chave_lida] = "Pago"
+                                        elif chave_lida not in status_faturas_dict:
+                                            status_faturas_dict[chave_lida] = "Pendente"
     except Exception as e:
         pass
 
@@ -1837,8 +1835,22 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
+        status_fatura = "Pendente"
         cartao_limpo = limpar_texto(cartao_nome)
-        status_fatura = status_faturas_dict.get(cartao_limpo, "Pendente")
+        palavras_cartao = set(cartao_limpo.split())
+        
+        # Cruza cada cartão do gráfico com os dados lidos na aba de lançamentos usando palavras-chave parciais
+        for chave_lida, estado in status_faturas_dict.items():
+            palavras_lidas = set(chave_lida.split())
+            
+            # Verifica se há interseção de palavras (ex: "itau" e "golden" batem com "itau - golden")
+            if palavras_cartao and palavras_lidas:
+                comum = palavras_cartao.intersection(palavras_lidas)
+                # Se compartilham palavras significativas ou uma está contida na outra
+                if comum or cartao_limpo in chave_lida or chave_lida in cartao_limpo:
+                    if estado == "Pago":
+                        status_fatura = "Pago"
+                        break
 
         if status_fatura == 'Pago':
             cor_status = "#2e7d32" 
