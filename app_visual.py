@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (FILTRO DE MÊS NUMÉRICO)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (VALIDAÇÃO PRECISA POR DATA)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1779,7 +1779,6 @@ if "💰" in st.session_state.page:
             st.session_state.get('mes_selecionado') or 
             st.session_state.get('mes') or 
             st.session_state.get('mes_atual') or 
-            st.session_state.get('selectbox_mes') or 
             'setembro'
         ).lower().strip()
         
@@ -1789,14 +1788,11 @@ if "💰" in st.session_state.page:
             'setembro': '09', 'outubro': '10', 'novembro': '11', 'dezembro': '12'
         }
         
-        # Descobre o número do mês correspondente (ex: '09' para setembro)
-        num_mes = '09'
+        num_mes_alvo = '09'
         for nome, num in meses_map.items():
             if nome in mes_selecionado_str or num in mes_selecionado_str:
-                num_mes = num
+                num_mes_alvo = num
                 break
-        
-        termos_busca_mes = [mes_selecionado_str, num_mes, f"/{num_mes}/", f"-{num_mes}-", f".{num_mes}."]
 
         ws_lancamentos = None
         for aba in sh.worksheets():
@@ -1811,19 +1807,20 @@ if "💰" in st.session_state.page:
             if len(dados_lanc) > 1:
                 for linha in dados_lanc[1:]:
                     if len(linha) >= 7:
-                        texto_linha_completo = limpar_texto(" ".join([str(c) for c in linha]))
+                        # Extrai o mês diretamente da coluna de data (Coluna A = índice 0)
+                        data_str = str(linha[0]).strip()
+                        partes_data = data_str.replace('-', '/').replace('.', '/').split('/')
+                        mes_da_linha = partes_data[1] if len(partes_data) >= 2 else ""
                         
-                        # Verifica se a linha pertence ao mês atual (nome ou número)
-                        pertence_ao_mes = any(termo in texto_linha_completo for termo in termos_busca_mes if len(termo) > 1)
-                        
-                        if pertence_ao_mes:
+                        if mes_da_linha == num_mes_alvo:
+                            texto_linha_completo = limpar_texto(" ".join([str(c) for c in linha]))
                             status_val = str(linha[6]).strip() # Coluna G = Status
                             is_pago = "pag" in limpar_texto(status_val)
                             
-                            if is_pago:
-                                for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                                    termo_alvo = termos_cartoes.get(cartao_grafico, limpar_texto(cartao_grafico))
-                                    if termo_alvo in texto_linha_completo:
+                            for cartao_grafico in df_cartoes_graph['Nome do Banco']:
+                                termo_alvo = termos_cartoes.get(cartao_grafico, limpar_texto(cartao_grafico))
+                                if termo_alvo in texto_linha_completo:
+                                    if is_pago:
                                         status_cartoes_mes[cartao_grafico] = "Pago"
     except Exception as e:
         pass
