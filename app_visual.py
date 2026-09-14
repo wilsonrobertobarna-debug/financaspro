@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (CONTROLE EXATO MÊS A MÊS)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (LENDO O STATUS DA PLANILHA)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1755,7 +1755,7 @@ if "💰" in st.session_state.page:
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
-    # Identifica o mês atual selecionado na tela
+    # Identifica o mês selecionado atualmente na tela
     mes_atual_tela = str(
         st.session_state.get('mes_selecionado') or 
         st.session_state.get('mes') or 
@@ -1763,63 +1763,48 @@ if "💰" in st.session_state.page:
         'Setembro'
     ).capitalize().strip()
     
-    # DICIONÁRIO COMPLETO MÊS A MÊS: Defina exatamente quais cartões estão "Pago" em cada mês.
-    # Tudo o que não estiver listado aqui para o mês ativo ficará automaticamente como "Pendente".
-    status_por_mes = {
-        "Janeiro": {
-            "Visa Gold - 0132": "Pago"
-        },
-        "Fevereiro": {
-            "Visa Gold - 0132": "Pago"
-        },
-        "Março": {
-            "Visa Gold - 0132": "Pago"
-        },
-        "Abril": {
-            "Visa Gold - 0132": "Pago"
-        },
-        "Maio": {
-            "Visa Gold - 0132": "Pago"
-        },
-        "Junho": {
-            "Visa Gold - 0132": "Pago"
-        },
-        "Julho": {
-            "Visa Gold - 0132": "Pago"
-        },
-        "Agosto": {
-            "Visa Gold - 0132": "Pago",
-            "Mastercard - Inter": "Pago"
-        },
-        "Setembro": {
-            "Visa Gold - 0132": "Pago"
-        },
-        "Outubro": {},   # Nenhum pago ainda (ficam todos pendentes)
-        "Novembro": {},  # Nenhum pago ainda (ficam todos pendentes)
-        "Dezembro": {}   # Nenhum pago ainda (ficam todos pendentes)
-    }
-    
-    status_faturas_dict = status_por_mes.get(mes_atual_tela, {})
+    # LEITURA AUTOMÁTICA DA PLANILHA: Busca o status direto da aba correspondente ao mês
+    status_faturas_dict = {}
+    try:
+        ws_mes = sh.worksheet(mes_atual_tela)
+        dados_aba = ws_mes.get_all_values()
+        if len(dados_aba) > 1:
+            # Procura qual coluna é o Banco/Cartão e qual é a coluna G (Status)
+            cabecalho = [str(c).strip().lower() for c in dados_aba[0]]
+            
+            for linha in dados_aba[1:]:
+                if len(linha) >= 7: # Garante que tem até a coluna G
+                    # Pega o nome do cartão (tentando achar a coluna de conta/banco/cartão ou pegando da coluna padrão)
+                    cartao_val = str(linha[1]).strip() # Geralmente coluna B ou similar onde fica o banco
+                    status_val = str(linha[6]).strip() # Coluna G (índice 6)
+                    
+                    if cartao_val:
+                        status_faturas_dict[cartao_val.lower()] = status_val
+    except Exception as e:
+        # Se a aba do mês ainda não existir na planilha, assume tudo pendente
+        pass
     
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = str(row['Nome do Banco']).strip()
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # BUSCA EXATA NO MÊS ATIVO: Só fica "Pago" se estiver explicitamente no dicionário do mês atual
+        # Procura o status na planilha preenchida pelo usuário (ignorando maiúsculas/minúsculas)
         status_fatura = "Pendente"
         for c_cadastrado, estado in status_faturas_dict.items():
-            if c_cadastrado.lower() in cartao_nome.lower() and str(estado).strip().lower() == 'pago':
-                status_fatura = "Pago"
+            if c_cadastrado in cartao_nome.lower() or cartao_nome.lower() in c_cadastrado:
+                if "pag" in estado.lower():
+                    status_fatura = "Pago"
                 break
 
-        # Define a cor e o emoji do selo com base no status final
+        # Define a cor e o emoji do selo com base no status da planilha
         if status_fatura == 'Pago':
             cor_status = "#2e7d32" # Verde escuro
             emoji_status = "✅"
         else:
             cor_status = "#d32f2f" # Vermelho/Alaranjado
             emoji_status = "⏳"
+            status_fatura = "Pendente"
         
         if meta_teto > 0:
             percentual = (gasto_real / meta_teto) * 100
