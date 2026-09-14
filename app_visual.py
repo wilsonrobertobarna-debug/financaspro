@@ -1703,8 +1703,8 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
-# =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (LENDO O STATUS DA PLANILHA)
+       # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (LENDO DA PLANILHA)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1763,25 +1763,28 @@ if "💰" in st.session_state.page:
         'Setembro'
     ).capitalize().strip()
     
-    # LEITURA AUTOMÁTICA DA PLANILHA: Busca o status direto da aba correspondente ao mês
+    # Função auxiliar para remover acentos e padronizar textos
+    import unicodedata
+    def remover_acentos(txt):
+        return ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
+
+    # LEITURA AUTOMÁTICA DA PLANILHA NA ABA DO MÊS
     status_faturas_dict = {}
     try:
         ws_mes = sh.worksheet(mes_atual_tela)
         dados_aba = ws_mes.get_all_values()
         if len(dados_aba) > 1:
-            # Procura qual coluna é o Banco/Cartão e qual é a coluna G (Status)
-            cabecalho = [str(c).strip().lower() for c in dados_aba[0]]
-            
             for linha in dados_aba[1:]:
-                if len(linha) >= 7: # Garante que tem até a coluna G
-                    # Pega o nome do cartão (tentando achar a coluna de conta/banco/cartão ou pegando da coluna padrão)
-                    cartao_val = str(linha[1]).strip() # Geralmente coluna B ou similar onde fica o banco
-                    status_val = str(linha[6]).strip() # Coluna G (índice 6)
+                if len(linha) >= 7: # Garante que a linha possui até a coluna G (índice 6)
+                    status_val = str(linha[6]).strip() # Coluna G (Status)
                     
-                    if cartao_val:
-                        status_faturas_dict[cartao_val.lower()] = status_val
+                    # Varre as colunas de A até F para encontrar o nome do cartão na linha
+                    for celula in linha[:6]:
+                        celula_txt = str(celula).strip()
+                        if celula_txt:
+                            chave = remover_acentos(celula_txt.lower()).replace("cartao", "").strip()
+                            status_faturas_dict[chave] = status_val
     except Exception as e:
-        # Se a aba do mês ainda não existir na planilha, assume tudo pendente
         pass
     
     for idx, row in df_cartoes_graph.iterrows():
@@ -1789,26 +1792,17 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # Procura o status na planilha preenchida pelo usuário (ignorando maiúsculas/minúsculas)
-        # Procura o status na planilha preenchida pelo usuário (ignorando a palavra "Cartão" e maiúsculas/minúsculas)
-        # Procura o status na planilha limpando acentos, maiúsculas e a palavra "Cartão"
+        # Cruzamento inteligente com a planilha
         status_fatura = "Pendente"
-        
-        import unicodedata
-        def remover_acentos(txt):
-            return ''.join(c for c in unicodedata.normalize('NFD', txt) if unicodedata.category(c) != 'Mn')
-            
         cartao_limpo = remover_acentos(cartao_nome.lower()).replace("cartao", "").strip()
         
         for c_cadastrado, estado in status_faturas_dict.items():
-            c_cadastrado_limpo = remover_acentos(c_cadastrado.lower()).replace("cartao", "").strip()
-            
-            if cartao_limpo in c_cadastrado_limpo or c_cadastrado_limpo in cartao_limpo:
-                if "pag" in estado.lower():
+            if cartao_limpo in c_cadastrado or c_cadastrado in cartao_limpo:
+                if "pag" in remover_acentos(estado.lower()):
                     status_fatura = "Pago"
                 break
 
-        # Define a cor e o emoji do selo com base no status da planilha
+        # Define a cor e o emoji do selo
         if status_fatura == 'Pago':
             cor_status = "#2e7d32" # Verde escuro
             emoji_status = "✅"
