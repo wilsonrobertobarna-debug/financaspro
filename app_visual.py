@@ -1703,7 +1703,7 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
-    # =========================================================================
+ # =========================================================================
         # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (LANÇAMENTOS + FILTRO DE MÊS)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
