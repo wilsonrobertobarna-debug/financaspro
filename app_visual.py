@@ -1755,15 +1755,15 @@ if "💰" in st.session_state.page:
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
-    # Identifica o mês selecionado na tela capturando o valor real ativo no seu painel
+    # Identifica o mês selecionado na tela de forma rigorosa
     mes_atual_tela = str(
         st.session_state.get('mes_selecionado') or 
         st.session_state.get('mes') or 
         st.session_state.get('mes_atual') or 
-        'Agosto'
-    ).capitalize()
+        'Setembro'
+    ).capitalize().strip()
     
-    # CONTROLE CENTRALIZADO POR MÊS: Agosto com Inter Pago, Setembro com Inter Pendente
+    # CONTROLE CENTRALIZADO POR MÊS: Definindo explicitamente o que é Pago ou Pendente mês a mês
     status_por_mes = {
         "Janeiro": {},
         "Fevereiro": {},
@@ -1774,18 +1774,24 @@ if "💰" in st.session_state.page:
         "Julho": {},
         "Agosto": {
             "Visa Gold - 0132": "Pago",
-            "Mastercard - Inter": "Pago"
+            "Mastercard - Inter": "Pago",
+            "Mastercard - 8112": "Pendente",
+            "Visa - Mercado Pago": "Pendente",
+            "Itau - Golden": "Pendente"
         },
         "Setembro": {
             "Visa Gold - 0132": "Pago",
-            "Mastercard - Inter": "Pendente"
+            "Mastercard - Inter": "Pendente",
+            "Mastercard - 8112": "Pendente",
+            "Visa - Mercado Pago": "Pendente",
+            "Itau - Golden": "Pendente"
         },
         "Outubro": {},
         "Novembro": {},
         "Dezembro": {}
     }
     
-    # Pega o dicionário específico do mês selecionado na tela
+    # Pega o dicionário do mês atual; se o mês não existir na lista, assume tudo pendente por segurança
     status_faturas_dict = status_por_mes.get(mes_atual_tela, {})
     
     for idx, row in df_cartoes_graph.iterrows():
@@ -1793,17 +1799,18 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # Busca o status do cartão para o mês ativo
-        status_fatura = status_faturas_dict.get(cartao_nome, "Pendente")
+        # BUSCA EXATA: Se o cartão não estiver escrito explicitamente como "Pago" no dicionário daquele mês, vira "Pendente"
+        status_fatura = status_faturas_dict.get(str(cartao_nome).strip(), "Pendente")
+        if str(status_fatura).strip().lower() != 'pago':
+            status_fatura = "Pendente"
 
         # Define a cor do selo de status
-        if str(status_fatura).strip().lower() == 'pago':
+        if status_fatura == 'Pago':
             cor_status = "#2e7d32" # Verde escuro
             emoji_status = "✅"
         else:
             cor_status = "#d32f2f" # Vermelho/Alaranjado
             emoji_status = "⏳"
-            status_fatura = "Pendente"
         
         if meta_teto > 0:
             percentual = (gasto_real / meta_teto) * 100
