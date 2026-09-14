@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
      # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (ABA LANÇAMENTOS)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (FILTRANDO POR MÊS E CARTÃO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1755,7 +1755,7 @@ if "💰" in st.session_state.page:
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
-    # Identifica o mês selecionado na tela para filtrar caso a aba tenha vários meses
+    # Identifica o mês selecionado atualmente na tela (ex: "Setembro")
     mes_atual_tela = str(
         st.session_state.get('mes_selecionado') or 
         st.session_state.get('mes') or 
@@ -1767,18 +1767,18 @@ if "💰" in st.session_state.page:
     def remover_acentos(txt):
         return ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
 
-    # LEITURA DA ABA LANÇAMENTOS
+    mes_limpo = remover_acentos(mes_atual_tela)
+
+    # LEITURA INTELIGENTE DA ABA LANÇAMENTOS (FILTRANDO POR MÊS E CARTÃO)
     status_faturas_dict = {}
     
     try:
-        # Tenta abrir a aba LANÇAMENTOS (aceita variações de maiúsculas/minúsculas)
         ws_lancamentos = None
         for aba in sh.worksheets():
             if remover_acentos(aba.title).lower() in ["lancamentos", "lançamentos"]:
                 ws_lancamentos = aba
                 break
         
-        # Fallback caso não ache com acento
         if not ws_lancamentos:
             ws_lancamentos = sh.worksheet("LANÇAMENTOS")
 
@@ -1786,23 +1786,24 @@ if "💰" in st.session_state.page:
             dados_aba = ws_lancamentos.get_all_values()
             if len(dados_aba) > 1:
                 for linha in dados_aba[1:]:
-                    if len(linha) >= 7: # Precisa ter até a coluna G (índice 6)
+                    if len(linha) >= 7:
                         status_val = str(linha[6]).strip() # Coluna G = Status
                         
-                        # Verifica se a linha pertence ao mês atual (se houver o mês escrito em alguma coluna) ou pega direto
-                        linha_texto_completo = " ".join([str(c) for c in linha]).lower()
+                        # Converte toda a linha em texto limpo para verificar se o mês atual aparece nela
+                        linha_texto = remover_acentos(" ".join([str(c) for c in linha]).lower())
                         
-                        # Varre as colunas A até F para achar o nome do cartão na linha
-                        for celula in linha[:6]:
-                            celula_txt = str(celula).strip()
-                            if celula_txt:
-                                chave = remover_acentos(celula_txt.lower()).replace("cartao", "").strip()
-                                # Se encontrou "pago" na coluna G desta linha, registra
-                                if "pag" in remover_acentos(status_val.lower()):
-                                    status_faturas_dict[chave] = "Pago"
-                                else:
-                                    if chave not in status_faturas_dict:
-                                        status_faturas_dict[chave] = "Pendente"
+                        # Verifica se esta linha pertence ao mês selecionado na tela
+                        if mes_limpo in linha_texto:
+                            # Se pertence ao mês, procura qual é o cartão e armazena o status específico desta linha
+                            for celula in linha[:6]:
+                                celula_txt = str(celula).strip()
+                                if celula_txt:
+                                    chave = remover_acentos(celula_txt.lower()).replace("cartao", "").strip()
+                                    if "pag" in remover_acentos(status_val.lower()):
+                                        status_faturas_dict[chave] = "Pago"
+                                    else:
+                                        if chave not in status_faturas_dict:
+                                            status_faturas_dict[chave] = "Pendente"
     except Exception as e:
         pass
 
@@ -1814,7 +1815,7 @@ if "💰" in st.session_state.page:
         status_fatura = "Pendente"
         cartao_limpo = remover_acentos(cartao_nome.lower()).replace("cartao", "").strip()
         
-        # Cruzamento com o dicionário gerado da aba LANÇAMENTOS
+        # Cruza apenas com o status mapeado para o mês atual exato
         for c_cadastrado, estado in status_faturas_dict.items():
             if cartao_limpo in c_cadastrado or c_cadastrado in cartao_limpo:
                 if estado == "Pago":
