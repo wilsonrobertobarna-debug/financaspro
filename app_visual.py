@@ -1770,7 +1770,7 @@ if "💰" in st.session_state.page:
         "Julho": {},
         "Agosto": {
             "Visa Gold - 0132": "Pago",
-            "Mastercard - Inter": "Pago"
+            "Mastercard - Inter": "Pendente"
         },
         "Setembro": {
             "Visa Gold - 0132": "Pago"
