@@ -1762,30 +1762,24 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # BUSCA INFALÍVEL: Varre todos os campos da linha do cartão procurando a palavra "pago"
+        # BUSCA EXATA NA COLUNA DE STATUS (Evita pegar o nome do banco por engano)
         status_fatura = 'Pendente'
         
-        # 1. Procura na própria linha do gráfico
-        for val in row.values:
-            if isinstance(val, str) and 'pago' in val.strip().lower():
-                status_fatura = 'Pago'
-                break
-                
-        # 2. Se não achou, procura na base geral de metas/cartões do app
-        if status_fatura == 'Pendente':
-            for nome_df in ['df_metas_cartoes', 'df_cartoes', 'df_metas']:
-                if nome_df in locals() and not df_metas_cartoes.empty:
-                    df_aux = locals()[nome_df]
-                    match = df_aux[df_aux.astype(str).apply(lambda x: x.str.contains(cartao_nome, case=False).any(), axis=1)]
-                    for _, m_row in match.iterrows():
-                        for val in m_row.values:
-                            if isinstance(val, str) and 'pago' in val.strip().lower():
-                                status_fatura = 'Pago'
-                                break
-                        if status_fatura == 'Pago':
-                            break
-                if status_fatura == 'Pago':
-                    break
+        try:
+            # Procura na base de metas/cartões original pelo cartão correspondente
+            if 'df_metas_cartoes' in locals() and not df_metas_cartoes.empty:
+                match = df_metas_cartoes[df_metas_cartoes['Nome do Banco'] == cartao_nome]
+                if not match.empty:
+                    # Tenta pegar explicitamente pela coluna 'Status' ou pela Coluna G (índice 6)
+                    if 'Status' in match.columns:
+                        val = str(match.iloc[0]['Status']).strip()
+                    else:
+                        val = str(match.iloc[0].iloc[6]).strip() # Coluna G (7ª coluna)
+                    
+                    if val.lower() == 'pago':
+                        status_fatura = 'Pago'
+        except Exception:
+            pass
 
         # Define a cor do selo de status
         if status_fatura.lower() == 'pago':
