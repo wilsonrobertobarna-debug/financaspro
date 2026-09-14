@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (LEITURA E FILTRO DIRETO)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (FILTRO DE MÊS NUMÉRICO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1775,7 +1775,6 @@ if "💰" in st.session_state.page:
         status_cartoes_mes[cartao_grafico] = "Pendente"
 
     try:
-        # Descobre o mês selecionado na tela de forma abrangente
         mes_selecionado_str = str(
             st.session_state.get('mes_selecionado') or 
             st.session_state.get('mes') or 
@@ -1783,9 +1782,22 @@ if "💰" in st.session_state.page:
             st.session_state.get('selectbox_mes') or 
             'setembro'
         ).lower().strip()
-        mes_limpo = limpar_texto(mes_selecionado_str)
+        
+        meses_map = {
+            'janeiro': '01', 'fevereiro': '02', 'marco': '03', 'abril': '04',
+            'maio': '05', 'junho': '06', 'julho': '07', 'agosto': '08',
+            'setembro': '09', 'outubro': '10', 'novembro': '11', 'dezembro': '12'
+        }
+        
+        # Descobre o número do mês correspondente (ex: '09' para setembro)
+        num_mes = '09'
+        for nome, num in meses_map.items():
+            if nome in mes_selecionado_str or num in mes_selecionado_str:
+                num_mes = num
+                break
+        
+        termos_busca_mes = [mes_selecionado_str, num_mes, f"/{num_mes}/", f"-{num_mes}-", f".{num_mes}."]
 
-        # Lê diretamente a aba de lançamentos da planilha
         ws_lancamentos = None
         for aba in sh.worksheets():
             if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
@@ -1801,8 +1813,10 @@ if "💰" in st.session_state.page:
                     if len(linha) >= 7:
                         texto_linha_completo = limpar_texto(" ".join([str(c) for c in linha]))
                         
-                        # Confere se a linha pertence ao mês selecionado na tela
-                        if mes_limpo in texto_linha_completo:
+                        # Verifica se a linha pertence ao mês atual (nome ou número)
+                        pertence_ao_mes = any(termo in texto_linha_completo for termo in termos_busca_mes if len(termo) > 1)
+                        
+                        if pertence_ao_mes:
                             status_val = str(linha[6]).strip() # Coluna G = Status
                             is_pago = "pag" in limpar_texto(status_val)
                             
