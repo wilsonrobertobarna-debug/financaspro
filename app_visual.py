@@ -1703,12 +1703,12 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle]
             
-      # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (MAPEAMENTO SEGURO E DINÂMICO)
+   # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (MAPEAMENTO ROBUSTO DE STATUS)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
-        # Dicionário de metas (cacheado pois a meta geral muda pouco)
+        # Dicionário de metas
         if 'dict_metas_cartoes' not in st.session_state:
             st.session_state['dict_metas_cartoes'] = {}
         dict_metas = st.session_state['dict_metas_cartoes']
@@ -1733,7 +1733,7 @@ if "💰" in st.session_state.page:
             except:
                 pass
 
-        # Lê o status da Coluna G diretamente da planilha a cada execução (sem cache travado)
+        # Leitura blindada do status (Normaliza nomes e varre a linha se necessário)
         dict_status_atual = {}
         try:
             ws_metas = sh.worksheet("Metas_Cartoes")
@@ -1742,11 +1742,22 @@ if "💰" in st.session_state.page:
                 for linha in dados_metas[1:]:
                     if len(linha) >= 1:
                         c_nome = str(linha[0]).strip()
-                        # Pega o status da Coluna G (índice 6) se existir
-                        if len(linha) > 6:
-                            c_status = str(linha[6]).strip()
-                            if c_status:
-                                dict_status_atual[c_nome] = c_status
+                        if not c_nome:
+                            continue
+                        
+                        # Procura o status na Coluna G (índice 6) ou em qualquer célula da linha que seja 'pago'
+                        status_encontrado = 'Pendente'
+                        if len(linha) > 6 and str(linha[6]).strip().lower() == 'pago':
+                            status_encontrado = 'Pago'
+                        else:
+                            # Varre a linha inteira caso a coluna G tenha deslocado
+                            for celula in linha:
+                                if str(celula).strip().lower() == 'pago':
+                                    status_encontrado = 'Pago'
+                                    break
+                        
+                        # Salva usando chave normalizada (sem diferenciar maiúsculas/minúsculas)
+                        dict_status_atual[c_nome.lower()] = status_encontrado
         except:
             pass
 
@@ -1777,10 +1788,8 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # Puxa o status dinâmico da planilha para este cartão
-        status_fatura = dict_status_atual.get(cartao_nome, 'Pendente')
-        if not status_fatura or str(status_fatura).strip() == '':
-            status_fatura = 'Pendente'
+        # Busca o status usando o nome do cartão normalizado
+        status_fatura = dict_status_atual.get(str(cartao_nome).strip().lower(), 'Pendente')
 
         # Define a cor do selo de status
         if status_fatura.lower() == 'pago':
