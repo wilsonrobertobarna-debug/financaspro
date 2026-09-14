@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (VALIDAÇÃO POR LINHA INTEIRA)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (VERIFICAÇÃO DIRETA)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1755,13 +1755,6 @@ if "💰" in st.session_state.page:
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
-    mes_atual_tela = str(
-        st.session_state.get('mes_selecionado') or 
-        st.session_state.get('mes') or 
-        st.session_state.get('mes_atual') or 
-        'Setembro'
-    ).lower().strip()
-    
     import unicodedata
     def limpar_texto(txt):
         if not txt:
@@ -1769,32 +1762,8 @@ if "💰" in st.session_state.page:
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
         return " ".join(sem_acento.lower().replace("cartao", "").replace("-", " ").replace("/", " ").split())
 
-    mes_limpo = limpar_texto(mes_atual_tela)
-    
-    # Termos exatos para capturar o mês em qualquer formato numérico ou por extenso
-    meses_dict = {
-        'janeiro': ['01', '/01', '-01', 'janeiro', 'jan'],
-        'fevereiro': ['02', '/02', '-02', 'fevereiro', 'fev'],
-        'marco': ['03', '/03', '-03', 'marco', 'mar'],
-        'abril': ['04', '/04', '-04', 'abril', 'abr'],
-        'maio': ['05', '/05', '-05', 'maio', 'mai'],
-        'junho': ['06', '/06', '-06', 'junho', 'jun'],
-        'julho': ['07', '/07', '-07', 'julho', 'jul'],
-        'agosto': ['08', '/08', '-08', 'agosto', 'ago'],
-        'setembro': ['09', '/09', '-09', 'setembro', 'set'],
-        'outubro': ['10', '/10', '-10', 'outubro', 'out'],
-        'novembro': ['11', '/11', '-11', 'novembro', 'nov'],
-        'dezembro': ['12', '/12', '-12', 'dezembro', 'dez']
-    }
-    
-    termos_mes = [mes_limpo]
-    for k, v in meses_dict.items():
-        if k in mes_limpo or mes_limpo in k:
-            termos_mes.extend(v)
-
+    # Dicionário de status: por padrão, TODOS começam estritamente como "Pendente"
     status_cartoes_mes = {}
-    
-    # Define rigorosamente todos como Pendente por padrão
     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
         status_cartoes_mes[limpar_texto(cartao_grafico)] = "Pendente"
 
@@ -1814,33 +1783,29 @@ if "💰" in st.session_state.page:
                 for linha in dados_aba[1:]:
                     if len(linha) >= 7:
                         status_val = str(linha[6]).strip() # Coluna G = Status
+                        is_pago = "pag" in limpar_texto(status_val)
                         
-                        # Texto completo da linha inteira para validar se pertence ao mês da tela
-                        texto_linha_inteira = limpar_texto(" ".join([str(c) for c in linha]))
-                        pertence_ao_mes = any(termo in texto_linha_inteira for termo in termos_mes)
-                        
-                        if pertence_ao_mes:
-                            is_pago = "pag" in limpar_texto(status_val)
+                        # Se encontrou uma linha marcada como Paga, identifica qual cartão é
+                        if is_pago:
+                            linha_texto = limpar_texto(" ".join([str(linha[i]) for i in range(min(6, len(linha)))]))
                             
-                            # Se a linha está paga e pertence ao mês correto, identifica qual cartão é
-                            if is_pago:
-                                for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                                    c_graf_limpo = limpar_texto(cartao_grafico)
-                                    
-                                    match_encontrado = False
-                                    if "itau" in c_graf_limpo and "golden" in c_graf_limpo:
-                                        match_encontrado = "itau" in texto_linha_inteira and "golden" in texto_linha_inteira
-                                    elif "8112" in c_graf_limpo:
-                                        match_encontrado = "8112" in texto_linha_inteira
-                                    elif "0132" in c_graf_limpo:
-                                        match_encontrado = "0132" in texto_linha_inteira
-                                    else:
-                                        palavras_chave = [p for p in c_graf_limpo.split() if len(p) > 2]
-                                        if palavras_chave and all(p in texto_linha_inteira for p in palavras_chave):
-                                            match_encontrado = True
+                            for cartao_grafico in df_cartoes_graph['Nome do Banco']:
+                                c_graf_limpo = limpar_texto(cartao_grafico)
+                                
+                                match_encontrado = False
+                                if "itau" in c_graf_limpo and "golden" in c_graf_limpo:
+                                    match_encontrado = "itau" in linha_texto and "golden" in linha_texto
+                                elif "8112" in c_graf_limpo:
+                                    match_encontrado = "8112" in linha_texto
+                                elif "0132" in c_graf_limpo:
+                                    match_encontrado = "0132" in linha_texto
+                                else:
+                                    palavras_chave = [p for p in c_graf_limpo.split() if len(p) > 2]
+                                    if palavras_chave and all(p in linha_texto for p in palavras_chave):
+                                        match_encontrado = True
 
-                                    if match_encontrado:
-                                        status_cartoes_mes[c_graf_limpo] = "Pago"
+                                if match_encontrado:
+                                    status_cartoes_mes[c_graf_limpo] = "Pago"
     except Exception as e:
         pass
 
