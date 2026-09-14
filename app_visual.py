@@ -1762,19 +1762,20 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # BUSCA EXATA NA COLUNA DE STATUS (Evita pegar o nome do banco por engano)
+        # BUSCA PRECISA NA TABELA DE METAS DO MÊS ATUAL
         status_fatura = 'Pendente'
-        
         try:
-            # Procura na base de metas/cartões original pelo cartão correspondente
+            # Procura na base de metas/cartões original
             if 'df_metas_cartoes' in locals() and not df_metas_cartoes.empty:
-                match = df_metas_cartoes[df_metas_cartoes['Nome do Banco'] == cartao_nome]
+                # Filtra pelo nome do banco
+                match = df_metas_cartoes[df_metas_cartoes['Nome do Banco'].astype(str).str.strip() == str(cartao_nome).strip()]
                 if not match.empty:
-                    # Tenta pegar explicitamente pela coluna 'Status' ou pela Coluna G (índice 6)
-                    if 'Status' in match.columns:
-                        val = str(match.iloc[0]['Status']).strip()
+                    # Pega a última linha correspondente (geralmente o mês atual/ativo) ou a coluna 6 (Coluna G)
+                    ultima_linha = match.iloc[-1]
+                    if 'Status' in ultima_linha:
+                        val = str(ultima_linha['Status']).strip()
                     else:
-                        val = str(match.iloc[0].iloc[6]).strip() # Coluna G (7ª coluna)
+                        val = str(ultima_linha.iloc[6]).strip() # Coluna G (índice 6)
                     
                     if val.lower() == 'pago':
                         status_fatura = 'Pago'
@@ -1818,7 +1819,7 @@ if "💰" in st.session_state.page:
             )
     else:
         if df_cartoes_graph.empty:
-            st.info("Nenhum lançamento encontrado para os cartões neste mês.")  
+            st.info("Nenhum lançamento encontrado para os cartões neste mês.") 
             
      # =========================================================================
      # =========================================================================
