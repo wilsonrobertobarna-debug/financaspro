@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (VALIDAÇÃO PRECISA)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (FILTRADO POR MÊS)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1762,7 +1762,7 @@ if "💰" in st.session_state.page:
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
         return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").split())
 
-    # Chaves exatas conforme aparecem na planilha de lançamentos e no gráfico
+    # Identificadores precisos para cada cartão
     identificadores_cartoes = {
         "Mastercard - Inter": ["inter"],
         "Mastercard - 8112": ["8112"],
@@ -1776,25 +1776,15 @@ if "💰" in st.session_state.page:
         status_cartoes_mes[limpar_texto(cartao_grafico)] = "Pendente"
 
     try:
-        linhas_alvo = []
+        # Usa estritamente as linhas já filtradas pelo mês atual do seu app
+        linhas_mes_atual = []
         if 'dados_filtrados_mes' in locals() and dados_filtrados_mes:
-            linhas_alvo = dados_filtrados_mes
+            linhas_mes_atual = dados_filtrados_mes
         elif 'df_filtrado' in locals() and hasattr(df_filtrado, 'values'):
-            linhas_alvo = df_filtrado.values.tolist()
-        else:
-            ws_lancamentos = None
-            for aba in sh.worksheets():
-                if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
-                    ws_lancamentos = aba
-                    break
-            if not ws_lancamentos:
-                ws_lancamentos = sh.worksheet("LANÇAMENTOS")
-            if ws_lancamentos:
-                dados_aba = ws_lancamentos.get_all_values()
-                linhas_alvo = dados_aba[1:] if len(dados_aba) > 1 else []
+            linhas_mes_atual = df_filtrado.values.tolist()
 
-        if linhas_alvo:
-            for linha in linhas_alvo:
+        if linhas_mes_atual:
+            for linha in linhas_mes_atual:
                 if len(linha) >= 7:
                     status_val = str(linha[6]).strip() # Coluna G = Status
                     is_pago = "pag" in limpar_texto(status_val)
@@ -1805,7 +1795,6 @@ if "💰" in st.session_state.page:
                         c_graf_limpo = limpar_texto(cartao_grafico)
                         termos_exatos = identificadores_cartoes.get(cartao_grafico, [c_graf_limpo])
                         
-                        # Verifica se algum dos termos específicos e unívocos está na linha
                         match_ok = any(termo in texto_linha for termo in termos_exatos)
 
                         if match_ok and is_pago:
