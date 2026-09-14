@@ -1703,7 +1703,7 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
-# ========# =========================================================================
+# =========================================================================
         # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (CONTROLE MÊS A MÊS NO CÓDIGO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
@@ -1755,16 +1755,15 @@ if "💰" in st.session_state.page:
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
-   
-    # Identifica o mês selecionado na tela de forma inteligente
+    # Identifica o mês selecionado na tela capturando o valor real ativo no seu painel
     mes_atual_tela = str(
         st.session_state.get('mes_selecionado') or 
         st.session_state.get('mes') or 
         st.session_state.get('mes_atual') or 
-        'Setembro'
+        'Agosto'
     ).capitalize()
     
-    # CONTROLE CENTRALIZADO POR MÊS: Definido de forma isolada e explícita
+    # CONTROLE CENTRALIZADO POR MÊS: Agosto com Inter Pago, Setembro com Inter Pendente
     status_por_mes = {
         "Janeiro": {},
         "Fevereiro": {},
@@ -1786,7 +1785,7 @@ if "💰" in st.session_state.page:
         "Dezembro": {}
     }
     
-    # Pega o dicionário específico do mês selecionado
+    # Pega o dicionário específico do mês selecionado na tela
     status_faturas_dict = status_por_mes.get(mes_atual_tela, {})
     
     for idx, row in df_cartoes_graph.iterrows():
@@ -1794,7 +1793,7 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # Garante a checagem explícita: se não estiver explicitamente 'Pago', força 'Pendente'
+        # Busca o status do cartão para o mês ativo
         status_fatura = status_faturas_dict.get(cartao_nome, "Pendente")
 
         # Define a cor do selo de status
