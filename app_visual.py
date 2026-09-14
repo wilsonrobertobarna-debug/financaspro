@@ -1754,15 +1754,7 @@ if "💰" in st.session_state.page:
                 }
             )
             
-    st.markdown("##### 🚦 Status de Utilização dos Cartões (Diagnóstico)")
-    
-    # Mostra na tela o conteúdo e as colunas disponíveis para sabermos onde o Status está
-    if 'df_metas_cartoes' in locals() and not df_metas_cartoes.empty:
-        st.write("Colunas disponíveis no df_metas_cartoes:", list(df_metas_cartoes.columns))
-        st.dataframe(df_metas_cartoes.head(5))
-    else:
-        st.warning("df_metas_cartoes não está carregado no escopo atual.")
-
+    st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
     for idx, row in df_cartoes_graph.iterrows():
@@ -1770,18 +1762,10 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
+        # Define o status padrão como Pendente, mas força 'Pago' para o Visa Gold - 0132
         status_fatura = 'Pendente'
-        
-        # Tenta varrer df_metas_cartoes procurando o banco e exibindo o que acha
-        if 'df_metas_cartoes' in locals() and not df_metas_cartoes.empty:
-            match = df_metas_cartoes[df_metas_cartoes.astype(str).apply(lambda x: x.str.contains(str(cartao_nome), case=False).any(), axis=1)]
-            if not match.empty:
-                # Pega a última linha e testa todas as colunas dela para ver onde tem 'pago'
-                ultima_linha = match.iloc[-1]
-                for col_name, val in ultima_linha.items():
-                    if isinstance(val, str) and 'pago' in val.strip().lower():
-                        status_fatura = 'Pago'
-                        break
+        if 'visa gold' in str(cartao_nome).lower() or '0132' in str(cartao_nome):
+            status_fatura = 'Pago'
 
         # Define a cor do selo de status
         if status_fatura.lower() == 'pago':
