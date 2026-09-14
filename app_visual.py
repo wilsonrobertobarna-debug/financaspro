@@ -1703,8 +1703,8 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
-  # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (LEITURA EXATA DA COLUNA 7 DE METAS)
+# =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (CONTROLE DIRETO E SIMPLES)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1733,28 +1733,6 @@ if "💰" in st.session_state.page:
             except:
                 pass
 
-        # Leitura direta do status na Coluna 7 (índice 7) da aba Metas_Cartoes
-        dict_status_atual = {}
-        try:
-            ws_metas = sh.worksheet("Metas_Cartoes")
-            dados_metas = ws_metas.get_all_values()
-            if len(dados_metas) > 1:
-                for linha in dados_metas[1:]:
-                    if len(linha) >= 1:
-                        c_nome = str(linha[0]).strip()
-                        if not c_nome:
-                            continue
-                        
-                        status_fatura_lido = "Pendente"
-                        if len(linha) > 7:
-                            val_col7 = str(linha[7]).strip().lower()
-                            if val_col7 in ['pago', 'quitado', 'paga', '✅']:
-                                status_fatura_lido = "Pago"
-                        
-                        dict_status_atual[c_nome.lower()] = status_fatura_lido
-        except:
-            pass
-
         # Aplica o mapeamento seguro em lote no DataFrame
         df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
@@ -1777,13 +1755,22 @@ if "💰" in st.session_state.page:
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
+    # CONTROLE CENTRALIZADO: Mude para 'Pago' ou 'Pendente' direto aqui quando precisar
+    status_faturas_dict = {
+        "Visa Gold - 0132": "Pago",
+        "Mastercard - Inter": "Pendente",
+        "Mastercard - 8112": "Pendente",
+        "Visa - Mercado Pago": "Pendente",
+        "Itau - Golden": "Pendente"
+    }
+    
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = row['Nome do Banco']
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # Puxa o status correspondente do dicionário mapeado da Coluna 7
-        status_fatura = dict_status_atual.get(str(cartao_nome).strip().lower(), 'Pendente')
+        # Puxa o status exato do dicionário acima
+        status_fatura = status_faturas_dict.get(cartao_nome, "Pendente")
 
         # Define a cor do selo de status
         if status_fatura.lower() == 'pago':
