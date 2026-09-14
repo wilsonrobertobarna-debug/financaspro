@@ -1703,7 +1703,7 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
-     # =========================================================================
+   # =========================================================================
         # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (MAPEAMENTO DIRETO E SEGURO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
@@ -1755,10 +1755,10 @@ if "💰" in st.session_state.page:
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
-    # Dicionário de status personalizado por cartão (Edite aqui para 'Pago' ou 'Pendente')
+    # Dicionário de status com mais de um cartão pago para teste
     status_faturas_dict = {
         "Visa Gold - 0132": "Pago",
-        "Mastercard - Inter": "Pendente",
+        "Mastercard - Inter": "Pago",
         "Mastercard - 8112": "Pendente",
         "Visa - Mercado Pago": "Pendente",
         "Itau - Golden": "Pendente"
