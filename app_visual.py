@@ -1762,6 +1762,11 @@ if "💰" in st.session_state.page:
                 gasto_real = row['V_Num']
                 meta_teto = row['Meta']
                 
+                # Captura o status da fatura (Pago/Pendente) vindo da linha, com fallback seguro se não existir
+                status_fatura = row.get('Status', 'Pendente')
+                if pd.isna(status_fatura) or str(status_fatura).strip() == '':
+                    status_fatura = 'Pendente'
+                
                 if meta_teto > 0:
                     percentual = (gasto_real / meta_teto) * 100
                 else:
@@ -1780,11 +1785,12 @@ if "💰" in st.session_state.page:
                 with cols_status[idx % len(cols_status)]:
                     st.metric(
                         label=cartao_nome,
-                        value=f"R$ {gasto_real:,.2f}",
+                        value=f"R$ {gasto_real:,.2f} ({status_fatura})",
                         delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
                     )
         else:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
+            
             
      # =========================================================================
      # =========================================================================
