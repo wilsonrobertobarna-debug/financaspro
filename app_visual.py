@@ -1703,8 +1703,8 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
-  # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (VALIDAÇÃO MÊS A MÊS)
+ # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (LEITURA DA COLUNA F)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1762,13 +1762,13 @@ if "💰" in st.session_state.page:
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
         return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").split())
 
-    # Termos exatos para evitar falsos positivos
+    # Mapeamento robusto relacionando o nome do gráfico aos trechos contidos na Coluna F
     termos_cartoes = {
-        "Mastercard - Inter": "inter",
-        "Mastercard - 8112": "8112",
-        "Visa Gold - 0132": "0132",
-        "Visa - Mercado Pago": "mercado pago",
-        "Itau - Golden": "itau gold"
+        "Mastercard - Inter": ["inter"],
+        "Mastercard - 8112": ["8112"],
+        "Visa Gold - 0132": ["0132", "visa gold"],
+        "Visa - Mercado Pago": ["mercado pago", "mercadopago"],
+        "Itau - Golden": ["itau"]
     }
 
     rastreio_cartoes = {}
@@ -1776,7 +1776,6 @@ if "💰" in st.session_state.page:
         rastreio_cartoes[cartao_grafico] = {"encontrou": False, "todos_pagos": True}
 
     try:
-        # Captura o mês selecionado atualmente na aplicação de forma robusta
         mes_selecionado_str = str(
             st.session_state.get('mes_selecionado') or 
             st.session_state.get('mes') or 
@@ -1809,25 +1808,23 @@ if "💰" in st.session_state.page:
             if len(dados_lanc) > 1:
                 for linha in dados_lanc[1:]:
                     if len(linha) >= 7:
+                        # Coluna A (Data/Vencimento) = índice 0
                         data_str = str(linha[0]).strip()
                         partes_data = data_str.replace('-', '/').replace('.', '/').split('/')
+                        mes_da_linha = partes_data[1] if len(partes_data) >= 2 else ""
                         
-                        # Valida se a data da linha possui formato válido DD/MM/AAAA ou MM/AAAA
-                        mes_da_linha = ""
-                        if len(partes_data) >= 3:
-                            mes_da_linha = partes_data[1]
-                        elif len(partes_data) == 2:
-                            mes_da_linha = partes_data[0] # Caso esteja MM/AAAA
-                            
-                        # Só processa a linha se pertencer estritamente ao mês selecionado na tela
                         if mes_da_linha == num_mes_alvo:
-                            texto_linha_completo = limpar_texto(" ".join([str(c) for c in linha]))
+                            banco_linha = limpar_texto(linha[5]) if len(linha) > 5 else "" # Coluna F = Banco
                             status_val = str(linha[6]).strip() # Coluna G = Status
                             is_pago = "pag" in limpar_texto(status_val)
                             
                             for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                                termo_alvo = termos_cartoes.get(cartao_grafico, limpar_texto(cartao_grafico))
-                                if termo_alvo in texto_linha_completo:
+                                chaves_possiveis = termos_cartoes.get(cartao_grafico, [limpar_texto(cartao_grafico)])
+                                
+                                # Verifica se a coluna F da linha pertence a este cartão
+                                pertence_ao_cartao = any(chave in banco_linha for chave in chaves_possiveis)
+                                
+                                if pertence_ao_cartao:
                                     rastreio_cartoes[cartao_grafico]["encontrou"] = True
                                     if not is_pago:
                                         rastreio_cartoes[cartao_grafico]["todos_pagos"] = False
@@ -1841,7 +1838,6 @@ if "💰" in st.session_state.page:
         
         dados_cartao = rastreio_cartoes.get(cartao_nome, {"encontrou": False, "todos_pagos": False})
         
-        # O cartão só fica verde se encontrou lançamentos EXCLUSIVAMENTE neste mês e TODOS estão pagos
         if dados_cartao["encontrou"] and dados_cartao["todos_pagos"]:
             status_fatura = "Pago"
             cor_status = "#2e7d32" 
