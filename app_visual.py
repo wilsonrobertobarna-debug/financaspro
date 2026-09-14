@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (STATUS DINÂMICO DOS OUTROS CARTÕES)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (CONTROLE EXATO MÊS A MÊS)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1763,24 +1763,40 @@ if "💰" in st.session_state.page:
         'Setembro'
     ).capitalize().strip()
     
-    # DICIONÁRIO COMPLETO MÊS A MÊS: Configure aqui quais cartões estão pagos ou pendentes em cada período
+    # DICIONÁRIO COMPLETO MÊS A MÊS: Defina exatamente quais cartões estão "Pago" em cada mês.
+    # Tudo o que não estiver listado aqui para o mês ativo ficará automaticamente como "Pendente".
     status_por_mes = {
-        "Janeiro": {},
-        "Fevereiro": {},
-        "Março": {},
-        "Abril": {},
-        "Maio": {},
-        "Junho": {},
-        "Julho": {},
+        "Janeiro": {
+            "Visa Gold - 0132": "Pago"
+        },
+        "Fevereiro": {
+            "Visa Gold - 0132": "Pago"
+        },
+        "Março": {
+            "Visa Gold - 0132": "Pago"
+        },
+        "Abril": {
+            "Visa Gold - 0132": "Pago"
+        },
+        "Maio": {
+            "Visa Gold - 0132": "Pago"
+        },
+        "Junho": {
+            "Visa Gold - 0132": "Pago"
+        },
+        "Julho": {
+            "Visa Gold - 0132": "Pago"
+        },
         "Agosto": {
+            "Visa Gold - 0132": "Pago",
             "Mastercard - Inter": "Pago"
         },
         "Setembro": {
-            # Adicione aqui outros cartões que estiverem pagos em setembro, ex: "Mastercard - Inter": "Pago"
+            "Visa Gold - 0132": "Pago"
         },
-        "Outubro": {},
-        "Novembro": {},
-        "Dezembro": {}
+        "Outubro": {},   # Nenhum pago ainda (ficam todos pendentes)
+        "Novembro": {},  # Nenhum pago ainda (ficam todos pendentes)
+        "Dezembro": {}   # Nenhum pago ainda (ficam todos pendentes)
     }
     
     status_faturas_dict = status_por_mes.get(mes_atual_tela, {})
@@ -1790,18 +1806,12 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # REGRA INTELIGENTE:
-        # 1. O Visa Gold - 0132 é sempre "Pago" em qualquer mês.
-        # 2. Os demais cartões seguem o dicionário do mês (se estiverem lá, ficam "Pago", senão ficam "Pendente").
-        if "0132" in cartao_nome or "visa gold" in cartao_nome.lower():
-            status_fatura = "Pago"
-        else:
-            # Procura no dicionário do mês (ignorando maiúsculas/minúsculas)
-            status_fatura = "Pendente"
-            for c_cadastrado, estado in status_faturas_dict.items():
-                if c_cadastrado.lower() in cartao_nome.lower() and str(estado).strip().lower() == 'pago':
-                    status_fatura = "Pago"
-                    break
+        # BUSCA EXATA NO MÊS ATIVO: Só fica "Pago" se estiver explicitamente no dicionário do mês atual
+        status_fatura = "Pendente"
+        for c_cadastrado, estado in status_faturas_dict.items():
+            if c_cadastrado.lower() in cartao_nome.lower() and str(estado).strip().lower() == 'pago':
+                status_fatura = "Pago"
+                break
 
         # Define a cor e o emoji do selo com base no status final
         if status_fatura == 'Pago':
