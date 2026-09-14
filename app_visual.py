@@ -1762,16 +1762,17 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # BUSCA PRECISA DE STATUS: Olha na base geral do mês (df_m) se há algum registro Pago para este banco
+      # BUSCA PRECISA DE STATUS: Olha na base geral do mês (df_m) se há algum registro Pago para este banco
         status_fatura = 'Pendente'
         if 'df_m' in locals() and not df_m.empty:
-            # Filtra lançamentos deste banco específico no mês atual
-            lancamentos_banco = df_m[df_m['Nome do Banco'] == cartao_nome]
-            if not lancamentos_banco.empty:
-                # Se pelo menos um registro estiver como 'Pago' (ignorando maiúsculas/minúsculas), o cartão é considerado Pago
-                tem_pago = lancamentos_banco['Status'].astype(str).str.strip().str.lower().eq('pago').any()
-                if tem_pago:
-                    status_fatura = 'Pago'
+            # Identifica qual coluna de cartão existe no df_m
+            col_cartao = next((c for c in ['Nome do Banco', 'Cartão', 'Banco'] if c in df_m.columns), None)
+            if col_cartao:
+                lancamentos_banco = df_m[df_m[col_cartao] == cartao_nome]
+                if not lancamentos_banco.empty and 'Status' in lancamentos_banco.columns:
+                    tem_pago = lancamentos_banco['Status'].astype(str).str.strip().str.lower().eq('pago').any()
+                    if tem_pago:
+                        status_fatura = 'Pago'
         
         # Fallback caso o df_m não esteja no escopo, tenta pegar direto da linha do graph
         if status_fatura == 'Pendente' and 'Status' in row:
