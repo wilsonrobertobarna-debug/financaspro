@@ -1754,7 +1754,7 @@ if "💰" in st.session_state.page:
                 }
             )
             
-    st.markdown("##### 🚦 Status de Utilização dos Cartões")
+   st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
     for idx, row in df_cartoes_graph.iterrows():
@@ -1762,17 +1762,17 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # Puxa o status direto da Coluna G (índice 6) da linha do cartão
+        # BUSCA SEGURA NA TABELA DE METAS/CARTÕES ORIGINAL
         status_fatura = 'Pendente'
         try:
-            # Tenta pegar pela coluna 'Status' ou pela 7ª coluna (índice 6)
-            if 'Status' in row:
-                val = str(row['Status']).strip()
-            else:
-                val = str(row.iloc[6]).strip()
-            
-            if val.lower() == 'pago':
-                status_fatura = 'Pago'
+            # Procura na base de metas/cartões o status correspondente a este banco no mês atual
+            if 'df_metas_cartoes' in locals() and not df_metas_cartoes.empty:
+                match = df_metas_cartoes[df_metas_cartoes['Nome do Banco'] == cartao_nome]
+                if not match.empty:
+                    # Tenta ler a coluna de status (seja 'Status' ou na coluna G / índice 6)
+                    val = str(match.iloc[0].get('Status', match.iloc[0].iloc[6] if len(match.iloc[0]) > 6 else 'Pendente')).strip()
+                    if val.lower() == 'pago':
+                        status_fatura = 'Pago'
         except Exception:
             pass
 
@@ -1813,7 +1813,7 @@ if "💰" in st.session_state.page:
             )
     else:
         if df_cartoes_graph.empty:
-            st.info("Nenhum lançamento encontrado para os cartões neste mês.")       
+            st.info("Nenhum lançamento encontrado para os cartões neste mês.")      
             
      # =========================================================================
      # =========================================================================
