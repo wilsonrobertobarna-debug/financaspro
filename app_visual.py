@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (INTEGRAÇÃO DIRETA)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (LEITURA E FILTRO DIRETO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1762,7 +1762,6 @@ if "💰" in st.session_state.page:
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
         return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").split())
 
-    # Mapeamento unívoco dos cartões para termos bem específicos da planilha
     termos_cartoes = {
         "Mastercard - Inter": "inter",
         "Mastercard - 8112": "8112",
@@ -1776,25 +1775,42 @@ if "💰" in st.session_state.page:
         status_cartoes_mes[cartao_grafico] = "Pendente"
 
     try:
-        # Pega as linhas filtradas do mês que já estão carregadas no escopo do seu app
-        linhas_mes = []
-        if 'dados_filtrados_mes' in locals() and dados_filtrados_mes:
-            linhas_mes = dados_filtrados_mes
-        elif 'df_filtrado' in locals() and hasattr(df_filtrado, 'values'):
-            linhas_mes = df_filtrado.values.tolist()
+        # Descobre o mês selecionado na tela de forma abrangente
+        mes_selecionado_str = str(
+            st.session_state.get('mes_selecionado') or 
+            st.session_state.get('mes') or 
+            st.session_state.get('mes_atual') or 
+            st.session_state.get('selectbox_mes') or 
+            'setembro'
+        ).lower().strip()
+        mes_limpo = limpar_texto(mes_selecionado_str)
 
-        if linhas_mes:
-            for linha in linhas_mes:
-                if len(linha) >= 7:
-                    texto_linha = limpar_texto(" ".join([str(c) for c in linha]))
-                    status_val = str(linha[6]).strip() # Coluna G = Status
-                    is_pago = "pag" in limpar_texto(status_val)
-                    
-                    if is_pago:
-                        for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                            termo_alvo = termos_cartoes.get(cartao_grafico, limpar_texto(cartao_grafico))
-                            if termo_alvo in texto_linha:
-                                status_cartoes_mes[cartao_grafico] = "Pago"
+        # Lê diretamente a aba de lançamentos da planilha
+        ws_lancamentos = None
+        for aba in sh.worksheets():
+            if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
+                ws_lancamentos = aba
+                break
+        if not ws_lancamentos:
+            ws_lancamentos = sh.worksheet("LANÇAMENTOS")
+
+        if ws_lancamentos:
+            dados_lanc = ws_lancamentos.get_all_values()
+            if len(dados_lanc) > 1:
+                for linha in dados_lanc[1:]:
+                    if len(linha) >= 7:
+                        texto_linha_completo = limpar_texto(" ".join([str(c) for c in linha]))
+                        
+                        # Confere se a linha pertence ao mês selecionado na tela
+                        if mes_limpo in texto_linha_completo:
+                            status_val = str(linha[6]).strip() # Coluna G = Status
+                            is_pago = "pag" in limpar_texto(status_val)
+                            
+                            if is_pago:
+                                for cartao_grafico in df_cartoes_graph['Nome do Banco']:
+                                    termo_alvo = termos_cartoes.get(cartao_grafico, limpar_texto(cartao_grafico))
+                                    if termo_alvo in texto_linha_completo:
+                                        status_cartoes_mes[cartao_grafico] = "Pago"
     except Exception as e:
         pass
 
