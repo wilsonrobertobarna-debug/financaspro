@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (FILTRO DE MÊS ESTRITO NA COLUNA DE DATA)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (FILTRO DIRETO POR MÊS E CARTÃO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1771,30 +1771,21 @@ if "💰" in st.session_state.page:
 
     mes_limpo = limpar_texto(mes_atual_tela)
     
-    # Padrões numéricos e textuais estritos para o mês selecionado
-    meses_padroes = {
-        'janeiro': ['/01/', '-01-', '.01.', '01/20', 'janeiro', 'jan'],
-        'fevereiro': ['/02/', '-02-', '.02.', '02/20', 'fevereiro', 'fev'],
-        'marco': ['/03/', '-03-', '.03.', '03/20', 'marco', 'mar'],
-        'abril': ['/04/', '-04-', '.04.', '04/20', 'abril', 'abr'],
-        'maio': ['/05/', '-05-', '.05.', '05/20', 'maio', 'mai'],
-        'junho': ['/06/', '-06-', '.06.', '06/20', 'junho', 'jun'],
-        'julho': ['/07/', '-07-', '.07.', '07/20', 'julho', 'jul'],
-        'agosto': ['/08/', '-08-', '.08.', '08/20', 'agosto', 'ago'],
-        'setembro': ['/09/', '-09-', '.09.', '09/20', 'setembro', 'set'],
-        'outubro': ['/10/', '-10-', '.10.', '10/20', 'outubro', 'out'],
-        'novembro': ['/11/', '-11-', '.11.', '11/20', 'novembro', 'nov'],
-        'dezembro': ['/12/', '-12-', '.12.', '12/20', 'dezembro', 'dez']
+    # Identificadores textuais e numéricos simples para o mês ativo
+    meses_num_map = {
+        'janeiro': '01', 'fevereiro': '02', 'marco': '03', 'abril': '04',
+        'maio': '05', 'junho': '06', 'julho': '07', 'agosto': '08',
+        'setembro': '09', 'outubro': '10', 'novembro': '11', 'dezembro': '12'
     }
     
-    termos_mes = [mes_limpo]
-    for k, v in meses_padroes.items():
+    termos_busca_mes = [mes_limpo]
+    for k, v in meses_num_map.items():
         if k in mes_limpo or mes_limpo in k:
-            termos_mes.extend(v)
+            termos_busca_mes.extend([k, v, f"/{v}/", f"-{v}-"])
 
     status_cartoes_mes = {}
     
-    # Inicializa estritamente TODOS os cartões do gráfico como "Pendente" por padrão
+    # Inicializa todos os cartões como Pendente por padrão
     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
         status_cartoes_mes[limpar_texto(cartao_grafico)] = "Pendente"
 
@@ -1814,32 +1805,30 @@ if "💰" in st.session_state.page:
                 for linha in dados_aba[1:]:
                     if len(linha) >= 7:
                         status_val = str(linha[6]).strip() # Coluna G = Status
+                        texto_linha = limpar_texto(" ".join([str(c) for c in linha]))
                         
-                        # Valida o mês estritamente nas colunas iniciais de data/identificação (ex: Coluna A e B)
-                        texto_data_linha = limpar_texto(" ".join([str(linha[i]) for i in [0, 1] if i < len(linha)]))
-                        pertence_ao_mes = any(termo in texto_data_linha for termo in termos_mes)
+                        # Verifica se a linha pertence ao mês selecionado
+                        pertence_ao_mes = any(termo in texto_linha for termo in termos_busca_mes)
                         
                         if pertence_ao_mes:
-                            linha_texto_inteira = limpar_texto(" ".join([str(c) for c in linha]))
                             is_pago = "pag" in limpar_texto(status_val)
                             
                             if is_pago:
                                 for cartao_grafico in df_cartoes_graph['Nome do Banco']:
                                     c_graf_limpo = limpar_texto(cartao_grafico)
                                     
-                                    # Validação exata e exclusiva baseada nos identificadores dos cartões
+                                    # Validação individual e exata por cartão
                                     match_cartao = False
                                     if "8112" in c_graf_limpo:
-                                        match_cartao = "8112" in linha_texto_inteira
+                                        match_cartao = "8112" in texto_linha
                                     elif "0132" in c_graf_limpo:
-                                        match_cartao = "0132" in linha_texto_inteira
+                                        match_cartao = "0132" in texto_linha
                                     elif "itau" in c_graf_limpo and "golden" in c_graf_limpo:
-                                        match_cartao = "itau" in linha_texto_inteira and "golden" in linha_texto_inteira and "0132" not in linha_texto_inteira and "8112" not in linha_texto_inteira
+                                        match_cartao = "itau" in texto_linha and "golden" in texto_linha and "0132" not in texto_linha and "8112" not in texto_linha
                                     else:
-                                        # Para outros cartões, exige que o nome exato esteja presente na linha
-                                        tokens_cartao = [t for t in c_graf_limpo.split() if len(t) > 2 and t not in {'visa', 'mastercard', 'cartao', 'banco'}]
-                                        if tokens_cartao:
-                                            match_cartao = all(tok in linha_texto_inteira for tok in tokens_cartao)
+                                        tokens = [t for t in c_graf_limpo.split() if len(t) > 2 and t not in {'visa', 'mastercard', 'cartao'}]
+                                        if tokens and all(t in texto_linha for t in tokens):
+                                            match_cartao = True
 
                                     if match_cartao:
                                         status_cartoes_mes[c_graf_limpo] = "Pago"
