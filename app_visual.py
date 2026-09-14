@@ -1701,9 +1701,10 @@ if "💰" in st.session_state.page:
                 gasto_total = df_m[mask]['V_Num'].sum()
                 dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total})
         else:
-            dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle]
-      # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (BUSCA BLINDADA DE STATUS)
+            dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
+             
+        # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (BUSCA EXATA DE STATUS)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1732,7 +1733,7 @@ if "💰" in st.session_state.page:
             except:
                 pass
 
-        # Leitura universal do status: varre todas as colunas de cada linha na aba Metas_Cartoes
+        # Leitura precisa: ignora o nome do cartão (coluna 0) e busca valor exato
         dict_status_atual = {}
         try:
             ws_metas = sh.worksheet("Metas_Cartoes")
@@ -1745,11 +1746,15 @@ if "💰" in st.session_state.page:
                             continue
                         
                         status_encontrado = 'Pendente'
-                        # Verifica se a palavra 'pago' existe em qualquer célula da linha deste cartão
-                        for celula in linha:
-                            if celula and 'pago' in str(celula).strip().lower():
-                                status_encontrado = 'Pago'
-                                break
+                        # Verifica especificamente a Coluna G (índice 6) ou varre a partir da coluna 2 para frente
+                        if len(linha) > 6 and str(linha[6]).strip().lower() in ['pago', 'quitado', 'paga']:
+                            status_encontrado = 'Pago'
+                        else:
+                            # Varre as colunas após o nome e valor (evitando pegar o nome do banco)
+                            for celula in linha[2:]:
+                                if celula and str(celula).strip().lower() in ['pago', 'quitado', 'paga']:
+                                    status_encontrado = 'Pago'
+                                    break
                         
                         dict_status_atual[c_nome.lower()] = status_encontrado
         except:
