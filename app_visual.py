@@ -1755,8 +1755,14 @@ if "💰" in st.session_state.page:
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
-    # Identifica qual mês está selecionado atualmente na tela
-    mes_atual_tela = str(st.session_state.get('mes_selecionado', 'Agosto')).capitalize()
+   
+    # Identifica o mês selecionado na tela de forma inteligente
+    mes_atual_tela = str(
+        st.session_state.get('mes_selecionado') or 
+        st.session_state.get('mes') or 
+        st.session_state.get('mes_atual') or 
+        'Setembro'
+    ).capitalize()
     
     # CONTROLE CENTRALIZADO POR MÊS: Definido de forma isolada e explícita
     status_por_mes = {
