@@ -1704,9 +1704,18 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (LÓGICA DIRETA E PRECISA)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (MAPEAMENTO OFICIAL)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
+        
+        # Dicionário oficial de mapeamento entre o gráfico e a planilha de lançamentos
+        mapeamento_cartoes = {
+            "Mastercard - Inter": "Inter",
+            "Mastercard - 8112": "8112",
+            "Visa Gold - 0132": "0132",
+            "Visa - Mercado Pago": "Mercado Pago",
+            "Itau - Golden": "Golden"
+        }
         
         # Dicionário de metas
         if 'dict_metas_cartoes' not in st.session_state:
@@ -1785,7 +1794,7 @@ if "💰" in st.session_state.page:
 
     status_cartoes_mes = {}
     
-    # REGRA 1: Absolutamente TODOS os cartões começam estritamente como "Pendente"
+    # REGRA: Absolutamente TODOS os cartões começam estritamente como "Pendente"
     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
         status_cartoes_mes[limpar_texto(cartao_grafico)] = "Pendente"
 
@@ -1813,29 +1822,15 @@ if "💰" in st.session_state.page:
                         if pertence_ao_mes:
                             is_pago = "pag" in limpar_texto(status_val)
                             
-                            # Se a linha está paga, verifica qual cartão do gráfico corresponde exatamente a ela
                             if is_pago:
                                 for cartao_grafico in df_cartoes_graph['Nome do Banco']:
                                     c_graf_limpo = limpar_texto(cartao_grafico)
                                     
-                                    # Extrai identificadores numéricos ou nomes específicos do cartão
-                                    match_encontrado = False
+                                    # Obtém o termo curto correspondente baseado no mapeamento oficial
+                                    termo_curto = limpar_texto(mapeamento_cartoes.get(cartao_grafico, cartao_grafico))
                                     
-                                    if "8112" in c_graf_limpo and "8112" in texto_linha:
-                                        match_encontrado = True
-                                    elif "0132" in c_graf_limpo and "0132" in texto_linha:
-                                        match_encontrado = True
-                                    elif ("golden" in c_graf_limpo or "itau" in c_graf_limpo) and "golden" in texto_linha and "0132" not in texto_linha and "8112" not in texto_linha:
-                                        match_encontrado = True
-                                    else:
-                                        # Para outros cartões, verifica se as palavras principais do nome aparecem na linha
-                                        palavras = [p for p in c_graf_limpo.split() if len(p) > 2 and p not in {'visa', 'mastercard', 'cartao', 'banco'}]
-                                        if palavras and all(p in texto_linha for p in palavras):
-                                            # Garante que não vai capturar acidentalmente se a linha pertencer a outro cartão conhecido
-                                            if not any(num in texto_linha for num in ['8112', '0132']):
-                                                match_encontrado = True
-
-                                    if match_encontrado:
+                                    # Verifica se o nome curto do cartão aparece na linha de lançamento paga
+                                    if termo_curto and termo_curto in texto_linha:
                                         status_cartoes_mes[c_graf_limpo] = "Pago"
     except Exception as e:
         pass
