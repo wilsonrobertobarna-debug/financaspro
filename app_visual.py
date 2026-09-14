@@ -2112,7 +2112,7 @@ else:
     else:
         st.warning("A base de dados `df_m_limpo` está vazia para este mês.")
 
-elif "Pendências" in aba:
+ elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")        
 # --- FILTROS UNIFICADOS ---
     c1, c2, c3, c4 = st.columns(4)
