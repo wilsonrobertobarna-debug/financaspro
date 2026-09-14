@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (MAPEAMENTO EXATO)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (VALIDAÇÃO POR MÊS ATIVO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1762,13 +1762,13 @@ if "💰" in st.session_state.page:
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
         return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").split())
 
-    # Dicionário mapeando exatamente os nomes dos cartões aos termos exatos que constam na Coluna F da planilha
+    # Termos únicos para cada cartão
     termos_cartoes = {
-        "Mastercard - Inter": ["cartao mastercard inter", "mastercard inter", "inter"],
-        "Mastercard - 8112": ["cartao mastercard 8112", "mastercard 8112", "8112"],
-        "Visa Gold - 0132": ["cartao visa gold 0132", "visa gold 0132", "0132"],
-        "Visa - Mercado Pago": ["cartao visa mercado pago", "visa mercado pago", "mercado pago", "mercadopago"],
-        "Itau - Golden": ["cartao itau gold", "cartao itau golden", "itau golden", "itau gold"]
+        "Mastercard - Inter": "inter",
+        "Mastercard - 8112": "8112",
+        "Visa Gold - 0132": "0132",
+        "Visa - Mercado Pago": "mercado pago",
+        "Itau - Golden": "itau"
     }
 
     status_cartoes_mes = {}
@@ -1776,15 +1776,17 @@ if "💰" in st.session_state.page:
         status_cartoes_mes[cartao_grafico] = "Pendente"
 
     try:
-        linhas_mes_origem = []
+        # Pega as linhas exatas do mês que estão ativas na tela (mesmo filtro do topo)
+        linhas_mes_ativo = []
         if 'dados_filtrados_mes' in locals() and dados_filtrados_mes:
-            linhas_mes_origem = dados_filtrados_mes
+            linhas_mes_ativo = dados_filtrados_mes
         elif 'df_filtrado' in locals() and hasattr(df_filtrado, 'values'):
-            linhas_mes_origem = df_filtrado.values.tolist()
+            linhas_mes_ativo = df_filtrado.values.tolist()
         elif 'df_mes' in locals() and hasattr(df_mes, 'values'):
-            linhas_mes_origem = df_mes.values.tolist()
+            linhas_mes_ativo = df_mes.values.tolist()
 
-        if not linhas_mes_origem:
+        # Se não houver variáveis locais de filtro, lemos a planilha filtrando estritamente pelo mês ativo na sessão
+        if not linhas_mes_ativo:
             ws_lancamentos = None
             for aba in sh.worksheets():
                 if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
@@ -1795,22 +1797,25 @@ if "💰" in st.session_state.page:
 
             if ws_lancamentos:
                 dados_lanc = ws_lancamentos.get_all_values()
-                mes_atual_tela = limpar_texto(str(st.session_state.get('mes_selecionado') or st.session_state.get('mes') or 'setembro'))
+                mes_selecionado_str = limpar_texto(str(st.session_state.get('mes_selecionado') or st.session_state.get('mes') or 'setembro'))
+                
                 meses_map = {'janeiro': '01', 'fevereiro': '02', 'marco': '03', 'abril': '04', 'maio': '05', 'junho': '06', 'julho': '07', 'agosto': '08', 'setembro': '09', 'outubro': '10', 'novembro': '11', 'dezembro': '12'}
-                num_mes = meses_map.get(mes_atual_tela, '09')
+                num_mes_alvo = meses_map.get(mes_selecionado_str, '09')
 
                 for linha in dados_lanc[1:]:
                     if len(linha) >= 7:
                         data_str = str(linha[0]).strip()
                         partes = data_str.replace('-', '/').replace('.', '/').split('/')
                         mes_linha = partes[1] if len(partes) >= 2 else ""
-                        if mes_linha == num_mes or mes_atual_tela in limpar_texto(" ".join(str(c) for c in linha)):
-                            linhas_mes_origem.append(linha)
+                        if mes_linha == num_mes_alvo:
+                            linhas_mes_ativo.append(linha)
 
-        if linhas_mes_origem:
-            status_por_cartao = {c: {"encontrou": False, "todos_pagos": True} for c in df_cartoes_graph['Nome do Banco']}
+        # Processa apenas as linhas pertencentes ao mês ativo da tela
+        if linhas_mes_ativo:
+            # Dicionário para rastrear o estado de cada cartão no mês: {cartao: [lista de booleanos de pagamento]}
+            rastreio_mes = {c: [] for c in df_cartoes_graph['Nome do Banco']}
             
-            for linha in linhas_mes_origem:
+            for linha in linhas_mes_ativo:
                 if hasattr(linha, 'tolist'):
                     linha = linha.tolist()
                 elif not isinstance(linha, (list, tuple)):
@@ -1822,15 +1827,13 @@ if "💰" in st.session_state.page:
                     is_pago = "pag" in limpar_texto(status_val)
                     
                     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                        chaves_permitidas = termos_cartoes.get(cartao_grafico, [limpar_texto(cartao_grafico)])
-                        
-                        if any(chave in banco_linha for chave in chaves_permitidas):
-                            status_por_cartao[cartao_grafico]["encontrou"] = True
-                            if not is_pago:
-                                status_por_cartao[cartao_grafico]["todos_pagos"] = False
+                        termo = termos_cartoes.get(cartao_grafico, "")
+                        if termo and termo in banco_linha:
+                            rastreio_mes[cartao_grafico].append(is_pago)
 
-            for cartao_grafico, info in status_por_cartao.items():
-                if info["encontrou"] and info["todos_pagos"]:
+            # Define o status do mês: só fica Pago se houver lançamentos E todos estiverem pagos
+            for cartao_grafico, lista_pagamentos in rastreio_mes.items():
+                if lista_pagamentos and all(lista_pagamentos):
                     status_cartoes_mes[cartao_grafico] = "Pago"
                 else:
                     status_cartoes_mes[cartao_grafico] = "Pendente"
