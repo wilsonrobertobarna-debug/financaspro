@@ -1703,19 +1703,22 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle]
             
-# =========================================================================
+    # =========================================================================
         # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (MAPEAMENTO SEGURO E DIRETO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
-        # Garante que a sessão existe
+        # Garante que as sessões existem
         if 'dict_metas_cartoes' not in st.session_state:
             st.session_state['dict_metas_cartoes'] = {}
+        if 'dict_status_cartoes' not in st.session_state:
+            st.session_state['dict_status_cartoes'] = {}
 
         dict_metas = st.session_state['dict_metas_cartoes']
+        dict_status = st.session_state['dict_status_cartoes']
 
-        # Se por algum motivo a sessão estiver vazia, tenta puxar direto do Sheets uma única vez para o dicionário inteiro
-        if not dict_metas:
+        # Se por algum motivo a sessão estiver vazia, puxa direto do Sheets (Metas e Coluna G para Status)
+        if not dict_metas or not dict_status:
             try:
                 ws_metas = sh.worksheet("Metas_Cartoes")
                 dados_metas = ws_metas.get_all_values()
@@ -1732,6 +1735,13 @@ if "💰" in st.session_state.page:
                                 dict_metas[c_nome] = float(c_val_str)
                             except:
                                 pass
+                            
+                            # Captura o Status da Coluna G (índice 6) com segurança
+                            if len(linha) > 6:
+                                c_status = str(linha[6]).strip()
+                                dict_status[c_nome] = c_status if c_status else 'Pendente'
+                            else:
+                                dict_status[c_nome] = 'Pendente'
             except:
                 pass
 
@@ -1762,10 +1772,10 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # Define o status padrão como Pendente, mas força 'Pago' para o Visa Gold - 0132
-        status_fatura = 'Pendente'
-        if 'visa gold' in str(cartao_nome).lower() or '0132' in str(cartao_nome):
-            status_fatura = 'Pago'
+        # Puxa o status real mapeado da Coluna G do Sheets
+        status_fatura = dict_status.get(cartao_nome, 'Pendente')
+        if not status_fatura or str(status_fatura).strip() == '':
+            status_fatura = 'Pendente'
 
         # Define a cor do selo de status
         if status_fatura.lower() == 'pago':
@@ -1804,7 +1814,7 @@ if "💰" in st.session_state.page:
             )
     else:
         if df_cartoes_graph.empty:
-            st.info("Nenhum lançamento encontrado para os cartões neste mês.") 
+            st.info("Nenhum lançamento encontrado para os cartões neste mês.")
             
      # =========================================================================
      # =========================================================================
