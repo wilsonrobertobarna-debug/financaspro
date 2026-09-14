@@ -1762,19 +1762,30 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # BUSCA SEGURA NA TABELA DE METAS/CARTÕES ORIGINAL
+        # BUSCA INFALÍVEL: Varre todos os campos da linha do cartão procurando a palavra "pago"
         status_fatura = 'Pendente'
-        try:
-            # Procura na base de metas/cartões o status correspondente a este banco no mês atual
-            if 'df_metas_cartoes' in locals() and not df_metas_cartoes.empty:
-                match = df_metas_cartoes[df_metas_cartoes['Nome do Banco'] == cartao_nome]
-                if not match.empty:
-                    # Tenta ler a coluna de status (seja 'Status' ou na coluna G / índice 6)
-                    val = str(match.iloc[0].get('Status', match.iloc[0].iloc[6] if len(match.iloc[0]) > 6 else 'Pendente')).strip()
-                    if val.lower() == 'pago':
-                        status_fatura = 'Pago'
-        except Exception:
-            pass
+        
+        # 1. Procura na própria linha do gráfico
+        for val in row.values:
+            if isinstance(val, str) and 'pago' in val.strip().lower():
+                status_fatura = 'Pago'
+                break
+                
+        # 2. Se não achou, procura na base geral de metas/cartões do app
+        if status_fatura == 'Pendente':
+            for nome_df in ['df_metas_cartoes', 'df_cartoes', 'df_metas']:
+                if nome_df in locals() and not df_metas_cartoes.empty:
+                    df_aux = locals()[nome_df]
+                    match = df_aux[df_aux.astype(str).apply(lambda x: x.str.contains(cartao_nome, case=False).any(), axis=1)]
+                    for _, m_row in match.iterrows():
+                        for val in m_row.values:
+                            if isinstance(val, str) and 'pago' in val.strip().lower():
+                                status_fatura = 'Pago'
+                                break
+                        if status_fatura == 'Pago':
+                            break
+                if status_fatura == 'Pago':
+                    break
 
         # Define a cor do selo de status
         if status_fatura.lower() == 'pago':
@@ -1813,7 +1824,7 @@ if "💰" in st.session_state.page:
             )
     else:
         if df_cartoes_graph.empty:
-            st.info("Nenhum lançamento encontrado para os cartões neste mês.")      
+            st.info("Nenhum lançamento encontrado para os cartões neste mês.")  
             
      # =========================================================================
      # =========================================================================
