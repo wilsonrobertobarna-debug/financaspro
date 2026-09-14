@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (MODO DIAGNÓSTICO VISUAL)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (FILTRANDO POR MÊS + F & G)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1762,7 +1762,7 @@ if "💰" in st.session_state.page:
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
         return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").split())
 
-    # Mapeamento limpo baseado nos identificadores únicos de cada cartão
+    # Mapeamento exato dos termos na Coluna F (índice 5)
     termos_cartoes = {
         "Mastercard - Inter": "inter",
         "Mastercard - 8112": "8112",
@@ -1772,79 +1772,78 @@ if "💰" in st.session_state.page:
     }
 
     status_cartoes_mes = {}
-    detalhes_status = {}
+    detalhes_diagnostico = {}
 
     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
         status_cartoes_mes[cartao_grafico] = "Pendente"
-        detalhes_status[cartao_grafico] = {"total_linhas": 0, "pagos": 0, "pendentes": 0}
+        detalhes_diagnostico[cartao_grafico] = {"linhas_mes": 0, "pagos": 0, "pendentes": 0}
 
     try:
-        # Recupera as linhas do mês ativo na aplicação
-        linhas_mes_ativo = []
-        if 'dados_filtrados_mes' in locals() and dados_filtrados_mes:
-            linhas_mes_ativo = dados_filtrados_mes
-        elif 'df_filtrado' in locals() and hasattr(df_filtrado, 'values'):
-            linhas_mes_ativo = df_filtrado.values.tolist()
-        elif 'df_mes' in locals() and hasattr(df_mes, 'values'):
-            linhas_mes_ativo = df_mes.values.tolist()
+        # Descobre qual é o mês selecionado atualmente na tela
+        mes_selecionado_str = limpar_texto(
+            str(st.session_state.get('mes_selecionado') or 
+                st.session_state.get('mes') or 
+                st.session_state.get('mes_atual') or 
+                'setembro')
+        )
+        
+        meses_map = {
+            'janeiro': '01', 'fevereiro': '02', 'marco': '03', 'abril': '04',
+            'maio': '05', 'junho': '06', 'julho': '07', 'agosto': '08',
+            'setembro': '09', 'outubro': '10', 'novembro': '11', 'dezembro': '12'
+        }
+        
+        num_mes_alvo = meses_map.get(mes_selecionado_str, '09')
 
-        if not linhas_mes_ativo:
-            ws_lancamentos = None
-            for aba in sh.worksheets():
-                if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
-                    ws_lancamentos = aba
-                    break
-            if not ws_lancamentos:
-                ws_lancamentos = sh.worksheet("LANÇAMENTOS")
+        ws_lancamentos = None
+        for aba in sh.worksheets():
+            if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
+                ws_lancamentos = aba
+                break
+        if not ws_lancamentos:
+            ws_lancamentos = sh.worksheet("LANÇAMENTOS")
 
-            if ws_lancamentos:
-                dados_lanc = ws_lancamentos.get_all_values()
-                mes_selecionado_str = limpar_texto(str(st.session_state.get('mes_selecionado') or st.session_state.get('mes') or 'setembro'))
-                
-                meses_map = {'janeiro': '01', 'fevereiro': '02', 'marco': '03', 'abril': '04', 'maio': '05', 'junho': '06', 'julho': '07', 'agosto': '08', 'setembro': '09', 'outubro': '10', 'novembro': '11', 'dezembro': '12'}
-                num_mes_alvo = meses_map.get(mes_selecionado_str, '09')
-
+        if ws_lancamentos:
+            dados_lanc = ws_lancamentos.get_all_values()
+            # Começa da linha 2 (índice 1), pulando o cabeçalho
+            if len(dados_lanc) > 1:
                 for linha in dados_lanc[1:]:
                     if len(linha) >= 7:
+                        # Coluna A (Data) = índice 0 -> extrai o mês da data
                         data_str = str(linha[0]).strip()
-                        partes = data_str.replace('-', '/').replace('.', '/').split('/')
-                        mes_linha = partes[1] if len(partes) >= 2 else ""
-                        if mes_linha == num_mes_alvo:
-                            linhas_mes_ativo.append(linha)
+                        partes_data = data_str.replace('-', '/').replace('.', '/').split('/')
+                        mes_da_linha = partes_data[1] if len(partes_data) >= 2 else ""
+                        
+                        # Processa apenas se a linha pertencer estritamente ao mês selecionado na tela
+                        if mes_da_linha == num_mes_alvo:
+                            banco_col_f = limpar_texto(linha[5])  # Coluna F (índice 5) = Banco
+                            status_col_g = limpar_texto(linha[6]) # Coluna G (índice 6) = Status
+                            
+                            is_pago = "pag" in status_col_g
 
-        if linhas_mes_ativo:
-            for linha in linhas_mes_ativo:
-                if hasattr(linha, 'tolist'):
-                    linha = linha.tolist()
-                elif not isinstance(linha, (list, tuple)):
-                    continue
-                
-                if len(linha) >= 7:
-                    banco_linha = limpar_texto(str(linha[5])) if len(linha) > 5 else ""
-                    status_val = str(linha[6]).strip()
-                    is_pago = "pag" in limpar_texto(status_val)
-                    
-                    for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                        termo = termos_cartoes.get(cartao_grafico, "")
-                        if termo and termo in banco_linha:
-                            detalhes_status[cartao_grafico]["total_linhas"] += 1
-                            if is_pago:
-                                detalhes_status[cartao_grafico]["pagos"] += 1
-                            else:
-                                detalhes_status[cartao_grafico]["pendentes"] += 1
+                            for cartao_grafico in df_cartoes_graph['Nome do Banco']:
+                                termo_chave = termos_cartoes.get(cartao_grafico, "")
+                                
+                                if termo_chave and termo_chave in banco_col_f:
+                                    detalhes_diagnostico[cartao_grafico]["linhas_mes"] += 1
+                                    if is_pago:
+                                        detalhes_diagnostico[cartao_grafico]["pagos"] += 1
+                                    else:
+                                        detalhes_diagnostico[cartao_grafico]["pendentes"] += 1
 
-            # Regra de validação: Se encontrou lançamentos e todos estão pagos -> Pago, caso contrário -> Pendente
-            for cartao_grafico, info in detalhes_status.items():
-                if info["total_linhas"] > 0 and info["pendentes"] == 0 and info["pagos"] > 0:
-                    status_cartoes_mes[cartao_grafico] = "Pago"
-                else:
-                    status_cartoes_mes[cartao_grafico] = "Pendente"
+                # Regra final: se encontrou lançamentos no mês e todos estão pagos -> "Pago", senão -> "Pendente"
+                for cartao_grafico, info in detalhes_diagnostico.items():
+                    if info["linhas_mes"] > 0 and info["pendentes"] == 0 and info["pagos"] > 0:
+                        status_cartoes_mes[cartao_grafico] = "Pago"
+                    else:
+                        status_cartoes_mes[cartao_grafico] = "Pendente"
     except Exception as e:
         pass
 
-    # Exibe um painel discreto mostrando o que o sistema leu para cada cartão neste mês
-    with st.expander("📊 [Painel de Diagnóstico] Leitura de Faturas do Mês"):
-        st.json(detalhes_status)
+    # Painel para conferirmos a leitura do mês ativo nas colunas F e G
+    with st.expander("🔍 [Depuração F & G por Mês]"):
+        st.write(f"Mês Alvo: {num_mes_alvo}")
+        st.write(detalhes_diagnostico)
 
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = str(row['Nome do Banco']).strip()
