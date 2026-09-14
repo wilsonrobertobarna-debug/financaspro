@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (LÓGICA INVERTIDA SEGURA)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (FILTRADO POR MÊS ATIVO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1773,37 +1773,66 @@ if "💰" in st.session_state.page:
 
     status_cartoes_mes = {}
     
-    # Inicializa todos como "Pago" por padrão
+    # Inicializa todos como "Pago" por padrão para o mês ativo
     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
         status_cartoes_mes[cartao_grafico] = "Pago"
 
     try:
-        ws_lancamentos = None
-        for aba in sh.worksheets():
-            if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
-                ws_lancamentos = aba
-                break
-        if not ws_lancamentos:
-            ws_lancamentos = sh.worksheet("LANÇAMENTOS")
+        # Pega exatamente as linhas que o seu app já filtrou para o mês atual na tela
+        linhas_mes_ativo = []
+        if 'dados_filtrados_mes' in locals() and dados_filtrados_mes:
+            linhas_mes_ativo = dados_filtrados_mes
+        elif 'df_filtrado' in locals() and hasattr(df_filtrado, 'values'):
+            linhas_mes_ativo = df_filtrado.values.tolist()
+        elif 'df_mes' in locals() and hasattr(df_mes, 'values'):
+            linhas_mes_ativo = df_mes.values.tolist()
 
-        if ws_lancamentos:
-            dados_lanc = ws_lancamentos.get_all_values()
-            
-            # Começa da linha 2 (índice 1), pulando o cabeçalho
-            if len(dados_lanc) > 1:
-                for linha in dados_lanc[1:]:
-                    if len(linha) >= 7:
-                        banco_col_f = limpar_texto(linha[5])  # Coluna F (índice 5) = Banco
-                        status_col_g = limpar_texto(linha[6]) # Coluna G (índice 6) = Status
-                        
-                        # Se a coluna G contiver termos indicando pendência (ou não estiver paga)
-                        is_pendente = "pend" in status_col_g or not status_col_g or "abert" in status_col_g
+        # Se por acaso a variável local não estiver acessível aqui, lemos direto da planilha filtrando pelo mês da tela
+        if not linhas_mes_ativo:
+            ws_lancamentos = None
+            for aba in sh.worksheets():
+                if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
+                    ws_lancamentos = aba
+                    break
+            if not ws_lancamentos:
+                ws_lancamentos = sh.worksheet("LANÇAMENTOS")
 
-                        for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                            termo = termos_cartoes.get(cartao_grafico, "")
-                            if termo and termo in banco_col_f:
-                                if is_pendente:
-                                    status_cartoes_mes[cartao_grafico] = "Pendente"
+            if ws_lancamentos:
+                dados_lanc = ws_lancamentos.get_all_values()
+                mes_selecionado_str = limpar_texto(str(st.session_state.get('mes_selecionado') or st.session_state.get('mes') or 'setembro'))
+                
+                meses_map = {'janeiro': '01', 'fevereiro': '02', 'marco': '03', 'abril': '04', 'maio': '05', 'junho': '06', 'julho': '07', 'agosto': '08', 'setembro': '09', 'outubro': '10', 'novembro': '11', 'dezembro': '12'}
+                num_mes_alvo = meses_map.get(mes_selecionado_str, '09')
+
+                if len(dados_lanc) > 1:
+                    for linha in dados_lanc[1:]:
+                        if len(linha) >= 7:
+                            data_str = str(linha[0]).strip()
+                            partes = data_str.replace('-', '/').replace('.', '/').split('/')
+                            mes_linha = partes[1] if len(partes) >= 2 else ""
+                            if mes_linha == num_mes_alvo:
+                                linhas_mes_ativo.append(linha)
+
+        # Processa estritamente as linhas do mês ativo
+        if linhas_mes_ativo:
+            for linha in linhas_mes_ativo:
+                if hasattr(linha, 'tolist'):
+                    linha = linha.tolist()
+                elif not isinstance(linha, (list, tuple)):
+                    continue
+                
+                if len(linha) >= 7:
+                    banco_col_f = limpar_texto(linha[5])  # Coluna F (índice 5) = Banco
+                    status_col_g = limpar_texto(linha[6]) # Coluna G (índice 6) = Status
+                    
+                    # Se houver indicação de pendência na Coluna G para este mês
+                    is_pendente = "pend" in status_col_g or "abert" in status_col_g
+
+                    for cartao_grafico in df_cartoes_graph['Nome do Banco']:
+                        termo = termos_cartoes.get(cartao_grafico, "")
+                        if termo and termo in banco_col_f:
+                            if is_pendente:
+                                status_cartoes_mes[cartao_grafico] = "Pendente"
     except Exception as e:
         pass
 
