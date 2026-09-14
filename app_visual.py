@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (CRUZAMENTO EXATO POR CARTÃO E MÊS)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (COMPARAÇÃO EXATA NA COLUNA A)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1767,7 +1767,8 @@ if "💰" in st.session_state.page:
         if not txt:
             return ""
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
-        return sem_acento.lower().replace("-", " ").replace("/", " ").replace("cartao", "").strip()
+        # Remove hífens, barras e espaços duplicados para padronizar perfeitamente
+        return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").replace("cartao", "").split())
 
     mes_limpo = limpar_texto(mes_atual_tela)
     
@@ -1791,7 +1792,6 @@ if "💰" in st.session_state.page:
         if k in mes_limpo or mes_limpo in k:
             termos_mes.extend(v)
 
-    # Dicionário que armazenará o status exato encontrado para cada cartão no mês atual
     status_cartoes_mes = {}
     
     try:
@@ -1812,27 +1812,26 @@ if "💰" in st.session_state.page:
                         status_val = str(linha[6]).strip() # Coluna G = Status
                         linha_texto = limpar_texto(" ".join([str(c) for c in linha]))
                         
-                        # 1. Garante que a linha pertence estritamente ao mês selecionado na tela
+                        # 1. Verifica se a linha pertence estritamente ao mês selecionado na tela
                         pertence_ao_mes = any(termo in linha_texto for termo in termos_mes)
                         
                         if pertence_ao_mes:
-                            # 2. Varre as colunas iniciais (A até F) para capturar o nome do cartão daquela linha específica
-                            for celula in linha[:6]:
-                                celula_txt = str(celula).strip()
-                                if len(celula_txt) > 2:
-                                    cartao_lido_limpo = limpar_texto(celula_txt)
+                            # 2. Pega o nome do cartão estritamente na primeira coluna (Coluna A, índice 0) onde fica o banco/cartão
+                            cartao_celula = str(linha[0]).strip()
+                            if cartao_celula:
+                                cartao_lido_limpo = limpar_texto(cartao_celula)
+                                
+                                # Compara com os cartões ativos no gráfico
+                                for cartao_grafico in df_cartoes_graph['Nome do Banco']:
+                                    c_graf_limpo = limpar_texto(cartao_grafico)
                                     
-                                    # Compara com cada cartão ativo no seu painel
-                                    for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                                        c_graf_limpo = limpar_texto(cartao_grafico)
-                                        
-                                        # Match exato ou contido (ex: "itau golden" confere com "itau - golden")
-                                        if c_graf_limpo == cartao_lido_limpo or c_graf_limpo in cartao_lido_limpo or cartao_lido_limpo in c_graf_limpo:
-                                            is_pago = "pag" in limpar_texto(status_val)
-                                            if is_pago:
-                                                status_cartoes_mes[c_graf_limpo] = "Pago"
-                                            elif c_graf_limpo not in status_cartoes_mes:
-                                                status_cartoes_mes[c_graf_limpo] = "Pendente"
+                                    # Validação restrita: os nomes limpos devem ser idênticos (ex: "itau golden" == "itau golden")
+                                    if c_graf_limpo == cartao_lido_limpo:
+                                        is_pago = "pag" in limpar_texto(status_val)
+                                        if is_pago:
+                                            status_cartoes_mes[c_graf_limpo] = "Pago"
+                                        elif c_graf_limpo not in status_cartoes_mes:
+                                            status_cartoes_mes[c_graf_limpo] = "Pendente"
     except Exception as e:
         pass
 
@@ -1842,8 +1841,6 @@ if "💰" in st.session_state.page:
         meta_teto = row['Meta']
         
         cartao_limpo = limpar_texto(cartao_nome)
-        
-        # Pega o status mapeado especificamente para este cartão neste mês; se não houver registro, assume Pendente
         status_fatura = status_cartoes_mes.get(cartao_limpo, "Pendente")
 
         if status_fatura == 'Pago':
