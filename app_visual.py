@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (COM CICLO DE FATURA F & V)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (INTEGRADO AO MÊS ATIVO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1756,131 +1756,64 @@ if "💰" in st.session_state.page:
     cols_status = st.columns(len(lista_cartoes_controle))
     
     import unicodedata
-    from datetime import datetime, timedelta
-
     def limpar_texto(txt):
         if not txt:
             return ""
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
         return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").split())
 
-    # Regras de Fechamento (F) e Vencimento (V) informadas por você
-    regras_cartoes = {
-        "Mastercard - Inter": {"f": 14, "v": 20, "termos": ["inter"]},
-        "Mastercard - 8112": {"f": 15, "v": 21, "termos": ["8112"]},
-        "Visa Gold - 0132": {"f": 5, "v": 11, "termos": ["0132", "visa gold"]},
-        "Visa - Mercado Pago": {"f": 18, "v": 3, "termos": ["mercado pago", "visa mercado"]},
-        "Itau - Golden": {"f": 19, "v": 26, "termos": ["itau", "golden"]}
+    # Termos exatos para a Coluna F (índice 5)
+    termos_cartoes = {
+        "Mastercard - Inter": ["inter"],
+        "Mastercard - 8112": ["8112"],
+        "Visa Gold - 0132": ["0132"],
+        "Visa - Mercado Pago": ["mercado pago"],
+        "Itau - Golden": ["itau", "golden"]
     }
 
     status_cartoes_mes = {}
     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
         status_cartoes_mes[cartao_grafico] = "Pendente"
 
-    auditoria_faturas = []
+    auditoria_status = []
 
     try:
-        # Identifica o mês e ano ativos na sessão
-        mes_ativo = "setembro"
-        for k in ['mes_selecionado', 'mes', 'mes_atual', 'selected_month']:
-            if k in st.session_state and st.session_state[k]:
-                mes_ativo = str(st.session_state[k]).strip().lower()
-                break
-        
-        meses_map = {
-            'janeiro': 1, 'fevereiro': 2, 'marco': 3, 'abril': 4,
-            'maio': 5, 'junho': 6, 'julho': 7, 'agosto': 8,
-            'setembro': 9, 'outubro': 10, 'novembro': 11, 'dezembro': 12
-        }
-        num_mes_alvo = meses_map.get(mes_ativo, 9)
-        
-        ano_alvo = 2026
-        for k in ['ano_selecionado', 'ano', 'selected_year']:
-            if k in st.session_state and st.session_state[k]:
-                try:
-                    ano_alvo = int(st.session_state[k])
-                    break
-                except:
-                    pass
+        # Pega as linhas filtradas que o aplicativo já usou para montar os gráficos do mês
+        linhas_mes_ativo = []
+        if 'dados_filtrados_mes' in locals() and dados_filtrados_mes:
+            linhas_mes_ativo = dados_filtrados_mes
+        elif 'df_filtrado' in locals() and hasattr(df_filtrado, 'values'):
+            linhas_mes_ativo = df_filtrado.values.tolist()
+        elif 'df_mes' in locals() and hasattr(df_mes, 'values'):
+            linhas_mes_ativo = df_mes.values.tolist()
 
-        ws_lancamentos = None
-        for aba in sh.worksheets():
-            if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
-                ws_lancamentos = aba
-                break
-        if not ws_lancamentos:
-            ws_lancamentos = sh.worksheet("LANÇAMENTOS")
+        registro_faturas = {cartao: [] for cartao in df_cartoes_graph['Nome do Banco']}
 
-        if ws_lancamentos:
-            dados_lanc = ws_lancamentos.get_all_values()
-            registro_faturas = {cartao: [] for cartao in df_cartoes_graph['Nome do Banco']}
-            
-            if len(dados_lanc) > 1:
-                for idx_linha, linha in enumerate(dados_lanc[1:], start=2):
-                    if len(linha) >= 7:
-                        data_str = str(linha[0]).strip()
-                        if not data_str:
-                            continue
-                        
-                        # Tenta converter a data da Coluna A
-                        data_dt = None
-                        for fmt in ('%d/%m/%Y', '%Y-%m-%d', '%d-%m-%Y', '%d/%m/%y'):
-                            try:
-                                data_dt = datetime.strptime(data_str[:10].replace('.', '/').replace('-', '/'), fmt)
-                                break
-                            except:
-                                pass
-                        
-                        if not data_dt:
-                            continue
+        if linhas_mes_ativo:
+            for linha in linhas_mes_ativo:
+                if hasattr(linha, 'tolist'):
+                    linha = linha.tolist()
+                elif not isinstance(linha, (list, tuple)):
+                    continue
+                
+                if len(linha) >= 7:
+                    banco_col_f = limpar_texto(linha[5])  # Coluna F (índice 5) = Banco
+                    status_col_g = limpar_texto(linha[6]) # Coluna G (índice 6) = Status
+                    
+                    is_pago = "pag" in status_col_g
 
-                        banco_col_f = limpar_texto(linha[5])  # Coluna F = Banco
-                        status_col_g = limpar_texto(linha[6]) # Coluna G = Status
-                        is_pago = "pag" in status_col_g
+                    for cartao_grafico in df_cartoes_graph['Nome do Banco']:
+                        possiveis_termos = termos_cartoes.get(cartao_grafico, [])
+                        if any(termo in banco_col_f for termo in possiveis_termos):
+                            registro_faturas[cartao_grafico].append(is_pago)
+                            auditoria_status.append({
+                                "Cartão": cartao_grafico,
+                                "Banco Lido (Col F)": str(linha[5]),
+                                "Status Lido (Col G)": str(linha[6]),
+                                "Pago?": is_pago
+                            })
 
-                        for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                            cfg = regras_cartoes.get(cartao_grafico)
-                            if not cfg:
-                                continue
-                            
-                            if not any(termo in banco_col_f for termo in cfg["termos"]):
-                                continue
-
-                            dia_f = cfg["f"]
-                            dia_v = cfg["v"]
-
-                            # Define o intervalo da fatura para o mês/ano alvo com base no fechamento (F)
-                            # Se V > F (ex: Inter F14 V20), o ciclo fecha no mês alvo no dia F.
-                            # Ex: Fatura de Setembro vai de 15/08 a 14/09.
-                            if dia_v > dia_f:
-                                mes_fim = num_mes_alvo
-                                ano_fim = ano_alvo
-                                mes_ini = num_mes_alvo - 1 if num_mes_alvo > 1 else 12
-                                ano_ini = ano_alvo if num_mes_alvo > 1 else ano_alvo - 1
-                            else:
-                                # Se V < F (ex: Mercado Pago F18 V3), o ciclo fecha no mês anterior ao vencimento
-                                mes_fim = num_mes_alvo - 1 if num_mes_alvo > 1 else 12
-                                ano_fim = ano_alvo if num_mes_alvo > 1 else ano_alvo - 1
-                                mes_ini = mes_fim - 1 if mes_fim > 1 else 12
-                                ano_ini = ano_fim if mes_fim > 1 else ano_fim - 1
-
-                            try:
-                                data_inicio = datetime(ano_ini, mes_ini, dia_f) + timedelta(days=1)
-                                data_fim = datetime(ano_fim, mes_fim, dia_f)
-                                
-                                if data_inicio <= data_dt <= data_fim:
-                                    registro_faturas[cartao_grafico].append(is_pago)
-                                    auditoria_faturas.append({
-                                        "Linha": idx_linha,
-                                        "Cartão": cartao_grafico,
-                                        "Data Compra": data_dt.strftime('%d/%m/%Y'),
-                                        "Fatura Ref": f"{num_mes_alvo}/{ano_alvo}",
-                                        "Status": "Pago" if is_pago else "Pendente"
-                                    })
-                            except:
-                                pass
-
-            # Avalia status final de cada cartão
+            # Avalia status final de cada cartão do mês
             for cartao_grafico, lista_status in registro_faturas.items():
                 if lista_status and all(lista_status):
                     status_cartoes_mes[cartao_grafico] = "Pago"
@@ -1889,12 +1822,12 @@ if "💰" in st.session_state.page:
     except Exception as e:
         pass
 
-    # Painel Raio-X opcional para conferir a leitura por competência
-    with st.expander(f"🔍 [Faturas por Ciclo F/V] Mês Ativo: {mes_ativo.upper()}"):
-        if auditoria_faturas:
-            st.dataframe(pd.DataFrame(auditoria_faturas))
+    # Painel Raio-X para conferir o que veio dos dados filtrados do mês
+    with st.expander("🔍 [Raio-X de Status do Mês Ativo]"):
+        if auditoria_status:
+            st.dataframe(pd.DataFrame(auditoria_status))
         else:
-            st.info("Nenhum lançamento encontrado dentro dos ciclos de fechamento para este mês.")
+            st.warning("Nenhum lançamento encontrado nas variáveis filtradas do mês para os cartões.")
 
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = str(row['Nome do Banco']).strip()
