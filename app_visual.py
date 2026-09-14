@@ -1762,24 +1762,31 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-      # BUSCA PRECISA DE STATUS: Olha na base geral do mês (df_m) se há algum registro Pago para este banco
+      # BUSCA PRECISA DE STATUS NA COLUNA G (Índice 6)
         status_fatura = 'Pendente'
         if 'df_m' in locals() and not df_m.empty:
-            # Identifica qual coluna de cartão existe no df_m
+            # Tenta encontrar a coluna pelo nome ou pelo índice da Coluna G (posição 6)
             col_cartao = next((c for c in ['Nome do Banco', 'Cartão', 'Banco'] if c in df_m.columns), None)
+            
             if col_cartao:
                 lancamentos_banco = df_m[df_m[col_cartao] == cartao_nome]
-                if not lancamentos_banco.empty and 'Status' in lancamentos_banco.columns:
-                    tem_pago = lancamentos_banco['Status'].astype(str).str.strip().str.lower().eq('pago').any()
+                if not lancamentos_banco.empty:
+                    # Verifica se existe coluna 'Status' ou pega diretamente pela posição da Coluna G (iloc[:, 6])
+                    if 'Status' in lancamentos_banco.columns:
+                        tem_pago = lancamentos_banco['Status'].astype(str).str.strip().str.lower().eq('pago').any()
+                    else:
+                        # Pega a 7ª coluna (Coluna G) com segurança
+                        tem_pago = lancamentos_banco.iloc[:, 6].astype(str).str.strip().str.lower().eq('pago').any()
+                        
                     if tem_pago:
                         status_fatura = 'Pago'
         
-        # Fallback caso o df_m não esteja no escopo, tenta pegar direto da linha do graph
-        if status_fatura == 'Pendente' and 'Status' in row:
-            val_linha = str(row['Status']).strip().lower()
-            if val_linha == 'pago':
-                status_fatura = 'Pago'
-
+        # Fallback para a linha do gráfico caso venha direto do row
+        if status_fatura == 'Pendente':
+            for col_cand in ['Status', df_cartoes_graph.columns[6] if len(df_cartoes_graph.columns) > 6 else '']:
+                if col_cand and col_cand in row and str(row[col_cand]).strip().lower() == 'pago':
+                    status_fatura = 'Pago'
+                    break
         # Define a cor do selo de status
         if status_fatura.lower() == 'pago':
             cor_status = "#2e7d32" # Verde escuro
