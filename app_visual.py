@@ -1755,41 +1755,57 @@ if "💰" in st.session_state.page:
             )
             
             st.markdown("##### 🚦 Status de Utilização dos Cartões")
-            cols_status = st.columns(len(lista_cartoes_controle))
-            
-            for idx, row in df_cartoes_graph.iterrows():
-                cartao_nome = row['Nome do Banco']
-                gasto_real = row['V_Num']
-                meta_teto = row['Meta']
-                
-                # Captura o status da fatura (Pago/Pendente) vindo da linha, com fallback seguro se não existir
-                status_fatura = row.get('Status', 'Pendente')
-                if pd.isna(status_fatura) or str(status_fatura).strip() == '':
-                    status_fatura = 'Pendente'
-                
-                if meta_teto > 0:
-                    percentual = (gasto_real / meta_teto) * 100
-                else:
-                    percentual = 0.0 if gasto_real == 0 else 100.0
-                
-                if percentual <= 80:
-                    bolinha = "🟢"
-                    status_txt = "OK"
-                elif percentual <= 100:
-                    bolinha = "🟡"
-                    status_txt = "Atenção"
-                else:
-                    bolinha = "🔴"
-                    status_txt = "Tô na lona"
-                
-                with cols_status[idx % len(cols_status)]:
-                    st.metric(
-                        label=cartao_nome,
-                        value=f"R$ {gasto_real:,.2f} ({status_fatura})",
-                        delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
-                    )
+    cols_status = st.columns(len(lista_cartoes_controle))
+    
+    for idx, row in df_cartoes_graph.iterrows():
+        cartao_nome = row['Nome do Banco']
+        gasto_real = row['V_Num']
+        meta_teto = row['Meta']
+        
+        # Captura o status da fatura (Pago/Pendente)
+        status_fatura = str(row.get('Status', 'Pendente')).strip()
+        if not status_fatura or status_fatura.lower() == 'nan':
+            status_fatura = 'Pendente'
+        
+        # Define a cor do selo de status (Verde para Pago, Laranja para Pendente)
+        if status_fatura.lower() == 'pago':
+            cor_status = "#2e7d32" # Verde escuro
+            emoji_status = "✅"
         else:
-            st.info("Nenhum lançamento encontrado para os cartões neste mês.")
+            cor_status = "#d32f2f" # Vermelho/Alaranjado
+            emoji_status = "⏳"
+        
+        if meta_teto > 0:
+            percentual = (gasto_real / meta_teto) * 100
+        else:
+            percentual = 0.0 if gasto_real == 0 else 100.0
+        
+        if percentual <= 80:
+            bolinha = "🟢"
+            status_txt = "OK"
+        elif percentual <= 100:
+            bolinha = "🟡"
+            status_txt = "Atenção"
+        else:
+            bolinha = "🔴"
+            status_txt = "Tô na lona"
+        
+        with cols_status[idx % len(cols_status)]:
+            # Exibe a métrica com o valor principal e o status menor logo abaixo/ao lado estilizado
+            st.metric(
+                label=cartao_nome,
+                value=f"R$ {gasto_real:,.2f}",
+                delta=f"{bolinha} {percentual:.1f}% ({status_txt})"
+            )
+            # Legenda menorzinha e discreta para o Status (Pago/Pendente)
+            st.markdown(
+                f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 10px; color: {cor_status}; font-weight: bold;'>"
+                f"{emoji_status} {status_fatura}"
+                f"</div>", 
+                unsafe_allow_html=True
+            )
+  else:
+      st.info("Nenhum lançamento encontrado para os cartões neste mês.")
             
             
      # =========================================================================
