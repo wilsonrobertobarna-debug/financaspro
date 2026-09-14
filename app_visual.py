@@ -1703,8 +1703,8 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
-     # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (LENDO A ABA DO MÊS CORRETO)
+    # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (LANÇAMENTOS + FILTRO DE MÊS)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1755,7 +1755,7 @@ if "💰" in st.session_state.page:
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
-    # Identifica o mês selecionado atualmente na tela (ex: "Setembro")
+    # Identifica o mês selecionado na tela
     mes_atual_tela = str(
         st.session_state.get('mes_selecionado') or 
         st.session_state.get('mes') or 
@@ -1768,37 +1768,64 @@ if "💰" in st.session_state.page:
         return ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
 
     mes_limpo = remover_acentos(mes_atual_tela)
+    
+    # Mapeamento de meses para números caso a planilha use formato numérico (ex: 09 ou 9)
+    meses_dict = {
+        'janeiro': ['01', '1', 'janeiro', 'jan'],
+        'fevereiro': ['02', '2', 'fevereiro', 'fev'],
+        'marco': ['03', '3', 'marco', 'mar'],
+        'abril': ['04', '4', 'abril', 'abr'],
+        'maio': ['05', '5', 'maio', 'mai'],
+        'junho': ['06', '6', 'junho', 'jun'],
+        'julho': ['07', '7', 'julho', 'jul'],
+        'agosto': ['08', '8', 'agosto', 'ago'],
+        'setembro': ['09', '9', 'setembro', 'set'],
+        'outubro': ['10', '10', 'outubro', 'out'],
+        'novembro': ['11', '11', 'novembro', 'nov'],
+        'dezembro': ['12', '12', 'dezembro', 'dez']
+    }
+    
+    termos_busca_mes = [mes_limpo]
+    for k, v in meses_dict.items():
+        if k in mes_limpo or mes_limpo in k:
+            termos_busca_mes.extend(v)
 
-    # LEITURA INTELIGENTE DA ABA DO MÊS CORRESPONDENTE
+    # LEITURA DA ABA LANÇAMENTOS COM FILTRO INTELIGENTE DE MÊS
     status_faturas_dict = {}
     
     try:
-        lista_abas = sh.worksheets()
-        ws_mes_escolhida = None
-        
-        # Procura a aba que corresponde ao mês selecionado na tela (ex: aba "Setembro")
-        for aba in lista_abas:
-            nome_aba_limpo = remover_acentos(aba.title.lower())
-            if mes_limpo in nome_aba_limpo or nome_aba_limpo in mes_limpo:
-                ws_mes_escolhida = aba
+        ws_lancamentos = None
+        for aba in sh.worksheets():
+            if remover_acentos(aba.title).lower() in ["lancamentos", "lançamentos"]:
+                ws_lancamentos = aba
                 break
         
-        # Se encontrou a aba daquele mês específico, lê os dados dela
-        if ws_mes_escolhida:
-            dados_aba = ws_mes_escolhida.get_all_values()
+        if not ws_lancamentos:
+            ws_lancamentos = sh.worksheet("LANÇAMENTOS")
+
+        if ws_lancamentos:
+            dados_aba = ws_lancamentos.get_all_values()
             if len(dados_aba) > 1:
                 for linha in dados_aba[1:]:
                     if len(linha) >= 7:
                         status_val = str(linha[6]).strip() # Coluna G = Status
-                        for celula in linha[:6]: # Colunas A até F
-                            celula_txt = str(celula).strip()
-                            if celula_txt:
-                                chave = remover_acentos(celula_txt.lower()).replace("cartao", "").strip()
-                                if "pag" in remover_acentos(status_val.lower()):
-                                    status_faturas_dict[chave] = "Pago"
-                                else:
-                                    if chave not in status_faturas_dict:
-                                        status_faturas_dict[chave] = "Pendente"
+                        
+                        # Junta o texto da linha para checar se pertence ao mês selecionado
+                        linha_texto = remover_acentos(" ".join([str(c) for c in linha]).lower())
+                        
+                        # Confere se algum termo do mês atual está presente nesta linha
+                        pertence_ao_mes = any(termo in linha_texto for termo in termos_busca_mes)
+                        
+                        if pertence_ao_mes:
+                            for celula in linha[:6]:
+                                celula_txt = str(celula).strip()
+                                if celula_txt:
+                                    chave = remover_acentos(celula_txt.lower()).replace("cartao", "").strip()
+                                    if "pag" in remover_acentos(status_val.lower()):
+                                        status_faturas_dict[chave] = "Pago"
+                                    else:
+                                        if chave not in status_faturas_dict:
+                                            status_faturas_dict[chave] = "Pendente"
     except Exception as e:
         pass
 
@@ -1810,7 +1837,6 @@ if "💰" in st.session_state.page:
         status_fatura = "Pendente"
         cartao_limpo = remover_acentos(cartao_nome.lower()).replace("cartao", "").strip()
         
-        # Cruza com o status da aba do mês atual
         for c_cadastrado, estado in status_faturas_dict.items():
             if cartao_limpo in c_cadastrado or c_cadastrado in cartao_limpo:
                 if estado == "Pago":
