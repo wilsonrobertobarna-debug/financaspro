@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (COM DIAGNÓSTICO DE LINHAS)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (MAPEAMENTO EXATO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1762,12 +1762,18 @@ if "💰" in st.session_state.page:
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
         return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").split())
 
-    status_cartoes_mes = {}
-    diagnostico_cartoes = {} # Armazena detalhes para inspeção
+    # Dicionário mapeando exatamente os nomes dos cartões aos termos exatos que constam na Coluna F da planilha
+    termos_cartoes = {
+        "Mastercard - Inter": ["cartao mastercard inter", "mastercard inter", "inter"],
+        "Mastercard - 8112": ["cartao mastercard 8112", "mastercard 8112", "8112"],
+        "Visa Gold - 0132": ["cartao visa gold 0132", "visa gold 0132", "0132"],
+        "Visa - Mercado Pago": ["cartao visa mercado pago", "visa mercado pago", "mercado pago", "mercadopago"],
+        "Itau - Golden": ["cartao itau gold", "cartao itau golden", "itau golden", "itau gold"]
+    }
 
+    status_cartoes_mes = {}
     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
         status_cartoes_mes[cartao_grafico] = "Pendente"
-        diagnostico_cartoes[cartao_grafico] = {"pagos": 0, "pendentes": 0, "linhas_encontradas": 0}
 
     try:
         linhas_mes_origem = []
@@ -1802,6 +1808,8 @@ if "💰" in st.session_state.page:
                             linhas_mes_origem.append(linha)
 
         if linhas_mes_origem:
+            status_por_cartao = {c: {"encontrou": False, "todos_pagos": True} for c in df_cartoes_graph['Nome do Banco']}
+            
             for linha in linhas_mes_origem:
                 if hasattr(linha, 'tolist'):
                     linha = linha.tolist()
@@ -1814,28 +1822,20 @@ if "💰" in st.session_state.page:
                     is_pago = "pag" in limpar_texto(status_val)
                     
                     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
-                        nome_cartao_limpo = limpar_texto(cartao_grafico)
-                        palavras_chave = [p for p in nome_cartao_limpo.split() if len(p) > 2 or p.isdigit()]
+                        chaves_permitidas = termos_cartoes.get(cartao_grafico, [limpar_texto(cartao_grafico)])
                         
-                        if nome_cartao_limpo in banco_linha or any(p in banco_linha for p in palavras_chave):
-                            diagnostico_cartoes[cartao_grafico]["linhas_encontradas"] += 1
-                            if is_pago:
-                                diagnostico_cartoes[cartao_grafico]["pagos"] += 1
-                            else:
-                                diagnostico_cartoes[cartao_grafico]["pendentes"] += 1
+                        if any(chave in banco_linha for chave in chaves_permitidas):
+                            status_por_cartao[cartao_grafico]["encontrou"] = True
+                            if not is_pago:
+                                status_por_cartao[cartao_grafico]["todos_pagos"] = False
 
-            for cartao_grafico, info in diagnostico_cartoes.items():
-                # Condição clara: Tem linhas e o número de pagos é igual ao total de linhas encontradas (e maior que 0)
-                if info["linhas_encontradas"] > 0 and info["pendentes"] == 0 and info["pagos"] > 0:
+            for cartao_grafico, info in status_por_cartao.items():
+                if info["encontrou"] and info["todos_pagos"]:
                     status_cartoes_mes[cartao_grafico] = "Pago"
                 else:
                     status_cartoes_mes[cartao_grafico] = "Pendente"
     except Exception as e:
         pass
-
-    # Exibe um painel rápido para vermos o que o código contou em cada cartão
-    with st.expander("🛠️ [Diagnóstico] Contagem de Transações por Cartão neste Mês"):
-        st.write(diagnostico_cartoes)
 
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = str(row['Nome do Banco']).strip()
