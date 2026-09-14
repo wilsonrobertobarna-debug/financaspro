@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (CONTROLE MÊS A MÊS NO CÓDIGO)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (CONTROLE MÊS A MÊS BLINDADO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1753,17 +1753,18 @@ if "💰" in st.session_state.page:
             )
             
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
-    cols_status = st.columns(len(lista_cartoes_controle))
     
-    # Identifica o mês selecionado na tela de forma rigorosa
-    mes_atual_tela = str(
-        st.session_state.get('mes_selecionado') or 
-        st.session_state.get('mes') or 
-        st.session_state.get('mes_atual') or 
-        'Setembro'
-    ).capitalize().strip()
-    
-    # CONTROLE CENTRALIZADO POR MÊS: Definindo explicitamente o que é Pago ou Pendente mês a mês
+    # Tenta capturar o mês de todas as formas possíveis no session_state
+    mes_atual_tela = None
+    for chave_possivel in ['mes_selecionado', 'mes', 'mes_atual', 'selected_month', 'selectbox_mes']:
+        if chave_possivel in st.session_state and st.session_state[chave_possivel]:
+            mes_atual_tela = str(st.session_state[chave_possivel]).capitalize().strip()
+            break
+            
+    if not mes_atual_tela:
+        mes_atual_tela = "Setembro" # Fallback caso nenhuma chave seja encontrada
+
+    # Dicionário centralizado por mês (adicione ou remova "Pago" onde quiser)
     status_por_mes = {
         "Janeiro": {},
         "Fevereiro": {},
@@ -1774,37 +1775,34 @@ if "💰" in st.session_state.page:
         "Julho": {},
         "Agosto": {
             "Visa Gold - 0132": "Pago",
-            "Mastercard - Inter": "Pago",
-            "Mastercard - 8112": "Pendente",
-            "Visa - Mercado Pago": "Pendente",
-            "Itau - Golden": "Pendente"
+            "Mastercard - Inter": "Pago"
         },
         "Setembro": {
-            "Visa Gold - 0132": "Pago",
-            "Mastercard - Inter": "Pendente",
-            "Mastercard - 8112": "Pendente",
-            "Visa - Mercado Pago": "Pendente",
-            "Itau - Golden": "Pendente"
+            "Visa Gold - 0132": "Pago"
         },
         "Outubro": {},
         "Novembro": {},
         "Dezembro": {}
     }
     
-    # Pega o dicionário do mês atual; se o mês não existir na lista, assume tudo pendente por segurança
+    # Pega estritamente o mês atual. Se o mês não estiver explicitamente mapeado, retorna dicionário vazio (tudo pendente)
     status_faturas_dict = status_por_mes.get(mes_atual_tela, {})
+    
+    cols_status = st.columns(len(lista_cartoes_controle))
     
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = row['Nome do Banco']
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # BUSCA EXATA: Se o cartão não estiver escrito explicitamente como "Pago" no dicionário daquele mês, vira "Pendente"
-        status_fatura = status_faturas_dict.get(str(cartao_nome).strip(), "Pendente")
-        if str(status_fatura).strip().lower() != 'pago':
-            status_fatura = "Pendente"
+        # VERIFICAÇÃO BLINDADA: Só é 'Pago' se estiver explicitamente escrito no mês correto
+        status_fatura = "Pendente"
+        for cartao_cadastrado, estado in status_faturas_dict.items():
+            if cartao_cadastrado.lower() in str(cartao_nome).lower() and estado.lower() == 'pago':
+                status_fatura = "Pago"
+                break
 
-        # Define a cor do selo de status
+        # Define a cor e o emoji do selo
         if status_fatura == 'Pago':
             cor_status = "#2e7d32" # Verde escuro
             emoji_status = "✅"
