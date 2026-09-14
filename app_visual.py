@@ -1804,7 +1804,7 @@ if "💰" in st.session_state.page:
                 f"</div>", 
                 unsafe_allow_html=True
             )
-  else:
+   else:
       st.info("Nenhum lançamento encontrado para os cartões neste mês.")
             
             
