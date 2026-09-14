@@ -1703,8 +1703,8 @@ if "💰" in st.session_state.page:
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
-       # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (LENDO DA PLANILHA)
+      # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (COM DIAGNÓSTICO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1755,7 +1755,6 @@ if "💰" in st.session_state.page:
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
-    # Identifica o mês selecionado atualmente na tela
     mes_atual_tela = str(
         st.session_state.get('mes_selecionado') or 
         st.session_state.get('mes') or 
@@ -1763,36 +1762,41 @@ if "💰" in st.session_state.page:
         'Setembro'
     ).capitalize().strip()
     
-    # Função auxiliar para remover acentos e padronizar textos
     import unicodedata
     def remover_acentos(txt):
         return ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
 
-    # LEITURA AUTOMÁTICA DA PLANILHA NA ABA DO MÊS
+    # LEITURA E DIAGNÓSTICO NA TELA
     status_faturas_dict = {}
+    registros_lidos = []
+    
     try:
         ws_mes = sh.worksheet(mes_atual_tela)
         dados_aba = ws_mes.get_all_values()
         if len(dados_aba) > 1:
             for linha in dados_aba[1:]:
-                if len(linha) >= 7: # Garante que a linha possui até a coluna G (índice 6)
-                    status_val = str(linha[6]).strip() # Coluna G (Status)
-                    
-                    # Varre as colunas de A até F para encontrar o nome do cartão na linha
+                if len(linha) >= 7:
+                    status_val = str(linha[6]).strip()
                     for celula in linha[:6]:
                         celula_txt = str(celula).strip()
                         if celula_txt:
                             chave = remover_acentos(celula_txt.lower()).replace("cartao", "").strip()
                             status_faturas_dict[chave] = status_val
+                            registros_lidos.append(f"Cartão: '{celula_txt}' | Status na Coluna G: '{status_val}'")
     except Exception as e:
-        pass
-    
+        st.error(f"Erro ao ler aba {mes_atual_tela}: {e}")
+
+    # Exibe na tela do Streamlit o que ele conseguiu ler da planilha para conferirmos
+    with st.expander("🔍 Clique aqui para ver o diagnóstico de leitura da planilha"):
+        st.write(f"Mês Lido: **{mes_atual_tela}**")
+        st.write("Dados encontrados na planilha:")
+        st.write(registros_lidos if registros_lidos else "Nenhum dado encontrado nas colunas A-F / G.")
+
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = str(row['Nome do Banco']).strip()
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # Cruzamento inteligente com a planilha
         status_fatura = "Pendente"
         cartao_limpo = remover_acentos(cartao_nome.lower()).replace("cartao", "").strip()
         
@@ -1802,12 +1806,11 @@ if "💰" in st.session_state.page:
                     status_fatura = "Pago"
                 break
 
-        # Define a cor e o emoji do selo
         if status_fatura == 'Pago':
-            cor_status = "#2e7d32" # Verde escuro
+            cor_status = "#2e7d32" 
             emoji_status = "✅"
         else:
-            cor_status = "#d32f2f" # Vermelho/Alaranjado
+            cor_status = "#d32f2f" 
             emoji_status = "⏳"
             status_fatura = "Pendente"
         
