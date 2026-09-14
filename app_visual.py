@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (VERSÃO DEFINITIVA)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (INTEGRAÇÃO COM DADOS DO GRÁFICO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1775,38 +1775,26 @@ if "💰" in st.session_state.page:
         status_cartoes_mes[cartao_grafico] = "Pendente"
 
     try:
-        # Recupera as linhas do mês que já foram filtradas pelo app em cima na tela, se disponíveis
-        linhas_mes_app = []
+        # Tenta obter as linhas já filtradas do mês que estão sendo usadas no restante do código principal
+        linhas_mes_origem = []
         if 'dados_filtrados_mes' in locals() and dados_filtrados_mes:
-            linhas_mes_app = dados_filtrados_mes
+            linhas_mes_origem = dados_filtrados_mes
         elif 'df_filtrado' in locals() and hasattr(df_filtrado, 'values'):
-            linhas_mes_app = df_filtrado.values.tolist()
+            linhas_mes_origem = df_filtrado.values.tolist()
+        elif 'df_mes' in locals() and hasattr(df_mes, 'values'):
+            linhas_mes_origem = df_mes.values.tolist()
 
-        # Se não encontrou variáveis locais, lê direto da aba de lançamentos validando o mês pelo filtro geral ativo
-        if not linhas_mes_app:
-            ws_lancamentos = None
-            for aba in sh.worksheets():
-                if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
-                    ws_lancamentos = aba
-                    break
-            if not ws_lancamentos:
-                ws_lancamentos = sh.worksheet("LANÇAMENTOS")
-            
-            if ws_lancamentos:
-                todos_dados = ws_lancamentos.get_all_values()
-                mes_atual_tela = limpar_texto(str(st.session_state.get('mes_selecionado') or st.session_state.get('mes') or 'setembro'))
-                if len(todos_dados) > 1:
-                    for linha in todos_dados[1:]:
-                        texto_completo_linha = limpar_texto(" ".join([str(c) for c in linha]))
-                        if mes_atual_tela in texto_completo_linha or '09' in texto_completo_linha:
-                            linhas_mes_app.append(linha)
-
-        # Analisa o status (Coluna G = índice 6) para cada cartão presente nas linhas do mês
-        if linhas_mes_app:
-            # Dicionário auxiliar para acumular: { cartao: [lista de status encontrados] }
+        # Se encontrou as linhas filtradas do mês, fazemos a varredura estrita nelas
+        if linhas_mes_origem:
             status_por_cartao = {c: [] for c in df_cartoes_graph['Nome do Banco']}
             
-            for linha in linhas_mes_app:
+            for linha in linhas_mes_origem:
+                # Converte a linha para lista se for formato de DataFrame do pandas
+                if hasattr(linha, 'tolist'):
+                    linha = linha.tolist()
+                elif not isinstance(linha, (list, tuple)):
+                    continue
+                
                 if len(linha) >= 7:
                     banco_linha = limpar_texto(str(linha[5])) if len(linha) > 5 else ""
                     status_val = str(linha[6]).strip()
@@ -1817,12 +1805,52 @@ if "💰" in st.session_state.page:
                         if any(chave in banco_linha for chave in chaves):
                             status_por_cartao[cartao_grafico].append(is_pago)
 
-            # Define regra: Se tem lançamentos e todos estão marcados como pagos -> "Pago", senão "Pendente"
             for cartao_grafico, lista_status in status_por_cartao.items():
                 if lista_status and all(lista_status):
                     status_cartoes_mes[cartao_grafico] = "Pago"
                 else:
                     status_cartoes_mes[cartao_grafico] = "Pendente"
+        else:
+            # Fallback seguro caso as variáveis de escopo mudem: lê direto da planilha usando o mês numérico e de texto combinados
+            ws_lancamentos = None
+            for aba in sh.worksheets():
+                if limpar_texto(aba.title) in ["lancamentos", "lançamentos"]:
+                    ws_lancamentos = aba
+                    break
+            if not ws_lancamentos:
+                ws_lancamentos = sh.worksheet("LANÇAMENTOS")
+
+            if ws_lancamentos:
+                dados_lanc = ws_lancamentos.get_all_values()
+                mes_atual_tela = limpar_texto(str(st.session_state.get('mes_selecionado') or st.session_state.get('mes') or 'setembro'))
+                
+                # Mapeia o mês da tela para número
+                meses_map = {'janeiro': '01', 'fevereiro': '02', 'marco': '03', 'abril': '04', 'maio': '05', 'junho': '06', 'julho': '07', 'agosto': '08', 'setembro': '09', 'outubro': '10', 'novembro': '11', 'dezembro': '12'}
+                num_mes = meses_map.get(mes_atual_tela, '09')
+
+                status_por_cartao = {c: [] for c in df_cartoes_graph['Nome do Banco']}
+                
+                for linha in dados_lanc[1:]:
+                    if len(linha) >= 7:
+                        data_str = str(linha[0]).strip()
+                        partes = data_str.replace('-', '/').replace('.', '/').split('/')
+                        mes_linha = partes[1] if len(partes) >= 2 else ""
+                        
+                        if mes_linha == num_mes or mes_atual_tela in limpar_texto(" ".join(str(c) for c in linha)):
+                            banco_linha = limpar_texto(str(linha[5])) if len(linha) > 5 else ""
+                            status_val = str(linha[6]).strip()
+                            is_pago = "pag" in limpar_texto(status_val)
+                            
+                            for cartao_grafico in df_cartoes_graph['Nome do Banco']:
+                                chaves = termos_cartoes.get(cartao_grafico, [])
+                                if any(chave in banco_linha for chave in chaves):
+                                    status_por_cartao[cartao_grafico].append(is_pago)
+
+                for cartao_grafico, lista_status in status_por_cartao.items():
+                    if lista_status and all(lista_status):
+                        status_cartoes_mes[cartao_grafico] = "Pago"
+                    else:
+                        status_cartoes_mes[cartao_grafico] = "Pendente"
     except Exception as e:
         pass
 
