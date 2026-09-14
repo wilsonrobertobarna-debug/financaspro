@@ -1704,7 +1704,7 @@ if "💰" in st.session_state.page:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle] 
              
 # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (MAPEAMENTO CORRIGIDO)
+        # 💳 RENDERIZAÇÃO DO GRÁFICO E STATUS DOS CARTÕES (VALIDAÇÃO PRECISA)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1760,15 +1760,15 @@ if "💰" in st.session_state.page:
         if not txt:
             return ""
         sem_acento = ''.join(c for c in unicodedata.normalize('NFD', str(txt)) if unicodedata.category(c) != 'Mn')
-        return " ".join(sem_acento.lower().replace("cartao", "").replace("-", " ").replace("/", " ").split())
+        return " ".join(sem_acento.lower().replace("-", " ").replace("/", " ").split())
 
-    # Mapeamento ajustado com o nome real da planilha ("Cartão Itau Gold")
-    mapeamento_termos = {
+    # Chaves exatas conforme aparecem na planilha de lançamentos e no gráfico
+    identificadores_cartoes = {
         "Mastercard - Inter": ["inter"],
         "Mastercard - 8112": ["8112"],
         "Visa Gold - 0132": ["0132"],
-        "Visa - Mercado Pago": ["mercado", "pago"],
-        "Itau - Golden": ["itau", "gold", "golden"]
+        "Visa - Mercado Pago": ["mercado pago", "mercadopago"],
+        "Itau - Golden": ["itau gold", "cartao itau gold"]
     }
 
     status_cartoes_mes = {}
@@ -1803,11 +1803,12 @@ if "💰" in st.session_state.page:
                     
                     for cartao_grafico in df_cartoes_graph['Nome do Banco']:
                         c_graf_limpo = limpar_texto(cartao_grafico)
-                        termos_possiveis = mapeamento_termos.get(cartao_grafico, [c_graf_limpo])
+                        termos_exatos = identificadores_cartoes.get(cartao_grafico, [c_graf_limpo])
                         
-                        encontrou_cartao = any(termo in texto_linha for termo in termos_possiveis)
+                        # Verifica se algum dos termos específicos e unívocos está na linha
+                        match_ok = any(termo in texto_linha for termo in termos_exatos)
 
-                        if encontrou_cartao and is_pago:
+                        if match_ok and is_pago:
                             status_cartoes_mes[c_graf_limpo] = "Pago"
     except Exception as e:
         pass
