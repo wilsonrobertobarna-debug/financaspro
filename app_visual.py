@@ -1680,12 +1680,12 @@ if "💰" in st.session_state.page:
         
         coluna_banco = next((col for col in ['Nome do Banco', 'Banco', 'Instituição', 'Conta'] if col in df_m.columns), None)
         
-        mapeamento_cartoes = {
-            "Mastercard - Inter": "Inter",
+       mapeamento_cartoes = {
+            "Mastercard - Inter": "inter",
             "Mastercard - 8112": "8112",
             "Visa Gold - 0132": "0132",
-            "Visa - Mercado Pago": "Mercado Pago",
-            "Itau Gold": "gold"
+            "Visa - Mercado Pago": "mercado pago",
+            "Itau Gold": "itau"  # <--- Mudamos de "gold" para "itau" para não misturar com o Visa Gold!
         }
         
         lista_cartoes_controle = list(mapeamento_cartoes.keys())
