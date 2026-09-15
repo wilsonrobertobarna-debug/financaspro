@@ -1685,7 +1685,7 @@ if "💰" in st.session_state.page:
             "Mastercard - 8112": "8112",
             "Visa Gold - 0132": "0132",
             "Visa - Mercado Pago": "Mercado Pago",
-            "Itau - Golden": "Golden"
+            "Itau Gold": "gold"
         }
         
         lista_cartoes_controle = list(mapeamento_cartoes.keys())
