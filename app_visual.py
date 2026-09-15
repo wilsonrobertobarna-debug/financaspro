@@ -1760,6 +1760,9 @@ if "💰" in st.session_state.page:
         # Cria o DataFrame base garantindo a ordem exata de lista_cartoes_controle
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
+        # COLE ESTA LINHA PARA A GENTE ENXERGAR A TABELA PURA NA TELA:
+        st.write("Tabela de dados:", df_cartoes_graph)
+        
         # GARANTIA DE ORDEM: Reindexa pelo nome oficial para alinhar perfeitamente com os cartões
         df_cartoes_graph = df_cartoes_graph.set_index('Nome do Banco').reindex(lista_cartoes_controle).reset_index()
 
