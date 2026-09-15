@@ -1611,38 +1611,27 @@ if "💰" in st.session_state.page:
             # Prepara os dados para o gráfico
             df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
             
-            if not df_f.empty:
-                # Gráfico com cores fixas, layout limpo e valores nas barras
-                fig_fluxo = px.bar(
-                    df_f, 
-                    x='Mes_Ano', 
-                    y='V_Num', 
-                    color='Tipo', 
-                    barmode='group',
-                    color_discrete_map={
-                        'Receita': '#2ecc71', 
-                        'Despesa': '#e74c3c', 
-                        'Rendimento': '#3498db'
-                    },
-                    text_auto='.2s'
-                )
-                fig_fluxo.update_layout(
-                    height=350, 
-                    margin=dict(t=30, b=10, l=0, r=0),
-                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-                )
-                
-                # Exibe o gráfico definitivo e travado para rolar a tela no celular
-                st.plotly_chart(
-                    fig_fluxo, 
-                    use_container_width=True,
-                    config={
-                        'staticPlot': True,
-                        'displayModeBar': False
-                    }
-                )
-            else:
-                st.info("Aguardando dados para o período...")
+           if not df_cartoes_graph.empty:
+            fig_cartoes = go.Figure()
+            # Invertemos X e Y para o gráfico ficar na horizontal
+            fig_cartoes.add_trace(go.Bar(y=df_cartoes_graph['Nome do Banco'], x=df_cartoes_graph['V_Num'], name='Realizado', marker_color='#e74c3c', orientation='h'))
+            fig_cartoes.add_trace(go.Bar(y=df_cartoes_graph['Nome do Banco'], x=df_cartoes_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4, orientation='h'))
+            
+            fig_cartoes.update_layout(
+                barmode='group', 
+                height=350, 
+                margin=dict(t=30, b=10, l=0, r=0),
+                yaxis=dict(autorange='reversed') # Deixa o primeiro cartão em cima
+            )
+            
+            st.plotly_chart(
+                fig_cartoes, 
+                use_container_width=True,
+                config={
+                    'staticPlot': True,
+                    'displayModeBar': False
+                }
+            )
                 
 
 # 6. NOVO: GRÁFICO DE METAS
