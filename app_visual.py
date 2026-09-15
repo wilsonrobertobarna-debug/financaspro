@@ -1661,7 +1661,7 @@ if "💰" in st.session_state.page:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
         
-        # =========================================================================
+      # =========================================================================
         # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO
         # =========================================================================
         st.markdown("---")
@@ -1690,20 +1690,17 @@ if "💰" in st.session_state.page:
                 if termo_busca == "Inter":
                     mask = mask & (df_m[coluna_banco].astype(str).str.contains("Cartão", case=False, na=False)) & (~df_m[coluna_banco].astype(str).str.contains("Pendência|Boleto|Empréstimo", case=False, na=False))
                 
-                # 1. Pega o total gasto (como você já faz)
+                # 1. Pega o total gasto
                 gasto_total = df_m[mask]['V_Num'].sum()
                 dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total})
                 
                 # 2. Verifica o status (Pago/Pendente) usando exatamente o mesmo filtro mask
                 sub_df = df_m[mask]
                 if not sub_df.empty:
-                    # Tenta identificar qual coluna é o Status (Geralmente 'Status' ou similar)
                     coluna_status = next((col for col in ['Status', 'Situação', 'Estado'] if col in sub_df.columns), None)
                     
                     if coluna_status:
-                        # Verifica se TODAS as linhas filtradas daquele cartão estão pagas
                         status_valores = sub_df[coluna_status].astype(str).str.strip().str.lower()
-                        # Considera pago se contiver "pag" (ex: Pago, PAGO, Pagto)
                         todos_pagos = all(status_valores.str.contains("pag", na=False)) and len(status_valores) > 0
                         status_cartoes_mes[nome_oficial] = "Pago" if todos_pagos else "Pendente"
                     else:
@@ -1715,7 +1712,7 @@ if "💰" in st.session_state.page:
             for c in lista_cartoes_controle:
                 status_cartoes_mes[c] = "Pendente"
             
-# =========================================================================
+        # =========================================================================
         # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (MAPEAMENTO SEGURO E DIRETO)
         # =========================================================================
         
@@ -1749,20 +1746,24 @@ if "💰" in st.session_state.page:
         # Cria o DataFrame base garantindo a ordem exata de lista_cartoes_controle
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
-        # COLE ESTA LINHA PARA A GENTE ENXERGAR A TABELA PURA NA TELA:
-        st.write("Tabela de dados:", df_cartoes_graph)
-        
         # GARANTIA DE ORDEM: Reindexa pelo nome oficial para alinhar perfeitamente com os cartões
         df_cartoes_graph = df_cartoes_graph.set_index('Nome do Banco').reindex(lista_cartoes_controle).reset_index()
 
         # Aplica a meta buscando chave por chave com segurança absoluta
         df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
+
         if not df_cartoes_graph.empty:
             fig_cartoes = go.Figure()
-            fig_cartoes.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
-            fig_cartoes.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
+            # Gráfico de barras horizontal para acomodar perfeitamente o volume do Inter mantendo os valores normais
+            fig_cartoes.add_trace(go.Bar(y=df_cartoes_graph['Nome do Banco'], x=df_cartoes_graph['V_Num'], name='Realizado', marker_color='#e74c3c', orientation='h'))
+            fig_cartoes.add_trace(go.Bar(y=df_cartoes_graph['Nome do Banco'], x=df_cartoes_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4, orientation='h'))
             
-            fig_cartoes.update_layout(barmode='group', height=350, margin=dict(t=30, b=10, l=0, r=0))
+            fig_cartoes.update_layout(
+                barmode='group', 
+                height=350, 
+                margin=dict(t=30, b=10, l=0, r=0),
+                yaxis=dict(autorange='reversed') # Mantém a ordem correta dos cartões de cima para baixo
+            )
             
             st.plotly_chart(
                 fig_cartoes, 
