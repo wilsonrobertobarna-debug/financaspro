@@ -1671,8 +1671,7 @@ if "💰" in st.session_state.page:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-        
-       # =========================================================================
+      # =========================================================================
         # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO
         # =========================================================================
         st.markdown("---")
@@ -1690,6 +1689,7 @@ if "💰" in st.session_state.page:
         
         lista_cartoes_controle = list(mapeamento_cartoes.keys())
         dados_cartoes_calculados = []
+        status_cartoes_mes = {}
         
         if coluna_banco and not df_m.empty:
             for nome_oficial, termo_busca in mapeamento_cartoes.items():
@@ -1700,10 +1700,25 @@ if "💰" in st.session_state.page:
                 
                 gasto_total = df_m[mask]['V_Num'].sum()
                 dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total})
+                
+                # Verificação limpa do status (Pago / Pendente)
+                sub_df = df_m[mask]
+                if not sub_df.empty:
+                    coluna_status = next((col for col in ['Status', 'Situação', 'Estado'] if col in sub_df.columns), None)
+                    if coluna_status:
+                        status_valores = sub_df[coluna_status].astype(str).str.strip().str.lower()
+                        todos_pagos = all(status_valores.str.contains("pag", na=False)) and len(status_valores) > 0
+                        status_cartoes_mes[nome_oficial] = "Pago" if todos_pagos else "Pendente"
+                    else:
+                        status_cartoes_mes[nome_oficial] = "Pendente"
+                else:
+                    status_cartoes_mes[nome_oficial] = "Pendente"
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle]
+            for c in lista_cartoes_controle:
+                status_cartoes_mes[c] = "Pendente"
             
-# =========================================================================
+        # =========================================================================
         # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (MAPEAMENTO SEGURO E DIRETO)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
@@ -1762,6 +1777,11 @@ if "💰" in st.session_state.page:
                 gasto_real = row['V_Num']
                 meta_teto = row['Meta']
                 
+                # Resgata o status calculado (Pago / Pendente)
+                status_fatura = status_cartoes_mes.get(cartao_nome, "Pendente")
+                cor_status = "#2e7d32" if status_fatura == 'Pago' else "#d32f2f"
+                emoji_status = "✅" if status_fatura == 'Pago' else "⏳"
+                
                 if meta_teto > 0:
                     percentual = (gasto_real / meta_teto) * 100
                 else:
@@ -1782,6 +1802,12 @@ if "💰" in st.session_state.page:
                         label=cartao_nome,
                         value=f"R$ {gasto_real:,.2f}",
                         delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
+                    )
+                    st.markdown(
+                        f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 10px; color: {cor_status}; font-weight: bold;'>"
+                        f"{emoji_status} {status_fatura}"
+                        f"</div>", 
+                        unsafe_allow_html=True
                     )
         else:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
