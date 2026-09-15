@@ -1661,7 +1661,7 @@ if "💰" in st.session_state.page:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
         
-    # =========================================================================
+   # =========================================================================
         # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO
         # =========================================================================
         st.markdown("---")
@@ -1736,9 +1736,10 @@ if "💰" in st.session_state.page:
             except:
                 pass
 
-        # GARANTIA DE CRIAÇÃO DA VARIÁVEL: Assegura que o dataframe sempre existirá
+        # Criação segura do DataFrame base de forma garantida
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados) if dados_cartoes_calculados else pd.DataFrame(columns=['Nome do Banco', 'V_Num'])
         
+        # Assegura que o dataframe tem as colunas necessárias antes de prosseguir
         if not df_cartoes_graph.empty and 'Nome do Banco' in df_cartoes_graph.columns:
             df_cartoes_graph = df_cartoes_graph.set_index('Nome do Banco').reindex(lista_cartoes_controle).reset_index()
             df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
