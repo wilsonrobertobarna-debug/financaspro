@@ -1641,7 +1641,7 @@ if "💰" in st.session_state.page:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
         
-        # =========================================================================
+    # =========================================================================
         # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO
         # =========================================================================
         st.markdown("---")
@@ -1728,6 +1728,7 @@ if "💰" in st.session_state.page:
             df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
             fig_cartoes = go.Figure()
+            # Gráfico de barras horizontal com valores normais e layout limpo
             fig_cartoes.add_trace(go.Bar(y=df_cartoes_graph['Nome do Banco'], x=df_cartoes_graph['V_Num'], name='Realizado', marker_color='#e74c3c', orientation='h'))
             fig_cartoes.add_trace(go.Bar(y=df_cartoes_graph['Nome do Banco'], x=df_cartoes_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4, orientation='h'))
             
