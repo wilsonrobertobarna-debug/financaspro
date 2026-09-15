@@ -1729,7 +1729,6 @@ if "💰" in st.session_state.page:
 # =========================================================================
         # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (MAPEAMENTO SEGURO E DIRETO)
         # =========================================================================
-        df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
         # Garante que a sessão existe
         if 'dict_metas_cartoes' not in st.session_state:
@@ -1758,9 +1757,14 @@ if "💰" in st.session_state.page:
             except:
                 pass
 
-        # Aplica o mapeamento seguro em lote no DataFrame
-        df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
+        # Cria o DataFrame base garantindo a ordem exata de lista_cartoes_controle
+        df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
+        
+        # GARANTIA DE ORDEM: Reindexa pelo nome oficial para alinhar perfeitamente com os cartões
+        df_cartoes_graph = df_cartoes_graph.set_index('Nome do Banco').reindex(lista_cartoes_controle).reset_index()
 
+        # Aplica a meta buscando chave por chave com segurança absoluta
+        df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
         if not df_cartoes_graph.empty:
             fig_cartoes = go.Figure()
             fig_cartoes.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
