@@ -1672,7 +1672,7 @@ if "💰" in st.session_state.page:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
         
-       # =========================================================================
+        # =========================================================================
         # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO
         # =========================================================================
         st.markdown("---")
@@ -1691,6 +1691,9 @@ if "💰" in st.session_state.page:
         lista_cartoes_controle = list(mapeamento_cartoes.keys())
         dados_cartoes_calculados = []
         
+        # Dicionário para armazenar o status de cada cartão do mês
+        status_cartoes_mes = {}
+        
         if coluna_banco and not df_m.empty:
             for nome_oficial, termo_busca in mapeamento_cartoes.items():
                 mask = (df_m['Tipo'] == 'Despesa') & (df_m[coluna_banco].astype(str).str.contains(termo_busca, case=False, na=False))
@@ -1698,10 +1701,30 @@ if "💰" in st.session_state.page:
                 if termo_busca == "Inter":
                     mask = mask & (df_m[coluna_banco].astype(str).str.contains("Cartão", case=False, na=False)) & (~df_m[coluna_banco].astype(str).str.contains("Pendência|Boleto|Empréstimo", case=False, na=False))
                 
+                # 1. Pega o total gasto (como você já faz)
                 gasto_total = df_m[mask]['V_Num'].sum()
                 dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total})
+                
+                # 2. Verifica o status (Pago/Pendente) usando exatamente o mesmo filtro mask
+                sub_df = df_m[mask]
+                if not sub_df.empty:
+                    # Tenta identificar qual coluna é o Status (Geralmente 'Status' ou similar)
+                    coluna_status = next((col for col in ['Status', 'Situação', 'Estado'] if col in sub_df.columns), None)
+                    
+                    if coluna_status:
+                        # Verifica se TODAS as linhas filtradas daquele cartão estão pagas
+                        status_valores = sub_df[coluna_status].astype(str).str.strip().str.lower()
+                        # Considera pago se contiver "pag" (ex: Pago, PAGO, Pagto)
+                        todos_pagos = all(status_valores.str.contains("pag", na=False)) and len(status_valores) > 0
+                        status_cartoes_mes[nome_oficial] = "Pago" if todos_pagos else "Pendente"
+                    else:
+                        status_cartoes_mes[nome_oficial] = "Pendente"
+                else:
+                    status_cartoes_mes[nome_oficial] = "Pendente"
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle]
+            for c in lista_cartoes_controle:
+                status_cartoes_mes[c] = "Pendente"
             
 # =========================================================================
         # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (MAPEAMENTO SEGURO E DIRETO)
@@ -1762,6 +1785,15 @@ if "💰" in st.session_state.page:
                 gasto_real = row['V_Num']
                 meta_teto = row['Meta']
                 
+                # Pega o status que calculamos logo acima
+                status_fatura = status_cartoes_mes.get(cartao_nome, "Pendente")
+                if status_fatura == 'Pago':
+                    cor_status = "#2e7d32" 
+                    emoji_status = "✅"
+                else:
+                    cor_status = "#d32f2f" 
+                    emoji_status = "⏳"
+                
                 if meta_teto > 0:
                     percentual = (gasto_real / meta_teto) * 100
                 else:
@@ -1782,6 +1814,12 @@ if "💰" in st.session_state.page:
                         label=cartao_nome,
                         value=f"R$ {gasto_real:,.2f}",
                         delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
+                    )
+                    st.markdown(
+                        f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 10px; color: {cor_status}; font-weight: bold;'>"
+                        f"{emoji_status} {status_fatura}"
+                        f"</div>", 
+                        unsafe_allow_html=True
                     )
         else:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
