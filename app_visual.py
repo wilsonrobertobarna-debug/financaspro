@@ -1611,7 +1611,7 @@ if "💰" in st.session_state.page:
             # Prepara os dados para o gráfico
             df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
             
-           if not df_cartoes_graph.empty:
+            if not df_cartoes_graph.empty:
             fig_cartoes = go.Figure()
             # Invertemos X e Y para o gráfico ficar na horizontal
             fig_cartoes.add_trace(go.Bar(y=df_cartoes_graph['Nome do Banco'], x=df_cartoes_graph['V_Num'], name='Realizado', marker_color='#e74c3c', orientation='h'))
