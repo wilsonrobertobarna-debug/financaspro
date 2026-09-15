@@ -1611,7 +1611,38 @@ if "💰" in st.session_state.page:
             # Prepara os dados para o gráfico
             df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
             
-           
+            if not df_f.empty:
+                # Gráfico com cores fixas, layout limpo e valores nas barras
+                fig_fluxo = px.bar(
+                    df_f, 
+                    x='Mes_Ano', 
+                    y='V_Num', 
+                    color='Tipo', 
+                    barmode='group',
+                    color_discrete_map={
+                        'Receita': '#2ecc71', 
+                        'Despesa': '#e74c3c', 
+                        'Rendimento': '#3498db'
+                    },
+                    text_auto='.2s'
+                )
+                fig_fluxo.update_layout(
+                    height=350, 
+                    margin=dict(t=30, b=10, l=0, r=0),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                
+                # Exibe o gráfico definitivo e travado para rolar a tela no celular
+                st.plotly_chart(
+                    fig_fluxo, 
+                    use_container_width=True,
+                    config={
+                        'staticPlot': True,
+                        'displayModeBar': False
+                    }
+                )
+            else:
+                st.info("Aguardando dados para o período...")
                 
 
 # 6. NOVO: GRÁFICO DE METAS
@@ -1641,7 +1672,7 @@ if "💰" in st.session_state.page:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
         
-    # =========================================================================
+       # =========================================================================
         # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO
         # =========================================================================
         st.markdown("---")
@@ -1650,19 +1681,15 @@ if "💰" in st.session_state.page:
         coluna_banco = next((col for col in ['Nome do Banco', 'Banco', 'Instituição', 'Conta'] if col in df_m.columns), None)
         
         mapeamento_cartoes = {
-            "Mastercard - Inter": "inter",
+            "Mastercard - Inter": "Inter",
             "Mastercard - 8112": "8112",
             "Visa Gold - 0132": "0132",
-            "Visa - Mercado Pago": "mercado pago",
-            "Itau Gold": "itau"
+            "Visa - Mercado Pago": "Mercado Pago",
+            "Itau - Golden": "Golden"
         }
         
         lista_cartoes_controle = list(mapeamento_cartoes.keys())
         dados_cartoes_calculados = []
-        status_cartoes_mes = {}
-        
-        # BLINDAGEM INICIAL: Já cria o dataframe vazio por segurança
-        df_cartoes_graph = pd.DataFrame(columns=['Nome do Banco', 'V_Num'])
         
         if coluna_banco and not df_m.empty:
             for nome_oficial, termo_busca in mapeamento_cartoes.items():
@@ -1673,36 +1700,21 @@ if "💰" in st.session_state.page:
                 
                 gasto_total = df_m[mask]['V_Num'].sum()
                 dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total})
-                
-                sub_df = df_m[mask]
-                if not sub_df.empty:
-                    coluna_status = next((col for col in ['Status', 'Situação', 'Estado'] if col in sub_df.columns), None)
-                    if coluna_status:
-                        status_valores = sub_df[coluna_status].astype(str).str.strip().str.lower()
-                        todos_pagos = all(status_valores.str.contains("pag", na=False)) and len(status_valores) > 0
-                        status_cartoes_mes[nome_oficial] = "Pago" if todos_pagos else "Pendente"
-                    else:
-                        status_cartoes_mes[nome_oficial] = "Pendente"
-                else:
-                    status_cartoes_mes[nome_oficial] = "Pendente"
-            
-            if dados_cartoes_calculados:
-                df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         else:
             dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle]
-            df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
-            for c in lista_cartoes_controle:
-                status_cartoes_mes[c] = "Pendente"
             
-        # =========================================================================
+# =========================================================================
         # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (MAPEAMENTO SEGURO E DIRETO)
         # =========================================================================
+        df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
+        # Garante que a sessão existe
         if 'dict_metas_cartoes' not in st.session_state:
             st.session_state['dict_metas_cartoes'] = {}
 
         dict_metas = st.session_state['dict_metas_cartoes']
 
+        # Se por algum motivo a sessão estiver vazia, tenta puxar direto do Sheets uma única vez para o dicionário inteiro
         if not dict_metas:
             try:
                 ws_metas = sh.worksheet("Metas_Cartoes")
@@ -1723,21 +1735,15 @@ if "💰" in st.session_state.page:
             except:
                 pass
 
-        if not df_cartoes_graph.empty and 'Nome do Banco' in df_cartoes_graph.columns:
-            df_cartoes_graph = df_cartoes_graph.set_index('Nome do Banco').reindex(lista_cartoes_controle).reset_index()
-            df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
+        # Aplica o mapeamento seguro em lote no DataFrame
+        df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
+        if not df_cartoes_graph.empty:
             fig_cartoes = go.Figure()
-            # Gráfico de barras horizontal com valores normais e layout limpo
-            fig_cartoes.add_trace(go.Bar(y=df_cartoes_graph['Nome do Banco'], x=df_cartoes_graph['V_Num'], name='Realizado', marker_color='#e74c3c', orientation='h'))
-            fig_cartoes.add_trace(go.Bar(y=df_cartoes_graph['Nome do Banco'], x=df_cartoes_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4, orientation='h'))
+            fig_cartoes.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
+            fig_cartoes.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
             
-            fig_cartoes.update_layout(
-                barmode='group', 
-                height=350, 
-                margin=dict(t=30, b=10, l=0, r=0),
-                yaxis=dict(autorange='reversed')
-            )
+            fig_cartoes.update_layout(barmode='group', height=350, margin=dict(t=30, b=10, l=0, r=0))
             
             st.plotly_chart(
                 fig_cartoes, 
@@ -1756,30 +1762,26 @@ if "💰" in st.session_state.page:
                 gasto_real = row['V_Num']
                 meta_teto = row['Meta']
                 
-                status_fatura = status_cartoes_mes.get(cartao_nome, "Pendente")
-                cor_status = "#2e7d32" if status_fatura == 'Pago' else "#d32f2f"
-                emoji_status = "✅" if status_fatura == 'Pago' else "⏳"
-                
-                percentual = (gasto_real / meta_teto * 100) if meta_teto > 0 else (0.0 if gasto_real == 0 else 100.0)
+                if meta_teto > 0:
+                    percentual = (gasto_real / meta_teto) * 100
+                else:
+                    percentual = 0.0 if gasto_real == 0 else 100.0
                 
                 if percentual <= 80:
-                    bolinha, status_txt = "🟢", "OK"
+                    bolinha = "🟢"
+                    status_txt = "OK"
                 elif percentual <= 100:
-                    bolinha, status_txt = "🟡", "Atenção"
+                    bolinha = "🟡"
+                    status_txt = "Atenção"
                 else:
-                    bolinha, status_txt = "🔴", "Tô na lona"
+                    bolinha = "🔴"
+                    status_txt = "Tô na lona"
                 
                 with cols_status[idx % len(cols_status)]:
                     st.metric(
                         label=cartao_nome,
                         value=f"R$ {gasto_real:,.2f}",
                         delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
-                    )
-                    st.markdown(
-                        f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 10px; color: {cor_status}; font-weight: bold;'>"
-                        f"{emoji_status} {status_fatura}"
-                        f"</div>", 
-                        unsafe_allow_html=True
                     )
         else:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
@@ -3230,7 +3232,7 @@ if aba == "📊 Análises & Configurações":
             {"nome": "Mastercard - 8112", "limite_banco": 27100.0},
             {"nome": "Visa Gold - 0132", "limite_banco": 22600.0},
             {"nome": "Visa - Mercado Pago", "limite_banco": 5600.0},
-            {"nome": "Itau Gold", "limite_banco": 8330.0}
+            {"nome": "Itau - Golden", "limite_banco": 8330.0}
         ]
 
         padroes_iniciais = {
@@ -3238,7 +3240,7 @@ if aba == "📊 Análises & Configurações":
             "Mastercard - 8112": 600.0,
             "Visa Gold - 0132": 1000.0,
             "Visa - Mercado Pago": 1200.0,
-            "Itau Gold": 200.0
+            "Itau - Golden": 200.0
         }
 
         # Inicializa a sessão com os padrões se não existir
