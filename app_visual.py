@@ -1679,7 +1679,7 @@ if "💰" in st.session_state.page:
         
         coluna_banco = next((col for col in ['Nome do Banco', 'Banco', 'Instituição', 'Conta'] if col in df_m.columns), None)
         
-       mapeamento_cartoes = {
+        mapeamento_cartoes = {
             "Mastercard - Inter": "Inter",
             "Mastercard - 8112": "8112",
             "Visa Gold - 0132": "0132",
