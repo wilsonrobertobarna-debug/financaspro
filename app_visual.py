@@ -3250,7 +3250,7 @@ if aba == "📊 Análises & Configurações":
         # --- DIVISÓRIA VISUAL ---
         st.markdown("---")
 
-     # =========================================================================
+        # =========================================================================
         # 💳 CARREGAMENTO OBRIGATÓRIO DIRETAMENTE DO GOOGLE SHEETS
         # =========================================================================
         cartoes_dados = [
@@ -3258,7 +3258,7 @@ if aba == "📊 Análises & Configurações":
             {"nome": "Mastercard - 8112", "limite_banco": 27100.0},
             {"nome": "Visa Gold - 0132", "limite_banco": 22600.0},
             {"nome": "Visa - Mercado Pago", "limite_banco": 5600.0},
-            {"nome": "Itau - Golden", "limite_banco": 8330.0}
+            {"nome": "Itau Gold", "limite_banco": 8330.0}
         ]
 
         padroes_iniciais = {
@@ -3266,9 +3266,8 @@ if aba == "📊 Análises & Configurações":
             "Mastercard - 8112": 600.0,
             "Visa Gold - 0132": 1000.0,
             "Visa - Mercado Pago": 1200.0,
-            "Itau - Golden": 200.0
+            "Itau Gold": 2000.0
         }
-
         # Inicializa a sessão com os padrões se não existir
         if 'dict_metas_cartoes' not in st.session_state:
             st.session_state['dict_metas_cartoes'] = padroes_iniciais.copy()
