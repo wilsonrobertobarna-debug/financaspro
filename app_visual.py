@@ -1942,13 +1942,16 @@ if "💰" in st.session_state.page:
     st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         
         
-    # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
+   # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
     st.subheader("🔔 Monitor de Pendências do Período")
     
     # Filtra apenas o que está pendente E pertence ao mês selecionado
     df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == filtro_mes)]
     
     if not df_pendente_mes.empty:
+        # Ordena por vencimento de forma crescente (mais próximo no topo)
+        df_pendente_mes = df_pendente_mes.sort_values(by='Vencimento', ascending=True)
+        
         st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
         
         # Exibe as pendências do mês
