@@ -2946,34 +2946,30 @@ if aba == "📋 Relatório PDF":
             pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
             pdf.ln(5)
             
-            # --- TÍTULO DA COLUNA DINÂMICO ---
-            nome_coluna_data_pdf = "Dt Compra" if eh_cartao_geral else "Dt Venc/Pag"
+            # --- TÍTULO DA COLUNA DINÂMICO (Reduzido para abrir espaço para a Descrição) ---
+            nome_coluna_data_pdf = "Dt Compra" if eh_cartao_geral else "Dt Venc"
 
-            pdf.set_font("Arial", 'B', 9)
-            pdf.cell(22, 7, nome_coluna_data_pdf, 1)
-            pdf.cell(18, 7, "Tipo", 1)
-            pdf.cell(33, 7, "Categoria", 1)
-            pdf.cell(48, 7, "Beneficiario", 1)  # Mudado de Descricao para Beneficiario (largura ajustada para 48)
-            pdf.cell(22, 7, "Valor", 1)        # Ajustado para 22 para fechar a largura da página
-            pdf.cell(32, 7, "Saldo Acum.", 1)
-            pdf.cell(25, 7, "Status", 1)
+            pdf.set_font("Arial", 'B', 8)  # Fonte levemente menor para caber melhor nos títulos
+            pdf.cell(18, 7, nome_coluna_data_pdf, 1)  # Data (18mm)
+            pdf.cell(14, 7, "Tipo", 1)               # Tipo (14mm)
+            pdf.cell(26, 7, "Categoria", 1)          # Categoria (26mm)
+            pdf.cell(32, 7, "Beneficiario", 1)       # Beneficiário (32mm)
+            pdf.cell(38, 7, "Descricao", 1)          # Descrição adicionada! (38mm)
+            pdf.cell(20, 7, "Valor", 1)              # Valor (20mm)
+            pdf.cell(26, 7, "Saldo Acum.", 1)        # Saldo Acumulado (26mm)
+            pdf.cell(20, 7, "Status", 1)             # Status (20mm) -> Total = 194mm exatos da página!
             pdf.ln()
 
             # ========================================================
-            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF (MOSTRA DATA DA COMPRA)
+            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
             if not df_report.empty:
                 col_benef_real = df_report.columns[9] if len(df_report.columns) > 9 else 'Beneficiario'
-                desc_col_temp = col_benef_real
-                if desc_col_temp in df_report.columns:
-                    df_report['_chave_desc'] = df_report[desc_col_temp].astype(str).str.strip().str.upper()
-                    df_report['_parc_atual'] = df_report.groupby('_chave_desc').cumcount() + 1
-                    df_report['_parc_total'] = df_report.groupby('_chave_desc')['_chave_desc'].transform('count')
-                else:
-                    df_report['_parc_atual'] = 1
-                    df_report['_parc_total'] = 1
-            
-            pdf.set_font("Arial", '', 9)
+                
+                # Identifica qual coluna é a Descrição de verdade no seu df_base
+                col_desc_real = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
+
+            pdf.set_font("Arial", '', 8)  # Fonte 8 nas linhas para caber perfeitamente
             for index, row in df_report.iterrows():
                 # Para cartão, força exibir a Data da Compra na linha da tabela
                 b_linha_atual = str(row.get(col_banco_df, '')).upper()
@@ -2984,23 +2980,29 @@ if aba == "📋 Relatório PDF":
                 else:
                     data_str = str(row.get(col_data_df, '---'))
                 
-                tipo_str = str(row.get('Tipo', '---')).strip()
-                cat_val = str(row.get('Categoria', 'Geral'))[:16]
+                tipo_str = str(row.get('Tipo', '---')).strip()[:6]  # Abrevia um pouco se precisar (ex: Despesa/Receita)
+                cat_val = str(row.get('Categoria', 'Geral'))[:14]   # Corta com limite seguro para 14 caracteres
                 
-                col_benef_real = df_report.columns[9] if len(df_report.columns) > 9 else 'Beneficiario'
+                # Pega o Beneficiário
                 desc_base = str(row.get(col_benef_real, row.get('Beneficiario', 'Sem nome'))).strip()
                 p_atual = row.get('_parc_atual', 1)
                 p_total = row.get('_parc_total', 1)
                 
                 if int(p_total) > 1:
-                    desc_val = f"{desc_base} {int(p_atual)}/{int(p_total)}"[:24]
+                    benef_val = f"{desc_base} {int(p_atual)}/{int(p_total)}"[:16]
                 else:
-                    desc_val = desc_base[:24]
+                    benef_val = desc_base[:16]
+
+                # Pega a Descrição real (caso exista a coluna)
+                if col_desc_real:
+                    desc_val = str(row.get(col_desc_real, '')).strip()[:20]
+                else:
+                    desc_val = ""
 
                 valor_val = pd.to_numeric(row.get('V_Num', row.get('Valor', 0)), errors='coerce')
                 if pd.isna(valor_val): valor_val = 0.0
                 saldo_val = row.get('Saldo_Acum', 0.0)
-                status_val = str(row.get('Status', '-'))
+                status_val = str(row.get('Status', '-'))[:10]
                 
                 # --- VALORES NEGATIVOS DESTACADOS EM VERMELHO COM SINAL ---
                 if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper() or valor_val < 0:
@@ -3013,19 +3015,21 @@ if aba == "📋 Relatório PDF":
                 texto_saldo = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                 cor_saldo = (255, 0, 0) if saldo_val < 0 else (0, 0, 0)
 
-                pdf.cell(22, 6, data_str, 1)
-                pdf.cell(18, 6, tipo_str, 1)
-                pdf.cell(33, 6, cat_val, 1)
-                pdf.cell(48, 6, desc_val, 1)  # Largura ajustada para 48 para bater com o cabeçalho
+                # Impressão das colunas com larguras proporcionais somando exatos 194mm
+                pdf.cell(18, 6, data_str, 1)
+                pdf.cell(14, 6, tipo_str, 1)
+                pdf.cell(26, 6, cat_val, 1)
+                pdf.cell(32, 6, benef_val, 1)
+                pdf.cell(38, 6, desc_val, 1)  # Nova coluna de descrição encaixada!
                 
                 pdf.set_text_color(*cor_valor)
-                pdf.cell(22, 6, texto_valor, 1)  # Largura ajustada para 22 para bater com o cabeçalho
+                pdf.cell(20, 6, texto_valor, 1)
                 
                 pdf.set_text_color(*cor_saldo)
-                pdf.cell(32, 6, texto_saldo, 1)
+                pdf.cell(26, 6, texto_saldo, 1)
                 
                 pdf.set_text_color(0, 0, 0)
-                pdf.cell(25, 6, status_val, 1)
+                pdf.cell(20, 6, status_val, 1)
                 pdf.ln()
 
             pdf_output = pdf.output(dest='S')
