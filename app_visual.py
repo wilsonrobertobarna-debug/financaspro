@@ -3178,6 +3178,8 @@ if aba == "📋 Relatório PDF":
         st.dataframe(df_tela_limpo, use_container_width=True)
     else:
         st.info("Nenhum lançamento encontrado para os filtros aplicados.")
+
+
 # =========================================================================
 # NOVA ABA: 📊 ANÁLISES & CONFIGURAÇÕES (Criada no final do arquivo)
 # =========================================================================
@@ -3185,7 +3187,7 @@ if aba == "📋 Relatório PDF":
 if aba == "📊 Análises & Configurações":
     st.markdown("## 📊 Painel de Análises & Configurações")
     
-  # =========================================================================
+    # =========================================================================
     # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
     # =========================================================================
     st.markdown("---")
@@ -3210,12 +3212,9 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
- # --- CÁLCULO AUTOMÁTICO DO ACUMULADO VIA PLANILHA DE LANÇAMENTOS ---
+    # --- CÁLCULO AUTOMÁTICO DO ACUMULADO VIA PLANILHA DE LANÇAMENTOS ---
     guardado_atual = 0.0
     if 'df_base' in locals() and not df_base.empty:
-        # Mostra as colunas disponíveis para sabermos qual é a correta
-        # st.write("Colunas na base:", list(df_base.columns)) 
-        
         colunas_possiveis = [c for c in df_base.columns if 'tipo' in c.lower() or 'categoria' in c.lower() or 'conta' in c.lower()]
         
         df_inv = pd.DataFrame()
@@ -3226,56 +3225,40 @@ if aba == "📊 Análises & Configurações":
                 break
         
         if not df_inv.empty:
-            # Vamos procurar a coluna de valor exata (geralmente se chama 'Valor', 'V_Num', 'Preço' ou similar)
-            # Diga-me qual é o nome da coluna de valor na sua planilha se não for nenhuma destas:
-            colunas_valor_possiveis = [c for c in df_inv.columns if 'valor' in c.lower() or 'v_num' in c.lower() or 'total' in c.lower()]
-            
-            if colunas_valor_possiveis:
-                col_valor = colunas_valor_possiveis[0]
-                # st.write("Coluna de valor encontrada:", col_valor)
-                
-                valores_convertidos = []
-                for val in df_inv[col_valor]:
-                    val_str = str(val).replace('R$', '').strip()
-                    if '.' in val_str and ',' in val_str:
-                        val_str = val_str.replace('.', '').replace(',', '.')
-                    elif ',' in val_str:
-                        val_str = val_str.replace(',', '.')
-                    
-                    try:
-                        valores_convertidos.append(float(val_str))
-                    except:
-                        pass
-                
-                if valores_convertidos:
-                    guardado_atual = sum(valores_convertidos)
+            # Procura a coluna de valor correta já existente no seu app (como 'V_Num' ou 'Valor')
+            col_valor = None
+            for c in df_inv.columns:
+                if c == 'V_Num' or 'valor' in c.lower():
+                    col_valor = c
+                    break
             
             if col_valor:
-                # Converte os valores da planilha para float de forma segura (tratando R$, pontos de milhar e vírgula decimal)
                 valores_convertidos = []
                 for val in df_inv[col_valor]:
-                    val_str = str(val).replace('R$', '').strip()
-                    # Se tiver ponto e vírgula, remove o ponto e troca a vírgula por ponto
-                    if '.' in val_str and ',' in val_str:
-                        val_str = val_str.replace('.', '').replace(',', '.')
-                    elif ',' in val_str:
-                        val_str = val_str.replace(',', '.')
-                    
                     try:
-                        valores_convertidos.append(float(val_str))
+                        # Se já for número, aproveita direto
+                        if isinstance(val, (int, float)):
+                            valores_convertidos.append(float(val))
+                        else:
+                            val_str = str(val).replace('R$', '').strip()
+                            if '.' in val_str and ',' in val_str:
+                                val_str = val_str.replace('.', '').replace(',', '.')
+                            elif ',' in val_str:
+                                val_str = val_str.replace(',', '.')
+                            valores_convertidos.append(float(val_str))
                     except:
                         pass
                 
                 if valores_convertidos:
                     guardado_atual = sum(valores_convertidos)
-  # Formulário limpo apenas para a Meta (usando texto para evitar o bug do number_input)
+
+    # Formulário limpo apenas para a Meta
     with st.form("form_reserva_financeira"):
         meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         salvar_reserva = st.form_submit_button("💾 Salvar Meta")
         
         if salvar_reserva:
             try:
-                # Converte o formato brasileiro (ex: 300.000,00) para float do Python
                 meta_limpa = meta_str_input.replace('R$', '').strip()
                 meta_limpa = meta_limpa.replace('.', '').replace(',', '.')
                 nova_meta = float(meta_limpa)
@@ -3299,7 +3282,10 @@ if aba == "📊 Análises & Configurações":
     col_m2.metric("💰 Acumulado (Automático)", f"R$ {guardado_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
     col_m3.metric("📈 Conclusão", f"{percentual_reserva:.1f}%")
 
-    st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")   
+    st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")
+
+    
+    
  # 1. GRÁFICO: EVOLUÇÃO DO SALDO ACUMULADO
     st.subheader("📈 Evolução do Saldo Acumulado")
     
