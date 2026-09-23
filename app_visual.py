@@ -1693,12 +1693,17 @@ if "💰" in st.session_state.page:
         
         if coluna_banco and not df_m.empty:
             for nome_oficial, termo_busca in mapeamento_cartoes.items():
-                # Máscara base de despesa do cartão
+                # Máscara base: pega apenas o que é Despesa e do banco correto
                 mask = (df_m['Tipo'] == 'Despesa') & (df_m[coluna_banco].astype(str).str.contains(termo_busca, case=False, na=False))
                 
-                # ADICIONADO: Ignora linhas que sejam pagamento de fatura ou transferência para o cartão
+                # BLINDA CONTRA TRANSFERÊNCIAS E PAGAMENTOS:
+                # 1. Ignora se na Descrição tiver termos de pagamento/transferência
                 if 'Descrição' in df_m.columns:
-                    mask = mask & (~df_m['Descrição'].astype(str).str.contains("Pagamento|Fatura|Pgto", case=False, na=False))
+                    mask = mask & (~df_m['Descrição'].astype(str).str.contains("Pagamento|Fatura|Pgto|cartão de credito|Transferência|Transf", case=False, na=False))
+                
+                # 2. Se houver coluna de Categoria, garante que não é categoria de transferência
+                if 'Categoria' in df_m.columns:
+                    mask = mask & (~df_m['Categoria'].astype(str).str.contains("Transferência|Transf|Cartão", case=False, na=False))
                 
                 if termo_busca == "Inter":
                     mask = mask & (df_m[coluna_banco].astype(str).str.contains("Cartão", case=False, na=False)) & (~df_m[coluna_banco].astype(str).str.contains("Pendência|Boleto|Empréstimo", case=False, na=False))
