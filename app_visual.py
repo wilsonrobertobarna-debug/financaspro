@@ -2099,7 +2099,16 @@ if "💰" in st.session_state.page:
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")        
-# --- FILTROS UNIFICADOS ---
+    
+    # --- CORREÇÃO DE FUSO HORÁRIO (BRASÍLIA) ---
+    import pytz
+    from datetime import datetime
+    
+    fuso_br = pytz.timezone('America/Sao_Paulo')
+    agora_br = datetime.now(fuso_br)
+    hoje_br = agora_br.date()
+    
+    # --- FILTROS UNIFICADOS ---
     c1, c2, c3, c4 = st.columns(4)
     filtro_banco = c1.multiselect("Banco/Cartão:", sorted(bancos_disponiveis), key="banco_pend")
     
@@ -2108,7 +2117,9 @@ elif "Pendências" in aba:
     filtro_beneficiario = c2.multiselect("Beneficiário:", lista_beneficiarios, key="benef_pend_multi")
     
     busca_desc = c3.text_input("Descrição:", key="desc_pend")
-    periodo = c4.date_input("Período:", (datetime.now().replace(day=1), datetime.now()), format="DD/MM/YYYY", key="data_pend")
+    
+    # Usa a data local de Brasília (início do mês até hoje)
+    periodo = c4.date_input("Período:", (hoje_br.replace(day=1), hoje_br), format="DD/MM/YYYY", key="data_pend")
 
     # --- PROCESSAMENTO ---
     df_v = df_base[df_base['Status'].astype(str).str.strip().str.lower() == 'pendente'].copy()
@@ -2125,54 +2136,45 @@ elif "Pendências" in aba:
     if isinstance(periodo, tuple) and len(periodo) == 2:
         df_v = df_v[(df_v['Data_Formatada'].dt.date >= periodo[0]) & (df_v['Data_Formatada'].dt.date <= periodo[1])]
 
-     # --- EXIBIÇÃO (Ajuste aqui para incluir o beneficiário na tabela) ---
+     # --- EXIBIÇÃO ---
         st.write(f"### Lançamentos Encontrados: {len(df_v)}")
         
-        # Adicionei 'Beneficiário' na lista de colunas abaixo:
         df_display = df_v[['ID', 'Vencimento', 'Banco', 'Descrição', 'Beneficiário', 'Valor', 'Categoria']].copy()
         
         df_display['Valor'] = df_v['V_Num'].apply(m_fmt)
         st.dataframe(df_display.iloc[::-1], use_container_width=True, hide_index=True)
 
       # ==========================================
-        # --- CONFERÊNCIA RÁPIDA DE SALDOS (ATUALIZADO) ---
-        # ==========================================
+      # --- CONFERÊNCIA RÁPIDA DE SALDOS ---
+      # ==========================================
         st.markdown("---")
         st.markdown("### 📊 Saldos dos Bancos na Tela de Pendências")
         
         df_bancos_resumo = carregar_bancos_manual_gs()
         if not df_bancos_resumo.empty and not df_v.empty:
-            # Descobre a data limite com base no filtro de período da tela
             if isinstance(periodo, tuple) and len(periodo) == 2:
                 data_inicio = pd.Timestamp(periodo[0])
                 data_limite = pd.Timestamp(periodo[1])
             else:
-                data_inicio = pd.Timestamp.now().normalize()
-                data_limite = pd.Timestamp.now().normalize()
+                data_inicio = pd.Timestamp(hoje_br)
+                data_limite = pd.Timestamp(hoje_br)
 
-            # Converte vencimento para datetime no df_v para filtrar o período certo
             df_v_aux = df_v.copy()
             df_v_aux['Venc_DT'] = pd.to_datetime(df_v_aux['Vencimento'], dayfirst=True, errors='coerce')
             
-            # Filtra lançamentos dentro do período e que estejam PENDENTES
             mask_periodo_pendente = (df_v_aux['Venc_DT'] >= data_inicio) & \
-                                    (df_v_aux['Venc_DT'] <= data_limite) & \
-                                    (df_v_aux['Status'].str.upper() == 'PENDENTE')
+                                     (df_v_aux['Venc_DT'] <= data_limite) & \
+                                     (df_v_aux['Status'].str.upper() == 'PENDENTE')
             
             df_pendentes_periodo = df_v_aux[mask_periodo_pendente]
             
-           # REGRA DE SELEÇÃO:
-            # Pega todos os bancos cadastrados para saber o total possível
             todos_os_bancos_cadastrados = df_bancos_resumo.iloc[:, 0].dropna().unique()
 
-            # Se o usuário selecionou um ou mais bancos específicos (mas NÃO todos)
             if filtro_banco and len(filtro_banco) > 0 and set(filtro_banco) != set(todos_os_bancos_cadastrados):
                 bancos_alvo = [filtro_banco] if isinstance(filtro_banco, str) else filtro_banco
             else:
-                # Se deixou em branco ou selecionou TODOS, pega SOMENTE os bancos com pendência no período
                 bancos_alvo = df_pendentes_periodo['Banco'].dropna().unique()
             
-            # Filtra o resumo para manter APENAS os bancos que estão na lista de alvos (com pendência ou selecionados)
             df_bancos_filtrado = df_bancos_resumo[df_bancos_resumo.iloc[:, 0].isin(bancos_alvo)]
             
             if not df_bancos_filtrado.empty:
@@ -2190,13 +2192,11 @@ elif "Pendências" in aba:
                         b_up = str(b_nome).upper()
                         
                         if "CARTA" in b_tipo or "CART" in b_up:
-                            # Para cartões, soma os lançamentos pendentes do período selecionado
                             mask_cart = (df_pendentes_periodo['Banco'] == b_nome)
                             usado_cart = df_pendentes_periodo.loc[mask_cart, 'V_Num'].sum()
                             lbl_txt = f"💳 {b_nome} (Usado)"
                             val_txt = f"-R$ {usado_cart:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                         else:
-                            # Para Contas Correntes: Pega o histórico até a data limite selecionada
                             filtro_cc = (df_base['Banco'] == b_nome)
                             df_cc_atual = df_base[filtro_cc].copy()
                             df_cc_atual['Vencimento_DT'] = pd.to_datetime(df_cc_atual['Vencimento'], dayfirst=True, errors='coerce')
@@ -2215,13 +2215,13 @@ elif "Pendências" in aba:
                 st.info("Nenhum banco com pendências no período selecionado.")
         else:
             st.info("Nenhum banco com pendências no período selecionado.")
-                            
+                        
         st.markdown("---")
         # --- BOTÃO DE BAIXA ---
         if not df_v.empty:
             nova_data = st.date_input(
                 "Data de pagamento para baixa:", 
-                datetime.now(), 
+                hoje_br, 
                 format="DD/MM/YYYY", 
                 key="data_baixa_pend"
             )
@@ -2244,7 +2244,7 @@ elif "Pendências" in aba:
             st.info("Nenhum lançamento encontrado neste período.")
         
         st.divider()
-        st.subheader("🔔 Avisos: Vencimentos Próximos")        
+        st.subheader("🔔 Avisos: Vencimentos Próximos") 
     
   # 1. Filtros
     c1, c2, c3 = st.columns(3)
