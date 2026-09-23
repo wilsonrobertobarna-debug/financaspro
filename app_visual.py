@@ -3210,7 +3210,7 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
-    # --- CÁLCULO AUTOMÁTICO DO ACUMULADO VIA PLANILHA DE LANÇAMENTOS ---
+   # --- CÁLCULO AUTOMÁTICO DO ACUMULADO VIA PLANILHA DE LANÇAMENTOS ---
     guardado_atual = 0.0
     if 'df_base' in locals() and not df_base.empty:
         colunas_possiveis = [c for c in df_base.columns if 'tipo' in c.lower() or 'categoria' in c.lower() or 'conta' in c.lower()]
@@ -3222,9 +3222,32 @@ if aba == "📊 Análises & Configurações":
                 df_inv = df_base[filtro_match]
                 break
         
-        if not df_inv.empty and 'V_Num' in df_inv.columns:
-            guardado_atual = df_inv['V_Num'].sum()
-
+        if not df_inv.empty:
+            # Procura qual coluna da base guarda o valor financeiro
+            col_valor = None
+            for c in df_inv.columns:
+                if 'valor' in c.lower() or c == 'V_Num':
+                    col_valor = c
+                    break
+            
+            if col_valor:
+                # Converte os valores da planilha para float de forma segura (tratando R$, pontos de milhar e vírgula decimal)
+                valores_convertidos = []
+                for val in df_inv[col_valor]:
+                    val_str = str(val).replace('R$', '').strip()
+                    # Se tiver ponto e vírgula, remove o ponto e troca a vírgula por ponto
+                    if '.' in val_str and ',' in val_str:
+                        val_str = val_str.replace('.', '').replace(',', '.')
+                    elif ',' in val_str:
+                        val_str = val_str.replace(',', '.')
+                    
+                    try:
+                        valores_convertidos.append(float(val_str))
+                    except:
+                        pass
+                
+                if valores_convertidos:
+                    guardado_atual = sum(valores_convertidos)
   # Formulário limpo apenas para a Meta (usando texto para evitar o bug do number_input)
     with st.form("form_reserva_financeira"):
         meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
