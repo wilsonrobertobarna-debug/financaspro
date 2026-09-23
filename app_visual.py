@@ -1693,7 +1693,7 @@ if "💰" in st.session_state.page:
         
         if coluna_banco and not df_m.empty:
             for nome_oficial, termo_busca in mapeamento_cartoes.items():
-                # Máscara base: pega apenas o que é Despesa e do banco correto
+               # Máscara base: pega apenas o que é Despesa e do banco correto
                 mask = (df_m['Tipo'] == 'Despesa') & (df_m[coluna_banco].astype(str).str.contains(termo_busca, case=False, na=False))
                 
                 # BLINDA CONTRA TRANSFERÊNCIAS E PAGAMENTOS:
@@ -1705,9 +1705,13 @@ if "💰" in st.session_state.page:
                 if 'Categoria' in df_m.columns:
                     mask = mask & (~df_m['Categoria'].astype(str).str.contains("Transferência|Transf|Cartão", case=False, na=False))
                 
+                # BLINDA CARTÕES ESPECÍFICOS (Inter e Mercado Pago)
                 if termo_busca == "Inter":
                     mask = mask & (df_m[coluna_banco].astype(str).str.contains("Cartão", case=False, na=False)) & (~df_m[coluna_banco].astype(str).str.contains("Pendência|Boleto|Empréstimo", case=False, na=False))
                 
+                elif termo_busca == "Mercado Pago":
+                    # Garante que só pega se o nome do banco contiver "Cartão" ou "Visa", ignorando a conta corrente pura
+                    mask = mask & (df_m[coluna_banco].astype(str).str.contains("Cartão|Visa", case=False, na=False))                
                 gasto_total = df_m[mask]['V_Num'].sum()
                 dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total})
                 
