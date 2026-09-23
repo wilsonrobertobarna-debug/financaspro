@@ -3210,9 +3210,12 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
-   # --- CÁLCULO AUTOMÁTICO DO ACUMULADO VIA PLANILHA DE LANÇAMENTOS ---
+ # --- CÁLCULO AUTOMÁTICO DO ACUMULADO VIA PLANILHA DE LANÇAMENTOS ---
     guardado_atual = 0.0
     if 'df_base' in locals() and not df_base.empty:
+        # Mostra as colunas disponíveis para sabermos qual é a correta
+        # st.write("Colunas na base:", list(df_base.columns)) 
+        
         colunas_possiveis = [c for c in df_base.columns if 'tipo' in c.lower() or 'categoria' in c.lower() or 'conta' in c.lower()]
         
         df_inv = pd.DataFrame()
@@ -3223,12 +3226,29 @@ if aba == "📊 Análises & Configurações":
                 break
         
         if not df_inv.empty:
-            # Procura qual coluna da base guarda o valor financeiro
-            col_valor = None
-            for c in df_inv.columns:
-                if 'valor' in c.lower() or c == 'V_Num':
-                    col_valor = c
-                    break
+            # Vamos procurar a coluna de valor exata (geralmente se chama 'Valor', 'V_Num', 'Preço' ou similar)
+            # Diga-me qual é o nome da coluna de valor na sua planilha se não for nenhuma destas:
+            colunas_valor_possiveis = [c for c in df_inv.columns if 'valor' in c.lower() or 'v_num' in c.lower() or 'total' in c.lower()]
+            
+            if colunas_valor_possiveis:
+                col_valor = colunas_valor_possiveis[0]
+                # st.write("Coluna de valor encontrada:", col_valor)
+                
+                valores_convertidos = []
+                for val in df_inv[col_valor]:
+                    val_str = str(val).replace('R$', '').strip()
+                    if '.' in val_str and ',' in val_str:
+                        val_str = val_str.replace('.', '').replace(',', '.')
+                    elif ',' in val_str:
+                        val_str = val_str.replace(',', '.')
+                    
+                    try:
+                        valores_convertidos.append(float(val_str))
+                    except:
+                        pass
+                
+                if valores_convertidos:
+                    guardado_atual = sum(valores_convertidos)
             
             if col_valor:
                 # Converte os valores da planilha para float de forma segura (tratando R$, pontos de milhar e vírgula decimal)
