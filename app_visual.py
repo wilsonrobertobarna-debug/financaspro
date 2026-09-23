@@ -3225,15 +3225,23 @@ if aba == "📊 Análises & Configurações":
         if not df_inv.empty and 'V_Num' in df_inv.columns:
             guardado_atual = df_inv['V_Num'].sum()
 
-    # Formulário limpo apenas para a Meta
+  # Formulário limpo apenas para a Meta (usando texto para evitar o bug do number_input)
     with st.form("form_reserva_financeira"):
-        nova_meta = st.number_input("Definir Meta Total da Reserva (R$):", value=float(meta_atual), step=1000.0, format="%.2f")
+        meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         salvar_reserva = st.form_submit_button("💾 Salvar Meta")
         
         if salvar_reserva:
-            ws_reserva.update(values=[[str(nova_meta)]], range_name='A2:A2')
-            st.toast("✅ Meta da reserva salva com sucesso!", icon="🎯")
-            st.rerun()
+            try:
+                # Converte o formato brasileiro (ex: 300.000,00) para float do Python
+                meta_limpa = meta_str_input.replace('R$', '').strip()
+                meta_limpa = meta_limpa.replace('.', '').replace(',', '.')
+                nova_meta = float(meta_limpa)
+                
+                ws_reserva.update(values=[[str(nova_meta)]], range_name='A2:A2')
+                st.toast("✅ Meta da reserva salva com sucesso!", icon="🎯")
+                st.rerun()
+            except ValueError:
+                st.error("⚠️ Formato de valor inválido. Use o formato como 300000 ou 300.000,00")
 
     # Exibição de Métricas e Progresso Visual
     if meta_atual > 0:
