@@ -3212,9 +3212,11 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
-    # --- CÁLCULO AUTOMÁTICO DO ACUMULADO VIA PLANILHA DE LANÇAMENTOS ---
+   # --- CÁLCULO AUTOMÁTICO DO ACUMULADO VIA PLANILHA DE LANÇAMENTOS ---
     guardado_atual = 0.0
     if 'df_base' in locals() and not df_base.empty:
+        
+        # Vamos procurar a coluna que tem o 'Investimento'
         colunas_possiveis = [c for c in df_base.columns if 'tipo' in c.lower() or 'categoria' in c.lower() or 'conta' in c.lower()]
         
         df_inv = pd.DataFrame()
@@ -3225,18 +3227,24 @@ if aba == "📊 Análises & Configurações":
                 break
         
         if not df_inv.empty:
-            # Procura a coluna de valor correta já existente no seu app (como 'V_Num' ou 'Valor')
+            # Mostra na tela quais colunas existem e quais linhas achou (ajuda a achar o erro na hora!)
+            st.write("Colunas disponíveis no df_inv:", list(df_inv.columns))
+            
+            # Tenta pegar a coluna exata de valor ou 'V_Num'
             col_valor = None
             for c in df_inv.columns:
-                if c == 'V_Num' or 'valor' in c.lower():
+                if c == 'V_Num' or 'valor' in c.lower() or 'preco' in c.lower():
                     col_valor = c
                     break
             
             if col_valor:
+                st.write("Coluna de valor usada:", col_valor)
+                # Mostra os primeiros valores crus que estão vindo da planilha
+                st.write("Valores crus encontrados:", df_inv[col_valor].head(5).tolist())
+                
                 valores_convertidos = []
                 for val in df_inv[col_valor]:
                     try:
-                        # Se já for número, aproveita direto
                         if isinstance(val, (int, float)):
                             valores_convertidos.append(float(val))
                         else:
@@ -3251,7 +3259,6 @@ if aba == "📊 Análises & Configurações":
                 
                 if valores_convertidos:
                     guardado_atual = sum(valores_convertidos)
-
     # Formulário limpo apenas para a Meta
     with st.form("form_reserva_financeira"):
         meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
