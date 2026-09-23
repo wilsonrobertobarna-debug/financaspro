@@ -1671,41 +1671,42 @@ if "💰" in st.session_state.page:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-       # =========================================================================
-        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (COM SELETOR RÁPIDO)
+      # =========================================================================
+        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (COM SELETOR DE MÊS PRÓPRIO)
         # =========================================================================
         st.markdown("---")
+        st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
         
-        # Cria colunas para o título e o seletor rápido lado a lado para economizar espaço
-        col_tit_cartao, col_sel_cartao = st.columns([2, 1])
-        with col_tit_cartao:
-            st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
+        # Barrinha de meses exclusiva para esta seção (evita rolar a página até o topo!)
+        meses_abreviados_cartao = [
+            "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
+            "Jul", "Ago", "Set", "Out", "Nov", "Dez"
+        ]
+        
+        mes_map_cartao = {
+            "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
+            "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
+        }
+        
+        # Sincroniza o padrão com o mesmo mês que está selecionado no topo ou usa Setembro como padrão
+        default_mes_cartao = locals().get('mes_atual', 'Set')
+        
+        mes_escolhido_cartao = st.pills(
+            "Período dos Cartões:",
+            meses_abreviados_cartao,
+            selection_mode="single",
+            default=default_mes_cartao if default_mes_cartao in meses_abreviados_cartao else "Set",
+            key="pills_cartoes_secao"
+        )
+        
+        if not mes_escolhido_cartao or mes_escolhido_cartao not in mes_map_cartao:
+            mes_escolhido_cartao = "Set"
             
-        with col_sel_cartao:
-            # Seletor exclusivo para esta seção (evita a maratona de scroll até o topo!)
-            # Pegamos as opções de meses disponíveis ou usamos o mesmo estado global do app
-            lista_meses_disponiveis = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
-                                       "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
-            
-            # Sincroniza com a session_state atual se ela existir, senão usa Setembro de 2026
-            mes_atual_selecionado = st.selectbox(
-                "Mês do Cartão", 
-                options=lista_meses_disponiveis,
-                index=8, # Setembro por padrão (ou o índice do seu mês atual)
-                key="selectbox_mes_cartoes_secao",
-                label_visibility="collapsed" # Esconde o rótulo para ficar limpo na tela
-            )
-
-        # -------------------------------------------------------------------------
-        # FILTRAGEM DO DATAFRAME PARA O MÊS ESCOLHIDO NESSA SEÇÃO
-        # -------------------------------------------------------------------------
-        # Copia o dataframe principal da sessão
-        df_m = st.session_state.get('df_mes_atual', pd.DataFrame()).copy()
+        # Filtra o DataFrame base especificamente para o mês escolhido nesta seção
+        filtro_mes_cartao = f"{mes_map_cartao.get(mes_escolhido_cartao, '09')}/26"
+        df_m_cartoes = df_base[df_base['Mes_Ano'] == filtro_mes_cartao].copy() if not df_base.empty else pd.DataFrame()
         
-        # Se você tiver uma lógica onde o mês filtra o DataFrame, aplicamos aqui com base no 'mes_atual_selecionado'
-        # (Caso seu dataframe global já venha filtrado pelo topo, você pode usar um filtro de data específico para o mês escolhido no selectbox acima)
-        
-        coluna_banco = next((col for col in ['Nome do Banco', 'Banco', 'Instituição', 'Conta'] if col in df_m.columns), None)
+        coluna_banco = next((col for col in ['Nome do Banco', 'Banco', 'Instituição', 'Conta'] if col in df_m_cartoes.columns), None)
         
         mapeamento_cartoes = {
             "Mastercard - Inter": "Inter",
@@ -1719,28 +1720,28 @@ if "💰" in st.session_state.page:
         dados_cartoes_calculados = []
         status_cartoes_mes = {}
         
-        if coluna_banco and not df_m.empty:
+        if coluna_banco and not df_m_cartoes.empty:
             for nome_oficial, termo_busca in mapeamento_cartoes.items():
                # Máscara base: pega apenas o que é Despesa e do banco correto
-               mask = (df_m['Tipo'] == 'Despesa') & (df_m[coluna_banco].astype(str).str.contains(termo_busca, case=False, na=False))
+               mask = (df_m_cartoes['Tipo'] == 'Despesa') & (df_m_cartoes[coluna_banco].astype(str).str.contains(termo_busca, case=False, na=False))
                
                # BLINDA CONTRA TRANSFERÊNCIAS E PAGAMENTOS:
-               if 'Descrição' in df_m.columns:
-                   mask = mask & (~df_m['Descrição'].astype(str).str.contains("Pagamento|Fatura|Pgto|cartão de credito|Transferência|Transf", case=False, na=False))
+               if 'Descrição' in df_m_cartoes.columns:
+                   mask = mask & (~df_m_cartoes['Descrição'].astype(str).str.contains("Pagamento|Fatura|Pgto|cartão de credito|Transferência|Transf", case=False, na=False))
                
-               if 'Categoria' in df_m.columns:
-                   mask = mask & (~df_m['Categoria'].astype(str).str.contains("Transferência|Transf|Cartão", case=False, na=False))
+               if 'Categoria' in df_m_cartoes.columns:
+                   mask = mask & (~df_m_cartoes['Categoria'].astype(str).str.contains("Transferência|Transf|Cartão", case=False, na=False))
                
                # BLINDA CARTÕES ESPECÍFICOS (Inter e Mercado Pago)
                if termo_busca == "Inter":
-                   mask = mask & (df_m[coluna_banco].astype(str).str.contains("Cartão", case=False, na=False)) & (~df_m[coluna_banco].astype(str).str.contains("Pendência|Boleto|Empréstimo", case=False, na=False))
+                   mask = mask & (df_m_cartoes[coluna_banco].astype(str).str.contains("Cartão", case=False, na=False)) & (~df_m_cartoes[coluna_banco].astype(str).str.contains("Pendência|Boleto|Empréstimo", case=False, na=False))
                elif termo_busca == "Mercado Pago":
-                   mask = mask & (df_m[coluna_banco].astype(str).str.contains("Cartão|Visa", case=False, na=False))                
+                   mask = mask & (df_m_cartoes[coluna_banco].astype(str).str.contains("Cartão|Visa", case=False, na=False))                
                
-               gasto_total = df_m[mask]['V_Num'].sum()
+               gasto_total = df_m_cartoes[mask]['V_Num'].sum()
                dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total})
                
-               sub_df = df_m[mask]
+               sub_df = df_m_cartoes[mask]
                if not sub_df.empty:
                    coluna_status = next((col for col in ['Status', 'Situação', 'Estado'] if col in sub_df.columns), None)
                    if coluna_status:
