@@ -3186,57 +3186,66 @@ if aba == "📊 Análises & Configurações":
     st.markdown("## 📊 Painel de Análises & Configurações")
     
     # =========================================================================
-    # 💰 PAINEL DE RESERVA FINANCEIRA
+    # 💰 PAINEL DE RESERVA FINANCEIRA (COM CÁLCULO AUTOMÁTICO DE INVESTIMENTOS)
     # =========================================================================
     st.markdown("---")
     st.subheader("🎯 Planejamento de Reserva Financeira")
-    st.write("Acompanhe o progresso da sua segurança financeira de forma independente.")
+    st.write("Acompanhe o progresso da sua segurança financeira com base nos seus lançamentos de investimentos.")
 
-    # Tenta carregar ou criar a aba 'Reserva_Financeira' no Google Sheets
+    # Tenta carregar ou criar a aba 'Reserva_Financeira' no Google Sheets (para salvar apenas a Meta e onde está investido)
     try:
         ws_reserva = sh.worksheet("Reserva_Financeira")
     except:
-        # Se a aba não existir, cria automaticamente com os cabeçalhos padrão
         ws_reserva = sh.add_worksheet(title="Reserva_Financeira", rows="10", cols="5")
-        ws_reserva.append_row(["Meta_Reserva", "Valor_Atual", "Onde_Esta"])
-        ws_reserva.append_row(["0.0", "0.0", "CDB / Caixinha"])
+        ws_reserva.append_row(["Meta_Reserva", "Investimentos"])
+        ws_reserva.append_row(["0.0", "Tesouro Selic / Caixinha"])
 
-    # Pega os dados da aba
+    # Pega os dados da aba de reserva
     dados_reserva = ws_reserva.get_all_values()
     
-    # Valores padrão caso esteja vazio
     meta_atual = 0.0
-    guardado_atual = 0.0
-    local_atual = "CDB / Caixinha"
+    local_atual = "Tesouro Selic / Caixinha"
 
     if len(dados_reserva) > 1:
         try:
             meta_atual = float(str(dados_reserva[1][0]).replace('R$', '').replace('.', '').replace(',', '.').strip())
         except:
             meta_atual = 0.0
-        
-        try:
-            guardado_atual = float(str(dados_reserva[1][1]).replace('R$', '').replace('.', '').replace(',', '.').strip())
-        except:
-            guardado_atual = 0.0
             
-        if len(dados_reserva[1]) > 2:
-            local_atual = str(dados_reserva[1][2])
+        if len(dados_reserva[1]) > 1:
+            local_atual = str(dados_reserva[1][1])
 
-    # Formulário na tela para atualizar os valores
+    # --- CÁLCULO AUTOMÁTICO DO ACUMULADO VIA PLANILHA DE LANÇAMENTOS ---
+    guardado_atual = 0.0
+    if 'df_base' in locals() and not df_base.empty:
+        # Procura por colunas que identifiquem o tipo/categoria (ex: 'Tipo', 'Categoria')
+        colunas_possiveis = [c for c in df_base.columns if 'tipo' in c.lower() or 'categoria' in c.lower() or 'conta' in c.lower()]
+        
+        df_inv = pd.DataFrame()
+        for col in colunas_possiveis:
+            # Filtra linhas onde o texto contenha 'investimento'
+            filtro_match = df_base[col].astype(str).str.strip().str.lower().str.contains('investimento')
+            if filtro_match.any():
+                df_inv = df_base[filtro_match]
+                break
+        
+        # Se encontrou lançamentos de investimento e existe a coluna de valor numérico ('V_Num')
+        if not df_inv.empty and 'V_Num' in df_inv.columns:
+            guardado_atual = df_inv['V_Num'].sum()
+
+    # Formulário para atualizar apenas a Meta e onde está guardado
     with st.form("form_reserva_financeira"):
         c_res1, c_res2 = st.columns(2)
         
         nova_meta = c_res1.number_input("Meta Total da Reserva (R$):", value=float(meta_atual), step=1000.0, format="%.2f")
-        novo_guardado = c_res2.number_input("Quanto já Guardou (R$):", value=float(guardado_atual), step=500.0, format="%.2f")
-        novo_local = st.text_input("Onde está guardado (ex: Tesouro Selic, Caixinha Nubank):", value=str(local_atual))
+        novo_local = c_res2.text_input("Onde está investido (ex: Tesouro Selic, Caixinha):", value=str(local_atual))
         
-        salvar_reserva = st.form_submit_button("💾 Salvar Reserva Financeira")
+        salvar_reserva = st.form_submit_button("💾 Salvar Configurações da Reserva")
         
         if salvar_reserva:
-            # Atualiza a segunda linha da planilha com os novos valores
-            ws_reserva.update(values=[[str(nova_meta), str(novo_guardado), novo_local]], range_name='A2:C2')
-            st.toast("✅ Reserva financeira atualizada com sucesso!", icon="🎯")
+            # Salva apenas a Meta e o local na planilha (o valor atual é calculado sozinho)
+            ws_reserva.update(values=[[str(nova_meta), novo_local]], range_name='A2:B2')
+            st.toast("✅ Meta da reserva atualizada com sucesso!", icon="🎯")
             st.rerun()
 
     # Exibição de Métricas e Progresso Visual
@@ -3249,12 +3258,11 @@ if aba == "📊 Análises & Configurações":
 
     col_m1, col_m2, col_m3 = st.columns(3)
     col_m1.metric("🎯 Meta Alvo", f"R$ {meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    col_m2.metric("💰 Acumulado", f"R$ {guardado_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    col_m2.metric("💰 Acumulado (Automático)", f"R$ {guardado_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
     col_m3.metric("📈 Conclusão", f"{percentual_reserva:.1f}%")
 
     # Barra de progresso do Streamlit
-    st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")
-    
+    st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")    
    
  # 1. GRÁFICO: EVOLUÇÃO DO SALDO ACUMULADO
     st.subheader("📈 Evolução do Saldo Acumulado")
