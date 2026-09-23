@@ -1757,8 +1757,8 @@ if "💰" in st.session_state.page:
             for c in lista_cartoes_controle:
                 status_cartoes_mes[c] = "Pendente"
             
-       # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (COM RÓTULOS DE VALORES NAS BARRAS)
+      # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (COM VALORES ABREVIADOS EM 'k')
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1790,13 +1790,19 @@ if "💰" in st.session_state.page:
         df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
         if not df_cartoes_graph.empty:
-            # Formata os valores para exibição limpa (ex: R$ 1.250,00 ou em formato curto se preferir)
-            textos_realizado = [f"R$ {val:,.2f}" for val in df_cartoes_graph['V_Num']]
-            textos_meta = [f"R$ {val:,.2f}" for val in df_cartoes_graph['Meta']]
+            # Função auxiliar para formatar em formato curto (ex: 12.5k, 3k)
+            def formata_valor_k(valor):
+                if valor >= 1000 or valor <= -1000:
+                    return f"{valor/1000:.1f}k".replace('.0k', 'k')
+                else:
+                    return f"{valor:.0f}"
+
+            textos_realizado = [formata_valor_k(val) for val in df_cartoes_graph['V_Num']]
+            textos_meta = [formata_valor_k(val) for val in df_cartoes_graph['Meta']]
 
             fig_cartoes = go.Figure()
             
-            # Adiciona barra de Realizado com os rótulos
+            # Adiciona barra de Realizado com valores abreviados
             fig_cartoes.add_trace(go.Bar(
                 x=df_cartoes_graph['Nome do Banco'], 
                 y=df_cartoes_graph['V_Num'], 
@@ -1806,7 +1812,7 @@ if "💰" in st.session_state.page:
                 textposition='auto'
             ))
             
-            # Adiciona barra de Meta Estipulada com os rótulos
+            # Adiciona barra de Meta Estipulada com valores abreviados
             fig_cartoes.add_trace(go.Bar(
                 x=df_cartoes_graph['Nome do Banco'], 
                 y=df_cartoes_graph['Meta'], 
@@ -1819,7 +1825,7 @@ if "💰" in st.session_state.page:
             
             fig_cartoes.update_layout(
                 barmode='group', 
-                height=380, # Aumentei levemente a altura para acomodar os números sem apertar
+                height=380, 
                 margin=dict(t=40, b=10, l=0, r=0)
             )
             
