@@ -1757,8 +1757,8 @@ if "💰" in st.session_state.page:
             for c in lista_cartoes_controle:
                 status_cartoes_mes[c] = "Pendente"
             
-        # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES
+       # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (COM RÓTULOS DE VALORES NAS BARRAS)
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1790,11 +1790,38 @@ if "💰" in st.session_state.page:
         df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
         if not df_cartoes_graph.empty:
+            # Formata os valores para exibição limpa (ex: R$ 1.250,00 ou em formato curto se preferir)
+            textos_realizado = [f"R$ {val:,.2f}" for val in df_cartoes_graph['V_Num']]
+            textos_meta = [f"R$ {val:,.2f}" for val in df_cartoes_graph['Meta']]
+
             fig_cartoes = go.Figure()
-            fig_cartoes.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
-            fig_cartoes.add_trace(go.Bar(x=df_cartoes_graph['Nome do Banco'], y=df_cartoes_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
             
-            fig_cartoes.update_layout(barmode='group', height=350, margin=dict(t=30, b=10, l=0, r=0))
+            # Adiciona barra de Realizado com os rótulos
+            fig_cartoes.add_trace(go.Bar(
+                x=df_cartoes_graph['Nome do Banco'], 
+                y=df_cartoes_graph['V_Num'], 
+                name='Realizado', 
+                marker_color='#e74c3c',
+                text=textos_realizado,
+                textposition='auto'
+            ))
+            
+            # Adiciona barra de Meta Estipulada com os rótulos
+            fig_cartoes.add_trace(go.Bar(
+                x=df_cartoes_graph['Nome do Banco'], 
+                y=df_cartoes_graph['Meta'], 
+                name='Meta Estipulada', 
+                marker_color='#2ecc71', 
+                opacity=0.4,
+                text=textos_meta,
+                textposition='auto'
+            ))
+            
+            fig_cartoes.update_layout(
+                barmode='group', 
+                height=380, # Aumentei levemente a altura para acomodar os números sem apertar
+                margin=dict(t=40, b=10, l=0, r=0)
+            )
             
             st.plotly_chart(
                 fig_cartoes, 
