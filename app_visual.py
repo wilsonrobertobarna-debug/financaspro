@@ -2799,21 +2799,27 @@ if aba == "📋 Relatório PDF":
 
             df_report = df_report.sort_values(by='DT_ORDEM')
 
-           # ========================================================
-            # 3. BUSCA DO SALDO DE ABERTURA - MATEMÁTICA REAL COMBINADA
+            # ========================================================
+            # 3. BUSCA DO SALDO DE ABERTURA - REGRA INTELIGENTE
             # ========================================================
             base_inicial = 0.0
-            try:
-                saldo_sistema_abril = 0.0
+            
+            # Identifica se o usuário selecionou um Banco/Cartão específico no relatório
+            # (Se for "Todos", significa que é um relatório geral, por beneficiário, categoria, etc.)
+            eh_relatorio_de_banco_especifico = (banco_relatorio != "Todos" and banco_relatorio != "" and banco_relatorio is not None)
+
+            # SÓ BUSCA SALDO ANTERIOR SE FOR RELATÓRIO DE BANCO/CARTÃO ESPECÍFICO
+            if eh_relatorio_de_banco_especifico:
                 try:
-                    ws_bancos = sh.worksheet("Bancos")
-                    dados_bancos = ws_bancos.get_all_values()
-                    df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
-                    
-                    col_banco_cad = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
-                    col_saldo_cad = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
-                    
-                    if banco_nome != "Todos os Bancos":
+                    saldo_sistema_abril = 0.0
+                    try:
+                        ws_bancos = sh.worksheet("Bancos")
+                        dados_bancos = ws_bancos.get_all_values()
+                        df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
+                        
+                        col_banco_cad = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
+                        col_saldo_cad = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
+                        
                         linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome.upper()]
                         if not linha_banco.empty:
                             val_cru = str(linha_banco.iloc[0][col_saldo_cad]).strip()
@@ -2824,59 +2830,59 @@ if aba == "📋 Relatório PDF":
                             elif ',' in val_limpo:
                                 val_limpo = val_limpo.replace(',', '.')
                             saldo_sistema_abril = float(val_limpo)
-                except:
-                    saldo_sistema_abril = 0.0
+                    except:
+                        saldo_sistema_abril = 0.0
 
-                df_historico = df_base.copy()
-                col_data_h = next((c for c in df_historico.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
-                col_banco_h = next((c for c in df_historico.columns if c.upper() in ['BANCO', 'CONTA']), None)
-                
-                if col_data_h:
-                    df_historico['DT_HIST'] = pd.to_datetime(df_historico[col_data_h], format="%d/%m/%Y", errors='coerce')
-                else:
-                    df_historico['DT_HIST'] = pd.to_datetime(df_historico.index, errors='coerce')
-                
-                if banco_nome != "Todos os Bancos" and col_banco_h:
-                    df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == str(banco_nome).upper()]
-                
-                # SE FOR CARTÃO: Pega apenas o mês imediatamente anterior (ex: Setembro para a fatura de Outubro)
-                # SE FOR CONTA COMUM: Acumula todo o histórico anterior
-                if eh_cartao_geral:
-                    t_ini_mes_ant = (t_ini - pd.DateOffset(months=1)).replace(day=1)
-                    t_fim_mes_ant = t_ini - pd.Timedelta(days=1)
-                    df_antes_do_periodo = df_historico[(df_historico['DT_HIST'] >= t_ini_mes_ant) & (df_historico['DT_HIST'] <= t_fim_mes_ant)]
-                else:
-                    df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
-                
-                saldo_acumulado_passado = 0.0
-                for _, r_pass in df_antes_do_periodo.iterrows():
-                    val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
+                    df_historico = df_base.copy()
+                    col_data_h = next((c for c in df_historico.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+                    col_banco_h = next((c for c in df_historico.columns if c.upper() in ['BANCO', 'CONTA']), None)
                     
-                    if isinstance(val_p_cru, str):
-                        import re
-                        val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
-                        if '.' in val_p_limpo and ',' in val_p_limpo:
-                            val_p_limpo = val_p_limpo.replace('.', '').replace(',', '.')
-                        elif ',' in val_p_limpo:
-                            val_p_limpo = val_p_limpo.replace(',', '.')
-                        val_p = pd.to_numeric(val_p_limpo, errors='coerce')
+                    if col_data_h:
+                        df_historico['DT_HIST'] = pd.to_datetime(df_historico[col_data_h], format="%d/%m/%Y", errors='coerce')
                     else:
-                        val_p = pd.to_numeric(val_p_cru, errors='coerce')
+                        df_historico['DT_HIST'] = pd.to_datetime(df_historico.index, errors='coerce')
+                    
+                    if col_banco_h:
+                        df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == str(banco_nome).upper()]
+                    
+                    if eh_cartao_geral:
+                        t_ini_mes_ant = (t_ini - pd.DateOffset(months=1)).replace(day=1)
+                        t_fim_mes_ant = t_ini - pd.Timedelta(days=1)
+                        df_antes_do_periodo = df_historico[(df_historico['DT_HIST'] >= t_ini_mes_ant) & (df_historico['DT_HIST'] <= t_fim_mes_ant)]
+                    else:
+                        df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
+                    
+                    saldo_acumulado_passado = 0.0
+                    for _, r_pass in df_antes_do_periodo.iterrows():
+                        val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
                         
-                    if pd.isna(val_p): val_p = 0.0
+                        if isinstance(val_p_cru, str):
+                            import re
+                            val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
+                            if '.' in val_p_limpo and ',' in val_p_limpo:
+                                val_p_limpo = val_p_limpo.replace('.', '').replace(',', '.')
+                            elif ',' in val_p_limpo:
+                                val_p_limpo = val_p_limpo.replace(',', '.')
+                            val_p = pd.to_numeric(val_p_limpo, errors='coerce')
+                        else:
+                            val_p = pd.to_numeric(val_p_cru, errors='coerce')
+                            
+                        if pd.isna(val_p): val_p = 0.0
+                        
+                        tipo_p = str(r_pass.get('Tipo', '')).upper().strip()
+                        if "DESPESA" in tipo_p or "GASTO" in tipo_p:
+                            saldo_acumulado_passado -= val_p
+                        else:
+                            saldo_acumulado_passado += val_p
                     
-                    tipo_p = str(r_pass.get('Tipo', '')).upper().strip()
-                    if "DESPESA" in tipo_p or "GASTO" in tipo_p:
-                        saldo_acumulado_passado -= val_p
+                    if eh_cartao_geral:
+                        base_inicial = saldo_acumulado_passado
                     else:
-                        saldo_acumulado_passado += val_p
-                
-                # Para cartão, o saldo inicial não puxa o saldo em dinheiro da conta do banco (saldo_sistema_abril)
-                if eh_cartao_geral:
-                    base_inicial = saldo_acumulado_passado
-                else:
-                    base_inicial = saldo_sistema_abril + saldo_acumulado_passado
-            except:
+                        base_inicial = saldo_sistema_abril + saldo_acumulado_passado
+                except:
+                    base_inicial = 0.0
+            else:
+                # SE FOR POR BENEFICIÁRIO, CATEGORIA, TIPO OU GERAL: Começa zerado!
                 base_inicial = 0.0
 
             saldo_anterior = base_inicial
@@ -2899,7 +2905,6 @@ if aba == "📋 Relatório PDF":
                 saldos_lista.append(corrente)
             
             df_report['Saldo_Acum'] = saldos_lista
-
             # ========================================================
             # 5. MONTAGEM DO CABEÇALHO DO PDF
             # ========================================================
