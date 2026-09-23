@@ -2028,7 +2028,7 @@ if "💰" in st.session_state.page:
         st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
         
         
-          # =================================================================v
+    # =================================================================v
     # --- AQUI COMEÇA O WILSONBOT (Logo abaixo do gráfico de cartões) ---
     # =================================================================v
     st.subheader("🤖 Consultor WilsonBot")
@@ -2100,11 +2100,10 @@ if "💰" in st.session_state.page:
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")        
     
-    # --- CORREÇÃO DE FUSO HORÁRIO (BRASÍLIA) ---
-    import pytz
-    from datetime import datetime
+    # --- CORREÇÃO DE FUSO HORÁRIO (BRASÍLIA - UTC-3) ---
+    from datetime import datetime, timezone, timedelta
     
-    fuso_br = pytz.timezone('America/Sao_Paulo')
+    fuso_br = timezone(timedelta(hours=-3))
     agora_br = datetime.now(fuso_br)
     hoje_br = agora_br.date()
     
@@ -2244,7 +2243,7 @@ elif "Pendências" in aba:
             st.info("Nenhum lançamento encontrado neste período.")
         
         st.divider()
-        st.subheader("🔔 Avisos: Vencimentos Próximos") 
+        st.subheader("🔔 Avisos: Vencimentos Próximos")
     
   # 1. Filtros
     c1, c2, c3 = st.columns(3)
