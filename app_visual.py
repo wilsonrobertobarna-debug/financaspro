@@ -3185,6 +3185,76 @@ if aba == "📋 Relatório PDF":
 if aba == "📊 Análises & Configurações":
     st.markdown("## 📊 Painel de Análises & Configurações")
     
+    # =========================================================================
+    # 💰 PAINEL DE RESERVA FINANCEIRA
+    # =========================================================================
+    st.markdown("---")
+    st.subheader("🎯 Planejamento de Reserva Financeira")
+    st.write("Acompanhe o progresso da sua segurança financeira de forma independente.")
+
+    # Tenta carregar ou criar a aba 'Reserva_Financeira' no Google Sheets
+    try:
+        ws_reserva = sh.worksheet("Reserva_Financeira")
+    except:
+        # Se a aba não existir, cria automaticamente com os cabeçalhos padrão
+        ws_reserva = sh.add_worksheet(title="Reserva_Financeira", rows="10", cols="5")
+        ws_reserva.append_row(["Meta_Reserva", "Valor_Atual", "Onde_Esta"])
+        ws_reserva.append_row(["0.0", "0.0", "CDB / Caixinha"])
+
+    # Pega os dados da aba
+    dados_reserva = ws_reserva.get_all_values()
+    
+    # Valores padrão caso esteja vazio
+    meta_atual = 0.0
+    guardado_atual = 0.0
+    local_atual = "CDB / Caixinha"
+
+    if len(dados_reserva) > 1:
+        try:
+            meta_atual = float(str(dados_reserva[1][0]).replace('R$', '').replace('.', '').replace(',', '.').strip())
+        except:
+            meta_atual = 0.0
+        
+        try:
+            guardado_atual = float(str(dados_reserva[1][1]).replace('R$', '').replace('.', '').replace(',', '.').strip())
+        except:
+            guardado_atual = 0.0
+            
+        if len(dados_reserva[1]) > 2:
+            local_atual = str(dados_reserva[1][2])
+
+    # Formulário na tela para atualizar os valores
+    with st.form("form_reserva_financeira"):
+        c_res1, c_res2 = st.columns(2)
+        
+        nova_meta = c_res1.number_input("Meta Total da Reserva (R$):", value=float(meta_atual), step=1000.0, format="%.2f")
+        novo_guardado = c_res2.number_input("Quanto já Guardou (R$):", value=float(guardado_atual), step=500.0, format="%.2f")
+        novo_local = st.text_input("Onde está guardado (ex: Tesouro Selic, Caixinha Nubank):", value=str(local_atual))
+        
+        salvar_reserva = st.form_submit_button("💾 Salvar Reserva Financeira")
+        
+        if salvar_reserva:
+            # Atualiza a segunda linha da planilha com os novos valores
+            ws_reserva.update(values=[[str(nova_meta), str(novo_guardado), novo_local]], range_name='A2:C2')
+            st.toast("✅ Reserva financeira atualizada com sucesso!", icon="🎯")
+            st.rerun()
+
+    # Exibição de Métricas e Progresso Visual
+    if meta_atual > 0:
+        progresso = min(guardado_atual / meta_atual, 1.0)
+        percentual_reserva = (guardado_atual / meta_atual) * 100
+    else:
+        progresso = 0.0
+        percentual_reserva = 0.0
+
+    col_m1, col_m2, col_m3 = st.columns(3)
+    col_m1.metric("🎯 Meta Alvo", f"R$ {meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    col_m2.metric("💰 Acumulado", f"R$ {guardado_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    col_m3.metric("📈 Conclusão", f"{percentual_reserva:.1f}%")
+
+    # Barra de progresso do Streamlit
+    st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")
+    
    
  # 1. GRÁFICO: EVOLUÇÃO DO SALDO ACUMULADO
     st.subheader("📈 Evolução do Saldo Acumulado")
