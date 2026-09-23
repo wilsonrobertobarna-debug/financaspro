@@ -3212,10 +3212,11 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
- # --- CÁLCULO AUTOMÁTICO DO ACUMULADO VIA PLANILHA DE LANÇAMENTOS ---
+# --- CÁLCULO AUTOMÁTICO DO ACUMULADO VIA PLANILHA DE LANÇAMENTOS ---
     guardado_atual = 0.0
     if 'df_base' in locals() and not df_base.empty:
         
+        # Procura linhas que tenham 'investimento' em qualquer coluna
         colunas_possiveis = [c for c in df_base.columns if 'tipo' in c.lower() or 'categoria' in c.lower() or 'conta' in c.lower()]
         
         df_inv = pd.DataFrame()
@@ -3226,26 +3227,29 @@ if aba == "📊 Análises & Configurações":
                 break
         
         if not df_inv.empty:
-            # Força o uso da coluna V_Num se ela existir (que é a versão numérica tratada pelo app)
-            col_valor = 'V_Num' if 'V_Num' in df_inv.columns else 'Valor'
-            
+            # Pega os valores direto da COLUNA B (índice 1 do DataFrame) da aba de lançamentos
             valores_convertidos = []
-            for val in df_inv[col_valor]:
-                try:
-                    if isinstance(val, (int, float)):
-                        valores_convertidos.append(float(val))
-                    else:
-                        val_str = str(val).replace('R$', '').strip()
-                        if '.' in val_str and ',' in val_str:
-                            val_str = val_str.replace('.', '').replace(',', '.')
-                        elif ',' in val_str:
-                            val_str = val_str.replace(',', '.')
-                        valores_convertidos.append(float(val_str))
-                except:
-                    pass
+            
+            # Se a coluna B existir no DataFrame (índice 1)
+            if len(df_base.columns) > 1:
+                coluna_b_dados = df_inv.iloc[:, 1] # Coluna B
+                
+                for val in coluna_b_dados:
+                    try:
+                        if isinstance(val, (int, float)):
+                            valores_convertidos.append(float(val))
+                        else:
+                            val_str = str(val).replace('R$', '').strip()
+                            if '.' in val_str and ',' in val_str:
+                                val_str = val_str.replace('.', '').replace(',', '.')
+                            elif ',' in val_str:
+                                val_str = val_str.replace(',', '.')
+                            valores_convertidos.append(float(val_str))
+                    except:
+                        pass
             
             if valores_convertidos:
-                guardado_atual = sum(valores_convertidos)    # Formulário limpo apenas para a Meta
+                guardado_atual = sum(valores_convertidos)
     with st.form("form_reserva_financeira"):
         meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         salvar_reserva = st.form_submit_button("💾 Salvar Meta")
