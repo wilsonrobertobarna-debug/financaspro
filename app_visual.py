@@ -3250,7 +3250,7 @@ if aba == "📊 Análises & Configurações":
         except:
             return 0.0
 
-   guardado_atual = 0.0
+    guardado_atual = 0.0
     saldo_outras_brl = 0.0
     saldo_veiculos_brl = 0.0
     total_invest_usd = 0.0
