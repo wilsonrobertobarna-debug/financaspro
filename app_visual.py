@@ -3252,8 +3252,6 @@ if aba == "📊 Análises & Configurações":
 
     saldo_inicial_investimentos_brl = 0.0
     guardado_atual = 0.0
-    
-    # Variáveis para o painel de conferência por moeda
     saldo_outras_brl = 0.0
     saldo_veiculos_brl = 0.0
     total_invest_usd = 0.0
@@ -3262,9 +3260,16 @@ if aba == "📊 Análises & Configurações":
     saldo_outras_eur = 0.0
 
     try:
-        # ==========================================
-        # PASSO 1: LEITURA DIRETA DOS SALDOS ATUAIS DA ABA BANCOS
-        # ==========================================
+        # Pega os dataframes necessários
+        df_lanc_local = None
+        for nome_var in ['df_lancamentos', 'df_lancamento', 'lancamentos_df', 'df']:
+            if nome_var in locals() and not locals()[nome_var].empty:
+                df_lanc_local = locals()[nome_var]
+                break
+            elif nome_var in st.session_state and not st.session_state[nome_var].empty:
+                df_lanc_local = st.session_state[nome_var]
+                break
+
         df_bancos_local = None
         for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
             if nome_var in locals() and not locals()[nome_var].empty:
@@ -3273,60 +3278,69 @@ if aba == "📊 Análises & Configurações":
             elif nome_var in st.session_state and not st.session_state[nome_var].empty:
                 df_bancos_local = st.session_state[nome_var]
                 break
-        
-        if df_bancos_local is not None and not df_bancos_local.empty:
+
+        if df_bancos_local is not None and not df_bancos_local.empty and df_lanc_local is not None:
+            # Garante que V_Num seja numérico no df de lançamentos
+            df_lanc_local['V_Num'] = pd.to_numeric(df_lanc_local['V_Num'], errors='coerce').fillna(0)
+
             for idx, row in df_bancos_local.iloc[1:].iterrows():
                 try:
                     nome_conta = str(row.iloc[0]).strip() if len(row) > 0 else ""
                     nome_conta_lower = nome_conta.lower()
-                    val_bruto = row.iloc[1] if len(row) > 1 else 0
-                    valor_num = converter_valor_br_seguro(val_bruto)
-                    tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
                     
-                    # Identifica a moeda na coluna F (índice 5), padrão BRL se vazio
-                    moeda = str(row.iloc[5]).strip().upper() if len(row) > 5 else "BRL"
-                    if not moeda or moeda == "NAN":
-                        moeda = "BRL"
+                    val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
+                    saldo_inicial = float(val_str) if val_str and val_str != 'nan' else 0.0
                     
-                    # 1. Veículos (T-Cross, Moto Lead, começados com 'x')
-                    is_veiculo = nome_conta.startswith('x') or nome_conta.startswith('X') or 'xtcross' in nome_conta_lower or 'xmoto' in nome_conta_lower
-                    
+                    tipo_conta = str(row.iloc[2]).strip().upper() if len(row) > 2 else ""
+                    moeda = str(row.iloc[5]).strip().upper() if len(row) > 5 and str(row.iloc[5]).strip() else "BRL"
+
+                    # 1. Veículos
+                    is_veiculo = nome_conta.startswith('x') or nome_conta.startswith('X') or 'xtcross' in nome_conta_lower or 'xmoto' in nome_conta_lower or 'VEICULO' in tipo_conta or 'BEM' in tipo_conta
                     if is_veiculo:
                         if moeda == "BRL":
-                            saldo_veiculos_brl += valor_num
+                            saldo_veiculos_brl += saldo_inicial
                         continue
+
+                    # 2. Ignora Cartões e VR/VA do cálculo de saldo patrimonial
+                    if "CARTA" in tipo_conta or "CART" in nome_conta_lower or "REFEIÇÃO" in tipo_conta or "VR" in nome_conta_lower or "VA" in nome_conta_lower:
+                        continue
+
+                    # 3. Calcula o saldo real da conta (Saldo Inicial + Entradas - Saídas)
+                    filtro = (df_lanc_local['Banco'] == nome_conta) & ((df_lanc_local['Status'].str.upper() == 'PAGO') | (df_lanc_local['Status'] == ''))
+                    df_banco_atual = df_lanc_local[filtro]
                     
-                    # 2. Investimentos vs Outras Contas (Conta Corrente)
-                    is_investimento = 'investimento' in tipo_conta or 'aplicação' in tipo_conta or 'aplicacao' in tipo_conta
+                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
                     
+                    saldo_atual_conta = saldo_inicial + entradas - saidas
+
+                    # 4. Separa entre Investimento e Conta Corrente
+                    is_investimento = 'INVEST' in tipo_conta or 'APLICAC' in tipo_conta
+
                     if is_investimento:
                         if moeda == "BRL":
-                            saldo_inicial_investimentos_brl += valor_num
+                            guardado_atual += saldo_atual_conta
                         elif moeda == "USD":
-                            total_invest_usd += valor_num
+                            total_invest_usd += saldo_atual_conta
                         elif moeda == "EUR":
-                            total_invest_eur += valor_num
+                            total_invest_eur += saldo_atual_conta
                     else:
-                        # Contas Correntes / Outras
                         if moeda == "BRL":
-                            saldo_outras_brl += valor_num
+                            saldo_outras_brl += saldo_atual_conta
                         elif moeda == "USD":
-                            saldo_outras_usd += valor_num
+                            saldo_outras_usd += saldo_atual_conta
                         elif moeda == "EUR":
-                            saldo_outras_eur += valor_num
+                            saldo_outras_eur += saldo_atual_conta
                 except:
                     pass
 
-        # O valor guardado agora assume diretamente o saldo real consolidado dos investimentos da aba Bancos
-        guardado_atual = saldo_inicial_investimentos_brl
-        
-        # Totais por Moeda para bater com o WhatsApp
+        # Totais gerais para a conferência
         subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
         subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
 
     except Exception as e:
-        st.error(f"Erro ao calcular os investimentos: {e}")
+        st.error(f"Erro ao calcular os saldos: {e}")
 
     # Formulário para salvar a meta
     with st.form("form_reserva_financeira"):
