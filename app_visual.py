@@ -3181,9 +3181,8 @@ if aba == "📋 Relatório PDF":
 
 
 # =========================================================================
-# NOVA ABA: 📊 ANÁLISES & CONFIGURAÇÕES (Criada no final do arquivo)
+# NOVA ABA: 📊 ANÁLISES & CONFIGURAÇÕES
 # =========================================================================
-# ATENÇÃO: Essa linha abaixo tem que começar encostada no canto esquerdo!
 if aba == "📊 Análises & Configurações":
     st.markdown("## 📊 Painel de Análises & Configurações")
     
@@ -3212,9 +3211,7 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
-# --- CÁLCULO TOTAL BLINDADO: LANÇAMENTOS + SALDO INICIAL DA ABA BANCOS (APENAS INVESTIMENTOS) ---
-# --- PASSO 1: LEITURA DO SALDO INICIAL (EXCLUINDO ITENS COM 'X' NO NOME) ---
-# --- FUNÇÃO DE CONVERSÃO SEGURA ---
+    # --- FUNÇÃO DE CONVERSÃO SEGURA ---
     def converter_valor_br_seguro(val):
         if pd.isna(val):
             return 0.0
@@ -3239,10 +3236,11 @@ if aba == "📊 Análises & Configurações":
 
     saldo_inicial_investimentos = 0.0
     total_rendimentos = 0.0
+    guardado_atual = 0.0
 
     try:
         # ==========================================
-        # PASSO 1: SALDO INICIAL (Aba Bancos)
+        # PASSO 1: SALDO INICIAL (Aba Bancos - Líquido sem veículos 'x')
         # ==========================================
         df_bancos_local = None
         for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
@@ -3253,7 +3251,6 @@ if aba == "📊 Análises & Configurações":
                 df_bancos_local = st.session_state[nome_var]
                 break
         
-        # Lista para guardar os nomes das contas de investimento válidas (sem os 'x')
         contas_investimento_validas = set()
         
         if df_bancos_local is not None and not df_bancos_local.empty:
@@ -3264,13 +3261,13 @@ if aba == "📊 Análises & Configurações":
                     nome_conta_lower = nome_conta.lower()
                     tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
                     
-                    # Ignora veículos com 'x'
+                    # Ignora veículos que começam com 'x' (ex: xTCross, xMoto Lead)
                     if nome_conta.startswith('x') or nome_conta.startswith('X') or 'xtcross' in nome_conta_lower or 'xmoto' in nome_conta_lower:
                         continue
                     
-                    # Se for investimento, guarda o nome da conta e soma o inicial
+                    # Se for investimento, guarda o nome e soma o inicial
                     if 'investimento' in tipo_conta or 'aplicação' in tipo_conta or 'aplicacao' in tipo_conta:
-                        contas_investimento_validas.add(nome_conta)
+                        contas_investimento_validas.add(nome_conta_lower)
                         val_bruto = row.iloc[1] if len(row) > 1 else 0
                         soma_bancos += converter_valor_br_seguro(val_bruto)
                 except:
@@ -3294,185 +3291,27 @@ if aba == "📊 Análises & Configurações":
             for idx, row in df_lancamentos_local.iloc[1:].iterrows():
                 try:
                     # Coluna F (índice 5): Banco / Conta do lançamento
-                    banco_lanc = str(row.iloc[5]).strip() if len(row) > 5 else ""
-                    
+                    banco_lanc = str(row.iloc[5]).strip().lower() if len(row) > 5 else ""
                     # Coluna D (índice 3): Categoria
                     categoria = str(row.iloc[3]).strip().lower() if len(row) > 3 else ""
                     
-                    # Verifica se o lançamento pertence a uma conta de investimento válida
-                    # (ou se o nome da conta bate com nossos investimentos)
-                    if banco_lanc in contas_investimento_validas or 'investimento' in banco_lanc.lower():
-                        # Filtra se a categoria é rendimento
-                        if 'rendimento' in categoria:
+                    # Verifica se a categoria é rendimento ou juros
+                    if 'rendimento' in categoria or 'juros' in categoria:
+                        match_banco = any(conta in banco_lanc for conta in contas_investimento_validas)
+                        if match_banco or 'investimento' in banco_lanc:
                             val_bruto = row.iloc[1] if len(row) > 1 else 0
                             soma_rend += converter_valor_br_seguro(val_bruto)
                 except:
                     pass
             total_rendimentos = soma_rend
 
-        # Total Geral de Investimentos (Saldo Inicial + Rendimentos)
-        total_geral_investimentos = saldo_inicial_investimentos + total_rendimentos
-
-        # Exibe os resultados organizados na tela
-        st.success(f"📊 **Resumo dos Investimentos:**")
-        st.write(f"- Saldo Inicial (Líquido): R$ {saldo_inicial_investimentos:,.2f}")
-        st.write(f"- Total de Rendimentos: R$ {total_rendimentos:,.2f}")
-        st.markdown(f"### **Total Final Calculado:** R$ {total_geral_investimentos:,.2f}")
+        # Total Acumulado Oficial (Saldo Inicial Líquido + Rendimentos)
+        guardado_atual = saldo_inicial_investimentos + total_rendimentos
 
     except Exception as e:
         st.error(f"Erro ao calcular os investimentos: {e}")
-    try:
-        # Localiza o DataFrame dos Bancos
-        df_bancos_local = None
-        for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
-            if nome_var in locals() and not locals()[nome_var].empty:
-                df_bancos_local = locals()[nome_var]
-                break
-            elif nome_var in st.session_state and not st.session_state[nome_var].empty:
-                df_bancos_local = st.session_state[nome_var]
-                break
-        
-        if df_bancos_local is not None and not df_bancos_local.empty:
-            soma_parcial = 0.0
-            
-            # Pula o cabeçalho (linha 0) e percorre o restante
-            for idx, row in df_bancos_local.iloc[1:].iterrows():
-                try:
-                    # Coluna C (índice 2): Tipo de Conta
-                    tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
-                    
-                    # Filtra estritamente se for investimento
-                    if 'investimento' in tipo_conta or 'aplicação' in tipo_conta or 'aplicacao' in tipo_conta:
-                        # Coluna B (índice 1): Saldo Inicial
-                        val_bruto = row.iloc[1] if len(row) > 1 else 0
-                        
-                        valor_convertido = converter_valor_br_seguro(val_bruto)
-                        soma_parcial += valor_convertido
-                        
-                        # Opcional: print para você ver no console/tela qual conta ele somou
-                        # st.write(f"Conta linha {idx}: {row.iloc[0]} | Valor: {valor_convertido}")
-                except:
-                    pass
-                    
-            saldo_inicial_investimentos = soma_parcial
-            
-            # Mostra o resultado parcial na tela para validação
-            st.info(f"📌 **Saldo Inicial das Contas de Investimento:** R$ {saldo_inicial_investimentos:,.2f}")
-            
-    except Exception as e:
-        st.error(f"Erro ao ler o saldo inicial: {e}")
 
-    try:
-        df_bancos_local = None
-        for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
-            if nome_var in locals() and not locals()[nome_var].empty:
-                df_bancos_local = locals()[nome_var]
-                break
-            elif nome_var in st.session_state and not st.session_state[nome_var].empty:
-                df_bancos_local = st.session_state[nome_var]
-                break
-        
-        if df_bancos_local is not None and not df_bancos_local.empty:
-            soma_bancos = 0.0
-            
-            # Pula a primeira linha (cabeçalho) e percorre o restante
-            for idx, row in df_bancos_local.iloc[1:].iterrows():
-                try:
-                    # Coluna 2: Tipo de Conta
-                    tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
-                    
-                    # Filtra apenas se for conta de investimento
-                    if 'investimento' in tipo_conta or 'aplicação' in tipo_conta or 'aplicacao' in tipo_conta:
-                        # Coluna 1: Saldo Inicial
-                        val = row.iloc[1] if len(row) > 1 else 0
-                        soma_bancos += converter_valor_br(val)
-                except Exception as inner_e:
-                    pass
-                    
-            guardado_atual = soma_bancos
-    except Exception as e:
-        pass
-        
-    # 2. Busca e soma o saldo inicial apenas das contas de 'Investimento' na aba Bancos
-    try:
-        df_bancos_local = None
-        for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
-            if nome_var in locals() and not locals()[nome_var].empty:
-                df_bancos_local = locals()[nome_var]
-                break
-            elif nome_var in st.session_state and not st.session_state[nome_var].empty:
-                df_bancos_local = st.session_state[nome_var]
-                break
-        
-        if df_bancos_local is not None and not df_bancos_local.empty:
-            soma_bancos = 0.0
-            
-            # Pula o cabeçalho (começa da linha 2 em diante / índice 1+)
-            df_dados_bancos = df_bancos_local.iloc[1:] if len(df_bancos_local) > 1 else df_bancos_local
-            
-            for idx, row in df_dados_bancos.iterrows():
-                # Verifica a Coluna C (índice 2) para ver se é conta de investimento
-                tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
-                
-                # Se for conta de investimento (ou se quiser aceitar poupança/reserva também, pode ajustar aqui)
-                if 'investimento' in tipo_conta or 'aplicação' in tipo_conta or 'aplicacao' in tipo_conta:
-                    # Pega o valor da Coluna B (índice 1) -> Saldo Inicial
-                    val = row.iloc[1] if len(row) > 1 else 0
-                    if pd.isna(val):
-                        continue
-                    try:
-                        if isinstance(val, (int, float)):
-                            soma_bancos += float(val)
-                        else:
-                            val_str = str(val).replace('R$', '').replace('r$', '').strip()
-                            if '.' in val_str and ',' in val_str:
-                                val_str = val_str.replace('.', '').replace(',', '.')
-                            elif ',' in val_str:
-                                val_str = val_str.replace(',', '.')
-                            soma_bancos += float(val_str)
-                    except:
-                        pass
-                        
-            guardado_atual += soma_bancos
-    except Exception as e:
-        pass
-
-    # 2. Busca e soma o saldo inicial diretamente da Coluna B (índice 1) da aba 'Bancos'
-    try:
-        df_bancos_local = None
-        for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
-            if nome_var in locals() and not locals()[nome_var].empty:
-                df_bancos_local = locals()[nome_var]
-                break
-            elif nome_var in st.session_state and not st.session_state[nome_var].empty:
-                df_bancos_local = st.session_state[nome_var]
-                break
-        
-        if df_bancos_local is not None and not df_bancos_local.empty:
-            soma_bancos = 0.0
-            # Pega diretamente a coluna B (índice 1) se ela existir, senão procura pela coluna de valor/saldo
-            col_alvo = df_bancos_local.columns[1] if len(df_bancos_local.columns) > 1 else None
-            
-            if col_alvo is not None:
-                for val in df_bancos_local[col_alvo]:
-                    if pd.isna(val):
-                        continue
-                    try:
-                        if isinstance(val, (int, float)):
-                            soma_bancos += float(val)
-                        else:
-                            val_str = str(val).replace('R$', '').replace('r$', '').strip()
-                            if '.' in val_str and ',' in val_str:
-                                val_str = val_str.replace('.', '').replace(',', '.')
-                            elif ',' in val_str:
-                                val_str = val_str.replace(',', '.')
-                            soma_bancos += float(val_str)
-                    except:
-                        pass
-                guardado_atual += soma_bancos
-    except Exception as e:
-        pass
-            
+    # Formulário para salvar a meta
     with st.form("form_reserva_financeira"):
         meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         salvar_reserva = st.form_submit_button("💾 Salvar Meta")
@@ -3504,13 +3343,15 @@ if aba == "📊 Análises & Configurações":
 
     st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")
 
-    
-    
- # 1. GRÁFICO: EVOLUÇÃO DO SALDO ACUMULADO
+    st.divider()
+
+    # =========================================================================
+    # 1. GRÁFICO: EVOLUÇÃO DO SALDO ACUMULADO
+    # =========================================================================
     st.subheader("📈 Evolução do Saldo Acumulado")
     
     # Certifique-se de que o df_base não está vazio
-    if not df_base.empty:
+    if 'df_base' in locals() and not df_base.empty:
         # CONVERSÃO ESSENCIAL: Garante que DT seja data e V_Num seja número
         df_base['DT'] = pd.to_datetime(df_base['DT'], format='%d/%m/%Y', errors='coerce')
         df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0)
