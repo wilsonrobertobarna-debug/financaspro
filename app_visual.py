@@ -3212,17 +3212,26 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
-# --- CÁLCULO AUTOMÁTICO DO ACUMULADO VIA PLANILHA DE LANÇAMENTOS ---
-  # --- INSPEÇÃO DEFINITIVA DAS COLUNA A, B, C ---
+# --- CÁLCULO AUTOMÁTICO DO ACUMULADO VIA COLUNA V_Num ---
     guardado_atual = 0.0
     if 'df_base' in locals() and not df_base.empty:
-        st.write("--- 🔍 PAINEL DE INSPEÇÃO ---")
-        st.write("Total de linhas na base:", len(df_base))
-        st.write("Nome das colunas:", list(df_base.columns))
         
-        # Mostra as primeiras 5 linhas inteiras para sabermos exatamente onde fica o valor
-        st.dataframe(df_base.head(5))
-        st.write("-----------------------------")
+        # Procura em quais colunas pode estar a palavra 'investimento'
+        colunas_possiveis = [c for c in df_base.columns if 'tipo' in c.lower() or 'categoria' in c.lower() or 'conta' in c.lower()]
+        
+        df_inv = pd.DataFrame()
+        for col in colunas_possiveis:
+            filtro_match = df_base[col].astype(str).str.strip().str.lower().str.contains('investimento')
+            if filtro_match.any():
+                df_inv = df_base[filtro_match]
+                break
+        
+        # Se achou os investimentos e a coluna V_Num existe
+        if not df_inv.empty and 'V_Num' in df_inv.columns:
+            # Converte e soma os valores da coluna V_Num de forma limpa
+            valores_validos = pd.to_numeric(df_inv['V_Num'], errors='coerce').fillna(0.0)
+            guardado_atual = float(valores_validos.sum())
+            
     with st.form("form_reserva_financeira"):
         meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         salvar_reserva = st.form_submit_button("💾 Salvar Meta")
