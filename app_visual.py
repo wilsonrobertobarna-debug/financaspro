@@ -3213,9 +3213,40 @@ if aba == "📊 Análises & Configurações":
             meta_atual = 0.0
 
 # --- CÁLCULO TOTAL BLINDADO: LANÇAMENTOS + SALDO INICIAL DA ABA BANCOS (APENAS INVESTIMENTOS) ---
-# --- CÁLCULO DEFINITIVO DA ABA BANCOS (USANDO ÍNDICES NUMÉRICOS) ---
+## --- CÁLCULO BLINDADO DE CONVERSÃO MONETÁRIA BRASILEIRA ---
     guardado_atual = 0.0
     
+    def converter_valor_br(val):
+        if pd.isna(val):
+            return 0.0
+        if isinstance(val, (int, float)):
+            return float(val)
+        
+        try:
+            # Remove símbolos de moeda e espaços
+            val_str = str(val).replace('R$', '').replace('r$', '').strip()
+            if not val_str:
+                return 0.0
+            
+            # Se o formato for padrão brasileiro com ponto de milhar e vírgula decimal (ex: "9.229,16")
+            if '.' in val_str and ',' in val_str:
+                # Remove os pontos de milhar e troca a vírgula decimal por ponto
+                val_str = val_str.replace('.', '').replace(',', '.')
+            elif ',' in val_str:
+                # Tem apenas vírgula decimal (ex: "9229,16")
+                val_str = val_str.replace(',', '.')
+            elif '.' in val_str:
+                # Se tiver apenas ponto, verifica se é separador de milhar ou decimal
+                partes = val_str.split('.')
+                if len(partes) > 2 or len(partes[-1]) != 2:
+                    # É ponto de milhar sem decimais (ex: "9.229")
+                    val_str = val_str.replace('.', '')
+                # Se tiver exatamente 2 casas após o último ponto, o pandas já pode ter lido como float americano
+                
+            return float(val_str)
+        except:
+            return 0.0
+
     try:
         df_bancos_local = None
         for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
@@ -3239,21 +3270,7 @@ if aba == "📊 Análises & Configurações":
                     if 'investimento' in tipo_conta or 'aplicação' in tipo_conta or 'aplicacao' in tipo_conta:
                         # Coluna 1: Saldo Inicial
                         val = row.iloc[1] if len(row) > 1 else 0
-                        
-                        if pd.isna(val):
-                            continue
-                            
-                        if isinstance(val, (int, float)):
-                            soma_bancos += float(val)
-                        else:
-                            val_str = str(val).replace('R$', '').replace('r$', '').strip()
-                            # Tratamento padrão brasileiro ('100,00' ou '1.500,00')
-                            if '.' in val_str and ',' in val_str:
-                                val_str = val_str.replace('.', '').replace(',', '.')
-                            elif ',' in val_str:
-                                val_str = val_str.replace(',', '.')
-                            
-                            soma_bancos += float(val_str)
+                        soma_bancos += converter_valor_br(val)
                 except Exception as inner_e:
                     pass
                     
