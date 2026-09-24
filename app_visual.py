@@ -3212,44 +3212,40 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
-# --- CÁLCULO AUTOMÁTICO DO ACUMULADO COM CONVERSÃO BRASILEIRA EXATA ---
+# --- CÁLCULO AUTOMÁTICO: BUSCA CATEGORIA INVESTIMENTO E SOMA O VALOR ---
     guardado_atual = 0.0
     if 'df_base' in locals() and not df_base.empty:
         
-        # Procura onde está escrito 'investimento' nas colunas de texto
-        colunas_texto = [c for c in df_base.columns if c not in ['Valor', 'V_Num', 'Linha_Sheets']]
+        valores_convertidos = []
         
-        df_inv = pd.DataFrame()
-        for col in colunas_texto:
-            filtro_match = df_base[col].astype(str).str.strip().str.lower().str.contains('investimento')
-            if filtro_match.any():
-                df_inv = df_base[filtro_match]
-                break
-        
-        # Se encontrou lançamentos de investimento, converte e soma a coluna 'Valor'
-        if not df_inv.empty and 'Valor' in df_inv.columns:
-            valores_convertidos = []
-            for val in df_inv['Valor']:
-                if pd.isna(val):
-                    continue
-                try:
-                    if isinstance(val, (int, float)):
-                        valores_convertidos.append(float(val))
-                    else:
-                        val_str = str(val).replace('R$', '').replace('r$', '').strip()
-                        
-                        # Converte padrão brasileiro (ex: '1.500,00' ou '100,00') para float do Python
-                        if '.' in val_str and ',' in val_str:
-                            val_str = val_str.replace('.', '').replace(',', '.')
-                        elif ',' in val_str:
-                            val_str = val_str.replace(',', '.')
+        # Garante que as colunas 'Categoria' e 'Valor' existem na base
+        if 'Categoria' in df_base.columns and 'Valor' in df_base.columns:
+            for index, row in df_base.iterrows():
+                categoria_val = str(row['Categoria']).strip().lower()
+                
+                # Procura se a categoria é exatamente ou contém 'investimento'
+                if 'investimento' in categoria_val:
+                    val = row['Valor']
+                    if pd.isna(val):
+                        continue
+                    try:
+                        if isinstance(val, (int, float)):
+                            valores_convertidos.append(float(val))
+                        else:
+                            val_str = str(val).replace('R$', '').replace('r$', '').strip()
                             
-                        valores_convertidos.append(float(val_str))
-                except:
-                    pass
-            
-            if valores_convertidos:
-                guardado_atual = sum(valores_convertidos)
+                            # Tratamento padrão brasileiro ('100,00' ou '1.500,00')
+                            if '.' in val_str and ',' in val_str:
+                                val_str = val_str.replace('.', '').replace(',', '.')
+                            elif ',' in val_str:
+                                val_str = val_str.replace(',', '.')
+                                
+                            valores_convertidos.append(float(val_str))
+                    except:
+                        pass
+        
+        if valores_convertidos:
+            guardado_atual = sum(valores_convertidos)
             
     with st.form("form_reserva_financeira"):
         meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
