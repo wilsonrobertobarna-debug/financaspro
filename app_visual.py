@@ -3212,7 +3212,7 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
-# --- CÁLCULO TOTAL: LANÇAMENTOS + SALDO INICIAL DA COLUNA B DOS BANCOS ---
+# --- CÁLCULO TOTAL BLINDADO: LANÇAMENTOS + SALDO INICIAL DA ABA BANCOS (APENAS INVESTIMENTOS) ---
     guardado_atual = 0.0
     
     # 1. Soma os lançamentos de investimentos/aplicações/rendimentos da aba Lançamentos
@@ -3250,6 +3250,50 @@ if aba == "📊 Análises & Configurações":
         
         if valores_lancamentos:
             guardado_atual += sum(valores_lancamentos)
+
+    # 2. Busca e soma o saldo inicial apenas das contas de 'Investimento' na aba Bancos
+    try:
+        df_bancos_local = None
+        for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
+            if nome_var in locals() and not locals()[nome_var].empty:
+                df_bancos_local = locals()[nome_var]
+                break
+            elif nome_var in st.session_state and not st.session_state[nome_var].empty:
+                df_bancos_local = st.session_state[nome_var]
+                break
+        
+        if df_bancos_local is not None and not df_bancos_local.empty:
+            soma_bancos = 0.0
+            
+            # Pula o cabeçalho (começa da linha 2 em diante / índice 1+)
+            df_dados_bancos = df_bancos_local.iloc[1:] if len(df_bancos_local) > 1 else df_bancos_local
+            
+            for idx, row in df_dados_bancos.iterrows():
+                # Verifica a Coluna C (índice 2) para ver se é conta de investimento
+                tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
+                
+                # Se for conta de investimento (ou se quiser aceitar poupança/reserva também, pode ajustar aqui)
+                if 'investimento' in tipo_conta or 'aplicação' in tipo_conta or 'aplicacao' in tipo_conta:
+                    # Pega o valor da Coluna B (índice 1) -> Saldo Inicial
+                    val = row.iloc[1] if len(row) > 1 else 0
+                    if pd.isna(val):
+                        continue
+                    try:
+                        if isinstance(val, (int, float)):
+                            soma_bancos += float(val)
+                        else:
+                            val_str = str(val).replace('R$', '').replace('r$', '').strip()
+                            if '.' in val_str and ',' in val_str:
+                                val_str = val_str.replace('.', '').replace(',', '.')
+                            elif ',' in val_str:
+                                val_str = val_str.replace(',', '.')
+                            soma_bancos += float(val_str)
+                    except:
+                        pass
+                        
+            guardado_atual += soma_bancos
+    except Exception as e:
+        pass
 
     # 2. Busca e soma o saldo inicial diretamente da Coluna B (índice 1) da aba 'Bancos'
     try:
