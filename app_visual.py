@@ -3213,44 +3213,47 @@ if aba == "📊 Análises & Configurações":
             meta_atual = 0.0
 
 # --- CÁLCULO TOTAL BLINDADO: LANÇAMENTOS + SALDO INICIAL DA ABA BANCOS (APENAS INVESTIMENTOS) ---
+ # --- TESTE ISOLADO: APENAS O SALDO DAS CONTAS DE INVESTIMENTO NA ABA BANCOS ---
     guardado_atual = 0.0
     
-    # 1. Soma os lançamentos de investimentos/aplicações/rendimentos da aba Lançamentos
-    if 'df_base' in locals() and not df_base.empty:
-        termos_alvo = ['rendimento', 'aplicação', 'aplicacao', 'investimento', 'aporte', 'reserva']
-        valores_lancamentos = []
+    try:
+        df_bancos_local = None
+        for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
+            if nome_var in locals() and not locals()[nome_var].empty:
+                df_bancos_local = locals()[nome_var]
+                break
+            elif nome_var in st.session_state and not st.session_state[nome_var].empty:
+                df_bancos_local = st.session_state[nome_var]
+                break
         
-        for index, row in df_base.iterrows():
-            texto_linha = ""
-            if 'Categoria' in df_base.columns:
-                texto_linha += str(row.get('Categoria', '')) + " "
-            if 'Tipo' in df_base.columns:
-                texto_linha += str(row.get('Tipo', '')) + " "
-            if 'Banco' in df_base.columns:
-                texto_linha += str(row.get('Banco', '')) + " "
-                
-            texto_linha = texto_linha.strip().lower()
+        if df_bancos_local is not None and not df_bancos_local.empty:
+            soma_bancos = 0.0
+            df_dados_bancos = df_bancos_local.iloc[1:] if len(df_bancos_local) > 1 else df_bancos_local
             
-            if any(termo in texto_linha for termo in termos_alvo):
-                val = row.get('Valor', 0)
-                if pd.isna(val):
-                    continue
-                try:
-                    if isinstance(val, (int, float)):
-                        valores_lancamentos.append(float(val))
-                    else:
-                        val_str = str(val).replace('R$', '').replace('r$', '').strip()
-                        if '.' in val_str and ',' in val_str:
-                            val_str = val_str.replace('.', '').replace(',', '.')
-                        elif ',' in val_str:
-                            val_str = val_str.replace(',', '.')
-                        valores_lancamentos.append(float(val_str))
-                except:
-                    pass
-        
-        if valores_lancamentos:
-            guardado_atual += sum(valores_lancamentos)
-
+            for idx, row in df_dados_bancos.iterrows():
+                tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
+                
+                # Se for conta de investimento
+                if 'investimento' in tipo_conta or 'aplicação' in tipo_conta or 'aplicacao' in tipo_conta:
+                    val = row.iloc[1] if len(row) > 1 else 0
+                    if pd.isna(val):
+                        continue
+                    try:
+                        if isinstance(val, (int, float)):
+                            soma_bancos += float(val)
+                        else:
+                            val_str = str(val).replace('R$', '').replace('r$', '').strip()
+                            if '.' in val_str and ',' in val_str:
+                                val_str = val_str.replace('.', '').replace(',', '.')
+                            elif ',' in val_str:
+                                val_str = val_str.replace(',', '.')
+                            soma_bancos += float(val_str)
+                    except:
+                        pass
+                        
+            guardado_atual = soma_bancos
+    except Exception as e:
+        pass
     # 2. Busca e soma o saldo inicial apenas das contas de 'Investimento' na aba Bancos
     try:
         df_bancos_local = None
