@@ -3316,6 +3316,7 @@ if aba == "📊 Análises & Configurações":
 
                     # 4. Separa entre Investimento e Conta Corrente
                    # 4. Ignora Cartões e VR/VA do cálculo de saldo patrimonial de contas correntes
+                    # 4. Ignora Cartões e VR/VA do cálculo de saldo patrimonial de contas correntes
                     if "CARTA" in tipo_conta or "CART" in nome_conta_lower:
                         continue
 
