@@ -3212,25 +3212,44 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
-# --- CÁLCULO AUTOMÁTICO DO ACUMULADO VIA COLUNA V_Num ---
+# --- CÁLCULO AUTOMÁTICO DO ACUMULADO COM CONVERSÃO BRASILEIRA EXATA ---
     guardado_atual = 0.0
     if 'df_base' in locals() and not df_base.empty:
         
-        # Procura em quais colunas pode estar a palavra 'investimento'
-        colunas_possiveis = [c for c in df_base.columns if 'tipo' in c.lower() or 'categoria' in c.lower() or 'conta' in c.lower()]
+        # Procura onde está escrito 'investimento' nas colunas de texto
+        colunas_texto = [c for c in df_base.columns if c not in ['Valor', 'V_Num', 'Linha_Sheets']]
         
         df_inv = pd.DataFrame()
-        for col in colunas_possiveis:
+        for col in colunas_texto:
             filtro_match = df_base[col].astype(str).str.strip().str.lower().str.contains('investimento')
             if filtro_match.any():
                 df_inv = df_base[filtro_match]
                 break
         
-        # Se achou os investimentos e a coluna V_Num existe
-        if not df_inv.empty and 'V_Num' in df_inv.columns:
-            # Converte e soma os valores da coluna V_Num de forma limpa
-            valores_validos = pd.to_numeric(df_inv['V_Num'], errors='coerce').fillna(0.0)
-            guardado_atual = float(valores_validos.sum())
+        # Se encontrou lançamentos de investimento, converte e soma a coluna 'Valor'
+        if not df_inv.empty and 'Valor' in df_inv.columns:
+            valores_convertidos = []
+            for val in df_inv['Valor']:
+                if pd.isna(val):
+                    continue
+                try:
+                    if isinstance(val, (int, float)):
+                        valores_convertidos.append(float(val))
+                    else:
+                        val_str = str(val).replace('R$', '').replace('r$', '').strip()
+                        
+                        # Converte padrão brasileiro (ex: '1.500,00' ou '100,00') para float do Python
+                        if '.' in val_str and ',' in val_str:
+                            val_str = val_str.replace('.', '').replace(',', '.')
+                        elif ',' in val_str:
+                            val_str = val_str.replace(',', '.')
+                            
+                        valores_convertidos.append(float(val_str))
+                except:
+                    pass
+            
+            if valores_convertidos:
+                guardado_atual = sum(valores_convertidos)
             
     with st.form("form_reserva_financeira"):
         meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
