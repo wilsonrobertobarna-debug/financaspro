@@ -3234,13 +3234,21 @@ if aba == "📊 Análises & Configurações":
         except:
             return 0.0
 
-    saldo_inicial_investimentos = 0.0
-    total_rendimentos = 0.0
+    saldo_inicial_investimentos_brl = 0.0
+    total_rendimentos_brl = 0.0
     guardado_atual = 0.0
+    
+    # Variáveis para o painel de conferência por moeda
+    saldo_outras_brl = 0.0
+    saldo_veiculos_brl = 0.0
+    total_invest_usd = 0.0
+    total_invest_eur = 0.0
+    saldo_outras_usd = 0.0
+    saldo_outras_eur = 0.0
 
     try:
         # ==========================================
-        # PASSO 1: SALDO INICIAL (Aba Bancos - Líquido sem veículos 'x')
+        # PASSO 1: LEITURA DA ABA BANCOS (Separando por Moeda e Tipo)
         # ==========================================
         df_bancos_local = None
         for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
@@ -3254,25 +3262,48 @@ if aba == "📊 Análises & Configurações":
         contas_investimento_validas = set()
         
         if df_bancos_local is not None and not df_bancos_local.empty:
-            soma_bancos = 0.0
             for idx, row in df_bancos_local.iloc[1:].iterrows():
                 try:
                     nome_conta = str(row.iloc[0]).strip() if len(row) > 0 else ""
                     nome_conta_lower = nome_conta.lower()
+                    val_bruto = row.iloc[1] if len(row) > 1 else 0
+                    valor_num = converter_valor_br_seguro(val_bruto)
                     tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
                     
-                    # Ignora veículos que começam com 'x' (ex: xTCross, xMoto Lead)
-                    if nome_conta.startswith('x') or nome_conta.startswith('X') or 'xtcross' in nome_conta_lower or 'xmoto' in nome_conta_lower:
+                    # Identifica a moeda na coluna F (índice 5), padrão BRL se vazio
+                    moeda = str(row.iloc[5]).strip().upper() if len(row) > 5 else "BRL"
+                    if not moeda or moeda == "NAN":
+                        moeda = "BRL"
+                    
+                    # 1. Veículos (T-Cross, Moto Lead, começados com 'x')
+                    is_veiculo = nome_conta.startswith('x') or nome_conta.startswith('X') or 'xtcross' in nome_conta_lower or 'xmoto' in nome_conta_lower
+                    
+                    if is_veiculo:
+                        if moeda == "BRL":
+                            saldo_veiculos_brl += valor_num
                         continue
                     
-                    # Se for investimento, guarda o nome e soma o inicial
-                    if 'investimento' in tipo_conta or 'aplicação' in tipo_conta or 'aplicacao' in tipo_conta:
-                        contas_investimento_validas.add(nome_conta_lower)
-                        val_bruto = row.iloc[1] if len(row) > 1 else 0
-                        soma_bancos += converter_valor_br_seguro(val_bruto)
+                    # 2. Investimentos vs Outras Contas
+                    is_investimento = 'investimento' in tipo_conta or 'aplicação' in tipo_conta or 'aplicacao' in tipo_conta
+                    
+                    if is_investimento:
+                        if moeda == "BRL":
+                            saldo_inicial_investimentos_brl += valor_num
+                            contas_investimento_validas.add(nome_conta_lower)
+                        elif moeda == "USD":
+                            total_invest_usd += valor_num
+                        elif moeda == "EUR":
+                            total_invest_eur += valor_num
+                    else:
+                        # Contas Correntes / Outras
+                        if moeda == "BRL":
+                            saldo_outras_brl += valor_num
+                        elif moeda == "USD":
+                            saldo_outras_usd += valor_num
+                        elif moeda == "EUR":
+                            saldo_outras_eur += valor_num
                 except:
                     pass
-            saldo_inicial_investimentos = soma_bancos
 
         # ==========================================
         # PASSO 2: RENDIMENTOS (Aba Lançamentos)
@@ -3303,10 +3334,15 @@ if aba == "📊 Análises & Configurações":
                             soma_rend += converter_valor_br_seguro(val_bruto)
                 except:
                     pass
-            total_rendimentos = soma_rend
+            total_rendimentos_brl = soma_rend
 
-        # Total Acumulado Oficial (Saldo Inicial Líquido + Rendimentos)
-        guardado_atual = saldo_inicial_investimentos + total_rendimentos
+        # Total Acumulado Oficial de Investimentos em BRL (Saldo Inicial + Rendimentos)
+        guardado_atual = saldo_inicial_investimentos_brl + total_rendimentos_brl
+        
+        # Totais por Moeda para bater com o WhatsApp
+        subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
+        subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
+        subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
 
     except Exception as e:
         st.error(f"Erro ao calcular os investimentos: {e}")
@@ -3338,10 +3374,25 @@ if aba == "📊 Análises & Configurações":
 
     col_m1, col_m2, col_m3 = st.columns(3)
     col_m1.metric("🎯 Meta Alvo", f"R$ {meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    col_m2.metric("💰 Acumulado (Automático)", f"R$ {guardado_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    col_m3.metric("📈 Conclusão", f"{percentual_reserva:.1f}%")
+    col_m2.metric("💰 Apenas Investimentos", f"R$ {guardado_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    col_m3.metric("📈 Conclusão da Meta", f"{percentual_reserva:.1f}%")
 
     st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")
+
+    # =========================================================================
+    # 🔍 PAINEL DE CONFERÊNCIA POR MOEDA (Espelho do WhatsApp)
+    # =========================================================================
+    with st.expander("📊 Conferência de Subtotais por Moeda (Espelho do WhatsApp)", expanded=True):
+        col_w1, col_w2, col_w3 = st.columns(3)
+        with col_w1:
+            st.metric("🇧🇷 Subtotal Contas & Invest. (BRL)", f"R$ {subtotal_contas_invest_brl:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+            st.caption(f"• Investimentos BRL: R$ {guardado_atual:,.2f}\n• Contas Correntes BRL: R$ {saldo_outras_brl:,.2f}")
+        with col_w2:
+            st.metric("🇺🇸 Subtotal Contas & Invest. (USD)", f"U$ {subtotal_invest_usd_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        with col_w3:
+            st.metric("🇪🇺 Subtotal Contas & Invest. (EUR)", f"€ {subtotal_invest_eur_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        
+        st.markdown(f"🚗 **Subtotal T-Cross + Moto Lead (BRL):** R$ {saldo_veiculos_brl:,.2f}")
 
     st.divider()
 
@@ -3401,6 +3452,8 @@ if aba == "📊 Análises & Configurações":
         st.warning("A base de dados está vazia.")
 
     st.divider()
+
+    
     # 2. COMPARATIVO: MÊS ATUAL VS MÊS ANTERIOR
     # Tratamento de segurança para evitar erro de dados vazios ou corrompidos
     df_pagos = df_base[df_base['Status'] == 'Pago'].copy()
