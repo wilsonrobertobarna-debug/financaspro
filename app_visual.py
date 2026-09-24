@@ -3250,8 +3250,7 @@ if aba == "📊 Análises & Configurações":
         except:
             return 0.0
 
-    saldo_inicial_investimentos_brl = 0.0
-    guardado_atual = 0.0
+   guardado_atual = 0.0
     saldo_outras_brl = 0.0
     saldo_veiculos_brl = 0.0
     total_invest_usd = 0.0
@@ -3260,7 +3259,6 @@ if aba == "📊 Análises & Configurações":
     saldo_outras_eur = 0.0
 
     try:
-        # Pega os dataframes necessários
         df_lanc_local = None
         for nome_var in ['df_lancamentos', 'df_lancamento', 'lancamentos_df', 'df']:
             if nome_var in locals() and not locals()[nome_var].empty:
@@ -3280,7 +3278,6 @@ if aba == "📊 Análises & Configurações":
                 break
 
         if df_bancos_local is not None and not df_bancos_local.empty and df_lanc_local is not None:
-            # Garante que V_Num seja numérico no df de lançamentos
             df_lanc_local['V_Num'] = pd.to_numeric(df_lanc_local['V_Num'], errors='coerce').fillna(0)
 
             for idx, row in df_bancos_local.iloc[1:].iterrows():
@@ -3291,21 +3288,23 @@ if aba == "📊 Análises & Configurações":
                     val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
                     saldo_inicial = float(val_str) if val_str and val_str != 'nan' else 0.0
                     
-                    tipo_conta = str(row.iloc[2]).strip().upper() if len(row) > 2 else ""
+                    tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
                     moeda = str(row.iloc[5]).strip().upper() if len(row) > 5 and str(row.iloc[5]).strip() else "BRL"
 
-                    # 1. Veículos
-                    is_veiculo = nome_conta.startswith('x') or nome_conta.startswith('X') or 'xtcross' in nome_conta_lower or 'xmoto' in nome_conta_lower or 'VEICULO' in tipo_conta or 'BEM' in tipo_conta
-                    if is_veiculo:
+                    tipo_limpo = tipo_conta.replace('ã', 'a').replace('á', 'a').replace('â', 'a')
+                    nome_limpo = nome_conta_lower.replace('ã', 'a').replace('á', 'a').replace('â', 'a')
+
+                    # 1. Veículos / Bens
+                    if 'xtcross' in nome_limpo or 'xmoto' in nome_limpo or 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_conta.startswith('x') or nome_conta.startswith('X'):
                         if moeda == "BRL":
                             saldo_veiculos_brl += saldo_inicial
                         continue
 
-                    # 2. Ignora Cartões e VR/VA do cálculo de saldo patrimonial
-                    if "CARTA" in tipo_conta or "CART" in nome_conta_lower or "REFEIÇÃO" in tipo_conta or "VR" in nome_conta_lower or "VA" in nome_conta_lower:
+                    # 2. Ignora Cartões, VR e VA de forma rigorosa
+                    if "cart" in tipo_limpo or "cart" in nome_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in nome_limpo or "va" in nome_limpo:
                         continue
 
-                    # 3. Calcula o saldo real da conta (Saldo Inicial + Entradas - Saídas)
+                    # 3. Cálculo do saldo real (Saldo Inicial + Entradas - Saídas Pagas)
                     filtro = (df_lanc_local['Banco'] == nome_conta) & ((df_lanc_local['Status'].str.upper() == 'PAGO') | (df_lanc_local['Status'] == ''))
                     df_banco_atual = df_lanc_local[filtro]
                     
@@ -3314,8 +3313,8 @@ if aba == "📊 Análises & Configurações":
                     
                     saldo_atual_conta = saldo_inicial + entradas - saidas
 
-                    # 4. Separa entre Investimento e Conta Corrente
-                    is_investimento = 'INVEST' in tipo_conta or 'APLICAC' in tipo_conta
+                    # 4. Separação Oficial
+                    is_investimento = 'invest' in tipo_limpo or 'aplicac' in tipo_limpo or 'poupanc' in tipo_limpo or 'prev' in tipo_limpo
 
                     if is_investimento:
                         if moeda == "BRL":
@@ -3334,7 +3333,7 @@ if aba == "📊 Análises & Configurações":
                 except:
                     pass
 
-        # Totais gerais para a conferência
+        # Totais finais sincronizados
         subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
         subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
