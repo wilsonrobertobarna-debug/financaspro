@@ -3186,6 +3186,22 @@ if aba == "📋 Relatório PDF":
 if aba == "📊 Análises & Configurações":
     st.markdown("## 📊 Painel de Análises & Configurações")
     
+    # 🔍 RAIO-X TEMPORÁRIO PARA VERIFICAR A ABA BANCOS
+    df_bancos_debug = None
+    for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
+        if nome_var in locals() and not locals()[nome_var].empty:
+            df_bancos_debug = locals()[nome_var]
+            break
+        elif nome_var in st.session_state and not st.session_state[nome_var].empty:
+            df_bancos_debug = st.session_state[nome_var]
+            break
+            
+    if df_bancos_debug is not None:
+        with st.expander("🛠️ Depuração da Aba Bancos (Clique para ver as linhas lidas)"):
+            st.write(df_bancos_debug)
+    else:
+        st.error("⚠️ Atenção: A variável da aba Bancos não foi encontrada pelo script!")
+    
     # =========================================================================
     # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
     # =========================================================================
