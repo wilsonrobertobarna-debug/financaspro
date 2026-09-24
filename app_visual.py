@@ -3374,7 +3374,7 @@ if aba == "📊 Análises & Configurações":
 
     st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")
 
-    # =========================================================================
+   # =========================================================================
     # 🔍 PAINEL DE CONFERÊNCIA POR MOEDA (Espelho do WhatsApp)
     # =========================================================================
     with st.expander("📊 Conferência de Subtotais por Moeda (Espelho do WhatsApp)", expanded=True):
@@ -3388,6 +3388,18 @@ if aba == "📊 Análises & Configurações":
             st.metric("🇪🇺 Subtotal Contas & Invest. (EUR)", f"€ {subtotal_invest_eur_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         
         st.markdown(f"🚗 **Subtotal T-Cross + Moto Lead (BRL):** R$ {saldo_veiculos_brl:,.2f}")
+
+    # 🔍 AUDITORIA DAS CONTAS BRL (Cole aqui embaixo)
+    with st.expander("🔍 Auditoria de Contas (Descobrir o Saldo Fantasma)"):
+        if 'df_bancos_local' in locals() and df_bancos_local is not None:
+            for idx, row in df_bancos_local.iloc[1:].iterrows():
+                try:
+                    nome = str(row.iloc[0]).strip()
+                    tipo = str(row.iloc[2]).strip()
+                    val = str(row.iloc[1]).strip()
+                    st.write(f"• **{nome}** (Tipo: {tipo}) | Valor Inicial na Planilha: {val}")
+                except:
+                    pass
 
     st.divider()
 
