@@ -3186,22 +3186,6 @@ if aba == "📋 Relatório PDF":
 if aba == "📊 Análises & Configurações":
     st.markdown("## 📊 Painel de Análises & Configurações")
     
-    # 🔍 RAIO-X TEMPORÁRIO PARA VERIFICAR A ABA BANCOS
-    df_bancos_debug = None
-    for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
-        if nome_var in locals() and not locals()[nome_var].empty:
-            df_bancos_debug = locals()[nome_var]
-            break
-        elif nome_var in st.session_state and not st.session_state[nome_var].empty:
-            df_bancos_debug = st.session_state[nome_var]
-            break
-            
-    if df_bancos_debug is not None:
-        with st.expander("🛠️ Depuração da Aba Bancos (Clique para ver as linhas lidas)"):
-            st.write(df_bancos_debug)
-    else:
-        st.error("⚠️ Atenção: A variável da aba Bancos não foi encontrada pelo script!")
-    
     # =========================================================================
     # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
     # =========================================================================
@@ -3340,6 +3324,7 @@ if aba == "📊 Análises & Configurações":
 
     except Exception as e:
         st.error(f"Erro ao calcular os saldos: {e}")
+
     # Formulário para salvar a meta
     with st.form("form_reserva_financeira"):
         meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
@@ -3372,7 +3357,7 @@ if aba == "📊 Análises & Configurações":
 
     st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")
 
-   # =========================================================================
+    # =========================================================================
     # 🔍 PAINEL DE CONFERÊNCIA POR MOEDA (Espelho do WhatsApp)
     # =========================================================================
     with st.expander("📊 Conferência de Subtotais por Moeda (Espelho do WhatsApp)", expanded=True):
@@ -3386,18 +3371,6 @@ if aba == "📊 Análises & Configurações":
             st.metric("🇪🇺 Subtotal Contas & Invest. (EUR)", f"€ {subtotal_invest_eur_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         
         st.markdown(f"🚗 **Subtotal T-Cross + Moto Lead (BRL):** R$ {saldo_veiculos_brl:,.2f}")
-
-    # 🔍 AUDITORIA DAS CONTAS BRL (Cole aqui embaixo)
-    with st.expander("🔍 Auditoria de Contas (Descobrir o Saldo Fantasma)"):
-        if 'df_bancos_local' in locals() and df_bancos_local is not None:
-            for idx, row in df_bancos_local.iloc[1:].iterrows():
-                try:
-                    nome = str(row.iloc[0]).strip()
-                    tipo = str(row.iloc[2]).strip()
-                    val = str(row.iloc[1]).strip()
-                    st.write(f"• **{nome}** (Tipo: {tipo}) | Valor Inicial na Planilha: {val}")
-                except:
-                    pass
 
     st.divider()
 
