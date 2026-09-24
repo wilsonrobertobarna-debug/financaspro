@@ -3213,39 +3213,75 @@ if aba == "📊 Análises & Configurações":
             meta_atual = 0.0
 
 # --- CÁLCULO TOTAL BLINDADO: LANÇAMENTOS + SALDO INICIAL DA ABA BANCOS (APENAS INVESTIMENTOS) ---
-## --- CÁLCULO BLINDADO DE CONVERSÃO MONETÁRIA BRASILEIRA ---
-    guardado_atual = 0.0
+# --- PASSO 1: LEITURA ISOLADA DO SALDO INICIAL (INVESTIMENTOS) ---
+    saldo_inicial_investimentos = 0.0
     
-    def converter_valor_br(val):
+    def converter_valor_br_seguro(val):
         if pd.isna(val):
             return 0.0
         if isinstance(val, (int, float)):
             return float(val)
         
         try:
-            # Remove símbolos de moeda e espaços
             val_str = str(val).replace('R$', '').replace('r$', '').strip()
             if not val_str:
                 return 0.0
             
-            # Se o formato for padrão brasileiro com ponto de milhar e vírgula decimal (ex: "9.229,16")
+            # Tratamento padrão brasileiro (ex: "1.250,50" ou "1250,50" ou "1250.50")
             if '.' in val_str and ',' in val_str:
-                # Remove os pontos de milhar e troca a vírgula decimal por ponto
+                # Se tem ponto e vírgula, o ponto é milhar e vírgula é decimal
                 val_str = val_str.replace('.', '').replace(',', '.')
             elif ',' in val_str:
-                # Tem apenas vírgula decimal (ex: "9229,16")
+                # Apenas vírgula decimal
                 val_str = val_str.replace(',', '.')
-            elif '.' in val_str:
-                # Se tiver apenas ponto, verifica se é separador de milhar ou decimal
-                partes = val_str.split('.')
-                if len(partes) > 2 or len(partes[-1]) != 2:
-                    # É ponto de milhar sem decimais (ex: "9.229")
-                    val_str = val_str.replace('.', '')
-                # Se tiver exatamente 2 casas após o último ponto, o pandas já pode ter lido como float americano
+            elif val_str.count('.') > 1:
+                # Mais de um ponto (ex: "1.250.500") -> remove todos
+                val_str = val_str.replace('.', '')
                 
             return float(val_str)
         except:
             return 0.0
+
+    try:
+        # Localiza o DataFrame dos Bancos
+        df_bancos_local = None
+        for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
+            if nome_var in locals() and not locals()[nome_var].empty:
+                df_bancos_local = locals()[nome_var]
+                break
+            elif nome_var in st.session_state and not st.session_state[nome_var].empty:
+                df_bancos_local = st.session_state[nome_var]
+                break
+        
+        if df_bancos_local is not None and not df_bancos_local.empty:
+            soma_parcial = 0.0
+            
+            # Pula o cabeçalho (linha 0) e percorre o restante
+            for idx, row in df_bancos_local.iloc[1:].iterrows():
+                try:
+                    # Coluna C (índice 2): Tipo de Conta
+                    tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
+                    
+                    # Filtra estritamente se for investimento
+                    if 'investimento' in tipo_conta or 'aplicação' in tipo_conta or 'aplicacao' in tipo_conta:
+                        # Coluna B (índice 1): Saldo Inicial
+                        val_bruto = row.iloc[1] if len(row) > 1 else 0
+                        
+                        valor_convertido = converter_valor_br_seguro(val_bruto)
+                        soma_parcial += valor_convertido
+                        
+                        # Opcional: print para você ver no console/tela qual conta ele somou
+                        # st.write(f"Conta linha {idx}: {row.iloc[0]} | Valor: {valor_convertido}")
+                except:
+                    pass
+                    
+            saldo_inicial_investimentos = soma_parcial
+            
+            # Mostra o resultado parcial na tela para validação
+            st.info(f"📌 **Saldo Inicial das Contas de Investimento:** R$ {saldo_inicial_investimentos:,.2f}")
+            
+    except Exception as e:
+        st.error(f"Erro ao ler o saldo inicial: {e}")
 
     try:
         df_bancos_local = None
