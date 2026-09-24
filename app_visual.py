@@ -3213,43 +3213,16 @@ if aba == "📊 Análises & Configurações":
             meta_atual = 0.0
 
 # --- CÁLCULO AUTOMÁTICO DO ACUMULADO VIA PLANILHA DE LANÇAMENTOS ---
+  # --- INSPEÇÃO DEFINITIVA DAS COLUNA A, B, C ---
     guardado_atual = 0.0
     if 'df_base' in locals() and not df_base.empty:
+        st.write("--- 🔍 PAINEL DE INSPEÇÃO ---")
+        st.write("Total de linhas na base:", len(df_base))
+        st.write("Nome das colunas:", list(df_base.columns))
         
-        # Procura linhas que tenham 'investimento' em qualquer coluna
-        colunas_possiveis = [c for c in df_base.columns if 'tipo' in c.lower() or 'categoria' in c.lower() or 'conta' in c.lower()]
-        
-        df_inv = pd.DataFrame()
-        for col in colunas_possiveis:
-            filtro_match = df_base[col].astype(str).str.strip().str.lower().str.contains('investimento')
-            if filtro_match.any():
-                df_inv = df_base[filtro_match]
-                break
-        
-        if not df_inv.empty:
-            # Pega os valores direto da COLUNA B (índice 1 do DataFrame) da aba de lançamentos
-            valores_convertidos = []
-            
-            # Se a coluna B existir no DataFrame (índice 1)
-            if len(df_base.columns) > 1:
-                coluna_b_dados = df_inv.iloc[:, 1] # Coluna B
-                
-                for val in coluna_b_dados:
-                    try:
-                        if isinstance(val, (int, float)):
-                            valores_convertidos.append(float(val))
-                        else:
-                            val_str = str(val).replace('R$', '').strip()
-                            if '.' in val_str and ',' in val_str:
-                                val_str = val_str.replace('.', '').replace(',', '.')
-                            elif ',' in val_str:
-                                val_str = val_str.replace(',', '.')
-                            valores_convertidos.append(float(val_str))
-                    except:
-                        pass
-            
-            if valores_convertidos:
-                guardado_atual = sum(valores_convertidos)
+        # Mostra as primeiras 5 linhas inteiras para sabermos exatamente onde fica o valor
+        st.dataframe(df_base.head(5))
+        st.write("-----------------------------")
     with st.form("form_reserva_financeira"):
         meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         salvar_reserva = st.form_submit_button("💾 Salvar Meta")
