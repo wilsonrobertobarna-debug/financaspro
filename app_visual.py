@@ -3213,7 +3213,7 @@ if aba == "📊 Análises & Configurações":
             meta_atual = 0.0
 
 # --- CÁLCULO TOTAL BLINDADO: LANÇAMENTOS + SALDO INICIAL DA ABA BANCOS (APENAS INVESTIMENTOS) ---
- # --- TESTE ISOLADO: APENAS O SALDO DAS CONTAS DE INVESTIMENTO NA ABA BANCOS ---
+# --- DIAGNÓSTICO DA ABA BANCOS ---
     guardado_atual = 0.0
     
     try:
@@ -3226,18 +3226,21 @@ if aba == "📊 Análises & Configurações":
                 df_bancos_local = st.session_state[nome_var]
                 break
         
-        if df_bancos_local is not None and not df_bancos_local.empty:
-            soma_bancos = 0.0
-            df_dados_bancos = df_bancos_local.iloc[1:] if len(df_bancos_local) > 1 else df_bancos_local
+        if df_bancos_local is not None:
+            st.write("📌 **Colunas da aba Bancos:**", list(df_bancos_local.columns))
+            st.dataframe(df_bancos_local) # Mostra a tabela inteira na tela para conferirmos
             
-            for idx, row in df_dados_bancos.iterrows():
-                tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
+            soma_bancos = 0.0
+            # Vamos iterar de forma limpa, mostrando cada linha no log se necessário
+            for idx, row in df_bancos_local.iterrows():
+                # Tenta pegar a coluna 1 (Saldo) e coluna 2 (Tipo) de forma segura
+                val = row.iloc[1] if len(row) > 1 else 0
+                tipo = str(row.iloc[2]).strip() if len(row) > 2 else "Sem tipo"
                 
-                # Se for conta de investimento
-                if 'investimento' in tipo_conta or 'aplicação' in tipo_conta or 'aplicacao' in tipo_conta:
-                    val = row.iloc[1] if len(row) > 1 else 0
-                    if pd.isna(val):
-                        continue
+                st.write(f"Linha {idx} | Tipo: {tipo} | Valor bruto: {val}")
+                
+                # Se não for cabeçalho (evita texto na primeira linha)
+                if idx != 0 and 'saldo' not in str(val).lower():
                     try:
                         if isinstance(val, (int, float)):
                             soma_bancos += float(val)
@@ -3250,10 +3253,10 @@ if aba == "📊 Análises & Configurações":
                             soma_bancos += float(val_str)
                     except:
                         pass
-                        
             guardado_atual = soma_bancos
+            st.write(f"💰 **Soma final calculada:** {guardado_atual}")
     except Exception as e:
-        pass
+        st.error(f"Erro no diagnóstico: {e}")
     # 2. Busca e soma o saldo inicial apenas das contas de 'Investimento' na aba Bancos
     try:
         df_bancos_local = None
