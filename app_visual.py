@@ -3213,7 +3213,7 @@ if aba == "📊 Análises & Configurações":
             meta_atual = 0.0
 
 # --- CÁLCULO TOTAL BLINDADO: LANÇAMENTOS + SALDO INICIAL DA ABA BANCOS (APENAS INVESTIMENTOS) ---
-# --- PASSO 1: LEITURA ISOLADA DO SALDO INICIAL (INVESTIMENTOS) ---
+# --- PASSO 1: LEITURA DO SALDO INICIAL (EXCLUINDO ITENS COM 'X' NO NOME) ---
     saldo_inicial_investimentos = 0.0
     
     def converter_valor_br_seguro(val):
@@ -3227,21 +3227,56 @@ if aba == "📊 Análises & Configurações":
             if not val_str:
                 return 0.0
             
-            # Tratamento padrão brasileiro (ex: "1.250,50" ou "1250,50" ou "1250.50")
             if '.' in val_str and ',' in val_str:
-                # Se tem ponto e vírgula, o ponto é milhar e vírgula é decimal
                 val_str = val_str.replace('.', '').replace(',', '.')
             elif ',' in val_str:
-                # Apenas vírgula decimal
                 val_str = val_str.replace(',', '.')
             elif val_str.count('.') > 1:
-                # Mais de um ponto (ex: "1.250.500") -> remove todos
                 val_str = val_str.replace('.', '')
                 
             return float(val_str)
         except:
             return 0.0
 
+    try:
+        df_bancos_local = None
+        for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
+            if nome_var in locals() and not locals()[nome_var].empty:
+                df_bancos_local = locals()[nome_var]
+                break
+            elif nome_var in st.session_state and not st.session_state[nome_var].empty:
+                df_bancos_local = st.session_state[nome_var]
+                break
+        
+        if df_bancos_local is not None and not df_bancos_local.empty:
+            soma_parcial = 0.0
+            
+            for idx, row in df_bancos_local.iloc[1:].iterrows():
+                try:
+                    # Coluna A (índice 0): Nome do Banco / Conta
+                    nome_conta = str(row.iloc[0]).strip() if len(row) > 0 else ""
+                    nome_conta_lower = nome_conta.lower()
+                    
+                    # Coluna C (índice 2): Tipo de Conta
+                    tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
+                    
+                    # Regra de Exclusão: Ignora se o nome começar com 'x' (ex: xTCross, xMoto Lead)
+                    if nome_conta.startswith('x') or nome_conta.startswith('X') or 'xtcross' in nome_conta_lower or 'xmoto' in nome_conta_lower:
+                        continue
+                    
+                    # Filtra se for investimento
+                    if 'investimento' in tipo_conta or 'aplicação' in tipo_conta or 'aplicacao' in tipo_conta:
+                        val_bruto = row.iloc[1] if len(row) > 1 else 0
+                        valor_convertido = converter_valor_br_seguro(val_bruto)
+                        soma_parcial += valor_convertido
+                except:
+                    pass
+                    
+            saldo_inicial_investimentos = soma_parcial
+            st.info(f"📌 **Saldo Inicial das Contas de Investimento (Líquido):** R$ {saldo_inicial_investimentos:,.2f}")
+            
+    except Exception as e:
+        st.error(f"Erro ao ler o saldo inicial: {e}")
     try:
         # Localiza o DataFrame dos Bancos
         df_bancos_local = None
