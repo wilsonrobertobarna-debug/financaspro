@@ -3212,39 +3212,39 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
-# --- CÁLCULO AUTOMÁTICO ULTRABLINDADO ---
+# --- CÁLCULO AUTOMÁTICO: BUSCA 'RENDIMENTO' OU 'APLICAÇÃO' E SOMA O 'VALOR' ---
     guardado_atual = 0.0
     if 'df_base' in locals() and not df_base.empty:
+        valores_convertidos = []
         
-        # Cria uma máscara para achar 'investimento' em Categoria ou Tipo
-        mask_inv = False
-        for col in ['Categoria', 'Tipo', 'Descrição']:
-            if col in df_base.columns:
-                mask_inv = mask_inv | df_base[col].astype(str).str.lower().str.contains('investimento', na=False)
+        # Garante que as colunas 'Categoria' e 'Valor' existem na base
+        if 'Categoria' in df_base.columns and 'Valor' in df_base.columns:
+            for index, row in df_base.iterrows():
+                categoria_val = str(row['Categoria']).strip().lower()
+                
+                # Procura se a categoria é 'rendimento' ou 'aplicação'
+                if 'rendimento' in categoria_val or 'aplicação' in categoria_val or 'aplicacao' in categoria_val:
+                    val = row['Valor']
+                    if pd.isna(val):
+                        continue
+                    try:
+                        if isinstance(val, (int, float)):
+                            valores_convertidos.append(float(val))
+                        else:
+                            val_str = str(val).replace('R$', '').replace('r$', '').strip()
+                            
+                            # Tratamento padrão brasileiro ('100,00' ou '1.500,00')
+                            if '.' in val_str and ',' in val_str:
+                                val_str = val_str.replace('.', '').replace(',', '.')
+                            elif ',' in val_str:
+                                val_str = val_str.replace(',', '.')
+                                
+                            valores_convertidos.append(float(val_str))
+                    except:
+                        pass
         
-        df_inv = df_base[mask_inv]
-        
-        if not df_inv.empty and 'Valor' in df_inv.columns:
-            soma_total = 0.0
-            for val in df_inv['Valor']:
-                if pd.isna(val):
-                    continue
-                try:
-                    if isinstance(val, (int, float)):
-                        soma_total += float(val)
-                    else:
-                        # Limpa string como '100,00' ou '1.500,00'
-                        val_str = str(val).replace('R$', '').replace('r$', '').strip()
-                        if '.' in val_str and ',' in val_str:
-                            val_str = val_str.replace('.', '').replace(',', '.')
-                        elif ',' in val_str:
-                            val_str = val_str.replace(',', '.')
-                        
-                        soma_total += float(val_str)
-                except:
-                    pass
-            
-            guardado_atual = soma_total
+        if valores_convertidos:
+            guardado_atual = sum(valores_convertidos)
             
     with st.form("form_reserva_financeira"):
         meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
