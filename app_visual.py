@@ -3315,10 +3315,6 @@ if aba == "📊 Análises & Configurações":
                     saldo_atual_conta = saldo_inicial + entradas - saidas
 
                     # 4. Separa entre Investimento e Conta Corrente
-                   # 4. Ignora Cartões e VR/VA do cálculo de saldo patrimonial de contas correntes
-                    if "CARTA" in tipo_conta or "CART" in nome_conta_lower:
-                        continue
-
                     is_investimento = 'INVEST' in tipo_conta or 'APLICAC' in tipo_conta
 
                     if is_investimento:
@@ -3335,6 +3331,9 @@ if aba == "📊 Análises & Configurações":
                             saldo_outras_usd += saldo_atual_conta
                         elif moeda == "EUR":
                             saldo_outras_eur += saldo_atual_conta
+                except:
+                    pass
+
         # Totais gerais para a conferência
         subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
@@ -3342,7 +3341,6 @@ if aba == "📊 Análises & Configurações":
 
     except Exception as e:
         st.error(f"Erro ao calcular os saldos: {e}")
-
     # Formulário para salvar a meta
     with st.form("form_reserva_financeira"):
         meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
