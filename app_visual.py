@@ -3234,7 +3234,7 @@ if aba == "📊 Análises & Configurações":
         except:
             return 0.0
 
-   saldo_inicial_investimentos_brl = 0.0
+    saldo_inicial_investimentos_brl = 0.0
     guardado_atual = 0.0
     
     # Variáveis para o painel de conferência por moeda
