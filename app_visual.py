@@ -3234,8 +3234,7 @@ if aba == "📊 Análises & Configurações":
         except:
             return 0.0
 
-    saldo_inicial_investimentos_brl = 0.0
-    total_rendimentos_brl = 0.0
+   saldo_inicial_investimentos_brl = 0.0
     guardado_atual = 0.0
     
     # Variáveis para o painel de conferência por moeda
@@ -3248,7 +3247,7 @@ if aba == "📊 Análises & Configurações":
 
     try:
         # ==========================================
-        # PASSO 1: LEITURA DA ABA BANCOS (Separando por Moeda e Tipo)
+        # PASSO 1: LEITURA DIRETA DOS SALDOS ATUAIS DA ABA BANCOS
         # ==========================================
         df_bancos_local = None
         for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
@@ -3258,8 +3257,6 @@ if aba == "📊 Análises & Configurações":
             elif nome_var in st.session_state and not st.session_state[nome_var].empty:
                 df_bancos_local = st.session_state[nome_var]
                 break
-        
-        contas_investimento_validas = set()
         
         if df_bancos_local is not None and not df_bancos_local.empty:
             for idx, row in df_bancos_local.iloc[1:].iterrows():
@@ -3283,13 +3280,12 @@ if aba == "📊 Análises & Configurações":
                             saldo_veiculos_brl += valor_num
                         continue
                     
-                    # 2. Investimentos vs Outras Contas
+                    # 2. Investimentos vs Outras Contas (Conta Corrente)
                     is_investimento = 'investimento' in tipo_conta or 'aplicação' in tipo_conta or 'aplicacao' in tipo_conta
                     
                     if is_investimento:
                         if moeda == "BRL":
                             saldo_inicial_investimentos_brl += valor_num
-                            contas_investimento_validas.add(nome_conta_lower)
                         elif moeda == "USD":
                             total_invest_usd += valor_num
                         elif moeda == "EUR":
@@ -3305,39 +3301,8 @@ if aba == "📊 Análises & Configurações":
                 except:
                     pass
 
-        # ==========================================
-        # PASSO 2: RENDIMENTOS (Aba Lançamentos)
-        # ==========================================
-        df_lancamentos_local = None
-        for nome_var in ['df_lancamentos', 'df_lancamento', 'lancamentos_df']:
-            if nome_var in locals() and not locals()[nome_var].empty:
-                df_lancamentos_local = locals()[nome_var]
-                break
-            elif nome_var in st.session_state and not st.session_state[nome_var].empty:
-                df_lancamentos_local = st.session_state[nome_var]
-                break
-
-        if df_lancamentos_local is not None and not df_lancamentos_local.empty:
-            soma_rend = 0.0
-            for idx, row in df_lancamentos_local.iloc[1:].iterrows():
-                try:
-                    # Coluna F (índice 5): Banco / Conta do lançamento
-                    banco_lanc = str(row.iloc[5]).strip().lower() if len(row) > 5 else ""
-                    # Coluna D (índice 3): Categoria
-                    categoria = str(row.iloc[3]).strip().lower() if len(row) > 3 else ""
-                    
-                    # Verifica se a categoria é rendimento ou juros
-                    if 'rendimento' in categoria or 'juros' in categoria:
-                        match_banco = any(conta in banco_lanc for conta in contas_investimento_validas)
-                        if match_banco or 'investimento' in banco_lanc:
-                            val_bruto = row.iloc[1] if len(row) > 1 else 0
-                            soma_rend += converter_valor_br_seguro(val_bruto)
-                except:
-                    pass
-            total_rendimentos_brl = soma_rend
-
-        # Total Acumulado Oficial de Investimentos em BRL (Saldo Inicial + Rendimentos)
-        guardado_atual = saldo_inicial_investimentos_brl + total_rendimentos_brl
+        # O valor guardado agora assume diretamente o saldo real consolidado dos investimentos da aba Bancos
+        guardado_atual = saldo_inicial_investimentos_brl
         
         # Totais por Moeda para bater com o WhatsApp
         subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
