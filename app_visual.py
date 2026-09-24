@@ -3214,8 +3214,7 @@ if aba == "📊 Análises & Configurações":
 
 # --- CÁLCULO TOTAL BLINDADO: LANÇAMENTOS + SALDO INICIAL DA ABA BANCOS (APENAS INVESTIMENTOS) ---
 # --- PASSO 1: LEITURA DO SALDO INICIAL (EXCLUINDO ITENS COM 'X' NO NOME) ---
-    saldo_inicial_investimentos = 0.0
-    
+# --- FUNÇÃO DE CONVERSÃO SEGURA ---
     def converter_valor_br_seguro(val):
         if pd.isna(val):
             return 0.0
@@ -3238,7 +3237,13 @@ if aba == "📊 Análises & Configurações":
         except:
             return 0.0
 
+    saldo_inicial_investimentos = 0.0
+    total_rendimentos = 0.0
+
     try:
+        # ==========================================
+        # PASSO 1: SALDO INICIAL (Aba Bancos)
+        # ==========================================
         df_bancos_local = None
         for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
             if nome_var in locals() and not locals()[nome_var].empty:
@@ -3248,35 +3253,74 @@ if aba == "📊 Análises & Configurações":
                 df_bancos_local = st.session_state[nome_var]
                 break
         
+        # Lista para guardar os nomes das contas de investimento válidas (sem os 'x')
+        contas_investimento_validas = set()
+        
         if df_bancos_local is not None and not df_bancos_local.empty:
-            soma_parcial = 0.0
-            
+            soma_bancos = 0.0
             for idx, row in df_bancos_local.iloc[1:].iterrows():
                 try:
-                    # Coluna A (índice 0): Nome do Banco / Conta
                     nome_conta = str(row.iloc[0]).strip() if len(row) > 0 else ""
                     nome_conta_lower = nome_conta.lower()
-                    
-                    # Coluna C (índice 2): Tipo de Conta
                     tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
                     
-                    # Regra de Exclusão: Ignora se o nome começar com 'x' (ex: xTCross, xMoto Lead)
+                    # Ignora veículos com 'x'
                     if nome_conta.startswith('x') or nome_conta.startswith('X') or 'xtcross' in nome_conta_lower or 'xmoto' in nome_conta_lower:
                         continue
                     
-                    # Filtra se for investimento
+                    # Se for investimento, guarda o nome da conta e soma o inicial
                     if 'investimento' in tipo_conta or 'aplicação' in tipo_conta or 'aplicacao' in tipo_conta:
+                        contas_investimento_validas.add(nome_conta)
                         val_bruto = row.iloc[1] if len(row) > 1 else 0
-                        valor_convertido = converter_valor_br_seguro(val_bruto)
-                        soma_parcial += valor_convertido
+                        soma_bancos += converter_valor_br_seguro(val_bruto)
                 except:
                     pass
+            saldo_inicial_investimentos = soma_bancos
+
+        # ==========================================
+        # PASSO 2: RENDIMENTOS (Aba Lançamentos)
+        # ==========================================
+        df_lancamentos_local = None
+        for nome_var in ['df_lancamentos', 'df_lancamento', 'lancamentos_df']:
+            if nome_var in locals() and not locals()[nome_var].empty:
+                df_lancamentos_local = locals()[nome_var]
+                break
+            elif nome_var in st.session_state and not st.session_state[nome_var].empty:
+                df_lancamentos_local = st.session_state[nome_var]
+                break
+
+        if df_lancamentos_local is not None and not df_lancamentos_local.empty:
+            soma_rend = 0.0
+            for idx, row in df_lancamentos_local.iloc[1:].iterrows():
+                try:
+                    # Coluna F (índice 5): Banco / Conta do lançamento
+                    banco_lanc = str(row.iloc[5]).strip() if len(row) > 5 else ""
                     
-            saldo_inicial_investimentos = soma_parcial
-            st.info(f"📌 **Saldo Inicial das Contas de Investimento (Líquido):** R$ {saldo_inicial_investimentos:,.2f}")
-            
+                    # Coluna D (índice 3): Categoria
+                    categoria = str(row.iloc[3]).strip().lower() if len(row) > 3 else ""
+                    
+                    # Verifica se o lançamento pertence a uma conta de investimento válida
+                    # (ou se o nome da conta bate com nossos investimentos)
+                    if banco_lanc in contas_investimento_validas or 'investimento' in banco_lanc.lower():
+                        # Filtra se a categoria é rendimento
+                        if 'rendimento' in categoria:
+                            val_bruto = row.iloc[1] if len(row) > 1 else 0
+                            soma_rend += converter_valor_br_seguro(val_bruto)
+                except:
+                    pass
+            total_rendimentos = soma_rend
+
+        # Total Geral de Investimentos (Saldo Inicial + Rendimentos)
+        total_geral_investimentos = saldo_inicial_investimentos + total_rendimentos
+
+        # Exibe os resultados organizados na tela
+        st.success(f"📊 **Resumo dos Investimentos:**")
+        st.write(f"- Saldo Inicial (Líquido): R$ {saldo_inicial_investimentos:,.2f}")
+        st.write(f"- Total de Rendimentos: R$ {total_rendimentos:,.2f}")
+        st.markdown(f"### **Total Final Calculado:** R$ {total_geral_investimentos:,.2f}")
+
     except Exception as e:
-        st.error(f"Erro ao ler o saldo inicial: {e}")
+        st.error(f"Erro ao calcular os investimentos: {e}")
     try:
         # Localiza o DataFrame dos Bancos
         df_bancos_local = None
