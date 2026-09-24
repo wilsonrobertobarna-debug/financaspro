@@ -3315,6 +3315,10 @@ if aba == "📊 Análises & Configurações":
                     saldo_atual_conta = saldo_inicial + entradas - saidas
 
                     # 4. Separa entre Investimento e Conta Corrente
+                   # 4. Ignora Cartões e VR/VA do cálculo de saldo patrimonial de contas correntes
+                    if "CARTA" in tipo_conta or "CART" in nome_conta_lower:
+                        continue
+
                     is_investimento = 'INVEST' in tipo_conta or 'APLICAC' in tipo_conta
 
                     if is_investimento:
@@ -3331,9 +3335,6 @@ if aba == "📊 Análises & Configurações":
                             saldo_outras_usd += saldo_atual_conta
                         elif moeda == "EUR":
                             saldo_outras_eur += saldo_atual_conta
-                except:
-                    pass
-
         # Totais gerais para a conferência
         subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
