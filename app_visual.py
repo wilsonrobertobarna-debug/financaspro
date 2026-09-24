@@ -3212,39 +3212,80 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
-# --- CÁLCULO AUTOMÁTICO: BUSCA 'RENDIMENTO' OU 'APLICAÇÃO' E SOMA O 'VALOR' ---
+# --- CÁLCULO TOTAL: LANÇAMENTOS + SALDO INICIAL DA COLUNA B DOS BANCOS ---
     guardado_atual = 0.0
+    
+    # 1. Soma os lançamentos de investimentos/aplicações/rendimentos da aba Lançamentos
     if 'df_base' in locals() and not df_base.empty:
-        valores_convertidos = []
+        termos_alvo = ['rendimento', 'aplicação', 'aplicacao', 'investimento', 'aporte', 'reserva']
+        valores_lancamentos = []
         
-        # Garante que as colunas 'Categoria' e 'Valor' existem na base
-        if 'Categoria' in df_base.columns and 'Valor' in df_base.columns:
-            for index, row in df_base.iterrows():
-                categoria_val = str(row['Categoria']).strip().lower()
+        for index, row in df_base.iterrows():
+            texto_linha = ""
+            if 'Categoria' in df_base.columns:
+                texto_linha += str(row.get('Categoria', '')) + " "
+            if 'Tipo' in df_base.columns:
+                texto_linha += str(row.get('Tipo', '')) + " "
+            if 'Banco' in df_base.columns:
+                texto_linha += str(row.get('Banco', '')) + " "
                 
-                # Procura se a categoria é 'rendimento' ou 'aplicação'
-                if 'rendimento' in categoria_val or 'aplicação' in categoria_val or 'aplicacao' in categoria_val:
-                    val = row['Valor']
+            texto_linha = texto_linha.strip().lower()
+            
+            if any(termo in texto_linha for termo in termos_alvo):
+                val = row.get('Valor', 0)
+                if pd.isna(val):
+                    continue
+                try:
+                    if isinstance(val, (int, float)):
+                        valores_lancamentos.append(float(val))
+                    else:
+                        val_str = str(val).replace('R$', '').replace('r$', '').strip()
+                        if '.' in val_str and ',' in val_str:
+                            val_str = val_str.replace('.', '').replace(',', '.')
+                        elif ',' in val_str:
+                            val_str = val_str.replace(',', '.')
+                        valores_lancamentos.append(float(val_str))
+                except:
+                    pass
+        
+        if valores_lancamentos:
+            guardado_atual += sum(valores_lancamentos)
+
+    # 2. Busca e soma o saldo inicial diretamente da Coluna B (índice 1) da aba 'Bancos'
+    try:
+        df_bancos_local = None
+        for nome_var in ['df_bancos', 'df_banks', 'bancos_df']:
+            if nome_var in locals() and not locals()[nome_var].empty:
+                df_bancos_local = locals()[nome_var]
+                break
+            elif nome_var in st.session_state and not st.session_state[nome_var].empty:
+                df_bancos_local = st.session_state[nome_var]
+                break
+        
+        if df_bancos_local is not None and not df_bancos_local.empty:
+            soma_bancos = 0.0
+            # Pega diretamente a coluna B (índice 1) se ela existir, senão procura pela coluna de valor/saldo
+            col_alvo = df_bancos_local.columns[1] if len(df_bancos_local.columns) > 1 else None
+            
+            if col_alvo is not None:
+                for val in df_bancos_local[col_alvo]:
                     if pd.isna(val):
                         continue
                     try:
                         if isinstance(val, (int, float)):
-                            valores_convertidos.append(float(val))
+                            soma_bancos += float(val)
                         else:
                             val_str = str(val).replace('R$', '').replace('r$', '').strip()
-                            
-                            # Tratamento padrão brasileiro ('100,00' ou '1.500,00')
                             if '.' in val_str and ',' in val_str:
                                 val_str = val_str.replace('.', '').replace(',', '.')
                             elif ',' in val_str:
                                 val_str = val_str.replace(',', '.')
-                                
-                            valores_convertidos.append(float(val_str))
+                            soma_bancos += float(val_str)
                     except:
                         pass
-        
-        if valores_convertidos:
-            guardado_atual = sum(valores_convertidos)
+                guardado_atual += soma_bancos
+    except Exception as e:
+        pass
             
     with st.form("form_reserva_financeira"):
         meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
