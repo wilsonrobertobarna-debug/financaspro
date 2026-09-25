@@ -2424,6 +2424,8 @@ elif "🚗" in aba:
                     lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
                     axis=1
                 )
+                # Formata a data para remover as horas indesejadas (00:00:00)
+                df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], errors='coerce').dt.strftime('%d/%m/%Y')
 
                 # Formata a coluna de valor financeiro usando a sua função m_fmt existente
                 df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
