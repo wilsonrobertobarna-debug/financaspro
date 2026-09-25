@@ -749,20 +749,22 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"], key="tip_novo_lancamento")
         
+        # Um respiro leve para desgrudar o tipo da categoria
         st.markdown("")
-       # --- SELEÇÃO DE CATEGORIA ---
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", "Aplicação", "Vale Alimentação", "Restaurante", "Celular", "Anuidade", "Seguro", "Internet", "Vestuário", "Salário", "Reembolso", "Moradia", "Saúde", "Taxas", "Depósito", "Plano Assistencial", "Transporte", "Previdência", "Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Educação", "Manutenção"], key="cat_novo_lancamento") 
         
-        # --- ⛽ DADOS DINÂMICOS DE KM E LITROS PARA VEÍCULOS (COM OCULTAÇÃO CORRETA) ---
+        # --- ⛽ DADOS DINÂMICOS DE KM E LITROS (COM ESPAÇAMENTO E ESTABILIDADE) ---
         f_km = 0.0
         f_litros = 0.0
         
-        # Pega a categoria selecionada diretamente do session_state para reagir na hora
         cat_atual = st.session_state.get('cat_novo_lancamento', f_cat)
         cat_limpa = str(cat_atual).strip().title()
 
         if cat_limpa in ["Combustível", "Manutenção", "Veículo"]:
+            # Respiro para desgrudar o título do campo de Categoria acima
+            st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("⚙️ **Dados do Veículo**")
+            
             col_km_f, col_lit_f = st.columns(2)
             with col_km_f:
                 f_km = st.number_input("Quilometragem (Km)", min_value=0.0, step=1.0, format="%.0f", key="input_km_lancamento")
@@ -771,6 +773,13 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     f_litros = st.number_input("Litros", min_value=0.0, step=0.01, format="%.2f", key="input_litros_lancamento")
                 else:
                     f_litros = 0.0
+        # ----------------------------------------------------------------
+
+        # Respiro antes do status
+        st.markdown("<br>", unsafe_allow_html=True)
+        f_sta = st.selectbox("Status", ["Pago", "Pendente"], key="sta_novo_lancamento")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
         # -----------------------------------------------------
 
         st.markdown("")
