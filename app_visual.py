@@ -788,12 +788,29 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     else:
                         st.session_state.ignorar_duplicidade = True
                 
-            todos_dados = ws_base.get_all_records()
+       # --- LEITURA SEGURA DOS DADOS DA PLANILHA (EVITA GSPREAD EXCEPTION) ---
+            try:
+                raw_data = ws_base.get_all_values()
+                if len(raw_data) > 1:
+                    import pandas as pd
+                    header = [str(c).strip() for c in raw_data[0]]
+                    rows = raw_data[1:]
+                    todos_dados = []
+                    for r in rows:
+                        # Garante que a linha preenche todas as colunas do cabeçalho
+                        padded_row = r + [''] * (len(header) - len(r))
+                        todos_dados.append(dict(zip(header, padded_row)))
+                else:
+                    todos_dados = []
+            except Exception:
+                todos_dados = []
             
             if todos_dados:
                 import pandas as pd
                 df_temp = pd.DataFrame(todos_dados)
                 if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
+                    # Converte para numérico com segurança antes de achar o max
+                    df_temp['ID'] = pd.to_numeric(df_temp['ID'], errors='coerce').fillna(0)
                     proximo_id = int(df_temp['ID'].max()) + 1
                 else:
                     proximo_id = 1
