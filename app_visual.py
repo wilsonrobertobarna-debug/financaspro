@@ -307,7 +307,10 @@ def carregar_dados_gs():
     dados = ws_base.get_all_values()
     if len(dados) <= 1: return pd.DataFrame()
     
-    df = pd.DataFrame(dados[1:], columns=dados[0])
+    # 🛡️ Limpa os espaços invisíveis de todos os cabeçalhos da planilha (ex: "Km " vira "Km")
+    cabecalhos_limpos = [str(c).strip() for c in dados[0]]
+    
+    df = pd.DataFrame(dados[1:], columns=cabecalhos_limpos)
     
     df['Linha_Sheets'] = range(2, len(df) + 2)
     
@@ -327,6 +330,18 @@ def carregar_dados_gs():
     # Garante que a coluna Banco existe e está limpa
     if 'Banco' not in df.columns:
         df['Banco'] = 'Dinheiro'
+        
+    # --- 🚗 BLINDAGEM DAS COLUNAS DE VEÍCULO (KM E LITROS) ---
+    if 'Km' not in df.columns:
+        df['Km'] = 0.0
+    else:
+        df['Km'] = pd.to_numeric(df['Km'].astype(str).str.replace('.', '', regex=False).str.replace(',', '.', regex=False), errors='coerce').fillna(0.0)
+
+    if 'Litros' not in df.columns:
+        df['Litros'] = 0.0
+    else:
+        df['Litros'] = pd.to_numeric(df['Litros'].astype(str).str.replace('.', '', regex=False).str.replace(',', '.', regex=False), errors='coerce').fillna(0.0)
+    # ---------------------------------------------------------
         
     return df
     
