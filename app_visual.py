@@ -2482,13 +2482,32 @@ elif "🚗" in aba:
                 
                 df_exibicao = df_veiculo[colunas_exibir_disponiveis].copy()
 
+                # --- 🎯 FUNÇÃO DE LITROS INTELIGENTE (SEM .00 SE FOR INTEIRO) ---
+                def formata_litros_inteligente(valor):
+                    try:
+                        val_float = float(valor)
+                        if pd.isna(val_float) or val_float == 0:
+                            return "0"
+                        if val_float.is_integer():
+                            return str(int(val_float))
+                        return f"{val_float:.2f}".replace('.', ',')
+                    except:
+                        return str(valor)
+
+                if 'Litros' in df_exibicao.columns:
+                    df_exibicao['Litros'] = df_exibicao['Litros'].apply(formata_litros_inteligente)
+                # -------------------------------------------------------------
+
                 formatos_tabela = {
                     'Km': "{:,.0f} km",
                     'Km_Rodados': "{:,.0f} km",
-                    'Litros': "{:.2f} L",
+                    # Como já tratamos o texto dos litros acima, tiramos o {:.2f} L daqui para não conflitar
                     'Km/L': "{:.2f} Km/L",
                     'Preço/Litro': "R$ {:.2f}"
                 }
+                
+                # Se quiser que apareça o "L" no final quando for inteiro ou decimal, 
+                # você pode ajustar o retorno da função para retornar f"{...} L" se preferir!
 
                 if not df_exibicao.empty:
                     st.dataframe(df_exibicao.iloc[::-1].style.format(formatos_tabela), use_container_width=True, hide_index=True)
