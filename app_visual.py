@@ -1938,34 +1938,24 @@ if "💰" in st.session_state.page:
     df_comp = df_comp[df_comp['Tipo'] == 'Despesa']
 
    # 4. Se a visão detalhada estiver ativa, exibe obrigatoriamente a caixa de seleção da categoria
+    # Cria o pivot table com base no nível escolhido, garantindo soma limpa
     if modo_visao == "Visão Detalhada (Desmembrar Categoria Específica)":
-        # Pega todas as categorias de despesa disponíveis na base geral ou no período
-        categorias_disponiveis = sorted(df_base[df_base['Tipo'] == 'Despesa']['Categoria'].dropna().unique().tolist())
-        
-        if categorias_disponiveis:
-            cat_selecionada = st.selectbox(
-                "📂 Selecione a Categoria para Detalhar:",
-                categorias_disponiveis,
-                key="select_cat_detalhe_comp"
-            )
-            # Filtra os dados dos 3 meses apenas para a categoria escolhida
-            df_comp = df_comp[df_comp['Categoria'] == cat_selecionada]
-            
-            # AGRUPAMENTO POR BENEFICIÁRIO: Junta as parcelas e itens pelo fornecedor/beneficiário
-            index_pivot = 'Beneficiário'
-        else:
-            st.info("Nenhuma categoria encontrada.")
-            index_pivot = 'Categoria'
+        # Agrupa previamente somando para garantir que não há quebras por banco ou duplicadas
+        df_agrupado = df_comp.groupby(['Beneficiario', df_comp['Vencimento'].dt.month], as_index=False)['V_Num'].sum()
+        df_pivot = df_agrupado.pivot_table(
+            index='Beneficiario',
+            columns='Vencimento',
+            values='V_Num',
+            aggfunc='sum'
+        ).fillna(0)
     else:
-        index_pivot = 'Categoria'
-
-    # Cria o pivot table com base no nível escolhido
-    df_pivot = df_comp.pivot_table(
-        index=index_pivot, 
-        columns=df_comp['Vencimento'].dt.month, 
-        values='V_Num', 
-        aggfunc='sum'
-    ).fillna(0)
+        df_agrupado = df_comp.groupby(['Categoria', df_comp['Vencimento'].dt.month], as_index=False)['V_Num'].sum()
+        df_pivot = df_agrupado.pivot_table(
+            index='Categoria',
+            columns='Vencimento',
+            values='V_Num',
+            aggfunc='sum'
+        ).fillna(0)
     
     # Garante que as colunas dos 3 meses existam no DataFrame mesmo se alguma estiver zerada
     for m in [mes_retrasado_num, mes_anterior_num, mes_atual_num]:
