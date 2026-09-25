@@ -1912,8 +1912,13 @@ if "💰" in st.session_state.page:
         mes_anterior_num = mes_atual_num - 1
         mes_retrasado_num = mes_atual_num - 2
 
-    # 3. Preparar os dados (convertendo a coluna de vencimento para data)
+    # 3. Preparar os dados (convertendo a coluna de vencimento para data e limpando textos)
     df_comp = df_base.copy()
+    
+    # --- BLOCO DE HIGIENIZAÇÃO DE TEXTO (Padroniza Beneficiário e Categoria) ---
+    df_comp['Beneficiário'] = df_comp['Beneficiário'].astype(str).str.strip().str.title()
+    df_comp['Categoria'] = df_comp['Categoria'].astype(str).str.strip().str.title()
+    # -------------------------------------------------------------------------
     
     # --- BLOCO DE SEGURANÇA PARA DATAS ---
     df_comp['Vencimento'] = pd.to_datetime(df_comp['Vencimento'], dayfirst=True, errors='coerce')
@@ -1952,7 +1957,7 @@ if "💰" in st.session_state.page:
         else:
             st.info("Nenhuma categoria encontrada para o período.")
 
-        # Agrupa e pivoteia estritamente por Beneficiário (sem banco)
+        # AGRUPAMENTO ESTRITO POR BENEFICIÁRIO (Ignora Descrição, Banco, etc.)
         df_agrupado = df_comp.groupby(['Beneficiário', df_comp['Vencimento'].dt.month], as_index=False)['V_Num'].sum()
         df_pivot = df_agrupado.pivot_table(
             index='Beneficiário',
