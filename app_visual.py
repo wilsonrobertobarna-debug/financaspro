@@ -1884,7 +1884,7 @@ if "💰" in st.session_state.page:
      # =========================================================================
         
         
-    # --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA 3 MESES COM DETALHAMENTO) ---
+# --- COMPARATIVO MENSAL EFICIENTE (AJUSTADO PARA 3 MESES COM DETALHAMENTO) ---
     st.subheader("🔄 Comparativo: 3 Meses (Retrasado, Anterior e Atual)")
     
     # 1. Seletor de Visão (Radio)
@@ -1937,11 +1937,22 @@ if "💰" in st.session_state.page:
     # Filtramos apenas despesas
     df_comp = df_comp[df_comp['Tipo'] == 'Despesa']
 
-   # 4. Se a visão detalhada estiver ativa, exibe obrigatoriamente a caixa de seleção da categoria
-    # Cria o pivot table com base no nível escolhido, garantindo soma limpa
-# Cria o pivot table com base no nível escolhido, garantindo soma limpa
+    # 4. Lógica de Visão Geral vs Visão Detalhada com Seleção de Categoria
     if modo_visao == "Visão Detalhada (Desmembrar Categoria Específica)":
-        # Agrupa previamente somando para garantir que não há quebras por banco ou duplicadas
+        categorias_disponiveis = sorted(df_comp['Categoria'].dropna().unique().tolist())
+        
+        if categorias_disponiveis:
+            cat_selecionada = st.selectbox(
+                "📂 Selecione a Categoria para Detalhar:",
+                categorias_disponiveis,
+                key="select_cat_detalhe_comp"
+            )
+            # Filtra estritamente pela categoria escolhida
+            df_comp = df_comp[df_comp['Categoria'] == cat_selecionada]
+        else:
+            st.info("Nenhuma categoria encontrada para o período.")
+
+        # Agrupa e pivoteia estritamente por Beneficiário (sem banco)
         df_agrupado = df_comp.groupby(['Beneficiário', df_comp['Vencimento'].dt.month], as_index=False)['V_Num'].sum()
         df_pivot = df_agrupado.pivot_table(
             index='Beneficiário',
@@ -1950,6 +1961,7 @@ if "💰" in st.session_state.page:
             aggfunc='sum'
         ).fillna(0)
     else:
+        # Visão Geral agrupa por Categoria
         df_agrupado = df_comp.groupby(['Categoria', df_comp['Vencimento'].dt.month], as_index=False)['V_Num'].sum()
         df_pivot = df_agrupado.pivot_table(
             index='Categoria',
