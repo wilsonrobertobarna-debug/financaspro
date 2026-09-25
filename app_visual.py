@@ -661,10 +661,8 @@ if st.session_state.get('limpar_form_pendente', False):
 
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
     
-    # 1. O Banco fica FORA do formulário para atualizar a tela na mesma hora que você troca
+    # 1. O Banco fica FORA do formulário
     f_bnc = st.selectbox("Banco", bancos_disponiveis, key="sb_banco_novo_lancamento")
-    
-    # Um respiro leve para desgrudar o Banco da Data da Compra
     st.markdown("")
     
     # Data da Compra
@@ -707,7 +705,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         except Exception:
             eh_cartao = False
 
-    # --- EXIBIÇÃO E DEFINIÇÃO DO VENCIMENTO ---
     st.markdown("")
     if eh_cartao:
         st.markdown(f"📅 **Vencimento (Cartão - Fech: {dia_fech} / Venc: {dia_venc}):** `{vencimento_calculado.strftime('%d/%m/%Y')}`")
@@ -715,100 +712,94 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
     else:
         t_dat = st.date_input("📅 Data de Vencimento", value=hoje_br, format="DD/MM/YYYY", key="dt_vencimento_banco_comum")
 
-    # Um respiro antes de entrar no formulário principal
     st.markdown("")
 
-    # 2. Agora entra o formulário com o restante dos campos e o botão Salvar
-    with st.form("f_novo"):
-            f_val = st.number_input("Valor", min_value=-100000.0, value=0.0, step=0.01, format="%.2f", key="val_novo_lancamento")
-            f_par = st.number_input("Parcelas", min_value=1, value=1, key="par_novo_lancamento")
-            f_desc = st.text_input("📝 Descrição", key="desc_novo_lancamento")
-            
-            # --- BENEFICIÁRIO COM AUTOCOMPLETAR DA COLUNA J (FILTRADO E ÚNICO) ---
-            beneficiarios_unicos = []
-            if not df_base.empty and 'Beneficiário' in df_base.columns:
-                nomes_brutos = df_base['Beneficiário'].dropna().astype(str)
-                
-                unicos_dict = {}
-                for n in nomes_brutos:
-                    n_limpo = n.strip()
-                    if n_limpo and n_limpo.lower() != 'nan':
-                        chave = n_limpo.lower()
-                        if chave not in unicos_dict:
-                            unicos_dict[chave] = n_limpo
-                            
-                beneficiarios_unicos = sorted(list(unicos_dict.values()))
-            
-            opcoes_beneficiario = [""] + beneficiarios_unicos
-            f_bnfc = st.selectbox("👤 Beneficiário (Histórico)", options=opcoes_beneficiario, key="sb_bnfc_novo_lancamento")
-            
-            st.markdown("")
-            f_bnfc_novo = st.text_input("Ou digite um novo Beneficiário:", key="bnfc_novo_texto")
-            
-            beneficiario_final = f_bnfc_novo.strip() if f_bnfc_novo.strip() else f_bnfc
-            
-            f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"], key="tip_novo_lancamento")
-            
-            # Um respiro leve para desgrudar o tipo da categoria
-            st.markdown("")
-            f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", "Aplicação", "Vale Alimentação", "Restaurante", "Celular", "Anuidade", "Seguro", "Internet", "Vestuário", "Salário", "Reembolso", "Moradia", "Saúde", "Taxas", "Depósito", "Plano Assistencial", "Transporte", "Previdência", "Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Educação", "Manutenção"], key="cat_novo_lancamento") 
-            
-            # --- ⛽ DADOS DINÂMICOS DE KM E LITROS (FORA DO FORM = APARECEM NA HORA) ---
-            f_km = 0.0
-            f_litros = 0.0
-            
-            cat_atual = st.session_state.get('cat_novo_lancamento', f_cat)
-            cat_limpa = str(cat_atual).strip().title()
+    # --- 🚗 CATEGORIA TAMBÉM FORA DO FORMULÁRIO (FIM DO LOOP E DA TELA ROSA) ---
+    f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", "Aplicação", "Vale Alimentação", "Restaurante", "Celular", "Anuidade", "Seguro", "Internet", "Vestuário", "Salário", "Reembolso", "Moradia", "Saúde", "Taxas", "Depósito", "Plano Assistencial", "Transporte", "Previdência", "Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Educação", "Manutenção"], key="cat_novo_lancamento") 
+    
+    f_km = 0.0
+    f_litros = 0.0
+    cat_limpa = str(f_cat).strip().title()
 
-            if cat_limpa in ["Combustível", "Manutenção", "Veículo"]:
-                st.markdown("<br>", unsafe_allow_html=True)
-                st.markdown("⚙️ **Dados do Veículo**")
-                
-                col_km_f, col_lit_f = st.columns(2)
-                with col_km_f:
-                    f_km = st.number_input("Quilometragem (Km)", min_value=0.0, step=1.0, format="%.0f", key="input_km_lancamento")
-                with col_lit_f:
-                    if cat_limpa == "Combustível":
-                        f_litros = st.number_input("Litros", min_value=0.0, step=0.01, format="%.2f", key="input_litros_lancamento")
-                    else:
-                        f_litros = 0.0
+    if cat_limpa in ["Combustível", "Manutenção", "Veículo"]:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("⚙️ **Dados do Veículo**")
+        
+        col_km_f, col_lit_f = st.columns(2)
+        with col_km_f:
+            f_km = st.number_input("Quilometragem (Km)", min_value=0.0, step=1.0, format="%.0f", key="input_km_lancamento")
+        with col_lit_f:
+            if cat_limpa == "Combustível":
+                f_litros = st.number_input("Litros", min_value=0.0, step=0.01, format="%.2f", key="input_litros_lancamento")
+            else:
+                f_litros = 0.0
+
+    st.markdown("")
+
+    # 2. Agora entra o formulário limpo apenas com os dados de valor, descrição e salvamento
+    with st.form("f_novo"):
+        f_val = st.number_input("Valor", min_value=-100000.0, value=0.0, step=0.01, format="%.2f", key="val_novo_lancamento")
+        f_par = st.number_input("Parcelas", min_value=1, value=1, key="par_novo_lancamento")
+        f_desc = st.text_input("📝 Descrição", key="desc_novo_lancamento")
+        
+        # --- BENEFICIÁRIO COM AUTOCOMPLETAR DA COLUNA J ---
+        beneficiarios_unicos = []
+        if not df_base.empty and 'Beneficiário' in df_base.columns:
+            nomes_brutos = df_base['Beneficiário'].dropna().astype(str)
+            unicos_dict = {}
+            for n in nomes_brutos:
+                n_limpo = n.strip()
+                if n_limpo and n_limpo.lower() != 'nan':
+                    chave = n_limpo.lower()
+                    if chave not in unicos_dict:
+                        unicos_dict[chave] = n_limpo
+            beneficiarios_unicos = sorted(list(unicos_dict.values()))
+        
+        opcoes_beneficiario = [""] + beneficiarios_unicos
+        f_bnfc = st.selectbox("👤 Beneficiário (Histórico)", options=opcoes_beneficiario, key="sb_bnfc_novo_lancamento")
+        
+        st.markdown("")
+        f_bnfc_novo = st.text_input("Ou digite um novo Beneficiário:", key="bnfc_novo_texto")
+        beneficiario_final = f_bnfc_novo.strip() if f_bnfc_novo.strip() else f_bnfc
+        
+        f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"], key="tip_novo_lancamento")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        f_sta = st.selectbox("Status", ["Pago", "Pendente"], key="status_pagamento_novo_form")
+        st.markdown("<br>", unsafe_allow_html=True)
             
-            # Respiro antes do status
-            st.markdown("<br>", unsafe_allow_html=True)
-            f_sta = st.selectbox("Status", ["Pago", "Pendente"], key="status_pagamento_novo_form")
+        botao_salvar = st.form_submit_button("Salvar Lançamento")
+
+    # 3. Processamento do salvamento fora/logo após o form para evitar loops do Streamlit
+    if botao_salvar:
+        if f_val == 0:
+            st.warning("⚠️ O campo 'Valor' deve ser maior que zero!")
+            st.stop()
+        
+        if not f_desc.strip():
+            st.warning("⚠️ O campo 'Descrição' não pode ficar em branco!")
+            st.stop()
             
-            st.markdown("<br>", unsafe_allow_html=True)
+        if not beneficiario_final.strip():
+            st.warning("⚠️ Selecione um Beneficiário no histórico ou digite um novo no campo abaixo!")
+            st.stop()
+            
+        if not df_base.empty and not st.session_state.get('ignorar_duplicidade', False):
+            duplicado = df_base[
+                (df_base['V_Num'] == float(f_val)) & 
+                (df_base['DT'].dt.date == t_dat) & 
+                (df_base['Descrição'].astype(str).str.strip().str.lower() == f_desc.strip().lower())
+            ]
+            
+            if not duplicado.empty:
+                st.warning(f"⚠️ **Atenção:** Já existe um lançamento idêntico ({f_desc} - R$ {f_val:,.2f} para {t_dat.strftime('%d/%m/%Y')}).")
+                confirma_dup = st.checkbox("Sim, quero duplicar este lançamento mesmo assim", key="chk_confirma_dup")
                 
-            if st.form_submit_button("Salvar Lançamento"):
-                if f_val == 0:
-                    st.warning("⚠️ O campo 'Valor' deve ser maior que zero!")
+                if not confirma_dup:
+                    st.info("Marque a caixa acima se realmente deseja salvar, ou altere os dados.")
                     st.stop()
-                
-                if not f_desc.strip():
-                    st.warning("⚠️ O campo 'Descrição' não pode ficar em branco!")
-                    st.stop()
-                    
-                if not beneficiario_final.strip():
-                    st.warning("⚠️ Selecione um Beneficiário no histórico ou digite um novo no campo abaixo!")
-                    st.stop()
-                    
-                if not df_base.empty and not st.session_state.get('ignorar_duplicidade', False):
-                    duplicado = df_base[
-                        (df_base['V_Num'] == float(f_val)) & 
-                        (df_base['DT'].dt.date == t_dat) & 
-                        (df_base['Descrição'].astype(str).str.strip().str.lower() == f_desc.strip().lower())
-                    ]
-                    
-                    if not duplicado.empty:
-                        st.warning(f"⚠️ **Atenção:** Já existe um lançamento idêntico ({f_desc} - R$ {f_val:,.2f} para {t_dat.strftime('%d/%m/%Y')}).")
-                        
-                        confirma_dup = st.checkbox("Sim, quero duplicar este lançamento mesmo assim", key="chk_confirma_dup")
-                        
-                        if not confirma_dup:
-                            st.info("Marque a caixa acima se realmente deseja salvar, ou altere os dados.")
-                            st.stop()
-                        else:
-                            st.session_state.ignorar_duplicidade = True
+                else:
+                    st.session_state.ignorar_duplicidade = True
                 
        # --- LEITURA SEGURA DOS DADOS DA PLANILHA (EVITA GSPREAD EXCEPTION) ---
             try:
