@@ -639,6 +639,8 @@ if st.session_state.get('limpar_form_pendente', False):
     st.session_state['desc_novo_lancamento'] = ""
     st.session_state['bnfc_novo_texto'] = ""
     st.session_state['sb_bnfc_novo_lancamento'] = ""
+    st.session_state['input_km_lancamento'] = 0.0
+    st.session_state['input_litros_lancamento'] = 0.0
     st.session_state['limpar_form_pendente'] = False
 # -------------------------------------------------------------
 
@@ -701,23 +703,17 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
     # Um respiro antes de entrar no formulário principal
     st.markdown("")
 
-   # 2. Agora entra o formulário com o restante dos campos e o botão Salvar
+    # 2. Agora entra o formulário com o restante dos campos e o botão Salvar
     with st.form("f_novo"):
         f_val = st.number_input("Valor", min_value=-100000.0, value=0.0, step=0.01, format="%.2f", key="val_novo_lancamento")
         f_par = st.number_input("Parcelas", min_value=1, value=1, key="par_novo_lancamento")
         f_desc = st.text_input("📝 Descrição", key="desc_novo_lancamento")
         
-        # --- BENEFICIÁRIO COM AUTOCOMPLETAR DA COLUNA J ---
-        #beneficiarios_unicos = []
-        #if not df_base.empty and 'Beneficiário' in df_base.columns:
-        #    beneficiarios_unicos = sorted([str(x).strip() for x in df_base['Beneficiário'].dropna().unique() if str(x).strip() != ''])
-
         # --- BENEFICIÁRIO COM AUTOCOMPLETAR DA COLUNA J (FILTRADO E ÚNICO) ---
         beneficiarios_unicos = []
         if not df_base.empty and 'Beneficiário' in df_base.columns:
             nomes_brutos = df_base['Beneficiário'].dropna().astype(str)
             
-            # Dicionário para chavear em minúsculo (evita duplicadas) mas guardar o nome original formatado
             unicos_dict = {}
             for n in nomes_brutos:
                 n_limpo = n.strip()
@@ -728,36 +724,40 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                         
             beneficiarios_unicos = sorted(list(unicos_dict.values()))
         
-        # Cria uma lista onde a primeira opção é vazia/digitar novo, seguida do histórico
         opcoes_beneficiario = [""] + beneficiarios_unicos
         f_bnfc = st.selectbox("👤 Beneficiário (Histórico)", options=opcoes_beneficiario, key="sb_bnfc_novo_lancamento")
         
-        # Respiro visual para desgrudar da barrinha/campo acima
         st.markdown("")
-        
-        # Caso queira digitar um beneficiário totalmente novo que não está na lista
         f_bnfc_novo = st.text_input("Ou digite um novo Beneficiário:", key="bnfc_novo_texto")
         
-        # Define qual beneficiário valerá (prioriza o texto livre se preenchido, senão pega o do selectbox)
         beneficiario_final = f_bnfc_novo.strip() if f_bnfc_novo.strip() else f_bnfc
-        # ------------------------------------------------
         
         f_tip = st.selectbox("Tipo", ["Despesa", "Receita", "Rendimento"], key="tip_novo_lancamento")
         
-        # Um respiro leve para desgrudar o tipo da categoria
         st.markdown("")
         f_cat = st.selectbox("Categoria", ["Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", "Aplicação", "Vale Alimentação", "Restaurante", "Celular", "Anuidade", "Seguro", "Internet", "Vestuário", "Salário", "Reembolso", "Moradia", "Saúde", "Taxas", "Depósito", "Plano Assistencial", "Transporte", "Previdência", "Outros", "Pet: Milo", "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Educação", "Manutenção"], key="cat_novo_lancamento") 
         
-        # Um respiro leve para desgrudar a categoria do status
+        # --- ⛽ DADOS DINÂMICOS DE KM E LITROS PARA VEÍCULOS ---
+        f_km = 0.0
+        f_litros = 0.0
+        cat_limpa = f_cat.strip().title() if f_cat else ""
+
+        if cat_limpa in ["Combustível", "Manutenção", "Veículo"]:
+            st.markdown("⚙️ **Dados do Veículo**")
+            col_km_f, col_lit_f = st.columns(2)
+            with col_km_f:
+                f_km = st.number_input("Quilometragem (Km)", min_value=0.0, step=1.0, format="%.0f", key="input_km_lancamento")
+            with col_lit_f:
+                if cat_limpa == "Combustível":
+                    f_litros = st.number_input("Litros", min_value=0.0, step=0.01, format="%.2f", key="input_litros_lancamento")
+        # -----------------------------------------------------
+
         st.markdown("")
         f_sta = st.selectbox("Status", ["Pago", "Pendente"], key="sta_novo_lancamento")
         
-        # Mais um respiro antes do botão para ele descolar do status
         st.markdown("<br>", unsafe_allow_html=True)
-        
             
         if st.form_submit_button("Salvar Lançamento"):
-            # --- 🛡️ TRAVA DE SEGURANÇA CONTRA CAMPOS VAZIOS ---
             if f_val == 0:
                 st.warning("⚠️ O campo 'Valor' deve ser maior que zero!")
                 st.stop()
@@ -769,8 +769,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             if not beneficiario_final.strip():
                 st.warning("⚠️ Selecione um Beneficiário no histórico ou digite um novo no campo abaixo!")
                 st.stop()
-            # ---------------------------------------------------
-           # --- 🛡️ ITEM 4: CONTROLE DE DUPLICIDADE SEGURO ---
+                
             if not df_base.empty and not st.session_state.get('ignorar_duplicidade', False):
                 duplicado = df_base[
                     (df_base['V_Num'] == float(f_val)) & 
@@ -788,7 +787,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                         st.stop()
                     else:
                         st.session_state.ignorar_duplicidade = True
-            
+                
             todos_dados = ws_base.get_all_records()
             
             if todos_dados:
@@ -812,6 +811,8 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                 else:
                     desc_com_parcela = f_desc.strip()
                 
+                # Nota: Certifique-se de que a sua planilha no Google Sheets possui as colunas para receber Km e Litros, 
+                # ou o append vai apenas preencher as ordens de colunas existentes.
                 ws_base.append_row([
                     nova_data.strftime("%d/%m/%Y"),
                     v_str,
@@ -822,22 +823,21 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     f_sta,
                     f_compra_str,
                     proximo_id + i,
-                    beneficiario_final  
+                    beneficiario_final,
+                    f_km,       # Salva o Km preenchido
+                    f_litros    # Salva os litros preenchidos
                 ])
             
             st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
             
-            # Ativa o gatilho para limpar os campos na próxima recarga
             st.session_state['limpar_form_pendente'] = True
             st.session_state.ignorar_duplicidade = False
             
-            # Pausa de 1.5 segundos para aliviar a API do Google Sheets e evitar o erro de requisição
             import time
             time.sleep(1.5)
             
             atualizar_sessao()
             st.rerun()
-
 
 
 # --- BARRINHA DE NOTIFICAÇÕES ---
