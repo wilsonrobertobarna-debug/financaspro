@@ -656,8 +656,11 @@ if st.session_state.get('limpar_form_pendente', False):
     st.session_state['sb_bnfc_novo_lancamento'] = ""
     st.session_state['input_km_lancamento'] = 0.0
     st.session_state['input_litros_lancamento'] = 0.0
+    # 🔑 Adicionamos o reset da categoria para sumir com os campos de veículo:
+    st.session_state['cat_novo_lancamento'] = "Outros"  # ou a primeira categoria padrão que preferir
     st.session_state['limpar_form_pendente'] = False
 # -------------------------------------------------------------
+
 
 with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expander_lancamento_aberto):
     
