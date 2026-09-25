@@ -773,16 +773,10 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     f_litros = st.number_input("Litros", min_value=0.0, step=0.01, format="%.2f", key="input_litros_lancamento")
                 else:
                     f_litros = 0.0
-     # ----------------------------------------------------------------
-
-        # Respiro antes do status com chave única blinda o erro
+        
+        # Respiro antes do status (com chave única correta)
         st.markdown("<br>", unsafe_allow_html=True)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"], key="status_pagamento_novo_form")
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        st.markdown("")
-        f_sta = st.selectbox("Status", ["Pago", "Pendente"], key="sta_novo_lancamento")
         
         st.markdown("<br>", unsafe_allow_html=True)
             
