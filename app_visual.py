@@ -2384,23 +2384,32 @@ elif "🚗" in aba:
             
         st.divider()
 
-        # --- NOVO BLOCO: HISTÓRICO AUTOMÁTICO DE ABASTECIMENTOS DA LEAD / T-CROSS ---
-        st.subheader("📊 Histórico de Abastecimentos e Consumo Real (Lançamentos)")
+        # --- HISTÓRICO COM CAIXA DE CONSULTA / FILTRO ---
+        st.subheader("📊 Histórico e Lançamentos do Veículo")
 
         if not df_base.empty:
             df_veiculo = df_base.copy()
 
-            # --- BLINDAGEM AUTOMÁTICA DE COLUNAS ---
+            # Blindagem automática de colunas
             if 'Km' not in df_veiculo.columns:
                 df_veiculo['Km'] = 0.0
             if 'Litros' not in df_veiculo.columns:
                 df_veiculo['Litros'] = 0.0
 
-            # Filtra lançamentos de combustível ou veículo
+            # Padroniza categoria
             df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
+            
+            # Pega inicialmente tudo que envolve veículo, combustível ou manutenção
             df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
 
             if not df_veiculo.empty:
+                # --- CAIXA DE CONSULTA PARA SEPARAR OS DADOS ---
+                tipos_disponiveis = ["Todos", "Combustível", "Manutenção", "Veículo"]
+                filtro_escolhido = st.selectbox("🔍 Filtrar visualização por categoria:", tipos_disponiveis, key="filtro_aba_veiculo")
+
+                if filtro_escolhido != "Todos":
+                    df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'] == filtro_escolhido]
+
                 # Ordenação cronológica correta
                 df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
                 df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
@@ -2410,29 +2419,22 @@ elif "🚗" in aba:
                 df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
                 df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
 
-                # 1. Quilômetros rodados desde o último abastecimento
+                # Cálculos
                 df_veiculo['Km_Rodados'] = df_veiculo['Km'].diff()
-
-                # 2. Média de consumo (Km / Litros)
                 df_veiculo['Km/L'] = df_veiculo.apply(
                     lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and row['Km_Rodados'] > 0 else 0.0, 
                     axis=1
                 )
-
-                # 3. Preço por Litro
                 df_veiculo['Preço/Litro'] = df_veiculo.apply(
                     lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
                     axis=1
                 )
-                # Formata a data para remover as horas indesejadas (00:00:00)
-                df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], errors='coerce').dt.strftime('%d/%m/%Y')
 
-                # Formata a coluna de valor financeiro usando a sua função m_fmt existente
+                # Formatação
+                df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], errors='coerce').dt.strftime('%d/%m/%Y')
                 df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
 
-                # Seleciona e exibe as colunas relevantes
-                colunas_exibir = ['Vencimento', 'Beneficiário', 'Valor_Formatado', 'Km', 'Km_Rodados', 'Litros', 'Km/L', 'Preço/Litro', 'Banco']
-                # Garante que só pega colunas que realmente existem no DataFrame
+                colunas_exibir = ['Vencimento', 'Categoria', 'Beneficiário', 'Valor_Formatado', 'Km', 'Km_Rodados', 'Litros', 'Km/L', 'Preço/Litro', 'Banco']
                 colunas_exibir_disponiveis = [col for col in colunas_exibir if col in df_veiculo.columns]
                 
                 df_exibicao = df_veiculo[colunas_exibir_disponiveis].copy()
@@ -2447,7 +2449,7 @@ elif "🚗" in aba:
 
                 st.dataframe(df_exibicao.iloc[::-1].style.format(formatos_tabela), use_container_width=True, hide_index=True)
             else:
-                st.info("Nenhum lançamento de veículo ou combustível encontrado na base.")
+                st.info("Nenhum lançamento de veículo, combustível ou manutenção encontrado na base.")
         else:
             st.warning("A base de dados está vazia.")
         
