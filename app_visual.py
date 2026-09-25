@@ -1939,11 +1939,12 @@ if "💰" in st.session_state.page:
 
    # 4. Se a visão detalhada estiver ativa, exibe obrigatoriamente a caixa de seleção da categoria
     # Cria o pivot table com base no nível escolhido, garantindo soma limpa
+# Cria o pivot table com base no nível escolhido, garantindo soma limpa
     if modo_visao == "Visão Detalhada (Desmembrar Categoria Específica)":
         # Agrupa previamente somando para garantir que não há quebras por banco ou duplicadas
-        df_agrupado = df_comp.groupby(['Beneficiario', df_comp['Vencimento'].dt.month], as_index=False)['V_Num'].sum()
+        df_agrupado = df_comp.groupby(['Beneficiário', df_comp['Vencimento'].dt.month], as_index=False)['V_Num'].sum()
         df_pivot = df_agrupado.pivot_table(
-            index='Beneficiario',
+            index='Beneficiário',
             columns='Vencimento',
             values='V_Num',
             aggfunc='sum'
