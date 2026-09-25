@@ -2482,15 +2482,15 @@ elif "🚗" in aba:
                 
                 df_exibicao = df_veiculo[colunas_exibir_disponiveis].copy()
 
-                # --- 🎯 FUNÇÃO DE LITROS INTELIGENTE (SEM .00 SE FOR INTEIRO) ---
+                # --- 🎯 FUNÇÃO DE LITROS INTELIGENTE COM A LETRA L ---
                 def formata_litros_inteligente(valor):
                     try:
                         val_float = float(valor)
                         if pd.isna(val_float) or val_float == 0:
-                            return "0"
+                            return "" # ou "0 L" se preferir mostrar zero
                         if val_float.is_integer():
-                            return str(int(val_float))
-                        return f"{val_float:.2f}".replace('.', ',')
+                            return f"{int(val_float)} L"
+                        return f"{val_float:.2f} L".replace('.', ',')
                     except:
                         return str(valor)
 
@@ -2501,7 +2501,7 @@ elif "🚗" in aba:
                 formatos_tabela = {
                     'Km': "{:,.0f} km",
                     'Km_Rodados': "{:,.0f} km",
-                    # Como já tratamos o texto dos litros acima, tiramos o {:.2f} L daqui para não conflitar
+                    # ⚠️ Note que REMOVEMOS a linha de 'Litros' daqui para o Pandas não sobrescrever!
                     'Km/L': "{:.2f} Km/L",
                     'Preço/Litro': "R$ {:.2f}"
                 }
