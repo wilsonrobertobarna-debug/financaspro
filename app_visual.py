@@ -2343,53 +2343,111 @@ elif "🐾" in aba:
         st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
 
 elif "🚗" in aba:
-    st.title("🚗 Gestão do Veículo")
-    
-    c1, c2, c3 = st.columns([1,1,2])
-    alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
-    gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
-    if alc > 0 and gas > 0:
-        if (alc/gas) <= 0.7: c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
-        else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
-    
-    st.divider()
-    
-    st.subheader("⚙️ Controle de Troca de Óleo")
-    km1, km2, km3 = st.columns(3)
-    km_atual = km1.number_input("Quilometragem Atual (km)", value=0, step=500)
-    km_oleo = km2.number_input("Km Última Troca de Óleo", value=0, step=500)
-    limite_oleo = km3.number_input("Limite de Troca (km rodados)", value=10000, step=1000)
-    
-    if km_atual > 0 and km_oleo > 0:
-        km_rodados = km_atual - km_oleo
-        if km_rodados >= limite_oleo:
-            st.error(f"🚨 ALERTA: Passou do limite para trocar o óleo! Rodou {km_rodados:,} km desde a última troca.")
-        else:
-            st.info(f"👍 Óleo em dia! Você rodou {km_rodados:,} km. Faltam {limite_oleo - km_rodados:,} km para a próxima troca.")
-            
-    st.divider()
-    
- 
-    st.subheader("⛽ Cálculo de Consumo (Km/L)")
-    st.info("💡 **Atenção:** Digite a quantidade em **Litros** e a distância em **Quilômetros**.")
-    
-    c_cons1, c_cons2, c_cons3 = st.columns(3)
-    litros = c_cons1.number_input("Litros Abastecidos", value=0.0, step=0.5, format="%.1f")
-    distancia = c_cons2.number_input("Distância Percorrida (km)", value=0, step=10, format="%d")
-    
-    # Validação segura: só calcula se ambos forem maiores que zero
-    if litros > 0:
-        consumo = distancia / litros
-        c_cons3.metric(label="Consumo Médio", value=f"{consumo:.2f} km/l")
-    else:
-        c_cons3.warning("Aguardando dados...")
+        st.title("🚗 Gestão do Veículo")
         
-    st.divider()
-    df_car = df_base[df_base['Categoria'].str.contains('Veículo|Combustível|Manutenção', case=False, na=False)]
-    if not df_car.empty:
-        df_car_display = df_car[['ID', 'Vencimento', 'Tipo', 'Valor', 'Descrição', 'Status', 'Banco']].copy()
-        df_car_display['Valor'] = df_car['V_Num'].apply(m_fmt)
-        st.dataframe(df_car_display.iloc[::-1], use_container_width=True, hide_index=True)
+        c1, c2, c3 = st.columns([1,1,2])
+        alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
+        gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
+        if alc > 0 and gas > 0:
+            if (alc/gas) <= 0.7: c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
+            else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
+        
+        st.divider()
+        
+        st.subheader("⚙️ Controle de Troca de Óleo")
+        km1, km2, km3 = st.columns(3)
+        km_atual = km1.number_input("Quilometragem Atual (km)", value=0, step=500)
+        km_oleo = km2.number_input("Km Última Troca de Óleo", value=0, step=500)
+        limite_oleo = km3.number_input("Limite de Troca (km rodados)", value=10000, step=1000)
+        
+        if km_atual > 0 and km_oleo > 0:
+            km_rodados = km_atual - km_oleo
+            if km_rodados >= limite_oleo:
+                st.error(f"🚨 ALERTA: Passou do limite para trocar o óleo! Rodou {km_rodados:,} km desde a última troca.")
+            else:
+                st.info(f"👍 Óleo em dia! Você rodou {km_rodados:,} km. Faltam {limite_oleo - km_rodados:,} km para a próxima troca.")
+                
+        st.divider()
+        
+        st.subheader("⛽ Cálculo de Consumo (Manual)")
+        st.info("💡 **Atenção:** Digite a quantidade em **Litros** e a distância em **Quilômetros** para cálculo rápido.")
+        
+        c_cons1, c_cons2, c_cons3 = st.columns(3)
+        litros_man = c_cons1.number_input("Litros Abastecidos", value=0.0, step=0.5, format="%.1f", key="litros_manual")
+        distancia = c_cons2.number_input("Distância Percorrida (km)", value=0, step=10, format="%d", key="distancia_manual")
+        
+        if litros_man > 0:
+            consumo = distancia / litros_man
+            c_cons3.metric(label="Consumo Médio", value=f"{consumo:.2f} km/l")
+        else:
+            c_cons3.warning("Aguardando dados...")
+            
+        st.divider()
+
+        # --- NOVO BLOCO: HISTÓRICO AUTOMÁTICO DE ABASTECIMENTOS DA LEAD / T-CROSS ---
+        st.subheader("📊 Histórico de Abastecimentos e Consumo Real (Lançamentos)")
+
+        if not df_base.empty:
+            df_veiculo = df_base.copy()
+
+            # --- BLINDAGEM AUTOMÁTICA DE COLUNAS ---
+            if 'Km' not in df_veiculo.columns:
+                df_veiculo['Km'] = 0.0
+            if 'Litros' not in df_veiculo.columns:
+                df_veiculo['Litros'] = 0.0
+
+            # Filtra lançamentos de combustível ou veículo
+            df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
+            df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
+
+            if not df_veiculo.empty:
+                # Ordenação cronológica correta
+                df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
+                df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
+
+                # Conversões numéricas seguras
+                df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
+                df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
+                df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
+
+                # 1. Quilômetros rodados desde o último abastecimento
+                df_veiculo['Km_Rodados'] = df_veiculo['Km'].diff()
+
+                # 2. Média de consumo (Km / Litros)
+                df_veiculo['Km/L'] = df_veiculo.apply(
+                    lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and row['Km_Rodados'] > 0 else 0.0, 
+                    axis=1
+                )
+
+                # 3. Preço por Litro
+                df_veiculo['Preço/Litro'] = df_veiculo.apply(
+                    lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
+                    axis=1
+                )
+
+                # Formata a coluna de valor financeiro usando a sua função m_fmt existente
+                df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
+
+                # Seleciona e exibe as colunas relevantes
+                colunas_exibir = ['Vencimento', 'Beneficiário', 'Valor_Formatado', 'Km', 'Km_Rodados', 'Litros', 'Km/L', 'Preço/Litro', 'Banco']
+                # Garante que só pega colunas que realmente existem no DataFrame
+                colunas_exibir_disponiveis = [col for col in colunas_exibir if col in df_veiculo.columns]
+                
+                df_exibicao = df_veiculo[colunas_exibir_disponiveis].copy()
+
+                formatos_tabela = {
+                    'Km': "{:,.0f} km",
+                    'Km_Rodados': "{:,.0f} km",
+                    'Litros': "{:.2f} L",
+                    'Km/L': "{:.2f} Km/L",
+                    'Preço/Litro': "R$ {:.2f}"
+                }
+
+                st.dataframe(df_exibicao.iloc[::-1].style.format(formatos_tabela), use_container_width=True, hide_index=True)
+            else:
+                st.info("Nenhum lançamento de veículo ou combustível encontrado na base.")
+        else:
+            st.warning("A base de dados está vazia.")
         
 
 elif "📄" in aba:
