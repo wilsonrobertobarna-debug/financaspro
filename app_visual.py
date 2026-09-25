@@ -775,6 +775,13 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
                     f_litros = 0.0
         # ----------------------------------------------------------------
 
+        # Respiro antes do status com chave única para evitar erro
+        st.markdown("<br>", unsafe_allow_html=True)
+        f_sta = st.selectbox("Status", ["Pago", "Pendente"], key="status_novo_lancamento_form")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        # ----------------------------------------------------------------
+
         # Respiro antes do status
         st.markdown("<br>", unsafe_allow_html=True)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"], key="sta_novo_lancamento")
