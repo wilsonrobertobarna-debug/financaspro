@@ -2265,15 +2265,28 @@ elif "Pendências" in aba:
         else:
             st.info("Nenhum banco com pendências no período selecionado.")
                         
-        st.markdown("---")
-        # --- BOTÃO DE BAIXA ---
+       st.markdown("---")
+        # --- SELEÇÃO DE BANCO E BOTÃO DE BAIXA ---
         if not df_v.empty:
-            nova_data = st.date_input(
-                "Data de pagamento para baixa:", 
-                hoje_br, 
-                format="DD/MM/YYYY", 
-                key="data_baixa_pend"
-            )
+            c_data, c_banco_pag = st.columns(2)
+            
+            with c_data:
+                nova_data = st.date_input(
+                    "Data de pagamento para baixa:", 
+                    hoje_br, 
+                    format="DD/MM/YYYY", 
+                    key="data_baixa_pend"
+                )
+            
+            with c_banco_pag:
+                # Pega todos os bancos cadastrados para o usuário escolher de onde sai o dinheiro
+                bancos_pagamento_disponiveis = sorted(bancos_disponiveis) if 'bancos_disponiveis' in locals() and bancos_disponiveis else []
+                banco_origem_pagamento = st.selectbox(
+                    "🏦 Banco para quitar/pagar (Opcional):",
+                    [""] + bancos_pagamento_disponiveis,
+                    key="banco_origem_pagamento_pend"
+                )
+
             if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_final"):
                 headers = ws_base.row_values(1)
                 idx_status = headers.index('Status') + 1
@@ -2286,14 +2299,80 @@ elif "Pendências" in aba:
                     ws_base.update_cell(linha_sheets, idx_venc, f"'{nova_data.strftime('%d/%m/%Y')}")
                     sucessos += 1
                 
-                st.toast(f"✅ {sucessos} itens baixados!", icon="💰")
+                # --- MÁGICA DA TRANSFERÊNCIA AUTOMÁTICA SE ESCOLHEU UM BANCO ---
+                if banco_origem_pagamento and not df_v.empty:
+                    # Agrupa os valores por cartão/banco presente nas pendências selecionadas
+                    soma_por_cartao = df_v.groupby('Banco')['V_Num'].sum().reset_index()
+                    
+                    # Descobre o próximo ID disponível na planilha para evitar conflito
+                    try:
+                        raw_data_id = ws_base.get_all_values()
+                        header_id = [str(c).strip() for c in raw_data_id[0]]
+                        idx_id_col = header_id.index('ID') if 'ID' in header_id else -1
+                        
+                        max_id = 1
+                        if idx_id_col != -1 and len(raw_data_id) > 1:
+                            ids_existentes = []
+                            for r in raw_data_id[1:]:
+                                if len(r) > idx_id_col and r[idx_id_col].strip():
+                                    try:
+                                        ids_existentes.append(int(float(r[idx_id_col])))
+                                    except:
+                                        pass
+                            if ids_existentes:
+                                max_id = max(ids_existentes) + 1
+                    except:
+                        max_id = 9999
+                
+                    data_str_fmt = nova_data.strftime("%d/%m/%Y")
+                    
+                    for idx_c, row_c in soma_por_cartao.iterrows():
+                        cartao_destino = row_c['Banco']
+                        valor_total_fatura = row_c['V_Num']
+                        
+                        if valor_total_fatura <= 0:
+                            continue
+                            
+                        val_str_fmt = f"{valor_total_fatura:.2f}".replace('.', ',')
+                        
+                        # 1. Lançamento de SAÍDA (Débito) no Banco escolhido
+                        ws_base.append_row([
+                            data_str_fmt,           # Data
+                            val_str_fmt,            # Valor
+                            f"Pgto Fatura {cartao_destino}", # Descrição
+                            "Transferência",        # Categoria (ajuste se necessário)
+                            "Despesa",              # Tipo
+                            banco_origem_pagamento, # Banco de saída
+                            "Pago",                 # Status
+                            data_str_fmt,           # Data Compra
+                            max_id,                 # ID
+                            "Titular",              # Beneficiário
+                            "", "",                 # Km / Litros
+                        ])
+                        
+                        max_id += 1
+                        
+                        # 2. Lançamento de ENTRADA (Crédito) no Cartão
+                        ws_base.append_row([
+                            data_str_fmt,           # Data
+                            val_str_fmt,            # Valor
+                            f"Recebimento Pgto Fatura", # Descrição
+                            "Transferência",        # Categoria
+                            "Recendimento",         # Tipo (ou Receita, dependendo da sua regra de cartão)
+                            cartao_destino,         # Banco/Cartão de entrada
+                            "Pago",                 # Status
+                            data_str_fmt,           # Data Compra
+                            max_id,                 # ID
+                            "Titular",              # Beneficiário
+                            "", "",                 # Km / Litros
+                        ])
+                        max_id += 1
+
+                st.toast(f"✅ {sucessos} itens baixados e transferência gerada com sucesso!", icon="💰")
                 atualizar_sessao()
                 st.rerun()
         else:
             st.info("Nenhum lançamento encontrado neste período.")
-        
-        st.divider()
-        st.subheader("🔔 Avisos: Vencimentos Próximos")
     
   # 1. Filtros
     c1, c2, c3 = st.columns(3)
