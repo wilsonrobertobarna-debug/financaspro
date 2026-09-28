@@ -812,86 +812,75 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.stop()
             
         # Caso contrário, segue o baile e salva no Google Sheets normalmente!
-        # (Aqui entra o seu código que envia os dados para a planilha)
         st.success("✅ Lançamento processado com sucesso!")
             
-            if not duplicado.empty:
-                st.warning(f"⚠️ **Atenção:** Já existe um lançamento idêntico ({f_desc} - R$ {f_val:,.2f} para {t_dat.strftime('%d/%m/%Y')}).")
-                confirma_dup = st.checkbox("Sim, quero duplicar este lançamento mesmo assim", key="chk_confirma_dup")
-                
-                if not confirma_dup:
-                    st.info("Marque a caixa acima se realmente deseja salvar, ou altere os dados.")
-                    st.stop()
-                else:
-                    st.session_state.ignorar_duplicidade = True
-                
-       # --- LEITURA SEGURA DOS DADOS DA PLANILHA (EVITA GSPREAD EXCEPTION) ---
-            try:
-                raw_data = ws_base.get_all_values()
-                if len(raw_data) > 1:
-                    import pandas as pd
-                    header = [str(c).strip() for c in raw_data[0]]
-                    rows = raw_data[1:]
-                    todos_dados = []
-                    for r in rows:
-                        # Garante que a linha preenche todas as colunas do cabeçalho
-                        padded_row = r + [''] * (len(header) - len(r))
-                        todos_dados.append(dict(zip(header, padded_row)))
-                else:
-                    todos_dados = []
-            except Exception:
-                todos_dados = []
-            
-            if todos_dados:
+        # --- LEITURA SEGURA DOS DADOS DA PLANILHA (EVITA GSPREAD EXCEPTION) ---
+        try:
+            raw_data = ws_base.get_all_values()
+            if len(raw_data) > 1:
                 import pandas as pd
-                df_temp = pd.DataFrame(todos_dados)
-                if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
-                    # Converte para numérico com segurança antes de achar o max
-                    df_temp['ID'] = pd.to_numeric(df_temp['ID'], errors='coerce').fillna(0)
-                    proximo_id = int(df_temp['ID'].max()) + 1
-                else:
-                    proximo_id = 1
+                header = [str(c).strip() for c in raw_data[0]]
+                rows = raw_data[1:]
+                todos_dados = []
+                for r in rows:
+                    # Garante que a linha preenche todas as colunas do cabeçalho
+                    padded_row = r + [''] * (len(header) - len(r))
+                    todos_dados.append(dict(zip(header, padded_row)))
+            else:
+                todos_dados = []
+        except Exception:
+            todos_dados = []
+            
+        if todos_dados:
+            import pandas as pd
+            df_temp = pd.DataFrame(todos_dados)
+            if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
+                # Converte para numérico com segurança antes de achar o max
+                df_temp['ID'] = pd.to_numeric(df_temp['ID'], errors='coerce').fillna(0)
+                proximo_id = int(df_temp['ID'].max()) + 1
             else:
                 proximo_id = 1
+        else:
+            proximo_id = 1
 
-            v_str = f"{f_val:.2f}".replace('.', ',')
-            f_compra_str = f_compra.strftime("%d/%m/%Y")
+        v_str = f"{f_val:.2f}".replace('.', ',')
+        f_compra_str = f_compra.strftime("%d/%m/%Y")
+        
+        for i in range(f_par):
+            nova_data = t_dat + relativedelta(months=i)
             
-            for i in range(f_par):
-                nova_data = t_dat + relativedelta(months=i)
-                
-                if f_par > 1:
-                    desc_com_parcela = f"{f_desc.strip()} {i+1}/{f_par}"
-                else:
-                    desc_com_parcela = f_desc.strip()
-                
-                # Nota: Certifique-se de que a sua planilha no Google Sheets possui as colunas para receber Km e Litros, 
-                # ou o append vai apenas preencher as ordens de colunas existentes.
-                ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"),
-                    v_str,
-                    desc_com_parcela,
-                    f_cat,
-                    f_tip,
-                    f_bnc,
-                    f_sta,
-                    f_compra_str,
-                    proximo_id + i,
-                    beneficiario_final,
-                    f_km,       # Salva o Km preenchido
-                    f_litros    # Salva os litros preenchidos
-                ])
+            if f_par > 1:
+                desc_com_parcela = f"{f_desc.strip()} {i+1}/{f_par}"
+            else:
+                desc_com_parcela = f_desc.strip()
             
-            st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
-            
-            st.session_state['limpar_form_pendente'] = True
-            st.session_state.ignorar_duplicidade = False
-            
-            import time
-            time.sleep(1.5)
-            
-            atualizar_sessao()
-            st.rerun()
+            # Nota: Certifique-se de que a sua planilha no Google Sheets possui as colunas para receber Km e Litros, 
+            # ou o append vai apenas preencher as ordens de colunas existentes.
+            ws_base.append_row([
+                nova_data.strftime("%d/%m/%Y"),
+                v_str,
+                desc_com_parcela,
+                f_cat,
+                f_tip,
+                f_bnc,
+                f_sta,
+                f_compra_str,
+                proximo_id + i,
+                beneficiario_final,
+                f_km,       # Salva o Km preenchido
+                f_litros    # Salva os litros preenchidos
+            ])
+        
+        st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
+        
+        st.session_state['limpar_form_pendente'] = True
+        st.session_state.ignorar_duplicidade = False
+        
+        import time
+        time.sleep(1.5)
+        
+        atualizar_sessao()
+        st.rerun()
 
 
 # --- BARRINHA DE NOTIFICAÇÕES ---
