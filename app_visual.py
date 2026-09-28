@@ -775,7 +775,6 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         # Aqui ele já avisa antes de você clicar em salvar se achar algo igual na base
         tem_duplicado = False
         if not df_base.empty:
-            # (Certifique-se de que t_dat está definido antes do form, senão use a data do seu input de data)
             duplicado_teste = df_base[
                 (df_base['V_Num'] == float(f_val)) & 
                 (df_base['DT'].dt.date == t_dat) & 
@@ -792,7 +791,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             
         botao_salvar = st.form_submit_button("Salvar Lançamento")
 
-  # 3. Processamento do salvamento fora/logo após o form
+    # 3. Processamento do salvamento fora/logo após o form
     if botao_salvar:
         if f_val == 0:
             st.warning("⚠️ O campo 'Valor' deve ser maior que zero!")
@@ -806,9 +805,9 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.warning("⚠️ Selecione um Beneficiário no histórico ou digite um novo no campo abaixo!")
             st.stop()
             
-        # Se encontrou duplicado e o usuário NÃO marcou a caixa, barra aqui de primeira
+        # Se encontrou duplicado e o usuário NÃO marcou a caixa lá em cima, barra aqui de primeira
         if tem_duplicado and not confirma_dup:
-            st.warning("❌ Marque a caixa de confirmação de duplicidade acima para prosseguir com o salvamento.")
+            st.warning("❌ Marque a caixa de confirmação de duplicidade no formulário acima para prosseguir com o salvamento.")
             st.stop()
             
         # Caso contrário, segue o baile e salva no Google Sheets normalmente!
