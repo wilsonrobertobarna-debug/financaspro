@@ -739,7 +739,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
     st.markdown("")
 
-    # 2. Agora entra o formulário limpo apenas com os dados de valor, descrição e salvamento
+   # 2. Agora entra o formulário limpo apenas com os dados de valor, descrição e salvamento
     with st.form("f_novo"):
         f_val = st.number_input("Valor", min_value=-100000.0, value=0.0, step=0.01, format="%.2f", key="val_novo_lancamento")
         f_par = st.number_input("Parcelas", min_value=1, value=1, key="par_novo_lancamento")
@@ -770,10 +770,29 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         st.markdown("<br>", unsafe_allow_html=True)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"], key="status_pagamento_novo_form")
         st.markdown("<br>", unsafe_allow_html=True)
+        
+        # --- 🔍 AVISO PREVENTIVO DE DUPLICIDADE (DENTRO DO FORM) ---
+        # Aqui ele já avisa antes de você clicar em salvar se achar algo igual na base
+        tem_duplicado = False
+        if not df_base.empty:
+            # (Certifique-se de que t_dat está definido antes do form, senão use a data do seu input de data)
+            duplicado_teste = df_base[
+                (df_base['V_Num'] == float(f_val)) & 
+                (df_base['DT'].dt.date == t_dat) & 
+                (df_base['Descrição'].astype(str).str.strip().str.lower() == f_desc.strip().lower())
+            ]
+            if not duplicado_teste.empty and f_val > 0:
+                tem_duplicado = True
+        
+        confirma_dup = False
+        if tem_duplicado:
+            st.warning(f"⚠️ **Atenção:** Já existe um lançamento idêntico ({f_desc} - R$ {f_val:,.2f}) para hoje!")
+            confirma_dup = st.checkbox("Sim, quero duplicar este lançamento mesmo assim", key="chk_confirma_dup")
+        # -----------------------------------------------------------
             
         botao_salvar = st.form_submit_button("Salvar Lançamento")
 
-    # 3. Processamento do salvamento fora/logo após o form para evitar loops do Streamlit
+  # 3. Processamento do salvamento fora/logo após o form
     if botao_salvar:
         if f_val == 0:
             st.warning("⚠️ O campo 'Valor' deve ser maior que zero!")
@@ -787,12 +806,14 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.warning("⚠️ Selecione um Beneficiário no histórico ou digite um novo no campo abaixo!")
             st.stop()
             
-        if not df_base.empty and not st.session_state.get('ignorar_duplicidade', False):
-            duplicado = df_base[
-                (df_base['V_Num'] == float(f_val)) & 
-                (df_base['DT'].dt.date == t_dat) & 
-                (df_base['Descrição'].astype(str).str.strip().str.lower() == f_desc.strip().lower())
-            ]
+        # Se encontrou duplicado e o usuário NÃO marcou a caixa, barra aqui de primeira
+        if tem_duplicado and not confirma_dup:
+            st.warning("❌ Marque a caixa de confirmação de duplicidade acima para prosseguir com o salvamento.")
+            st.stop()
+            
+        # Caso contrário, segue o baile e salva no Google Sheets normalmente!
+        # (Aqui entra o seu código que envia os dados para a planilha)
+        st.success("✅ Lançamento processado com sucesso!")
             
             if not duplicado.empty:
                 st.warning(f"⚠️ **Atenção:** Já existe um lançamento idêntico ({f_desc} - R$ {f_val:,.2f} para {t_dat.strftime('%d/%m/%Y')}).")
