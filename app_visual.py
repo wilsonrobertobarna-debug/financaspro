@@ -2265,7 +2265,7 @@ elif "Pendências" in aba:
         else:
             st.info("Nenhum banco com pendências no período selecionado.")
                         
-       st.markdown("---")
+        st.markdown("---")
         # --- SELEÇÃO DE BANCO E BOTÃO DE BAIXA ---
         if not df_v.empty:
             c_data, c_banco_pag = st.columns(2)
