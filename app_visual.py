@@ -1491,13 +1491,12 @@ if "💰" in st.session_state.page:
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
-    # 1. BARRINHA DE MESES (Sincronizada via session_state)
+    # 1. BARRINHA DE MESES (Topo)
     meses_abreviados = [
         "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
         "Jul", "Ago", "Set", "Out", "Nov", "Dez"
     ]
 
-    # Garante que a memória global do mês existe
     if 'mes_global' not in st.session_state:
         num_mes_atual = datetime.now().month - 1
         st.session_state['mes_global'] = meses_abreviados[num_mes_atual] if meses_abreviados else "Jan"
@@ -1507,26 +1506,19 @@ if "💰" in st.session_state.page:
         "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
     }
 
-if 'mes_global' not in st.session_state:
-    num_mes_atual = datetime.now().month - 1
-    st.session_state['mes_global'] = meses_abreviados[num_mes_atual] if meses_abreviados else "Jan"
+    def atualiza_mes_topo():
+        st.session_state['mes_global'] = st.session_state['pills_topo']
 
-def atualiza_mes_topo():
-    st.session_state['mes_global'] = st.session_state['pills_topo']
+    mes_atual = st.pills(
+        "Período:",
+        meses_abreviados,
+        selection_mode="single",
+        key="pills_topo",
+        default=st.session_state['mes_global'],
+        on_change=atualiza_mes_topo
+    )
 
-mes_atual = st.pills(
-    "Período:",
-    meses_abreviados,
-    selection_mode="single",
-    key="pills_topo",
-    default=st.session_state['mes_global'],
-    on_change=atualiza_mes_topo
-)
-    # Atualiza a memória global se houver mudança (SEM st.rerun() manual)
-    if mes_atual and mes_atual != st.session_state['mes_global']:
-        st.session_state['mes_global'] = mes_atual
-
-    # Define o mês ativo oficial com base na memória global
+    # Garante que o mês atual segue a memória global unificada
     mes_atual = st.session_state.get('mes_global', meses_abreviados[0])
 
     if not mes_atual or mes_atual not in mes_map:
