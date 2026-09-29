@@ -1507,7 +1507,7 @@ if "💰" in st.session_state.page:
         "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
     }
 
-    # A barrinha agora lê e escreve na chave 'mes_global' e usa key="pills_topo"
+  # A barrinha lê e escreve na chave 'mes_global' usando key="pills_topo"
     mes_atual = st.pills(
         "Período:",
         meses_abreviados,
@@ -1516,10 +1516,9 @@ if "💰" in st.session_state.page:
         key="pills_topo"
     )
 
-    # Se a barrinha do topo for mexida, atualiza o session_state
+    # Atualiza a memória global se houver mudança (SEM st.rerun() manual)
     if mes_atual and mes_atual != st.session_state['mes_global']:
         st.session_state['mes_global'] = mes_atual
-        st.rerun()
 
     # Define o mês ativo oficial com base na memória global
     mes_atual = st.session_state.get('mes_global', meses_abreviados[0])
