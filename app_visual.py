@@ -1723,14 +1723,14 @@ if "💰" in st.session_state.page:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-        # =========================================================================
-        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SEM LOOP DE RERUN)
+       # =========================================================================
+        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO)
         # =========================================================================
         st.markdown("---")
         st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
         
-       def atualiza_mes_baixo():
-    st.session_state['mes_global'] = st.session_state['pills_baixo']
+        def atualiza_mes_baixo():
+            st.session_state['mes_global'] = st.session_state['pills_baixo']
 
         mes_cartao_escolhido = st.pills(
             "Período (Cartões):",
@@ -1740,9 +1740,9 @@ if "💰" in st.session_state.page:
             default=st.session_state['mes_global'],
             on_change=atualiza_mes_baixo
         )
-        
-        # O mês ativo sempre segue a memória unificada
-        mes_ativo_cartoes = st.session_state['mes_global']
+
+        # O mês ativo dos cartões segue a memória global unificada
+        mes_ativo_cartoes = st.session_state.get('mes_global', meses_atual)
         filtro_mes_cartoes = f"{mes_map.get(mes_ativo_cartoes, '09')}/26"
 
         if not df_base.empty:
