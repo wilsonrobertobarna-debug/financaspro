@@ -1713,7 +1713,7 @@ if "💰" in st.session_state.page:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-# =========================================================================
+        # =========================================================================
         # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO COM O TOPO)
         # =========================================================================
         st.markdown("---")
@@ -1722,22 +1722,25 @@ if "💰" in st.session_state.page:
         # Sincroniza a chave do estado da seção de baixo com o mês escolhido no topo
         st.session_state["pills_cartoes_secao"] = mes_atual
         
-        meses_abreviados_cartao = [
-            "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
-            "Jul", "Ago", "Set", "Out", "Nov", "Dez"
-        ]
-        
-        mes_map_cartao = {
-            "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
-            "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
-        }
-        
-        mes_escolhido_cartao = st.pills(
-            "Período dos Cartões:",
-            meses_abreviados_cartao,
-            selection_mode="single",
-            key="pills_cartoes_secao"
-        )
+        # 1. BARRINHA DE MESES
+meses_abreviados = [
+    "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
+    "Jul", "Ago", "Set", "Out", "Nov", "Dez"
+]
+
+num_mes_atual = datetime.now().month - 1
+default_mes = meses_abreviados[num_mes_atual] if meses_abreviados else "Jan"
+
+# Garante que o session_state lembre da escolha
+if "mes_selecionado_topo" not in st.session_state:
+    st.session_state["mes_selecionado_topo"] = default_mes
+
+mes_atual = st.pills(
+    "Período:",
+    meses_abreviados,
+    selection_mode="single",
+    key="mes_selecionado_topo"
+)
         
         if not mes_escolhido_cartao or mes_escolhido_cartao not in mes_map_cartao:
             mes_escolhido_cartao = mes_atual
