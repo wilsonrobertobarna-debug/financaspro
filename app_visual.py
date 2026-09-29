@@ -1507,7 +1507,7 @@ if "💰" in st.session_state.page:
         "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
     }
 
- if 'mes_global' not in st.session_state:
+if 'mes_global' not in st.session_state:
     num_mes_atual = datetime.now().month - 1
     st.session_state['mes_global'] = meses_abreviados[num_mes_atual] if meses_abreviados else "Jan"
 
