@@ -1506,6 +1506,9 @@ if "💰" in st.session_state.page:
         "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
     }
 
+   # Sincroniza o valor atual da chave da barrinha do topo com a memória global
+    st.session_state['pills_topo'] = st.session_state.get('mes_global', meses_abreviados[0])
+
     def atualiza_mes_topo():
         st.session_state['mes_global'] = st.session_state['pills_topo']
 
@@ -1514,11 +1517,9 @@ if "💰" in st.session_state.page:
         meses_abreviados,
         selection_mode="single",
         key="pills_topo",
-        default=st.session_state['mes_global'],
         on_change=atualiza_mes_topo
     )
 
-    # Garante que o mês atual segue a memória global unificada
     mes_atual = st.session_state.get('mes_global', meses_abreviados[0])
 
     if not mes_atual or mes_atual not in mes_map:
@@ -1723,12 +1724,15 @@ if "💰" in st.session_state.page:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-       # =========================================================================
+     # =========================================================================
         # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO)
         # =========================================================================
         st.markdown("---")
         st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
         
+        # Sincroniza o valor atual da chave da barrinha de baixo com a memória global
+        st.session_state['pills_baixo'] = st.session_state.get('mes_global', meses_abreviados[0])
+
         def atualiza_mes_baixo():
             st.session_state['mes_global'] = st.session_state['pills_baixo']
 
@@ -1737,7 +1741,6 @@ if "💰" in st.session_state.page:
             meses_abreviados,
             selection_mode="single",
             key="pills_baixo",
-            default=st.session_state['mes_global'],
             on_change=atualiza_mes_baixo
         )
 
