@@ -1726,14 +1726,34 @@ if "💰" in st.session_state.page:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-        # =========================================================================
-        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO)
+       # =========================================================================
+        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (COM BARRINHA SINCRONIZADA)
         # =========================================================================
         st.markdown("---")
         st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
         
-        # Como o df_m já está filtrado pelo mês do topo, usamos ele direto aqui!
-        df_m_cartoes = df_m.copy() if not df_m.empty else pd.DataFrame()
+        # BARRINHA DE BAIXO: Sincronizada com o topo via 'mes_global'
+        mes_cartao_escolhido = st.pills(
+            "Período (Cartões):",
+            meses_abreviados,
+            selection_mode="single",
+            default=st.session_state.get('mes_global', meses_abreviados[0]),
+            key="pills_baixo"
+        )
+        
+        # Se você mexer na barrinha de baixo, ela atualiza a memória global e recarrega a página
+        if mes_cartao_escolhido and mes_cartao_escolhido != st.session_state.get('mes_global'):
+            st.session_state['mes_global'] = mes_cartao_escolhido
+            st.rerun()
+
+        # O mês ativo dos cartões agora é o mesmo do topo (garantindo total sincronia)
+        mes_ativo_cartoes = st.session_state.get('mes_global', mes_atual)
+        filtro_mes_cartoes = f"{mes_map.get(mes_ativo_cartoes, '09')}/26"
+
+        if not df_base.empty:
+            df_m_cartoes = df_base[df_base['Mes_Ano'] == filtro_mes_cartoes].copy()
+        else:
+            df_m_cartoes = pd.DataFrame()
         
         coluna_banco = next((col for col in ['Nome do Banco', 'Banco', 'Instituição', 'Conta'] if col in df_m_cartoes.columns), None)
         
@@ -1742,7 +1762,7 @@ if "💰" in st.session_state.page:
             "Mastercard - 8112": "8112",
             "Visa Gold - 0132": "0132",
             "Visa - Mercado Pago": "Mercado Pago",
-            "Itau Gold": "itau"  # Busca o termo "itau" com segurança para o Itaú Gold
+            "Itau Gold": "itau"
         }
         
         lista_cartoes_controle = list(mapeamento_cartoes.keys())
@@ -1751,24 +1771,21 @@ if "💰" in st.session_state.page:
         
         if coluna_banco and not df_m_cartoes.empty:
             for nome_oficial, termo_busca in mapeamento_cartoes.items():
-               # Máscara base: pega apenas o que é Despesa e do banco correto
                mask = (df_m_cartoes['Tipo'] == 'Despesa') & (df_m_cartoes[coluna_banco].astype(str).str.contains(termo_busca, case=False, na=False))
                
-               # BLINDA CONTRA TRANSFERÊNCIAS E PAGAMENTOS:
                if 'Descrição' in df_m_cartoes.columns:
                    mask = mask & (~df_m_cartoes['Descrição'].astype(str).str.contains("Pagamento|Fatura|Pgto|cartão de credito|Transferência|Transf", case=False, na=False))
                
                if 'Categoria' in df_m_cartoes.columns:
                    mask = mask & (~df_m_cartoes['Categoria'].astype(str).str.contains("Transferência|Transf|Cartão", case=False, na=False))
                
-               # BLINDA CARTÕES ESPECÍFICOS (Inter e Mercado Pago)
                if termo_busca == "Inter":
                    mask = mask & (df_m_cartoes[coluna_banco].astype(str).str.contains("Cartão", case=False, na=False)) & (~df_m_cartoes[coluna_banco].astype(str).str.contains("Pendência|Boleto|Empréstimo", case=False, na=False))
                elif termo_busca == "Mercado Pago":
                    mask = mask & (df_m_cartoes[coluna_banco].astype(str).str.contains("Cartão|Visa", case=False, na=False))                
                
-               gasto_total = df_m_cartoes[mask]['V_Num'].sum()
-               dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total})
+               gasto_total_cartao = df_m_cartoes[mask]['V_Num'].sum()
+               dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total_cartao})
                
                sub_df = df_m_cartoes[mask]
                if not sub_df.empty:
@@ -1786,8 +1803,8 @@ if "💰" in st.session_state.page:
             for c in lista_cartoes_controle:
                 status_cartoes_mes[c] = "Pendente"
             
-      # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (COM VALORES ABREVIADOS EM 'k')
+        # =========================================================================
+        # 💳 CARREGAMENTO DE METAS DOS CARTÕES
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
