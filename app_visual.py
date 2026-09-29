@@ -1742,7 +1742,7 @@ if "💰" in st.session_state.page:
         )
 
         # O mês ativo dos cartões segue a memória global unificada
-        mes_ativo_cartoes = st.session_state.get('mes_global', meses_atual)
+        mes_ativo_cartoes = st.session_state.get('mes_global', mes_atual)
         filtro_mes_cartoes = f"{mes_map.get(mes_ativo_cartoes, '09')}/26"
 
         if not df_base.empty:
