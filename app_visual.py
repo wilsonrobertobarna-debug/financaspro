@@ -1522,7 +1522,6 @@ mes_atual = st.pills(
     default=st.session_state['mes_global'],
     on_change=atualiza_mes_topo
 )
-
     # Atualiza a memória global se houver mudança (SEM st.rerun() manual)
     if mes_atual and mes_atual != st.session_state['mes_global']:
         st.session_state['mes_global'] = mes_atual
