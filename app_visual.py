@@ -1713,41 +1713,14 @@ if "💰" in st.session_state.page:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-      # =========================================================================
-        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO
+        # =========================================================================
+        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO)
         # =========================================================================
         st.markdown("---")
         st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
         
         # Como o df_m já está filtrado pelo mês do topo, usamos ele direto aqui!
         df_m_cartoes = df_m.copy() if not df_m.empty else pd.DataFrame()
-        
-        # 1. BARRINHA DE MESES
-        meses_abreviados = [
-            "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
-            "Jul", "Ago", "Set", "Out", "Nov", "Dez"
-        ]
-        
-        num_mes_atual = datetime.now().month - 1
-        default_mes = meses_abreviados[num_mes_atual] if meses_abreviados else "Jan"
-        
-        # Garante que o session_state lembre da escolha
-        if "mes_selecionado_topo" not in st.session_state:
-            st.session_state["mes_selecionado_topo"] = default_mes
-        
-        mes_atual = st.pills(
-            "Período:",
-            meses_abreviados,
-            selection_mode="single",
-            key="mes_selecionado_topo"
-        )
-        
-        if not mes_escolhido_cartao or mes_escolhido_cartao not in mes_map_cartao:
-            mes_escolhido_cartao = mes_atual
-            
-        # Filtra o DataFrame base especificamente para o mês escolhido
-        filtro_mes_cartao = f"{mes_map_cartao.get(mes_escolhido_cartao, '09')}/26"
-        df_m_cartoes = df_base[df_base['Mes_Ano'] == filtro_mes_cartao].copy() if not df_base.empty else pd.DataFrame()
         
         coluna_banco = next((col for col in ['Nome do Banco', 'Banco', 'Instituição', 'Conta'] if col in df_m_cartoes.columns), None)
         
@@ -1829,7 +1802,6 @@ if "💰" in st.session_state.page:
                                 pass
             except:
                 pass
-
         df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
         if not df_cartoes_graph.empty:
