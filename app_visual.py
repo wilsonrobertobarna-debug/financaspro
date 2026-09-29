@@ -1491,32 +1491,45 @@ if "💰" in st.session_state.page:
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
-# 1. BARRINHA DE MESES
+    # 1. BARRINHA DE MESES (Sincronizada via session_state)
     meses_abreviados = [
         "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
         "Jul", "Ago", "Set", "Out", "Nov", "Dez"
     ]
 
-    num_mes_atual = datetime.now().month - 1
-    default_mes = meses_abreviados[num_mes_atual] if meses_abreviados else "Jan"
+    # Garante que a memória global do mês existe
+    if 'mes_global' not in st.session_state:
+        num_mes_atual = datetime.now().month - 1
+        st.session_state['mes_global'] = meses_abreviados[num_mes_atual] if meses_abreviados else "Jan"
 
     mes_map = {
         "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
         "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
     }
 
+    # A barrinha agora lê e escreve na chave 'mes_global' e usa key="pills_topo"
     mes_atual = st.pills(
         "Período:",
         meses_abreviados,
         selection_mode="single",
-        default=default_mes,
+        default=st.session_state['mes_global'],
+        key="pills_topo"
     )
 
+    # Se a barrinha do topo for mexida, atualiza o session_state
+    if mes_atual and mes_atual != st.session_state['mes_global']:
+        st.session_state['mes_global'] = mes_atual
+        st.rerun()
+
+    # Define o mês ativo oficial com base na memória global
+    mes_atual = st.session_state.get('mes_global', meses_abreviados[0])
+
     if not mes_atual or mes_atual not in mes_map:
-        mes_atual = default_mes
+        mes_atual = meses_abreviados[0]
 
     if not df_base.empty:
         filtro_mes = f"{mes_map.get(mes_atual, '08')}/26"
+        # ... (o restante do seu código continua exatamente igual daqui para baixo)
         
         # Filtra os dados do mês
         df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
