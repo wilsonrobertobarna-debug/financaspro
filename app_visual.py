@@ -1737,15 +1737,19 @@ mes_atual = st.pills(
         st.markdown("---")
         st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
         
-        # A barrinha de baixo usa EXATAMENTE A MESMA key="mes_global"
+       def atualiza_mes_baixo():
+    st.session_state['mes_global'] = st.session_state['pills_baixo']
+
         mes_cartao_escolhido = st.pills(
             "Período (Cartões):",
             meses_abreviados,
             selection_mode="single",
-            key="mes_global"
+            key="pills_baixo",
+            default=st.session_state['mes_global'],
+            on_change=atualiza_mes_baixo
         )
         
-        # O mês ativo já é direto o que está na memória unificada
+        # O mês ativo sempre segue a memória unificada
         mes_ativo_cartoes = st.session_state['mes_global']
         filtro_mes_cartoes = f"{mes_map.get(mes_ativo_cartoes, '09')}/26"
 
