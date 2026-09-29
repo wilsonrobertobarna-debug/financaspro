@@ -1729,27 +1729,22 @@ if "💰" in st.session_state.page:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-# =========================================================================
+        # =========================================================================
         # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SEM LOOP DE RERUN)
         # =========================================================================
         st.markdown("---")
         st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
         
-        # BARRINHA DE BAIXO: Apenas lê e atualiza a variável na memória sem forçar st.rerun() manual
+        # A barrinha de baixo usa EXATAMENTE A MESMA key="mes_global"
         mes_cartao_escolhido = st.pills(
             "Período (Cartões):",
             meses_abreviados,
             selection_mode="single",
-            default=st.session_state.get('mes_global', meses_abreviados[0]),
-            key="pills_baixo"
+            key="mes_global"
         )
         
-        # Atualiza a memória global de forma limpa (o Streamlit já atualiza a tela sozinho)
-        if mes_cartao_escolhido and mes_cartao_escolhido != st.session_state.get('mes_global'):
-            st.session_state['mes_global'] = mes_cartao_escolhido
-
-        # O mês ativo dos cartões usa a memória unificada
-        mes_ativo_cartoes = st.session_state.get('mes_global', mes_atual)
+        # O mês ativo já é direto o que está na memória unificada
+        mes_ativo_cartoes = st.session_state['mes_global']
         filtro_mes_cartoes = f"{mes_map.get(mes_ativo_cartoes, '09')}/26"
 
         if not df_base.empty:
