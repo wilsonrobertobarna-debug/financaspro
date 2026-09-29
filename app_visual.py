@@ -1713,14 +1713,14 @@ if "💰" in st.session_state.page:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-        # =========================================================================
-        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO COM O TOPO)
+      # =========================================================================
+        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO
         # =========================================================================
         st.markdown("---")
         st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
         
-        # Sincroniza a chave do estado da seção de baixo com o mês escolhido no topo
-        st.session_state["pills_cartoes_secao"] = mes_atual
+        # Como o df_m já está filtrado pelo mês do topo, usamos ele direto aqui!
+        df_m_cartoes = df_m.copy() if not df_m.empty else pd.DataFrame()
         
         # 1. BARRINHA DE MESES
         meses_abreviados = [
