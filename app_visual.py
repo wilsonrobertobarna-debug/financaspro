@@ -3498,11 +3498,14 @@ if aba == "📊 Análises & Configurações":
                     tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
                     moeda = str(row.iloc[5]).strip().upper() if len(row) > 5 and str(row.iloc[5]).strip() else "BRL"
 
-                    st.write(f"🔍 Lendo -> Conta: '{nome_conta}' | Tipo: '{tipo_conta}'")
+                    # Remove todos os acentos possíveis para evitar erros de digitação (como Veículo)
+                    import unicodedata
+                    def remover_acentos(texto):
+                        nfkd = unicodedata.normalize('NFKD', texto)
+                        return "".join([c for c in nfkd if not unicodedata.combining(c)])
 
-
-                    tipo_limpo = tipo_conta.replace('ã', 'a').replace('á', 'a').replace('â', 'a')
-                    nome_limpo = nome_conta_lower.replace('ã', 'a').replace('á', 'a').replace('â', 'a')
+                    tipo_limpo = remover_acentos(tipo_conta)
+                    nome_limpo = remover_acentos(nome_conta_lower)
 
                     # 1. Veículos / Bens (Ignora do cálculo de contas e investimentos correntes)
                     if 'xtcross' in nome_limpo or 'xmoto' in nome_limpo or 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_conta.startswith('x') or nome_conta.startswith('X'):
