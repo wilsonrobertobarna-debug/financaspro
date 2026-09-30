@@ -3457,7 +3457,172 @@ if aba == "📊 Análises & Configurações":
             return float(val_str)
         except:
             return 0.0
+guardado_atual = 0.0
+    saldo_outras_brl = 0.0
+    saldo_veiculos_brl = 0.0
+    total_invest_usd = 0.0
+    total_invest_eur = 0.0
+    saldo_outras_usd = 0.0
+    saldo_outras_eur = 0.0
 
+    try:
+        df_lanc_local = None
+        for nome_var in ['df_lancamentos', 'df_lancamento', 'lancamentos_df', 'df', 'df_base']:
+            if nome_var in locals() and not locals()[nome_var].empty:
+                df_lanc_local = locals()[nome_var]
+                break
+            elif nome_var in st.session_state and not st.session_state[nome_var].empty:
+                df_lanc_local = st.session_state[nome_var]
+                break
+
+        df_bancos_local = None
+        for nome_var in ['df_bancos', 'df_banks', 'bancos_df', 'df_bancos_info']:
+            if nome_var in locals() and not locals()[nome_var].empty:
+                df_bancos_local = locals()[nome_var]
+                break
+            elif nome_var in st.session_state and not st.session_state[nome_var].empty:
+                df_bancos_local = st.session_state[nome_var]
+                break
+
+        if df_bancos_local is not None and not df_bancos_local.empty and df_lanc_local is not None:
+            df_lanc_local['V_Num'] = pd.to_numeric(df_lanc_local['V_Num'], errors='coerce').fillna(0)
+
+            for idx, row in df_bancos_local.iloc[1:].iterrows():
+                try:
+                    nome_conta = str(row.iloc[0]).strip() if len(row) > 0 else ""
+                    nome_conta_lower = nome_conta.lower()
+                    
+                    val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
+                    saldo_inicial = float(val_str) if val_str and val_str != 'nan' else 0.0
+                    
+                    tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
+                    moeda = str(row.iloc[5]).strip().upper() if len(row) > 5 and str(row.iloc[5]).strip() else "BRL"
+
+                    tipo_limpo = tipo_conta.replace('ã', 'a').replace('á', 'a').replace('â', 'a')
+                    nome_limpo = nome_conta_lower.replace('ã', 'a').replace('á', 'a').replace('â', 'a')
+
+                    # 1. Veículos / Bens
+                    if 'xtcross' in nome_limpo or 'xmoto' in nome_limpo or 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_conta.startswith('x') or nome_conta.startswith('X'):
+                        if moeda == "BRL":
+                            saldo_veiculos_brl += saldo_inicial
+                        continue
+
+                    # 2. Ignora Cartões, VR e VA de forma rigorosa
+                    if "cart" in tipo_limpo or "cart" in nome_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in nome_limpo or "va" in nome_limpo:
+                        continue
+                   
+                    # 3. Cálculo do saldo real
+                    df_banco_atual = df_lanc_local[df_lanc_local['Banco'] == nome_conta]
+                    
+                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+                    
+                    saldo_atual_conta = saldo_inicial + entradas - saidas
+                    
+                    # 4. Separação Oficial
+                    is_investimento = 'invest' in tipo_limpo or 'aplicac' in tipo_limpo or 'prev' in tipo_limpo
+
+                    if is_investimento:
+                        if moeda == "BRL":
+                            guardado_atual += saldo_atual_conta
+                        elif moeda == "USD":
+                            total_invest_usd += saldo_atual_conta
+                        elif moeda == "EUR":
+                            total_invest_eur += saldo_atual_conta
+                    else:
+                        if moeda == "BRL":
+                            saldo_outras_brl += saldo_atual_conta
+                        elif moeda == "USD":
+                            saldo_outras_usd += saldo_atual_conta
+                        elif moeda == "EUR":
+                            saldo_outras_eur += saldo_atual_conta
+                except:
+                    pass
+
+        subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
+        subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
+        subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
+
+    except Exception as e:
+        st.error(f"Erro ao calcular os saldos: {e}")
+
+    # Formulário da Meta
+    with st.form("form_reserva_financeira"):
+        meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        salvar_reserva = st.form_submit_button("💾 Salvar Meta")
+        
+        if salvar_reserva:
+            try:
+                meta_limpa = meta_str_input.replace('R$', '').strip()
+                meta_limpa = meta_limpa.replace('.', '').replace(',', '.')
+                nova_meta = float(meta_limpa)
+                
+                ws_reserva.update(values=[[str(nova_meta)]], range_name='A2:A2')
+                st.toast("✅ Meta da reserva salva com sucesso!", icon="🎯")
+                st.rerun()
+            except ValueError:
+                st.error("⚠️ Formato de valor inválido.")
+
+    base_calculo_reserva = subtotal_contas_invest_brl
+    progresso = min(base_calculo_reserva / meta_atual, 1.0) if meta_atual > 0 else 0.0
+    percentual_reserva = (base_calculo_reserva / meta_atual) * 100 if meta_atual > 0 else 0.0
+
+    col_m1, col_m2, col_m3 = st.columns(3)
+    col_m1.metric("🎯 Meta Alvo", f"R$ {meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    col_m2.metric("💰 Patrimônio Total BRL", f"R$ {base_calculo_reserva:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    col_m3.metric("📈 Conclusão da Meta", f"{percentual_reserva:.1f}%")
+
+    st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")
+
+    with st.expander("📊 Conferência de Subtotais por Moeda (Espelho do WhatsApp)", expanded=True):
+        col_w1, col_w2, col_w3 = st.columns(3)
+        with col_w1:
+            st.metric("🇧🇷 Subtotal Contas & Invest. (BRL)", f"R$ {subtotal_contas_invest_brl:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+            st.caption(f"• Investimentos BRL: R$ {guardado_atual:,.2f}\n• Contas Correntes BRL: R$ {saldo_outras_brl:,.2f}")
+        with col_w2:
+            st.metric("🇺🇸 Subtotal Contas & Invest. (USD)", f"U$ {subtotal_invest_usd_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        with col_w3:
+            st.metric("🇪🇺 Subtotal Contas & Invest. (EUR)", f"€ {subtotal_invest_eur_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        
+        st.markdown(f"🚗 **Subtotal T-Cross + Moto Lead (BRL):** R$ {saldo_veiculos_brl:,.2f}")
+
+    st.divider()
+
+    # Gráfico de Evolução
+    st.subheader("📈 Evolução do Saldo Acumulado")
+    if 'df_base' in locals() and not df_base.empty:
+        df_base['DT'] = pd.to_datetime(df_base['DT'], format='%d/%m/%Y', errors='coerce')
+        df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0)
+        
+        df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
+        
+        if not df_saldo_dia.empty:
+            df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
+                lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
+            )
+            df_saldo_dia = df_saldo_dia.groupby('DT')['Valor_Com_Sinal'].sum().reset_index()
+            df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
+            
+            fig_acum = px.line(df_saldo_dia, x='DT', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
+            fig_acum.update_layout(height=350, margin=dict(l=20, r=20, t=50, b=20))
+            st.plotly_chart(fig_acum, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
+        else:
+            st.info("Não há lançamentos marcados como 'Pago'.")
+    else:
+        st.warning("A base de dados está vazia.")
+
+    st.divider()
+    
+    # 3. DATAFRAME: BANCOS E CARTÕES
+    st.subheader("🏦 Informações de Contas e Cartões")
+    if 'df_bancos_info' in locals() and not df_bancos_info.empty:
+        st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+    else:
+        st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets.")
+
+
+
+    
     guardado_atual = 0.0
     saldo_outras_brl = 0.0
     saldo_veiculos_brl = 0.0
