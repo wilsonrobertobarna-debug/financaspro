@@ -3466,6 +3466,11 @@ if aba == "📊 Análises & Configurações":
     saldo_outras_eur = 0.0
 
     try:
+        import unicodedata
+        def remover_acentos(texto):
+            nfkd = unicodedata.normalize('NFKD', str(texto))
+            return "".join([c for c in nfkd if not unicodedata.combining(c)]).lower().strip()
+
         df_lanc_local = None
         for nome_var in ['df_lancamentos', 'df_lancamento', 'lancamentos_df', 'df', 'df_base']:
             if nome_var in locals() and not locals()[nome_var].empty:
@@ -3499,26 +3504,25 @@ if aba == "📊 Análises & Configurações":
                     tipo_limpo = remover_acentos(tipo_conta)
                     nome_limpo = remover_acentos(nome_conta)
 
-                    # 1. Veículos / Bens (Ignora do cálculo de contas e investimentos)
+                    # 1. Veículos / Bens
                     if 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_limpo.startswith('x'):
                         if moeda == "BRL":
                             saldo_veiculos_brl += saldo_inicial
                         continue
 
-                    # 2. Ignora Cartões e Benefícios (VR/VA)
+                    # 2. Ignora Cartões e Benefícios
                     if "cart" in tipo_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in tipo_limpo or "va" in tipo_limpo:
                         continue
                    
-                    tipo_lower = str(tipo_conta).lower()
-                    is_investimento = ('invest' in tipo_lower) or ('aplicac' in tipo_lower) or ('prev' in tipo_lower) or ('poupanc' in tipo_lower)
+                    is_investimento = ('invest' in tipo_limpo) or ('aplicac' in tipo_limpo) or ('prev' in tipo_limpo) or ('poupanc' in tipo_limpo)
 
-                    # 3. Cálculo do saldo real
+                    # 3. Cálculo do saldo
+                    df_banco_atual = df_lanc_local[df_lanc_local['Banco'] == nome_conta]
+
                     if is_investimento:
-                        # Para investimentos/poupança, o saldo é o valor aplicado/inicial atualizado (sem descontar despesas correntes)
-                        df_banco_atual = df_lanc_local[df_lanc_local['Banco'] == nome_conta]
                         rendimentos = df_banco_atual[df_banco_atual['Tipo'] == 'Rendimento']['V_Num'].sum()
                         aportes = df_banco_atual[df_banco_atual['Tipo'] == 'Receita']['V_Num'].sum()
-                        resgates = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum() # se houver resgate registrado como saída
+                        resgates = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
                         
                         saldo_atual_conta = saldo_inicial + aportes + rendimentos - resgates
                         
@@ -3529,8 +3533,6 @@ if aba == "📊 Análises & Configurações":
                         elif moeda == "EUR":
                             total_invest_eur += saldo_atual_conta
                     else:
-                        # Para Conta Corrente, aplica a movimentação normal (Saldo Inicial + Entradas - Saídas)
-                        df_banco_atual = df_lanc_local[df_lanc_local['Banco'] == nome_conta]
                         entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
                         saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
                         
@@ -3542,12 +3544,17 @@ if aba == "📊 Análises & Configurações":
                             saldo_outras_usd += saldo_atual_conta
                         elif moeda == "EUR":
                             saldo_outras_eur += saldo_atual_conta
-                except:
+                except Exception as ex:
                     pass
 
         subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
         subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
+
+    except Exception as e:
+        subtotal_contas_invest_brl = 0.0
+        subtotal_invest_usd_geral = 0.0
+        subtotal_invest_eur_geral = 0.0
 
     except Exception as e:
         st.error(f"Erro ao calcular os saldos: {e}")
