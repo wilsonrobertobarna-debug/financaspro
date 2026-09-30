@@ -3508,8 +3508,11 @@ if aba == "📊 Análises & Configurações":
                         continue
                    
                     # 3. Classificação limpa pelo tipo exato da planilha
-                    is_investimento = ('invest' in tipo_limpo) or ('poupanc' in tipo_limpo)
-                    is_corrente = 'corrente' in tipo_limpo
+                    # Classificação abrangente e segura para capturar qualquer variação de investimento
+                    tipo_lower = tipo_limpo.lower()
+                    
+                    is_investimento = any(termo in tipo_lower for termo in ['invest', 'aplicac', 'poupanc', 'cdb', 'fundo', 'prev'])
+                    is_corrente = 'corrente' in tipo_lower
 
                     if is_investimento:
                         if moeda == "BRL":
