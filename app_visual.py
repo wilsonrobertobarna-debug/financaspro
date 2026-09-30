@@ -3457,7 +3457,7 @@ if aba == "📊 Análises & Configurações":
             return float(val_str)
         except:
             return 0.0
-    guardado_atual = 0.0
+   guardado_atual = 0.0
     saldo_outras_brl = 0.0
     saldo_veiculos_brl = 0.0
     total_invest_usd = 0.0
@@ -3481,6 +3481,7 @@ if aba == "📊 Análises & Configurações":
                 break
 
         if df_bancos_local is not None and not df_bancos_local.empty:
+            st.write("--- **DEPURAÇÃO DE CONTAS E INVESTIMENTOS** ---")
             for idx, row in df_bancos_local.iloc[1:].iterrows():
                 try:
                     nome_conta = str(row.iloc[0]).strip() if len(row) > 0 else ""
@@ -3496,34 +3497,31 @@ if aba == "📊 Análises & Configurações":
                     tipo_limpo = remover_acentos(tipo_conta)
                     nome_limpo = remover_acentos(nome_conta)
 
-                    # 1. Ignora Veículos e Cartões logo de cara
                     is_veiculo = 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_limpo.startswith('x')
                     is_cartao = "cart" in tipo_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in tipo_limpo or "va" in tipo_limpo
                     
                     if is_veiculo:
+                        st.write(f"🚗 Veículo ignorado: {nome_conta} | R$ {saldo_conta:,.2f}")
                         if moeda == "BRL":
                             saldo_veiculos_brl += saldo_conta
                         continue
 
                     if is_cartao:
+                        st.write(f"💳 Cartão ignorado: {nome_conta} | R$ {saldo_conta:,.2f}")
                         continue
 
-                    # ==========================================
-                    # ETAPA 1: APENAS CONTAS CORRENTES
-                    # ==========================================
                     is_corrente = 'corrente' in tipo_limpo
                     if is_corrente:
+                        st.write(f"🏦 Conta Corrente: {nome_conta} | R$ {saldo_conta:,.2f}")
                         if moeda == "BRL":
                             saldo_outras_brl += saldo_conta
                         elif moeda == "USD":
                             saldo_outras_usd += saldo_conta
                         elif moeda == "EUR":
                             saldo_outras_eur += saldo_conta
-                        continue # Vai para a próxima linha da planilha
+                        continue
 
-                    # ==========================================
-                    # ETAPA 2: APENAS INVESTIMENTOS (Tudo o que restou)
-                    # ==========================================
+                    st.write(f"📈 Investimento: {nome_conta} ({tipo_conta}) | R$ {saldo_conta:,.2f}")
                     if moeda == "BRL":
                         guardado_atual += saldo_conta
                     elif moeda == "USD":
@@ -3533,6 +3531,7 @@ if aba == "📊 Análises & Configurações":
 
                 except Exception as ex:
                     pass
+            st.write("---------------------------------------------")
 
         subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
