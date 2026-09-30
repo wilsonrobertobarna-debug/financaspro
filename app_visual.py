@@ -3546,7 +3546,7 @@ if aba == "📊 Análises & Configurações":
         st.error(f"Erro ao calcular os saldos: {e}")
 
     # Formulário da Meta
-    with st.form("form_reserva_financeira"):
+    with st.form("form_reserva_financeira_principal"):
         meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         salvar_reserva = st.form_submit_button("💾 Salvar Meta")
         
