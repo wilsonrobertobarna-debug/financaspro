@@ -3487,7 +3487,6 @@ if aba == "📊 Análises & Configurações":
                     if not nome_conta or nome_conta == 'nan':
                         continue
 
-                    # Pega o saldo diretamente da coluna de saldo da planilha (índice 1)
                     val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
                     saldo_conta = float(val_str) if val_str and val_str != 'nan' else 0.0
                     
@@ -3497,37 +3496,36 @@ if aba == "📊 Análises & Configurações":
                     tipo_limpo = remover_acentos(tipo_conta)
                     nome_limpo = remover_acentos(nome_conta)
 
-                    # 1. Veículos / Bens (T-Cross, Moto Lead)
-                    if 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_limpo.startswith('x'):
+                    # 1. Veículos / Bens
+                    is_veiculo = 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_limpo.startswith('x')
+                    if is_veiculo:
                         if moeda == "BRL":
                             saldo_veiculos_brl += saldo_conta
                         continue
 
-                    # 2. Ignora Cartões de Crédito e Benefícios (VR/VA)
-                    if "cart" in tipo_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in tipo_limpo or "va" in tipo_limpo:
+                    # 2. Cartões e Benefícios (Ignora)
+                    is_cartao = "cart" in tipo_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in tipo_limpo or "va" in tipo_limpo
+                    if is_cartao:
                         continue
                    
-                    # 3. Classificação limpa pelo tipo exato da planilha
-                    # Classificação abrangente e segura para capturar qualquer variação de investimento
-                    tipo_lower = tipo_limpo.lower()
-                    
-                    is_investimento = any(termo in tipo_lower for termo in ['invest', 'aplicac', 'poupanc', 'cdb', 'fundo', 'prev'])
-                    is_corrente = 'corrente' in tipo_lower
+                    # 3. Conta Corrente explícita
+                    is_corrente = 'corrente' in tipo_limpo
 
-                    if is_investimento:
-                        if moeda == "BRL":
-                            guardado_atual += saldo_conta
-                        elif moeda == "USD":
-                            total_invest_usd += saldo_conta
-                        elif moeda == "EUR":
-                            total_invest_eur += saldo_conta
-                    elif is_corrente:
+                    if is_corrente:
                         if moeda == "BRL":
                             saldo_outras_brl += saldo_conta
                         elif moeda == "USD":
                             saldo_outras_usd += saldo_conta
                         elif moeda == "EUR":
                             saldo_outras_eur += saldo_conta
+                    else:
+                        # 4. REGRA UNIVERSAL: Tudo o que não for corrente, cartão ou veículo vai para Investimento!
+                        if moeda == "BRL":
+                            guardado_atual += saldo_conta
+                        elif moeda == "USD":
+                            total_invest_usd += saldo_conta
+                        elif moeda == "EUR":
+                            total_invest_eur += saldo_conta
                 except Exception as ex:
                     pass
 
