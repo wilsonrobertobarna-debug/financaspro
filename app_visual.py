@@ -3487,37 +3487,29 @@ if aba == "📊 Análises & Configurações":
         if df_bancos_local is not None and not df_bancos_local.empty and df_lanc_local is not None:
             df_lanc_local['V_Num'] = pd.to_numeric(df_lanc_local['V_Num'], errors='coerce').fillna(0)
 
-            for idx, row in df_bancos_local.iloc[1:].iterrows():
+for idx, row in df_bancos_local.iloc[1:].iterrows():
                 try:
                     nome_conta = str(row.iloc[0]).strip() if len(row) > 0 else ""
-                    nome_conta_lower = nome_conta.lower()
-                    
                     val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
                     saldo_inicial = float(val_str) if val_str and val_str != 'nan' else 0.0
                     
-                    tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
+                    tipo_conta = str(row.iloc[2]).strip() if len(row) > 2 else ""
                     moeda = str(row.iloc[5]).strip().upper() if len(row) > 5 and str(row.iloc[5]).strip() else "BRL"
 
-                    # Remove todos os acentos possíveis para evitar erros de digitação (como Veículo)
-                    import unicodedata
-                    def remover_acentos(texto):
-                        nfkd = unicodedata.normalize('NFKD', texto)
-                        return "".join([c for c in nfkd if not unicodedata.combining(c)])
-
                     tipo_limpo = remover_acentos(tipo_conta)
-                    nome_limpo = remover_acentos(nome_conta_lower)
+                    nome_limpo = remover_acentos(nome_conta)
 
-                    # 1. Veículos / Bens (Ignora do cálculo de contas e investimentos correntes)
-                    if 'xtcross' in nome_limpo or 'xmoto' in nome_limpo or 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_conta.startswith('x') or nome_conta.startswith('X'):
+                    # 1. Veículos / Bens (Ignora do cálculo de contas e investimentos)
+                    if 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_limpo.startswith('x'):
                         if moeda == "BRL":
                             saldo_veiculos_brl += saldo_inicial
                         continue
 
-                    # 2. Ignora Cartões, VR e VA
-                    if "cart" in tipo_limpo or "cart" in nome_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in nome_limpo or "va" in nome_limpo:
+                    # 2. Ignora Cartões e Benefícios (VR/VA)
+                    if "cart" in tipo_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in tipo_limpo or "va" in tipo_limpo:
                         continue
                    
-                    # 3. Cálculo do saldo real da conta (Saldo Inicial + Entradas - Saídas)
+                    # 3. Calcula o saldo real da conta (Saldo Inicial + Entradas - Saídas)
                     df_banco_atual = df_lanc_local[df_lanc_local['Banco'] == nome_conta]
                     
                     entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
@@ -3525,8 +3517,9 @@ if aba == "📊 Análises & Configurações":
                     
                     saldo_atual_conta = saldo_inicial + entradas - saidas
                     
-                    # 4. Classificação exata (Investimento vs Conta Corrente)
-                    is_investimento = 'invest' in tipo_limpo or 'aplicac' in tipo_limpo or 'prev' in tipo_limpo or 'poupanc' in tipo_limpo
+                    # ⬇️ É AQUI QUE VOCÊ COLOCA A CLASSIFICAÇÃO EXATA ⬇️
+                    tipo_lower = str(tipo_conta).lower()
+                    is_investimento = ('invest' in tipo_lower) or ('aplicac' in tipo_lower) or ('prev' in tipo_lower) or ('poupanc' in tipo_lower)
 
                     if is_investimento:
                         if moeda == "BRL":
