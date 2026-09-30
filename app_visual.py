@@ -3458,9 +3458,8 @@ if aba == "📊 Análises & Configurações":
         except:
             return 0.0
    # Valores cravados e alinhados com o seu controle real:
-    saldo_outras_brl = 3199.72        # Total das Contas Correntes (Itaú Fabiana + Itaú Wilson + Inter)
-    guardado_atual = 175893.79        # Valor exato dos Investimentos BRL para fechar o total de R$ 179.093,51
-    
+    guardado_atual = 0.0
+    saldo_outras_brl = 0.0
     saldo_veiculos_brl = 0.0
     total_invest_usd = 0.0
     total_invest_eur = 0.0
@@ -3482,7 +3481,6 @@ if aba == "📊 Análises & Configurações":
                 df_bancos_local = st.session_state[nome_var]
                 break
 
-        # Mantém a leitura apenas para capturar veículos (T-Cross/Moto) e moedas estrangeiras se houver
         if df_bancos_local is not None and not df_bancos_local.empty:
             for idx, row in df_bancos_local.iloc[1:].iterrows():
                 try:
@@ -3499,22 +3497,41 @@ if aba == "📊 Análises & Configurações":
                     tipo_limpo = remover_acentos(tipo_conta)
                     nome_limpo = remover_acentos(nome_conta)
 
-                    # 1. Apenas computa veículos e moedas estrangeiras da planilha original
+                    # 1. Veículos / Bens (Isolados)
                     is_veiculo = 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_limpo.startswith('x')
                     if is_veiculo:
                         if moeda == "BRL":
                             saldo_veiculos_brl += saldo_conta
                         continue
 
-                    if moeda == "USD" and 'invest' in tipo_limpo:
+                    # 2. Cartões e Benefícios (Ignorados)
+                    is_cartao = "cart" in tipo_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in tipo_limpo or "va" in tipo_limpo
+                    if is_cartao:
+                        continue
+                   
+                    # 3. Contas Correntes (Lidas dinamicamente da planilha pelas linhas correspondentes)
+                    is_corrente = ('corrente' in tipo_limpo) or ('fabiana' in nome_limpo) or ('wilson' in nome_limpo and 'invest' not in tipo_limpo) or ('inter' in nome_limpo and 'invest' not in tipo_limpo and 'cdb' not in tipo_limpo)
+                    
+                    if is_corrente:
+                        if moeda == "BRL":
+                            saldo_outras_brl += saldo_conta
+                        elif moeda == "USD":
+                            saldo_outras_usd += saldo_conta
+                        elif moeda == "EUR":
+                            saldo_outras_eur += saldo_conta
+                        continue
+
+                    # 4. REGRA UNIVERSAL PARA INVESTIMENTOS: Tudo o que restou vai para investimento
+                    if moeda == "BRL":
+                        guardado_atual += saldo_conta
+                    elif moeda == "USD":
                         total_invest_usd += saldo_conta
-                    elif moeda == "EUR" and 'invest' in tipo_limpo:
+                    elif moeda == "EUR":
                         total_invest_eur += saldo_conta
 
                 except Exception as ex:
                     pass
 
-        # Subtotais fechados perfeitamente com o seu controle
         subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
         subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
