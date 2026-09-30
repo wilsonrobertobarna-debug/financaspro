@@ -3410,7 +3410,7 @@ if aba == "📋 Relatório PDF":
 if aba == "📊 Análises & Configurações":
     st.markdown("## 📊 Painel de Análises & Configurações")
     
-    # =========================================================================
+ # =========================================================================
     # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
     # =========================================================================
     st.markdown("---")
@@ -3511,7 +3511,6 @@ if aba == "📊 Análises & Configurações":
                     # 2. Ignora Cartões, VR e VA de forma rigorosa
                     if "cart" in tipo_limpo or "cart" in nome_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in nome_limpo or "va" in nome_limpo:
                         continue
-
                    
                     # 3. Cálculo do saldo real (Saldo Inicial + Todas as Entradas e Saídas da Conta)
                     df_banco_atual = df_lanc_local[df_lanc_local['Banco'] == nome_conta]
@@ -3521,9 +3520,8 @@ if aba == "📊 Análises & Configurações":
                     
                     saldo_atual_conta = saldo_inicial + entradas - saidas
                     
-
-                    # 4. Separação Oficial
-                    is_investimento = 'invest' in tipo_limpo or 'aplicac' in tipo_limpo or 'poupanc' in tipo_limpo or 'prev' in tipo_limpo
+                    # 4. Separação Oficial (Removido 'poupanc' para tratar poupança como conta corrente)
+                    is_investimento = 'invest' in tipo_limpo or 'aplicac' in tipo_limpo or 'prev' in tipo_limpo
 
                     if is_investimento:
                         if moeda == "BRL":
@@ -3567,17 +3565,18 @@ if aba == "📊 Análises & Configurações":
             except ValueError:
                 st.error("⚠️ Formato de valor inválido. Use o formato como 300000 ou 300.000,00")
 
-    # Exibição de Métricas e Progresso Visual
+    # Exibição de Métricas e Progresso Visual (Utilizando o patrimônio total BRL sincronizado)
+    base_calculo_reserva = subtotal_contas_invest_brl
     if meta_atual > 0:
-        progresso = min(guardado_atual / meta_atual, 1.0)
-        percentual_reserva = (guardado_atual / meta_atual) * 100
+        progresso = min(base_calculo_reserva / meta_atual, 1.0)
+        percentual_reserva = (base_calculo_reserva / meta_atual) * 100
     else:
         progresso = 0.0
         percentual_reserva = 0.0
 
     col_m1, col_m2, col_m3 = st.columns(3)
     col_m1.metric("🎯 Meta Alvo", f"R$ {meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    col_m2.metric("💰 Apenas Investimentos", f"R$ {guardado_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    col_m2.metric("💰 Patrimônio Total BRL", f"R$ {base_calculo_reserva:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
     col_m3.metric("📈 Conclusão da Meta", f"{percentual_reserva:.1f}%")
 
     st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")
@@ -3598,7 +3597,6 @@ if aba == "📊 Análises & Configurações":
         st.markdown(f"🚗 **Subtotal T-Cross + Moto Lead (BRL):** R$ {saldo_veiculos_brl:,.2f}")
 
     st.divider()
-
     # =========================================================================
     # 1. GRÁFICO: EVOLUÇÃO DO SALDO ACUMULADO
     # =========================================================================
