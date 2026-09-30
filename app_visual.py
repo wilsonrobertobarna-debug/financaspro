@@ -3484,10 +3484,10 @@ if aba == "📊 Análises & Configurações":
                 df_bancos_local = st.session_state[nome_var]
                 break
 
-        if df_bancos_local is not None and not df_bancos_local.empty and df_lanc_local is not None:
+       if df_bancos_local is not None and not df_bancos_local.empty and df_lanc_local is not None:
             df_lanc_local['V_Num'] = pd.to_numeric(df_lanc_local['V_Num'], errors='coerce').fillna(0)
 
-        for idx, row in df_bancos_local.iloc[1:].iterrows():
+            for idx, row in df_bancos_local.iloc[1:].iterrows():
                 try:
                     nome_conta = str(row.iloc[0]).strip() if len(row) > 0 else ""
                     val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
@@ -3509,19 +3509,19 @@ if aba == "📊 Análises & Configurações":
                     if "cart" in tipo_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in tipo_limpo or "va" in tipo_limpo:
                         continue
                    
-                    # 3. Calcula o saldo real da conta (Saldo Inicial + Entradas - Saídas)
-                    df_banco_atual = df_lanc_local[df_lanc_local['Banco'] == nome_conta]
-                    
-                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
-                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
-                    
-                    saldo_atual_conta = saldo_inicial + entradas - saidas
-                    
-                    # ⬇️ É AQUI QUE VOCÊ COLOCA A CLASSIFICAÇÃO EXATA ⬇️
                     tipo_lower = str(tipo_conta).lower()
                     is_investimento = ('invest' in tipo_lower) or ('aplicac' in tipo_lower) or ('prev' in tipo_lower) or ('poupanc' in tipo_lower)
 
+                    # 3. Cálculo do saldo real
                     if is_investimento:
+                        # Para investimentos/poupança, o saldo é o valor aplicado/inicial atualizado (sem descontar despesas correntes)
+                        df_banco_atual = df_lanc_local[df_lanc_local['Banco'] == nome_conta]
+                        rendimentos = df_banco_atual[df_banco_atual['Tipo'] == 'Rendimento']['V_Num'].sum()
+                        aportes = df_banco_atual[df_banco_atual['Tipo'] == 'Receita']['V_Num'].sum()
+                        resgates = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum() # se houver resgate registrado como saída
+                        
+                        saldo_atual_conta = saldo_inicial + aportes + rendimentos - resgates
+                        
                         if moeda == "BRL":
                             guardado_atual += saldo_atual_conta
                         elif moeda == "USD":
@@ -3529,6 +3529,13 @@ if aba == "📊 Análises & Configurações":
                         elif moeda == "EUR":
                             total_invest_eur += saldo_atual_conta
                     else:
+                        # Para Conta Corrente, aplica a movimentação normal (Saldo Inicial + Entradas - Saídas)
+                        df_banco_atual = df_lanc_local[df_lanc_local['Banco'] == nome_conta]
+                        entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+                        saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+                        
+                        saldo_atual_conta = saldo_inicial + entradas - saidas
+                        
                         if moeda == "BRL":
                             saldo_outras_brl += saldo_atual_conta
                         elif moeda == "USD":
@@ -3544,7 +3551,6 @@ if aba == "📊 Análises & Configurações":
 
     except Exception as e:
         st.error(f"Erro ao calcular os saldos: {e}")
-
     # Formulário da Meta
     with st.form("form_reserva_financeira_principal"):
         meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
