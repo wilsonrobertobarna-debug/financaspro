@@ -3498,6 +3498,9 @@ if aba == "📊 Análises & Configurações":
                     tipo_conta = str(row.iloc[2]).strip().lower() if len(row) > 2 else ""
                     moeda = str(row.iloc[5]).strip().upper() if len(row) > 5 and str(row.iloc[5]).strip() else "BRL"
 
+                    st.write(f"🔍 Lendo -> Conta: '{nome_conta}' | Tipo: '{tipo_conta}'")
+
+
                     tipo_limpo = tipo_conta.replace('ã', 'a').replace('á', 'a').replace('â', 'a')
                     nome_limpo = nome_conta_lower.replace('ã', 'a').replace('á', 'a').replace('â', 'a')
 
