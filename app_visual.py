@@ -3512,14 +3512,15 @@ if aba == "📊 Análises & Configurações":
                     if "cart" in tipo_limpo or "cart" in nome_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in nome_limpo or "va" in nome_limpo:
                         continue
 
-                    # 3. Cálculo do saldo real (Saldo Inicial + Entradas - Saídas Pagas)
-                    filtro = (df_lanc_local['Banco'] == nome_conta) & ((df_lanc_local['Status'].str.upper() == 'PAGO') | (df_lanc_local['Status'] == ''))
-                    df_banco_atual = df_lanc_local[filtro]
+                   
+                    # 3. Cálculo do saldo real (Saldo Inicial + Todas as Entradas e Saídas da Conta)
+                    df_banco_atual = df_lanc_local[df_lanc_local['Banco'] == nome_conta]
                     
                     entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
                     saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
                     
                     saldo_atual_conta = saldo_inicial + entradas - saidas
+                    
 
                     # 4. Separação Oficial
                     is_investimento = 'invest' in tipo_limpo or 'aplicac' in tipo_limpo or 'poupanc' in tipo_limpo or 'prev' in tipo_limpo
