@@ -3509,10 +3509,11 @@ if aba == "📊 Análises & Configurações":
                     if is_cartao:
                         continue
                    
-                    # 3. Contas Correntes (Lidas dinamicamente da planilha pelas linhas correspondentes)
-                    is_corrente = ('corrente' in tipo_limpo) or ('fabiana' in nome_limpo) or ('wilson' in nome_limpo and 'invest' not in tipo_limpo) or ('inter' in nome_limpo and 'invest' not in tipo_limpo and 'cdb' not in tipo_limpo)
-                    
-                    if is_corrente:
+                    # 3. Contas Correntes (Estrito: precisa ter 'corrente' no tipo E pertencer a um dos bancos operacionais)
+                    is_corrente_tipo = 'corrente' in tipo_limpo
+                    is_banco_operacional = ('fabiana' in nome_limpo) or ('wilson' in nome_limpo and 'invest' not in tipo_limpo) or ('inter' in nome_limpo and 'invest' not in tipo_limpo and 'cdb' not in tipo_limpo)
+
+                    if is_corrente_tipo and is_banco_operacional:
                         if moeda == "BRL":
                             saldo_outras_brl += saldo_conta
                         elif moeda == "USD":
@@ -3521,7 +3522,7 @@ if aba == "📊 Análises & Configurações":
                             saldo_outras_eur += saldo_conta
                         continue
 
-                    # 4. REGRA UNIVERSAL PARA INVESTIMENTOS: Tudo o que restou vai para investimento
+                    # 4. REGRA UNIVERSAL PARA INVESTIMENTOS: Tudo o que restou (CDBs, Fundos, Poupanças, etc.)
                     if moeda == "BRL":
                         guardado_atual += saldo_conta
                     elif moeda == "USD":
