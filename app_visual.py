@@ -3457,7 +3457,7 @@ if aba == "📊 Análises & Configurações":
             return float(val_str)
         except:
             return 0.0
-    guardado_atual = 0.0
+   guardado_atual = 0.0
     saldo_outras_brl = 0.0
     saldo_veiculos_brl = 0.0
     total_invest_usd = 0.0
@@ -3495,6 +3495,9 @@ if aba == "📊 Análises & Configurações":
             for idx, row in df_bancos_local.iloc[1:].iterrows():
                 try:
                     nome_conta = str(row.iloc[0]).strip() if len(row) > 0 else ""
+                    if not nome_conta or nome_conta == 'nan':
+                        continue
+
                     val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
                     saldo_inicial = float(val_str) if val_str and val_str != 'nan' else 0.0
                     
@@ -3504,7 +3507,7 @@ if aba == "📊 Análises & Configurações":
                     tipo_limpo = remover_acentos(tipo_conta)
                     nome_limpo = remover_acentos(nome_conta)
 
-                    # 1. Veículos / Bens
+                    # 1. Veículos / Bens (T-Cross, Moto Lead)
                     if 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_limpo.startswith('x'):
                         if moeda == "BRL":
                             saldo_veiculos_brl += saldo_inicial
@@ -3514,11 +3517,12 @@ if aba == "📊 Análises & Configurações":
                     if "cart" in tipo_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in tipo_limpo or "va" in tipo_limpo:
                         continue
                    
+                    # Identifica se é investimento pelo que está escrito na coluna Tipo da planilha
                     is_investimento = ('invest' in tipo_limpo) or ('aplicac' in tipo_limpo) or ('prev' in tipo_limpo) or ('poupanc' in tipo_limpo)
 
-                    # 3. Cálculo do saldo
-                    df_banco_atual = df_lanc_local[df_lanc_local['Banco'] == nome_conta]
-
+                    # Calcula movimentações apenas se o nome da conta bater perfeitamente nos lançamentos
+                    df_banco_atual = df_lanc_local[df_lanc_local['Banco'].astype(str).str.strip() == nome_conta]
+                    
                     if is_investimento:
                         rendimentos = df_banco_atual[df_banco_atual['Tipo'] == 'Rendimento']['V_Num'].sum()
                         aportes = df_banco_atual[df_banco_atual['Tipo'] == 'Receita']['V_Num'].sum()
