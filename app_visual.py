@@ -3487,7 +3487,7 @@ if aba == "📊 Análises & Configurações":
         if df_bancos_local is not None and not df_bancos_local.empty and df_lanc_local is not None:
             df_lanc_local['V_Num'] = pd.to_numeric(df_lanc_local['V_Num'], errors='coerce').fillna(0)
 
-for idx, row in df_bancos_local.iloc[1:].iterrows():
+        for idx, row in df_bancos_local.iloc[1:].iterrows():
                 try:
                     nome_conta = str(row.iloc[0]).strip() if len(row) > 0 else ""
                     val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
