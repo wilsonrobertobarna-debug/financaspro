@@ -3457,7 +3457,7 @@ if aba == "📊 Análises & Configurações":
             return float(val_str)
         except:
             return 0.0
-    guardado_atual = 0.0
+   guardado_atual = 0.0
     saldo_outras_brl = 0.0
     saldo_veiculos_brl = 0.0
     total_invest_usd = 0.0
@@ -3501,17 +3501,17 @@ if aba == "📊 Análises & Configurações":
                     tipo_limpo = tipo_conta.replace('ã', 'a').replace('á', 'a').replace('â', 'a')
                     nome_limpo = nome_conta_lower.replace('ã', 'a').replace('á', 'a').replace('â', 'a')
 
-                    # 1. Veículos / Bens
+                    # 1. Veículos / Bens (Ignora do cálculo de contas e investimentos correntes)
                     if 'xtcross' in nome_limpo or 'xmoto' in nome_limpo or 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_conta.startswith('x') or nome_conta.startswith('X'):
                         if moeda == "BRL":
                             saldo_veiculos_brl += saldo_inicial
                         continue
 
-                    # 2. Ignora Cartões, VR e VA de forma rigorosa
+                    # 2. Ignora Cartões, VR e VA
                     if "cart" in tipo_limpo or "cart" in nome_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in nome_limpo or "va" in nome_limpo:
                         continue
                    
-                    # 3. Cálculo do saldo real
+                    # 3. Cálculo do saldo real da conta (Saldo Inicial + Entradas - Saídas)
                     df_banco_atual = df_lanc_local[df_lanc_local['Banco'] == nome_conta]
                     
                     entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
@@ -3519,8 +3519,8 @@ if aba == "📊 Análises & Configurações":
                     
                     saldo_atual_conta = saldo_inicial + entradas - saidas
                     
-                    # 4. Separação Oficial
-                    is_investimento = 'invest' in tipo_limpo or 'aplicac' in tipo_limpo or 'prev' in tipo_limpo
+                    # 4. Classificação exata (Investimento vs Conta Corrente)
+                    is_investimento = 'invest' in tipo_limpo or 'aplicac' in tipo_limpo or 'prev' in tipo_limpo or 'poupanc' in tipo_limpo
 
                     if is_investimento:
                         if moeda == "BRL":
