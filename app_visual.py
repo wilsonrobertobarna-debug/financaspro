@@ -3458,11 +3458,11 @@ if aba == "📊 Análises & Configurações":
         except:
             return 0.0
    # Valores cravados e alinhados com o seu controle real:
-    guardado_atual = 0.0
-    saldo_outras_brl = 0.0
-    saldo_veiculos_brl = 0.0
-    total_invest_usd = 0.0
-    total_invest_eur = 0.0
+   guardado_atual = 0.0          # Investimentos BRL
+    saldo_outras_brl = 0.0        # Contas Correntes / Dinheiro BRL
+    saldo_veiculos_brl = 0.0      # Veículos BRL
+    total_invest_usd = 0.0        # Investimentos USD
+    total_invest_eur = 0.0        # Investimentos EUR
     saldo_outras_usd = 0.0
     saldo_outras_eur = 0.0
 
@@ -3482,42 +3482,58 @@ if aba == "📊 Análises & Configurações":
                 break
 
         if df_bancos_local is not None and not df_bancos_local.empty:
-            st.write("--- **DIAGNÓSTICO DA PLANILHA DE BANCOS** ---")
             for idx, row in df_bancos_local.iloc[1:].iterrows():
                 try:
-                    # Imprime as primeiras colunas para descobrirmos a posição exata (Nome, Saldo, Tipo)
-                    col_0 = str(row.iloc[0]).strip() if len(row) > 0 else ""
-                    col_1 = str(row.iloc[1]).strip() if len(row) > 1 else ""
-                    col_2 = str(row.iloc[2]).strip() if len(row) > 2 else ""
-                    
-                    if not col_0 or col_0 == 'nan':
+                    nome_conta = str(row.iloc[0]).strip() if len(row) > 0 else ""
+                    if not nome_conta or nome_conta == 'nan':
                         continue
 
-                    st.write(f"Linha -> Nome: [**{col_0}**] | Saldo Col 1: [**{col_1}**] | Tipo Col 2: [**{col_2}**]")
-
-                    val_str = col_1.replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip()
+                    val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
                     saldo_conta = float(val_str) if val_str and val_str != 'nan' else 0.0
                     
-                    tipo_limpo = remover_acentos(col_2)
-                    nome_limpo = remover_acentos(col_0)
+                    tipo_conta = str(row.iloc[2]).strip() if len(row) > 2 else ""
+                    moeda = str(row.iloc[5]).strip().upper() if len(row) > 5 and str(row.iloc[5]).strip() else "BRL"
 
-                    is_veiculo = 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_limpo.startswith('x')
+                    tipo_limpo = remover_acentos(tipo_conta)
+                    nome_limpo = remover_acentos(nome_conta)
+
+                    # 1. Cartões e Benefícios (Ignorados do patrimônio)
                     is_cartao = "cart" in tipo_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in tipo_limpo or "va" in tipo_limpo
-                    
-                    if is_veiculo or is_cartao:
+                    if is_cartao:
                         continue
 
-                    # Identificação direta pelas suas contas correntes exatas
-                    is_conta_corrente = ('fabiana' in nome_limpo) or ('wilson' in nome_limpo and 'invest' not in tipo_limpo) or ('inter' in nome_limpo and 'invest' not in tipo_limpo and 'cdb' not in tipo_limpo)
+                    # 2. Veículos (T-Cross, Moto Lead ou prefixo x)
+                    is_veiculo = 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_limpo.startswith('x')
+                    if is_veiculo:
+                        if moeda == "BRL":
+                            saldo_veiculos_brl += saldo_conta
+                        continue
 
-                    if is_conta_corrente:
-                        saldo_outras_brl += saldo_conta
-                    else:
+                    # 3. Contas Correntes e Dinheiro (Conforme padrão WhatsApp)
+                    # Lista exata de correntes/dinheiro: Inter, Itaú Fabiana, Itaú Wilson, Mercado Pago, Pag. Bank, Pic Pay, Dinheiro
+                    is_corrente_ou_dinheiro = any(k in nome_limpo for k in [
+                        'inter', 'itau - fabiana', 'itau - wilson', 'mercado pago', 'pag. bank', 'pic pay', 'dinheiro'
+                    ]) and not any(inv in tipo_limpo or inv in nome_limpo for inv in ['invest', 'cdb', 'firf', 'lci', 'tesouro', 'cofrinho', 'prev', 'pou'])
+
+                    if is_corrente_ou_dinheiro:
+                        if moeda == "BRL":
+                            saldo_outras_brl += saldo_conta
+                        elif moeda == "USD":
+                            saldo_outras_usd += saldo_conta
+                        elif moeda == "EUR":
+                            saldo_outras_eur += saldo_conta
+                        continue
+
+                    # 4. Todo o restante é considerado Investimento / Poupança / Previdência
+                    if moeda == "BRL":
                         guardado_atual += saldo_conta
+                    elif moeda == "USD":
+                        total_invest_usd += saldo_conta
+                    elif moeda == "EUR":
+                        total_invest_eur += saldo_conta
 
                 except Exception as ex:
                     pass
-            st.write("---------------------------------------------")
 
         subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
