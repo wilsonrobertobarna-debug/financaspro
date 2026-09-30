@@ -3457,7 +3457,7 @@ if aba == "📊 Análises & Configurações":
             return float(val_str)
         except:
             return 0.0
-    guardado_atual = 0.0
+  guardado_atual = 0.0
     saldo_outras_brl = 0.0
     saldo_veiculos_brl = 0.0
     total_invest_usd = 0.0
@@ -3471,15 +3471,6 @@ if aba == "📊 Análises & Configurações":
             nfkd = unicodedata.normalize('NFKD', str(texto))
             return "".join([c for c in nfkd if not unicodedata.combining(c)]).lower().strip()
 
-        df_lanc_local = None
-        for nome_var in ['df_lancamentos', 'df_lancamento', 'lancamentos_df', 'df', 'df_base']:
-            if nome_var in locals() and not locals()[nome_var].empty:
-                df_lanc_local = locals()[nome_var]
-                break
-            elif nome_var in st.session_state and not st.session_state[nome_var].empty:
-                df_lanc_local = st.session_state[nome_var]
-                break
-
         df_bancos_local = None
         for nome_var in ['df_bancos', 'df_banks', 'bancos_df', 'df_bancos_info']:
             if nome_var in locals() and not locals()[nome_var].empty:
@@ -3489,17 +3480,16 @@ if aba == "📊 Análises & Configurações":
                 df_bancos_local = st.session_state[nome_var]
                 break
 
-        if df_bancos_local is not None and not df_bancos_local.empty and df_lanc_local is not None:
-            df_lanc_local['V_Num'] = pd.to_numeric(df_lanc_local['V_Num'], errors='coerce').fillna(0)
-
+        if df_bancos_local is not None and not df_bancos_local.empty:
             for idx, row in df_bancos_local.iloc[1:].iterrows():
                 try:
                     nome_conta = str(row.iloc[0]).strip() if len(row) > 0 else ""
                     if not nome_conta or nome_conta == 'nan':
                         continue
 
+                    # Pega o saldo diretamente da coluna de saldo da planilha (índice 1)
                     val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
-                    saldo_inicial = float(val_str) if val_str and val_str != 'nan' else 0.0
+                    saldo_conta = float(val_str) if val_str and val_str != 'nan' else 0.0
                     
                     tipo_conta = str(row.iloc[2]).strip() if len(row) > 2 else ""
                     moeda = str(row.iloc[5]).strip().upper() if len(row) > 5 and str(row.iloc[5]).strip() else "BRL"
@@ -3510,46 +3500,31 @@ if aba == "📊 Análises & Configurações":
                     # 1. Veículos / Bens (T-Cross, Moto Lead)
                     if 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_limpo.startswith('x'):
                         if moeda == "BRL":
-                            saldo_veiculos_brl += saldo_inicial
+                            saldo_veiculos_brl += saldo_conta
                         continue
 
-                    # 2. Ignora rigorosamente Cartões de Crédito e Benefícios (VR/VA) para não afundar o saldo
+                    # 2. Ignora Cartões de Crédito e Benefícios (VR/VA)
                     if "cart" in tipo_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in tipo_limpo or "va" in tipo_limpo:
                         continue
                    
-                    # 3. Classificação EXATA baseada no que você confirmou:
+                    # 3. Classificação limpa pelo tipo exato da planilha
                     is_investimento = ('invest' in tipo_limpo) or ('poupanc' in tipo_limpo)
                     is_corrente = 'corrente' in tipo_limpo
 
-                    df_banco_atual = df_lanc_local[df_lanc_local['Banco'].astype(str).str.strip() == nome_conta]
-
                     if is_investimento:
-                        # Para investimentos/poupança: saldo inicial + aportes/rendimentos
-                        rendimentos = df_banco_atual[df_banco_atual['Tipo'] == 'Rendimento']['V_Num'].sum()
-                        aportes = df_banco_atual[df_banco_atual['Tipo'] == 'Receita']['V_Num'].sum()
-                        
-                        saldo_atual_conta = saldo_inicial + aportes + rendimentos
-                        
                         if moeda == "BRL":
-                            guardado_atual += saldo_atual_conta
+                            guardado_atual += saldo_conta
                         elif moeda == "USD":
-                            total_invest_usd += saldo_atual_conta
+                            total_invest_usd += saldo_conta
                         elif moeda == "EUR":
-                            total_invest_eur += saldo_atual_conta
-
+                            total_invest_eur += saldo_conta
                     elif is_corrente:
-                        # Para conta corrente: saldo inicial + entradas - saídas
-                        entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
-                        saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
-                        
-                        saldo_atual_conta = saldo_inicial + entradas - saidas
-                        
                         if moeda == "BRL":
-                            saldo_outras_brl += saldo_atual_conta
+                            saldo_outras_brl += saldo_conta
                         elif moeda == "USD":
-                            saldo_outras_usd += saldo_atual_conta
+                            saldo_outras_usd += saldo_conta
                         elif moeda == "EUR":
-                            saldo_outras_eur += saldo_atual_conta
+                            saldo_outras_eur += saldo_conta
                 except Exception as ex:
                     pass
 
