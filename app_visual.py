@@ -3458,7 +3458,7 @@ if aba == "📊 Análises & Configurações":
         except:
             return 0.0
    # Valores cravados e alinhados com o seu controle real:
-   guardado_atual = 0.0          # Investimentos BRL
+    guardado_atual = 0.0          # Investimentos BRL
     saldo_outras_brl = 0.0        # Contas Correntes / Dinheiro BRL
     saldo_veiculos_brl = 0.0      # Veículos BRL
     total_invest_usd = 0.0        # Investimentos USD
