@@ -3471,6 +3471,9 @@ if aba == "📊 Análises & Configurações":
             nfkd = unicodedata.normalize('NFKD', str(texto))
             return "".join([c for c in nfkd if not unicodedata.combining(c)]).lower().strip()
 
+        # INJEÇÃO DIRETA E EXATA DOS VALORES REAIS DAS CONTAS CORRENTES (WhatsApp)
+        saldo_outras_brl = 2985.48 + 6.51 + 4.30  # Total: R$ 2.996,29
+
         df_bancos_local = None
         for nome_var in ['df_bancos', 'df_banks', 'bancos_df', 'df_bancos_info']:
             if nome_var in locals() and not locals()[nome_var].empty:
@@ -3496,7 +3499,7 @@ if aba == "📊 Análises & Configurações":
                     tipo_limpo = remover_acentos(tipo_conta)
                     nome_limpo = remover_acentos(nome_conta)
 
-                    # 1. Veículos / Bens (T-Cross, Moto Lead)
+                    # 1. Veículos / Bens (Ignora do cálculo de contas/investimentos)
                     is_veiculo = 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_limpo.startswith('x')
                     if is_veiculo:
                         if moeda == "BRL":
@@ -3508,25 +3511,11 @@ if aba == "📊 Análises & Configurações":
                     if is_cartao:
                         continue
                    
-                    # 3. Tratamento especial para as Contas Correntes injetando os valores reais atuais:
-                    nome_lower = nome_limpo.lower()
+                    # 3. Se for conta corrente genérica listada na planilha, pulamos para não duplicar com os valores fixos acima
                     if 'corrente' in tipo_limpo:
-                        if 'fabiana' in nome_lower or 'patroa' in nome_lower:
-                            saldo_conta = 2985.48  # Valor real atualizado da Fabiana
-                        elif 'wilson' in nome_lower:
-                            saldo_conta = 6.51     # Valor real atualizado do Wilson
-                        elif 'inter' in nome_lower:
-                            saldo_conta = 4.30     # Valor real atualizado do Inter
-
-                        if moeda == "BRL":
-                            saldo_outras_brl += saldo_conta
-                        elif moeda == "USD":
-                            saldo_outras_usd += saldo_conta
-                        elif moeda == "EUR":
-                            saldo_outras_eur += saldo_conta
                         continue
 
-                    # 4. Todo o resto que sobrou vai para Investimento
+                    # 4. Todo o resto vai para Investimento
                     if moeda == "BRL":
                         guardado_atual += saldo_conta
                     elif moeda == "USD":
