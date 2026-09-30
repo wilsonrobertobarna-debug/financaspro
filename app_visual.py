@@ -3457,7 +3457,7 @@ if aba == "📊 Análises & Configurações":
             return float(val_str)
         except:
             return 0.0
-    guardado_atual = 0.0
+   guardado_atual = 0.0
     saldo_outras_brl = 0.0
     saldo_veiculos_brl = 0.0
     total_invest_usd = 0.0
@@ -3496,21 +3496,22 @@ if aba == "📊 Análises & Configurações":
                     tipo_limpo = remover_acentos(tipo_conta)
                     nome_limpo = remover_acentos(nome_conta)
 
-                    # 1. Veículos / Bens
+                    # 1. Ignora Veículos e Cartões logo de cara
                     is_veiculo = 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_limpo.startswith('x')
+                    is_cartao = "cart" in tipo_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in tipo_limpo or "va" in tipo_limpo
+                    
                     if is_veiculo:
                         if moeda == "BRL":
                             saldo_veiculos_brl += saldo_conta
                         continue
 
-                    # 2. Cartões e Benefícios (Ignora)
-                    is_cartao = "cart" in tipo_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in tipo_limpo or "va" in tipo_limpo
                     if is_cartao:
                         continue
-                   
-                    # 3. Conta Corrente explícita
-                    is_corrente = 'corrente' in tipo_limpo
 
+                    # ==========================================
+                    # ETAPA 1: APENAS CONTAS CORRENTES
+                    # ==========================================
+                    is_corrente = 'corrente' in tipo_limpo
                     if is_corrente:
                         if moeda == "BRL":
                             saldo_outras_brl += saldo_conta
@@ -3518,14 +3519,18 @@ if aba == "📊 Análises & Configurações":
                             saldo_outras_usd += saldo_conta
                         elif moeda == "EUR":
                             saldo_outras_eur += saldo_conta
-                    else:
-                        # 4. REGRA UNIVERSAL: Tudo o que não for corrente, cartão ou veículo vai para Investimento!
-                        if moeda == "BRL":
-                            guardado_atual += saldo_conta
-                        elif moeda == "USD":
-                            total_invest_usd += saldo_conta
-                        elif moeda == "EUR":
-                            total_invest_eur += saldo_conta
+                        continue # Vai para a próxima linha da planilha
+
+                    # ==========================================
+                    # ETAPA 2: APENAS INVESTIMENTOS (Tudo o que restou)
+                    # ==========================================
+                    if moeda == "BRL":
+                        guardado_atual += saldo_conta
+                    elif moeda == "USD":
+                        total_invest_usd += saldo_conta
+                    elif moeda == "EUR":
+                        total_invest_eur += saldo_conta
+
                 except Exception as ex:
                     pass
 
