@@ -3457,7 +3457,7 @@ if aba == "📊 Análises & Configurações":
             return float(val_str)
         except:
             return 0.0
-    guardado_atual = 0.0
+   guardado_atual = 0.0
     saldo_outras_brl = 0.0
     saldo_veiculos_brl = 0.0
     total_invest_usd = 0.0
@@ -3513,22 +3513,22 @@ if aba == "📊 Análises & Configurações":
                             saldo_veiculos_brl += saldo_inicial
                         continue
 
-                    # 2. Ignora Cartões e Benefícios
+                    # 2. Ignora rigorosamente Cartões de Crédito e Benefícios (VR/VA) para não afundar o saldo
                     if "cart" in tipo_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in tipo_limpo or "va" in tipo_limpo:
                         continue
                    
-                    # Identifica se é investimento pelo que está escrito na coluna Tipo da planilha
-                    is_investimento = ('invest' in tipo_limpo) or ('aplicac' in tipo_limpo) or ('prev' in tipo_limpo) or ('poupanc' in tipo_limpo)
+                    # 3. Classificação EXATA baseada no que você confirmou:
+                    is_investimento = ('invest' in tipo_limpo) or ('poupanc' in tipo_limpo)
+                    is_corrente = 'corrente' in tipo_limpo
 
-                    # Calcula movimentações apenas se o nome da conta bater perfeitamente nos lançamentos
                     df_banco_atual = df_lanc_local[df_lanc_local['Banco'].astype(str).str.strip() == nome_conta]
-                    
+
                     if is_investimento:
+                        # Para investimentos/poupança: saldo inicial + aportes/rendimentos
                         rendimentos = df_banco_atual[df_banco_atual['Tipo'] == 'Rendimento']['V_Num'].sum()
                         aportes = df_banco_atual[df_banco_atual['Tipo'] == 'Receita']['V_Num'].sum()
-                        resgates = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
                         
-                        saldo_atual_conta = saldo_inicial + aportes + rendimentos - resgates
+                        saldo_atual_conta = saldo_inicial + aportes + rendimentos
                         
                         if moeda == "BRL":
                             guardado_atual += saldo_atual_conta
@@ -3536,7 +3536,9 @@ if aba == "📊 Análises & Configurações":
                             total_invest_usd += saldo_atual_conta
                         elif moeda == "EUR":
                             total_invest_eur += saldo_atual_conta
-                    else:
+
+                    elif is_corrente:
+                        # Para conta corrente: saldo inicial + entradas - saídas
                         entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
                         saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
                         
