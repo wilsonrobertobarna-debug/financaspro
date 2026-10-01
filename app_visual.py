@@ -2966,11 +2966,8 @@ elif "📄" in aba:
         texto_relatorio_zap += f"🇺🇸 Dólar: U$ {(total_invest_usd + saldo_outras_usd):,.2f}\n"
     if 'total_invest_eur' in locals() and 'saldo_outras_eur' in locals() and (total_invest_eur + saldo_outras_eur) > 0:
         texto_relatorio_zap += f"🇪🇺 Euro: € {(total_invest_eur + saldo_outras_eur):,.2f}\n"
-
    
-    st.markdown("---")
-    link_zap_oficial = f"https://wa.me/?text={urllib.parse.quote(texto_relatorio_zap)}"
-    st.markdown(f'### [📲 Enviar Relatório Completo para o WhatsApp]({link_zap_oficial})', unsafe_allow_html=True)
+   
 
 
 if aba == "📋 Relatório PDF":
