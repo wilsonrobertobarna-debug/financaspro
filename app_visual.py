@@ -2801,7 +2801,30 @@ elif "📄" in aba:
     
     st.text_area("Copiar Relatório para o WhatsApp", relat, height=380)
 
+    # ==========================================
+    # BOTÃO DE IMPRIMIR O RELATÓRIO
+    # ==========================================
+    import streamlit.components.v1 as components
 
+    html_botao_imprimir = """
+    <div style="margin-top: 10px; margin-bottom: 20px;">
+        <button onclick="parent.window.print()" style="
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            width: 100%;">
+            🖨️ Imprimir Relatório Completo
+        </button>
+    </div>
+    """
+    components.html(html_botao_imprimir, height=60)
+    
     
     # ==========================================
     # 4. NOVA SEÇÃO: BUSCA E ENVIO DE LANÇAMENTO ESPECÍFICO
