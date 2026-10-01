@@ -2882,16 +2882,16 @@ elif "📄" in aba:
             card_lanc += f"💰 *Valor:* R$ {item_esp['Valor']}\n"
             card_lanc += f"📅 *Vencimento:* {item_esp['Vencimento']}\n"
             card_lanc += f"🏦 *Banco:* {item_esp['Banco']}\n"
-            card_lanc += f"🏷️ *Categoria:* {item_esp.get('Categoria', 'N/D')}\n"
+            card_lanc += f"🏷️️ *Categoria:* {item_esp.get('Categoria', 'N/D')}\n"
             card_lanc += f"👤 *Beneficiário:* {benef_esp}\n"
             card_lanc += f"📋 *Tipo:* {item_esp.get('Tipo', 'N/D')} | *Status:* {item_esp['Status']}\n"
             card_lanc += f"========================================\n"
 
             st.write("") 
-        st.text_area("Card do Lançamento para Copiar", card_lanc, height=200, key=f"txt_card_esp_{r_id}")
+            st.text_area("Card do Lançamento para Copiar", card_lanc, height=200, key=f"txt_card_esp_{r_id}")
 
-        link_zap_lanc = f"https://wa.me/?text={urllib.parse.quote(card_lanc)}"
-        st.markdown(f'[📲 Enviar este Lançamento para o WhatsApp]({link_zap_lanc})', unsafe_allow_html=True)
+            link_zap_lanc = f"https://wa.me/?text={urllib.parse.quote(card_lanc)}"
+            st.markdown(f'[📲 Enviar este Lançamento para o WhatsApp]({link_zap_lanc})', unsafe_allow_html=True)
     else:
         st.write("")
         st.info("Nenhum lançamento encontrado com os filtros selecionados no período.")
