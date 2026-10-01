@@ -2902,16 +2902,19 @@ elif "📄" in aba:
     st.markdown("---")
     st.subheader("📲 Compartilhar Relatório Geral de Saldos")
 
-    # Monta o texto consolidado com os valores calculados
+    # Garante que as variáveis existem antes de montar o texto para evitar NameError
+    val_brl = subtotal_contas_invest_brl if 'subtotal_contas_invest_brl' in locals() else 0.0
+
+    # Monta o texto consolidado com os valores calculados de forma segura
     texto_relatorio_geral = f"📊 *RELATÓRIO GERAL DE SALDOS - FINANÇASPRO*\n"
     texto_relatorio_geral += f"========================================\n"
-    texto_relatorio_geral += f"💰 *Contas & Investimentos BRL:* R$ {subtotal_contas_invest_brl:,.2f}\n"
+    texto_relatorio_geral += f"💰 *Contas & Investimentos BRL:* R$ {val_brl:,.2f}\n"
 
-    if 'total_invest_usd' in locals() and (total_invest_usd + saldo_outras_usd) > 0:
+    if 'total_invest_usd' in locals() and 'saldo_outras_usd' in locals() and (total_invest_usd + saldo_outras_usd) > 0:
         sub_usd = total_invest_usd + saldo_outras_usd
         texto_relatorio_geral += f"💵 *Total USD:* US$ {sub_usd:,.2f}\n"
         
-    if 'total_invest_eur' in locals() and (total_invest_eur + saldo_outras_eur) > 0:
+    if 'total_invest_eur' in locals() and 'saldo_outras_eur' in locals() and (total_invest_eur + saldo_outras_eur) > 0:
         sub_eur = total_invest_eur + saldo_outras_eur
         texto_relatorio_geral += f"💶 *Total EUR:* € {sub_eur:,.2f}\n"
         
@@ -2924,8 +2927,7 @@ elif "📄" in aba:
     st.text_area("Texto do Relatório Geral para Copiar", texto_relatorio_geral, height=150, key="txt_relatorio_geral_whatsapp")
 
     link_zap_geral = f"https://wa.me/?text={urllib.parse.quote(texto_relatorio_geral)}"
-    st.markdown(f'[📲 Enviar Relatório Geral para o WhatsApp]({link_zap_geral})', unsafe_allow_html=True)
-      
+    st.markdown(f'[📲 Enviar Relatório Geral para o WhatsApp]({link_zap_geral})', unsafe_allow_html=True)      
 
 
 if aba == "📋 Relatório PDF":
