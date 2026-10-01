@@ -2888,13 +2888,43 @@ elif "📄" in aba:
             card_lanc += f"========================================\n"
 
             st.write("") 
-            st.text_area("Card do Lançamento para Copiar", card_lanc, height=200, key=f"txt_card_esp_{r_id}")
+                st.text_area("Card do Lançamento para Copiar", card_lanc, height=200, key=f"txt_card_esp_{r_id}")
 
-            link_zap_lanc = f"https://wa.me/?text={urllib.parse.quote(card_lanc)}"
-            st.markdown(f'[📲 Enviar este Lançamento para o WhatsApp]({link_zap_lanc})', unsafe_allow_html=True)
-    else:
-        st.write("")
-        st.info("Nenhum lançamento encontrado com os filtros selecionados no período.")
+                link_zap_lanc = f"https://wa.me/?text={urllib.parse.quote(card_lanc)}"
+                st.markdown(f'[📲 Enviar este Lançamento para o WhatsApp]({link_zap_lanc})', unsafe_allow_html=True)
+        else:
+            st.write("")
+            st.info("Nenhum lançamento encontrado com os filtros selecionados no período.")
+
+    # ==========================================
+    # BOTÃO DE COMPARTILHAR RELATÓRIO GERAL NO WHATSAPP
+    # ==========================================
+    st.markdown("---")
+    st.subheader("📲 Compartilhar Relatório Geral de Saldos")
+
+    # Monta o texto consolidado com os valores calculados
+    texto_relatorio_geral = f"📊 *RELATÓRIO GERAL DE SALDOS - FINANÇASPRO*\n"
+    texto_relatorio_geral += f"========================================\n"
+    texto_relatorio_geral += f"💰 *Contas & Investimentos BRL:* R$ {subtotal_contas_invest_brl:,.2f}\n"
+
+    if 'total_invest_usd' in locals() and (total_invest_usd + saldo_outras_usd) > 0:
+        sub_usd = total_invest_usd + saldo_outras_usd
+        texto_relatorio_geral += f"💵 *Total USD:* US$ {sub_usd:,.2f}\n"
+        
+    if 'total_invest_eur' in locals() and (total_invest_eur + saldo_outras_eur) > 0:
+        sub_eur = total_invest_eur + saldo_outras_eur
+        texto_relatorio_geral += f"💶 *Total EUR:* € {sub_eur:,.2f}\n"
+        
+    if 'saldo_veiculos_brl' in locals() and saldo_veiculos_brl > 0:
+        texto_relatorio_geral += f"🚗 *Veículos / Bens BRL:* R$ {saldo_veiculos_brl:,.2f}\n"
+        
+    texto_relatorio_geral += f"========================================\n"
+    texto_relatorio_geral += f"📅 Atualizado em: {hoje.strftime('%d/%m/%Y')}\n"
+
+    st.text_area("Texto do Relatório Geral para Copiar", texto_relatorio_geral, height=150, key="txt_relatorio_geral_whatsapp")
+
+    link_zap_geral = f"https://wa.me/?text={urllib.parse.quote(texto_relatorio_geral)}"
+    st.markdown(f'[📲 Enviar Relatório Geral para o WhatsApp]({link_zap_geral})', unsafe_allow_html=True)
       
 
 
