@@ -493,7 +493,6 @@ def get_valor_pendente(df):
 # CHAMADA OBRIGATÓRIA DA FUNÇÃO NO FLUXO PRINCIPAL
 # ==========================================
 if 'df_base' in locals() or 'df_base' in globals():
-    enviar_whatsapp_pendencias(df_base)
 
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
