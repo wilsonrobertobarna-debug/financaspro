@@ -2888,13 +2888,13 @@ elif "📄" in aba:
             card_lanc += f"========================================\n"
 
             st.write("") 
-                st.text_area("Card do Lançamento para Copiar", card_lanc, height=200, key=f"txt_card_esp_{r_id}")
+        st.text_area("Card do Lançamento para Copiar", card_lanc, height=200, key=f"txt_card_esp_{r_id}")
 
-                link_zap_lanc = f"https://wa.me/?text={urllib.parse.quote(card_lanc)}"
-                st.markdown(f'[📲 Enviar este Lançamento para o WhatsApp]({link_zap_lanc})', unsafe_allow_html=True)
-        else:
-            st.write("")
-            st.info("Nenhum lançamento encontrado com os filtros selecionados no período.")
+        link_zap_lanc = f"https://wa.me/?text={urllib.parse.quote(card_lanc)}"
+        st.markdown(f'[📲 Enviar este Lançamento para o WhatsApp]({link_zap_lanc})', unsafe_allow_html=True)
+    else:
+        st.write("")
+        st.info("Nenhum lançamento encontrado com os filtros selecionados no período.")
 
     # ==========================================
     # BOTÃO DE COMPARTILHAR RELATÓRIO GERAL NO WHATSAPP
