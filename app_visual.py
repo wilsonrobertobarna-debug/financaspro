@@ -2897,59 +2897,72 @@ elif "📄" in aba:
         st.info("Nenhum lançamento encontrado com os filtros selecionados no período.")
 
  # ==========================================
-    # BOTÃO DE COMPARTILHAR RELATÓRIO COMPLETO NO WHATSAPP
+    # BOTÃO OFICIAL DE COMPARTILHAR RELATÓRIO NO WHATSAPP
     # ==========================================
     st.markdown("---")
-    st.subheader("📲 Compartilhar Relatório Completo no WhatsApp")
+    st.subheader("📲 Enviar Relatório Geral para o WhatsApp")
 
-    # Garante as datas do período selecionado (ou usa o mês atual como fallback)
-    p_ini = prime_dia_str if 'prime_dia_str' in locals() else "01/09/2026"
-    p_fim = ult_dia_str if 'ult_dia_str' in locals() else "30/09/2026"
-
-    # Monta a estrutura exata do relatório que você quer disparar
-    texto_relatorio_completo = f"RELATÓRIO WILSON & FABIANA\n"
-    texto_relatorio_completo += f"Período: {p_ini} a {p_fim}\n"
-    texto_relatorio_completo += f"========================================\n"
+    # Montagem do relatório completo no formato padrão oficial
+    texto_relatorio_zap = f"RELATÓRIO WILSON & FABIANA\n"
+    texto_relatorio_zap += f"Período: {prime_dia_str} a {ult_dia_str}\n"
+    texto_relatorio_zap += f"========================================\n"
+    texto_relatorio_zap += f"REC: R$ {total_rec_mes:,.2f} | REND: R$ {total_rend_mes:,.2f} (Info)\n"
+    texto_relatorio_zap += f"DES: R$ {total_desp_mes:,.2f} | SOBRA: R$ {total_sobra_mes:,.2f}\n"
+    texto_relatorio_zap += f"🔴 A Pagar: R$ 0,00\n"
+    texto_relatorio_zap += f"🟢 A Receber: R$ 0,00\n"
+    texto_relatorio_zap += f"========================================\n\n"
     
-    # Adiciona Receitas, Despesas e Sobras (buscando das variáveis do sistema se existirem)
-    v_rec = total_rec_mes if 'total_rec_mes' in locals() else 12106.77
-    v_rend = total_rend_mes if 'total_rend_mes' in locals() else 1678.10
-    v_des = total_desp_mes if 'total_desp_mes' in locals() else 13248.71
-    v_sobra = v_rec - v_des
+    texto_relatorio_zap += f"SALDOS E CONTAS:\n"
+
+    # Varredura dos saldos e contas vindas da base oficial do seu painel
+    if 'df_bancos_info' in locals() and not df_bancos_info.empty:
+        for _, row in df_bancos_info.iterrows():
+            tipo_item = str(row.get('Tipo', '')).strip()
+            nome_item = str(row.get('Banco', row.get('Nome', 'Item'))).strip()
+            val_item = row.get('Saldo', row.get('Valor', 0.0))
+            
+            if tipo_item in ['Cartão', 'Cartao']:
+                limite = row.get('Limite', 0.0)
+                usado = row.get('Usado', val_item)
+                disp = limite - usado
+                venc = row.get('Vencimento', 'N/D')
+                texto_relatorio_zap += f"💳 {nome_item}: Limite: R$ {limite:,.2f} | Usado: R$ {usado:,.2f} | Disp: R$ {disp:,.2f} (Venc: {venc})\n"
+            elif tipo_item in ['Investimento', 'Investimentos', 'Invest']:
+                moeda = str(row.get('Moeda', 'BRL')).upper()
+                prefixo_moeda = "U$" if moeda == "USD" else ("€" if moeda == "EUR" else "R$")
+                texto_relatorio_zap += f"💰 {nome_item}: {prefixo_moeda} {val_item:,.2f}\n"
+            elif tipo_item in ['Veículo', 'Veiculo', 'Veiculos']:
+                texto_relatorio_zap += f"🚗 {nome_item}: R$ {val_item:,.2f}\n"
+            else:
+                texto_relatorio_zap += f"🏦 {nome_item}: R$ {val_item:,.2f}\n"
+
+    texto_relatorio_zap += f"\n----------------------------------------\n"
+    texto_relatorio_zap += f"📊 Subtotal Contas & Invest. (BRL): R$ {subtotal_contas_invest_brl:,.2f}\n"
     
-    texto_relatorio_completo += f"REC: R$ {v_rec:,.2f} | REND: R$ {v_rend:,.2f} (Info)\n"
-    texto_relatorio_completo += f"DES: R$ {v_des:,.2f} | SOBRA: R$ {v_sobra:,.2f}\n"
-    texto_relatorio_completo += f"🔴 A Pagar: R$ 0,00\n"
-    texto_relatorio_completo += f"🟢 A Receber: R$ 0,00\n"
-    texto_relatorio_completo += f"========================================\n\n"
+    if 'total_invest_usd' in locals() and (total_invest_usd + saldo_outras_usd) > 0:
+        texto_relatorio_zap += f"📊 Subtotal Contas & Invest. (USD): U$ {(total_invest_usd + saldo_outras_usd):,.2f}\n"
+    if 'total_invest_eur' in locals() and (total_invest_eur + saldo_outras_eur) > 0:
+        texto_relatorio_zap += f"📊 Subtotal Contas & Invest. (EUR): € {(total_invest_eur + saldo_outras_eur):,.2f}\n"
+        
+    texto_relatorio_zap += f"💳 Subtotal Cartões Usados: R$ {subtotal_cartoes_usados:,.2f} if 'subtotal_cartoes_usados' in locals() else R$ 0,00\n".replace("if 'subtotal_cartoes_usados' in locals() else R$ 0,00", f"{subtotal_cartoes_usados:,.2f}" if 'subtotal_cartoes_usados' in locals() else "0,00")
     
-    texto_relatorio_completo += f"SALDOS E CONTAS:\n"
+    if 'saldo_veiculos_brl' in locals() and saldo_veiculos_brl > 0:
+        texto_relatorio_zap += f"🚗 Subtotal Veículos (BRL): R$ {saldo_veiculos_brl:,.2f}\n"
+        
+    texto_relatorio_zap += f"========================================\n"
+    texto_relatorio_zap += f"💎 PATRIMÔNIO TOTAL:\n"
+    texto_relatorio_zap += f"🇧🇷 Real: R$ {(subtotal_contas_invest_brl + (saldo_veiculos_brl if 'saldo_veiculos_brl' in locals() else 0)):,.2f}\n"
+    
+    if 'total_invest_usd' in locals() and (total_invest_usd + saldo_outras_usd) > 0:
+        texto_relatorio_zap += f"🇺🇸 Dólar: U$ {(total_invest_usd + saldo_outras_usd):,.2f}\n"
+    if 'total_invest_eur' in locals() and (total_invest_eur + saldo_outras_eur) > 0:
+        texto_relatorio_zap += f"🇪🇺 Euro: € {(total_invest_eur + saldo_outras_eur):,.2f}\n"
 
-    # Puxa as variáveis consolidadas principais calculadas pelo sistema:
-    brl_total = subtotal_contas_invest_brl if 'subtotal_contas_invest_brl' in locals() else 180598.58
-    usd_total = (total_invest_usd + saldo_outras_usd) if 'total_invest_usd' in locals() and 'saldo_outras_usd' in locals() else 1407.90
-    eur_total = (total_invest_eur + saldo_outras_eur) if 'total_invest_eur' in locals() and 'saldo_outras_eur' in locals() else 111.81
-    veiculos_total = saldo_veiculos_brl if 'saldo_veiculos_brl' in locals() else 110540.00
-    patrimonio_brl = brl_total + veiculos_total
+    # Exibe a caixa de texto e o link direto para disparar no WhatsApp
+    st.text_area("Texto do Relatório para Copiar", texto_relatorio_zap, height=220, key="txt_relatorio_oficial_zap")
 
-    # Subtotais e patrimônio total calculados:
-    texto_relatorio_completo += f"*(Relatório consolidado gerado com base nos saldos atuais do painel)*\n\n"
-    texto_relatorio_completo += f"----------------------------------------\n"
-    texto_relatorio_completo += f"📊 Subtotal Contas & Invest. (BRL): R$ {brl_total:,.2f}\n"
-    texto_relatorio_completo += f"📊 Subtotal Contas & Invest. (USD): U$ {usd_total:,.2f}\n"
-    texto_relatorio_completo += f"📊 Subtotal Contas & Invest. (EUR): € {eur_total:,.2f}\n"
-    texto_relatorio_completo += f"🚗 Subtotal T-Cross + Moto Lead (BRL): R$ {veiculos_total:,.2f}\n"
-    texto_relatorio_completo += f"========================================\n"
-    texto_relatorio_completo += f"💎 PATRIMÔNIO TOTAL:\n"
-    texto_relatorio_completo += f"🇧🇷 Real: R$ {patrimonio_brl:,.2f}\n"
-    texto_relatorio_completo += f"🇺🇸 Dólar: U$ {usd_total:,.2f}\n"
-    texto_relatorio_completo += f"🇪🇺 Euro: € {eur_total:,.2f}\n"
-
-    # Caixa de texto e link do WhatsApp
-    st.text_area("Texto Completo para o WhatsApp", texto_relatorio_completo, height=250, key="txt_relatorio_completo_zap")
-
-    link_zap_completo = f"https://wa.me/?text={urllib.parse.quote(texto_relatorio_completo)}"
-    st.markdown(f'[📲 Enviar Relatório Completo para o WhatsApp]({link_zap_completo})', unsafe_allow_html=True)  
+    link_zap_oficial = f"https://wa.me/?text={urllib.parse.quote(texto_relatorio_zap)}"
+    st.markdown(f'[📲 Disparar Relatório Completo para o WhatsApp]({link_zap_oficial})', unsafe_allow_html=True) 
 
 
 if aba == "📋 Relatório PDF":
