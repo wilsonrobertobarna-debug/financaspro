@@ -492,8 +492,7 @@ def get_valor_pendente(df):
 # ==========================================
 # CHAMADA OBRIGATÓRIA DA FUNÇÃO NO FLUXO PRINCIPAL
 # ==========================================
-if 'df_base' in locals() or 'df_base' in globals():
-
+# 4. SIDEBAR - NAVEGAÇÃO
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 
@@ -502,15 +501,7 @@ if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     st.cache_data.clear()
     st.rerun()
 
-# 📲 BOTÃO PARA TESTAR O WHATSAPP A HORA QUE QUISER
-if st.sidebar.button("📲 Testar Envio WhatsApp"):
-    st.session_state['forcar_envio_wa'] = True
-    if 'last_wa_date' in st.session_state:
-        del st.session_state['last_wa_date']
-    st.rerun()  # Dar o rerun aqui agora vai forçar o app a recarregar e executar a função logo acima!
-
 st.sidebar.divider()
-
 
 if 'page' not in st.session_state:
     st.session_state.page = "💰 Finanças & Bancos"
