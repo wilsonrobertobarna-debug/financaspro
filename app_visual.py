@@ -2896,7 +2896,7 @@ elif "📄" in aba:
         st.write("")
         st.info("Nenhum lançamento encontrado com os filtros selecionados no período.")
 
-   # ==========================================
+ # ==========================================
     # BOTÃO DE COMPARTILHAR RELATÓRIO COMPLETO NO WHATSAPP
     # ==========================================
     st.markdown("---")
@@ -2925,15 +2925,14 @@ elif "📄" in aba:
     
     texto_relatorio_completo += f"SALDOS E CONTAS:\n"
 
-    # Se você já tiver o dicionário de contas/saldos gerado pelo seu relatório completo, podemos varrer ele aqui. 
-    # Caso contrário, puxamos as variáveis consolidadas principais que calculamos:
+    # Puxa as variáveis consolidadas principais calculadas pelo sistema:
     brl_total = subtotal_contas_invest_brl if 'subtotal_contas_invest_brl' in locals() else 180598.58
     usd_total = (total_invest_usd + saldo_outras_usd) if 'total_invest_usd' in locals() and 'saldo_outras_usd' in locals() else 1407.90
     eur_total = (total_invest_eur + saldo_outras_eur) if 'total_invest_eur' in locals() and 'saldo_outras_eur' in locals() else 111.81
     veiculos_total = saldo_veiculos_brl if 'saldo_veiculos_brl' in locals() else 110540.00
     patrimonio_brl = brl_total + veiculos_total
 
-    # Exemplo dos subtotais e patrimônio total calculados pela sua regra de ouro:
+    # Subtotais e patrimônio total calculados:
     texto_relatorio_completo += f"*(Relatório consolidado gerado com base nos saldos atuais do painel)*\n\n"
     texto_relatorio_completo += f"----------------------------------------\n"
     texto_relatorio_completo += f"📊 Subtotal Contas & Invest. (BRL): R$ {brl_total:,.2f}\n"
@@ -2950,7 +2949,7 @@ elif "📄" in aba:
     st.text_area("Texto Completo para o WhatsApp", texto_relatorio_completo, height=250, key="txt_relatorio_completo_zap")
 
     link_zap_completo = f"https://wa.me/?text={urllib.parse.quote(texto_relatorio_completo)}"
-    st.markdown(f'[📲 Enviar Relatório Completo para o WhatsApp]({link_zap_completo})', unsafe_allow_html=True)     
+    st.markdown(f'[📲 Enviar Relatório Completo para o WhatsApp]({link_zap_completo})', unsafe_allow_html=True)  
 
 
 if aba == "📋 Relatório PDF":
