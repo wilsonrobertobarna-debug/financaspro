@@ -3435,7 +3435,7 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
-    # --- FUNÇÃO DE CONVERSÃO SEGURA ---
+   # --- FUNÇÃO DE CONVERSÃO SEGURA ---
     def converter_valor_br_seguro(val):
         if pd.isna(val):
             return 0.0
@@ -3457,82 +3457,82 @@ if aba == "📊 Análises & Configurações":
             return float(val_str)
         except:
             return 0.0
-   # Valores cravados e alinhados com o seu controle real:
-   # Inicializadores dos totais
-    guardado_atual = 0.0          # Investimentos BRL
-    saldo_outras_brl = 0.0        # Contas Correntes BRL
-    saldo_veiculos_brl = 0.0      # Veículos BRL
-    total_invest_usd = 0.0        # Investimentos USD
-    total_invest_eur = 0.0        # Investimentos EUR
+
+    # Inicializadores dos totais
+    guardado_atual = 0.0            # Investimentos BRL
+    saldo_outras_brl = 0.0          # Contas Correntes BRL
+    saldo_veiculos_brl = 0.0        # Veículos BRL
+    total_invest_usd = 0.0          # Investimentos USD
+    total_invest_eur = 0.0          # Investimentos EUR
     saldo_outras_usd = 0.0
     saldo_outras_eur = 0.0
 
-    if not df_bancos_info.empty:
-        for idx, row in df_bancos_info.iterrows():
-            try:
-                nome_banco = row.iloc[0] if len(row) > 0 else ''
-                if not nome_banco or str(nome_banco) == 'nan':
-                    continue
-                
-                val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
-                saldo_inicial = float(val_str) if val_str and val_str != 'nan' else 0.0
-                tipo_c = str(row.iloc[2]).strip().upper() if len(row) > 2 else ''
-                moeda_banco = str(row.iloc[5]).strip().upper() if len(row) > 5 and str(row.iloc[5]).strip() else "BRL"
-                b_up = str(nome_banco).upper()
+    try:
+        if 'df_bancos_info' in locals() and not df_bancos_info.empty:
+            for idx, row in df_bancos_info.iterrows():
+                try:
+                    nome_banco = row.iloc[0] if len(row) > 0 else ''
+                    if not nome_banco or str(nome_banco) == 'nan':
+                        continue
+                    
+                    val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
+                    saldo_inicial = float(val_str) if val_str and val_str != 'nan' else 0.0
+                    tipo_c = str(row.iloc[2]).strip().upper() if len(row) > 2 else ''
+                    moeda_banco = str(row.iloc[5]).strip().upper() if len(row) > 5 and str(row.iloc[5]).strip() else "BRL"
+                    b_up = str(nome_banco).upper()
 
-                # Ignora cartões de crédito para o cálculo de saldo patrimonial de contas/investimentos
-                if "CARTA" in tipo_c or "CART" in b_up:
-                    continue
+                    # Ignora cartões de crédito para o cálculo de saldo patrimonial
+                    if "CARTA" in tipo_c or "CART" in b_up:
+                        continue
 
-                # Identifica Veículos / Bens
-                if "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
-                    if moeda_banco == "BRL":
-                        saldo_veiculos_brl += saldo_inicial
-                    continue
+                    # Identifica Veículos / Bens
+                    if "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
+                        if moeda_banco == "BRL":
+                            saldo_veiculos_brl += saldo_inicial
+                        continue
 
-                # Identifica Vale Refeição (Geralmente não soma no patrimônio líquido de contas/invest)
-                if "REFEIÇÃO" in tipo_c or "VR" in b_up or "VA" in b_up or "ALIMENTAÇÃO" in b_up:
-                    continue
+                    # Identifica Vale Refeição
+                    if "REFEIÇÃO" in tipo_c or "VR" in b_up or "VA" in b_up or "ALIMENTAÇÃO" in b_up:
+                        continue
 
-                # Para Contas Correntes e Investimentos, calcula o saldo atualizado com base nos lançamentos (mesma lógica do relatório)
-                filtro = (df_base['Banco'] == nome_banco) & ((df_base['Status'].str.upper() == 'PAGO') | (df_base['Status'] == ''))
-                df_banco_atual = df_base[filtro]
-                
-                entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
-                saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
-                
-                saldo_atual = saldo_inicial + entradas - saidas
+                    # Calcula o saldo atualizado com base nos lançamentos
+                    filtro = (df_base['Banco'] == nome_banco) & ((df_base['Status'].str.upper() == 'PAGO') | (df_base['Status'] == ''))
+                    df_banco_atual = df_base[filtro]
+                    
+                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+                    
+                    saldo_atual = saldo_inicial + entradas - saidas
 
-                # SEPARAÇÃO EXATA BASEADA NA SUA REGRA DE TIPO ("INVEST")
-                is_investimento = "INVEST" in tipo_c or "POUP" in tipo_c or "PREV" in tipo_c
+                    # Separação exata baseada na regra de tipo
+                    is_investimento = "INVEST" in tipo_c or "POUP" in tipo_c or "PREV" in tipo_c
 
-                if moeda_banco == "USD":
-                    if is_investimento:
-                        total_invest_usd += saldo_atual
-                    else:
-                        saldo_outras_usd += saldo_atual
-                elif moeda_banco == EUR if 'EUR' in globals() else moeda_banco == "EUR": # segurança para Euro
-                    if is_investimento:
-                        total_invest_eur += saldo_atual
-                    else:
-                        saldo_outras_eur += saldo_atual
-                else: # BRL
-                    if is_investimento:
-                        guardado_atual += saldo_atual
-                    else:
-                        saldo_outras_brl += saldo_atual
+                    if moeda_banco == "USD":
+                        if is_investimento:
+                            total_invest_usd += saldo_atual
+                        else:
+                            saldo_outras_usd += saldo_atual
+                    elif moeda_banco == "EUR":
+                        if is_investimento:
+                            total_invest_eur += saldo_atual
+                        else:
+                            saldo_outras_eur += saldo_atual
+                    else: # BRL
+                        if is_investimento:
+                            guardado_atual += saldo_atual
+                        else:
+                            saldo_outras_brl += saldo_atual
 
-            except Exception as ex:
-                pass
+                except Exception as ex:
+                    pass
 
         subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
         subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
 
-    
-                
     except Exception as e:
         st.error(f"Erro ao calcular os saldos: {e}")
+
     # Formulário da Meta
     with st.form("form_reserva_financeira_principal"):
         meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
