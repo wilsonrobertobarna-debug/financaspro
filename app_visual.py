@@ -1491,43 +1491,32 @@ if "💰" in st.session_state.page:
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
-    # 1. BARRINHA DE MESES (Topo)
+# 1. BARRINHA DE MESES
     meses_abreviados = [
         "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
         "Jul", "Ago", "Set", "Out", "Nov", "Dez"
     ]
 
-    if 'mes_global' not in st.session_state:
-        num_mes_atual = datetime.now().month - 1
-        st.session_state['mes_global'] = meses_abreviados[num_mes_atual] if meses_abreviados else "Jan"
+    num_mes_atual = datetime.now().month - 1
+    default_mes = meses_abreviados[num_mes_atual] if meses_abreviados else "Jan"
 
     mes_map = {
         "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
         "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
     }
 
-   # Sincroniza o valor atual da chave da barrinha do topo com a memória global
-    st.session_state['pills_topo'] = st.session_state.get('mes_global', meses_abreviados[0])
-
-    def atualiza_mes_topo():
-        st.session_state['mes_global'] = st.session_state['pills_topo']
-
     mes_atual = st.pills(
         "Período:",
         meses_abreviados,
         selection_mode="single",
-        key="pills_topo",
-        on_change=atualiza_mes_topo
+        default=default_mes,
     )
 
-    mes_atual = st.session_state.get('mes_global', meses_abreviados[0])
-
     if not mes_atual or mes_atual not in mes_map:
-        mes_atual = meses_abreviados[0]
+        mes_atual = default_mes
 
     if not df_base.empty:
         filtro_mes = f"{mes_map.get(mes_atual, '08')}/26"
-        # ... (o restante do seu código continua exatamente igual daqui para baixo)
         
         # Filtra os dados do mês
         df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
@@ -1724,34 +1713,40 @@ if "💰" in st.session_state.page:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-     # =========================================================================
-        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO)
+      # =========================================================================
+        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (COM SELETOR DE MÊS PRÓPRIO)
         # =========================================================================
         st.markdown("---")
         st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
         
-        # Sincroniza o valor atual da chave da barrinha de baixo com a memória global
-        st.session_state['pills_baixo'] = st.session_state.get('mes_global', meses_abreviados[0])
-
-        def atualiza_mes_baixo():
-            st.session_state['mes_global'] = st.session_state['pills_baixo']
-
-        mes_cartao_escolhido = st.pills(
-            "Período (Cartões):",
-            meses_abreviados,
+        # Barrinha de meses exclusiva para esta seção (evita rolar a página até o topo!)
+        meses_abreviados_cartao = [
+            "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
+            "Jul", "Ago", "Set", "Out", "Nov", "Dez"
+        ]
+        
+        mes_map_cartao = {
+            "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
+            "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
+        }
+        
+        # Sincroniza o padrão com o mesmo mês que está selecionado no topo ou usa Setembro como padrão
+        default_mes_cartao = locals().get('mes_atual', 'Set')
+        
+        mes_escolhido_cartao = st.pills(
+            "Período dos Cartões:",
+            meses_abreviados_cartao,
             selection_mode="single",
-            key="pills_baixo",
-            on_change=atualiza_mes_baixo
+            default=default_mes_cartao if default_mes_cartao in meses_abreviados_cartao else "Set",
+            key="pills_cartoes_secao"
         )
-
-        # O mês ativo dos cartões segue a memória global unificada
-        mes_ativo_cartoes = st.session_state.get('mes_global', mes_atual)
-        filtro_mes_cartoes = f"{mes_map.get(mes_ativo_cartoes, '09')}/26"
-
-        if not df_base.empty:
-            df_m_cartoes = df_base[df_base['Mes_Ano'] == filtro_mes_cartoes].copy()
-        else:
-            df_m_cartoes = pd.DataFrame()
+        
+        if not mes_escolhido_cartao or mes_escolhido_cartao not in mes_map_cartao:
+            mes_escolhido_cartao = "Set"
+            
+        # Filtra o DataFrame base especificamente para o mês escolhido nesta seção
+        filtro_mes_cartao = f"{mes_map_cartao.get(mes_escolhido_cartao, '09')}/26"
+        df_m_cartoes = df_base[df_base['Mes_Ano'] == filtro_mes_cartao].copy() if not df_base.empty else pd.DataFrame()
         
         coluna_banco = next((col for col in ['Nome do Banco', 'Banco', 'Instituição', 'Conta'] if col in df_m_cartoes.columns), None)
         
@@ -1760,7 +1755,7 @@ if "💰" in st.session_state.page:
             "Mastercard - 8112": "8112",
             "Visa Gold - 0132": "0132",
             "Visa - Mercado Pago": "Mercado Pago",
-            "Itau Gold": "itau"
+            "Itau Gold": "itau"  # Busca o termo "itau" com segurança para o Itaú Gold
         }
         
         lista_cartoes_controle = list(mapeamento_cartoes.keys())
@@ -1769,21 +1764,24 @@ if "💰" in st.session_state.page:
         
         if coluna_banco and not df_m_cartoes.empty:
             for nome_oficial, termo_busca in mapeamento_cartoes.items():
+               # Máscara base: pega apenas o que é Despesa e do banco correto
                mask = (df_m_cartoes['Tipo'] == 'Despesa') & (df_m_cartoes[coluna_banco].astype(str).str.contains(termo_busca, case=False, na=False))
                
+               # BLINDA CONTRA TRANSFERÊNCIAS E PAGAMENTOS:
                if 'Descrição' in df_m_cartoes.columns:
                    mask = mask & (~df_m_cartoes['Descrição'].astype(str).str.contains("Pagamento|Fatura|Pgto|cartão de credito|Transferência|Transf", case=False, na=False))
                
                if 'Categoria' in df_m_cartoes.columns:
                    mask = mask & (~df_m_cartoes['Categoria'].astype(str).str.contains("Transferência|Transf|Cartão", case=False, na=False))
                
+               # BLINDA CARTÕES ESPECÍFICOS (Inter e Mercado Pago)
                if termo_busca == "Inter":
                    mask = mask & (df_m_cartoes[coluna_banco].astype(str).str.contains("Cartão", case=False, na=False)) & (~df_m_cartoes[coluna_banco].astype(str).str.contains("Pendência|Boleto|Empréstimo", case=False, na=False))
                elif termo_busca == "Mercado Pago":
                    mask = mask & (df_m_cartoes[coluna_banco].astype(str).str.contains("Cartão|Visa", case=False, na=False))                
                
-               gasto_total_cartao = df_m_cartoes[mask]['V_Num'].sum()
-               dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total_cartao})
+               gasto_total = df_m_cartoes[mask]['V_Num'].sum()
+               dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total})
                
                sub_df = df_m_cartoes[mask]
                if not sub_df.empty:
@@ -1801,8 +1799,8 @@ if "💰" in st.session_state.page:
             for c in lista_cartoes_controle:
                 status_cartoes_mes[c] = "Pendente"
             
-        # =========================================================================
-        # 💳 CARREGAMENTO DE METAS DOS CARTÕES
+      # =========================================================================
+        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (COM VALORES ABREVIADOS EM 'k')
         # =========================================================================
         df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
         
@@ -1830,6 +1828,7 @@ if "💰" in st.session_state.page:
                                 pass
             except:
                 pass
+
         df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
         if not df_cartoes_graph.empty:
@@ -2267,27 +2266,14 @@ elif "Pendências" in aba:
             st.info("Nenhum banco com pendências no período selecionado.")
                         
         st.markdown("---")
-        # --- SELEÇÃO DE BANCO E BOTÃO DE BAIXA ---
+        # --- BOTÃO DE BAIXA ---
         if not df_v.empty:
-            c_data, c_banco_pag = st.columns(2)
-            
-            with c_data:
-                nova_data = st.date_input(
-                    "Data de pagamento para baixa:", 
-                    hoje_br, 
-                    format="DD/MM/YYYY", 
-                    key="data_baixa_pend"
-                )
-            
-            with c_banco_pag:
-                # Pega todos os bancos cadastrados para o usuário escolher de onde sai o dinheiro
-                bancos_pagamento_disponiveis = sorted(bancos_disponiveis) if 'bancos_disponiveis' in locals() and bancos_disponiveis else []
-                banco_origem_pagamento = st.selectbox(
-                    "🏦 Banco para quitar/pagar (Opcional):",
-                    [""] + bancos_pagamento_disponiveis,
-                    key="banco_origem_pagamento_pend"
-                )
-
+            nova_data = st.date_input(
+                "Data de pagamento para baixa:", 
+                hoje_br, 
+                format="DD/MM/YYYY", 
+                key="data_baixa_pend"
+            )
             if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_final"):
                 headers = ws_base.row_values(1)
                 idx_status = headers.index('Status') + 1
@@ -2300,80 +2286,14 @@ elif "Pendências" in aba:
                     ws_base.update_cell(linha_sheets, idx_venc, f"'{nova_data.strftime('%d/%m/%Y')}")
                     sucessos += 1
                 
-                # --- MÁGICA DA TRANSFERÊNCIA AUTOMÁTICA SE ESCOLHEU UM BANCO ---
-                if banco_origem_pagamento and not df_v.empty:
-                    # Agrupa os valores por cartão/banco presente nas pendências selecionadas
-                    soma_por_cartao = df_v.groupby('Banco')['V_Num'].sum().reset_index()
-                    
-                    # Descobre o próximo ID disponível na planilha para evitar conflito
-                    try:
-                        raw_data_id = ws_base.get_all_values()
-                        header_id = [str(c).strip() for c in raw_data_id[0]]
-                        idx_id_col = header_id.index('ID') if 'ID' in header_id else -1
-                        
-                        max_id = 1
-                        if idx_id_col != -1 and len(raw_data_id) > 1:
-                            ids_existentes = []
-                            for r in raw_data_id[1:]:
-                                if len(r) > idx_id_col and r[idx_id_col].strip():
-                                    try:
-                                        ids_existentes.append(int(float(r[idx_id_col])))
-                                    except:
-                                        pass
-                            if ids_existentes:
-                                max_id = max(ids_existentes) + 1
-                    except:
-                        max_id = 9999
-                
-                    data_str_fmt = nova_data.strftime("%d/%m/%Y")
-                    
-                    for idx_c, row_c in soma_por_cartao.iterrows():
-                        cartao_destino = row_c['Banco']
-                        valor_total_fatura = row_c['V_Num']
-                        
-                        if valor_total_fatura <= 0:
-                            continue
-                            
-                        val_str_fmt = f"{valor_total_fatura:.2f}".replace('.', ',')
-                        
-                        # 1. Lançamento de SAÍDA (Débito) no Banco escolhido
-                        ws_base.append_row([
-                            data_str_fmt,           # Data
-                            val_str_fmt,            # Valor
-                            f"Pgto Fatura {cartao_destino}", # Descrição
-                            "Transferência",        # Categoria (ajuste se necessário)
-                            "Despesa",              # Tipo
-                            banco_origem_pagamento, # Banco de saída
-                            "Pago",                 # Status
-                            data_str_fmt,           # Data Compra
-                            max_id,                 # ID
-                            "Titular",              # Beneficiário
-                            "", "",                 # Km / Litros
-                        ])
-                        
-                        max_id += 1
-                        
-                        # 2. Lançamento de ENTRADA (Crédito) no Cartão
-                        ws_base.append_row([
-                            data_str_fmt,           # Data
-                            val_str_fmt,            # Valor
-                            f"Recebimento Pgto Fatura", # Descrição
-                            "Transferência",        # Categoria
-                            "Recendimento",         # Tipo (ou Receita, dependendo da sua regra de cartão)
-                            cartao_destino,         # Banco/Cartão de entrada
-                            "Pago",                 # Status
-                            data_str_fmt,           # Data Compra
-                            max_id,                 # ID
-                            "Titular",              # Beneficiário
-                            "", "",                 # Km / Litros
-                        ])
-                        max_id += 1
-
-                st.toast(f"✅ {sucessos} itens baixados e transferência gerada com sucesso!", icon="💰")
+                st.toast(f"✅ {sucessos} itens baixados!", icon="💰")
                 atualizar_sessao()
                 st.rerun()
         else:
             st.info("Nenhum lançamento encontrado neste período.")
+        
+        st.divider()
+        st.subheader("🔔 Avisos: Vencimentos Próximos")
     
   # 1. Filtros
     c1, c2, c3 = st.columns(3)
@@ -2882,7 +2802,7 @@ elif "📄" in aba:
             card_lanc += f"💰 *Valor:* R$ {item_esp['Valor']}\n"
             card_lanc += f"📅 *Vencimento:* {item_esp['Vencimento']}\n"
             card_lanc += f"🏦 *Banco:* {item_esp['Banco']}\n"
-            card_lanc += f"🏷️️ *Categoria:* {item_esp.get('Categoria', 'N/D')}\n"
+            card_lanc += f"🏷️ *Categoria:* {item_esp.get('Categoria', 'N/D')}\n"
             card_lanc += f"👤 *Beneficiário:* {benef_esp}\n"
             card_lanc += f"📋 *Tipo:* {item_esp.get('Tipo', 'N/D')} | *Status:* {item_esp['Status']}\n"
             card_lanc += f"========================================\n"
@@ -2895,74 +2815,7 @@ elif "📄" in aba:
     else:
         st.write("")
         st.info("Nenhum lançamento encontrado com os filtros selecionados no período.")
-
- # ==========================================
-    # BOTÃO OFICIAL DE COMPARTILHAR RELATÓRIO NO WHATSAPP
-    # ==========================================
-    st.markdown("---")
-    st.subheader("📲 Enviar Relatório Geral para o WhatsApp")
-
-    # Montagem do relatório completo no formato padrão oficial
-    texto_relatorio_zap = f"RELATÓRIO WILSON & FABIANA\n"
-    texto_relatorio_zap += f"Período: {prime_dia_str} a {ult_dia_str}\n"
-    texto_relatorio_zap += f"========================================\n"
-    texto_relatorio_zap += f"REC: R$ {total_rec_mes:,.2f} | REND: R$ {total_rend_mes:,.2f} (Info)\n"
-    texto_relatorio_zap += f"DES: R$ {total_desp_mes:,.2f} | SOBRA: R$ {total_sobra_mes:,.2f}\n"
-    texto_relatorio_zap += f"🔴 A Pagar: R$ 0,00\n"
-    texto_relatorio_zap += f"🟢 A Receber: R$ 0,00\n"
-    texto_relatorio_zap += f"========================================\n\n"
-    
-    texto_relatorio_zap += f"SALDOS E CONTAS:\n"
-
-    # Varredura dos saldos e contas vindas da base oficial do seu painel
-    if 'df_bancos_info' in locals() and not df_bancos_info.empty:
-        for _, row in df_bancos_info.iterrows():
-            tipo_item = str(row.get('Tipo', '')).strip()
-            nome_item = str(row.get('Banco', row.get('Nome', 'Item'))).strip()
-            val_item = row.get('Saldo', row.get('Valor', 0.0))
-            
-            if tipo_item in ['Cartão', 'Cartao']:
-                limite = row.get('Limite', 0.0)
-                usado = row.get('Usado', val_item)
-                disp = limite - usado
-                venc = row.get('Vencimento', 'N/D')
-                texto_relatorio_zap += f"💳 {nome_item}: Limite: R$ {limite:,.2f} | Usado: R$ {usado:,.2f} | Disp: R$ {disp:,.2f} (Venc: {venc})\n"
-            elif tipo_item in ['Investimento', 'Investimentos', 'Invest']:
-                moeda = str(row.get('Moeda', 'BRL')).upper()
-                prefixo_moeda = "U$" if moeda == "USD" else ("€" if moeda == "EUR" else "R$")
-                texto_relatorio_zap += f"💰 {nome_item}: {prefixo_moeda} {val_item:,.2f}\n"
-            elif tipo_item in ['Veículo', 'Veiculo', 'Veiculos']:
-                texto_relatorio_zap += f"🚗 {nome_item}: R$ {val_item:,.2f}\n"
-            else:
-                texto_relatorio_zap += f"🏦 {nome_item}: R$ {val_item:,.2f}\n"
-
-    texto_relatorio_zap += f"\n----------------------------------------\n"
-    texto_relatorio_zap += f"📊 Subtotal Contas & Invest. (BRL): R$ {subtotal_contas_invest_brl:,.2f}\n"
-    
-    if 'total_invest_usd' in locals() and (total_invest_usd + saldo_outras_usd) > 0:
-        texto_relatorio_zap += f"📊 Subtotal Contas & Invest. (USD): U$ {(total_invest_usd + saldo_outras_usd):,.2f}\n"
-    if 'total_invest_eur' in locals() and (total_invest_eur + saldo_outras_eur) > 0:
-        texto_relatorio_zap += f"📊 Subtotal Contas & Invest. (EUR): € {(total_invest_eur + saldo_outras_eur):,.2f}\n"
-        
-    texto_relatorio_zap += f"💳 Subtotal Cartões Usados: R$ {subtotal_cartoes_usados:,.2f} if 'subtotal_cartoes_usados' in locals() else R$ 0,00\n".replace("if 'subtotal_cartoes_usados' in locals() else R$ 0,00", f"{subtotal_cartoes_usados:,.2f}" if 'subtotal_cartoes_usados' in locals() else "0,00")
-    
-    if 'saldo_veiculos_brl' in locals() and saldo_veiculos_brl > 0:
-        texto_relatorio_zap += f"🚗 Subtotal Veículos (BRL): R$ {saldo_veiculos_brl:,.2f}\n"
-        
-    texto_relatorio_zap += f"========================================\n"
-    texto_relatorio_zap += f"💎 PATRIMÔNIO TOTAL:\n"
-    texto_relatorio_zap += f"🇧🇷 Real: R$ {(subtotal_contas_invest_brl + (saldo_veiculos_brl if 'saldo_veiculos_brl' in locals() else 0)):,.2f}\n"
-    
-    if 'total_invest_usd' in locals() and (total_invest_usd + saldo_outras_usd) > 0:
-        texto_relatorio_zap += f"🇺🇸 Dólar: U$ {(total_invest_usd + saldo_outras_usd):,.2f}\n"
-    if 'total_invest_eur' in locals() and (total_invest_eur + saldo_outras_eur) > 0:
-        texto_relatorio_zap += f"🇪🇺 Euro: € {(total_invest_eur + saldo_outras_eur):,.2f}\n"
-
-    # Exibe a caixa de texto e o link direto para disparar no WhatsApp
-    st.text_area("Texto do Relatório para Copiar", texto_relatorio_zap, height=220, key="txt_relatorio_oficial_zap")
-
-    link_zap_oficial = f"https://wa.me/?text={urllib.parse.quote(texto_relatorio_zap)}"
-    st.markdown(f'[📲 Disparar Relatório Completo para o WhatsApp]({link_zap_oficial})', unsafe_allow_html=True) 
+      
 
 
 if aba == "📋 Relatório PDF":
@@ -3477,7 +3330,7 @@ if aba == "📋 Relatório PDF":
 if aba == "📊 Análises & Configurações":
     st.markdown("## 📊 Painel de Análises & Configurações")
     
- # =========================================================================
+    # =========================================================================
     # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
     # =========================================================================
     st.markdown("---")
@@ -3502,7 +3355,7 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
-   # --- FUNÇÃO DE CONVERSÃO SEGURA ---
+    # --- FUNÇÃO DE CONVERSÃO SEGURA ---
     def converter_valor_br_seguro(val):
         if pd.isna(val):
             return 0.0
@@ -3525,158 +3378,6 @@ if aba == "📊 Análises & Configurações":
         except:
             return 0.0
 
-    # Inicializadores dos totais
-    guardado_atual = 0.0            # Investimentos BRL
-    saldo_outras_brl = 0.0          # Contas Correntes BRL
-    saldo_veiculos_brl = 0.0        # Veículos BRL
-    total_invest_usd = 0.0          # Investimentos USD
-    total_invest_eur = 0.0          # Investimentos EUR
-    saldo_outras_usd = 0.0
-    saldo_outras_eur = 0.0
-
-    try:
-        if 'df_bancos_info' in locals() and not df_bancos_info.empty:
-            for idx, row in df_bancos_info.iterrows():
-                try:
-                    nome_banco = row.iloc[0] if len(row) > 0 else ''
-                    if not nome_banco or str(nome_banco) == 'nan':
-                        continue
-                    
-                    val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
-                    saldo_inicial = float(val_str) if val_str and val_str != 'nan' else 0.0
-                    tipo_c = str(row.iloc[2]).strip().upper() if len(row) > 2 else ''
-                    moeda_banco = str(row.iloc[5]).strip().upper() if len(row) > 5 and str(row.iloc[5]).strip() else "BRL"
-                    b_up = str(nome_banco).upper()
-
-                    # Ignora cartões de crédito para o cálculo de saldo patrimonial
-                    if "CARTA" in tipo_c or "CART" in b_up:
-                        continue
-
-                    # Identifica Veículos / Bens
-                    if "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
-                        if moeda_banco == "BRL":
-                            saldo_veiculos_brl += saldo_inicial
-                        continue
-
-                    # Identifica Vale Refeição
-                    if "REFEIÇÃO" in tipo_c or "VR" in b_up or "VA" in b_up or "ALIMENTAÇÃO" in b_up:
-                        continue
-
-                    # Calcula o saldo atualizado com base nos lançamentos
-                    filtro = (df_base['Banco'] == nome_banco) & ((df_base['Status'].str.upper() == 'PAGO') | (df_base['Status'] == ''))
-                    df_banco_atual = df_base[filtro]
-                    
-                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
-                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
-                    
-                    saldo_atual = saldo_inicial + entradas - saidas
-
-                    # Separação exata baseada na regra de tipo
-                    is_investimento = "INVEST" in tipo_c or "POUP" in tipo_c or "PREV" in tipo_c
-
-                    if moeda_banco == "USD":
-                        if is_investimento:
-                            total_invest_usd += saldo_atual
-                        else:
-                            saldo_outras_usd += saldo_atual
-                    elif moeda_banco == "EUR":
-                        if is_investimento:
-                            total_invest_eur += saldo_atual
-                        else:
-                            saldo_outras_eur += saldo_atual
-                    else: # BRL
-                        if is_investimento:
-                            guardado_atual += saldo_atual
-                        else:
-                            saldo_outras_brl += saldo_atual
-
-                except Exception as ex:
-                    pass
-
-        subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
-        subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
-        subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
-
-    except Exception as e:
-        st.error(f"Erro ao calcular os saldos: {e}")
-
-    # Formulário da Meta
-    with st.form("form_reserva_financeira_principal"):
-        meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-        salvar_reserva = st.form_submit_button("💾 Salvar Meta")
-        
-        if salvar_reserva:
-            try:
-                meta_limpa = meta_str_input.replace('R$', '').strip()
-                meta_limpa = meta_limpa.replace('.', '').replace(',', '.')
-                nova_meta = float(meta_limpa)
-                
-                ws_reserva.update(values=[[str(nova_meta)]], range_name='A2:A2')
-                st.toast("✅ Meta da reserva salva com sucesso!", icon="🎯")
-                st.rerun()
-            except ValueError:
-                st.error("⚠️ Formato de valor inválido.")
-
-    base_calculo_reserva = subtotal_contas_invest_brl
-    progresso = min(base_calculo_reserva / meta_atual, 1.0) if meta_atual > 0 else 0.0
-    percentual_reserva = (base_calculo_reserva / meta_atual) * 100 if meta_atual > 0 else 0.0
-
-    col_m1, col_m2, col_m3 = st.columns(3)
-    col_m1.metric("🎯 Meta Alvo", f"R$ {meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    col_m2.metric("💰 Patrimônio Total BRL", f"R$ {base_calculo_reserva:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    col_m3.metric("📈 Conclusão da Meta", f"{percentual_reserva:.1f}%")
-
-    st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")
-
-    with st.expander("📊 Conferência de Subtotais por Moeda (Espelho do WhatsApp)", expanded=True):
-        col_w1, col_w2, col_w3 = st.columns(3)
-        with col_w1:
-            st.metric("🇧🇷 Subtotal Contas & Invest. (BRL)", f"R$ {subtotal_contas_invest_brl:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-            st.caption(f"• Investimentos BRL: R$ {guardado_atual:,.2f}\n• Contas Correntes BRL: R$ {saldo_outras_brl:,.2f}")
-        with col_w2:
-            st.metric("🇺🇸 Subtotal Contas & Invest. (USD)", f"U$ {subtotal_invest_usd_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-        with col_w3:
-            st.metric("🇪🇺 Subtotal Contas & Invest. (EUR)", f"€ {subtotal_invest_eur_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-        
-        st.markdown(f"🚗 **Subtotal T-Cross + Moto Lead (BRL):** R$ {saldo_veiculos_brl:,.2f}")
-
-    st.divider()
-
-    # Gráfico de Evolução
-    st.subheader("📈 Evolução do Saldo Acumulado")
-    if 'df_base' in locals() and not df_base.empty:
-        df_base['DT'] = pd.to_datetime(df_base['DT'], format='%d/%m/%Y', errors='coerce')
-        df_base['V_Num'] = pd.to_numeric(df_base['V_Num'], errors='coerce').fillna(0)
-        
-        df_saldo_dia = df_base[df_base['Status'] == 'Pago'].sort_values('DT').copy()
-        
-        if not df_saldo_dia.empty:
-            df_saldo_dia['Valor_Com_Sinal'] = df_saldo_dia.apply(
-                lambda x: x['V_Num'] if x['Tipo'] in ['Receita', 'Rendimento'] else -x['V_Num'], axis=1
-            )
-            df_saldo_dia = df_saldo_dia.groupby('DT')['Valor_Com_Sinal'].sum().reset_index()
-            df_saldo_dia['Saldo_Acumulado'] = df_saldo_dia['Valor_Com_Sinal'].cumsum()
-            
-            fig_acum = px.line(df_saldo_dia, x='DT', y='Saldo_Acumulado', title="Progresso do Patrimônio Acumulado no Tempo", markers=True)
-            fig_acum.update_layout(height=350, margin=dict(l=20, r=20, t=50, b=20))
-            st.plotly_chart(fig_acum, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
-        else:
-            st.info("Não há lançamentos marcados como 'Pago'.")
-    else:
-        st.warning("A base de dados está vazia.")
-
-    st.divider()
-    
-    # 3. DATAFRAME: BANCOS E CARTÕES
-    st.subheader("🏦 Informações de Contas e Cartões")
-    if 'df_bancos_info' in locals() and not df_bancos_info.empty:
-        st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
-    else:
-        st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets.")
-
-
-
-    
     guardado_atual = 0.0
     saldo_outras_brl = 0.0
     saldo_veiculos_brl = 0.0
@@ -3730,17 +3431,18 @@ if aba == "📊 Análises & Configurações":
                     # 2. Ignora Cartões, VR e VA de forma rigorosa
                     if "cart" in tipo_limpo or "cart" in nome_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in nome_limpo or "va" in nome_limpo:
                         continue
-                   
-                    # 3. Cálculo do saldo real (Saldo Inicial + Todas as Entradas e Saídas da Conta)
-                    df_banco_atual = df_lanc_local[df_lanc_local['Banco'] == nome_conta]
+
+                    # 3. Cálculo do saldo real (Saldo Inicial + Entradas - Saídas Pagas)
+                    filtro = (df_lanc_local['Banco'] == nome_conta) & ((df_lanc_local['Status'].str.upper() == 'PAGO') | (df_lanc_local['Status'] == ''))
+                    df_banco_atual = df_lanc_local[filtro]
                     
                     entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
                     saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
                     
                     saldo_atual_conta = saldo_inicial + entradas - saidas
-                    
-                    # 4. Separação Oficial (Removido 'poupanc' para tratar poupança como conta corrente)
-                    is_investimento = 'invest' in tipo_limpo or 'aplicac' in tipo_limpo or 'prev' in tipo_limpo
+
+                    # 4. Separação Oficial
+                    is_investimento = 'invest' in tipo_limpo or 'aplicac' in tipo_limpo or 'poupanc' in tipo_limpo or 'prev' in tipo_limpo
 
                     if is_investimento:
                         if moeda == "BRL":
@@ -3784,18 +3486,17 @@ if aba == "📊 Análises & Configurações":
             except ValueError:
                 st.error("⚠️ Formato de valor inválido. Use o formato como 300000 ou 300.000,00")
 
-    # Exibição de Métricas e Progresso Visual (Utilizando o patrimônio total BRL sincronizado)
-    base_calculo_reserva = subtotal_contas_invest_brl
+    # Exibição de Métricas e Progresso Visual
     if meta_atual > 0:
-        progresso = min(base_calculo_reserva / meta_atual, 1.0)
-        percentual_reserva = (base_calculo_reserva / meta_atual) * 100
+        progresso = min(guardado_atual / meta_atual, 1.0)
+        percentual_reserva = (guardado_atual / meta_atual) * 100
     else:
         progresso = 0.0
         percentual_reserva = 0.0
 
     col_m1, col_m2, col_m3 = st.columns(3)
     col_m1.metric("🎯 Meta Alvo", f"R$ {meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    col_m2.metric("💰 Patrimônio Total BRL", f"R$ {base_calculo_reserva:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    col_m2.metric("💰 Apenas Investimentos", f"R$ {guardado_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
     col_m3.metric("📈 Conclusão da Meta", f"{percentual_reserva:.1f}%")
 
     st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")
@@ -3816,6 +3517,7 @@ if aba == "📊 Análises & Configurações":
         st.markdown(f"🚗 **Subtotal T-Cross + Moto Lead (BRL):** R$ {saldo_veiculos_brl:,.2f}")
 
     st.divider()
+
     # =========================================================================
     # 1. GRÁFICO: EVOLUÇÃO DO SALDO ACUMULADO
     # =========================================================================
