@@ -3530,12 +3530,7 @@ if aba == "📊 Análises & Configurações":
         subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
 
     
-        except Exception as e:
-            subtotal_contas_invest_brl = 0.0
-            subtotal_invest_usd_geral = 0.0
-            subtotal_invest_eur_geral = 0.0
-
-        
+                
     except Exception as e:
         st.error(f"Erro ao calcular os saldos: {e}")
     # Formulário da Meta
