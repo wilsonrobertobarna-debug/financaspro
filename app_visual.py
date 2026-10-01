@@ -2897,12 +2897,8 @@ elif "📄" in aba:
         st.info("Nenhum lançamento encontrado com os filtros selecionados no período.")
 
  # ==========================================
-    # BOTÃO OFICIAL DE COMPARTILHAR RELATÓRIO NO WHATSAPP
+    # BOTÃO DIRETO PARA O WHATSAPP (LIMPO E SEM CAIXA DE TEXTO)
     # ==========================================
-    st.markdown("---")
-    st.subheader("📲 Enviar Relatório Geral para o WhatsApp")
-
-    # Fallback seguro para as datas caso o nome da variável no seu script seja diferente
     p_ini_str = prime_dia_str if 'prime_dia_str' in locals() else (primeiro_dia_str if 'primeiro_dia_str' in locals() else "01/09/2026")
     p_fim_str = ult_dia_str if 'ult_dia_str' in locals() else (ultimo_dia_str if 'ultimo_dia_str' in locals() else "30/09/2026")
     
@@ -2923,7 +2919,7 @@ elif "📄" in aba:
     
     texto_relatorio_zap += f"SALDOS E CONTAS:\n"
 
-    # Varredura dos saldos e contas vindas da base oficial do seu painel
+    # Varredura dos saldos e contas vindas da base oficial
     if 'df_bancos_info' in locals() and not df_bancos_info.empty:
         for _, row in df_bancos_info.iterrows():
             tipo_item = str(row.get('Tipo', '')).strip()
@@ -2945,7 +2941,6 @@ elif "📄" in aba:
             else:
                 texto_relatorio_zap += f"🏦 {nome_item}: R$ {val_item:,.2f}\n"
 
-    # Puxa os subtotais globais com segurança
     sub_brl = subtotal_contas_invest_brl if 'subtotal_contas_invest_brl' in locals() else 0.0
     sub_cartoes = subtotal_cartoes_usados if 'subtotal_cartoes_usados' in locals() else 0.0
     sub_veiculos = saldo_veiculos_brl if 'saldo_veiculos_brl' in locals() else 0.0
@@ -2972,11 +2967,10 @@ elif "📄" in aba:
     if 'total_invest_eur' in locals() and 'saldo_outras_eur' in locals() and (total_invest_eur + saldo_outras_eur) > 0:
         texto_relatorio_zap += f"🇪🇺 Euro: € {(total_invest_eur + saldo_outras_eur):,.2f}\n"
 
-    # Exibe a caixa de texto e o link direto para disparar no WhatsApp
-    st.text_area("Texto do Relatório para Copiar", texto_relatorio_zap, height=220, key="txt_relatorio_oficial_zap")
-
+    # Renderiza apenas o botão direto, sem caixas de texto poluindo a tela
+    st.markdown("---")
     link_zap_oficial = f"https://wa.me/?text={urllib.parse.quote(texto_relatorio_zap)}"
-    st.markdown(f'[📲 Disparar Relatório Completo para o WhatsApp]({link_zap_oficial})', unsafe_allow_html=True)
+    st.markdown(f'### [📲 Enviar Relatório Completo para o WhatsApp]({link_zap_oficial})', unsafe_allow_html=True)
 
 
 if aba == "📋 Relatório PDF":
