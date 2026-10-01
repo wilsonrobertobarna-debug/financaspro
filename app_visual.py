@@ -2967,7 +2967,7 @@ elif "📄" in aba:
     if 'total_invest_eur' in locals() and 'saldo_outras_eur' in locals() and (total_invest_eur + saldo_outras_eur) > 0:
         texto_relatorio_zap += f"🇪🇺 Euro: € {(total_invest_eur + saldo_outras_eur):,.2f}\n"
 
-    # Renderiza apenas o botão direto, sem caixas de texto poluindo a tela
+   
     st.markdown("---")
     link_zap_oficial = f"https://wa.me/?text={urllib.parse.quote(texto_relatorio_zap)}"
     st.markdown(f'### [📲 Enviar Relatório Completo para o WhatsApp]({link_zap_oficial})', unsafe_allow_html=True)
