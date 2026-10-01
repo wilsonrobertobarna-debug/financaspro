@@ -3458,91 +3458,83 @@ if aba == "📊 Análises & Configurações":
         except:
             return 0.0
    # Valores cravados e alinhados com o seu controle real:
+   # Inicializadores dos totais
     guardado_atual = 0.0          # Investimentos BRL
-    saldo_outras_brl = 0.0        # Contas Correntes / Dinheiro BRL
+    saldo_outras_brl = 0.0        # Contas Correntes BRL
     saldo_veiculos_brl = 0.0      # Veículos BRL
     total_invest_usd = 0.0        # Investimentos USD
     total_invest_eur = 0.0        # Investimentos EUR
     saldo_outras_usd = 0.0
     saldo_outras_eur = 0.0
 
-    try:
-        import unicodedata
-        def remover_acentos(texto):
-            nfkd = unicodedata.normalize('NFKD', str(texto))
-            return "".join([c for c in nfkd if not unicodedata.combining(c)]).lower().strip()
+    if not df_bancos_info.empty:
+        for idx, row in df_bancos_info.iterrows():
+            try:
+                nome_banco = row.iloc[0] if len(row) > 0 else ''
+                if not nome_banco or str(nome_banco) == 'nan':
+                    continue
+                
+                val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
+                saldo_inicial = float(val_str) if val_str and val_str != 'nan' else 0.0
+                tipo_c = str(row.iloc[2]).strip().upper() if len(row) > 2 else ''
+                moeda_banco = str(row.iloc[5]).strip().upper() if len(row) > 5 and str(row.iloc[5]).strip() else "BRL"
+                b_up = str(nome_banco).upper()
 
-        df_bancos_local = None
-        for nome_var in ['df_bancos', 'df_banks', 'bancos_df', 'df_bancos_info']:
-            if nome_var in locals() and not locals()[nome_var].empty:
-                df_bancos_local = locals()[nome_var]
-                break
-            elif nome_var in st.session_state and not st.session_state[nome_var].empty:
-                df_bancos_local = st.session_state[nome_var]
-                break
+                # Ignora cartões de crédito para o cálculo de saldo patrimonial de contas/investimentos
+                if "CARTA" in tipo_c or "CART" in b_up:
+                    continue
 
-        if df_bancos_local is not None and not df_bancos_local.empty:
-            for idx, row in df_bancos_local.iloc[1:].iterrows():
-                try:
-                    nome_conta = str(row.iloc[0]).strip() if len(row) > 0 else ""
-                    if not nome_conta or nome_conta == 'nan':
-                        continue
+                # Identifica Veículos / Bens
+                if "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
+                    if moeda_banco == "BRL":
+                        saldo_veiculos_brl += saldo_inicial
+                    continue
 
-                    val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
-                    saldo_conta = float(val_str) if val_str and val_str != 'nan' else 0.0
-                    
-                    tipo_conta = str(row.iloc[2]).strip() if len(row) > 2 else ""
-                    moeda = str(row.iloc[5]).strip().upper() if len(row) > 5 and str(row.iloc[5]).strip() else "BRL"
+                # Identifica Vale Refeição (Geralmente não soma no patrimônio líquido de contas/invest)
+                if "REFEIÇÃO" in tipo_c or "VR" in b_up or "VA" in b_up or "ALIMENTAÇÃO" in b_up:
+                    continue
 
-                    tipo_limpo = remover_acentos(tipo_conta)
-                    nome_limpo = remover_acentos(nome_conta)
+                # Para Contas Correntes e Investimentos, calcula o saldo atualizado com base nos lançamentos (mesma lógica do relatório)
+                filtro = (df_base['Banco'] == nome_banco) & ((df_base['Status'].str.upper() == 'PAGO') | (df_base['Status'] == ''))
+                df_banco_atual = df_base[filtro]
+                
+                entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
+                saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
+                
+                saldo_atual = saldo_inicial + entradas - saidas
 
-                    # 1. Cartões e Benefícios (Ignorados do patrimônio)
-                    is_cartao = "cart" in tipo_limpo or "credito" in tipo_limpo or "refeicao" in tipo_limpo or "vr" in tipo_limpo or "va" in tipo_limpo
-                    if is_cartao:
-                        continue
+                # SEPARAÇÃO EXATA BASEADA NA SUA REGRA DE TIPO ("INVEST")
+                is_investimento = "INVEST" in tipo_c or "POUP" in tipo_c or "PREV" in tipo_c
 
-                    # 2. Veículos (T-Cross, Moto Lead ou prefixo x)
-                    is_veiculo = 'veiculo' in tipo_limpo or 'bem' in tipo_limpo or nome_limpo.startswith('x')
-                    if is_veiculo:
-                        if moeda == "BRL":
-                            saldo_veiculos_brl += saldo_conta
-                        continue
+                if moeda_banco == "USD":
+                    if is_investimento:
+                        total_invest_usd += saldo_atual
+                    else:
+                        saldo_outras_usd += saldo_atual
+                elif moeda_banco == EUR if 'EUR' in globals() else moeda_banco == "EUR": # segurança para Euro
+                    if is_investimento:
+                        total_invest_eur += saldo_atual
+                    else:
+                        saldo_outras_eur += saldo_atual
+                else: # BRL
+                    if is_investimento:
+                        guardado_atual += saldo_atual
+                    else:
+                        saldo_outras_brl += saldo_atual
 
-                    # 3. Contas Correntes e Dinheiro (Conforme padrão WhatsApp)
-                    # Lista exata de correntes/dinheiro: Inter, Itaú Fabiana, Itaú Wilson, Mercado Pago, Pag. Bank, Pic Pay, Dinheiro
-                    is_corrente_ou_dinheiro = any(k in nome_limpo for k in [
-                        'inter', 'itau - fabiana', 'itau - wilson', 'mercado pago', 'pag. bank', 'pic pay', 'dinheiro'
-                    ]) and not any(inv in tipo_limpo or inv in nome_limpo for inv in ['invest', 'cdb', 'firf', 'lci', 'tesouro', 'cofrinho', 'prev', 'pou'])
-
-                    if is_corrente_ou_dinheiro:
-                        if moeda == "BRL":
-                            saldo_outras_brl += saldo_conta
-                        elif moeda == "USD":
-                            saldo_outras_usd += saldo_conta
-                        elif moeda == "EUR":
-                            saldo_outras_eur += saldo_conta
-                        continue
-
-                    # 4. Todo o restante é considerado Investimento / Poupança / Previdência
-                    if moeda == "BRL":
-                        guardado_atual += saldo_conta
-                    elif moeda == "USD":
-                        total_invest_usd += saldo_conta
-                    elif moeda == "EUR":
-                        total_invest_eur += saldo_conta
-
-                except Exception as ex:
-                    pass
+            except Exception as ex:
+                pass
 
         subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
         subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
 
+    
     except Exception as e:
         subtotal_contas_invest_brl = 0.0
         subtotal_invest_usd_geral = 0.0
         subtotal_invest_eur_geral = 0.0
+
         
     except Exception as e:
         st.error(f"Erro ao calcular os saldos: {e}")
