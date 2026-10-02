@@ -2478,7 +2478,7 @@ elif "🚗" in aba:
                 if 'Litros' in df_exibicao.columns:
                     df_exibicao['Litros'] = df_exibicao['Litros'].apply(formata_litros_inteligente)
 
-                formatos_tabela = {
+               formatos_tabela = {
                     'Km': "{:,.0f} km",
                     'Km_Rodados': "{:,.0f} km",
                     'Km/L': "{:.2f} Km/L",
@@ -2486,6 +2486,10 @@ elif "🚗" in aba:
                 }
                 
                 if not df_exibicao.empty:
+                    # Ordena estritamente por data crescente para o cálculo e depois inverte só para exibição (recente em cima)
+                    df_exibicao = df_exibicao.sort_values('Vencimento', ascending=True)
+                    
+                    # Exibe com o mais recente no topo (iloc[::-1]), mantendo a integridade
                     st.dataframe(df_exibicao.iloc[::-1].style.format(formatos_tabela), use_container_width=True, hide_index=True)
                 else:
                     st.info("Nenhum lançamento encontrado com esses filtros.")
