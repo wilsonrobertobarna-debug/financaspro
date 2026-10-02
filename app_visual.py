@@ -2392,7 +2392,7 @@ elif "🚗" in aba:
         # --- HISTÓRICO COM FILTRO DUPLO (CATEGORIA + BUSCA POR DESCRIÇÃO/VEÍCULO) ---
         st.subheader("📊 Histórico e Lançamentos do Veículo")
 
-        if not df_base.empty:
+if not df_base.empty:
             df_veiculo = df_base.copy()
 
             # Blindagem automática de colunas
@@ -2401,22 +2401,20 @@ elif "🚗" in aba:
             if 'Litros' not in df_veiculo.columns:
                 df_veiculo['Litros'] = 0.0
 
-            # 1. CONVERTE A DATA E ORDENA CRONOLOGICAMENTE PELO LANÇAMENTO
-            # Garante que o dia mais antigo venha primeiro e o mais recente por último
+            # 1. PASSO DE OURO: Converte a data e ordena do mais antigo para o mais recente primeiro que tudo!
             df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
-            df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
+            df_veiculo = df_veiculo.sort_values('Vencimento', ascending=True).reset_index(drop=True)
 
-            # Converte as colunas numéricas de forma segura
+            # 2. PASSO DE SEGURANÇA: Converte as colunas numéricas (já com tratamento de vírgula nos litros)
             df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
             
-            # Trata vírgula e ponto nos litros
             if df_veiculo['Litros'].dtype == object:
                 df_veiculo['Litros'] = df_veiculo['Litros'].astype(str).str.replace(',', '.', regex=False)
             df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
             
             df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
 
-            # 2. AGORA SIM O .DIFF() VAI SEGUIR A ORDENAÇÃO CERTA DAS DATAS!
+            # 3. PASSO DO CÁLCULO: Agora o .diff() pega a sequência cronológica perfeita!
             df_veiculo['Km_Rodados'] = df_veiculo['Km'].diff()
             df_veiculo.loc[df_veiculo['Km'].shift(1) == 0, 'Km_Rodados'] = 0.0
             
