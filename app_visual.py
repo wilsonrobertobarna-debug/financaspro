@@ -2406,7 +2406,12 @@ elif "🚗" in aba:
             df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
 
             df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
+            
+            # Converte a coluna Litros substituindo vírgula por ponto de forma segura
+            if df_veiculo['Litros'].dtype == object:
+                df_veiculo['Litros'] = df_veiculo['Litros'].astype(str).str.replace(',', '.', regex=False)
             df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
+            
             df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
 
             # O .diff() agora olha a sequência real cronológica do carro na planilha inteira!
