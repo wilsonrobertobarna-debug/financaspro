@@ -2410,7 +2410,15 @@ elif "🚗" in aba:
             df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
 
             # O .diff() agora olha a sequência real cronológica do carro na planilha inteira!
+            # O .diff() calcula a diferença, mas se for o primeiro registro ou se o Km anterior for 0, zera para não bugar
             df_veiculo['Km_Rodados'] = df_veiculo['Km'].diff()
+            
+            # Se a linha anterior for 0 ou NaN (primeiro registro da lista), o Km rodado daquele tanque não tem como calcular, então fica 0
+            df_veiculo.loc[df_veiculo['Km'].shift(1) == 0, 'Km_Rodados'] = 0.0
+            df_veiculo['Km_Rodados'] = df_veiculo['Km_Rodados'].fillna(0)
+            
+            # Blindagem extra: se por acaso der um valor absurdo de rodagem num tanque só (ex: mais de 1500 km num tanque de T-Cross), zera também
+            df_veiculo.loc[df_veiculo['Km_Rodados'] > 1500, 'Km_Rodados'] = 0.0
             df_veiculo['Km/L'] = df_veiculo.apply(
                 lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and row['Km_Rodados'] > 0 else 0.0, 
                 axis=1
