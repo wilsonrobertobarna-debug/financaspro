@@ -2402,8 +2402,14 @@ elif "🚗" in aba:
                 df_veiculo['Litros'] = 0.0
 
             # 1. PASSO DE OURO: Converte a data e ordena do mais antigo para o mais recente primeiro que tudo!
+            # 1. Converte ambas as datas para o formato padrão do Pandas
             df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
-            df_veiculo = df_veiculo.sort_values('Vencimento', ascending=True).reset_index(drop=True)
+            
+            # ATENÇÃO: Verifique se o nome exato da coluna da data de compra na sua base é 'Data' ou 'Data_Compra'
+            df_veiculo['Data_Compra'] = pd.to_datetime(df_veiculo['Data_Compra'], dayfirst=True, errors='coerce')
+
+            # 2. DUPLA ORDENAÇÃO: Ordena primeiro pelo Vencimento e depois pela Data da Compra, ambas crescentes
+            df_veiculo = df_veiculo.sort_values(by=['Vencimento', 'Data_Compra'], ascending=[True, True]).reset_index(drop=True)
 
             # 2. PASSO DE SEGURANÇA: Converte as colunas numéricas (já com tratamento de vírgula nos litros)
             df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
