@@ -2478,7 +2478,7 @@ elif "🚗" in aba:
                 if 'Litros' in df_exibicao.columns:
                     df_exibicao['Litros'] = df_exibicao['Litros'].apply(formata_litros_inteligente)
 
-               formatos_tabela = {
+                formatos_tabela = {
                     'Km': "{:,.0f} km",
                     'Km_Rodados': "{:,.0f} km",
                     'Km/L': "{:.2f} Km/L",
