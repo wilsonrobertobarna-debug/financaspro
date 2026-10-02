@@ -2388,7 +2388,8 @@ elif "🚗" in aba:
             c_cons3.warning("Aguardando dados...")
             
         st.divider()
-# --- HISTÓRICO COM FILTRO DUPLO (CATEGORIA + BUSCA POR DESCRIÇÃO/VEÍCULO) ---
+
+        # --- HISTÓRICO COM FILTRO DUPLO (CATEGORIA + BUSCA POR DESCRIÇÃO/VEÍCULO) ---
         st.subheader("📊 Histórico e Lançamentos do Veículo")
 
         if not df_base.empty:
@@ -2400,22 +2401,7 @@ elif "🚗" in aba:
             if 'Litros' not in df_veiculo.columns:
                 df_veiculo['Litros'] = 0.0
 
-            # Padroniza categoria e descrição para facilitar a busca
-            df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
-            
-            # Pega inicialmente tudo que envolve veículo, combustível ou manutenção
-            df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
-
-            if not df_base.empty:
-            df_veiculo = df_base.copy()
-
-            # Blindagem automática de colunas
-            if 'Km' not in df_veiculo.columns:
-                df_veiculo['Km'] = 0.0
-            if 'Litros' not in df_veiculo.columns:
-                df_veiculo['Litros'] = 0.0
-
-            # 1. ORDENA E CALCULA PRIMERO NA BASE GERAL (Garante o .diff() correto do hodômetro)
+            # 1. ORDENA E CALCULA PRIMEIRO NA BASE GERAL (Garante o .diff() correto do hodômetro)
             df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
             df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
 
