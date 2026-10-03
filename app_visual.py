@@ -2389,7 +2389,7 @@ elif "🚗" in aba:
         
     st.divider()
 
-  # --- HISTÓRICO COM FILTRO DUPLO (CATEGORIA + BUSCA POR DESCRIÇÃO/VEÍCULO) ---
+ # --- HISTÓRICO COM FILTRO DUPLO (CATEGORIA + BUSCA POR DESCRIÇÃO/VEÍCULO) ---
     st.subheader("📊 Histórico e Lançamentos do Veículo")
 
     if not df_base.empty:
@@ -2404,18 +2404,17 @@ elif "🚗" in aba:
         # Identifica a coluna de data real da compra de forma blindada
         coluna_data = 'Data_Compra' if 'Data_Compra' in df_veiculo.columns else 'Data'
 
-        # 1. CONVERSÃO DE DATAS
-        df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
+        # 1. CONVERSÃO DE DATAS PURAS (Mantém objetos datetime para cálculos e ordenações)
+        df_veiculo['Vencimento_Dt'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
+        
         if coluna_data in df_veiculo.columns:
-            df_veiculo[coluna_data] = pd.to_datetime(df_veiculo[coluna_data], dayfirst=True, errors='coerce')
-
-        # 2. ORDENAÇÃO PARA O CÁLCULO (Do mais antigo para o mais recente, essencial para o .diff() funcionar)
-        if coluna_data in df_veiculo.columns:
-            df_veiculo = df_veiculo.sort_values(by=[coluna_data, 'Vencimento'], ascending=[True, True]).reset_index(drop=True)
+            df_veiculo[coluna_data + '_Dt'] = pd.to_datetime(df_veiculo[coluna_data], dayfirst=True, errors='coerce')
+            # Ordenação inicial para o cálculo do .diff() (Antigo em cima, recente embaixo)
+            df_veiculo = df_veiculo.sort_values(by=[coluna_data + '_Dt', 'Vencimento_Dt'], ascending=[True, True]).reset_index(drop=True)
         else:
-            df_veiculo = df_veiculo.sort_values(by='Vencimento', ascending=True).reset_index(drop=True)
+            df_veiculo = df_veiculo.sort_values(by='Vencimento_Dt', ascending=True).reset_index(drop=True)
 
-        # 3. PASSO DE SEGURANÇA: Converte as colunas numéricas
+        # 2. PASSO DE SEGURANÇA: Converte as colunas numéricas
         df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
         
         if df_veiculo['Litros'].dtype == object:
@@ -2424,7 +2423,7 @@ elif "🚗" in aba:
         
         df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
 
-        # 4. PASSO DO CÁLCULO: .diff() na ordem cronológica correta
+        # 3. PASSO DO CÁLCULO: .diff() na ordem cronológica correta
         df_veiculo['Km_Rodados'] = df_veiculo['Km'].diff()
         df_veiculo.loc[df_veiculo['Km'].shift(1) == 0, 'Km_Rodados'] = 0.0
         
@@ -2457,51 +2456,47 @@ elif "🚗" in aba:
             if busca_texto:
                 df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
-            # Formatação para exibição
-            if coluna_data in df_veiculo.columns:
-                df_veiculo[coluna_data] = df_veiculo[coluna_data].dt.strftime('%d/%m/%Y')
-            df_veiculo['Vencimento'] = df_veiculo['Vencimento'].dt.strftime('%d/%m/%Y')
-            df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
-
-            colunas_exibir = ['Vencimento', 'Categoria', 'Descrição', 'Valor_Formatado', 'Km', 'Km_Rodados', 'Litros', 'Km/L', 'Preço/Litro', 'Banco']
-            colunas_exibir_disponiveis = [col for col in colunas_exibir if col in df_veiculo.columns]
-            
-            df_exibicao = df_veiculo[colunas_exibir_disponiveis].copy()
-
-            def formata_litros_inteligente(valor):
-                try:
-                    val_float = float(valor)
-                    if pd.isna(val_float) or val_float == 0:
-                        return ""
-                    if val_float.is_integer():
-                        return f"{int(val_float)} L"
-                    return f"{val_float:.2f} L".replace('.', ',')
-                except:
-                    return str(valor)
-
-            if 'Litros' in df_exibicao.columns:
-                df_exibicao['Litros'] = df_exibicao['Litros'].apply(formata_litros_inteligente)
-
-            formatos_tabela = {
-                'Km': "{:,.0f} km",
-                'Km_Rodados': "{:,.0f} km",
-                'Km/L': "{:.2f} Km/L",
-                'Preço/Litro': "R$ {:.2f}"
-            }
-            
             if not df_veiculo.empty:
-                # 5. ORDENAÇÃO DE EXIBIÇÃO FINAL (Invertida: mais recente no topo, mais antigo embaixo)
-                if coluna_data in df_veiculo.columns and coluna_data in df_veiculo.columns:
-                    df_exibicao_final = df_veiculo.sort_values(by=[coluna_data, 'Vencimento'], ascending=[False, False])
+                # 4. ORDENAÇÃO DE EXIBIÇÃO FINAL USANDO AS DATAS EM FORMATO DATETIME (Mais recente no topo, antigo embaixo)
+                if coluna_data in df_veiculo.columns and (coluna_data + '_Dt') in df_veiculo.columns:
+                    df_veiculo = df_veiculo.sort_values(by=[coluna_data + '_Dt', 'Vencimento_Dt'], ascending=[False, False]).reset_index(drop=True)
                 else:
-                    df_exibicao_final = df_veiculo.sort_values(by='Vencimento', ascending=False)
-                
-                df_exibicao_final = df_exibicao_final[colunas_exibir_disponiveis].copy()
-                
-                if 'Litros' in df_exibicao_final.columns:
-                    df_exibicao_final['Litros'] = df_exibicao_final['Litros'].apply(formata_litros_inteligente)
+                    df_veiculo = df_veiculo.sort_values(by='Vencimento_Dt', ascending=False).reset_index(drop=True)
 
-                st.dataframe(df_exibicao_final.style.format(formatos_tabela), use_container_width=True, hide_index=True)
+                # Formata as datas para exibição visual APÓS a ordenação estar garantida
+                if coluna_data in df_veiculo.columns:
+                    df_veiculo[coluna_data] = df_veiculo[coluna_data + '_Dt'].dt.strftime('%d/%m/%Y')
+                df_veiculo['Vencimento'] = df_veiculo['Vencimento_Dt'].dt.strftime('%d/%m/%Y')
+                df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
+
+                colunas_exibir = ['Vencimento', 'Categoria', 'Descrição', 'Valor_Formatado', 'Km', 'Km_Rodados', 'Litros', 'Km/L', 'Preço/Litro', 'Banco']
+                colunas_exibir_disponiveis = [col for col in colunas_exibir if col in df_veiculo.columns]
+                
+                df_exibicao = df_veiculo[colunas_exibir_disponiveis].copy()
+
+                def formata_litros_inteligente(valor):
+                    try:
+                        val_float = float(valor)
+                        if pd.isna(val_float) or val_float == 0:
+                            return ""
+                        if val_float.is_integer():
+                            return f"{int(val_float)} L"
+                        return f"{val_float:.2f} L".replace('.', ',')
+                    except:
+                        return str(valor)
+
+                if 'Litros' in df_exibicao.columns:
+                    df_exibicao['Litros'] = df_exibicao['Litros'].apply(formata_litros_inteligente)
+
+                formatos_tabela = {
+                    'Km': "{:,.0f} km",
+                    'Km_Rodados': "{:,.0f} km",
+                    'Km/L': "{:.2f} Km/L",
+                    'Preço/Litro': "R$ {:.2f}"
+                }
+
+                # Exibe a tabela perfeitamente ordenada e formatada
+                st.dataframe(df_exibicao.style.format(formatos_tabela), use_container_width=True, hide_index=True)
             else:
                 st.info("Nenhum lançamento encontrado com esses filtros.")
         else:
