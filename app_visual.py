@@ -2392,85 +2392,83 @@ elif "🚗" in aba:
         # --- HISTÓRICO COM FILTRO DUPLO (CATEGORIA + BUSCA POR DESCRIÇÃO/VEÍCULO) ---
         st.subheader("📊 Histórico e Lançamentos do Veículo")
 
-        if not df_base.empty:
-            df_veiculo = df_base.copy()
+é tudo isto?:          if not df_base.empty:
+            df_veiculo = df_base.copy()
 
-            # Blindagem automática de colunas
-            if 'Km' not in df_veiculo.columns:
-                df_veiculo['Km'] = 0.0
-            if 'Litros' not in df_veiculo.columns:
-                df_veiculo['Litros'] = 0.0
+            # Blindagem automática de colunas
+            if 'Km' not in df_veiculo.columns:
+                df_veiculo['Km'] = 0.0
+            if 'Litros' not in df_veiculo.columns:
+                df_veiculo['Litros'] = 0.0
 
-            # 1. PASSO DE OURO: Converte a data e ordena do mais antigo para o mais recente primeiro que tudo!
-# 1. Converte a coluna de Vencimento
+            # 1. PASSO DE OURO: Converte a data e ordena do mais antigo para o mais recente primeiro que tudo!
+            # 1. Converte a coluna de Vencimento
+            # 1. ORDENAÇÃO DO MAIS RECENTE PARA O MAIS ANTIGO (O mais atual em cima, o mais antigo embaixo)
             df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
             
-            # 2. Identifica automaticamente se a coluna de data da compra é 'Data' ou 'Data_Compra'
             coluna_data = 'Data_Compra' if 'Data_Compra' in df_veiculo.columns else 'Data'
             
             if coluna_data in df_veiculo.columns:
                 df_veiculo[coluna_data] = pd.to_datetime(df_veiculo[coluna_data], dayfirst=True, errors='coerce')
-                # Dupla ordenação: Vencimento e depois a data real do gasto
-                df_veiculo = df_veiculo.sort_values(by=['Vencimento', coluna_data], ascending=[True, True]).reset_index(drop=True)
+                # Ordena decrescente: Outubro em cima, Setembro, Agosto, Maio no rodapé
+                df_veiculo = df_veiculo.sort_values(by=['Vencimento', coluna_data], ascending=[False, False]).reset_index(drop=True)
             else:
-                # Se só tiver o Vencimento, ordena por ele mesmo
-                df_veiculo = df_veiculo.sort_values(by='Vencimento', ascending=True).reset_index(drop=True)
+                df_veiculo = df_veiculo.sort_values(by='Vencimento', ascending=False).reset_index(drop=True)
+            # 2. PASSO DE SEGURANÇA: Converte as colunas numéricas (já com tratamento de vírgula nos litros)
+            df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
+            
+            if df_veiculo['Litros'].dtype == object:
+                df_veiculo['Litros'] = df_veiculo['Litros'].astype(str).str.replace(',', '.', regex=False)
+            df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
+            
+            df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
 
-            # 2. PASSO DE SEGURANÇA: Converte as colunas numéricas (já com tratamento de vírgula nos litros)
-            df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
-            
-            if df_veiculo['Litros'].dtype == object:
-                df_veiculo['Litros'] = df_veiculo['Litros'].astype(str).str.replace(',', '.', regex=False)
-            df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
-            
-            df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
+            # 3. PASSO DO CÁLCULO: Agora o .diff() pega a sequência cronológica perfeita!
+            df_veiculo['Km_Rodados'] = df_veiculo['Km'].diff()
+            df_veiculo.loc[df_veiculo['Km'].shift(1) == 0, 'Km_Rodados'] = 0.0
+            
+            df_veiculo['Km/L'] = df_veiculo.apply(
+                lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and row['Km_Rodados'] > 0 else 0.0, 
+                axis=1
+            )
+            df_veiculo['Preço/Litro'] = df_veiculo.apply(
+                lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
+                axis=1
+            )
 
-            # 3. PASSO DO CÁLCULO: Agora o .diff() pega a sequência cronológica perfeita!
-            df_veiculo['Km_Rodados'] = df_veiculo['Km'].diff()
-            df_veiculo.loc[df_veiculo['Km'].shift(1) == 0, 'Km_Rodados'] = 0.0
-            
-            df_veiculo['Km/L'] = df_veiculo.apply(
-                lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and row['Km_Rodados'] > 0 else 0.0, 
-                axis=1
-            )
-            df_veiculo['Preço/Litro'] = df_veiculo.apply(
-                lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
-                axis=1
-            )
+            # Padroniza categoria para os filtros
+            df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
+            
+            # Pega inicialmente tudo que envolve veículo, combustível ou manutenção
+            df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
 
-            # Padroniza categoria para os filtros
-            df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
-            
-            # Pega inicialmente tudo que envolve veículo, combustível ou manutenção
-            df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
+            if not df_veiculo.empty:
+                # --- DUAS COLUNAS PARA OS FILTROS ---
+                col_filtro1, col_filtro2 = st.columns(2)
+                
+                with col_filtro1:
+                    tipos_disponiveis = ["Todos", "Combustível", "Manutenção", "Veículo"]
+                    filtro_escolhido = st.selectbox("🔍 Filtrar por Categoria:", tipos_disponiveis, key="filtro_aba_veiculo")
 
-            if not df_veiculo.empty:
-                # --- DUAS COLUNAS PARA OS FILTROS ---
-                col_filtro1, col_filtro2 = st.columns(2)
-                
-                with col_filtro1:
-                    tipos_disponiveis = ["Todos", "Combustível", "Manutenção", "Veículo"]
-                    filtro_escolhido = st.selectbox("🔍 Filtrar por Categoria:", tipos_disponiveis, key="filtro_aba_veiculo")
+                with col_filtro2:
+                    busca_texto = st.text_input("🔎 Buscar por Veículo/Descrição (ex: Tcross, Lead):", "", key="busca_veiculo_texto")
 
-                with col_filtro2:
-                    busca_texto = st.text_input("🔎 Buscar por Veículo/Descrição (ex: Tcross, Lead):", "", key="busca_veiculo_texto")
+                # Aplica o filtro de Categoria
+                if filtro_escolhido != "Todos":
+                    df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'] == filtro_escolhido]
 
-                # Aplica o filtro de Categoria
-                if filtro_escolhido != "Todos":
-                    df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'] == filtro_escolhido]
+                # Aplica o filtro de texto na coluna Descrição
+                if busca_texto:
+                    df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
-                # Aplica o filtro de texto na coluna Descrição
-                if busca_texto:
-                    df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
+                # Formatação para exibição
+                df_veiculo['Vencimento'] = df_veiculo['Vencimento'].dt.strftime('%d/%m/%Y')
+                df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
 
-                # Formatação para exibição
-                df_veiculo['Vencimento'] = df_veiculo['Vencimento'].dt.strftime('%d/%m/%Y')
-                df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
-
-                colunas_exibir = ['Vencimento', 'Categoria', 'Descrição', 'Valor_Formatado', 'Km', 'Km_Rodados', 'Litros', 'Km/L', 'Preço/Litro', 'Banco']
-                colunas_exibir_disponiveis = [col for col in colunas_exibir if col in df_veiculo.columns]
-                
-                df_exibicao = df_veiculo[colunas_exibir_disponiveis].copy()
+                colunas_exibir = ['Vencimento', 'Categoria', 'Descrição', 'Valor_Formatado', 'Km', 'Km_Rodados', 'Litros', 'Km/L', 'Preço/Litro', 'Banco']
+                colunas_exibir_disponiveis = [col for col in colunas_exibir if col in df_veiculo.columns]
+                
+                df_exibicao = df_veiculo[colunas_exibir_disponiveis].copy()
 
                 # --- 🎯 FUNÇÃO DE LITROS INTELIGENTE COM A LETRA L ---
                 def formata_litros_inteligente(valor):
