@@ -2409,7 +2409,7 @@ elif "🚗" in aba:
         
         if coluna_data in df_veiculo.columns:
             df_veiculo[coluna_data + '_Dt'] = pd.to_datetime(df_veiculo[coluna_data], dayfirst=True, errors='coerce')
-            # Ordenação inicial para o cálculo do .diff() (Antigo em cima, recente embaixo)
+            # Ordenação inicial para o cálculo do .diff() funcionar perfeitamente (Antigo em cima, recente embaixo)
             df_veiculo = df_veiculo.sort_values(by=[coluna_data + '_Dt', 'Vencimento_Dt'], ascending=[True, True]).reset_index(drop=True)
         else:
             df_veiculo = df_veiculo.sort_values(by='Vencimento_Dt', ascending=True).reset_index(drop=True)
@@ -2457,14 +2457,13 @@ elif "🚗" in aba:
                 df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
             if not df_veiculo.empty:
-                # 4. ORDENAÇÃO DE EXIBIÇÃO FINAL PELO MÊS E DATA DE COMPRA (Mais recente no topo, antigo embaixo)
+                # 4. 🎯 ORDENAÇÃO FINAL ESTRITA PELA DATA DE COMPRA (Mais recente no topo, antigo embaixo)
                 if coluna_data in df_veiculo.columns and (coluna_data + '_Dt') in df_veiculo.columns:
-                    # Ordena priorizando a Data da Compra de forma decrescente (recente em cima)
-                    df_veiculo = df_veiculo.sort_values(by=[coluna_data + '_Dt', 'Vencimento_Dt'], ascending=[False, False]).reset_index(drop=True)
+                    df_veiculo = df_veiculo.sort_values(by=[coluna_data + '_Dt'], ascending=[False]).reset_index(drop=True)
                 else:
                     df_veiculo = df_veiculo.sort_values(by='Vencimento_Dt', ascending=False).reset_index(drop=True)
 
-                # Formata as datas para exibição visual APÓS a ordenação correta
+                # Formata as datas para exibição visual APÓS a ordenação final
                 if coluna_data in df_veiculo.columns:
                     df_veiculo[coluna_data] = df_veiculo[coluna_data + '_Dt'].dt.strftime('%d/%m/%Y')
                 df_veiculo['Vencimento'] = df_veiculo['Vencimento_Dt'].dt.strftime('%d/%m/%Y')
@@ -2496,7 +2495,7 @@ elif "🚗" in aba:
                     'Preço/Litro': "R$ {:.2f}"
                 }
 
-                # Exibe a tabela perfeitamente ordenada pela data da compra respeitando o mês
+                # Exibe a tabela ordenada estritamente pela Data de Compra
                 st.dataframe(df_exibicao.style.format(formatos_tabela), use_container_width=True, hide_index=True)
             else:
                 st.info("Nenhum lançamento encontrado com esses filtros.")
@@ -2504,6 +2503,8 @@ elif "🚗" in aba:
             st.info("Nenhum lançamento de veículo encontrado na base com os filtros atuais.")
     else:
         st.warning("A base de dados está vazia.")
+
+
 
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
