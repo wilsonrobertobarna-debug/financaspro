@@ -2493,14 +2493,26 @@ elif "🚗" in aba:
             }
             
             if not df_exibicao.empty:
-                # Exibe invertendo apenas a visualização (.iloc[::-1]) para o mês mais recente (10) ficar no topo e maio no rodapé, sem quebrar o cálculo
-                st.dataframe(df_exibicao.iloc[::-1].style.format(formatos_tabela), use_container_width=True, hide_index=True)
+                # Ordena a exibição final para garantir: Mais recente em cima (ex: 194,02), intermediária e mais antiga embaixo
+                if coluna_data in df_veiculo.columns:
+                    df_exibicao_final = df_veiculo.sort_values(by=[coluna_data, 'Vencimento'], ascending=[False, False])
+                else:
+                    df_exibicao_final = df_veiculo.sort_values(by='Vencimento', ascending=False)
+                
+                # Pega as colunas na ordem certa de exibição
+                df_exibicao_final = df_exibicao_final[colunas_exibir_disponiveis].copy()
+                
+                if 'Litros' in df_exibicao_final.columns:
+                    df_exibicao_final['Litros'] = df_exibicao_final['Litros'].apply(formata_litros_inteligente)
+
+                # Exibe limpo e ordenado do jeito certinho (recente em cima, antigo embaixo)
+                st.dataframe(df_exibicao_final.style.format(formatos_tabela), use_container_width=True, hide_index=True)
             else:
                 st.info("Nenhum lançamento encontrado com esses filtros.")
         else:
             st.info("Nenhum lançamento de veículo encontrado na base com os filtros atuais.")
     else:
-        st.warning("A base de dados está vazia.")        
+        st.warning("A base de dados está vazia.")  
 
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
