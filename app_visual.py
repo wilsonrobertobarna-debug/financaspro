@@ -2401,15 +2401,17 @@ elif "🚗" in aba:
         if 'Litros' not in df_veiculo.columns:
             df_veiculo['Litros'] = 0.0
 
-        # Identifica o nome exato da coluna de data de compra na sua base
-        coluna_data = 'Data Compra' if 'Data Compra' in df_veiculo.columns else ('Data' if 'Data' in df_veiculo.columns else 'Vencimento')
+        # Identifica dinamicamente qualquer variação do nome da coluna de data de compra
+        colunas_possiveis = ['Data Compra', 'Data_Compra', 'data compra', 'data_compra', 'Data']
+        coluna_data = next((col for col in colunas_possiveis if col in df_veiculo.columns), 'Vencimento')
 
-        # 1. CONVERSÃO DE DATAS PURAS
+        # 1. CONVERSÃO DE DATAS PURAS E BLINDAGEM DE VALORES VAZIOS
         df_veiculo['Vencimento_Dt'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
         df_veiculo[coluna_data + '_Dt'] = pd.to_datetime(df_veiculo[coluna_data], dayfirst=True, errors='coerce')
         
-        # 🎯 CHAVE INTELIGENTE DE ORDENAÇÃO: Se a Data Compra estiver vazia, usa o Vencimento como fallback para não sumir/ir pro rodapé
+        # 🎯 CHAVE BLINDADA: Se a data de compra estiver vazia, herda a data de vencimento para nunca ir pro rodapé incorretamente
         df_veiculo['Data_Ordenacao'] = df_veiculo[coluna_data + '_Dt'].fillna(df_veiculo['Vencimento_Dt'])
+        df_veiculo['Data_Ordenacao'] = df_veiculo['Data_Ordenacao'].fillna(pd.Timestamp('1900-01-01'))
 
         # Ordenação inicial para o cálculo do .diff() funcionar perfeitamente (Antigo em cima, recente embaixo)
         df_veiculo = df_veiculo.sort_values(by=['Data_Ordenacao', 'Vencimento_Dt'], ascending=[True, True]).reset_index(drop=True)
@@ -2457,7 +2459,7 @@ elif "🚗" in aba:
                 df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
             if not df_veiculo.empty:
-                # 4. 🎯 ORDENAÇÃO FINAL DE EXIBIÇÃO: Mais recente no topo, antigo embaixo usando a chave inteligente
+                # 4. 🎯 ORDENAÇÃO FINAL DE EXIBIÇÃO: Mais recente no topo, antigo embaixo usando a chave blindada
                 df_veiculo = df_veiculo.sort_values(
                     by=['Data_Ordenacao', 'Vencimento_Dt'], 
                     ascending=[False, False]
