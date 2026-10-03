@@ -2401,14 +2401,16 @@ elif "🚗" in aba:
         if 'Litros' not in df_veiculo.columns:
             df_veiculo['Litros'] = 0.0
 
-        # 1. ORDENAÇÃO CRONOLÓGICA PURA (Antigo em cima, recente embaixo — essencial para o .diff() funcionar)
+       
+        # 1. ORDENAÇÃO CRONOLÓGICA POR DATA DA COMPRA (Essencial para o .diff() e o consumo do carro)
         df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
         
         coluna_data = 'Data_Compra' if 'Data_Compra' in df_veiculo.columns else 'Data'
         
         if coluna_data in df_veiculo.columns:
             df_veiculo[coluna_data] = pd.to_datetime(df_veiculo[coluna_data], dayfirst=True, errors='coerce')
-            df_veiculo = df_veiculo.sort_values(by=['Vencimento', coluna_data], ascending=[True, True]).reset_index(drop=True)
+            # Ordena primariamente pela data da compra (do mais antigo ao mais recente para o cálculo)
+            df_veiculo = df_veiculo.sort_values(by=[coluna_data, 'Vencimento'], ascending=[True, True]).reset_index(drop=True)
         else:
             df_veiculo = df_veiculo.sort_values(by='Vencimento', ascending=True).reset_index(drop=True)
 
