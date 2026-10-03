@@ -2389,7 +2389,7 @@ elif "🚗" in aba:
         
     st.divider()
 
-    # --- HISTÓRICO COM FILTRO DUPLO (CATEGORIA + BUSCA POR DESCRIÇÃO/VEÍCULO) ---
+   # --- HISTÓRICO COM FILTRO DUPLO (CATEGORIA + BUSCA POR DESCRIÇÃO/VEÍCULO) ---
     st.subheader("📊 Histórico e Lançamentos do Veículo")
 
     if not df_base.empty:
@@ -2401,15 +2401,14 @@ elif "🚗" in aba:
         if 'Litros' not in df_veiculo.columns:
             df_veiculo['Litros'] = 0.0
 
-       
-        # 1. ORDENAÇÃO CRONOLÓGICA POR DATA DA COMPRA (Essencial para o .diff() e o consumo do carro)
-        df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
-        
+        # Identifica a coluna de data real da compra de forma blindada
         coluna_data = 'Data_Compra' if 'Data_Compra' in df_veiculo.columns else 'Data'
+
+        # 1. ORDENAÇÃO CRONOLÓGICA PURA (Antigo em cima, recente embaixo — essencial para o .diff() funcionar)
+        df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
         
         if coluna_data in df_veiculo.columns:
             df_veiculo[coluna_data] = pd.to_datetime(df_veiculo[coluna_data], dayfirst=True, errors='coerce')
-            # Ordena primariamente pela data da compra (do mais antigo ao mais recente para o cálculo)
             df_veiculo = df_veiculo.sort_values(by=[coluna_data, 'Vencimento'], ascending=[True, True]).reset_index(drop=True)
         else:
             df_veiculo = df_veiculo.sort_values(by='Vencimento', ascending=True).reset_index(drop=True)
@@ -2461,7 +2460,9 @@ elif "🚗" in aba:
             if busca_texto:
                 df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
-            # Formatação para exibição
+            # Formatação para exibição das datas e valores
+            if coluna_data in df_veiculo.columns:
+                df_veiculo[coluna_data] = df_veiculo[coluna_data].dt.strftime('%d/%m/%Y')
             df_veiculo['Vencimento'] = df_veiculo['Vencimento'].dt.strftime('%d/%m/%Y')
             df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
 
@@ -2492,7 +2493,7 @@ elif "🚗" in aba:
                 'Preço/Litro': "R$ {:.2f}"
             }
             
-            if not df_exibicao.empty:
+            if not df_veiculo.empty:
                 # Ordena a exibição final para garantir: Mais recente em cima (ex: 194,02), intermediária e mais antiga embaixo
                 if coluna_data in df_veiculo.columns:
                     df_exibicao_final = df_veiculo.sort_values(by=[coluna_data, 'Vencimento'], ascending=[False, False])
@@ -2512,8 +2513,7 @@ elif "🚗" in aba:
         else:
             st.info("Nenhum lançamento de veículo encontrado na base com os filtros atuais.")
     else:
-        st.warning("A base de dados está vazia.")  
-
+        st.warning("A base de dados está vazia.")
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
     
