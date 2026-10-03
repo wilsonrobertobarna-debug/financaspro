@@ -2401,8 +2401,8 @@ elif "🚗" in aba:
         if 'Litros' not in df_veiculo.columns:
             df_veiculo['Litros'] = 0.0
 
-        # Identifica a coluna de data real da compra de forma blindada
-        coluna_data = 'Data_Compra' if 'Data_Compra' in df_veiculo.columns else ('Data' if 'Data' in df_veiculo.columns else 'Vencimento')
+        # Identifica a coluna de data real da compra (com espaço exato conforme sua base)
+        coluna_data = 'Data Compra' if 'Data Compra' in df_veiculo.columns else ('Data' if 'Data' in df_veiculo.columns else 'Vencimento')
 
         # 1. CONVERSÃO DE DATAS PURAS (Mantém objetos datetime para cálculos e ordenações)
         df_veiculo['Vencimento_Dt'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
@@ -2454,7 +2454,7 @@ elif "🚗" in aba:
                 df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
             if not df_veiculo.empty:
-                # 4. 🎯 ORDENAÇÃO FINAL ESTRITA PELA DATA DE COMPRA (Mais recente no topo, antigo embaixo)
+                # 4. 🎯 ORDENAÇÃO FINAL ESTRITA PELA DATA COMPRA (Mais recente no topo, antigo embaixo)
                 df_veiculo = df_veiculo.sort_values(
                     by=[coluna_data + '_Dt', 'Vencimento_Dt'], 
                     ascending=[False, False]
@@ -2492,7 +2492,7 @@ elif "🚗" in aba:
                     'Preço/Litro': "R$ {:.2f}"
                 }
 
-                # Exibe a tabela ordenada estritamente pela Data de Compra (mais recente no topo)
+                # Exibe a tabela ordenada estritamente pela Data Compra (mais recente no topo)
                 st.dataframe(df_exibicao.style.format(formatos_tabela), use_container_width=True, hide_index=True)
             else:
                 st.info("Nenhum lançamento encontrado com esses filtros.")
