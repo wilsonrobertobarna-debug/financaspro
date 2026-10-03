@@ -2401,15 +2401,18 @@ elif "🚗" in aba:
         if 'Litros' not in df_veiculo.columns:
             df_veiculo['Litros'] = 0.0
 
-        # Identifica a coluna de data real da compra (com espaço exato conforme sua base)
+        # Identifica o nome exato da coluna de data de compra na sua base
         coluna_data = 'Data Compra' if 'Data Compra' in df_veiculo.columns else ('Data' if 'Data' in df_veiculo.columns else 'Vencimento')
 
-        # 1. CONVERSÃO DE DATAS PURAS (Mantém objetos datetime para cálculos e ordenações)
+        # 1. CONVERSÃO DE DATAS PURAS
         df_veiculo['Vencimento_Dt'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
         df_veiculo[coluna_data + '_Dt'] = pd.to_datetime(df_veiculo[coluna_data], dayfirst=True, errors='coerce')
         
+        # 🎯 CHAVE INTELIGENTE DE ORDENAÇÃO: Se a Data Compra estiver vazia, usa o Vencimento como fallback para não sumir/ir pro rodapé
+        df_veiculo['Data_Ordenacao'] = df_veiculo[coluna_data + '_Dt'].fillna(df_veiculo['Vencimento_Dt'])
+
         # Ordenação inicial para o cálculo do .diff() funcionar perfeitamente (Antigo em cima, recente embaixo)
-        df_veiculo = df_veiculo.sort_values(by=[coluna_data + '_Dt', 'Vencimento_Dt'], ascending=[True, True]).reset_index(drop=True)
+        df_veiculo = df_veiculo.sort_values(by=['Data_Ordenacao', 'Vencimento_Dt'], ascending=[True, True]).reset_index(drop=True)
 
         # 2. PASSO DE SEGURANÇA: Converte as colunas numéricas
         df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
@@ -2454,9 +2457,9 @@ elif "🚗" in aba:
                 df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
             if not df_veiculo.empty:
-                # 4. 🎯 ORDENAÇÃO FINAL ESTRITA PELA DATA COMPRA (Mais recente no topo, antigo embaixo)
+                # 4. 🎯 ORDENAÇÃO FINAL DE EXIBIÇÃO: Mais recente no topo, antigo embaixo usando a chave inteligente
                 df_veiculo = df_veiculo.sort_values(
-                    by=[coluna_data + '_Dt', 'Vencimento_Dt'], 
+                    by=['Data_Ordenacao', 'Vencimento_Dt'], 
                     ascending=[False, False]
                 ).reset_index(drop=True)
 
@@ -2492,7 +2495,7 @@ elif "🚗" in aba:
                     'Preço/Litro': "R$ {:.2f}"
                 }
 
-                # Exibe a tabela ordenada estritamente pela Data Compra (mais recente no topo)
+                # Exibe a tabela perfeitamente ordenada
                 st.dataframe(df_exibicao.style.format(formatos_tabela), use_container_width=True, hide_index=True)
             else:
                 st.info("Nenhum lançamento encontrado com esses filtros.")
@@ -2500,7 +2503,6 @@ elif "🚗" in aba:
             st.info("Nenhum lançamento de veículo encontrado na base com os filtros atuais.")
     else:
         st.warning("A base de dados está vazia.")
-
 
 
 elif "📄" in aba:
