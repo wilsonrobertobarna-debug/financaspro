@@ -1529,7 +1529,7 @@ if "💰" in st.session_state.page:
         
         with g2:
            with g2:
-st.subheader("📊 Fluxo Mensal (3 Meses)")
+        st.subheader("📊 Fluxo Mensal (3 Meses)")
         
         # Cálculo dos 3 meses a partir do mês selecionado
         idx = meses_abreviados.index(mes_atual)
