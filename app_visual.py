@@ -1529,7 +1529,6 @@ if "💰" in st.session_state.page:
         
         with g2:
          with g2:
-            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES) - UNIFICADO (PAGO + PENDENTE)
             st.subheader("📊 Fluxo Mensal (3 Meses)")
             
             if not df_base.empty:
@@ -1537,74 +1536,16 @@ if "💰" in st.session_state.page:
                 meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
                 filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
                 
-                # Filtra a base completa pelos meses do período
-                df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
+                # Pega os pendentes do período para inspecionar
+                pendentes_no_periodo = df_base[(df_base['Mes_Ano'].isin(filtro_lista)) & (df_base['Status'] == 'Pendente')].copy()
                 
-                if not df_fluxo.empty:
-                    # Exclui transferências e bancos estrangeiros se houverem
-                    if 'Categoria' in df_fluxo.columns:
-                        df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
-                    
-                    if "bancos_estrangeiros" in locals() and bancos_estrangeiros and 'Banco' in df_fluxo.columns:
-                        df_fluxo = df_fluxo[~df_fluxo['Banco'].isin(bancos_estrangeiros)]
-                    
-                    # Normaliza o Tipo para garantir Receita, Despesa e Rendimento
-                    if 'Tipo' in df_fluxo.columns:
-                        df_fluxo['Tipo_Clean'] = df_fluxo['Tipo'].astype(str).str.strip().str.title()
-                        
-                        mapeamento_tipos = {
-                            'Receita': 'Receita',
-                            'A Receber': 'Receita',
-                            'Despesa': 'Despesa',
-                            'A Pagar': 'Despesa',
-                            'Rendimento': 'Rendimento'
-                        }
-                        df_fluxo['Tipo_Grafico'] = df_fluxo['Tipo_Clean'].map(mapeamento_tipos).fillna(df_fluxo['Tipo_Clean'])
-                    else:
-                        df_fluxo['Tipo_Grafico'] = 'Despesa'
-                    
-                    # Garante que V_Num é numérico
-                    df_fluxo['V_Num'] = pd.to_numeric(df_fluxo['V_Num'], errors='coerce').fillna(0)
-                    
-                    # Agrupa por Mês e Tipo somando TUDO (Pago + Pendente)
-                    df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo_Grafico'])['V_Num'].sum().reset_index()
-                    
-                    if not df_f.empty:
-                        fig_fluxo = px.bar(
-                            df_f, 
-                            x='Mes_Ano', 
-                            y='V_Num', 
-                            color='Tipo_Grafico', 
-                            barmode='group',
-                            color_discrete_map={
-                                'Receita': '#2ecc71', 
-                                'Despesa': '#e74c3c', 
-                                'Rendimento': '#3498db'
-                            },
-                            text_auto='.2s'
-                        )
-                        fig_fluxo.update_layout(
-                            height=350, 
-                            margin=dict(t=30, b=10, l=0, r=0),
-                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                            xaxis_title="",
-                            yaxis_title=""
-                        )
-                        
-                        st.plotly_chart(
-                            fig_fluxo, 
-                            use_container_width=True,
-                            config={
-                                'staticPlot': True,
-                                'displayModeBar': False
-                            }
-                        )
-                    else:
-                        st.info("Aguardando dados para o período...")
+                if not pendentes_no_periodo.empty:
+                    st.write("🔍 **Inspecionando os 52 Pendentes:**")
+                    st.write("Colunas disponíveis:", list(pendentes_no_periodo.columns))
+                    st.write("Valores únicos da coluna 'Tipo' nestes pendentes:", pendentes_no_periodo['Tipo'].unique() if 'Tipo' in pendentes_no_periodo.columns else "Coluna Tipo não existe")
+                    st.write("Amostra dos dados (primeiras 3 linhas):", pendentes_no_periodo[['Mes_Ano', 'Tipo', 'V_Num', 'Status']].head(3))
                 else:
-                    st.info("Nenhum lançamento encontrado para o período.")
-            else:
-                st.info("A base de dados está vazia.")
+                    st.write("Nenhum pendente encontrado no período para inspecionar.")
                             
 
 # 6. NOVO: GRÁFICO DE METAS
