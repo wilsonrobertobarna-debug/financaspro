@@ -1530,81 +1530,76 @@ if "💰" in st.session_state.page:
         with g2:
            with g2:
            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES)
-            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES)
-st.subheader("📊 Fluxo Mensal (3 Meses)")
-
-if not df_base.empty:
-    if 'Mes_Ano' in df_base.columns and 'V_Num' in df_base.columns:
-        try:
-            idx = meses_abreviados.index(mes_atual)
-            meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
-            filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
+            st.subheader("📊 Fluxo Mensal (3 Meses)")
             
-            df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
-        except Exception:
-            df_fluxo = df_base.copy()
-
-        if not df_fluxo.empty:
-            # 🔒 EXCLUI AS TRANSFERÊNCIAS DO GRÁFICO
-            if 'Categoria' in df_fluxo.columns:
-                df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
-            
-            # 🛡️ NORMALIZAÇÃO DE TIPOS: Une A Receber com Receita e A Pagar com Despesa
-            if 'Tipo' in df_fluxo.columns:
-                df_fluxo['Tipo_Clean'] = df_fluxo['Tipo'].astype(str).str.strip().str.title()
+            if not df_base.empty:
+                # Cálculo dos 3 meses a partir do mês selecionado
+                idx = meses_abreviados.index(mes_atual)
+                meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
+                filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
                 
-                mapeamento_tipos = {
-                    'Receita': 'Receita',
-                    'A Receber': 'Receita',
-                    'Despesa': 'Despesa',
-                    'A Pagar': 'Despesa',
-                    'Rendimento': 'Rendimento'
-                }
-                df_fluxo['Tipo_Grafico'] = df_fluxo['Tipo_Clean'].map(mapeamento_tipos).fillna(df_fluxo['Tipo_Clean'])
-            else:
-                df_fluxo['Tipo_Grafico'] = 'Despesa'
-
-            # Agrupa por mês e tipo unificado
-            df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo_Grafico'])['V_Num'].sum().reset_index()
-            
-            if not df_f.empty:
-                fig_fluxo = px.bar(
-                    df_f, 
-                    x='Mes_Ano', 
-                    y='V_Num', 
-                    color='Tipo_Grafico', 
-                    barmode='group',
-                    color_discrete_map={
-                        'Receita': '#2ecc71', 
-                        'Despesa': '#e74c3c', 
-                        'Rendimento': '#3498db'
-                    },
-                    text_auto='.2s'
-                )
-                fig_fluxo.update_layout(
-                    height=350, 
-                    margin=dict(t=30, b=10, l=0, r=0),
-                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                    xaxis_title="",
-                    yaxis_title=""
-                )
+                # Filtra a base completa pelos meses selecionados
+                df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
                 
-                st.plotly_chart(
-                    fig_fluxo, 
-                    use_container_width=True,
-                    config={
-                        'staticPlot': True,
-                        'displayModeBar': False
-                    }
-                )
+                if not df_fluxo.empty:
+                    # 🔒 EXCLUI AS TRANSFERÊNCIAS
+                    if 'Categoria' in df_fluxo.columns:
+                        df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
+                    
+                    # 🛡️ NORMALIZAÇÃO DE TIPOS: Junta "A Receber" com "Receita" e "A Pagar" com "Despesa"
+                    if 'Tipo' in df_fluxo.columns:
+                        df_fluxo['Tipo_Clean'] = df_fluxo['Tipo'].astype(str).str.strip().str.title()
+                        
+                        mapeamento_tipos = {
+                            'Receita': 'Receita',
+                            'A Receber': 'Receita',
+                            'Despesa': 'Despesa',
+                            'A Pagar': 'Despesa',
+                            'Rendimento': 'Rendimento'
+                        }
+                        df_fluxo['Tipo_Grafico'] = df_fluxo['Tipo_Clean'].map(mapeamento_tipos).fillna(df_fluxo['Tipo_Clean'])
+                    else:
+                        df_fluxo['Tipo_Grafico'] = 'Despesa'
+            
+                    # Prepara os dados agrupados por mês e tipo unificado
+                    df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo_Grafico'])['V_Num'].sum().reset_index()
+                    
+                    if not df_f.empty:
+                        fig_fluxo = px.bar(
+                            df_f, 
+                            x='Mes_Ano', 
+                            y='V_Num', 
+                            color='Tipo_Grafico', 
+                            barmode='group',
+                            color_discrete_map={
+                                'Receita': '#2ecc71', 
+                                'Despesa': '#e74c3c', 
+                                'Rendimento': '#3498db'
+                            },
+                            text_auto='.2s'
+                        )
+                        fig_fluxo.update_layout(
+                            height=350, 
+                            margin=dict(t=30, b=10, l=0, r=0),
+                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                            xaxis_title="",
+                            yaxis_title=""
+                        )
+                        
+                        st.plotly_chart(
+                            fig_fluxo, 
+                            use_container_width=True,
+                            config={
+                                'staticPlot': True,
+                                'displayModeBar': False
+                            }
+                        )
+                    else:
+                        st.info("Aguardando dados para o período...")
+                else:
+                    st.info("Nenhum lançamento encontrado para o período.")
             else:
-                st.info("Aguardando dados para o período...")
-        else:
-            st.info("Nenhum lançamento encontrado para o período.")
-    else:
-        st.info("Colunas essenciais (Mes_Ano ou V_Num) ausentes na base.")
-else:
-    st.info("A base de dados está vazia.")
+                st.info("A base de dados está vazia.")
                             
 
 # 6. NOVO: GRÁFICO DE METAS
