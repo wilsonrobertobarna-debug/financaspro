@@ -1526,7 +1526,7 @@ if "💰" in st.session_state.page:
                         'displayModeBar': False
                     }
                 )
-        
+      
          with g2:
             # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES) - COM CORREÇÃO DE TIPO VAZIO
             st.subheader("📊 Fluxo Mensal (3 Meses)")
@@ -1547,9 +1547,8 @@ if "💰" in st.session_state.page:
                     if "bancos_estrangeiros" in locals() and bancos_estrangeiros and 'Banco' in df_fluxo.columns:
                         df_fluxo = df_fluxo[~df_fluxo['Banco'].isin(bancos_estrangeiros)]
                     
-                    # 🛡️️ TRATAMENTO CRUCIAL: Corrige o Tipo vazio/nulo nos pendentes
+                    # 🛡 TRATAMENTO CRUCIAL: Corrige o Tipo vazio/nulo nos pendentes
                     if 'Tipo' in df_fluxo.columns:
-                        # Substitui valores nulos, vazios ou espaços em branco por 'Despesa' padrão para os pendentes (ou ajusta conforme necessário)
                         df_fluxo['Tipo'] = df_fluxo['Tipo'].fillna('').astype(str).str.strip()
                         df_fluxo.loc[df_fluxo['Tipo'] == '', 'Tipo'] = 'Despesa'
                         
