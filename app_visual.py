@@ -2440,23 +2440,34 @@ if not df_base.empty:
             df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
         if not df_veiculo.empty:
+# 1️⃣ PRIMEIRO: Converte datas e ordena cronologicamente
             df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
             df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
 
+            # 2️⃣ SEGUNDO: Conversões numéricas seguras
             df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
             df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
             df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
 
-            df_veiculo['Km_Rodados'] = df_veiculo['Km'].diff()
-            df_veiculo['Km/L'] = df_veiculo.apply(
-                lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and row['Km_Rodados'] > 0 else 0.0, 
-                axis=1
-            )
+            # 3️⃣ TERCEIRO: Zera o Km onde for 0 (para manutenções sem odômetro não quebrarem a conta) e faz o diff
+            # Substitui 0 por NaN temporariamente para o diff() pular linhas vazias corretamente
+            df_veiculo['Km_Valido'] = df_veiculo['Km'].replace(0, pd.NA)
+            df_veiculo['Km_Rodados'] = df_veiculo['Km_Valido'].diff()
+
+            # 4️⃣ QUARTO: Cálculo seguro do Km/L (só calcula se abasteceu mais de 0 litros e rodou um Km lógico > 0 e < 2000)
+            def calcula_km_l(row):
+                km_rodado = row['Km_Rodados']
+                litros = row['Litros']
+                if pd.notna(km_rodado) and km_rodado > 0 and km_rodado < 2000 and litros > 0:
+                    return km_rodado / litros
+                return 0.0
+
+            df_veiculo['Km/L'] = df_veiculo.apply(calcula_km_l, axis=1)
+            
             df_veiculo['Preço/Litro'] = df_veiculo.apply(
                 lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
                 axis=1
             )
-
             df_veiculo['Vencimento'] = df_veiculo['Vencimento'].dt.strftime('%d/%m/%Y')
             df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
 
