@@ -1511,23 +1511,23 @@ if "💰" in st.session_state.page:
         st.divider()
         
 
-      # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
-        g1, g2 = st.columns(2)
-        
-        with g1:
-            st.write("### 🍕 Gastos por Categoria")
-            df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
-            if not df_p.empty:
-                st.plotly_chart(
-                    px.pie(df_p, values='V_Num', names='Categoria', hole=0.4), 
-                    use_container_width=True,
-                    config={
-                        'staticPlot': True,
-                        'displayModeBar': False
-                    }
-                )
+          # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
+            g1, g2 = st.columns(2)
+            
+            with g1:
+                st.write("### 🍕 Gastos por Categoria")
+                df_p = df_m_limpo[df_m_limpo['Tipo'] == 'Despesa'].groupby('Categoria')['V_Num'].sum().reset_index()
+                if not df_p.empty:
+                    st.plotly_chart(
+                        px.pie(df_p, values='V_Num', names='Categoria', hole=0.4), 
+                        use_container_width=True,
+                        config={
+                            'staticPlot': True,
+                            'displayModeBar': False
+                        }
+                    )
       
-         with g2:
+        with g2:
             # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES) - COM CORREÇÃO DE TIPO VAZIO
             st.subheader("📊 Fluxo Mensal (3 Meses)")
             
