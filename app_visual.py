@@ -2440,34 +2440,62 @@ if not df_base.empty:
             df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
         if not df_veiculo.empty:
-# 1️⃣ PRIMEIRO: Converte datas e ordena cronologicamente
+            # 1️⃣ Converte datas e ordena cronologicamente
             df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
             df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
 
-            # 2️⃣ SEGUNDO: Conversões numéricas seguras
+            # 2️⃣ Conversões numéricas seguras
             df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
             df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
             df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
 
-            # 3️⃣ TERCEIRO: Zera o Km onde for 0 (para manutenções sem odômetro não quebrarem a conta) e faz o diff
-            # Substitui 0 por NaN temporariamente para o diff() pular linhas vazias corretamente
-            df_veiculo['Km_Valido'] = df_veiculo['Km'].replace(0, pd.NA)
-            df_veiculo['Km_Rodados'] = df_veiculo['Km_Valido'].diff()
-
-            # 4️⃣ QUARTO: Cálculo seguro do Km/L (só calcula se abasteceu mais de 0 litros e rodou um Km lógico > 0 e < 2000)
-            def calcula_km_l(row):
-                km_rodado = row['Km_Rodados']
-                litros = row['Litros']
-                if pd.notna(km_rodado) and km_rodado > 0 and km_rodado < 2000 and litros > 0:
-                    return km_rodado / litros
-                return 0.0
-
-            df_veiculo['Km/L'] = df_veiculo.apply(calcula_km_l, axis=1)
+            # 3️⃣ Cálculo sequencial seguro de Km Rodados e Km/L
+            km_rodados_lista = []
+            km_l_lista = []
+            preco_litro_lista = []
             
-            df_veiculo['Preço/Litro'] = df_veiculo.apply(
-                lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
-                axis=1
-            )
+            ultimo_km_valido = 0
+
+            for index, row in df_veiculo.iterrows():
+                km_atual = row['Km']
+                litros = row['Litros']
+                valor = row['V_Num']
+                
+                # Preço por litro
+                p_litro = (valor / litros) if litros > 0 else 0.0
+                preco_litro_lista.append(p_litro)
+                
+                # Se não tem KM cadastrado nesta linha, não calcula rodagem
+                if km_atual <= 0:
+                    km_rodados_lista.append(0.0)
+                    km_l_lista.append(0.0)
+                    continue
+                
+                # Se é a primeira vez que vemos um KM válido, guardamos e seguimos
+                if ultimo_km_valido == 0:
+                    ultimo_km_valido = km_atual
+                    km_rodados_lista.append(0.0)
+                    km_l_lista.append(0.0)
+                else:
+                    # Calcula a diferença com o último abastecimento/KM registrado
+                    rodados = km_atual - ultimo_km_valido
+                    
+                    if rodados > 0 and litros > 0:
+                        consumo = rodados / litros
+                        km_rodados_lista.append(rodados)
+                        km_l_lista.append(consumo)
+                        ultimo_km_valido = km_atual # Atualiza para o próximo intervalo
+                    else:
+                        km_rodados_lista.append(0.0)
+                        km_l_lista.append(0.0)
+                        # Atualiza o KM válido se o atual for maior que o anterior
+                        if km_atual > ultimo_km_valido:
+                            ultimo_km_valido = km_atual
+
+            df_veiculo['Km_Rodados'] = km_rodados_lista
+            df_veiculo['Km/L'] = km_l_lista
+            df_veiculo['Preço/Litro'] = preco_litro_lista
+
             df_veiculo['Vencimento'] = df_veiculo['Vencimento'].dt.strftime('%d/%m/%Y')
             df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
 
