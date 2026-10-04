@@ -1537,6 +1537,8 @@ if "💰" in st.session_state.page:
                 idx = meses_abreviados.index(mes_atual)
                 meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
                 filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
+
+                st.write("Tipos encontrados na base:", df_base['Tipo'].unique())
                 
                 # Filtra a base completa pelos meses selecionados
                 df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
