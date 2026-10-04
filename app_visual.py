@@ -2458,7 +2458,7 @@ if not df_base.empty:
             if 'Litros' in df_exibicao.columns:
                 df_exibicao['Litros'] = df_exibicao['Litros'].apply(formata_litros_inteligente)
 
-            formatos_tabela = {
+           formatos_tabela = {
                 'Km': "{:,.0f} km",
                 'Km_Rodados': "{:,.0f} km",
                 'Km/L': "{:.2f} Km/L",
@@ -2470,8 +2470,7 @@ if not df_base.empty:
             st.info("Nenhum lançamento encontrado com esses filtros.")
     else:
         st.info("Nenhum lançamento de veículo encontrado na base.")
-else:
-    st.info("A base de dados está vazia.")
+
 
 
 elif "📄" in aba:
