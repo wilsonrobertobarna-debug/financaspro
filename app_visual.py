@@ -1527,8 +1527,9 @@ if "💰" in st.session_state.page:
                     }
                 )
         
- with g2:
-            st.subheader("📊 Fluxo Mensal (3 Meses)")
+        with g2:
+           with g2:
+            st.write("### 📊 Fluxo Mensal (3 Meses)")
             
             # Cálculo dos 3 meses a partir do mês selecionado
             idx = meses_abreviados.index(mes_atual)
@@ -1538,65 +1539,47 @@ if "💰" in st.session_state.page:
             # Filtra a base completa pelos meses selecionados
             df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
             
+            # 🔒 EXCLUI AS TRANSFERÊNCIAS (Olhando pelo campo Categoria)
             if not df_fluxo.empty:
-                # 🔒 EXCLUI AS TRANSFERÊNCIAS
                 if 'Categoria' in df_fluxo.columns:
                     df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
+            
+            # Prepara os dados para o gráfico
+            df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
+            
+            if not df_f.empty:
+                # Gráfico com cores fixas, layout limpo e valores nas barras
+                fig_fluxo = px.bar(
+                    df_f, 
+                    x='Mes_Ano', 
+                    y='V_Num', 
+                    color='Tipo', 
+                    barmode='group',
+                    color_discrete_map={
+                        'Receita': '#2ecc71', 
+                        'Despesa': '#e74c3c', 
+                        'Rendimento': '#3498db'
+                    },
+                    text_auto='.2s'
+                )
+                fig_fluxo.update_layout(
+                    height=350, 
+                    margin=dict(t=30, b=10, l=0, r=0),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
                 
-                # 🛡️ NORMALIZAÇÃO DE TIPOS: Garante que "A Receber" vire "Receita" e "A Pagar" vire "Despesa" 
-                # para que o gráfico some tudo na mesma barra do mês correspondente!
-                if 'Tipo' in df_fluxo.columns:
-                    df_fluxo['Tipo_Clean'] = df_fluxo['Tipo'].astype(str).str.strip().str.title()
-                    
-                    # Mapeia variações para unificar nas cores corretas do gráfico
-                    mapeamento_tipos = {
-                        'Receita': 'Receita',
-                        'A Receber': 'Receita',
-                        'Despesa': 'Despesa',
-                        'A Pagar': 'Despesa',
-                        'Rendimento': 'Rendimento'
+                # Exibe o gráfico definitivo e travado para rolar a tela no celular
+                st.plotly_chart(
+                    fig_fluxo, 
+                    use_container_width=True,
+                    config={
+                        'staticPlot': True,
+                        'displayModeBar': False
                     }
-                    df_fluxo['Tipo_Grafico'] = df_fluxo['Tipo_Clean'].map(mapeamento_tipos).fillna(df_fluxo['Tipo_Clean'])
-                else:
-                    df_fluxo['Tipo_Grafico'] = 'Despesa'
-
-                # Prepara os dados para o gráfico usando o tipo unificado
-                df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo_Grafico'])['V_Num'].sum().reset_index()
-                
-                if not df_f.empty:
-                    fig_fluxo = px.bar(
-                        df_f, 
-                        x='Mes_Ano', 
-                        y='V_Num', 
-                        color='Tipo_Grafico', 
-                        barmode='group',
-                        color_discrete_map={
-                            'Receita': '#2ecc71', 
-                            'Despesa': '#e74c3c', 
-                            'Rendimento': '#3498db'
-                        },
-                        text_auto='.2s'
-                    )
-                    fig_fluxo.update_layout(
-                        height=350, 
-                        margin=dict(t=30, b=10, l=0, r=0),
-                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                        xaxis_title="",
-                        yaxis_title=""
-                    )
-                    
-                    st.plotly_chart(
-                        fig_fluxo, 
-                        use_container_width=True,
-                        config={
-                            'staticPlot': True,
-                            'displayModeBar': False
-                        }
-                    )
-                else:
-                    st.info("Aguardando dados para o período...")
+                )
             else:
-                st.info("Nenhum lançamento encontrado para o período.")           
+                st.info("Aguardando dados para o período...")
+                
 
 # 6. NOVO: GRÁFICO DE METAS
         st.subheader("🎯 Metas vs Realizado (Despesas)")
@@ -2365,130 +2348,105 @@ elif "🐾" in aba:
         st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
 
 elif "🚗" in aba:
-    st.title("🚗 Gestão do Veículo")
-    
-    c1, c2, c3 = st.columns([1,1,2])
-    alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
-    gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
-    if alc > 0 and gas > 0:
-        if (alc/gas) <= 0.7: c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
-        else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
-    
-    st.divider()
-    
-    st.subheader("⚙️ Controle de Troca de Óleo")
-    km1, km2, km3 = st.columns(3)
-    km_atual = km1.number_input("Quilometragem Atual (km)", value=0, step=500)
-    km_oleo = km2.number_input("Km Última Troca de Óleo", value=0, step=500)
-    limite_oleo = km3.number_input("Limite de Troca (km rodados)", value=10000, step=1000)
-    
-    if km_atual > 0 and km_oleo > 0:
-        km_rodados = km_atual - km_oleo
-        if km_rodados >= limite_oleo:
-            st.error(f"🚨 ALERTA: Passou do limite para trocar o óleo! Rodou {km_rodados:,} km desde a última troca.")
+        st.title("🚗 Gestão do Veículo")
+        
+        c1, c2, c3 = st.columns([1,1,2])
+        alc = c1.number_input("Preço Álcool", value=0.0, step=0.01)
+        gas = c2.number_input("Preço Gasolina", value=0.0, step=0.01)
+        if alc > 0 and gas > 0:
+            if (alc/gas) <= 0.7: c3.success("💡 RECOMENDAÇÃO: ABASTEÇA COM ÁLCOOL!")
+            else: c3.warning("💡 RECOMENDAÇÃO: ABASTEÇA COM GASOLINA!")
+        
+        st.divider()
+        
+        st.subheader("⚙️ Controle de Troca de Óleo")
+        km1, km2, km3 = st.columns(3)
+        km_atual = km1.number_input("Quilometragem Atual (km)", value=0, step=500)
+        km_oleo = km2.number_input("Km Última Troca de Óleo", value=0, step=500)
+        limite_oleo = km3.number_input("Limite de Troca (km rodados)", value=10000, step=1000)
+        
+        if km_atual > 0 and km_oleo > 0:
+            km_rodados = km_atual - km_oleo
+            if km_rodados >= limite_oleo:
+                st.error(f"🚨 ALERTA: Passou do limite para trocar o óleo! Rodou {km_rodados:,} km desde a última troca.")
+            else:
+                st.info(f"👍 Óleo em dia! Você rodou {km_rodados:,} km. Faltam {limite_oleo - km_rodados:,} km para a próxima troca.")
+                
+        st.divider()
+        
+        st.subheader("⛽ Cálculo de Consumo (Manual)")
+        st.info("💡 **Atenção:** Digite a quantidade em **Litros** e a distância em **Quilômetros** para cálculo rápido.")
+        
+        c_cons1, c_cons2, c_cons3 = st.columns(3)
+        litros_man = c_cons1.number_input("Litros Abastecidos", value=0.0, step=0.5, format="%.1f", key="litros_manual")
+        distancia = c_cons2.number_input("Distância Percorrida (km)", value=0, step=10, format="%d", key="distancia_manual")
+        
+        if litros_man > 0:
+            consumo = distancia / litros_man
+            c_cons3.metric(label="Consumo Médio", value=f"{consumo:.2f} km/l")
         else:
-            st.info(f"👍 Óleo em dia! Você rodou {km_rodados:,} km. Faltam {limite_oleo - km_rodados:,} km para a próxima troca.")
+            c_cons3.warning("Aguardando dados...")
             
-    st.divider()
-    
-    st.subheader("⛽ Cálculo de Consumo (Manual)")
-    st.info("💡 **Atenção:** Digite a quantidade em **Litros** e a distância em **Quilômetros** para cálculo rápido.")
-    
-    c_cons1, c_cons2, c_cons3 = st.columns(3)
-    litros_man = c_cons1.number_input("Litros Abastecidos", value=0.0, step=0.5, format="%.1f", key="litros_manual")
-    distancia = c_cons2.number_input("Distância Percorrida (km)", value=0, step=10, format="%d", key="distancia_manual")
-    
-    if litros_man > 0:
-        consumo = distancia / litros_man
-        c_cons3.metric(label="Consumo Médio", value=f"{consumo:.2f} km/l")
-    else:
-        c_cons3.warning("Aguardando dados...")
-        
-    st.divider()
-
+        st.divider()
 # --- HISTÓRICO COM FILTRO DUPLO (CATEGORIA + BUSCA POR DESCRIÇÃO/VEÍCULO) ---
-    st.subheader("📊 Histórico e Lançamentos do Veículo")
+        st.subheader("📊 Histórico e Lançamentos do Veículo")
 
-    if not df_base.empty:
-        df_veiculo = df_base.copy()
+        if not df_base.empty:
+            df_veiculo = df_base.copy()
 
-        # Blindagem automática de colunas
-        if 'Km' not in df_veiculo.columns:
-            df_veiculo['Km'] = 0.0
-        if 'Litros' not in df_veiculo.columns:
-            df_veiculo['Litros'] = 0.0
+            # Blindagem automática de colunas
+            if 'Km' not in df_veiculo.columns:
+                df_veiculo['Km'] = 0.0
+            if 'Litros' not in df_veiculo.columns:
+                df_veiculo['Litros'] = 0.0
 
-        # Identifica dinamicamente a coluna de data de compra
-        colunas_possiveis = ['Data Compra', 'Data_Compra', 'data compra', 'data_compra', 'Data']
-        coluna_data = next((col for col in colunas_possiveis if col in df_veiculo.columns), 'Vencimento')
-
-        # 1. CONVERSÃO DE DATAS PURAS E CHAVE DE ORDENAÇÃO
-        df_veiculo['Vencimento_Dt'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
-        df_veiculo[coluna_data + '_Dt'] = pd.to_datetime(df_veiculo[coluna_data], dayfirst=True, errors='coerce')
-        
-        df_veiculo['Data_Ordenacao'] = df_veiculo[coluna_data + '_Dt'].fillna(df_veiculo['Vencimento_Dt'])
-        df_veiculo['Data_Ordenacao'] = df_veiculo['Data_Ordenacao'].fillna(pd.Timestamp('1900-01-01'))
-
-        # 2. 🔄 ORDENAÇÃO CRONOLÓGICA INICIAL (Do mais antigo para o mais recente para o cálculo do .diff())
-        df_veiculo = df_veiculo.sort_values(by=['Data_Ordenacao', 'Vencimento_Dt'], ascending=[True, True]).reset_index(drop=True)
-
-        # 3. CONVERSÃO SEGURA DE NÚMEROS (Mantendo o formato correto do valor e dos quilômetros)
-        df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
-        
-        if df_veiculo['Litros'].dtype == object:
-            df_veiculo['Litros'] = df_veiculo['Litros'].astype(str).str.replace(',', '.', regex=False)
-        df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
-        
-        df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
-
-        # 4. 🧮 CÁLCULO DO ODÔMETRO E CONSUMO (Na ordem cronológica correta)
-        df_veiculo['Km_Trabalho'] = df_veiculo['Km'].replace(0, pd.NA).ffill().fillna(0)
-        df_veiculo['Km_Rodados'] = df_veiculo['Km_Trabalho'].diff()
-        
-        df_veiculo.loc[df_veiculo['Km_Rodados'] <= 0, 'Km_Rodados'] = 0.0
-        df_veiculo.loc[df_veiculo['Km'] == 0, 'Km_Rodados'] = 0.0
-
-        df_veiculo['Km/L'] = df_veiculo.apply(
-            lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and row['Km_Rodados'] > 0 else 0.0, 
-            axis=1
-        )
-        df_veiculo['Preço/Litro'] = df_veiculo.apply(
-            lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
-            axis=1
-        )
-
-        # Padroniza categoria para os filtros
-        df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
-        df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
-
-        if not df_veiculo.empty:
-            col_filtro1, col_filtro2 = st.columns(2)
+            # Padroniza categoria e descrição para facilitar a busca
+            df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
             
-            with col_filtro1:
-                tipos_disponiveis = ["Todos", "Combustível", "Manutenção", "Veículo"]
-                filtro_escolhido = st.selectbox("🔍 Filtrar por Categoria:", tipos_disponiveis, key="filtro_aba_veiculo")
-
-            with col_filtro2:
-                busca_texto = st.text_input("🔎 Buscar por Veículo/Descrição (ex: Tcross, Lead):", "", key="busca_veiculo_texto")
-
-            if filtro_escolhido != "Todos":
-                df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'] == filtro_escolhido]
-
-            if busca_texto:
-                df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
+            # Pega inicialmente tudo que envolve veículo, combustível ou manutenção
+            df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
 
             if not df_veiculo.empty:
-                # 5. 🎯 ORDENAÇÃO FINAL DE EXIBIÇÃO: Mais recente no topo (Decrescente)
-                df_veiculo = df_veiculo.sort_values(
-                    by=['Data_Ordenacao', 'Vencimento_Dt'], 
-                    ascending=[False, False],
-                    kind='mergesort'
-                ).reset_index(drop=True)
+                # --- DUAS COLUNAS PARA OS FILTROS ---
+                col_filtro1, col_filtro2 = st.columns(2)
+                
+                with col_filtro1:
+                    tipos_disponiveis = ["Todos", "Combustível", "Manutenção", "Veículo"]
+                    filtro_escolhido = st.selectbox("🔍 Filtrar por Categoria:", tipos_disponiveis, key="filtro_aba_veiculo")
 
-                # Formata as datas para exibição visual APÓS a ordenação final
-                if coluna_data in df_veiculo.columns and coluna_data != 'Vencimento':
-                    df_veiculo[coluna_data] = df_veiculo[coluna_data + '_Dt'].dt.strftime('%d/%m/%Y')
-                df_veiculo['Vencimento'] = df_veiculo['Vencimento_Dt'].dt.strftime('%d/%m/%Y')
+                with col_filtro2:
+                    busca_texto = st.text_input("🔎 Buscar por Veículo/Descrição (ex: Tcross, Lead):", "", key="busca_veiculo_texto")
+
+                # Aplica o filtro de Categoria
+                if filtro_escolhido != "Todos":
+                    df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'] == filtro_escolhido]
+
+                # Aplica o filtro de texto na coluna Descrição (ignorando maiúsculas/minúsculas)
+                if busca_texto:
+                    df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
+
+                # Ordenação cronológica correta
+                df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
+                df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
+
+                # Conversões numéricas seguras
+                df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
+                df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
+                df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
+
+                # Cálculos
+                df_veiculo['Km_Rodados'] = df_veiculo['Km'].diff()
+                df_veiculo['Km/L'] = df_veiculo.apply(
+                    lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and row['Km_Rodados'] > 0 else 0.0, 
+                    axis=1
+                )
+                df_veiculo['Preço/Litro'] = df_veiculo.apply(
+                    lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
+                    axis=1
+                )
+
+                # Formatação
+                df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], errors='coerce').dt.strftime('%d/%m/%Y')
                 df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
 
                 colunas_exibir = ['Vencimento', 'Categoria', 'Descrição', 'Valor_Formatado', 'Km', 'Km_Rodados', 'Litros', 'Km/L', 'Preço/Litro', 'Banco']
@@ -2496,11 +2454,12 @@ elif "🚗" in aba:
                 
                 df_exibicao = df_veiculo[colunas_exibir_disponiveis].copy()
 
+                # --- 🎯 FUNÇÃO DE LITROS INTELIGENTE COM A LETRA L ---
                 def formata_litros_inteligente(valor):
                     try:
                         val_float = float(valor)
                         if pd.isna(val_float) or val_float == 0:
-                            return ""
+                            return "" # ou "0 L" se preferir mostrar zero
                         if val_float.is_integer():
                             return f"{int(val_float)} L"
                         return f"{val_float:.2f} L".replace('.', ',')
@@ -2509,22 +2468,28 @@ elif "🚗" in aba:
 
                 if 'Litros' in df_exibicao.columns:
                     df_exibicao['Litros'] = df_exibicao['Litros'].apply(formata_litros_inteligente)
+                # -------------------------------------------------------------
 
                 formatos_tabela = {
                     'Km': "{:,.0f} km",
                     'Km_Rodados': "{:,.0f} km",
+                    # ⚠️ Note que REMOVEMOS a linha de 'Litros' daqui para o Pandas não sobrescrever!
                     'Km/L': "{:.2f} Km/L",
                     'Preço/Litro': "R$ {:.2f}"
                 }
+                
+                # Se quiser que apareça o "L" no final quando for inteiro ou decimal, 
+                # você pode ajustar o retorno da função para retornar f"{...} L" se preferir!
 
-                # Exibe a tabela com o valor correto, ordem certa e cálculos funcionando
-                st.dataframe(df_exibicao.style.format(formatos_tabela), use_container_width=True, hide_index=True)
+                if not df_exibicao.empty:
+                    st.dataframe(df_exibicao.iloc[::-1].style.format(formatos_tabela), use_container_width=True, hide_index=True)
+                else:
+                    st.info("Nenhum lançamento encontrado com esses filtros.")
             else:
-                st.info("Nenhum lançamento encontrado com esses filtros.")
+                st.info("Nenhum lançamento de veículo encontrado na base.")
         else:
-            st.info("Nenhum lançamento de veículo encontrado na base com os filtros atuais.")
-    else:
-        st.warning("A base de dados está vazia.")
+            st.warning("A base de dados está vazia.")
+        
 
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
