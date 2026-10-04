@@ -1528,8 +1528,8 @@ if "💰" in st.session_state.page:
                 )
         
         with g2:
-           with g2:
-           # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES)
+          with g2:
+            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES)
             st.subheader("📊 Fluxo Mensal (3 Meses)")
             
             if not df_base.empty:
@@ -1546,21 +1546,24 @@ if "💰" in st.session_state.page:
                     if 'Categoria' in df_fluxo.columns:
                         df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
                     
-                    # 🛡️ NORMALIZAÇÃO DE TIPOS: Junta "A Receber" com "Receita" e "A Pagar" com "Despesa"
+                    # 🛡️ NORMALIZAÇÃO DE TIPOS: Força a união de Pagar/Receber pendentes com Realizados
                     if 'Tipo' in df_fluxo.columns:
                         df_fluxo['Tipo_Clean'] = df_fluxo['Tipo'].astype(str).str.strip().str.title()
                         
                         mapeamento_tipos = {
                             'Receita': 'Receita',
                             'A Receber': 'Receita',
+                            'Receita Pendente': 'Receita',
                             'Despesa': 'Despesa',
                             'A Pagar': 'Despesa',
+                            'Despesa Pendente': 'Despesa',
+                            'Pendente': 'Despesa',
                             'Rendimento': 'Rendimento'
                         }
                         df_fluxo['Tipo_Grafico'] = df_fluxo['Tipo_Clean'].map(mapeamento_tipos).fillna(df_fluxo['Tipo_Clean'])
                     else:
                         df_fluxo['Tipo_Grafico'] = 'Despesa'
-            
+                    
                     # Prepara os dados agrupados por mês e tipo unificado
                     df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo_Grafico'])['V_Num'].sum().reset_index()
                     
