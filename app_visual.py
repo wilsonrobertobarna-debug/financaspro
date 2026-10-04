@@ -1529,31 +1529,47 @@ if "💰" in st.session_state.page:
         
         with g2:
            with g2:
-            st.write("### 📊 Fluxo Mensal (3 Meses)")
+st.subheader("📊 Fluxo Mensal (3 Meses)")
+        
+        # Cálculo dos 3 meses a partir do mês selecionado
+        idx = meses_abreviados.index(mes_atual)
+        meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
+        filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
+        
+        # Filtra a base completa pelos meses selecionados
+        df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
+        
+        if not df_fluxo.empty:
+            # 🔒 EXCLUI AS TRANSFERÊNCIAS
+            if 'Categoria' in df_fluxo.columns:
+                df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
             
-            # Cálculo dos 3 meses a partir do mês selecionado
-            idx = meses_abreviados.index(mes_atual)
-            meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
-            filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
-            
-            # Filtra a base completa pelos meses selecionados
-            df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
-            
-            # 🔒 EXCLUI AS TRANSFERÊNCIAS (Olhando pelo campo Categoria)
-            if not df_fluxo.empty:
-                if 'Categoria' in df_fluxo.columns:
-                    df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
-            
-            # Prepara os dados para o gráfico
-            df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
+            # 🛡️ NORMALIZAÇÃO DE TIPOS: Garante que "A Receber" vire "Receita" e "A Pagar" vire "Despesa" 
+            # para que o gráfico some tudo na mesma barra do mês correspondente!
+            if 'Tipo' in df_fluxo.columns:
+                df_fluxo['Tipo_Clean'] = df_fluxo['Tipo'].astype(str).str.strip().str.title()
+                
+                # Mapeia variações para unificar nas cores corretas do gráfico
+                mapeamento_tipos = {
+                    'Receita': 'Receita',
+                    'A Receber': 'Receita',
+                    'Despesa': 'Despesa',
+                    'A Pagar': 'Despesa',
+                    'Rendimento': 'Rendimento'
+                }
+                df_fluxo['Tipo_Grafico'] = df_fluxo['Tipo_Clean'].map(mapeamento_tipos).fillna(df_fluxo['Tipo_Clean'])
+            else:
+                df_fluxo['Tipo_Grafico'] = 'Despesa'
+
+            # Prepara os dados para o gráfico usando o tipo unificado
+            df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo_Grafico'])['V_Num'].sum().reset_index()
             
             if not df_f.empty:
-                # Gráfico com cores fixas, layout limpo e valores nas barras
                 fig_fluxo = px.bar(
                     df_f, 
                     x='Mes_Ano', 
                     y='V_Num', 
-                    color='Tipo', 
+                    color='Tipo_Grafico', 
                     barmode='group',
                     color_discrete_map={
                         'Receita': '#2ecc71', 
@@ -1565,10 +1581,11 @@ if "💰" in st.session_state.page:
                 fig_fluxo.update_layout(
                     height=350, 
                     margin=dict(t=30, b=10, l=0, r=0),
-                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                    xaxis_title="",
+                    yaxis_title=""
                 )
                 
-                # Exibe o gráfico definitivo e travado para rolar a tela no celular
                 st.plotly_chart(
                     fig_fluxo, 
                     use_container_width=True,
@@ -1579,6 +1596,8 @@ if "💰" in st.session_state.page:
                 )
             else:
                 st.info("Aguardando dados para o período...")
+        else:
+            st.info("Nenhum lançamento encontrado para o período.")
                 
 
 # 6. NOVO: GRÁFICO DE METAS
