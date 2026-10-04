@@ -1529,7 +1529,7 @@ if "💰" in st.session_state.page:
         
         with g2:
           with g2:
-            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES)
+            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES) - COM PENDENTES DA COLUNA STATUS
             st.subheader("📊 Fluxo Mensal (3 Meses)")
             
             if not df_base.empty:
@@ -1537,8 +1537,6 @@ if "💰" in st.session_state.page:
                 idx = meses_abreviados.index(mes_atual)
                 meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
                 filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
-
-                st.write("Tipos encontrados na base:", df_base['Tipo'].unique())
                 
                 # Filtra a base completa pelos meses selecionados
                 df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
@@ -1548,25 +1546,23 @@ if "💰" in st.session_state.page:
                     if 'Categoria' in df_fluxo.columns:
                         df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
                     
-                    # 🛡️ NORMALIZAÇÃO DE TIPOS: Força a união de Pagar/Receber pendentes com Realizados
+                    # 🛡️ NORMALIZAÇÃO DE TIPOS E INCLUSÃO DOS PENDENTES DA COLUNA 'STATUS'
                     if 'Tipo' in df_fluxo.columns:
                         df_fluxo['Tipo_Clean'] = df_fluxo['Tipo'].astype(str).str.strip().str.title()
                         
+                        # Se houver coluna Status, podemos verificar se há distinção, 
+                        # mas como você disse que Despesa e Receita já englobam, 
+                        # vamos garantir que o Tipo base vá direto para o gráfico:
                         mapeamento_tipos = {
                             'Receita': 'Receita',
-                            'A Receber': 'Receita',
-                            'Receita Pendente': 'Receita',
                             'Despesa': 'Despesa',
-                            'A Pagar': 'Despesa',
-                            'Despesa Pendente': 'Despesa',
-                            'Pendente': 'Despesa',
                             'Rendimento': 'Rendimento'
                         }
                         df_fluxo['Tipo_Grafico'] = df_fluxo['Tipo_Clean'].map(mapeamento_tipos).fillna(df_fluxo['Tipo_Clean'])
                     else:
                         df_fluxo['Tipo_Grafico'] = 'Despesa'
                     
-                    # Prepara os dados agrupados por mês e tipo unificado
+                    # Prepara os dados agrupados por mês e tipo unificado (somando tudo, pago e pendente do mês)
                     df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo_Grafico'])['V_Num'].sum().reset_index()
                     
                     if not df_f.empty:
