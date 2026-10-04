@@ -2409,30 +2409,44 @@ elif "🚗" in aba:
         df_veiculo['Vencimento_Dt'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
         df_veiculo[coluna_data + '_Dt'] = pd.to_datetime(df_veiculo[coluna_data], dayfirst=True, errors='coerce')
         
-        # 🎯 CHAVE BLINDADA DE ORDENAÇÃO
         df_veiculo['Data_Ordenacao'] = df_veiculo[coluna_data + '_Dt'].fillna(df_veiculo['Vencimento_Dt'])
         df_veiculo['Data_Ordenacao'] = df_veiculo['Data_Ordenacao'].fillna(pd.Timestamp('1900-01-01'))
 
-        # 2. 🔄 ORDENAÇÃO OBRIGATÓRIA PARA O CÁLCULO (.diff()): Do mais antigo para o mais recente
+        # 2. 🔄 LIMPEZA ROBUSTA DOS NÚMEROS
+        for col_num in ['Km', 'Litros', 'V_Num']:
+            if col_num in df_veiculo.columns:
+                df_veiculo[col_num] = (
+                    df_veiculo[col_num]
+                    .astype(str)
+                    .str.lower()
+                    .str.replace('km', '', regex=False)
+                    .str.replace('l', '', regex=False)
+                    .str.replace('r$', '', regex=False)
+                    .str.replace('.', '', regex=False)
+                    .str.replace(',', '.', regex=False)
+                    .str.strip()
+                )
+                df_veiculo[col_num] = pd.to_numeric(df_veiculo[col_num], errors='coerce').fillna(0.0)
+            else:
+                df_veiculo[col_num] = 0.0
+
+        # 3. 🔄 ORDENAÇÃO CRONOLÓGICA PURA (Do mais antigo para o mais recente para o cálculo)
         df_veiculo = df_veiculo.sort_values(by=['Data_Ordenacao', 'Vencimento_Dt'], ascending=[True, True]).reset_index(drop=True)
 
-        # 3. PASSO DE SEGURANÇA: Converte as colunas numéricas
-        df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
+        # 4. 🧮 ODÔMETRO CONTÍNUO E CÁLCULO DE KM RODADOS
+        # Transforma zeros em NaN temporariamente para o ffill propagar a última quilometragem válida do carro
+        df_veiculo['Km_Trabalho'] = df_veiculo['Km'].replace(0, pd.NA).ffill().fillna(0)
         
-        if df_veiculo['Litros'].dtype == object:
-            df_veiculo['Litros'] = df_veiculo['Litros'].astype(str).str.replace(',', '.', regex=False)
-        df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
+        # Calcula a diferença em relação ao registro anterior na linha do tempo
+        df_veiculo['Km_Rodados'] = df_veiculo['Km_Trabalho'].diff()
         
-        df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
+        # Se for o primeiro registro ou se o resultado for negativo/zero, ajusta para 0.0
+        df_veiculo.loc[df_veiculo['Km_Rodados'] <= 0, 'Km_Rodados'] = 0.0
 
-        # 4. 🧮 PASSO DO CÁLCULO DO CONSUMO (Rodando na ordem cronológica correta)
-        # Calcula a diferença de Km entre o registro atual e o anterior imediato
-        df_veiculo['Km_Rodados'] = df_veiculo['Km'].diff()
-        
-        # Se o Km anterior for 0 ou menor, ou se for o primeiro registro, zera o km rodado para evitar valores negativos ou absurdos
-        mask_invalido = (df_veiculo['Km'].shift(1) == 0) | (df_veiculo['Km_Rodados'] <= 0)
-        df_veiculo.loc[mask_invalido, 'Km_Rodados'] = 0.0
-        
+        # Se a linha original estava com Km 0 (ex: manutenção sem km informado), limpa o Km_Rodados dela para não poluir
+        df_veiculo.loc[df_veiculo['Km'] == 0, 'Km_Rodados'] = 0.0
+
+        # 5. 🧮 CÁLCULO DE KM/L E PREÇO/LITRO
         df_veiculo['Km/L'] = df_veiculo.apply(
             lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and row['Km_Rodados'] > 0 else 0.0, 
             axis=1
@@ -2463,7 +2477,7 @@ elif "🚗" in aba:
                 df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
             if not df_veiculo.empty:
-                # 5. 🎯 ORDENAÇÃO FINAL DE EXIBIÇÃO: Inverte para o mais recente ficar no topo
+                # 6. 🎯 ORDENAÇÃO FINAL DE EXIBIÇÃO: Inverte para o mais recente ficar no topo
                 df_veiculo = df_veiculo.sort_values(
                     by=['Data_Ordenacao', 'Vencimento_Dt'], 
                     ascending=[False, False],
@@ -2502,7 +2516,7 @@ elif "🚗" in aba:
                     'Preço/Litro': "R$ {:.2f}"
                 }
 
-                # Exibe a tabela perfeitamente ordenada e com os cálculos corrigidos
+                # Exibe a tabela final formatada e calculada
                 st.dataframe(df_exibicao.style.format(formatos_tabela), use_container_width=True, hide_index=True)
             else:
                 st.info("Nenhum lançamento encontrado com esses filtros.")
@@ -2510,7 +2524,6 @@ elif "🚗" in aba:
             st.info("Nenhum lançamento de veículo encontrado na base com os filtros atuais.")
     else:
         st.warning("A base de dados está vazia.")
-
 
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
