@@ -1527,7 +1527,7 @@ if "💰" in st.session_state.page:
                         }
                     )
       
-        with g2:
+         with g2:
             # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES) - COM CORREÇÃO DE TIPO VAZIO
             st.subheader("📊 Fluxo Mensal (3 Meses)")
             
