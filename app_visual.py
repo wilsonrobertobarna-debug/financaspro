@@ -2389,52 +2389,53 @@ elif "🚗" in aba:
             
         st.divider()
 # --- HISTÓRICO COM FILTRO DUPLO (CATEGORIA + BUSCA POR DESCRIÇÃO/VEÍCULO) ---
-        st.subheader("📊 Histórico e Lançamentos do Veículo")
+    st.subheader("📊 Histórico e Lançamentos do Veículo")
 
-        if not df_base.empty:
-            df_veiculo = df_base.copy()
+    if not df_base.empty:
+        df_veiculo = df_base.copy()
 
-            # Blindagem automática de colunas
-            if 'Km' not in df_veiculo.columns:
-                df_veiculo['Km'] = 0.0
-            if 'Litros' not in df_veiculo.columns:
-                df_veiculo['Litros'] = 0.0
+        # Blindagem automática de colunas
+        if 'Km' not in df_veiculo.columns:
+            df_veiculo['Km'] = 0.0
+        if 'Litros' not in df_veiculo.columns:
+            df_veiculo['Litros'] = 0.0
 
-            # Padroniza categoria e descrição para facilitar a busca
-            df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
+        # Padroniza categoria e descrição para facilitar a busca
+        df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
+        
+        # Pega inicialmente tudo que envolve veículo, combustível ou manutenção
+        df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
+
+        if not df_veiculo.empty:
+            # --- DUAS COLUNAS PARA OS FILTROS ---
+            col_filtro1, col_filtro2 = st.columns(2)
             
-            # Pega inicialmente tudo que envolve veículo, combustível ou manutenção
-            df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
+            with col_filtro1:
+                tipos_disponiveis = ["Todos", "Combustível", "Manutenção", "Veículo"]
+                filtro_escolhido = st.selectbox("🔍 Filtrar por Categoria:", tipos_disponiveis, key="filtro_aba_veiculo")
+
+            with col_filtro2:
+                busca_texto = st.text_input("🔎 Buscar por Veículo/Descrição (ex: Tcross, Lead):", "", key="busca_veiculo_texto")
+
+            # Aplica o filtro de Categoria
+            if filtro_escolhido != "Todos":
+                df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'] == filtro_escolhido]
+
+            # Aplica o filtro de texto na coluna Descrição (ignorando maiúsculas/minúsculas)
+            if busca_texto:
+                df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
             if not df_veiculo.empty:
-                # --- DUAS COLUNAS PARA OS FILTROS ---
-                col_filtro1, col_filtro2 = st.columns(2)
-                
-                with col_filtro1:
-                    tipos_disponiveis = ["Todos", "Combustível", "Manutenção", "Veículo"]
-                    filtro_escolhido = st.selectbox("🔍 Filtrar por Categoria:", tipos_disponiveis, key="filtro_aba_veiculo")
-
-                with col_filtro2:
-                    busca_texto = st.text_input("🔎 Buscar por Veículo/Descrição (ex: Tcross, Lead):", "", key="busca_veiculo_texto")
-
-                # Aplica o filtro de Categoria
-                if filtro_escolhido != "Todos":
-                    df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'] == filtro_escolhido]
-
-                # Aplica o filtro de texto na coluna Descrição (ignorando maiúsculas/minúsculas)
-                if busca_texto:
-                    df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
-
-                # Ordenação cronológica correta
+                # 1️⃣ PRIMEIRO: Converte datas e ordena cronologicamente (essencial para o odômetro funcionar!)
                 df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
                 df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
 
-                # Conversões numéricas seguras
+                # 2️⃣ SEGUNDO: Conversões numéricas seguras
                 df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
                 df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
                 df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
 
-                # Cálculos
+                # 3️⃣ TERCEIRO: Cálculos de consumo na ordem cronológica correta
                 df_veiculo['Km_Rodados'] = df_veiculo['Km'].diff()
                 df_veiculo['Km/L'] = df_veiculo.apply(
                     lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and row['Km_Rodados'] > 0 else 0.0, 
@@ -2445,8 +2446,8 @@ elif "🚗" in aba:
                     axis=1
                 )
 
-                # Formatação
-                df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], errors='coerce').dt.strftime('%d/%m/%Y')
+                # Formatação de data e valor
+                df_veiculo['Vencimento'] = df_veiculo['Vencimento'].dt.strftime('%d/%m/%Y')
                 df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
 
                 colunas_exibir = ['Vencimento', 'Categoria', 'Descrição', 'Valor_Formatado', 'Km', 'Km_Rodados', 'Litros', 'Km/L', 'Preço/Litro', 'Banco']
@@ -2459,7 +2460,7 @@ elif "🚗" in aba:
                     try:
                         val_float = float(valor)
                         if pd.isna(val_float) or val_float == 0:
-                            return "" # ou "0 L" se preferir mostrar zero
+                            return ""
                         if val_float.is_integer():
                             return f"{int(val_float)} L"
                         return f"{val_float:.2f} L".replace('.', ',')
@@ -2468,28 +2469,22 @@ elif "🚗" in aba:
 
                 if 'Litros' in df_exibicao.columns:
                     df_exibicao['Litros'] = df_exibicao['Litros'].apply(formata_litros_inteligente)
-                # -------------------------------------------------------------
 
                 formatos_tabela = {
                     'Km': "{:,.0f} km",
                     'Km_Rodados': "{:,.0f} km",
-                    # ⚠️ Note que REMOVEMOS a linha de 'Litros' daqui para o Pandas não sobrescrever!
                     'Km/L': "{:.2f} Km/L",
                     'Preço/Litro': "R$ {:.2f}"
                 }
                 
-                # Se quiser que apareça o "L" no final quando for inteiro ou decimal, 
-                # você pode ajustar o retorno da função para retornar f"{...} L" se preferir!
-
-                if not df_exibicao.empty:
-                    st.dataframe(df_exibicao.iloc[::-1].style.format(formatos_tabela), use_container_width=True, hide_index=True)
-                else:
-                    st.info("Nenhum lançamento encontrado com esses filtros.")
+                # Exibe invertido (mais recente no topo) para melhor visualização no app
+                st.dataframe(df_exibicao.iloc[::-1].style.format(formatos_tabela), use_container_width=True, hide_index=True)
             else:
-                st.info("Nenhum lançamento de veículo encontrado na base.")
+                st.info("Nenhum lançamento encontrado com esses filtros.")
         else:
-            st.warning("A base de dados está vazia.")
-        
+            st.info("Nenhum lançamento de veículo encontrado na base.")
+    else:
+        st.info("A base de dados está vazia.")        
 
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
