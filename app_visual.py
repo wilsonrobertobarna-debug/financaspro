@@ -2392,7 +2392,7 @@ elif "🚗" in aba:
         # --- HISTÓRICO COM FILTRO DUPLO (CATEGORIA + BUSCA POR DESCRIÇÃO/VEÍCULO) ---
         st.subheader("📊 Histórico e Lançamentos do Veículo")
 
-    if not df_base.empty:
+        if not df_base.empty:
         df_veiculo = df_base.copy()
 
         # Blindagem automática de colunas
