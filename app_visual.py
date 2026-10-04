@@ -1528,9 +1528,19 @@ if "💰" in st.session_state.page:
                 )
         
         with g2:
-         with g2:
-            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES) - PAGO + PENDENTE
+        with g2:
+            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES)
             st.subheader("📊 Fluxo Mensal (3 Meses)")
+            
+            # 🔍 DIAGNÓSTICO RÁPIDO: Vamos ver o que tem na base neste exato momento
+            if not df_base.empty:
+                st.write("--- 🛠️ DEBUG DO GRÁFICO ---")
+                st.write("Total de linhas na base geral:", len(df_base))
+                if 'Status' in df_base.columns:
+                    st.write("Contagem por Status:", df_base['Status'].value_counts().to_dict())
+                if 'Tipo' in df_base.columns:
+                    st.write("Contagem por Tipo:", df_base['Tipo'].value_counts().to_dict())
+                st.write("-----------------------------")
             
             if not df_base.empty:
                 # Cálculo dos 3 meses a partir do mês selecionado
