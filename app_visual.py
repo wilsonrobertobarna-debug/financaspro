@@ -2388,65 +2388,90 @@ elif "🚗" in aba:
             c_cons3.warning("Aguardando dados...")
             
         st.divider()
-# --- HISTÓRICO COM FILTRO DUPLO (CATEGORIA + BUSCA POR DESCRIÇÃO/VEÍCULO) ---
+    
+        # --- HISTÓRICO COM FILTRO DUPLO (CATEGORIA + BUSCA POR DESCRIÇÃO/VEÍCULO) ---
         st.subheader("📊 Histórico e Lançamentos do Veículo")
 
-        if not df_base.empty:
-            df_veiculo = df_base.copy()
+    if not df_base.empty:
+        df_veiculo = df_base.copy()
 
-            # Blindagem automática de colunas
-            if 'Km' not in df_veiculo.columns:
-                df_veiculo['Km'] = 0.0
-            if 'Litros' not in df_veiculo.columns:
-                df_veiculo['Litros'] = 0.0
+        # Blindagem automática de colunas
+        if 'Km' not in df_veiculo.columns:
+            df_veiculo['Km'] = 0.0
+        if 'Litros' not in df_veiculo.columns:
+            df_veiculo['Litros'] = 0.0
 
-            # Padroniza categoria e descrição para facilitar a busca
-            df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
+        # Identifica dinamicamente a coluna de data de compra
+        colunas_possiveis = ['Data Compra', 'Data_Compra', 'data compra', 'data_compra', 'Data']
+        coluna_data = next((col for col in colunas_possiveis if col in df_veiculo.columns), 'Vencimento')
+
+        # 1. CONVERSÃO DE DATAS PURAS E CHAVE DE ORDENAÇÃO
+        df_veiculo['Vencimento_Dt'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
+        df_veiculo[coluna_data + '_Dt'] = pd.to_datetime(df_veiculo[coluna_data], dayfirst=True, errors='coerce')
+        
+        df_veiculo['Data_Ordenacao'] = df_veiculo[coluna_data + '_Dt'].fillna(df_veiculo['Vencimento_Dt'])
+        df_veiculo['Data_Ordenacao'] = df_veiculo['Data_Ordenacao'].fillna(pd.Timestamp('1900-01-01'))
+
+        # 2. 🔄 ORDENAÇÃO CRONOLÓGICA INICIAL (Do mais antigo para o mais recente para o cálculo do .diff())
+        df_veiculo = df_veiculo.sort_values(by=['Data_Ordenacao', 'Vencimento_Dt'], ascending=[True, True]).reset_index(drop=True)
+
+        # 3. CONVERSÃO SEGURA DE NÚMEROS (Mantendo o formato correto do valor e dos quilômetros)
+        df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
+        
+        if df_veiculo['Litros'].dtype == object:
+            df_veiculo['Litros'] = df_veiculo['Litros'].astype(str).str.replace(',', '.', regex=False)
+        df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
+        
+        df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
+
+        # 4. 🧮 CÁLCULO DO ODÔMETRO E CONSUMO (Na ordem cronológica correta)
+        df_veiculo['Km_Trabalho'] = df_veiculo['Km'].replace(0, pd.NA).ffill().fillna(0)
+        df_veiculo['Km_Rodados'] = df_veiculo['Km_Trabalho'].diff()
+        
+        df_veiculo.loc[df_veiculo['Km_Rodados'] <= 0, 'Km_Rodados'] = 0.0
+        df_veiculo.loc[df_veiculo['Km'] == 0, 'Km_Rodados'] = 0.0
+
+        df_veiculo['Km/L'] = df_veiculo.apply(
+            lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and row['Km_Rodados'] > 0 else 0.0, 
+            axis=1
+        )
+        df_veiculo['Preço/Litro'] = df_veiculo.apply(
+            lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
+            axis=1
+        )
+
+        # Padroniza categoria para os filtros
+        df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
+        df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
+
+        if not df_veiculo.empty:
+            col_filtro1, col_filtro2 = st.columns(2)
             
-            # Pega inicialmente tudo que envolve veículo, combustível ou manutenção
-            df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
+            with col_filtro1:
+                tipos_disponiveis = ["Todos", "Combustível", "Manutenção", "Veículo"]
+                filtro_escolhido = st.selectbox("🔍 Filtrar por Categoria:", tipos_disponiveis, key="filtro_aba_veiculo")
+
+            with col_filtro2:
+                busca_texto = st.text_input("🔎 Buscar por Veículo/Descrição (ex: Tcross, Lead):", "", key="busca_veiculo_texto")
+
+            if filtro_escolhido != "Todos":
+                df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'] == filtro_escolhido]
+
+            if busca_texto:
+                df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
             if not df_veiculo.empty:
-                # --- DUAS COLUNAS PARA OS FILTROS ---
-                col_filtro1, col_filtro2 = st.columns(2)
-                
-                with col_filtro1:
-                    tipos_disponiveis = ["Todos", "Combustível", "Manutenção", "Veículo"]
-                    filtro_escolhido = st.selectbox("🔍 Filtrar por Categoria:", tipos_disponiveis, key="filtro_aba_veiculo")
+                # 5. 🎯 ORDENAÇÃO FINAL DE EXIBIÇÃO: Mais recente no topo (Decrescente)
+                df_veiculo = df_veiculo.sort_values(
+                    by=['Data_Ordenacao', 'Vencimento_Dt'], 
+                    ascending=[False, False],
+                    kind='mergesort'
+                ).reset_index(drop=True)
 
-                with col_filtro2:
-                    busca_texto = st.text_input("🔎 Buscar por Veículo/Descrição (ex: Tcross, Lead):", "", key="busca_veiculo_texto")
-
-                # Aplica o filtro de Categoria
-                if filtro_escolhido != "Todos":
-                    df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'] == filtro_escolhido]
-
-                # Aplica o filtro de texto na coluna Descrição (ignorando maiúsculas/minúsculas)
-                if busca_texto:
-                    df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
-
-                # Ordenação cronológica correta
-                df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
-                df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
-
-                # Conversões numéricas seguras
-                df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
-                df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
-                df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
-
-                # Cálculos
-                df_veiculo['Km_Rodados'] = df_veiculo['Km'].diff()
-                df_veiculo['Km/L'] = df_veiculo.apply(
-                    lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and row['Km_Rodados'] > 0 else 0.0, 
-                    axis=1
-                )
-                df_veiculo['Preço/Litro'] = df_veiculo.apply(
-                    lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
-                    axis=1
-                )
-
-                # Formatação
-                df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], errors='coerce').dt.strftime('%d/%m/%Y')
+                # Formata as datas para exibição visual APÓS a ordenação final
+                if coluna_data in df_veiculo.columns and coluna_data != 'Vencimento':
+                    df_veiculo[coluna_data] = df_veiculo[coluna_data + '_Dt'].dt.strftime('%d/%m/%Y')
+                df_veiculo['Vencimento'] = df_veiculo['Vencimento_Dt'].dt.strftime('%d/%m/%Y')
                 df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
 
                 colunas_exibir = ['Vencimento', 'Categoria', 'Descrição', 'Valor_Formatado', 'Km', 'Km_Rodados', 'Litros', 'Km/L', 'Preço/Litro', 'Banco']
@@ -2454,12 +2479,11 @@ elif "🚗" in aba:
                 
                 df_exibicao = df_veiculo[colunas_exibir_disponiveis].copy()
 
-                # --- 🎯 FUNÇÃO DE LITROS INTELIGENTE COM A LETRA L ---
                 def formata_litros_inteligente(valor):
                     try:
                         val_float = float(valor)
                         if pd.isna(val_float) or val_float == 0:
-                            return "" # ou "0 L" se preferir mostrar zero
+                            return ""
                         if val_float.is_integer():
                             return f"{int(val_float)} L"
                         return f"{val_float:.2f} L".replace('.', ',')
@@ -2468,27 +2492,22 @@ elif "🚗" in aba:
 
                 if 'Litros' in df_exibicao.columns:
                     df_exibicao['Litros'] = df_exibicao['Litros'].apply(formata_litros_inteligente)
-                # -------------------------------------------------------------
 
                 formatos_tabela = {
                     'Km': "{:,.0f} km",
                     'Km_Rodados': "{:,.0f} km",
-                    # ⚠️ Note que REMOVEMOS a linha de 'Litros' daqui para o Pandas não sobrescrever!
                     'Km/L': "{:.2f} Km/L",
                     'Preço/Litro': "R$ {:.2f}"
                 }
-                
-                # Se quiser que apareça o "L" no final quando for inteiro ou decimal, 
-                # você pode ajustar o retorno da função para retornar f"{...} L" se preferir!
 
-                if not df_exibicao.empty:
-                    st.dataframe(df_exibicao.iloc[::-1].style.format(formatos_tabela), use_container_width=True, hide_index=True)
-                else:
-                    st.info("Nenhum lançamento encontrado com esses filtros.")
+                # Exibe a tabela com o valor correto, ordem certa e cálculos funcionando
+                st.dataframe(df_exibicao.style.format(formatos_tabela), use_container_width=True, hide_index=True)
             else:
-                st.info("Nenhum lançamento de veículo encontrado na base.")
+                st.info("Nenhum lançamento encontrado com esses filtros.")
         else:
-            st.warning("A base de dados está vazia.")
+            st.info("Nenhum lançamento de veículo encontrado na base com os filtros atuais.")
+    else:
+        st.warning("A base de dados está vazia.")
         
 
 elif "📄" in aba:
