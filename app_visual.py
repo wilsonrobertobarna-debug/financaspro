@@ -1528,41 +1528,28 @@ if "💰" in st.session_state.page:
                 )
         
         with g2:
-         with g2:
-            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES)
+        with g2:
+            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES) - UNIFICADO (PAGO + PENDENTE)
             st.subheader("📊 Fluxo Mensal (3 Meses)")
             
-            # 🔍 DIAGNÓSTICO RÁPIDO: Vamos ver o que tem na base neste exato momento
             if not df_base.empty:
-                st.write("--- 🛠️ DEBUG DO GRÁFICO ---")
-                st.write("Total de linhas na base geral:", len(df_base))
-                if 'Status' in df_base.columns:
-                    st.write("Contagem por Status:", df_base['Status'].value_counts().to_dict())
-                if 'Tipo' in df_base.columns:
-                    st.write("Contagem por Tipo:", df_base['Tipo'].value_counts().to_dict())
-                st.write("-----------------------------")
-            
-            if not df_base.empty:
-                # Cálculo dos 3 meses a partir do mês selecionado
+                # Cálculo dos 3 meses a partir do mês selecionado usando a base geral (df_base)
                 idx = meses_abreviados.index(mes_atual)
                 meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
                 filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
                 
-                # Filtra a base completa pelos meses selecionados
+                # Pega da base completa para incluir os pendentes dos 3 meses
                 df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
                 
                 if not df_fluxo.empty:
-                    # 🔒 EXCLUI AS TRANSFERÊNCIAS
+                    # 🔒 EXCLUI AS TRANSFERÊNCIAS E BANCOS ESTRANGEIROS (se aplicável)
                     if 'Categoria' in df_fluxo.columns:
                         df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
                     
-                    # 🛡️ GARANTE QUE A COLUNA STATUS NÃO ESTEJA BLOQUEANDO NADA
-                    # (Se quiser garantir que só traz Pago e Pendente, caso haja lixo na base, des descomente a linha abaixo)
-                    # if 'Status' in df_fluxo.columns:
-                    #     df_fluxo['Status_Clean'] = df_fluxo['Status'].astype(str).str.strip().str.title()
-                    #     df_fluxo = df_fluxo[df_fluxo['Status_Clean'].isin(['Pago', 'Pendente', 'Recebido', 'A Pagar'])]
-
-                    # 🛡️ NORMALIZAÇÃO DE TIPOS
+                    if bancos_estrangeiros and 'Banco' in df_fluxo.columns:
+                        df_fluxo = df_fluxo[~df_fluxo['Banco'].isin(bancos_estrangeiros)]
+                    
+                    # 🛡️ NORMALIZAÇÃO DE TIPOS (Garante que Despesa e Receita fiquem padronizadas)
                     if 'Tipo' in df_fluxo.columns:
                         df_fluxo['Tipo_Clean'] = df_fluxo['Tipo'].astype(str).str.strip().str.title()
                         
@@ -1577,7 +1564,7 @@ if "💰" in st.session_state.page:
                     else:
                         df_fluxo['Tipo_Grafico'] = 'Despesa'
                     
-                    # Agrupa somando TUDO (Pago + Pendente do mês)
+                    # 🚀 SOMA TUDO: Pago + Pendente agrupados por mês e tipo
                     df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo_Grafico'])['V_Num'].sum().reset_index()
                     
                     if not df_f.empty:
