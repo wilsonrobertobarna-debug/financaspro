@@ -1529,15 +1529,15 @@ if "💰" in st.session_state.page:
         
         #with g2:
             
-       with g2:
-            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES) - DEFINITIVO
+      with g2:
+            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES) - ALINHADO COM A SELEÇÃO DO TOPO
             st.subheader("📊 Fluxo Mensal (3 Meses)")
             
-            # Pega a base completa se existir, senão usa df_base
-            base_para_usar = df_geral if 'df_geral' in locals() and not df_geral.empty else df_base
+            # Pega a base global completa (df) antes de qualquer filtro de mês da tela
+            base_grafico = df if 'df' in locals() and not df.empty else df_base
             
-            if not base_para_usar.empty:
-                df_fluxo = base_para_usar.copy()
+            if not base_grafico.empty:
+                df_fluxo = base_grafico.copy()
                 
                 # 🔒 1. GARANTE APENAS STATUS VÁLIDOS (Pago e Pendente)
                 if 'Status' in df_fluxo.columns:
@@ -1548,7 +1548,11 @@ if "💰" in st.session_state.page:
                 if 'Categoria' in df_fluxo.columns:
                     df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
                 
-                # 🛡️ 2. NORMALIZAÇÃO DE TIPO (Trata vazios e padroniza para o gráfico)
+                # Remove bancos estrangeiros se houverem
+                if "bancos_estrangeiros" in locals() and bancos_estrangeiros and 'Banco' in df_fluxo.columns:
+                    df_fluxo = df_fluxo[~df_fluxo['Banco'].isin(bancos_estrangeiros)]
+                
+                # 🛡️ 2. NORMALIZAÇÃO DE TIPO
                 if 'Tipo' in df_fluxo.columns:
                     df_fluxo['Tipo'] = df_fluxo['Tipo'].fillna('').astype(str).str.strip()
                     df_fluxo.loc[df_fluxo['Tipo'] == '', 'Tipo'] = 'Despesa'
@@ -1562,18 +1566,14 @@ if "💰" in st.session_state.page:
                 
                 df_fluxo['V_Num'] = pd.to_numeric(df_fluxo['V_Num'], errors='coerce').fillna(0)
                 
-                # 📅 3. SELEÇÃO DOS ÚLTIMOS 3 MESES DISPONÍVEIS NA BASE
-                if 'Mes_Ano' in df_fluxo.columns:
-                    # Pega todos os meses únicos válidos e ordena
-                    meses_unicos = sorted([m for m in df_fluxo['Mes_Ano'].dropna().unique() if '/' in str(m)])
+                # 📅 3. DINÂMICA DOS 3 MESES BASEADA NA SELEÇÃO DO TOPO (mes_atual)
+                if 'Mes_Ano' in df_fluxo.columns and mes_atual in meses_abreviados:
+                    idx = meses_abreviados.index(mes_atual)
+                    # Pega o mês atual selecionado e os 2 anteriores com base na barrinha do topo
+                    meses_selecionados_str = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
+                    filtro_lista_meses = [f"{mes_map[m]}/26" for m in meses_selecionados_str]
                     
-                    if len(meses_unicos) >= 3:
-                        # Pega os 3 últimos meses presentes na base
-                        ultimos_tres_meses = meses_unicos[-3:]
-                    else:
-                        ultimos_tres_meses = meses_unicos
-                        
-                    df_fluxo = df_fluxo[df_fluxo['Mes_Ano'].isin(ultimos_tres_meses)]
+                    df_fluxo = df_fluxo[df_fluxo['Mes_Ano'].isin(filtro_lista_meses)]
                 
                 if not df_fluxo.empty:
                     # Agrupa por Mês e Tipo
@@ -1602,7 +1602,7 @@ if "💰" in st.session_state.page:
                     
                     st.plotly_chart(fig_fluxo, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
                 else:
-                    st.info("Nenhum lançamento encontrado para o período.")
+                    st.info("Nenhum lançamento encontrado para os últimos 3 meses.")
             else:
                 st.info("A base de dados está vazia.")
                             
