@@ -1529,78 +1529,57 @@ if "💰" in st.session_state.page:
         
         with g2:
            with g2:
-           # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES)
-            st.subheader("📊 Fluxo Mensal (3 Meses)")
+            st.write("### 📊 Fluxo Mensal (3 Meses)")
             
-            if not df_base.empty:
-                # Cálculo dos 3 meses a partir do mês selecionado
-                idx = meses_abreviados.index(mes_atual)
-                meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
-                filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
-                
-                # Filtra a base completa pelos meses selecionados
-                df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
-                
-                if not df_fluxo.empty:
-                    # 🔒 EXCLUI AS TRANSFERÊNCIAS
-                    if 'Categoria' in df_fluxo.columns:
-                        df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
-                    
-                    # 🛡️ NORMALIZAÇÃO DE TIPOS: Junta "A Receber" com "Receita" e "A Pagar" com "Despesa"
-                    if 'Tipo' in df_fluxo.columns:
-                        df_fluxo['Tipo_Clean'] = df_fluxo['Tipo'].astype(str).str.strip().str.title()
-                        
-                        mapeamento_tipos = {
-                            'Receita': 'Receita',
-                            'A Receber': 'Receita',
-                            'Despesa': 'Despesa',
-                            'A Pagar': 'Despesa',
-                            'Rendimento': 'Rendimento'
-                        }
-                        df_fluxo['Tipo_Grafico'] = df_fluxo['Tipo_Clean'].map(mapeamento_tipos).fillna(df_fluxo['Tipo_Clean'])
-                    else:
-                        df_fluxo['Tipo_Grafico'] = 'Despesa'
+            # Cálculo dos 3 meses a partir do mês selecionado
+            idx = meses_abreviados.index(mes_atual)
+            meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
+            filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
             
-                    # Prepara os dados agrupados por mês e tipo unificado
-                    df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo_Grafico'])['V_Num'].sum().reset_index()
-                    
-                    if not df_f.empty:
-                        fig_fluxo = px.bar(
-                            df_f, 
-                            x='Mes_Ano', 
-                            y='V_Num', 
-                            color='Tipo_Grafico', 
-                            barmode='group',
-                            color_discrete_map={
-                                'Receita': '#2ecc71', 
-                                'Despesa': '#e74c3c', 
-                                'Rendimento': '#3498db'
-                            },
-                            text_auto='.2s'
-                        )
-                        fig_fluxo.update_layout(
-                            height=350, 
-                            margin=dict(t=30, b=10, l=0, r=0),
-                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                            xaxis_title="",
-                            yaxis_title=""
-                        )
-                        
-                        st.plotly_chart(
-                            fig_fluxo, 
-                            use_container_width=True,
-                            config={
-                                'staticPlot': True,
-                                'displayModeBar': False
-                            }
-                        )
-                    else:
-                        st.info("Aguardando dados para o período...")
-                else:
-                    st.info("Nenhum lançamento encontrado para o período.")
+            # Filtra a base completa pelos meses selecionados
+            df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
+            
+            # 🔒 EXCLUI AS TRANSFERÊNCIAS (Olhando pelo campo Categoria)
+            if not df_fluxo.empty:
+                if 'Categoria' in df_fluxo.columns:
+                    df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
+            
+            # Prepara os dados para o gráfico
+            df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
+            
+            if not df_f.empty:
+                # Gráfico com cores fixas, layout limpo e valores nas barras
+                fig_fluxo = px.bar(
+                    df_f, 
+                    x='Mes_Ano', 
+                    y='V_Num', 
+                    color='Tipo', 
+                    barmode='group',
+                    color_discrete_map={
+                        'Receita': '#2ecc71', 
+                        'Despesa': '#e74c3c', 
+                        'Rendimento': '#3498db'
+                    },
+                    text_auto='.2s'
+                )
+                fig_fluxo.update_layout(
+                    height=350, 
+                    margin=dict(t=30, b=10, l=0, r=0),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                
+                # Exibe o gráfico definitivo e travado para rolar a tela no celular
+                st.plotly_chart(
+                    fig_fluxo, 
+                    use_container_width=True,
+                    config={
+                        'staticPlot': True,
+                        'displayModeBar': False
+                    }
+                )
             else:
-                st.info("A base de dados está vazia.")
-                            
+                st.info("Aguardando dados para o período...")
+                
 
 # 6. NOVO: GRÁFICO DE METAS
         st.subheader("🎯 Metas vs Realizado (Despesas)")
@@ -2440,61 +2419,22 @@ if not df_base.empty:
             df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
         if not df_veiculo.empty:
-            # 1️⃣ Converte datas e ordena cronologicamente
             df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
             df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
 
-            # 2️⃣ Conversões numéricas seguras
             df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
             df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
             df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
 
-            # 3️⃣ Cálculo sequencial seguro de Km Rodados e Km/L
-            km_rodados_lista = []
-            km_l_lista = []
-            preco_litro_lista = []
-            
-            ultimo_km_valido = 0
-
-            for index, row in df_veiculo.iterrows():
-                km_atual = row['Km']
-                litros = row['Litros']
-                valor = row['V_Num']
-                
-                # Preço por litro
-                p_litro = (valor / litros) if litros > 0 else 0.0
-                preco_litro_lista.append(p_litro)
-                
-                # Se não tem KM cadastrado nesta linha, não calcula rodagem
-                if km_atual <= 0:
-                    km_rodados_lista.append(0.0)
-                    km_l_lista.append(0.0)
-                    continue
-                
-                # Se é a primeira vez que vemos um KM válido, guardamos e seguimos
-                if ultimo_km_valido == 0:
-                    ultimo_km_valido = km_atual
-                    km_rodados_lista.append(0.0)
-                    km_l_lista.append(0.0)
-                else:
-                    # Calcula a diferença com o último abastecimento/KM registrado
-                    rodados = km_atual - ultimo_km_valido
-                    
-                    if rodados > 0 and litros > 0:
-                        consumo = rodados / litros
-                        km_rodados_lista.append(rodados)
-                        km_l_lista.append(consumo)
-                        ultimo_km_valido = km_atual # Atualiza para o próximo intervalo
-                    else:
-                        km_rodados_lista.append(0.0)
-                        km_l_lista.append(0.0)
-                        # Atualiza o KM válido se o atual for maior que o anterior
-                        if km_atual > ultimo_km_valido:
-                            ultimo_km_valido = km_atual
-
-            df_veiculo['Km_Rodados'] = km_rodados_lista
-            df_veiculo['Km/L'] = km_l_lista
-            df_veiculo['Preço/Litro'] = preco_litro_lista
+            df_veiculo['Km_Rodados'] = df_veiculo['Km'].diff()
+            df_veiculo['Km/L'] = df_veiculo.apply(
+                lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and row['Km_Rodados'] > 0 else 0.0, 
+                axis=1
+            )
+            df_veiculo['Preço/Litro'] = df_veiculo.apply(
+                lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
+                axis=1
+            )
 
             df_veiculo['Vencimento'] = df_veiculo['Vencimento'].dt.strftime('%d/%m/%Y')
             df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
