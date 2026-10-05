@@ -1529,16 +1529,15 @@ if "💰" in st.session_state.page:
         
         with g2:
             
-          with g2:
-            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES) - ALINHADO COM OS CARDS
+         with g2:
+            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES) - ALINHADO E CORRIGIDO
             st.subheader("📊 Fluxo Mensal (3 Meses)")
             
             if not df_base.empty:
-                # Usa exatamente a mesma lógica de meses do seu painel principal
                 idx = meses_abreviados.index(mes_atual)
                 meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
+                filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
                 
-                # Filtra considerando tanto a coluna de Mês abreviado quanto Mes_Ano se houver
                 df_fluxo = df_base.copy()
                 
                 # Padroniza Status (Pago + Pendente)
@@ -1564,20 +1563,14 @@ if "💰" in st.session_state.page:
                 
                 df_fluxo['V_Num'] = pd.to_numeric(df_fluxo['V_Num'], errors='coerce').fillna(0)
                 
-                # Filtra pelos 3 meses usando a mesma referência da barra lateral/painel
-                if 'Mes' in df_fluxo.columns:
-                    df_fluxo = df_fluxo[df_fluxo['Mes'].isin(meses_para_exibir)]
-                elif 'Mes_Ano' in df_fluxo.columns:
-                    filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
+                # Filtra pelos meses usando Mes_Ano (que é o padrão seguro da base)
+                if 'Mes_Ano' in df_fluxo.columns:
                     df_fluxo = df_fluxo[df_fluxo['Mes_Ano'].isin(filtro_lista)]
                 
-                # Agrupa por Mês e Tipo
-                resumo_meses = df_fluxo.groupby(['Mes', 'Tipo_Grafico' if 'Mes' in df_fluxo.columns else 'Mes_Ano'])['V_Num'].sum().reset_index()
-                # Padroniza a coluna do eixo X para exibir o mês corretamente
-                if 'Mes' in resumo_meses.columns:
-                    resumo_meses.rename(columns={'Mes': 'Mes_Ano'}, inplace=True)
-                
-                if not resumo_meses.empty:
+                if not df_fluxo.empty:
+                    # Agrupa de forma segura usando Mes_Ano e Tipo_Grafico
+                    resumo_meses = df_fluxo.groupby(['Mes_Ano', 'Tipo_Grafico'])['V_Num'].sum().reset_index()
+                    
                     fig_fluxo = px.bar(
                         resumo_meses, 
                         x='Mes_Ano', 
