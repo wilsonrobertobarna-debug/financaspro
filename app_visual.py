@@ -126,10 +126,9 @@ with topo_container:
     """, unsafe_allow_html=True)
     
     st.markdown("## 🎮 Painel Wilson")
-
     if 'page' not in st.session_state:
-        st.session_state.page = "💰 Finanças & Bancos"
-
+    st.session_state.page = "🚗 Meu Veículo"
+  
     menu_itens = [
         "💰 Finanças & Bancos",
         "📋 Pendências",
