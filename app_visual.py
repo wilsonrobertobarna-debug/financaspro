@@ -243,6 +243,34 @@ def conectar():
 
         pk = str(creds_dict.get("private_key", ""))
         
+        # Limpeza profunda da chave privada
+        pk = pk.strip()
+        if (pk.startswith('"') and pk.endswith('"')) or (pk.startswith("'") and pk.endswith("'")):
+            pk = pk[1:-1].strip()
+            
+        pk = pk.replace("\\n", "\n")
+        
+        if "BEGIN PRIVATE KEY" in pk and "END PRIVATE KEY" in pk:
+            # Pega apenas o conteúdo bruto do miolo da chave
+            linhas = [l.strip() for l in pk.split("\n") if l.strip()]
+            miolo_linhas = [l for l in linhas if "BEGIN" not in l and "END" not in l]
+            miolo_texto = "".join(miolo_linhas)
+            
+            # Reconstrói o formato PEM padrão com quebras exatas a cada 64 caracteres
+            pedaços = [miolo_texto[i:i+64] for i in range(0, len(miolo_texto), 64)]
+            pk = "-----BEGIN PRIVATE KEY-----\n" + "\n".join(pedaços) + "\n-----END PRIVATE KEY-----\n"
+
+        creds_dict["private_key"] = pk
+
+        return gspread.authorize(Credentials.from_service_account_info(
+            creds_dict, 
+            scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        ))
+    except Exception as e:
+        st.error(f"Erro na conexão com o Google Sheets: {e}")
+        st.stop()
+        pk = str(creds_dict.get("private_key", ""))
+        
         # Limpeza total de aspas e espaços ao redor
         pk = pk.strip()
         if (pk.startswith('"') and pk.endswith('"')) or (pk.startswith("'") and pk.endswith("'")):
