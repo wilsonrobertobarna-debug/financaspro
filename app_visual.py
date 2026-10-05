@@ -1659,7 +1659,13 @@ if "💰" in st.session_state.page:
             # 🔒 EXCLUI AS TRANSFERÊNCIAS (Olhando pelo campo Categoria)
             if not df_fluxo.empty:
                 if 'Categoria' in df_fluxo.columns:
-                    df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
+                    # Padroniza removendo acentos e deixando minúsculo para pegar qualquer variação
+                    cat_lower = df_fluxo['Categoria'].astype(str).str.lower()
+                    termos_proibidos = ['transferênci', 'transferenci', 'aplicaçã', 'aplicacao', 'resgate']
+                    
+                    # Cria a máscara para filtrar tudo o que não for transferência
+                    mask = ~cat_lower.str.contains('|'.join(termos_proibidos), na=False)
+                    df_fluxo = df_fluxo[mask]
             
             # Prepara os dados para o gráfico
             df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
