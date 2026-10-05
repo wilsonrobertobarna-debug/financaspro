@@ -1645,80 +1645,57 @@ if "💰" in st.session_state.page:
                 )
         
         with g2:
-          
-     with g2:
-        # 📊 GRÁFICO DE FLuxo MENSAL (3 MESES) - COM CORREÇÃO DE TAG
-        st.subheader("📊 Fluxo Mensal (3 Meses)")
-        
-        base_grafico = df if 'df' in locals() and not df.empty else df_base
-        
-        if not base_grafico.empty:
-            df_fluxo = base_grafico.copy()
+           with g2:
+            st.write("### 📊 Fluxo Mensal (3 Meses)")
             
-            # 📅 1. FILTRA OS 3 MESES
-            if 'Mes_Ano' in df_fluxo.columns and mes_atual in meses_abreviados:
-                idx = meses_abreviados.index(mes_atual)
-                meses_selecionados_str = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
-                filtro_lista_meses = [f"{mes_map[m]}/26" for m in meses_selecionados_str]
-                df_fluxo = df_fluxo[df_fluxo['Mes_Ano'].isin(filtro_lista_meses)]
+            # Cálculo dos 3 meses a partir do mês selecionado
+            idx = meses_abreviados.index(mes_atual)
+            meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
+            filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
             
+            # Filtra a base completa pelos meses selecionados
+            df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
+            
+            # 🔒 EXCLUI AS TRANSFERÊNCIAS (Olhando pelo campo Categoria)
             if not df_fluxo.empty:
-                # 🔒 2. EXCLUSÃO DIRETA PELAS TAGS/COLUNAS DE CONTROLE (Remove qualquer linha marcada como Transferência/Aplicação)
-                for col in ['Tipo', 'Categoria', 'Descrição', 'Tag']:
-                    if col in df_fluxo.columns:
-                        # Remove qualquer linha que tenha essas palavras-chave independentemente da tag
-                        mask_proibida = df_fluxo[col].astype(str).str.lower().str.contains('transferência|transferencia|transf|aplicação|aplicacao|resgate', na=False)
-                        df_fluxo = df_fluxo[~mask_proibida]
+                if 'Categoria' in df_fluxo.columns:
+                    df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
+            
+            # Prepara os dados para o gráfico
+            df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
+            
+            if not df_f.empty:
+                # Gráfico com cores fixas, layout limpo e valores nas barras
+                fig_fluxo = px.bar(
+                    df_f, 
+                    x='Mes_Ano', 
+                    y='V_Num', 
+                    color='Tipo', 
+                    barmode='group',
+                    color_discrete_map={
+                        'Receita': '#2ecc71', 
+                        'Despesa': '#e74c3c', 
+                        'Rendimento': '#3498db'
+                    },
+                    text_auto='.2s'
+                )
+                fig_fluxo.update_layout(
+                    height=350, 
+                    margin=dict(t=30, b=10, l=0, r=0),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
                 
-                # Garante status válidos
-                if 'Status' in df_fluxo.columns:
-                    df_fluxo['Status'] = df_fluxo['Status'].astype(str).str.strip().str.title()
-                    df_fluxo = df_fluxo[df_fluxo['Status'].isin(['Pago', 'Pendente'])]
-                
-                # 🛡️ 3. NORMALIZAÇÃO DE TIPO PARA O GRÁFICO
-                if 'Tipo' in df_fluxo.columns:
-                    df_fluxo['Tipo'] = df_fluxo['Tipo'].fillna('').astype(str).str.strip()
-                    df_fluxo['Tipo_Grafico'] = df_fluxo['Tipo'].str.title().replace({
-                        'A Receber': 'Receita',
-                        'A Pagar': 'Despesa',
-                        'Pendente': 'Despesa'
-                    })
-                else:
-                    df_fluxo['Tipo_Grafico'] = 'Despesa'
-                
-                df_fluxo['V_Num'] = pd.to_numeric(df_fluxo['V_Num'], errors='coerce').fillna(0)
-                
-                if not df_fluxo.empty:
-                    resumo_meses = df_fluxo.groupby(['Mes_Ano', 'Tipo_Grafico'])['V_Num'].sum().reset_index()
-                    
-                    fig_fluxo = px.bar(
-                        resumo_meses, 
-                        x='Mes_Ano', 
-                        y='V_Num', 
-                        color='Tipo_Grafico', 
-                        barmode='group',
-                        color_discrete_map={
-                            'Receita': '#2ecc71', 
-                            'Despesa': '#e74c3c', 
-                            'Rendimento': '#3498db'
-                        },
-                        text_auto='.2s'
-                    )
-                    fig_fluxo.update_layout(
-                        height=350, 
-                        margin=dict(t=30, b=10, l=0, r=0),
-                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                        xaxis_title="",
-                        yaxis_title=""
-                    )
-                    
-                    st.plotly_chart(fig_fluxo, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
-                else:
-                    st.info("Nenhum lançamento válido após remover as transferências das tags.")
+                # Exibe o gráfico definitivo e travado para rolar a tela no celular
+                st.plotly_chart(
+                    fig_fluxo, 
+                    use_container_width=True,
+                    config={
+                        'staticPlot': True,
+                        'displayModeBar': False
+                    }
+                )
             else:
-                st.info("Nenhum lançamento encontrado para os últimos 3 meses.")
-        else:
-            st.info("A base de dados está vazia.")
+                st.info("Aguardando dados para o período...")
                 
 
 # 6. NOVO: GRÁFICO DE METAS
