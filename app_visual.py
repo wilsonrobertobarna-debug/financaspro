@@ -235,18 +235,31 @@ st.set_page_config(
 def conectar():
     creds_dict = st.secrets.get("connections", {}).get("gsheets")
     if not creds_dict:
-        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
+        st.error("⚠️ Wilson, verifique os Secrets!")
+        st.stop()
     try:
-        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
+        pk = str(creds_dict["private_key"])
+        
+        # Remove aspas extras se houver no início ou fim
+        if (pk.startswith('"') and pk.endswith('"')) or (pk.startswith("'") and pk.endswith("'")):
+            pk = pk[1:-1]
+            
+        # Converte as barras invertidas "\n" em quebras de linha reais
+        pk = pk.replace("\\n", "\n").strip()
+        
         final_creds = {
-            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
-            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
-            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
+            "type": creds_dict["type"], 
+            "project_id": creds_dict["project_id"],
+            "private_key_id": creds_dict.get("private_key_id"), 
+            "private_key": pk,
+            "client_email": creds_dict["client_email"], 
+            "token_uri": creds_dict["token_uri"],
         }
         return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
     except Exception as e:
-        st.error(f"Erro na conexão: {e}"); st.stop()
-
+        st.error(f"Erro na conexão: {e}")
+        st.stop()
+        
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
