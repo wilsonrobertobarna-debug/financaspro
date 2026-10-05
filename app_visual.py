@@ -2447,7 +2447,7 @@ elif "🚗" in aba:
             
         st.divider()
 
-elif "Meu Veículo" in aba:
+if "Meu Veículo" in aba:
     st.subheader("📊 Histórico e Lançamentos do Veículo")
 
     if not df_base.empty:
