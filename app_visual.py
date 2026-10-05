@@ -230,23 +230,39 @@ st.set_page_config(
     initial_sidebar_state="collapsed" # Isso fará a barra vir fechada por padrão
 )
 
-# 2. CONEXÃO (LIGA O MOTOR)
 @st.cache_resource
 def conectar():
-    creds_dict = st.secrets.get("connections", {}).get("gsheets")
-    if not creds_dict:
-        st.error("⚠️ Wilson, verifique os Secrets!"); st.stop()
     try:
-        pk = str(creds_dict["private_key"]).replace("\\n", "\n").strip()
-        final_creds = {
-            "type": creds_dict["type"], "project_id": creds_dict["project_id"],
-            "private_key_id": creds_dict.get("private_key_id"), "private_key": pk,
-            "client_email": creds_dict["client_email"], "token_uri": creds_dict["token_uri"],
-        }
-        return gspread.authorize(Credentials.from_service_account_info(final_creds, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]))
-    except Exception as e:
-        st.error(f"Erro na conexão: {e}"); st.stop()
+        # Pega os segredos de forma segura
+        if "connections" in st.secrets and "gsheets" in st.secrets["connections"]:
+            creds_dict = dict(st.secrets["connections"]["gsheets"])
+        elif "gsheets" in st.secrets:
+            creds_dict = dict(st.secrets["gsheets"])
+        else:
+            st.error("⚠️ Configurações do Google Sheets não encontrada nos Secrets.")
+            st.stop()
 
+        pk = str(creds_dict.get("private_key", ""))
+        
+        # Limpeza profunda de aspas e espaços
+        pk = pk.strip()
+        if (pk.startswith('"') and pk.endswith('"')) or (pk.startswith("'") and pk.endswith("'")):
+            pk = pk[1:-1].strip()
+            
+        # Converte as barras invertidas "\n" em quebras de linha reais de forma segura
+        if "\\n" in pk:
+            pk = pk.replace("\\n", "\n")
+            
+        creds_dict["private_key"] = pk
+
+        return gspread.authorize(Credentials.from_service_account_info(
+            creds_dict, 
+            scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        ))
+    except Exception as e:
+        st.error(f"Erro na conexão com o Google Sheets: {e}")
+        st.stop()
+        
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
 
