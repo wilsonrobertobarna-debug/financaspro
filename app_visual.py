@@ -471,113 +471,6 @@ if 'df_base' not in st.session_state:
 # Agora, as variáveis sempre terão o conteúdo que foi carregado
 df_base = st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
-
-
-
-# INTEGRAÇÃO DE AVISOS NO WHATSAPP VIA TWILIO (REGRA QUINZENAL)
-
-def enviar_whatsapp_pendencias(df):
-    now = datetime.now()
-    dia_atual = now.day
-
-    if st.session_state.get('forcar_envio_wa', False):
-        twilio_secrets = st.secrets.get("twilio", {})
-        sid = twilio_secrets.get("account_sid")
-        token = twilio_secrets.get("auth_token")
-        w_from = twilio_secrets.get("whatsapp_from")
-        w_to = twilio_secrets.get("whatsapp_to")
-
-        if not sid or not token or not w_from or not w_to:
-            st.error("❌ Erro: As chaves do Twilio não foram encontradas no secrets.toml!")
-            st.session_state['forcar_envio_wa'] = False
-            return
-
-        try:
-            from twilio.rest import Client
-            client_tw = Client(sid, token)
-
-            if 1 <= dia_atual <= 15:
-                data_inicio = now.replace(day=1)
-                data_fim = now.replace(day=15)
-                periodo_nome = "Início do Mês (Vencimentos de 01 a 15)"
-            else:
-                data_inicio = now.replace(day=16)
-                if now.month == 12:
-                    proximo_mes = now.replace(year=now.year + 1, month=1, day=1)
-                else:
-                    proximo_mes = now.replace(month=now.month + 1, day=1)
-                data_fim = proximo_mes - timedelta(days=1)
-                periodo_nome = "Segunda Quinzena (Vencimentos de 16 em diante)"
-
-            # Identifica e isola os bancos estrangeiros no WhatsApp
-            bancos_estrangeiros = []
-            if 'df_bancos_info' in globals() and not df_bancos_info.empty:
-                for _, r_b in df_bancos_info.iterrows():
-                    if len(r_b) > 5 and str(r_b.iloc[5]).strip().upper() in ["USD", "EUR"]:
-                        bancos_estrangeiros.append(str(r_b.iloc[0]).strip())
-
-            df_aviso = df[(df['Status'] == 'Pendente') & (df['DT'].notnull())].copy()
-
-            if bancos_estrangeiros:
-                df_aviso = df_aviso[~df_aviso['Banco'].isin(bancos_estrangeiros)]
-
-            if df_aviso.empty:
-                st.warning("⚠️ O Twilio está conectado, mas **não há nenhuma conta com o status 'Pendente'** em Reais na sua planilha.")
-                st.session_state['forcar_envio_wa'] = False
-                return
-
-            df_quinzena = df_aviso[
-                (df_aviso['DT'].dt.date >= data_inicio.date()) & 
-                (df_aviso['DT'].dt.date <= data_fim.date())
-            ].copy()
-
-            if df_quinzena.empty:
-                st.warning(f"⚠️ O Twilio está conectado, mas **não há contas pendentes para esta quinzena** em Reais ({periodo_nome}).")
-                st.session_state['forcar_envio_wa'] = False
-                return
-
-            df_quinzena = df_quinzena.sort_values(by='DT')
-            
-            # Cabeçalho ajustado usando apenas os dados filtrados em Reais (BRL)
-            mensagem = f"🛡️ *RELATÓRIO WILSON & FABIANA*\n"
-            mensagem += f"Período: {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}\n"
-            mensagem += f"========================================\n"
-            mensagem += f"REC: {m_fmt(rec_mes)} | REND: {m_fmt(rend_mes)} (Info)\n"
-            mensagem += f"DES: {m_fmt(des_mes)} | SOBRA: {m_fmt(sobra_mes)}\n"
-            mensagem += f"========================================\n\n"
-            mensagem += f"🔔 *Alerta Quinzena* *({periodo_nome})*\n\n"
-            total_quinc = 0.0
-            contador = 0
-
-            for _, row in df_quinzena.iterrows():
-                data_fmt = row.get('Data', row['DT'].strftime('%d/%m/%Y'))
-                desc = row.get('Descrição', 'Sem descrição')
-                valor = row.get('V_Num', 0.0)
-                banco = row.get('Banco', 'N/D')
-
-                if contador >= 5:
-                    mensagem += "⚠️ *Existem mais contas no período. Acesse o app para ver a lista completa.*\n\n"
-                    break
-
-                mensagem += f"📌 *{desc}*\n    📅 Venc: {data_fmt} | {m_fmt(valor)} | Banco: {banco}\n\n"
-                total_quinc += float(valor)
-                contador += 1
-
-            mensagem += f"💰 *Total previsto: {m_fmt(total_quinc)}*\n"
-            mensagem += "Acesse o FinançasPro para gerenciar tudo!"
-
-            client_tw.messages.create(
-                body=mensagem,
-                from_=w_from,
-                to=w_to
-            )
-            st.success(f"🚀 Alerta resumido disparado com sucesso para {w_to}!")
-            st.session_state['last_wa_date'] = now.date()
-
-        except Exception as e:
-            st.error(f"❌ Erro técnico ao enviar pelo Twilio: {e}")
-
-        st.session_state['forcar_envio_wa'] = False
         
 # CARREGA OS BANCOS DINAMICAMENTE DA PLANILHA OU USA OS PADRÕES
 if not df_bancos_info.empty:
@@ -599,9 +492,7 @@ def get_valor_pendente(df):
 # ==========================================
 # CHAMADA OBRIGATÓRIA DA FUNÇÃO NO FLUXO PRINCIPAL
 # ==========================================
-if 'df_base' in locals() or 'df_base' in globals():
-    enviar_whatsapp_pendencias(df_base)
-
+# 4. SIDEBAR - NAVEGAÇÃO
 # 4. SIDEBAR - NAVEGAÇÃO
 st.sidebar.title("🎮 Painel Wilson")
 
@@ -610,15 +501,7 @@ if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     st.cache_data.clear()
     st.rerun()
 
-# 📲 BOTÃO PARA TESTAR O WHATSAPP A HORA QUE QUISER
-if st.sidebar.button("📲 Testar Envio WhatsApp"):
-    st.session_state['forcar_envio_wa'] = True
-    if 'last_wa_date' in st.session_state:
-        del st.session_state['last_wa_date']
-    st.rerun()  # Dar o rerun aqui agora vai forçar o app a recarregar e executar a função logo acima!
-
 st.sidebar.divider()
-
 
 if 'page' not in st.session_state:
     st.session_state.page = "💰 Finanças & Bancos"
@@ -1525,12 +1408,38 @@ if "💰" in st.session_state.page:
     if not mes_atual or mes_atual not in mes_map:
         mes_atual = meses_abreviados[0]
 
+    # --- 🚫 FUNÇÃO UNIVERSAL DE LIMPEZA DE TRANSFERÊNCIAS ---
+    def limpar_transferencias(df_entrada):
+        if df_entrada.empty:
+            return df_entrada
+        
+        df_limpo = df_entrada.copy()
+        
+        # Termos que identificam transferências, aplicações, resgates ou trânsito entre contas
+        termos_proibidos = ['transferência', 'transf', 'aplicacao', 'aplicação', 'resgate', 'TED', 'DOC']
+        
+        # Varre as colunas de texto para eliminar o vai e vem
+        for col in df_limpo.columns:
+            if df_limpo[col].dtype == object or str(df_limpo[col].dtype) == 'string':
+                mascara = df_limpo[col].astype(str).str.lower().apply(lambda x: any(termo in x for termo in termos_proibidos))
+                df_limpo = df_limpo[~mascara]
+        
+        # Reforço extra na coluna Categoria se ela existir
+        if 'Categoria' in df_limpo.columns:
+            df_limpo = df_limpo[~df_limpo['Categoria'].astype(str).str.lower().str.contains('transferência|transf|aplicação|resgate', na=False)]
+            
+        return df_limpo
+
     if not df_base.empty:
         filtro_mes = f"{mes_map.get(mes_atual, '08')}/26"
-        # ... (o restante do seu código continua exatamente igual daqui para baixo)
         
-        # Filtra os dados do mês
-        df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
+        # 1. Filtra os dados do mês bruto
+        df_m_bruto = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
+        
+        # 2. Aplica a faxina anti-transferência antes de separar pagos e pendentes
+        df_m = limpar_transferencias(df_m_bruto)
+        
+        # --- (o restante do seu código de cartões, métricas e gráficos continua daqui para baixo) ---
         
         # --- IDENTIFICAÇÃO DE BANCOS EM MOEDA ESTRANGEIRA ---
         bancos_estrangeiros = []
@@ -1628,7 +1537,7 @@ if "💰" in st.session_state.page:
         st.divider()
         
 
-      # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
+         # 5. GRÁFICOS DE APOIO (Pizza e Fluxo)
         g1, g2 = st.columns(2)
         
         with g1:
@@ -1644,59 +1553,91 @@ if "💰" in st.session_state.page:
                     }
                 )
         
-        with g2:
-           with g2:
-            st.write("### 📊 Fluxo Mensal (3 Meses)")
+        #with g2:
             
-            # Cálculo dos 3 meses a partir do mês selecionado
-            idx = meses_abreviados.index(mes_atual)
-            meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
-            filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
-            
-            # Filtra a base completa pelos meses selecionados
-            df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
-            
-            # 🔒 EXCLUI AS TRANSFERÊNCIAS (Olhando pelo campo Categoria)
-            if not df_fluxo.empty:
-                if 'Categoria' in df_fluxo.columns:
-                    df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
-            
-            # Prepara os dados para o gráfico
-            df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
-            
-            if not df_f.empty:
-                # Gráfico com cores fixas, layout limpo e valores nas barras
-                fig_fluxo = px.bar(
-                    df_f, 
-                    x='Mes_Ano', 
-                    y='V_Num', 
-                    color='Tipo', 
-                    barmode='group',
-                    color_discrete_map={
-                        'Receita': '#2ecc71', 
-                        'Despesa': '#e74c3c', 
-                        'Rendimento': '#3498db'
-                    },
-                    text_auto='.2s'
-                )
-                fig_fluxo.update_layout(
-                    height=350, 
-                    margin=dict(t=30, b=10, l=0, r=0),
-                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-                )
+            with g2:
+                # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES) - DEFINITIVO E SEM TRANSFERÊNCIAS
+                st.subheader("📊 Fluxo Mensal (3 Meses)")
                 
-                # Exibe o gráfico definitivo e travado para rolar a tela no celular
-                st.plotly_chart(
-                    fig_fluxo, 
-                    use_container_width=True,
-                    config={
-                        'staticPlot': True,
-                        'displayModeBar': False
-                    }
-                )
-            else:
-                st.info("Aguardando dados para o período...")
+                base_grafico = df if 'df' in locals() and not df.empty else df_base
                 
+                if not base_grafico.empty:
+                    df_fluxo = base_grafico.copy()
+                    
+                    # 🔒 1. GARANTE APENAS STATUS VÁLIDOS (Pago e Pendente)
+                    if 'Status' in df_fluxo.columns:
+                        df_fluxo['Status'] = df_fluxo['Status'].astype(str).str.strip().str.title()
+                        df_fluxo = df_fluxo[df_fluxo['Status'].isin(['Pago', 'Pendente'])]
+                    
+                    # 🚫 2. FAXINA ANTI-TRANSFERÊNCIA NO GRÁFICO
+                    if 'limpar_transferencias' in locals():
+                        df_fluxo = limpar_transferencias(df_fluxo)
+                    else:
+                        termos_proibidos = ['transferência', 'transf', 'aplicacao', 'aplicação', 'resgate', 'TED', 'DOC']
+                        for col in df_fluxo.columns:
+                            if df_fluxo[col].dtype == object or str(df_fluxo[col].dtype) == 'string':
+                                mascara = df_fluxo[col].astype(str).str.lower().apply(lambda x: any(t in x for t in termos_proibidos))
+                                df_fluxo = df_fluxo[~mascara]
+                        if 'Categoria' in df_fluxo.columns:
+                            df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência|transf|aplicação|resgate', na=False)]
+                    
+                    # Remove bancos estrangeiros se houverem
+                    if "bancos_estrangeiros" in locals() and bancos_estrangeiros and 'Banco' in df_fluxo.columns:
+                        df_fluxo = df_fluxo[~df_fluxo['Banco'].isin(bancos_estrangeiros)]
+                    
+                    # 🛡️ 3. NORMALIZAÇÃO DE TIPO
+                    if 'Tipo' in df_fluxo.columns:
+                        df_fluxo['Tipo'] = df_fluxo['Tipo'].fillna('').astype(str).str.strip()
+                        df_fluxo.loc[df_fluxo['Tipo'] == '', 'Tipo'] = 'Despesa'
+                        df_fluxo['Tipo_Grafico'] = df_fluxo['Tipo'].str.title().replace({
+                            'A Receber': 'Receita',
+                            'A Pagar': 'Despesa',
+                            'Pendente': 'Despesa'
+                        })
+                    else:
+                        df_fluxo['Tipo_Grafico'] = 'Despesa'
+                    
+                    df_fluxo['V_Num'] = pd.to_numeric(df_fluxo['V_Num'], errors='coerce').fillna(0)
+                    
+                    # 📅 4. SELEÇÃO DOS 3 MESES BASEADA NA SELEÇÃO DO TOPO
+                    if 'Mes_Ano' in df_fluxo.columns and mes_atual in meses_abreviados:
+                        idx = meses_abreviados.index(mes_atual)
+                        meses_selecionados_str = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
+                        filtro_lista_meses = [f"{mes_map[m]}/26" for m in meses_selecionados_str]
+                        
+                        df_fluxo = df_fluxo[df_fluxo['Mes_Ano'].isin(filtro_lista_meses)]
+                    
+                    if not df_fluxo.empty:
+                        # Agrupa por Mês e Tipo
+                        resumo_meses = df_fluxo.groupby(['Mes_Ano', 'Tipo_Grafico'])['V_Num'].sum().reset_index()
+                        
+                        fig_fluxo = px.bar(
+                            resumo_meses, 
+                            x='Mes_Ano', 
+                            y='V_Num', 
+                            color='Tipo_Grafico', 
+                            barmode='group',
+                            color_discrete_map={
+                                'Receita': '#2ecc71', 
+                                'Despesa': '#e74c3c', 
+                                'Rendimento': '#3498db'
+                            },
+                            text_auto='.2s'
+                        )
+                        fig_fluxo.update_layout(
+                            height=350, 
+                            margin=dict(t=30, b=10, l=0, r=0),
+                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                            xaxis_title="",
+                            yaxis_title=""
+                        )
+                        
+                        st.plotly_chart(fig_fluxo, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
+                    else:
+                        st.info("Nenhum lançamento encontrado para os últimos 3 meses.")
+                else:
+                    st.info("A base de dados está vazia.")
+                            
 
 # 6. NOVO: GRÁFICO DE METAS
         st.subheader("🎯 Metas vs Realizado (Despesas)")
@@ -2505,108 +2446,129 @@ elif "🚗" in aba:
             c_cons3.warning("Aguardando dados...")
             
         st.divider()
-# --- HISTÓRICO COM FILTRO DUPLO (CATEGORIA + BUSCA POR DESCRIÇÃO/VEÍCULO) ---
-        st.subheader("📊 Histórico e Lançamentos do Veículo")
 
-        if not df_base.empty:
-            df_veiculo = df_base.copy()
+st.subheader("📊 Histórico e Lançamentos do Veículo")
 
-            # Blindagem automática de colunas
-            if 'Km' not in df_veiculo.columns:
-                df_veiculo['Km'] = 0.0
-            if 'Litros' not in df_veiculo.columns:
-                df_veiculo['Litros'] = 0.0
+if not df_base.empty:
+    df_veiculo = df_base.copy()
 
-            # Padroniza categoria e descrição para facilitar a busca
-            df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
-            
-            # Pega inicialmente tudo que envolve veículo, combustível ou manutenção
-            df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
+    if 'Km' not in df_veiculo.columns:
+        df_veiculo['Km'] = 0.0
+    if 'Litros' not in df_veiculo.columns:
+        df_veiculo['Litros'] = 0.0
 
-            if not df_veiculo.empty:
-                # --- DUAS COLUNAS PARA OS FILTROS ---
-                col_filtro1, col_filtro2 = st.columns(2)
-                
-                with col_filtro1:
-                    tipos_disponiveis = ["Todos", "Combustível", "Manutenção", "Veículo"]
-                    filtro_escolhido = st.selectbox("🔍 Filtrar por Categoria:", tipos_disponiveis, key="filtro_aba_veiculo")
+    df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
+    df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
 
-                with col_filtro2:
-                    busca_texto = st.text_input("🔎 Buscar por Veículo/Descrição (ex: Tcross, Lead):", "", key="busca_veiculo_texto")
-
-                # Aplica o filtro de Categoria
-                if filtro_escolhido != "Todos":
-                    df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'] == filtro_escolhido]
-
-                # Aplica o filtro de texto na coluna Descrição (ignorando maiúsculas/minúsculas)
-                if busca_texto:
-                    df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
-
-                # Ordenação cronológica correta
-                df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
-                df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
-
-                # Conversões numéricas seguras
-                df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
-                df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
-                df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
-
-                # Cálculos
-                df_veiculo['Km_Rodados'] = df_veiculo['Km'].diff()
-                df_veiculo['Km/L'] = df_veiculo.apply(
-                    lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and row['Km_Rodados'] > 0 else 0.0, 
-                    axis=1
-                )
-                df_veiculo['Preço/Litro'] = df_veiculo.apply(
-                    lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
-                    axis=1
-                )
-
-                # Formatação
-                df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], errors='coerce').dt.strftime('%d/%m/%Y')
-                df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
-
-                colunas_exibir = ['Vencimento', 'Categoria', 'Descrição', 'Valor_Formatado', 'Km', 'Km_Rodados', 'Litros', 'Km/L', 'Preço/Litro', 'Banco']
-                colunas_exibir_disponiveis = [col for col in colunas_exibir if col in df_veiculo.columns]
-                
-                df_exibicao = df_veiculo[colunas_exibir_disponiveis].copy()
-
-                # --- 🎯 FUNÇÃO DE LITROS INTELIGENTE COM A LETRA L ---
-                def formata_litros_inteligente(valor):
-                    try:
-                        val_float = float(valor)
-                        if pd.isna(val_float) or val_float == 0:
-                            return "" # ou "0 L" se preferir mostrar zero
-                        if val_float.is_integer():
-                            return f"{int(val_float)} L"
-                        return f"{val_float:.2f} L".replace('.', ',')
-                    except:
-                        return str(valor)
-
-                if 'Litros' in df_exibicao.columns:
-                    df_exibicao['Litros'] = df_exibicao['Litros'].apply(formata_litros_inteligente)
-                # -------------------------------------------------------------
-
-                formatos_tabela = {
-                    'Km': "{:,.0f} km",
-                    'Km_Rodados': "{:,.0f} km",
-                    # ⚠️ Note que REMOVEMOS a linha de 'Litros' daqui para o Pandas não sobrescrever!
-                    'Km/L': "{:.2f} Km/L",
-                    'Preço/Litro': "R$ {:.2f}"
-                }
-                
-                # Se quiser que apareça o "L" no final quando for inteiro ou decimal, 
-                # você pode ajustar o retorno da função para retornar f"{...} L" se preferir!
-
-                if not df_exibicao.empty:
-                    st.dataframe(df_exibicao.iloc[::-1].style.format(formatos_tabela), use_container_width=True, hide_index=True)
-                else:
-                    st.info("Nenhum lançamento encontrado com esses filtros.")
-            else:
-                st.info("Nenhum lançamento de veículo encontrado na base.")
-        else:
-            st.warning("A base de dados está vazia.")
+    if not df_veiculo.empty:
+        col_filtro1, col_filtro2 = st.columns(2)
         
+        with col_filtro1:
+            tipos_disponiveis = ["Todos", "Combustível", "Manutenção", "Veículo"]
+            filtro_escolhido = st.selectbox("🔍 Filtrar por Categoria:", tipos_disponiveis, key="filtro_aba_veiculo")
+
+        with col_filtro2:
+            busca_texto = st.text_input("🔎 Buscar por Veículo/Descrição (ex: Tcross, Lead):", "", key="busca_veiculo_texto")
+
+        if filtro_escolhido != "Todos":
+            df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'] == filtro_escolhido]
+
+        if busca_texto:
+            df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
+
+        if not df_veiculo.empty:
+            # 1️⃣ Converte datas e ordena cronologicamente
+            df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
+            df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
+
+            # 2️⃣ Conversões numéricas seguras
+            df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
+            df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
+            df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
+
+            # 3️⃣ Cálculo sequencial seguro de Km Rodados e Km/L
+            km_rodados_lista = []
+            km_l_lista = []
+            preco_litro_lista = []
+            
+            ultimo_km_valido = 0
+
+            for index, row in df_veiculo.iterrows():
+                km_atual = row['Km']
+                litros = row['Litros']
+                valor = row['V_Num']
+                
+                # Preço por litro
+                p_litro = (valor / litros) if litros > 0 else 0.0
+                preco_litro_lista.append(p_litro)
+                
+                # Se não tem KM cadastrado nesta linha, não calcula rodagem
+                if km_atual <= 0:
+                    km_rodados_lista.append(0.0)
+                    km_l_lista.append(0.0)
+                    continue
+                
+                # Se é a primeira vez que vemos um KM válido, guardamos e seguimos
+                if ultimo_km_valido == 0:
+                    ultimo_km_valido = km_atual
+                    km_rodados_lista.append(0.0)
+                    km_l_lista.append(0.0)
+                else:
+                    # Calcula a diferença com o último abastecimento/KM registrado
+                    rodados = km_atual - ultimo_km_valido
+                    
+                    if rodados > 0 and litros > 0:
+                        consumo = rodados / litros
+                        km_rodados_lista.append(rodados)
+                        km_l_lista.append(consumo)
+                        ultimo_km_valido = km_atual # Atualiza para o próximo intervalo
+                    else:
+                        km_rodados_lista.append(0.0)
+                        km_l_lista.append(0.0)
+                        # Atualiza o KM válido se o atual for maior que o anterior
+                        if km_atual > ultimo_km_valido:
+                            ultimo_km_valido = km_atual
+
+            df_veiculo['Km_Rodados'] = km_rodados_lista
+            df_veiculo['Km/L'] = km_l_lista
+            df_veiculo['Preço/Litro'] = preco_litro_lista
+
+            df_veiculo['Vencimento'] = df_veiculo['Vencimento'].dt.strftime('%d/%m/%Y')
+            df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
+
+            colunas_exibir = ['Vencimento', 'Categoria', 'Descrição', 'Valor_Formatado', 'Km', 'Km_Rodados', 'Litros', 'Km/L', 'Preço/Litro', 'Banco']
+            colunas_exibir_disponiveis = [col for col in colunas_exibir if col in df_veiculo.columns]
+            
+            df_exibicao = df_veiculo[colunas_exibir_disponiveis].copy()
+
+            def formata_litros_inteligente(valor):
+                try:
+                    val_float = float(valor)
+                    if pd.isna(val_float) or val_float == 0:
+                        return ""
+                    if val_float.is_integer():
+                        return f"{int(val_float)} L"
+                    return f"{val_float:.2f} L".replace('.', ',')
+                except:
+                    return str(valor)
+
+            if 'Litros' in df_exibicao.columns:
+                df_exibicao['Litros'] = df_exibicao['Litros'].apply(formata_litros_inteligente)
+
+            formatos_tabela = {
+                'Km': "{:,.0f} km",
+                'Km_Rodados': "{:,.0f} km",
+                'Km/L': "{:.2f} Km/L",
+                'Preço/Litro': "R$ {:.2f}"
+            }
+            
+            st.dataframe(df_exibicao.iloc[::-1].style.format(formatos_tabela), use_container_width=True, hide_index=True)
+        else:
+            st.info("Nenhum lançamento encontrado com esses filtros.")
+    else:
+        st.info("Nenhum lançamento de veículo encontrado na base.")
+
+
 
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
@@ -2801,7 +2763,36 @@ elif "📄" in aba:
     
     st.text_area("Copiar Relatório para o WhatsApp", relat, height=380)
 
+    # ==========================================
+    # BOTÃO PARA ABRIR O WHATSAPP COM O TEXTO
+    # ==========================================
+    import urllib.parse
+    import streamlit.components.v1 as components
 
+    # Codifica o texto do relatório para a URL do WhatsApp funcionar perfeitamente com quebras de linha e acentos
+    relat_encoded = urllib.parse.quote(relat)
+    
+    html_botao_whatsapp = f"""
+    <div style="margin-top: 10px; margin-bottom: 20px;">
+        <a href="https://api.whatsapp.com/send?text={relat_encoded}" target="_blank" style="
+            display: block;
+            background-color: #25D366;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+            💬 Enviar Relatório no WhatsApp
+        </a>
+    </div>
+    """
+    components.html(html_botao_whatsapp, height=60)
+    
     
     # ==========================================
     # 4. NOVA SEÇÃO: BUSCA E ENVIO DE LANÇAMENTO ESPECÍFICO
