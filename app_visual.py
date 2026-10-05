@@ -2446,7 +2446,7 @@ elif "🚗" in aba:
             
         st.divider()
 
-if "Meu Veículo" in aba:
+elif aba == "🚗 Meu Veículo":
     st.subheader("📊 Histórico e Lançamentos do Veículo")
 
     if not df_base.empty:
@@ -2477,20 +2477,16 @@ if "Meu Veículo" in aba:
                 df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
             if not df_veiculo.empty:
-                # 1️⃣ Converte datas e ordena cronologicamente
                 df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
                 df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
 
-                # 2️⃣ Conversões numéricas seguras
                 df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
                 df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
                 df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
 
-                # 3️⃣ Cálculo sequencial seguro de Km Rodados e Km/L
                 km_rodados_lista = []
                 km_l_lista = []
                 preco_litro_lista = []
-                
                 ultimo_km_valido = 0
 
                 for index, row in df_veiculo.iterrows():
@@ -2512,7 +2508,6 @@ if "Meu Veículo" in aba:
                         km_l_lista.append(0.0)
                     else:
                         rodados = km_atual - ultimo_km_valido
-                        
                         if rodados > 0 and litros > 0:
                             consumo = rodados / litros
                             km_rodados_lista.append(rodados)
