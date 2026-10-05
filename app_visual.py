@@ -1645,8 +1645,8 @@ if "💰" in st.session_state.page:
                 )
         
         with g2:
-           with g2:
-        with g2:
+          
+     with g2:
         # 📊 GRÁFICO DE FLuxo MENSAL (3 MESES) - COM CORREÇÃO DE TAG
         st.subheader("📊 Fluxo Mensal (3 Meses)")
         
