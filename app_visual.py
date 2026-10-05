@@ -1656,16 +1656,22 @@ if "💰" in st.session_state.page:
             # Filtra a base completa pelos meses selecionados
             df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
             
-            # 🔒 EXCLUI AS TRANSFERÊNCIAS (Olhando pelo campo Categoria)
+           
+            # 🔒 FILTRO BLINDADO: Remove transferências, aplicações e resgates em qualquer coluna
             if not df_fluxo.empty:
-                if 'Categoria' in df_fluxo.columns:
-                    # Padroniza removendo acentos e deixando minúsculo para pegar qualquer variação
-                    cat_lower = df_fluxo['Categoria'].astype(str).str.lower()
-                    termos_proibidos = ['transferênci', 'transferenci', 'aplicaçã', 'aplicacao', 'resgate']
-                    
-                    # Cria a máscara para filtrar tudo o que não for transferência
-                    mask = ~cat_lower.str.contains('|'.join(termos_proibidos), na=False)
-                    df_fluxo = df_fluxo[mask]
+                # Junta o texto da Categoria, Descrição e Tipo para procurar os termos
+                texto_geral = (
+                    df_fluxo.get('Categoria', '').astype(str) + " " +
+                    df_fluxo.get('Descrição', '').astype(str) + " " +
+                    df_fluxo.get('Tipo', '').astype(str)
+                ).str.lower()
+                
+                # Raízes das palavras proibidas (pega variações como transferencia, transf, aplicacao, aplic, resgate, etc.)
+                termos_proibidos = ['transf', 'aplic', 'resgat']
+                
+                # Filtra fora tudo o que tiver essas palavras
+                mask = ~texto_geral.str.contains('|'.join(termos_proibidos), na=False)
+                df_fluxo = df_fluxo[mask]
             
             # Prepara os dados para o gráfico
             df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
