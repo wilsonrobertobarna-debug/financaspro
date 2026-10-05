@@ -1555,71 +1555,88 @@ if "💰" in st.session_state.page:
         
         #with g2:
             
-        with g2:
-            st.subheader("📋 Auditoria Detalhada - Mês 10 (Outubro)")
+       with g2:
+            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES) - DEFINITIVO E SEM TRANSFERÊNCIAS
+            st.subheader("📊 Fluxo Mensal (3 Meses)")
             
-            base_auditoria = df if 'df' in locals() and not df.empty else df_base
+            base_grafico = df if 'df' in locals() and not df.empty else df_base
             
-            if not base_auditoria.empty:
-                df_aud = base_auditoria.copy()
+            if not base_grafico.empty:
+                df_fluxo = base_grafico.copy()
                 
-                # Normalizações essenciais
-                if 'Status' in df_aud.columns:
-                    df_aud['Status'] = df_aud['Status'].astype(str).str.strip().str.title()
-                if 'Tipo' in df_aud.columns:
-                    df_aud['Tipo'] = df_aud['Tipo'].fillna('Despesa').astype(str).str.strip()
-                df_aud['V_Num'] = pd.to_numeric(df_aud['V_Num'], errors='coerce').fillna(0)
+                # 🔒 1. GARANTE APENAS STATUS VÁLIDOS (Pago e Pendente)
+                if 'Status' in df_fluxo.columns:
+                    df_fluxo['Status'] = df_fluxo['Status'].astype(str).str.strip().str.title()
+                    df_fluxo = df_fluxo[df_fluxo['Status'].isin(['Pago', 'Pendente'])]
                 
-                # Filtra especificamente para o Mês atual / Outubro
-                if 'Mes_Ano' in df_aud.columns:
-                    mes_alvo_filtro = f"Out/{str(datetime.now().year)[-2:]}" # Ex: Out/26
-                    if 'mes_atual' in locals() and mes_atual in meses_abreviados:
-                        mes_alvo_filtro = f"{mes_map[mes_atual]}/{str(datetime.now().year)[-2:]}"
-                    
-                    st.markdown(f"**Filtrando lançamentos para o período:** `{mes_alvo_filtro}`")
-                    df_aud = df_aud[df_aud['Mes_Ano'] == mes_alvo_filtro]
-                    
-                    # --- 🚫 BLINDAGEM ANTI-TRANSFERÊNCIA NA AUDITORIA ---
-                    if 'limpar_transferencias' in locals():
-                        df_aud = limpar_transferencias(df_aud)
-                    else:
-                        # Caso a função não esteja no escopo desta seção, aplicamos o filtro direto:
-                        termos_proibidos = ['transferência', 'transf', 'aplicacao', 'aplicação', 'resgate', 'TED', 'DOC']
-                        for col in df_aud.columns:
-                            if df_aud[col].dtype == object or str(df_aud[col].dtype) == 'string':
-                                mascara = df_aud[col].astype(str).str.lower().apply(lambda x: any(t in x for t in termos_proibidos))
-                                df_aud = df_aud[~mascara]
-                        if 'Categoria' in df_aud.columns:
-                            df_aud = df_aud[~df_aud['Categoria'].astype(str).str.lower().str.contains('transferência|transf|aplicação|resgate', na=False)]
-                
-                if not df_aud.empty:
-                    # Totais rápidos para conferência (agora livres de transferências!)
-                    total_rec_pago = df_aud[(df_aud['Tipo'].str.contains('Receita', case=False, na=False)) & (df_aud['Status'] == 'Pago')]['V_Num'].sum()
-                    total_rec_pend = df_aud[(df_aud['Tipo'].str.contains('Receita', case=False, na=False)) & (df_aud['Status'] == 'Pendente')]['V_Num'].sum()
-                    
-                    total_desp_pago = df_aud[(df_aud['Tipo'].str.contains('Despesa|Pagar', case=False, na=False)) & (df_aud['Status'] == 'Pago')]['V_Num'].sum()
-                    total_desp_pend = df_aud[(df_aud['Tipo'].str.contains('Despesa|Pagar', case=False, na=False)) & (df_aud['Status'] == 'Pendente')]['V_Num'].sum()
-                    
-                    col_a, col_b = st.columns(2)
-                    with col_a:
-                        st.metric("Receitas Mês (Pago + Pendente)", f"R$ {(total_rec_pago + total_rec_pend):,.2f}", f"Pago: R$ {total_rec_pago:,.2f} | Pend: R$ {total_rec_pend:,.2f}")
-                    with col_b:
-                        st.metric("Despesas Mês (Pago + Pendente)", f"R$ {(total_desp_pago + total_desp_pend):,.2f}", f"Pago: R$ {total_desp_pago:,.2f} | Pend: R$ {total_desp_pend:,.2f}")
-                    
-                    st.divider()
-                    
-                    # Seleciona as colunas mais importantes para você auditar
-                    colunas_exibir = [c for c in ['Data', 'Descricao', 'Beneficiario', 'Categoria', 'Tipo', 'Status', 'V_Num', 'Banco'] if c in df_aud.columns]
-                    
-                    st.dataframe(
-                        df_aud[colunas_exibir].sort_values(by=['Tipo', 'Status'], ascending=False),
-                        use_container_width=True,
-                        hide_index=True
-                    )
+                # 🚫 2. FAXINA ANTI-TRANSFERÊNCIA NO GRÁFICO
+                if 'limpar_transferencias' in locals():
+                    df_fluxo = limpar_transferencias(df_fluxo)
                 else:
-                    st.warning(f"Não foram encontrados registros (não-transferências) para o mês selecionado ({mes_alvo_filtro}).")
+                    termos_proibidos = ['transferência', 'transf', 'aplicacao', 'aplicação', 'resgate', 'TED', 'DOC']
+                    for col in df_fluxo.columns:
+                        if df_fluxo[col].dtype == object or str(df_fluxo[col].dtype) == 'string':
+                            mascara = df_fluxo[col].astype(str).str.lower().apply(lambda x: any(t in x for t in termos_proibidos))
+                            df_fluxo = df_fluxo[~mascara]
+                    if 'Categoria' in df_fluxo.columns:
+                        df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência|transf|aplicação|resgate', na=False)]
+                
+                # Remove bancos estrangeiros se houverem
+                if "bancos_estrangeiros" in locals() and bancos_estrangeiros and 'Banco' in df_fluxo.columns:
+                    df_fluxo = df_fluxo[~df_fluxo['Banco'].isin(bancos_estrangeiros)]
+                
+                # 🛡️ 3. NORMALIZAÇÃO DE TIPO
+                if 'Tipo' in df_fluxo.columns:
+                    df_fluxo['Tipo'] = df_fluxo['Tipo'].fillna('').astype(str).str.strip()
+                    df_fluxo.loc[df_fluxo['Tipo'] == '', 'Tipo'] = 'Despesa'
+                    df_fluxo['Tipo_Grafico'] = df_fluxo['Tipo'].str.title().replace({
+                        'A Receber': 'Receita',
+                        'A Pagar': 'Despesa',
+                        'Pendente': 'Despesa'
+                    })
+                else:
+                    df_fluxo['Tipo_Grafico'] = 'Despesa'
+                
+                df_fluxo['V_Num'] = pd.to_numeric(df_fluxo['V_Num'], errors='coerce').fillna(0)
+                
+                # 📅 4. SELEÇÃO DOS 3 MESES BASEADA NA SELEÇÃO DO TOPO
+                if 'Mes_Ano' in df_fluxo.columns and mes_atual in meses_abreviados:
+                    idx = meses_abreviados.index(mes_atual)
+                    meses_selecionados_str = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
+                    filtro_lista_meses = [f"{mes_map[m]}/26" for m in meses_selecionados_str]
+                    
+                    df_fluxo = df_fluxo[df_fluxo['Mes_Ano'].isin(filtro_lista_meses)]
+                
+                if not df_fluxo.empty:
+                    # Agrupa por Mês e Tipo
+                    resumo_meses = df_fluxo.groupby(['Mes_Ano', 'Tipo_Grafico'])['V_Num'].sum().reset_index()
+                    
+                    fig_fluxo = px.bar(
+                        resumo_meses, 
+                        x='Mes_Ano', 
+                        y='V_Num', 
+                        color='Tipo_Grafico', 
+                        barmode='group',
+                        color_discrete_map={
+                            'Receita': '#2ecc71', 
+                            'Despesa': '#e74c3c', 
+                            'Rendimento': '#3498db'
+                        },
+                        text_auto='.2s'
+                    )
+                    fig_fluxo.update_layout(
+                        height=350, 
+                        margin=dict(t=30, b=10, l=0, r=0),
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                        xaxis_title="",
+                        yaxis_title=""
+                    )
+                    
+                    st.plotly_chart(fig_fluxo, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
+                else:
+                    st.info("Nenhum lançamento encontrado para os últimos 3 meses.")
             else:
-                st.info("Base de dados vazia.")
+                st.info("A base de dados está vazia.")
                             
 
 # 6. NOVO: GRÁFICO DE METAS
