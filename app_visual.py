@@ -1408,12 +1408,38 @@ if "💰" in st.session_state.page:
     if not mes_atual or mes_atual not in mes_map:
         mes_atual = meses_abreviados[0]
 
+    # --- 🚫 FUNÇÃO UNIVERSAL DE LIMPEZA DE TRANSFERÊNCIAS ---
+    def limpar_transferencias(df_entrada):
+        if df_entrada.empty:
+            return df_entrada
+        
+        df_limpo = df_entrada.copy()
+        
+        # Termos que identificam transferências, aplicações, resgates ou trânsito entre contas
+        termos_proibidos = ['transferência', 'transf', 'aplicacao', 'aplicação', 'resgate', 'TED', 'DOC']
+        
+        # Varre as colunas de texto para eliminar o vai e vem
+        for col in df_limpo.columns:
+            if df_limpo[col].dtype == object or str(df_limpo[col].dtype) == 'string':
+                mascara = df_limpo[col].astype(str).str.lower().apply(lambda x: any(termo in x for termo in termos_proibidos))
+                df_limpo = df_limpo[~mascara]
+        
+        # Reforço extra na coluna Categoria se ela existir
+        if 'Categoria' in df_limpo.columns:
+            df_limpo = df_limpo[~df_limpo['Categoria'].astype(str).str.lower().str.contains('transferência|transf|aplicação|resgate', na=False)]
+            
+        return df_limpo
+
     if not df_base.empty:
         filtro_mes = f"{mes_map.get(mes_atual, '08')}/26"
-        # ... (o restante do seu código continua exatamente igual daqui para baixo)
         
-        # Filtra os dados do mês
-        df_m = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
+        # 1. Filtra os dados do mês bruto
+        df_m_bruto = df_base[df_base['Mes_Ano'] == filtro_mes].copy()
+        
+        # 2. Aplica a faxina anti-transferência antes de separar pagos e pendentes
+        df_m = limpar_transferencias(df_m_bruto)
+        
+        # --- (o restante do seu código de cartões, métricas e gráficos continua daqui para baixo) ---
         
         # --- IDENTIFICAÇÃO DE BANCOS EM MOEDA ESTRANGEIRA ---
         bancos_estrangeiros = []
