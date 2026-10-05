@@ -2447,34 +2447,17 @@ elif "🚗" in aba:
         st.divider()
 
 elif aba == "🚗 Meu Veículo":
+   elif aba == "🚗 Meu Veículo":
     st.subheader("📊 Histórico e Lançamentos do Veículo")
-
-    if df_base.empty:
-        st.warning("⚠️ O DataFrame principal (`df_base`) está vazio. Os dados não foram carregados do Google Sheets.")
-    else:
-        # Mostra as colunas que o app está enxergando na sua planilha
-        st.write("Colunas encontradas na sua base:", list(df_base.columns))
-
-        df_veiculo = df_base.copy()
-
-        # Garante que as colunas existem para não dar erro
-        if 'Km' not in df_veiculo.columns:
-            df_veiculo['Km'] = 0.0
-        if 'Litros' not in df_veiculo.columns:
-            df_veiculo['Litros'] = 0.0
-
-        df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
+    
+    if 'df_base' in st.session_state and not st.session_state['df_base'].empty:
+        df_v = st.session_state['df_base']
+        st.success(f"Base carregada com sucesso! Total de linhas na planilha: {len(df_v)}")
         
-        # Filtra pelas categorias de veículo
-        df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
-
-        st.write(f"Total de lançamentos encontrados para o veículo: {len(df_veiculo)}")
-
-        if not df_veiculo.empty:
-            # Exibe a tabela direto para testar
-            st.dataframe(df_veiculo, use_container_width=True)
-        else:
-            st.warning("⚠️ Nenhum lançamento com categoria 'Combustível', 'Veículo' ou 'Manutenção' foi encontrado na planilha.")
+        # Mostra a tabela completa para você ver os dados na hora
+        st.dataframe(df_v, use_container_width=True)
+    else:
+        st.error("A base de dados está vazia ou não foi carregada.")
 
        
 
