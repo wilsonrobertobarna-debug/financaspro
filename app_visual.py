@@ -2447,9 +2447,12 @@ elif "🚗" in aba:
             
         st.divider()
 
-# Coloque esta verificação logo antes do st.subheader do carro:
-if pagina == "Veículo": # (ou o nome exato da variável/aba de veículos no seu código)
+elif "Veículo" in aba: # Ou o nome exato que você usa na sua navegação para a aba de veículos
     st.subheader("📊 Histórico e Lançamentos do Veículo")
+    
+    if not df_base.empty:
+        df_veiculo = df_base.copy()
+        # ... (todo o resto do código de filtros e cálculos do veículo que ajustamos antes)
     
     # ... (todo o código do carro que colamos antes fica recuado aqui dentro)
 
