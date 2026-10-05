@@ -1529,16 +1529,21 @@ if "💰" in st.session_state.page:
         
         with g2:
             
-         with g2:
-            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES) - ALINHADO E CORRIGIDO
+        with g2:
             st.subheader("📊 Fluxo Mensal (3 Meses)")
             
-            if not df_base.empty:
+            # Pega a base completa se existir, senão usa df_base
+            base_para_usar = df_geral if 'df_geral' in locals() and not df_geraly.empty else df_base
+            
+            if not base_para_usar.empty:
+                # 🔍 RAIO-X: Mostra quais meses existem na base inteira antes do filtro
+                st.write("Meses disponíveis na base:", base_para_usar['Mes_Ano'].unique() if 'Mes_Ano' in base_para_usar.columns else "Sem coluna Mes_Ano")
+                
                 idx = meses_abreviados.index(mes_atual)
                 meses_para_exibir = [meses_abreviados[max(0, idx-2)], meses_abreviados[max(0, idx-1)], meses_abreviados[idx]]
                 filtro_lista = [f"{mes_map[m]}/26" for m in meses_para_exibir]
                 
-                df_fluxo = df_base.copy()
+                df_fluxo = base_para_usar.copy()
                 
                 # Padroniza Status (Pago + Pendente)
                 if 'Status' in df_fluxo.columns:
@@ -1563,12 +1568,11 @@ if "💰" in st.session_state.page:
                 
                 df_fluxo['V_Num'] = pd.to_numeric(df_fluxo['V_Num'], errors='coerce').fillna(0)
                 
-                # Filtra pelos meses usando Mes_Ano (que é o padrão seguro da base)
+                # Filtra pelos meses do período
                 if 'Mes_Ano' in df_fluxo.columns:
                     df_fluxo = df_fluxo[df_fluxo['Mes_Ano'].isin(filtro_lista)]
                 
                 if not df_fluxo.empty:
-                    # Agrupa de forma segura usando Mes_Ano e Tipo_Grafico
                     resumo_meses = df_fluxo.groupby(['Mes_Ano', 'Tipo_Grafico'])['V_Num'].sum().reset_index()
                     
                     fig_fluxo = px.bar(
@@ -1594,7 +1598,7 @@ if "💰" in st.session_state.page:
                     
                     st.plotly_chart(fig_fluxo, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
                 else:
-                    st.info("Nenhum lançamento encontrado para o período.")
+                    st.info("Nenhum lançamento encontrado para o período após os filtros.")
             else:
                 st.info("A base de dados está vazia.")
                             
