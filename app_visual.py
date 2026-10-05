@@ -1529,7 +1529,8 @@ if "💰" in st.session_state.page:
         
         with g2:
             
-           with g2:
+          with g2:
+            # 📊 GRÁFICO DE FLUXO MENSAL (3 MESES) - FINAL
             st.subheader("📊 Fluxo Mensal (3 Meses)")
             
             if not df_base.empty:
@@ -1561,9 +1562,8 @@ if "💰" in st.session_state.page:
                     
                     df_fluxo['V_Num'] = pd.to_numeric(df_fluxo['V_Num'], errors='coerce').fillna(0)
                     
-                    # 🔍 MOSTRA O TOTAL EXATO POR MÊS E TIPO NA TELA
+                    # Agrupa por Mês e Tipo
                     resumo_meses = df_fluxo.groupby(['Mes_Ano', 'Tipo_Grafico'])['V_Num'].sum().reset_index()
-                    st.write("📋 **Valores por Mês que vão para o gráfico:**", resumo_meses)
                     
                     fig_fluxo = px.bar(
                         resumo_meses, 
@@ -1578,7 +1578,13 @@ if "💰" in st.session_state.page:
                         },
                         text_auto='.2s'
                     )
-                    fig_fluxo.update_layout(height=350, margin=dict(t=30, b=10, l=0, r=0))
+                    fig_fluxo.update_layout(
+                        height=350, 
+                        margin=dict(t=30, b=10, l=0, r=0),
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                        xaxis_title="",
+                        yaxis_title=""
+                    )
                     
                     st.plotly_chart(fig_fluxo, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
                 else:
