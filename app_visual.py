@@ -159,7 +159,82 @@ elif st.session_state.page == "🐾 Milo & Bolt":
     pass
 
 elif st.session_state.page == "🚗 Meu Veículo":
-    pass
+    st.subheader("📊 Histórico e Lançamentos do Veículo")
+
+    if not df_base.empty:
+        df_veiculo = df_base.copy()
+        if 'Km' not in df_veiculo.columns: df_veiculo['Km'] = 0.0
+        if 'Litros' not in df_veiculo.columns: df_veiculo['Litros'] = 0.0
+
+        df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
+        df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
+
+        if not df_veiculo.empty:
+            col_filtro1, col_filtro2 = st.columns(2)
+            with col_filtro1:
+                filtro_escolhido = st.selectbox("🔍 Filtrar por Categoria:", ["Todos", "Combustível", "Manutenção", "Veículo"], key="filtro_aba_veiculo")
+            with col_filtro2:
+                busca_texto = st.text_input("🔎 Buscar por Descrição:", "", key="busca_veiculo_texto")
+
+            if filtro_escolhido != "Todos":
+                df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'] == filtro_escolhido]
+            if busca_texto:
+                df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
+
+            if not df_veiculo.empty:
+                df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
+                df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
+                df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
+                df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
+                df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
+
+                km_rodados_lista, km_l_lista, preco_litro_lista, ultimo_km_valido = [], [], [], 0
+
+                for index, row in df_veiculo.iterrows():
+                    km_atual, litros, valor = row['Km'], row['Litros'], row['V_Num']
+                    p_litro = (valor / litros) if litros > 0 else 0.0
+                    preco_litro_lista.append(p_litro)
+                    
+                    if km_atual <= 0 or ultimo_km_valido == 0:
+                        km_rodados_lista.append(0.0)
+                        km_l_lista.append(0.0)
+                        if ultimo_km_valido == 0 and km_atual > 0: ultimo_km_valido = km_atual
+                        continue
+                    
+                    rodados = km_atual - ultimo_km_valido
+                    if rodados > 0 and litros > 0:
+                        km_rodados_lista.append(rodados)
+                        km_l_lista.append(rodados / litros)
+                        ultimo_km_valido = km_atual
+                    else:
+                        km_rodados_lista.append(0.0)
+                        km_l_lista.append(0.0)
+                        if km_atual > ultimo_km_valido: ultimo_km_valido = km_atual
+
+                df_veiculo['Km_Rodados'] = km_rodados_lista
+                df_veiculo['Km/L'] = km_l_lista
+                df_veiculo['Preço/Litro'] = preco_litro_lista
+                df_veiculo['Vencimento'] = df_veiculo['Vencimento'].dt.strftime('%d/%m/%Y')
+                df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
+
+                colunas_exibir = ['Vencimento', 'Categoria', 'Descrição', 'Valor_Formatado', 'Km', 'Km_Rodados', 'Litros', 'Km/L', 'Preço/Litro', 'Banco']
+                df_exibicao = df_veiculo[[col for col in colunas_exibir if col in df_veiculo.columns]].copy()
+
+                def formata_litros(v):
+                    try:
+                        vf = float(v)
+                        return f"{int(vf)} L" if vf.is_integer() else f"{vf:.2f} L".replace('.', ',') if vf > 0 else ""
+                    except: return str(v)
+
+                if 'Litros' in df_exibicao.columns: df_exibicao['Litros'] = df_exibicao['Litros'].apply(formata_litros)
+
+                st.dataframe(df_exibicao.iloc[::-1].style.format({'Km': "{:,.0f} km", 'Km_Rodados': "{:,.0f} km", 'Km/L': "{:.2f} Km/L", 'Preço/Litro': "R$ {:.2f}"}), use_container_width=True, hide_index=True)
+            else:
+                st.info("Nenhum lançamento encontrado com esses filtros.")
+        else:
+            st.info("Nenhum lançamento de veículo encontrado na base.")
+    else:
+        st.warning("A base de dados está vazia.")
 
 elif st.session_state.page == "📄 WhatsApp":
     pass
