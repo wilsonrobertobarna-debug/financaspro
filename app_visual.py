@@ -1527,7 +1527,7 @@ if "💰" in st.session_state.page:
                     }
                 )
         
-        with g2:
+        #with g2:
             
         with g2:
             st.subheader("📊 Fluxo Mensal (3 Meses)")
