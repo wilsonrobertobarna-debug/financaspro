@@ -2447,8 +2447,7 @@ elif "🚗" in aba:
             
         st.divider()
 
-# Coloque esta verificação EXATAMENTE antes do título do veículo:
-elif "Veículo" in aba: # (ou o nome exato da aba de veículos no seu menu)
+elif "Veículo" in aba:
     st.subheader("📊 Histórico e Lançamentos do Veículo")
 
     if not df_base.empty:
