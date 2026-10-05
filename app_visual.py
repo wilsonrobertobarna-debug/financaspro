@@ -233,26 +233,32 @@ st.set_page_config(
 @st.cache_resource
 def conectar():
     try:
-        # Pega os segredos de forma segura
         if "connections" in st.secrets and "gsheets" in st.secrets["connections"]:
             creds_dict = dict(st.secrets["connections"]["gsheets"])
         elif "gsheets" in st.secrets:
             creds_dict = dict(st.secrets["gsheets"])
         else:
-            st.error("⚠️ Configurações do Google Sheets não encontrada nos Secrets.")
+            st.error("⚠️ Configurações do Google Sheets não encontradas nos Secrets.")
             st.stop()
 
         pk = str(creds_dict.get("private_key", ""))
         
-        # Limpeza profunda de aspas e espaços
+        # Limpeza total de aspas e espaços ao redor
         pk = pk.strip()
         if (pk.startswith('"') and pk.endswith('"')) or (pk.startswith("'") and pk.endswith("'")):
             pk = pk[1:-1].strip()
-            
-        # Converte as barras invertidas "\n" em quebras de linha reais de forma segura
+
+        # Garante que as quebras de linha sejam interpretadas corretamente pelo Python
         if "\\n" in pk:
             pk = pk.replace("\\n", "\n")
-            
+        
+        # Se por acaso a chave veio toda em uma linha só sem quebras reais, reconstrói o formato PEM
+        if "-----BEGIN PRIVATE KEY-----" in pk and "-----END PRIVATE KEY-----" in pk and "\n" not in pk[29:-27]:
+            conteudo = pk.replace("-----BEGIN PRIVATE KEY-----", "").replace("-----END PRIVATE KEY-----", "").strip()
+            # Insere quebras a cada 64 caracteres, que é o padrão do formato PEM
+            linhas_cert = [conteudo[i:i+64] for i in range(0, len(conteudo), 64)]
+            pk = "-----BEGIN PRIVATE KEY-----\n" + "\n".join(linhas_cert) + "\n-----END PRIVATE KEY-----"
+
         creds_dict["private_key"] = pk
 
         return gspread.authorize(Credentials.from_service_account_info(
