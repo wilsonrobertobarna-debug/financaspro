@@ -446,32 +446,29 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                         
                         st.metric(label=f"{icone} {nome_banco}", value=formatar_moeda(saldo_atual, simb_moeda))
 
-# INICIALIZA O CACHE NA SESSÃO
+# ==========================================
+# 🔒 INICIALIZAÇÃO E FILTRO MESTRE GLOBAL
+# ==========================================
 if 'df_base' not in st.session_state:
     st.session_state['df_base'] = carregar_dados_gs()
 if 'df_bancos_info' not in st.session_state:
     st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
 
-# 2. Agora criamos as variáveis locais para usar nas barras
-df_base = st.session_state['df_base']
-df_bancos_info = st.session_state['df_bancos_info']
-
-# FUNÇÃO PARA ATUALIZAR O ESTADO
+# Função para atualizar o estado via botão
 def atualizar_sessao():
     st.session_state['df_base'] = carregar_dados_gs()
     st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
 
-# A "MÉCÂNICA" DE SEGURANÇA:
-# Se o programa acabou de abrir e não tem nada na memória, ele carrega.
-# Se já tem algo na memória (mesmo que você tenha fechado e aberto), 
-# ele NÃO limpa, ele mantém o que está lá até que você aperte o botão de atualizar.
 if 'df_base' not in st.session_state:
     atualizar_sessao()
 
-# Agora, as variáveis sempre terão o conteúdo que foi carregado
-df_base = st.session_state['df_base']
+# Atribui às variáveis locais
+df_base = st.session_state['df_base'].copy() if not st.session_state['df_base'].empty else st.session_state['df_base']
 df_bancos_info = st.session_state['df_bancos_info']
 
+# 🚫 FILTRO MESTRE GLOBAL: Remove qualquer transferência da base inteira para não inflar cards e gráficos
+if not df_base.empty and 'Categoria' in df_base.columns:
+    df_base = df_base[~df_base['Categoria'].astype(str).str.lower().str.contains('transferência|transferencia|transf', na=False)]
 
 
 # INTEGRAÇÃO DE AVISOS NO WHATSAPP VIA TWILIO (REGRA QUINZENAL)
