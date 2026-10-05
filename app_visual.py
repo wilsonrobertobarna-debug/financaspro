@@ -2451,7 +2451,7 @@ elif "🚗" in aba:
 
 st.subheader("📊 Histórico e Lançamentos do Veículo")
 
-    if not df_base.empty:
+        if not df_base.empty:
         df_veiculo = df_base.copy()
 
         if 'Km' not in df_veiculo.columns:
