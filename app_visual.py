@@ -2447,11 +2447,9 @@ elif "🚗" in aba:
             
         st.divider()
 
+st.subheader("📊 Histórico e Lançamentos do Veículo")
 
-
-        st.subheader("📊 Histórico e Lançamentos do Veículo")
-
-        if not df_base.empty:
+    if not df_base.empty:
         df_veiculo = df_base.copy()
 
         if 'Km' not in df_veiculo.columns:
@@ -2569,6 +2567,8 @@ elif "🚗" in aba:
                 st.info("Nenhum lançamento encontrado com esses filtros.")
         else:
             st.info("Nenhum lançamento de veículo encontrado na base.")
+
+       
 
 
 
