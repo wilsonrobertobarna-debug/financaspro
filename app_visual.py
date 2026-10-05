@@ -268,6 +268,34 @@ def conectar():
     except Exception as e:
         st.error(f"Erro na conexão com o Google Sheets: {e}")
         st.stop()
+
+        pk = str(creds_dict.get("private_key", ""))
+        
+        # Limpeza total de aspas e espaços ao redor
+        pk = pk.strip()
+        if (pk.startswith('"') and pk.endswith('"')) or (pk.startswith("'") and pk.endswith("'")):
+            pk = pk[1:-1].strip()
+
+        # Garante que as quebras de linha sejam interpretadas corretamente pelo Python
+        if "\\n" in pk:
+            pk = pk.replace("\\n", "\n")
+        
+        # Se por acaso a chave veio toda em uma linha só sem quebras reais, reconstrói o formato PEM
+        if "-----BEGIN PRIVATE KEY-----" in pk and "-----END PRIVATE KEY-----" in pk and "\n" not in pk[29:-27]:
+            conteudo = pk.replace("-----BEGIN PRIVATE KEY-----", "").replace("-----END PRIVATE KEY-----", "").strip()
+            # Insere quebras a cada 64 caracteres, que é o padrão do formato PEM
+            linhas_cert = [conteudo[i:i+64] for i in range(0, len(conteudo), 64)]
+            pk = "-----BEGIN PRIVATE KEY-----\n" + "\n".join(linhas_cert) + "\n-----END PRIVATE KEY-----"
+
+        creds_dict["private_key"] = pk
+
+        return gspread.authorize(Credentials.from_service_account_info(
+            creds_dict, 
+            scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        ))
+    except Exception as e:
+        st.error(f"Erro na conexão com o Google Sheets: {e}")
+        st.stop()
         
 client = conectar()
 sh = client.open_by_key("147vDx908UMco7LByhOZjCGWCOoX8pEyAq-xG2BHaaU4")
