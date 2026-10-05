@@ -1556,59 +1556,70 @@ if "💰" in st.session_state.page:
         #with g2:
             
         with g2:
-            st.subheader("📋 Auditoria Detalhada - Mês 10 (Outubro)")
+        st.subheader("📋 Auditoria Detalhada - Mês 10 (Outubro)")
+        
+        base_auditoria = df if 'df' in locals() and not df.empty else df_base
+        
+        if not base_auditoria.empty:
+            df_aud = base_auditoria.copy()
             
-            base_auditoria = df if 'df' in locals() and not df.empty else df_base
+            # Normalizações essenciais
+            if 'Status' in df_aud.columns:
+                df_aud['Status'] = df_aud['Status'].astype(str).str.strip().str.title()
+            if 'Tipo' in df_aud.columns:
+                df_aud['Tipo'] = df_aud['Tipo'].fillna('Despesa').astype(str).str.strip()
+            df_aud['V_Num'] = pd.to_numeric(df_aud['V_Num'], errors='coerce').fillna(0)
             
-            if not base_auditoria.empty:
-                df_aud = base_auditoria.copy()
+            # Filtra especificamente para o Mês atual / Outubro
+            if 'Mes_Ano' in df_aud.columns:
+                mes_alvo_filtro = f"Out/{str(datetime.now().year)[-2:]}" # Ex: Out/26
+                if 'mes_atual' in locals() and mes_atual in meses_abreviados:
+                    mes_alvo_filtro = f"{mes_map[mes_atual]}/{str(datetime.now().year)[-2:]}"
                 
-                # Normalizações essenciais
-                if 'Status' in df_aud.columns:
-                    df_aud['Status'] = df_aud['Status'].astype(str).str.strip().str.title()
-                if 'Tipo' in df_aud.columns:
-                    df_aud['Tipo'] = df_aud['Tipo'].fillna('Despesa').astype(str).str.strip()
-                df_aud['V_Num'] = pd.to_numeric(df_aud['V_Num'], errors='coerce').fillna(0)
+                st.markdown(f"**Filtrando lançamentos para o período:** `{mes_alvo_filtro}`")
+                df_aud = df_aud[df_aud['Mes_Ano'] == mes_alvo_filtro]
                 
-                # Filtra especificamente para o Mês 10 / Outubro (ajuste o formato se o seu Mes_Ano for diferente, ex: 'Out/26' ou '10/2026')
-                if 'Mes_Ano' in df_aud.columns:
-                    # Tenta filtrar pelo mês atual selecionado no topo ou direto por Outubro
-                    mes_alvo_filtro = f"Out/{str(datetime.now().year)[-2:]}" # Ex: Out/26
-                    # Se houver uma forma de casar com o mês 10, vamos filtrar pelo mês ativo da barra do topo
-                    if 'mes_atual' in locals() and mes_atual in meses_abreviados:
-                        mes_alvo_filtro = f"{mes_map[mes_atual]}/{str(datetime.now().year)[-2:]}"
-                    
-                    st.markdown(f"**Filtrando lançamentos para o período:** `{mes_alvo_filtro}`")
-                    df_aud = df_aud[df_aud['Mes_Ano'] == mes_alvo_filtro]
-                
-                if not df_aud.empty:
-                    # Totais rápidos para conferência
-                    total_rec_pago = df_aud[(df_aud['Tipo'].str.contains('Receita', case=False, na=False)) & (df_aud['Status'] == 'Pago')]['V_Num'].sum()
-                    total_rec_pend = df_aud[(df_aud['Tipo'].str.contains('Receita', case=False, na=False)) & (df_aud['Status'] == 'Pendente')]['V_Num'].sum()
-                    
-                    total_desp_pago = df_aud[(df_aud['Tipo'].str.contains('Despesa|Pagar', case=False, na=False)) & (df_aud['Status'] == 'Pago')]['V_Num'].sum()
-                    total_desp_pend = df_aud[(df_aud['Tipo'].str.contains('Despesa|Pagar', case=False, na=False)) & (df_aud['Status'] == 'Pendente')]['V_Num'].sum()
-                    
-                    col_a, col_b = st.columns(2)
-                    with col_a:
-                        st.metric("Receitas Mês 10 (Pago + Pendente)", f"R$ {(total_rec_pago + total_rec_pend):,.2f}", f"Pago: R$ {total_rec_pago:,.2f} | Pend: R$ {total_rec_pend:,.2f}")
-                    with col_b:
-                        st.metric("Despesas Mês 10 (Pago + Pendente)", f"R$ {(total_desp_pago + total_desp_pend):,.2f}", f"Pago: R$ {total_desp_pago:,.2f} | Pend: R$ {total_desp_pend:,.2f}")
-                    
-                    st.divider()
-                    
-                    # Seleciona as colunas mais importantes para você auditar (ajuste conforme os nomes reais do seu DataFrame)
-                    colunas_exibir = [c for c in ['Data', 'Descricao', 'Beneficiario', 'Categoria', 'Tipo', 'Status', 'V_Num', 'Banco'] if c in df_aud.columns]
-                    
-                    st.dataframe(
-                        df_aud[colunas_exibir].sort_values(by=['Tipo', 'Status'], ascending=False),
-                        use_container_width=True,
-                        hide_index=True
-                    )
+                # --- 🚫 BLINDAGEM ANTI-TRANSFERÊNCIA NA AUDITORIA ---
+                if 'limpar_transferencias' in locals():
+                    df_aud = limpar_transferencias(df_aud)
                 else:
-                    st.warning(f"Não foram encontrados registros para o mês selecionado ({mes_alvo_filtro}). Verifique se o formato da coluna 'Mes_Ano' corresponde.")
+                    # Caso a função não esteja no escopo desta seção, aplicamos o filtro direto:
+                    termos_proibidos = ['transferência', 'transf', 'aplicacao', 'aplicação', 'resgate', 'TED', 'DOC']
+                    for col in df_aud.columns:
+                        if df_aud[col].dtype == object or str(df_aud[col].dtype) == 'string':
+                            mascara = df_aud[col].astype(str).str.lower().apply(lambda x: any(t in x for t in termos_proibidos))
+                            df_aud = df_aud[~mascara]
+                    if 'Categoria' in df_aud.columns:
+                        df_aud = df_aud[~df_aud['Categoria'].astype(str).str.lower().str.contains('transferência|transf|aplicação|resgate', na=False)]
+            
+            if not df_aud.empty:
+                # Totais rápidos para conferência (agora livres de transferências!)
+                total_rec_pago = df_aud[(df_aud['Tipo'].str.contains('Receita', case=False, na=False)) & (df_aud['Status'] == 'Pago')]['V_Num'].sum()
+                total_rec_pend = df_aud[(df_aud['Tipo'].str.contains('Receita', case=False, na=False)) & (df_aud['Status'] == 'Pendente')]['V_Num'].sum()
+                
+                total_desp_pago = df_aud[(df_aud['Tipo'].str.contains('Despesa|Pagar', case=False, na=False)) & (df_aud['Status'] == 'Pago')]['V_Num'].sum()
+                total_desp_pend = df_aud[(df_aud['Tipo'].str.contains('Despesa|Pagar', case=False, na=False)) & (df_aud['Status'] == 'Pendente')]['V_Num'].sum()
+                
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.metric("Receitas Mês (Pago + Pendente)", f"R$ {(total_rec_pago + total_rec_pend):,.2f}", f"Pago: R$ {total_rec_pago:,.2f} | Pend: R$ {total_rec_pend:,.2f}")
+                with col_b:
+                    st.metric("Despesas Mês (Pago + Pendente)", f"R$ {(total_desp_pago + total_desp_pend):,.2f}", f"Pago: R$ {total_desp_pago:,.2f} | Pend: R$ {total_desp_pend:,.2f}")
+                
+                st.divider()
+                
+                # Seleciona as colunas mais importantes para você auditar
+                colunas_exibir = [c for c in ['Data', 'Descricao', 'Beneficiario', 'Categoria', 'Tipo', 'Status', 'V_Num', 'Banco'] if c in df_aud.columns]
+                
+                st.dataframe(
+                    df_aud[colunas_exibir].sort_values(by=['Tipo', 'Status'], ascending=False),
+                    use_container_width=True,
+                    hide_index=True
+                )
             else:
-                st.info("Base de dados vazia.")
+                st.warning(f"Não foram encontrados registros (não-transferências) para o mês selecionado ({mes_alvo_filtro}).")
+        else:
+            st.info("Base de dados vazia.")
                             
 
 # 6. NOVO: GRÁFICO DE METAS
