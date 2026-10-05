@@ -2447,6 +2447,7 @@ elif "🚗" in aba:
             
         st.divider()
 
+if pagina == "Veículos"
 st.subheader("📊 Histórico e Lançamentos do Veículo")
 
 if not df_base.empty:
