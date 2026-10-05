@@ -2449,114 +2449,32 @@ elif "🚗" in aba:
 elif aba == "🚗 Meu Veículo":
     st.subheader("📊 Histórico e Lançamentos do Veículo")
 
-    if not df_base.empty:
+    if df_base.empty:
+        st.warning("⚠️ O DataFrame principal (`df_base`) está vazio. Os dados não foram carregados do Google Sheets.")
+    else:
+        # Mostra as colunas que o app está enxergando na sua planilha
+        st.write("Colunas encontradas na sua base:", list(df_base.columns))
+
         df_veiculo = df_base.copy()
 
+        # Garante que as colunas existem para não dar erro
         if 'Km' not in df_veiculo.columns:
             df_veiculo['Km'] = 0.0
         if 'Litros' not in df_veiculo.columns:
             df_veiculo['Litros'] = 0.0
 
         df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
+        
+        # Filtra pelas categorias de veículo
         df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
 
+        st.write(f"Total de lançamentos encontrados para o veículo: {len(df_veiculo)}")
+
         if not df_veiculo.empty:
-            col_filtro1, col_filtro2 = st.columns(2)
-            
-            with col_filtro1:
-                tipos_disponiveis = ["Todos", "Combustível", "Manutenção", "Veículo"]
-                filtro_escolhido = st.selectbox("🔍 Filtrar por Categoria:", tipos_disponiveis, key="filtro_aba_veiculo")
-
-            with col_filtro2:
-                busca_texto = st.text_input("🔎 Buscar por Veículo/Descrição (ex: Tcross, Lead):", "", key="busca_veiculo_texto")
-
-            if filtro_escolhido != "Todos":
-                df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'] == filtro_escolhido]
-
-            if busca_texto:
-                df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
-
-            if not df_veiculo.empty:
-                df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
-                df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
-
-                df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
-                df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
-                df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
-
-                km_rodados_lista = []
-                km_l_lista = []
-                preco_litro_lista = []
-                ultimo_km_valido = 0
-
-                for index, row in df_veiculo.iterrows():
-                    km_atual = row['Km']
-                    litros = row['Litros']
-                    valor = row['V_Num']
-                    
-                    p_litro = (valor / litros) if litros > 0 else 0.0
-                    preco_litro_lista.append(p_litro)
-                    
-                    if km_atual <= 0:
-                        km_rodados_lista.append(0.0)
-                        km_l_lista.append(0.0)
-                        continue
-                    
-                    if ultimo_km_valido == 0:
-                        ultimo_km_valido = km_atual
-                        km_rodados_lista.append(0.0)
-                        km_l_lista.append(0.0)
-                    else:
-                        rodados = km_atual - ultimo_km_valido
-                        if rodados > 0 and litros > 0:
-                            consumo = rodados / litros
-                            km_rodados_lista.append(rodados)
-                            km_l_lista.append(consumo)
-                            ultimo_km_valido = km_atual
-                        else:
-                            km_rodados_lista.append(0.0)
-                            km_l_lista.append(0.0)
-                            if km_atual > ultimo_km_valido:
-                                ultimo_km_valido = km_atual
-
-                df_veiculo['Km_Rodados'] = km_rodados_lista
-                df_veiculo['Km/L'] = km_l_lista
-                df_veiculo['Preço/Litro'] = preco_litro_lista
-
-                df_veiculo['Vencimento'] = df_veiculo['Vencimento'].dt.strftime('%d/%m/%Y')
-                df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
-
-                colunas_exibir = ['Vencimento', 'Categoria', 'Descrição', 'Valor_Formatado', 'Km', 'Km_Rodados', 'Litros', 'Km/L', 'Preço/Litro', 'Banco']
-                colunas_exibir_disponiveis = [col for col in colunas_exibir if col in df_veiculo.columns]
-                
-                df_exibicao = df_veiculo[colunas_exibir_disponiveis].copy()
-
-                def formata_litros_inteligente(valor):
-                    try:
-                        val_float = float(valor)
-                        if pd.isna(val_float) or val_float == 0:
-                            return ""
-                        if val_float.is_integer():
-                            return f"{int(val_float)} L"
-                        return f"{val_float:.2f} L".replace('.', ',')
-                    except:
-                        return str(valor)
-
-                if 'Litros' in df_exibicao.columns:
-                    df_exibicao['Litros'] = df_exibicao['Litros'].apply(formata_litros_inteligente)
-
-                formatos_tabela = {
-                    'Km': "{:,.0f} km",
-                    'Km_Rodados': "{:,.0f} km",
-                    'Km/L': "{:.2f} Km/L",
-                    'Preço/Litro': "R$ {:.2f}"
-                }
-                
-                st.dataframe(df_exibicao.iloc[::-1].style.format(formatos_tabela), use_container_width=True, hide_index=True)
-            else:
-                st.info("Nenhum lançamento encontrado com esses filtros.")
+            # Exibe a tabela direto para testar
+            st.dataframe(df_veiculo, use_container_width=True)
         else:
-            st.info("Nenhum lançamento de veículo encontrado na base.")
+            st.warning("⚠️ Nenhum lançamento com categoria 'Combustível', 'Veículo' ou 'Manutenção' foi encontrado na planilha.")
 
        
 
