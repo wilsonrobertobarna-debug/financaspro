@@ -3142,9 +3142,8 @@ if aba == "📋 Relatório PDF":
                     df_report['DT_ORDEM'] = pd.to_datetime(df_report[col_compra_df], format="%d/%m/%Y", errors='coerce')
                 else:
                     df_report['DT_ORDEM'] = pd.to_datetime(df_report[col_filtro_ativo], format="%d/%m/%Y", errors='coerce')
-        
-            df_report = df_report.sort_values(by='DT_ORDEM')
 
+            df_report = df_report.sort_values(by='DT_ORDEM')
     
             # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - REGRA INTELIGENTE
