@@ -3046,6 +3046,7 @@ if aba == "📋 Relatório PDF":
         busca_tipo = st.selectbox("🏷️ Filtrar Tipo:", opcoes_tipo_rel, key="sb_rel_tipo")
         st.markdown("---")
        
+    
     # Botão para processar e gerar o documento / visualizar
     if st.button("📄 Gerar PDF", key="btn_gerar_pdf"):
         try:
@@ -3116,15 +3117,13 @@ if aba == "📋 Relatório PDF":
             if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_report.columns:
                 df_report = df_report[df_report['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
-            # BLINDAGEM INTELIGENTE DO PDF: Só oculta transferências se Categoria E Tipo estiverem em "Todos"
+            # BLINDAGEM INTELIGENTE DO PDF (Inativa para não ocultar dados sem categoria de transferência)
             modo_geral_pdf = (
                 busca_categoria == "Todos" and 
                 (not 'busca_tipo' in locals() or busca_tipo == "Todos")
             )
-            if modo_geral_pdf and 'Categoria' in df_report.columns:
-               #df_report = df_report[~df_report['Categoria'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
 
-           # ========================================================
+            # ========================================================
             # ORDENAÇÃO INTELIGENTE
             # ========================================================
             if banco_relatorio == "Todos":
@@ -3150,11 +3149,8 @@ if aba == "📋 Relatório PDF":
             # ========================================================
             base_inicial = 0.0
             
-            # Identifica se o usuário selecionou um Banco/Cartão específico no relatório
-            # (Se for "Todos", significa que é um relatório geral, por beneficiário, categoria, etc.)
             eh_relatorio_de_banco_especifico = (banco_relatorio != "Todos" and banco_relatorio != "" and banco_relatorio is not None)
 
-            # SÓ BUSCA SALDO ANTERIOR SE FOR RELATÓRIO DE BANCO/CARTÃO ESPECÍFICO
             if eh_relatorio_de_banco_especifico:
                 try:
                     saldo_sistema_abril = 0.0
@@ -3228,11 +3224,11 @@ if aba == "📋 Relatório PDF":
                 except:
                     base_inicial = 0.0
             else:
-                # SE FOR POR BENEFICIÁRIO, CATEGORIA, TIPO OU GERAL: Começa zerado!
                 base_inicial = 0.0
 
             saldo_anterior = base_inicial
 
+            
             # ========================================================
             # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO
             # ========================================================
