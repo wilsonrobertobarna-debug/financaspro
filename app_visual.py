@@ -3429,6 +3429,9 @@ if aba == "📋 Relatório PDF":
     # =========================================================================
     # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS FILTROS (VISUAL LIMPO)
     # =========================================================================
+   # =========================================================================
+    # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS FILTROS (VISUAL LIMPO)
+    # =========================================================================
     st.markdown("### 🔍 Lançamentos Filtrados")
 
     df_tela = df_base.copy()
@@ -3445,7 +3448,7 @@ if aba == "📋 Relatório PDF":
             df_tela = df_tela[(df_tela['DT_FILTRO'] >= pd.to_datetime(periodo_pdf[0])) & 
                               (df_tela['DT_FILTRO'] <= pd.to_datetime(periodo_pdf[1]))]
 
-   # Aplica Banco na tela
+    # Aplica Banco na tela
     if banco_relatorio != "Todos" and col_banco_df:
         df_tela = df_tela[df_tela[col_banco_df].str.upper().str.strip() == str(banco_relatorio).upper()]
 
@@ -3471,17 +3474,7 @@ if aba == "📋 Relatório PDF":
     if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
         df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
-    # BLINDAGEM INTELIGENTE DA TELA: Só oculta transferências se Categoria E Tipo estiverem em "Todos"
-    modo_geral_tela = (
-        ('busca_categoria' in locals() and busca_categoria == "Todos") and 
-        ('busca_tipo' in locals() and busca_tipo == "Todos")
-    )
-    if modo_geral_tela and 'Categoria' in df_tela.columns:
-        df_tela = df_tela[~df_tela['Categoria'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
-
-    
-    # --- FAXINA RIGOROSA ---
-    colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
+    # (A linha de blindagem que ocultava as transferências foi removida aqui para liberá-las)
 
     # --- FAXINA RIGOROSA ---
     colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
