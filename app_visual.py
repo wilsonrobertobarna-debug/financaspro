@@ -3440,13 +3440,13 @@ if aba == "📋 Relatório PDF":
     if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
         df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
-    # BLINDAGEM INTELIGENTE DA TELA: Só oculta transferências se Categoria E Tipo estiverem em "Todos"
-    modo_geral_tela = (
-        ('busca_categoria' in locals() and busca_categoria == "Todos") and 
-        ('busca_tipo' in locals() and busca_tipo == "Todos")
-    )
-    if modo_geral_tela and 'Categoria' in df_tela.columns:
-       #df_tela = df_tela[~df_tela['Categoria'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
+ # BLINDAGEM INTELIGENTE DO PDF (Inativa para não ocultar dados sem categoria de transferência)
+            modo_geral_pdf = (
+                busca_categoria == "Todos" and 
+                (not 'busca_tipo' in locals() or busca_tipo == "Todos")
+            )
+            if modo_geral_pdf and 'Categoria' in df_report.columns:
+                pass
     
     # --- FAXINA RIGOROSA ---
     colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
