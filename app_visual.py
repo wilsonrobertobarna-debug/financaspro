@@ -3440,13 +3440,7 @@ if aba == "📋 Relatório PDF":
     if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
         df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
-    # BLINDAGEM INTELIGENTE DO PDF (Inativa para não ocultar dados sem categoria de transferência)
-    modo_geral_pdf = (
-                busca_categoria == "Todos" and 
-                (not 'busca_tipo' in locals() or busca_tipo == "Todos")
-            )
-            if modo_geral_pdf and 'Categoria' in df_report.columns:
-                pass
+  
     
     # --- FAXINA RIGOROSA ---
     colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
