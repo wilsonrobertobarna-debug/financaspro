@@ -3219,11 +3219,19 @@ if aba == "📋 Relatório PDF":
                             
                         base_inicial = saldo_acumulado_passado
                     else:
-                        # 🏦 REGRA DA CONTA CORRENTE / POUPANÇA: Saldo cadastrado + histórico anterior ao período
+                       else:
+                        # 🏦 REGRA DA CONTA CORRENTE / POUPANÇA: 
+                        # Pega o saldo base da aba Bancos e ajusta com o histórico anterior estrito à data de início do filtro
                         df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
                         
                         saldo_acumulado_passado = 0.0
                         for _, r_pass in df_antes_do_periodo.iterrows():
+                            # Ignora lançamentos cancelados se houver coluna de status
+                            if col_status_h:
+                                st_pass = str(r_pass.get(col_status_h, '')).upper().strip()
+                                if st_pass == 'CANCELADO':
+                                    continue
+                                    
                             val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
                             if isinstance(val_p_cru, str):
                                 val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
@@ -3238,12 +3246,13 @@ if aba == "📋 Relatório PDF":
                             if pd.isna(val_p): val_p = 0.0
                             
                             tipo_p = str(r_pass.get('Tipo', '')).upper().strip()
-                            if "DESPESA" in tipo_p or "GASTO" in tipo_p:
-                                saldo_acumulado_passado -= val_p
+                            # Se for despesa ou gasto, diminui do saldo. Se for receita, soma.
+                            if any(t in tipo_p for t in ["DESPESA", "GASTO", "SAÍDA", "PAGAMENTO"]):
+                                saldo_acumulado_passado -= abs(val_p)
                             else:
-                                saldo_acumulado_passado += val_p
+                                saldo_acumulado_passado += abs(val_p)
                         
-                        base_inicial = saldo_sistema_banco
+                        base_inicial = saldo_sistema_banco + saldo_acumulado_passado
                 except:
                     base_inicial = 0.0
             else:
