@@ -3251,7 +3251,7 @@ if aba == "📋 Relatório PDF":
                             else:
                                 saldo_acumulado_passado += val_p
                         
-                        base_inicial = saldo_sistema_banco + saldo_acumulado_passado
+                        base_inicial = saldo_sistema_banco
                 except:
                     base_inicial = 0.0
             else:
