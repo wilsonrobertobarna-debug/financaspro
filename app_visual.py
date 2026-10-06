@@ -3124,7 +3124,7 @@ if aba == "📋 Relatório PDF":
             if modo_geral_pdf and 'Categoria' in df_report.columns:
                #df_report = df_report[~df_report['Categoria'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
 
-            # ========================================================
+           # ========================================================
             # ORDENAÇÃO INTELIGENTE
             # ========================================================
             if banco_relatorio == "Todos":
