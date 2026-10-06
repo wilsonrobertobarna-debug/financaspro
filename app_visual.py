@@ -3145,19 +3145,17 @@ if aba == "📋 Relatório PDF":
 
             df_report = df_report.sort_values(by='DT_ORDEM')
 
+            
             # ========================================================
-            # 3. BUSCA DO SALDO DE ABERTURA - REGRA INTELIGENTE
+            # 3. BUSCA DO SALDO DE ABERTURA / SALDO PENDENTE
             # ========================================================
             base_inicial = 0.0
             
-            # Identifica se o usuário selecionou um Banco/Cartão específico no relatório
-            # (Se for "Todos", significa que é um relatório geral, por beneficiário, categoria, etc.)
             eh_relatorio_de_banco_especifico = (banco_relatorio != "Todos" and banco_relatorio != "" and banco_relatorio is not None)
 
-            # SÓ BUSCA SALDO ANTERIOR SE FOR RELATÓRIO DE BANCO/CARTÃO ESPECÍFICO
             if eh_relatorio_de_banco_especifico:
                 try:
-                    saldo_sistema_abril = 0.0
+                    saldo_sistema_banco = 0.0
                     try:
                         ws_bancos = sh.worksheet("Bancos")
                         dados_bancos = ws_bancos.get_all_values()
@@ -3175,13 +3173,14 @@ if aba == "📋 Relatório PDF":
                                 val_limpo = val_limpo.replace('.', '').replace(',', '.')
                             elif ',' in val_limpo:
                                 val_limpo = val_limpo.replace(',', '.')
-                            saldo_sistema_abril = float(val_limpo)
+                            saldo_sistema_banco = float(val_limpo)
                     except:
-                        saldo_sistema_abril = 0.0
+                        saldo_sistema_banco = 0.0
 
                     df_historico = df_base.copy()
                     col_data_h = next((c for c in df_historico.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
                     col_banco_h = next((c for c in df_historico.columns if c.upper() in ['BANCO', 'CONTA']), None)
+                    col_status_h = next((c for c in df_historico.columns if c.upper() in ['STATUS']), None)
                     
                     if col_data_h:
                         df_historico['DT_HIST'] = pd.to_datetime(df_historico[col_data_h], format="%d/%m/%Y", errors='coerce')
@@ -3192,43 +3191,40 @@ if aba == "📋 Relatório PDF":
                         df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == str(banco_nome).upper()]
                     
                     if eh_cartao_geral:
+                        # 💳 REGRA DO CARTÃO DE CRÉDITO: Zera o saldo pendente se o mês anterior estiver PAGO
                         t_ini_mes_ant = (t_ini - pd.DateOffset(months=1)).replace(day=1)
                         t_fim_mes_ant = t_ini - pd.Timedelta(days=1)
+                        
                         df_antes_do_periodo = df_historico[(df_historico['DT_HIST'] >= t_ini_mes_ant) & (df_historico['DT_HIST'] <= t_fim_mes_ant)]
-                    else:
-                        df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
-                    
-                    saldo_acumulado_passado = 0.0
-                    for _, r_pass in df_antes_do_periodo.iterrows():
-                        val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
                         
-                        if isinstance(val_p_cru, str):
-                            import re
-                            val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
-                            if '.' in val_p_limpo and ',' in val_p_limpo:
-                                val_p_limpo = val_p_limpo.replace('.', '').replace(',', '.')
-                            elif ',' in val_p_limpo:
-                                val_p_limpo = val_p_limpo.replace(',', '.')
-                            val_p = pd.to_numeric(val_p_limpo, errors='coerce')
-                        else:
-                            val_p = pd.to_numeric(val_p_cru, errors='coerce')
+                        # Se o status for PAGO, ele ignora do cálculo pendente anterior
+                        if col_status_h:
+                            df_antes_do_periodo = df_antes_do_periodo[df_antes_do_periodo[col_status_h].str.upper().str.strip() != 'PAGO']
+                        
+                        saldo_acumulado_passado = 0.0
+                        for _, r_pass in df_antes_do_periodo.iterrows():
+                            val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
+                            if isinstance(val_p_cru, str):
+                                import re
+                                val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
+                                if '.' in val_p_limpo and ',' in val_p_limpo:
+                                    val_p_limpo = val_p_limpo.replace('.', '').replace(',', '.')
+                                elif ',' in val_p_limpo:
+                                    val_p_limpo = val_p_limpo.replace(',', '.')
+                                val_p = pd.to_numeric(val_p_limpo, errors='coerce')
+                            else:
+                                val_p = pd.to_numeric(val_p_cru, errors='coerce')
                             
-                        if pd.isna(val_p): val_p = 0.0
-                        
-                        tipo_p = str(r_pass.get('Tipo', '')).upper().strip()
-                        if "DESPESA" in tipo_p or "GASTO" in tipo_p:
-                            saldo_acumulado_passado -= val_p
-                        else:
+                            if pd.isna(val_p): val_p = 0.0
                             saldo_acumulado_passado += val_p
-                    
-                    if eh_cartao_geral:
+                            
                         base_inicial = saldo_acumulado_passado
                     else:
-                        base_inicial = saldo_sistema_abril + saldo_acumulado_passado
+                        # 🏦 REGRA DA CONTA CORRENTE (Baseline do cadastro em Bancos)
+                        base_inicial = saldo_sistema_banco
                 except:
                     base_inicial = 0.0
             else:
-                # SE FOR POR BENEFICIÁRIO, CATEGORIA, TIPO OU GERAL: Começa zerado!
                 base_inicial = 0.0
 
             saldo_anterior = base_inicial
