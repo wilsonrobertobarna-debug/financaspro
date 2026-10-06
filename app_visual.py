@@ -2970,9 +2970,6 @@ elif "📄" in aba:
 if aba == "📋 Relatório PDF":
     st.markdown("### 📋 Emissão de Relatório Financeiro")
 
-   if aba == "📋 Relatório PDF":
-    st.markdown("### 📋 Emissão de Relatório Financeiro")
-
     # -------------------------------------------------------------------------
     # 1. FILTROS DA TELA (Com chaves exclusivas e espaçamentos blindados)
     # -------------------------------------------------------------------------
