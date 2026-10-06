@@ -3149,6 +3149,9 @@ if aba == "📋 Relatório PDF":
             # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - REGRA CORRIGIDA (BANCO VS CARTÃO)
             # ========================================================
+            # ========================================================
+            # 3. BUSCA DO SALDO DE ABERTURA - COM SUPORTE A TRANSFERÊNCIAS (COLUNA D)
+            # ========================================================
             base_inicial = 0.0
             
             eh_relatorio_de_banco_especifico = (banco_relatorio != "Todos" and banco_relatorio != "" and banco_relatorio is not None)
@@ -3191,13 +3194,12 @@ if aba == "📋 Relatório PDF":
                         df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == str(banco_nome).upper()]
                     
                     if eh_cartao_geral:
-                        # 💳 REGRA DO CARTÃO DE CRÉDITO: Considera apenas faturas pendentes estritamente anteriores ou do mês fechado
+                        # 💳 REGRA DO CARTÃO DE CRÉDITO
                         t_ini_mes_ant = (t_ini - pd.DateOffset(months=1)).replace(day=1)
                         t_fim_mes_ant = t_ini - pd.Timedelta(days=1)
                         
                         df_antes_do_periodo = df_historico[(df_historico['DT_HIST'] >= t_ini_mes_ant) & (df_historico['DT_HIST'] <= t_fim_mes_ant)]
                         
-                        # Se o status for Pago, ignoramos o saldo anterior do cartão para não trazer fatura quitada como "em aberto"
                         if col_status_h:
                             df_antes_do_periodo = df_antes_do_periodo[df_antes_do_periodo[col_status_h].str.upper().str.strip() != 'PAGO']
                         
@@ -3215,23 +3217,15 @@ if aba == "📋 Relatório PDF":
                                 val_p = pd.to_numeric(val_p_cru, errors='coerce')
                             
                             if pd.isna(val_p): val_p = 0.0
-                            saldo_acumulado_passado += val_p # No cartão, débitos acumulados geram fatura em aberto
+                            saldo_acumulado_passado += val_p
                             
                         base_inicial = saldo_acumulado_passado
                     else:
-                       
-                        # 🏦 REGRA DA CONTA CORRENTE / POUPANÇA: 
-                        # Pega o saldo base da aba Bancos e ajusta com o histórico anterior estrito à data de início do filtro
+                        # 🏦 REGRA DA CONTA CORRENTE (Lendo a Categoria na Coluna D / 'Categoria')
                         df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
                         
                         saldo_acumulado_passado = 0.0
                         for _, r_pass in df_antes_do_periodo.iterrows():
-                            # Ignora lançamentos cancelados se houver coluna de status
-                            if col_status_h:
-                                st_pass = str(r_pass.get(col_status_h, '')).upper().strip()
-                                if st_pass == 'CANCELADO':
-                                    continue
-                                    
                             val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
                             if isinstance(val_p_cru, str):
                                 val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
@@ -3246,11 +3240,18 @@ if aba == "📋 Relatório PDF":
                             if pd.isna(val_p): val_p = 0.0
                             
                             tipo_p = str(r_pass.get('Tipo', '')).upper().strip()
-                            # Se for despesa ou gasto, diminui do saldo. Se for receita, soma.
-                            if any(t in tipo_p for t in ["DESPESA", "GASTO", "SAÍDA", "PAGAMENTO"]):
-                                saldo_acumulado_passado -= abs(val_p)
+                            # Pega o valor da Coluna D (Categoria)
+                            cat_p = str(r_pass.get('Categoria', '')).upper().strip()
+                            
+                            # Se for despesa ou se for uma transferência de saída, subtrai
+                            if "DESPESA" in tipo_p or "GASTO" in tipo_p or "TRANSFERÊNCIA" in cat_p or "TRANSFERENCIA" in cat_p:
+                                # Cuidado: se for Receita mas a categoria for Transferência (entrada de dinheiro), ela deve somar!
+                                if "RECEITA" in tipo_p and ("TRANSFERÊNCIA" in cat_p or "TRANSFERENCIA" in cat_p):
+                                    saldo_acumulado_passado += val_p
+                                else:
+                                    saldo_acumulado_passado -= val_p
                             else:
-                                saldo_acumulado_passado += abs(val_p)
+                                saldo_acumulado_passado += val_p
                         
                         base_inicial = saldo_sistema_banco + saldo_acumulado_passado
                 except:
