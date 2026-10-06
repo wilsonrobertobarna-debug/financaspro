@@ -3228,9 +3228,8 @@ if aba == "📋 Relatório PDF":
 
             saldo_anterior = base_inicial
 
-            
             # ========================================================
-            # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO
+            # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO (ROBUSTO)
             # ========================================================
             corrente = saldo_anterior 
             saldos_lista = []
@@ -3240,10 +3239,18 @@ if aba == "📋 Relatório PDF":
                 if pd.isna(val): val = 0
                 
                 tipo_check = str(r.get('Tipo', '')).upper().strip()
-                if "DESPESA" in tipo_check or "GASTO" in tipo_check:
+                
+                # Tratamento inteligente para identificar se diminui ou soma no saldo
+                if any(t in tipo_check for t in ["DESPESA", "GASTO", "SAÍDA", "SAIDA"]):
                     corrente -= val
-                else:
+                elif any(t in tipo_check for t in ["RECEITA", "ENTRADA", "GANHO"]):
                     corrente += val
+                else:
+                    # Caso seja Transferência ou outro tipo personalizado, 
+                    # você pode ajustar se ela subtrai ou soma dependendo da sua regra de caixa.
+                    # Por padrão, se não for explicitamente despesa/saída, soma ou avalia pelo valor.
+                    corrente += val 
+                    
                 saldos_lista.append(corrente)
             
             df_report['Saldo_Acum'] = saldos_lista
