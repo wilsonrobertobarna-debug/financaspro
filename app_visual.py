@@ -3284,7 +3284,7 @@ if aba == "📋 Relatório PDF":
             st.error(f"Erro ao gerar o PDF: {e}")
 
     # =========================================================================
-    # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS FILTROS (VISUAL LIMPO)
+    # EXIBIÇÃO DA TABELA NA TELA (COM DATAS BLINDADAS)
     # =========================================================================
     st.markdown("### 🔍 Lançamentos Filtrados")
 
@@ -3295,45 +3295,50 @@ if aba == "📋 Relatório PDF":
     col_desc_df = next((c for c in df_tela.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
     col_status_df = next((c for c in df_tela.columns if c.upper() in ['STATUS']), None)
 
+    # CONVERSÃO DE DATA BLINDADA (Lê qualquer formato automaticamente)
     if col_data_df:
-        df_tela['DT_FILTRO'] = pd.to_datetime(df_tela[col_data_df], format="%d/%m/%Y", errors='coerce')
+        df_tela['DT_FILTRO'] = pd.to_datetime(df_tela[col_data_df], errors='coerce')
         if isinstance(periodo_pdf, (list, tuple)) and len(periodo_pdf) == 2:
-            df_tela = df_tela[(df_tela['DT_FILTRO'] >= pd.to_datetime(periodo_pdf[0])) & 
-                              (df_tela['DT_FILTRO'] <= pd.to_datetime(periodo_pdf[1]))]
+            d_ini = pd.to_datetime(periodo_pdf[0])
+            d_fim = pd.to_datetime(periodo_pdf[1])
+            df_tela = df_tela[(df_tela['DT_FILTRO'] >= d_ini) & (df_tela['DT_FILTRO'] <= d_fim)]
 
+    # Aplica Banco se não for Todos
     if banco_relatorio != "Todos" and col_banco_df:
         df_tela = df_tela[df_tela[col_banco_df].str.upper().str.strip() == str(banco_relatorio).upper()]
 
+    # Aplica Descrição
     if busca_desc and col_desc_df:
         df_tela = df_tela[df_tela[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
 
+    # Aplica Beneficiário
     if busca_benef:
         col_benef_nome = df_tela.columns[9] if len(df_tela.columns) > 9 else None
         if col_benef_nome and col_benef_nome in df_tela.columns:
             df_tela = df_tela[df_tela[col_benef_nome].astype(str).str.contains(busca_benef, case=False, na=False)]
 
+    # Aplica Status (Se for "Todos", passa direto sem filtrar)
     if busca_status != "Todos" and col_status_df:
         df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
+    # Aplica Categoria (Se for "Todas", passa direto)
     if 'busca_categoria' in locals() and busca_categoria != "Todas" and 'Categoria' in df_tela.columns:
         df_tela = df_tela[df_tela['Categoria'].str.upper().str.strip() == str(busca_categoria).upper()]
 
+    # Aplica Tipo (Se for "Todos", passa direto)
     if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
         df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
+    # Limpeza final das colunas técnicas
     colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
-    
-    colunas_visiveis = [
-        c for c in df_tela.columns 
-        if c not in colunas_proibidas and not c.upper().startswith('DT_')
-    ]
+    colunas_visiveis = [c for c in df_tela.columns if c not in colunas_proibidas and not c.upper().startswith('DT_')]
     
     df_tela_limpo = df_tela[colunas_visiveis]
 
     if not df_tela_limpo.empty:
         st.dataframe(df_tela_limpo, use_container_width=True)
     else:
-        st.info("Nenhum lançamento encontrado para os filtros aplicados.")
+        st.info("Nenhum lançamento encontrado para os filtros aplicados. Verifique o período selecionado.")
 
 
 # =========================================================================
