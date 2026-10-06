@@ -3145,10 +3145,8 @@ if aba == "📋 Relatório PDF":
 
             df_report = df_report.sort_values(by='DT_ORDEM')
 
+           
             # ========================================================
-            # 3. BUSCA DO SALDO DE ABERTURA - REGRA INTELIGENTE
-            # ========================================================
-           # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - REGRA CORRIGIDA (BANCO VS CARTÃO)
             # ========================================================
             base_inicial = 0.0
@@ -3245,7 +3243,7 @@ if aba == "📋 Relatório PDF":
                             else:
                                 saldo_acumulado_passado += val_p
                         
-                        base_inicial = saldo_sistema_banco + saldo_acumulado_passado
+                        base_inicial = saldo_sistema_banco
                 except:
                     base_inicial = 0.0
             else:
