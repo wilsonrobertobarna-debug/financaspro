@@ -3314,93 +3314,73 @@ if aba == "📋 Relatório PDF":
             pdf.cell(20, 7, "Status", 1)             # Status (20mm) -> Total = 194mm exatos da página!
             pdf.ln()
 
+           
             # ========================================================
             # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
             # ========================================================
-            if not df_report.empty:
-                col_benef_real = df_report.columns[9] if len(df_report.columns) > 9 else 'Beneficiario'
-                
-                # Identifica qual coluna é a Descrição de verdade no seu df_base
-                col_desc_real = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
-
-            pdf.set_font("Arial", '', 8)  # Fonte 8 nas linhas para caber perfeitamente
-            for index, row in df_report.iterrows():
-                # Para cartão, força exibir a Data da Compra na linha da tabela
-                b_linha_atual = str(row.get(col_banco_df, '')).upper()
-                is_cartao_linha = "CARTAO" in b_linha_atual or "CARTÃO" in b_linha_atual
-                
-                if is_cartao_linha and col_compra_df:
-                    data_str = str(row.get(col_compra_df, '---'))
+            pdf.set_font("Arial", '', 7)  # Fonte menor para caber nos campos
+            
+            for _, r in df_report.iterrows():
+                # Tratamento da Data
+                dt_val = r.get('DT_ORDEM', '')
+                if pd.notna(dt_val):
+                    str_data = pd.to_datetime(dt_val).strftime('%d/%m/%Y')
                 else:
-                    data_str = str(row.get(col_data_df, '---'))
+                    str_data = str(r.get(col_filtro_ativo, ''))[:10]
                 
-                tipo_str = str(row.get('Tipo', '---')).strip()[:6]  # Abrevia um pouco se precisar (ex: Despesa/Receita)
-                cat_val = str(row.get('Categoria', 'Geral'))[:14]   # Corta com limite seguro para 14 caracteres
+                tipo_str = str(r.get('Tipo', ''))[:10]
+                cat_str = str(r.get('Categoria', ''))[:15]
                 
-                # Pega o Beneficiário
-                desc_base = str(row.get(col_benef_real, row.get('Beneficiario', 'Sem nome'))).strip()
-                p_atual = row.get('_parc_atual', 1)
-                p_total = row.get('_parc_total', 1)
+                # Captura correta do Beneficiário (Coluna J ou nome da coluna)
+                benef_str = ""
+                try:
+                    if len(df_report.columns) > 9:
+                        benef_str = str(r.iloc[9])[:18]
+                    else:
+                        col_ben_alt = next((c for c in df_report.columns if 'BENEF' in c.upper()), None)
+                        if col_ben_alt:
+                            benef_str = str(r.get(col_ben_alt, ''))[:18]
+                except:
+                    benef_str = ""
+
+                desc_str = str(r.get(col_desc_df, '') if col_desc_df else r.get('Descrição', ''))[:22]
                 
-                if int(p_total) > 1:
-                    benef_val = f"{desc_base} {int(p_atual)}/{int(p_total)}"[:16]
-                else:
-                    benef_val = desc_base[:16]
+                val_num = pd.to_numeric(r.get('V_Num', r.get('Valor', 0)), errors='coerce')
+                if pd.isna(val_num): val_num = 0.0
+                str_valor = f"R$ {val_num:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-                # Pega a Descrição real (caso exista a coluna)
-                if col_desc_real:
-                    desc_val = str(row.get(col_desc_real, '')).strip()[:20]
-                else:
-                    desc_val = ""
+                saldo_val = pd.to_numeric(r.get('Saldo_Acum', 0), errors='coerce')
+                if pd.isna(saldo_val): saldo_val = 0.0
+                str_saldo = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-                valor_val = pd.to_numeric(row.get('V_Num', row.get('Valor', 0)), errors='coerce')
-                if pd.isna(valor_val): valor_val = 0.0
-                saldo_val = row.get('Saldo_Acum', 0.0)
-                status_val = str(row.get('Status', '-'))[:10]
-                
-                # --- VALORES NEGATIVOS DESTACADOS EM VERMELHO COM SINAL ---
-                if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper() or valor_val < 0:
-                    texto_valor = f"- R$ {abs(valor_val):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                    cor_valor = (255, 0, 0) # Vermelho
-                else:
-                    texto_valor = f"R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                    cor_valor = (0, 0, 0)
+                status_str = str(r.get(col_status_df, ''))[:10] if col_status_df else ""
 
-                texto_saldo = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                cor_saldo = (255, 0, 0) if saldo_val < 0 else (0, 0, 0)
-
-                # Impressão das colunas com larguras proporcionais somando exatos 194mm
-                pdf.cell(18, 6, data_str, 1)
+                # Desenha a linha na tabela do PDF (respeitando a largura total de 194mm)
+                pdf.cell(18, 6, str_data, 1)
                 pdf.cell(14, 6, tipo_str, 1)
-                pdf.cell(26, 6, cat_val, 1)
-                pdf.cell(32, 6, benef_val, 1)
-                pdf.cell(38, 6, desc_val, 1)  # Nova coluna de descrição encaixada!
-                
-                pdf.set_text_color(*cor_valor)
-                pdf.cell(20, 6, texto_valor, 1)
-                
-                pdf.set_text_color(*cor_saldo)
-                pdf.cell(26, 6, texto_saldo, 1)
-                
-                pdf.set_text_color(0, 0, 0)
-                pdf.cell(20, 6, status_val, 1)
+                pdf.cell(26, 6, cat_str, 1)
+                pdf.cell(32, 6, benef_str, 1)
+                pdf.cell(38, 6, desc_str, 1)
+                pdf.cell(20, 6, str_valor, 1, align='R')
+                pdf.cell(26, 6, str_saldo, 1, align='R')
+                pdf.cell(20, 6, status_str, 1)
                 pdf.ln()
 
-            pdf_output = pdf.output(dest='S')
-            if isinstance(pdf_output, str):
-                pdf_output = pdf_output.encode('latin-1')
-                
-            st.download_button(
-                label="📥 Baixar PDF",
-                data=pdf_output,
-                file_name="relatorio_financaspro.pdf",
-                mime="application/pdf"
+            # ========================================================
+            # 7. SAÍDA DO PDF PARA O STREAMLIT
+            # ========================================================
+            html_pdf = pdf.output(dest='S').encode('latin1')
+            import base64
+            b64_pdf = base64.b64encode(html_pdf).decode('latin1')
+            
+            st.success("PDF gerado com sucesso!")
+            st.markdown(
+                f'<iframe src="data:application/pdf;base64,{b64_pdf}" width="100%" height="600px" type="application/pdf"></iframe>',
+                unsafe_allow_html=True
             )
-            st.success(f"PDF pronto! Relatório atualizado.")
-
+            
         except Exception as e:
-            st.error(f"Erro ao gerar o PDF: {e}")
-   
+            st.error(f"Erro ao gerar o PDF: {e}")   
 
     # =========================================================================
     # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS FILTROS (VISUAL LIMPO)
