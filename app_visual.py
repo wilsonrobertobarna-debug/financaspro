@@ -3124,24 +3124,24 @@ if aba == "📋 Relatório PDF":
             if modo_geral_pdf and 'Categoria' in df_report.columns:
                #df_report = df_report[~df_report['Categoria'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
 
-            # ========================================================
-            # ORDENAÇÃO INTELIGENTE
-            # ========================================================
-            if banco_relatorio == "Todos":
-                def pega_data_ordenacao(row):
-                    b_linha = str(row.get(col_banco_df, '')).upper()
-                    if ("CARTAO" in b_linha or "CARTÃO" in b_linha) and col_compra_df:
-                        return row.get(col_compra_df, row.get(col_data_df))
-                    else:
-                        return row.get(col_data_df)
-                
-                df_report['DT_ORDEM_TEMP'] = df_report.apply(pega_data_ordenacao, axis=1)
-                df_report['DT_ORDEM'] = pd.to_datetime(df_report['DT_ORDEM_TEMP'], format="%d/%m/%Y", errors='coerce')
+    # ========================================================
+    # ORDENAÇÃO INTELIGENTE
+    # ========================================================
+    if banco_relatorio == "Todos":
+        def pega_data_ordenacao(row):
+            b_linha = str(row.get(col_banco_df, '')).upper()
+            if ("CARTAO" in b_linha or "CARTÃO" in b_linha) and col_compra_df:
+                return row.get(col_compra_df, row.get(col_data_df))
             else:
-                if eh_cartao_geral and col_compra_df:
-                    df_report['DT_ORDEM'] = pd.to_datetime(df_report[col_compra_df], format="%d/%m/%Y", errors='coerce')
-                else:
-                    df_report['DT_ORDEM'] = pd.to_datetime(df_report[col_filtro_ativo], format="%d/%m/%Y", errors='coerce')
+                return row.get(col_data_df)
+        
+        df_report['DT_ORDEM_TEMP'] = df_report.apply(pega_data_ordenacao, axis=1)
+        df_report['DT_ORDEM'] = pd.to_datetime(df_report['DT_ORDEM_TEMP'], format="%d/%m/%Y", errors='coerce')
+    else:
+        if eh_cartao_geral and col_compra_df:
+            df_report['DT_ORDEM'] = pd.to_datetime(df_report[col_compra_df], format="%d/%m/%Y", errors='coerce')
+        else:
+            df_report['DT_ORDEM'] = pd.to_datetime(df_report[col_filtro_ativo], format="%d/%m/%Y", errors='coerce')
 
             df_report = df_report.sort_values(by='DT_ORDEM')
 
