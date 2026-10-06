@@ -3146,9 +3146,7 @@ if aba == "📋 Relatório PDF":
             df_report = df_report.sort_values(by='DT_ORDEM')
 
            
-            # ========================================================
-            # 3. BUSCA DO SALDO DE ABERTURA - REGRA CORRIGIDA (BANCO VS CARTÃO)
-            # ========================================================
+            
             # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - COM SUPORTE A TRANSFERÊNCIAS (COLUNA D)
             # ========================================================
@@ -3260,6 +3258,8 @@ if aba == "📋 Relatório PDF":
                 base_inicial = 0.0
 
             saldo_anterior = base_inicial
+
+            
             # ========================================================
             # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO
             # ========================================================
