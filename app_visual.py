@@ -3219,7 +3219,7 @@ if aba == "📋 Relatório PDF":
                             
                         base_inicial = saldo_acumulado_passado
                     else:
-                       else:
+                       
                         # 🏦 REGRA DA CONTA CORRENTE / POUPANÇA: 
                         # Pega o saldo base da aba Bancos e ajusta com o histórico anterior estrito à data de início do filtro
                         df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
