@@ -3145,6 +3145,7 @@ if aba == "📋 Relatório PDF":
 
     df_report = df_report.sort_values(by='DT_ORDEM')
 
+    
             # ========================================================
             # 3. BUSCA DO SALDO DE ABERTURA - REGRA INTELIGENTE
             # ========================================================
