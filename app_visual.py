@@ -3145,18 +3145,19 @@ if aba == "📋 Relatório PDF":
 
             df_report = df_report.sort_values(by='DT_ORDEM')
 
-           
-            
             # ========================================================
-            # 3. BUSCA DO SALDO DE ABERTURA - COM SUPORTE A TRANSFERÊNCIAS (COLUNA D)
+            # 3. BUSCA DO SALDO DE ABERTURA - REGRA INTELIGENTE
             # ========================================================
             base_inicial = 0.0
             
+            # Identifica se o usuário selecionou um Banco/Cartão específico no relatório
+            # (Se for "Todos", significa que é um relatório geral, por beneficiário, categoria, etc.)
             eh_relatorio_de_banco_especifico = (banco_relatorio != "Todos" and banco_relatorio != "" and banco_relatorio is not None)
 
+            # SÓ BUSCA SALDO ANTERIOR SE FOR RELATÓRIO DE BANCO/CARTÃO ESPECÍFICO
             if eh_relatorio_de_banco_especifico:
                 try:
-                    saldo_sistema_banco = 0.0
+                    saldo_sistema_abril = 0.0
                     try:
                         ws_bancos = sh.worksheet("Bancos")
                         dados_bancos = ws_bancos.get_all_values()
@@ -3174,14 +3175,13 @@ if aba == "📋 Relatório PDF":
                                 val_limpo = val_limpo.replace('.', '').replace(',', '.')
                             elif ',' in val_limpo:
                                 val_limpo = val_limpo.replace(',', '.')
-                            saldo_sistema_banco = float(val_limpo)
+                            saldo_sistema_abril = float(val_limpo)
                     except:
-                        saldo_sistema_banco = 0.0
+                        saldo_sistema_abril = 0.0
 
                     df_historico = df_base.copy()
                     col_data_h = next((c for c in df_historico.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
                     col_banco_h = next((c for c in df_historico.columns if c.upper() in ['BANCO', 'CONTA']), None)
-                    col_status_h = next((c for c in df_historico.columns if c.upper() in ['STATUS']), None)
                     
                     if col_data_h:
                         df_historico['DT_HIST'] = pd.to_datetime(df_historico[col_data_h], format="%d/%m/%Y", errors='coerce')
@@ -3192,74 +3192,47 @@ if aba == "📋 Relatório PDF":
                         df_historico = df_historico[df_historico[col_banco_h].str.upper().str.strip() == str(banco_nome).upper()]
                     
                     if eh_cartao_geral:
-                        # 💳 REGRA DO CARTÃO DE CRÉDITO
                         t_ini_mes_ant = (t_ini - pd.DateOffset(months=1)).replace(day=1)
                         t_fim_mes_ant = t_ini - pd.Timedelta(days=1)
-                        
                         df_antes_do_periodo = df_historico[(df_historico['DT_HIST'] >= t_ini_mes_ant) & (df_historico['DT_HIST'] <= t_fim_mes_ant)]
+                    else:
+                        df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
+                    
+                    saldo_acumulado_passado = 0.0
+                    for _, r_pass in df_antes_do_periodo.iterrows():
+                        val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
                         
-                        if col_status_h:
-                            df_antes_do_periodo = df_antes_do_periodo[df_antes_do_periodo[col_status_h].str.upper().str.strip() != 'PAGO']
-                        
-                        saldo_acumulado_passado = 0.0
-                        for _, r_pass in df_antes_do_periodo.iterrows():
-                            val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
-                            if isinstance(val_p_cru, str):
-                                val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
-                                if '.' in val_p_limpo and ',' in val_p_limpo:
-                                    val_p_limpo = val_p_limpo.replace('.', '').replace(',', '.')
-                                elif ',' in val_p_limpo:
-                                    val_p_limpo = val_p_limpo.replace(',', '.')
-                                val_p = pd.to_numeric(val_p_limpo, errors='coerce')
-                            else:
-                                val_p = pd.to_numeric(val_p_cru, errors='coerce')
+                        if isinstance(val_p_cru, str):
+                            import re
+                            val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
+                            if '.' in val_p_limpo and ',' in val_p_limpo:
+                                val_p_limpo = val_p_limpo.replace('.', '').replace(',', '.')
+                            elif ',' in val_p_limpo:
+                                val_p_limpo = val_p_limpo.replace(',', '.')
+                            val_p = pd.to_numeric(val_p_limpo, errors='coerce')
+                        else:
+                            val_p = pd.to_numeric(val_p_cru, errors='coerce')
                             
-                            if pd.isna(val_p): val_p = 0.0
+                        if pd.isna(val_p): val_p = 0.0
+                        
+                        tipo_p = str(r_pass.get('Tipo', '')).upper().strip()
+                        if "DESPESA" in tipo_p or "GASTO" in tipo_p:
+                            saldo_acumulado_passado -= val_p
+                        else:
                             saldo_acumulado_passado += val_p
-                            
+                    
+                    if eh_cartao_geral:
                         base_inicial = saldo_acumulado_passado
                     else:
-                        # 🏦 REGRA DA CONTA CORRENTE (Lendo a Categoria na Coluna D / 'Categoria')
-                        df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini]
-                        
-                        saldo_acumulado_passado = 0.0
-                        for _, r_pass in df_antes_do_periodo.iterrows():
-                            val_p_cru = r_pass.get('V_Num', r_pass.get('Valor', 0))
-                            if isinstance(val_p_cru, str):
-                                val_p_limpo = re.sub(r'[^\d.,-]', '', val_p_cru).strip()
-                                if '.' in val_p_limpo and ',' in val_p_limpo:
-                                    val_p_limpo = val_p_limpo.replace('.', '').replace(',', '.')
-                                elif ',' in val_p_limpo:
-                                    val_p_limpo = val_p_limpo.replace(',', '.')
-                                val_p = pd.to_numeric(val_p_limpo, errors='coerce')
-                            else:
-                                val_p = pd.to_numeric(val_p_cru, errors='coerce')
-                            
-                            if pd.isna(val_p): val_p = 0.0
-                            
-                            tipo_p = str(r_pass.get('Tipo', '')).upper().strip()
-                            # Pega o valor da Coluna D (Categoria)
-                            cat_p = str(r_pass.get('Categoria', '')).upper().strip()
-                            
-                            # Se for despesa ou se for uma transferência de saída, subtrai
-                            if "DESPESA" in tipo_p or "GASTO" in tipo_p or "TRANSFERÊNCIA" in cat_p or "TRANSFERENCIA" in cat_p:
-                                # Cuidado: se for Receita mas a categoria for Transferência (entrada de dinheiro), ela deve somar!
-                                if "RECEITA" in tipo_p and ("TRANSFERÊNCIA" in cat_p or "TRANSFERENCIA" in cat_p):
-                                    saldo_acumulado_passado += val_p
-                                else:
-                                    saldo_acumulado_passado -= val_p
-                            else:
-                                saldo_acumulado_passado += val_p
-                        
-                        base_inicial = saldo_sistema_banco
+                        base_inicial = saldo_sistema_abril + saldo_acumulado_passado
                 except:
                     base_inicial = 0.0
             else:
+                # SE FOR POR BENEFICIÁRIO, CATEGORIA, TIPO OU GERAL: Começa zerado!
                 base_inicial = 0.0
 
             saldo_anterior = base_inicial
 
-            
             # ========================================================
             # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO
             # ========================================================
@@ -3429,9 +3402,6 @@ if aba == "📋 Relatório PDF":
     # =========================================================================
     # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS FILTROS (VISUAL LIMPO)
     # =========================================================================
-   # =========================================================================
-    # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS FILTROS (VISUAL LIMPO)
-    # =========================================================================
     st.markdown("### 🔍 Lançamentos Filtrados")
 
     df_tela = df_base.copy()
@@ -3448,7 +3418,7 @@ if aba == "📋 Relatório PDF":
             df_tela = df_tela[(df_tela['DT_FILTRO'] >= pd.to_datetime(periodo_pdf[0])) & 
                               (df_tela['DT_FILTRO'] <= pd.to_datetime(periodo_pdf[1]))]
 
-    # Aplica Banco na tela
+   # Aplica Banco na tela
     if banco_relatorio != "Todos" and col_banco_df:
         df_tela = df_tela[df_tela[col_banco_df].str.upper().str.strip() == str(banco_relatorio).upper()]
 
@@ -3474,7 +3444,17 @@ if aba == "📋 Relatório PDF":
     if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
         df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
-    # (A linha de blindagem que ocultava as transferências foi removida aqui para liberá-las)
+    # BLINDAGEM INTELIGENTE DA TELA: Só oculta transferências se Categoria E Tipo estiverem em "Todos"
+    modo_geral_tela = (
+        ('busca_categoria' in locals() and busca_categoria == "Todos") and 
+        ('busca_tipo' in locals() and busca_tipo == "Todos")
+    )
+    if modo_geral_tela and 'Categoria' in df_tela.columns:
+        df_tela = df_tela[~df_tela['Categoria'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
+
+    
+    # --- FAXINA RIGOROSA ---
+    colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
 
     # --- FAXINA RIGOROSA ---
     colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
