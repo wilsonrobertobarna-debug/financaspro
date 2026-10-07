@@ -739,7 +739,7 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
 
     st.markdown("")
 
-    # 2. Agora entra o formulário limpo apenas com os dados de valor, descrição e salvamento
+   # 2. Agora entra o formulário limpo apenas com os dados de valor, descrição e salvamento
     with st.form("f_novo"):
         f_val = st.number_input("Valor", min_value=-100000.0, value=0.0, step=0.01, format="%.2f", key="val_novo_lancamento")
         f_par = st.number_input("Parcelas", min_value=1, value=1, key="par_novo_lancamento")
@@ -770,10 +770,28 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
         st.markdown("<br>", unsafe_allow_html=True)
         f_sta = st.selectbox("Status", ["Pago", "Pendente"], key="status_pagamento_novo_form")
         st.markdown("<br>", unsafe_allow_html=True)
+        
+        # --- 🔍 AVISO PREVENTIVO DE DUPLICIDADE (DENTRO DO FORM) ---
+        # Aqui ele já avisa antes de você clicar em salvar se achar algo igual na base
+        tem_duplicado = False
+        if not df_base.empty:
+            duplicado_teste = df_base[
+                (df_base['V_Num'] == float(f_val)) & 
+                (df_base['DT'].dt.date == t_dat) & 
+                (df_base['Descrição'].astype(str).str.strip().str.lower() == f_desc.strip().lower())
+            ]
+            if not duplicado_teste.empty and f_val > 0:
+                tem_duplicado = True
+        
+        confirma_dup = False
+        if tem_duplicado:
+            st.warning(f"⚠️ **Atenção:** Já existe um lançamento idêntico ({f_desc} - R$ {f_val:,.2f}) para hoje!")
+            confirma_dup = st.checkbox("Sim, quero duplicar este lançamento mesmo assim", key="chk_confirma_dup")
+        # -----------------------------------------------------------
             
         botao_salvar = st.form_submit_button("Salvar Lançamento")
 
-    # 3. Processamento do salvamento fora/logo após o form para evitar loops do Streamlit
+    # 3. Processamento do salvamento fora/logo após o form
     if botao_salvar:
         if f_val == 0:
             st.warning("⚠️ O campo 'Valor' deve ser maior que zero!")
@@ -787,90 +805,81 @@ with st.sidebar.expander("🚀 Novo Lançamento", expanded=st.session_state.expa
             st.warning("⚠️ Selecione um Beneficiário no histórico ou digite um novo no campo abaixo!")
             st.stop()
             
-        if not df_base.empty and not st.session_state.get('ignorar_duplicidade', False):
-            duplicado = df_base[
-                (df_base['V_Num'] == float(f_val)) & 
-                (df_base['DT'].dt.date == t_dat) & 
-                (df_base['Descrição'].astype(str).str.strip().str.lower() == f_desc.strip().lower())
-            ]
+        # Se encontrou duplicado e o usuário NÃO marcou a caixa lá em cima, barra aqui de primeira
+        if tem_duplicado and not confirma_dup:
+            st.warning("❌ Marque a caixa de confirmação de duplicidade no formulário acima para prosseguir com o salvamento.")
+            st.stop()
             
-            if not duplicado.empty:
-                st.warning(f"⚠️ **Atenção:** Já existe um lançamento idêntico ({f_desc} - R$ {f_val:,.2f} para {t_dat.strftime('%d/%m/%Y')}).")
-                confirma_dup = st.checkbox("Sim, quero duplicar este lançamento mesmo assim", key="chk_confirma_dup")
-                
-                if not confirma_dup:
-                    st.info("Marque a caixa acima se realmente deseja salvar, ou altere os dados.")
-                    st.stop()
-                else:
-                    st.session_state.ignorar_duplicidade = True
-                
-       # --- LEITURA SEGURA DOS DADOS DA PLANILHA (EVITA GSPREAD EXCEPTION) ---
-            try:
-                raw_data = ws_base.get_all_values()
-                if len(raw_data) > 1:
-                    import pandas as pd
-                    header = [str(c).strip() for c in raw_data[0]]
-                    rows = raw_data[1:]
-                    todos_dados = []
-                    for r in rows:
-                        # Garante que a linha preenche todas as colunas do cabeçalho
-                        padded_row = r + [''] * (len(header) - len(r))
-                        todos_dados.append(dict(zip(header, padded_row)))
-                else:
-                    todos_dados = []
-            except Exception:
-                todos_dados = []
+        # Caso contrário, segue o baile e salva no Google Sheets normalmente!
+        st.success("✅ Lançamento processado com sucesso!")
             
-            if todos_dados:
+        # --- LEITURA SEGURA DOS DADOS DA PLANILHA (EVITA GSPREAD EXCEPTION) ---
+        try:
+            raw_data = ws_base.get_all_values()
+            if len(raw_data) > 1:
                 import pandas as pd
-                df_temp = pd.DataFrame(todos_dados)
-                if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
-                    # Converte para numérico com segurança antes de achar o max
-                    df_temp['ID'] = pd.to_numeric(df_temp['ID'], errors='coerce').fillna(0)
-                    proximo_id = int(df_temp['ID'].max()) + 1
-                else:
-                    proximo_id = 1
+                header = [str(c).strip() for c in raw_data[0]]
+                rows = raw_data[1:]
+                todos_dados = []
+                for r in rows:
+                    # Garante que a linha preenche todas as colunas do cabeçalho
+                    padded_row = r + [''] * (len(header) - len(r))
+                    todos_dados.append(dict(zip(header, padded_row)))
+            else:
+                todos_dados = []
+        except Exception:
+            todos_dados = []
+            
+        if todos_dados:
+            import pandas as pd
+            df_temp = pd.DataFrame(todos_dados)
+            if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
+                # Converte para numérico com segurança antes de achar o max
+                df_temp['ID'] = pd.to_numeric(df_temp['ID'], errors='coerce').fillna(0)
+                proximo_id = int(df_temp['ID'].max()) + 1
             else:
                 proximo_id = 1
+        else:
+            proximo_id = 1
 
-            v_str = f"{f_val:.2f}".replace('.', ',')
-            f_compra_str = f_compra.strftime("%d/%m/%Y")
+        v_str = f"{f_val:.2f}".replace('.', ',')
+        f_compra_str = f_compra.strftime("%d/%m/%Y")
+        
+        for i in range(f_par):
+            nova_data = t_dat + relativedelta(months=i)
             
-            for i in range(f_par):
-                nova_data = t_dat + relativedelta(months=i)
-                
-                if f_par > 1:
-                    desc_com_parcela = f"{f_desc.strip()} {i+1}/{f_par}"
-                else:
-                    desc_com_parcela = f_desc.strip()
-                
-                # Nota: Certifique-se de que a sua planilha no Google Sheets possui as colunas para receber Km e Litros, 
-                # ou o append vai apenas preencher as ordens de colunas existentes.
-                ws_base.append_row([
-                    nova_data.strftime("%d/%m/%Y"),
-                    v_str,
-                    desc_com_parcela,
-                    f_cat,
-                    f_tip,
-                    f_bnc,
-                    f_sta,
-                    f_compra_str,
-                    proximo_id + i,
-                    beneficiario_final,
-                    f_km,       # Salva o Km preenchido
-                    f_litros    # Salva os litros preenchidos
-                ])
+            if f_par > 1:
+                desc_com_parcela = f"{f_desc.strip()} {i+1}/{f_par}"
+            else:
+                desc_com_parcela = f_desc.strip()
             
-            st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
-            
-            st.session_state['limpar_form_pendente'] = True
-            st.session_state.ignorar_duplicidade = False
-            
-            import time
-            time.sleep(1.5)
-            
-            atualizar_sessao()
-            st.rerun()
+            # Nota: Certifique-se de que a sua planilha no Google Sheets possui as colunas para receber Km e Litros, 
+            # ou o append vai apenas preencher as ordens de colunas existentes.
+            ws_base.append_row([
+                nova_data.strftime("%d/%m/%Y"),
+                v_str,
+                desc_com_parcela,
+                f_cat,
+                f_tip,
+                f_bnc,
+                f_sta,
+                f_compra_str,
+                proximo_id + i,
+                beneficiario_final,
+                f_km,       # Salva o Km preenchido
+                f_litros    # Salva os litros preenchidos
+            ])
+        
+        st.toast(f"✅ Lançamento {proximo_id} salvo!", icon="💰")
+        
+        st.session_state['limpar_form_pendente'] = True
+        st.session_state.ignorar_duplicidade = False
+        
+        import time
+        time.sleep(1.5)
+        
+        atualizar_sessao()
+        st.rerun()
 
 
 # --- BARRINHA DE NOTIFICAÇÕES ---
