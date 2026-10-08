@@ -2462,7 +2462,7 @@ elif "🚗" in aba:
                 if busca_texto:
                     df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
-                # Ordenação cronológica correta
+               # Ordenação cronológica correta (Do mais antigo para o mais recente para o cálculo dar certo)
                 df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
                 df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
 
@@ -2471,10 +2471,14 @@ elif "🚗" in aba:
                 df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
                 df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
 
-                # Cálculos
-                df_veiculo['Km_Rodados'] = df_veiculo['Km'].diff()
+                # --- BLINDAGEM DO CÁLCULO DE KM/L ---
+                # Garante que só calcula Km_Rodados considerando linhas onde o Km é maior que zero
+                df_veiculo['Km_Valido'] = df_veiculo['Km'].replace(0, pd.NA).ffill()
+                df_veiculo['Km_Rodados'] = df_veiculo['Km_Valido'].diff()
+
+                # Cálculos finais
                 df_veiculo['Km/L'] = df_veiculo.apply(
-                    lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and row['Km_Rodados'] > 0 else 0.0, 
+                    lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and pd.notna(row['Km_Rodados']) and row['Km_Rodados'] > 0 else 0.0, 
                     axis=1
                 )
                 df_veiculo['Preço/Litro'] = df_veiculo.apply(
