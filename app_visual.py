@@ -2494,7 +2494,8 @@ elif "🚗" in aba:
                 df_veiculo['Preço/Litro'] = df_veiculo.apply(
                     lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
                     axis=1
-                )                df_veiculo['Preço/Litro'] = df_veiculo.apply(
+                )                
+                df_veiculo['Preço/Litro'] = df_veiculo.apply(
                     lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
                     axis=1
                 )
