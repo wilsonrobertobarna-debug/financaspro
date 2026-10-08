@@ -2470,22 +2470,31 @@ elif "🚗" in aba:
                 df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
                 df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
 
-                # Conversões numéricas seguras
-                df_veiculo['Km'] = pd.to_numeric(df_veiculo['Km'], errors='coerce').fillna(0)
-                df_veiculo['Litros'] = pd.to_numeric(df_veiculo['Litros'], errors='coerce').fillna(0)
-                df_veiculo['V_Num'] = pd.to_numeric(df_veiculo['V_Num'], errors='coerce').fillna(0)
+                # --- CONVERSÃO NUMÉRICA BLINDADA ---
+                # Garante que ponto/vírgula não quebre os números
+                for col in ['Km', 'Litros', 'V_Num']:
+                    if col in df_veiculo.columns:
+                        df_veiculo[col] = (
+                            df_veiculo[col]
+                            .astype(str)
+                            .str.replace('.', '', regex=False)
+                            .str.replace(',', '.', regex=False)
+                        )
+                        df_veiculo[col] = pd.to_numeric(df_veiculo[col], errors='coerce').fillna(0.0)
 
-                # --- BLINDAGEM DO CÁLCULO DE KM/L ---
-                # Garante que só calcula Km_Rodados considerando linhas onde o Km é maior que zero
+                # --- CÁLCULOS DO T-CROSS ---
+                # Pega o último Km válido para calcular os quilômetros rodados
                 df_veiculo['Km_Valido'] = df_veiculo['Km'].replace(0, pd.NA).ffill()
                 df_veiculo['Km_Rodados'] = df_veiculo['Km_Valido'].diff()
 
-                # Cálculos finais
                 df_veiculo['Km/L'] = df_veiculo.apply(
                     lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and pd.notna(row['Km_Rodados']) and row['Km_Rodados'] > 0 else 0.0, 
                     axis=1
                 )
                 df_veiculo['Preço/Litro'] = df_veiculo.apply(
+                    lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
+                    axis=1
+                )                df_veiculo['Preço/Litro'] = df_veiculo.apply(
                     lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
                     axis=1
                 )
