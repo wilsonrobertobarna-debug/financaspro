@@ -2470,23 +2470,35 @@ elif "🚗" in aba:
                 df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
                 df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
 
-                # --- CONVERSÃO NUMÉRICA BLINDADA ---
-                # Garante que ponto/vírgula não quebre os números
-                for col in ['Km', 'Litros', 'V_Num']:
-                    if col in df_veiculo.columns:
-                        df_veiculo[col] = (
-                            df_veiculo[col]
-                            .astype(str)
-                            .str.replace('.', '', regex=False)
-                            .str.replace(',', '.', regex=False)
-                        )
-                        df_veiculo[col] = pd.to_numeric(df_veiculo[col], errors='coerce').fillna(0.0)
+                # --- CONVERSÃO NUMÉRICA SEGURA ---
+                def converter_para_float(val):
+                    if pd.isna(val):
+                        return 0.0
+                    val_str = str(val).strip()
+                    if not val_str or val_str.lower() == 'nan':
+                        return 0.0
+                    # Se tem vírgula, assume formato BR (ex: 45200,50)
+                    if ',' in val_str:
+                        val_str = val_str.replace('.', '').replace(',', '.')
+                    try:
+                        return float(val_str)
+                    except:
+                        return 0.0
+
+                df_veiculo['Km'] = df_veiculo['Km'].apply(converter_para_float)
+                df_veiculo['Litros'] = df_veiculo['Litros'].apply(converter_para_float)
+                df_veiculo['V_Num'] = df_veiculo['V_Num'].apply(converter_para_float)
 
                 # --- CÁLCULOS DO T-CROSS ---
-                # Pega o último Km válido para calcular os quilômetros rodados
-                df_veiculo['Km_Valido'] = df_veiculo['Km'].replace(0, pd.NA).ffill()
+                # Garante ordenação correta por data antes do diff
+                df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
+
+                # Calcula os km rodados apenas entre linhas que possuem Km preenchido
+                df_veiculo['Km_Valido'] = df_veiculo['Km'].apply(lambda x: x if x > 0 else pd.NA)
+                df_veiculo['Km_Valido'] = df_veiculo['Km_Valido'].ffill()
                 df_veiculo['Km_Rodados'] = df_veiculo['Km_Valido'].diff()
 
+                # Km/L e Preço/Litro
                 df_veiculo['Km/L'] = df_veiculo.apply(
                     lambda row: row['Km_Rodados'] / row['Litros'] if row['Litros'] > 0 and pd.notna(row['Km_Rodados']) and row['Km_Rodados'] > 0 else 0.0, 
                     axis=1
@@ -2494,12 +2506,7 @@ elif "🚗" in aba:
                 df_veiculo['Preço/Litro'] = df_veiculo.apply(
                     lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
                     axis=1
-                )                
-                df_veiculo['Preço/Litro'] = df_veiculo.apply(
-                    lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
-                    axis=1
                 )
-
                 # Formatação
                 df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], errors='coerce').dt.strftime('%d/%m/%Y')
                 df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
