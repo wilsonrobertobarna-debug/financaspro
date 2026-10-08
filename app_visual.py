@@ -2462,11 +2462,10 @@ elif "🚗" in aba:
                 if busca_texto:
                     df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
-                # --- ORDENAÇÃO CRONOLÓGICA PRIMEIRO ---
+               # --- ORDENAÇÃO POR HODÔMETRO (GARANTE A SEQREQUENCIA REAL DO CARRO) ---
                 df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
-                df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
-
-                # --- CONVERSÃO NUMÉRICA SEGURA ---
+                
+                # Converte os números primeiro para ordenar pelo Km real
                 def converter_para_float(val):
                     if pd.isna(val):
                         return 0.0
@@ -2484,11 +2483,15 @@ elif "🚗" in aba:
                 df_veiculo['Litros'] = df_veiculo['Litros'].apply(converter_para_float)
                 df_veiculo['V_Num'] = df_veiculo['V_Num'].apply(converter_para_float)
 
+                # Ordena pelo Km (do menor para o maior) para o carro rodar para frente
+                df_veiculo = df_veiculo.sort_values(by='Km', ascending=True).reset_index(drop=True)
+
                 # --- CÁLCULOS DO T-CROSS BLINDADOS ---
                 df_veiculo['Km_Valido'] = df_veiculo['Km'].apply(lambda x: x if x > 0 else pd.NA)
                 df_veiculo['Km_Valido'] = df_veiculo['Km_Valido'].ffill()
                 df_veiculo['Km_Rodados'] = df_veiculo['Km_Valido'].diff()
 
+                # Função explícita e tolerante para o cálculo de Km/L
                 def calcula_km_l(row):
                     km_rod = row['Km_Rodados']
                     litros = row['Litros']
@@ -2502,7 +2505,6 @@ elif "🚗" in aba:
                     lambda row: row['V_Num'] / row['Litros'] if row['Litros'] > 0 else 0.0, 
                     axis=1
                 )
-
                 # Formatação para exibição
                 df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], errors='coerce').dt.strftime('%d/%m/%Y')
                 df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
