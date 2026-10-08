@@ -1645,10 +1645,17 @@ if "💰" in st.session_state.page:
             # Filtra a base completa pelos meses selecionados
             df_fluxo = df_base[df_base['Mes_Ano'].isin(filtro_lista)].copy()
             
-            # 🔒 EXCLUI AS TRANSFERÊNCIAS (Olhando pelo campo Categoria)
+            # 🔒 EXCLUI AS TRANSFERÊNCIAS NORMAIS, MAS MANTÉM AS PENDENTES
             if not df_fluxo.empty:
-                if 'Categoria' in df_fluxo.columns:
-                    df_fluxo = df_fluxo[~df_fluxo['Categoria'].astype(str).str.lower().str.contains('transferência', na=False)]
+                if 'Categoria' in df_fluxo.columns and 'Status' in df_fluxo.columns:
+                    # Identifica se é transferência (com ou sem acento)
+                    is_transf = df_fluxo['Categoria'].astype(str).str.lower().str.normalize('NFKD').str.encode('ascii', errors='ignore').str.decode('utf-8').str.contains('transferencia', na=False)
+                    
+                    # Identifica se o status é pendente
+                    is_pendente = df_fluxo['Status'].astype(str).str.lower().str.contains('pendente', na=False)
+                    
+                    # Mantém na base do gráfico: o que não é transferência OU o que é pendente
+                    df_fluxo = df_fluxo[(~is_transf) | (is_pendente)]
             
             # Prepara os dados para o gráfico
             df_f = df_fluxo.groupby(['Mes_Ano', 'Tipo'])['V_Num'].sum().reset_index()
