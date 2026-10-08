@@ -2461,7 +2461,11 @@ elif "🚗" in aba:
                 # Aplica o filtro de texto na coluna Descrição (ignorando maiúsculas/minúsculas)
                 if busca_texto:
                     df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
-
+                # --- DIAGNÓSTICO DOS DADOS ---
+                print("Tipos de dados originais:")
+                print(df_veiculo[['Vencimento', 'Km', 'Litros', 'V_Num']].dtypes)
+                print("\nPrimeiras linhas da tabela:")
+                print(df_veiculo[['Vencimento', 'Km', 'Litros', 'V_Num']].head(10))
                # Ordenação cronológica correta (Do mais antigo para o mais recente para o cálculo dar certo)
                 df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
                 df_veiculo = df_veiculo.sort_values('Vencimento').reset_index(drop=True)
