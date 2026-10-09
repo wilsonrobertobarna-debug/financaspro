@@ -2067,7 +2067,7 @@ if "💰" in st.session_state.page:
     st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         
         
- # --- FILTRO DE ALERTA: PENDÊNCIAS DO PERÍODO ---
+# --- FILTRO DE ALERTA: PENDÊNCIAS DO PERÍODO ---
     st.subheader("🔔 Monitor de Pendências do Período")
     
     # Filtra apenas o que está pendente E pertence ao mês selecionado (trazendo Receitas e Despesas)
@@ -2077,16 +2077,30 @@ if "💰" in st.session_state.page:
         # Ordena por vencimento de forma crescente (mais próximo no topo)
         df_pendente_mes = df_pendente_mes.sort_values(by='Vencimento', ascending=True)
         
-        st.warning(f"⚠️ Atenção: Você tiene {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
+        st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
         
         # Define as colunas que vão aparecer, garantindo que o 'Tipo' esteja em destaque
         colunas_exibir = ['Tipo', 'Vencimento', 'Descrição', 'Banco', 'Valor', 'Categoria']
-        
-        # Filtra apenas as colunas que realmente existem no DataFrame para evitar erros
         colunas_disponiveis = [col for col in colunas_exibir if col in df_pendente_mes.columns]
         
-        # Exibe as pendências do mês com o Tipo visível
-        st.dataframe(df_pendente_mes[colunas_disponiveis], use_container_width=True)
+        df_mostrar = df_pendente_mes[colunas_disponiveis].copy()
+        
+        # 🎨 Função de xurumela para colorir as letras do Tipo (Receita = Verde, Despesa = Vermelho)
+        def colorir_tipo(val):
+            val_str = str(val).lower()
+            if 'receita' in val_str or 'entrada' in val_str:
+                return 'color: #27ae60; font-weight: bold;'  # Verde bonito
+            elif 'despesa' in val_str or 'saída' in val_str or 'saida' in val_str:
+                return 'color: #c0392b; font-weight: bold;'  # Vermelho elegante
+            return ''
+
+        # Aplica o estilo na coluna Tipo (se ela existir na seleção)
+        if 'Tipo' in df_mostrar.columns:
+            df_estilizado = df_mostrar.style.map(colorir_tipo, subset=['Tipo'])
+            st.dataframe(df_estilizado, use_container_width=True)
+        else:
+            st.dataframe(df_mostrar, use_container_width=True)
+            
     else:
         st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
         
