@@ -2067,20 +2067,26 @@ if "💰" in st.session_state.page:
     st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         
         
-   # --- FILTRO DE ALERTA: PENDÊNCIAS DO MÊS ---
+ # --- FILTRO DE ALERTA: PENDÊNCIAS DO PERÍODO ---
     st.subheader("🔔 Monitor de Pendências do Período")
     
-    # Filtra apenas o que está pendente E pertence ao mês selecionado
-    df_pendente_mes = df_base[(df_base['Status'] == 'Pendente') & (df_base['Mes_Ano'] == filtro_mes)]
+    # Filtra apenas o que está pendente E pertence ao mês selecionado (trazendo Receitas e Despesas)
+    df_pendente_mes = df_base[(df_base['Status'].str.lower() == 'pendente') & (df_base['Mes_Ano'] == filtro_mes)]
     
     if not df_pendente_mes.empty:
         # Ordena por vencimento de forma crescente (mais próximo no topo)
         df_pendente_mes = df_pendente_mes.sort_values(by='Vencimento', ascending=True)
         
-        st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
+        st.warning(f"⚠️ Atenção: Você tiene {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
         
-        # Exibe as pendências do mês
-        st.dataframe(df_pendente_mes[['Vencimento', 'Descrição','Banco','Valor', 'Categoria']], use_container_width=True)
+        # Define as colunas que vão aparecer, garantindo que o 'Tipo' esteja em destaque
+        colunas_exibir = ['Tipo', 'Vencimento', 'Descrição', 'Banco', 'Valor', 'Categoria']
+        
+        # Filtra apenas as colunas que realmente existem no DataFrame para evitar erros
+        colunas_disponiveis = [col for col in colunas_exibir if col in df_pendente_mes.columns]
+        
+        # Exibe as pendências do mês com o Tipo visível
+        st.dataframe(df_pendente_mes[colunas_disponiveis], use_container_width=True)
     else:
         st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
         
