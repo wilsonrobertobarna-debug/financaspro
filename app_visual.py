@@ -1491,42 +1491,40 @@ if "💰" in st.session_state.page:
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
-# 1. BARRINHA DE MESES
-   # 1. BARRINHA DE MESES (SINCRONIZADA GLOBALMENTE)
-    meses_abreviados = [
-        "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
-        "Jul", "Ago", "Set", "Out", "Nov", "Dez"
-    ]
+# 1. BARRINHA DE MESES (SINCRONIZADA COM CARTÕES)
+meses_abreviados = [
+    "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
+    "Jul", "Ago", "Set", "Out", "Nov", "Dez"
+]
 
-    num_mes_atual = datetime.now().month - 1
-    default_mes = meses_abreviados[num_mes_atual] if meses_abreviados else "Jan"
+num_mes_atual = datetime.now().month - 1
+default_mes = meses_abreviados[num_mes_atual] if meses_abreviados else "Jan"
 
-    mes_map = {
-        "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
-        "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
-    }
+mes_map = {
+    "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
+    "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
+}
 
-    # Inicializa o mês global no session_state se ainda não existir
-    if 'mes_selecionado_global' not in st.session_state:
-        st.session_state['mes_selecionado_global'] = default_mes
+# Inicializa as chaves se não existirem
+if 'pills_topo_secao' not in st.session_state:
+    st.session_state['pills_topo_secao'] = default_mes
+if 'pills_cartoes_secao' not in st.session_state:
+    st.session_state['pills_cartoes_secao'] = default_mes
 
-    # Callback para atualizar a variável global quando clicar no topo
-    def sync_mes_topo():
-        if st.session_state.get('pills_topo_secao'):
-            st.session_state['mes_selecionado_global'] = st.session_state['pills_topo_secao']
+def sync_mes_topo():
+    # Força a régua dos cartões a receber a mesma escolha do topo
+    st.session_state['pills_cartoes_secao'] = st.session_state['pills_topo_secao']
 
-    # Régua do Topo
-    mes_atual = st.pills(
-        "Período:",
-        meses_abreviados,
-        selection_mode="single",
-        default=st.session_state['mes_selecionado_global'],
-        key="pills_topo_secao",
-        on_change=sync_mes_topo
-    )
+mes_atual = st.pills(
+    "Período:",
+    meses_abreviados,
+    selection_mode="single",
+    key="pills_topo_secao",
+    on_change=sync_mes_topo
+)
 
-    if not mes_atual or mes_atual not in mes_map:
-        mes_atual = st.session_state.get('mes_selecionado_global', default_mes)
+if not mes_atual or mes_atual not in mes_map:
+    mes_atual = st.session_state.get('pills_topo_secao', default_mes)
 
     if not df_base.empty:
         filtro_mes = f"{mes_map.get(mes_atual, '08')}/26"
@@ -1733,44 +1731,44 @@ if "💰" in st.session_state.page:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
-        # =========================================================================
-        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO)
-        # =========================================================================
-        st.markdown("---")
-        st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
-        
-        meses_abreviados_cartao = [
-            "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
-            "Jul", "Ago", "Set", "Out", "Nov", "Dez"
-        ]
-        
-        mes_map_cartao = {
-            "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
-            "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
-        }
-        
-        # Callback para atualizar a variável global quando clicar nos Cartões
-        def sync_mes_cartoes():
-            if st.session_state.get('pills_cartoes_secao'):
-                st.session_state['mes_selecionado_global'] = st.session_state['pills_cartoes_secao']
+       # =========================================================================
+# 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO COM O TOPO)
+# =========================================================================
+st.markdown("---")
+st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
 
-        # Régua dos Cartões
-        mes_escolhido_cartao = st.pills(
-            "Período dos Cartões:",
-            meses_abreviados_cartao,
-            selection_mode="single",
-            default=st.session_state.get('mes_selecionado_global', 'Set'),
-            key="pills_cartoes_secao",
-            on_change=sync_mes_cartoes
-        )
-        
-        if not mes_escolhido_cartao or mes_escolhido_cartao not in mes_map_cartao:
-            mes_escolhido_cartao = st.session_state.get('mes_selecionado_global', 'Set')
-            
-        # Filtra os dados com base no mês sincronizado
-        filtro_mes_cartao = f"{mes_map_cartao.get(mes_escolhido_cartao, '09')}/26"
-        df_m_cartoes = df_base[df_base['Mes_Ano'] == filtro_mes_cartao].copy() if not df_base.empty else pd.DataFrame()
-        
+meses_abreviados_cartao = [
+    "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
+    "Jul", "Ago", "Set", "Out", "Nov", "Dez"
+]
+
+mes_map_cartao = {
+    "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
+    "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
+}
+
+# Garante que a chave dos cartões esteja inicializada
+if 'pills_cartoes_secao' not in st.session_state:
+    st.session_state['pills_cartoes_secao'] = st.session_state.get('pills_topo_secao', 'Set')
+
+def sync_mes_cartoes():
+    # Força a régua do topo a receber a mesma escolha dos cartões
+    st.session_state['pills_topo_secao'] = st.session_state['pills_cartoes_secao']
+
+mes_escolhido_cartao = st.pills(
+    "Período dos Cartões:",
+    meses_abreviados_cartao,
+    selection_mode="single",
+    key="pills_cartoes_secao",
+    on_change=sync_mes_cartoes
+)
+
+if not mes_escolhido_cartao or mes_escolhido_cartao not in mes_map_cartao:
+    mes_escolhido_cartao = st.session_state.get('pills_cartoes_secao', 'Set')
+
+# Filtra os dados com base no mês sincronizado
+filtro_mes_cartao = f"{mes_map_cartao.get(mes_escolhido_cartao, '09')}/26"
+df_m_cartoes = df_base[df_base['Mes_Ano'] == filtro_mes_cartao].copy() if not df_base.empty else pd.DataFrame()        
         coluna_banco = next((col for col in ['Nome do Banco', 'Banco', 'Instituição', 'Conta'] if col in df_m_cartoes.columns), None)
         
         mapeamento_cartoes = {
