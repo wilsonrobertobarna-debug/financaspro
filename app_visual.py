@@ -2170,24 +2170,31 @@ if "💰" in st.session_state.page:
     st.divider()
 
             
-# 7. TABELA FINAL
+# 7. TABELA FINAL (COM TRANSFERÊNCIAS E ORDENADA POR VENCIMENTO)
     st.write("---")
     st.subheader("🔍 Lançamentos do Mês")
     
-    if 'df_m_limpo' in locals() and not df_m_limpo.empty:
-        df_exibicao = df_m_limpo.copy()
+    # Usa df_m_br para incluir todos os lançamentos do mês (inclusive transferências e pendentes)
+    if 'df_m_br' in locals() and not df_m_br.empty:
+        df_exibicao = df_m_br.copy()
         
-        # Ordenação pelo ID do maior para o menor para o mais recente ficar no topo
-        if 'ID' in df_exibicao.columns:
+        # Converte a coluna de vencimento para data/string segura para ordenação correta
+        if 'Vencimento' in df_exibicao.columns:
+            # Ordena por Vencimento (do mais próximo/recente para o mais distante, ou ajuste ascending se preferir)
+            df_exibicao = df_exibicao.sort_values(by='Vencimento', ascending=True, na_position='last')
+        elif 'ID' in df_exibicao.columns:
             df_exibicao = df_exibicao.sort_values(by='ID', ascending=False)
         
+        # Garante que as colunas exibidas existam no dataframe para evitar erros
+        colunas_disponiveis = [col for col in ['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status', 'Tipo'] if col in df_exibicao.columns]
+        
         st.dataframe(
-            df_exibicao[['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status']], 
+            df_exibicao[colunas_disponiveis], 
             use_container_width=True, 
             hide_index=True
         )
     else:
-        st.warning("A base de dados `df_m_limpo` está vazia para este mês.")
+        st.warning("A base de dados está vazia para este mês.")
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")        
