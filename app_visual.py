@@ -1529,7 +1529,8 @@ if "💰" in st.session_state.page:
         # Atualiza a chave dos cartões para o mesmo mês ANTES do cartão ser renderizado embaixo
         st.session_state['pills_cartoes_key'] = mes_atual
     else:
-        mes_atual = st.session_state['mes_selecionado_global']
+        
+        mes_atual = st.session_state.get('pills_topo', default_mes)
     
 
     if mes_atual and mes_atual in mes_map:
