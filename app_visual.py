@@ -1525,7 +1525,7 @@ if "💰" in st.session_state.page:
         st.session_state['pills_cartoes_key'] = mes_atual
     else:
         mes_atual = st.session_state['mes_selecionado_global']
-    )
+    
 
     if mes_atual and mes_atual in mes_map:
         st.session_state['mes_selecionado'] = mes_atual
