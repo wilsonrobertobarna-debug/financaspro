@@ -1505,28 +1505,26 @@ if "💰" in st.session_state.page:
         "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
     }
 
-    # Inicializa a escolha inicial apenas na PRIMEIRA vez que abre o app
-    if 'mes_selecionado' not in st.session_state:
-        st.session_state['mes_selecionado'] = default_mes
+    # Inicializa os valores de ambos os pills na PRIMEIRA vez que abre o app
+    if 'pills_topo' not in st.session_state:
+        st.session_state['pills_topo'] = default_mes
+    if 'pills_cartoes' not in st.session_state:
+        st.session_state['pills_cartoes'] = default_mes
 
-    # Callback simples: acionado quando clica na barrinha do topo
-    def_on_change_topo():
-        novo_mes = st.session_state.get('pills_topo')
-        if novo_mes:
-            st.session_state['mes_selecionado'] = novo_mes
-            st.session_state['pills_cartoes'] = novo_mes
+    # Callback quando clica na barrinha do topo
+    def sync_topo():
+        st.session_state['pills_cartoes'] = st.session_state['pills_topo']
 
     mes_atual = st.pills(
         "Período:",
         meses_abreviados,
         selection_mode="single",
-        default=st.session_state['mes_selecionado'],
         key="pills_topo",
-        on_change=def_on_change_topo
+        on_change=sync_topo
     )
 
     if not mes_atual or mes_atual not in mes_map:
-        mes_atual = st.session_state['mes_selecionado']
+        mes_atual = st.session_state.get('pills_topo', default_mes)
         
         # Atualiza a chave dos cartões para o mesmo mês ANTES do cartão ser renderizado embaixo
         st.session_state['pills_cartoes_key'] = mes_atual
@@ -1744,12 +1742,11 @@ if "💰" in st.session_state.page:
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
+        
         # =========================================================================
         # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO)
         # =========================================================================
-       # =========================================================================
-        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO)
-        # =========================================================================
+        
         st.markdown("---")
         st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
         
@@ -1763,24 +1760,20 @@ if "💰" in st.session_state.page:
             "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
         }
         
-        # Callback simples: acionado quando clica na barrinha dos cartões
-        def def_on_change_cartoes():
-            novo_mes = st.session_state.get('pills_cartoes')
-            if novo_mes:
-                st.session_state['mes_selecionado'] = novo_mes
-                st.session_state['pills_topo'] = novo_mes
+        # Callback quando clica na barrinha dos cartões
+        def sync_cartoes():
+            st.session_state['pills_topo'] = st.session_state['pills_cartoes']
 
         mes_escolhido_cartao = st.pills(
             "Período dos Cartões:",
             meses_abreviados_cartao,
             selection_mode="single",
-            default=st.session_state['mes_selecionado'],
             key="pills_cartoes",
-            on_change=def_on_change_cartoes
+            on_change=sync_cartoes
         )
         
         if not mes_escolhido_cartao or mes_escolhido_cartao not in mes_map_cartao:
-            mes_escolhido_cartao = st.session_state['mes_selecionado']
+            mes_escolhido_cartao = st.session_state.get('pills_cartoes', 'Out')
             
         # Filtra o DataFrame base especificamente para o mês escolhido
         filtro_mes_cartao = f"{mes_map_cartao.get(mes_escolhido_cartao, '10')}/26"
