@@ -1491,7 +1491,7 @@ if "💰" in st.session_state.page:
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
-# 1. BARRINHA DE MESES
+# 1. BARRINHA DE MESES (COM CHAVE GLOBAL COMPARTILHADA)
     meses_abreviados = [
         "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
         "Jul", "Ago", "Set", "Out", "Nov", "Dez"
@@ -1505,15 +1505,22 @@ if "💰" in st.session_state.page:
         "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
     }
 
+    # Inicializa a chave de estado compartilhada
+    if 'mes_selecionado' not in st.session_state:
+        st.session_state['mes_selecionado'] = default_mes
+
     mes_atual = st.pills(
         "Período:",
         meses_abreviados,
         selection_mode="single",
-        default=default_mes,
+        default=st.session_state['mes_selecionado'],
+        key="pills_topo_global"
     )
 
-    if not mes_atual or mes_atual not in mes_map:
-        mes_atual = default_mes
+    if mes_atual and mes_atual in mes_map:
+        st.session_state['mes_selecionado'] = mes_atual
+    else:
+        mes_atual = st.session_state['mes_selecionado']
 
     if not df_base.empty:
         filtro_mes = f"{mes_map.get(mes_atual, '08')}/26"
