@@ -1492,6 +1492,7 @@ if "💰" in st.session_state.page:
     st.subheader("🛡️ FinançasPro Wilson")
 
 # 1. BARRINHA DE MESES
+   # 1. BARRINHA DE MESES (SINCRONIZADA GLOBALMENTE)
     meses_abreviados = [
         "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
         "Jul", "Ago", "Set", "Out", "Nov", "Dez"
@@ -1505,15 +1506,27 @@ if "💰" in st.session_state.page:
         "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
     }
 
+    # Inicializa o mês global no session_state se ainda não existir
+    if 'mes_selecionado_global' not in st.session_state:
+        st.session_state['mes_selecionado_global'] = default_mes
+
+    # Callback para atualizar a variável global quando clicar no topo
+    def sync_mes_topo():
+        if st.session_state.get('pills_topo_secao'):
+            st.session_state['mes_selecionado_global'] = st.session_state['pills_topo_secao']
+
+    # Régua do Topo
     mes_atual = st.pills(
         "Período:",
         meses_abreviados,
         selection_mode="single",
-        default=default_mes,
+        default=st.session_state['mes_selecionado_global'],
+        key="pills_topo_secao",
+        on_change=sync_mes_topo
     )
 
     if not mes_atual or mes_atual not in mes_map:
-        mes_atual = default_mes
+        mes_atual = st.session_state.get('mes_selecionado_global', default_mes)
 
     if not df_base.empty:
         filtro_mes = f"{mes_map.get(mes_atual, '08')}/26"
