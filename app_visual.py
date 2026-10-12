@@ -1491,7 +1491,7 @@ if "💰" in st.session_state.page:
     st.markdown("""<style>.block-container { padding-top: 0rem; padding-bottom: 0rem; }</style>""", unsafe_allow_html=True)
     st.subheader("🛡️ FinançasPro Wilson")
 
-# 1. BARRINHA DE MESES (COM CHAVE GLOBAL COMPARTILHADA)
+# 1. BARRINHA DE MESES (TOPO)
     meses_abreviados = [
         "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
         "Jul", "Ago", "Set", "Out", "Nov", "Dez"
@@ -1505,16 +1505,26 @@ if "💰" in st.session_state.page:
         "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
     }
 
-    # Inicializa a chave de estado compartilhada
-    if 'mes_selecionado' not in st.session_state:
-        st.session_state['mes_selecionado'] = default_mes
+    # Inicializa a chave global se não existir
+    if 'mes_selecionado_global' not in st.session_state:
+        st.session_state['mes_selecionado_global'] = default_mes
+
+    # Garante que a chave do topo use a global
+    st.session_state['pills_topo_key'] = st.session_state['mes_selecionado_global']
 
     mes_atual = st.pills(
         "Período:",
         meses_abreviados,
         selection_mode="single",
-        default=st.session_state['mes_selecionado'],
-        key="pills_topo_global"
+        key="pills_topo_key"
+    )
+
+    if mes_atual and mes_atual in mes_map:
+        st.session_state['mes_selecionado_global'] = mes_atual
+        # Atualiza a chave dos cartões para o mesmo mês ANTES do cartão ser renderizado embaixo
+        st.session_state['pills_cartoes_key'] = mes_atual
+    else:
+        mes_atual = st.session_state['mes_selecionado_global']
     )
 
     if mes_atual and mes_atual in mes_map:
@@ -1728,7 +1738,7 @@ if "💰" in st.session_state.page:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
         # =========================================================================
-        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO COM RECARGA)
+        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO)
         # =========================================================================
         st.markdown("---")
         st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
@@ -1743,28 +1753,24 @@ if "💰" in st.session_state.page:
             "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
         }
         
-        # Função que atualiza o topo e força o app a rodar de novo na hora
-        def mudar_mes_cartoes():
-            novo_mes = st.session_state.get('pills_cartoes_secao')
-            if novo_mes:
-                st.session_state['mes_selecionado'] = novo_mes
-                # Força o Streamlit a atualizar a página inteira imediatamente
-                st.rerun()
-
-        # Garante que o valor inicial venha do global
-        if 'pills_cartoes_secao' not in st.session_state:
-            st.session_state['pills_cartoes_secao'] = st.session_state.get('mes_selecionado', 'Set')
+        # Garante que a chave dos cartões acompanhe a global se não existir
+        if 'pills_cartoes_key' not in st.session_state:
+            st.session_state['pills_cartoes_key'] = st.session_state.get('mes_selecionado_global', 'Set')
 
         mes_escolhido_cartao = st.pills(
             "Período dos Cartões:",
             meses_abreviados_cartao,
             selection_mode="single",
-            key="pills_cartoes_secao",
-            on_change=mudar_mes_cartoes
+            key="pills_cartoes_key"
         )
         
-        if not mes_escolhido_cartao or mes_escolhido_cartao not in mes_map_cartao:
-            mes_escolhido_cartao = st.session_state.get('mes_selecionado', 'Set')
+        if mes_escolhido_cartao and mes_escolhido_cartao in mes_map_cartao:
+            if mes_escolhido_cartao != st.session_state.get('mes_selecionado_global'):
+                st.session_state['mes_selecionado_global'] = mes_escolhido_cartao
+                st.session_state['pills_topo_key'] = mes_escolhido_cartao
+                st.rerun()  # Recarrega para o topo atualizar junto
+        else:
+            mes_escolhido_cartao = st.session_state.get('mes_selecionado_global', 'Set')
             
         # Filtra o DataFrame base especificamente para o mês escolhido
         filtro_mes_cartao = f"{mes_map_cartao.get(mes_escolhido_cartao, '09')}/26"
