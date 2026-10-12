@@ -2181,20 +2181,20 @@ if "💰" in st.session_state.page:
     st.divider()
 
             
-# 7. TABELA FINAL (COM TRANSFERÊNCIAS E ORDENADA POR VENCIMENTO)
+    
+   # 7. TABELA FINAL (COM TRANSFERÊNCIAS E ÚLTIMOS LANÇAMENTOS NO TOPO)
     st.write("---")
     st.subheader("🔍 Lançamentos do Mês")
     
-    # Usa df_m_br para incluir todos os lançamentos do mês (inclusive transferências e pendentes)
     if 'df_m_br' in locals() and not df_m_br.empty:
         df_exibicao = df_m_br.copy()
         
-        # Converte a coluna de vencimento para data/string segura para ordenação correta
-        if 'Vencimento' in df_exibicao.columns:
-            # Ordena por Vencimento (do mais próximo/recente para o mais distante, ou ajuste ascending se preferir)
-            df_exibicao = df_exibicao.sort_values(by='Vencimento', ascending=True, na_position='last')
-        elif 'ID' in df_exibicao.columns:
+        # Ordenação invertida: ID maior (mais recente) no topo
+        if 'ID' in df_exibicao.columns:
             df_exibicao = df_exibicao.sort_values(by='ID', ascending=False)
+        elif 'Vencimento' in df_exibicao.columns:
+            # Se não tiver ID, ordena pelo vencimento do mais distante/recente conforme sua preferência
+            df_exibicao = df_exibicao.sort_values(by='Vencimento', ascending=False, na_position='last')
         
         # Garante que as colunas exibidas existam no dataframe para evitar erros
         colunas_disponiveis = [col for col in ['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status', 'Tipo'] if col in df_exibicao.columns]
