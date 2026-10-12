@@ -1498,7 +1498,7 @@ meses_abreviados = [
 ]
 
 num_mes_atual = datetime.now().month - 1
-default_mes = meses_abreviados[num_mes_atual] if meses_abreviados else "Jan"
+default_mes = meses_abreviados[num_mes_atual] if 0 <= num_mes_atual < len(meses_abreviados) else "Jan"
 
 mes_map = {
     "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
@@ -1508,12 +1508,13 @@ mes_map = {
 # Inicializa as chaves se não existirem
 if 'pills_topo_secao' not in st.session_state:
     st.session_state['pills_topo_secao'] = default_mes
+
 if 'pills_cartoes_secao' not in st.session_state:
     st.session_state['pills_cartoes_secao'] = default_mes
 
 def sync_mes_topo():
-    # Força a régua dos cartões a receber a mesma escolha do topo
-    st.session_state['pills_cartoes_secao'] = st.session_state['pills_topo_secao']
+    if st.session_state.get('pills_topo_secao'):
+        st.session_state['pills_cartoes_secao'] = st.session_state['pills_topo_secao']
 
 mes_atual = st.pills(
     "Período:",
@@ -1751,9 +1752,10 @@ if not mes_atual or mes_atual not in mes_map:
         if 'pills_cartoes_secao' not in st.session_state:
             st.session_state['pills_cartoes_secao'] = st.session_state.get('pills_topo_secao', 'Set')
         
+        # 💳 CONTROLE DE CARTÕES (SINCRONIZADO)
         def sync_mes_cartoes():
-            # Força a régua do topo a receber a mesma escolha dos cartões
-            st.session_state['pills_topo_secao'] = st.session_state['pills_cartoes_secao']
+            if st.session_state.get('pills_cartoes_secao'):
+                st.session_state['pills_topo_secao'] = st.session_state['pills_cartoes_secao']
         
         mes_escolhido_cartao = st.pills(
             "Período dos Cartões:",
@@ -1762,7 +1764,7 @@ if not mes_atual or mes_atual not in mes_map:
             key="pills_cartoes_secao",
             on_change=sync_mes_cartoes
         )
-        
+
         if not mes_escolhido_cartao or mes_escolhido_cartao not in mes_map_cartao:
             mes_escolhido_cartao = st.session_state.get('pills_cartoes_secao', 'Set')
         
