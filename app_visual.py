@@ -1728,7 +1728,7 @@ if "💰" in st.session_state.page:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
         # =========================================================================
-        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO COM O TOPO)
+        # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO COM RECARGA)
         # =========================================================================
         st.markdown("---")
         st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
@@ -1743,24 +1743,29 @@ if "💰" in st.session_state.page:
             "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
         }
         
-        # Sincroniza diretamente com o mês selecionado no topo global do app
-        mes_atual_global = st.session_state.get('mes_selecionado', 'Set')
-        
+        # Função que atualiza o topo e força o app a rodar de novo na hora
+        def mudar_mes_cartoes():
+            novo_mes = st.session_state.get('pills_cartoes_secao')
+            if novo_mes:
+                st.session_state['mes_selecionado'] = novo_mes
+                # Força o Streamlit a atualizar a página inteira imediatamente
+                st.rerun()
+
+        # Garante que o valor inicial venha do global
+        if 'pills_cartoes_secao' not in st.session_state:
+            st.session_state['pills_cartoes_secao'] = st.session_state.get('mes_selecionado', 'Set')
+
         mes_escolhido_cartao = st.pills(
             "Período dos Cartões:",
             meses_abreviados_cartao,
             selection_mode="single",
-            default=mes_atual_global if mes_atual_global in meses_abreviados_cartao else "Set",
-            key="pills_cartoes_secao"
+            key="pills_cartoes_secao",
+            on_change=mudar_mes_cartoes
         )
         
         if not mes_escolhido_cartao or mes_escolhido_cartao not in mes_map_cartao:
-            mes_escolhido_cartao = mes_atual_global if mes_atual_global in mes_map_cartao else "Set"
+            mes_escolhido_cartao = st.session_state.get('mes_selecionado', 'Set')
             
-        # Atualiza o estado global caso o usuário mude direto na barrinha dos cartões
-        if mes_escolhido_cartao != st.session_state.get('mes_selecionado'):
-            st.session_state['mes_selecionado'] = mes_escolhido_cartao
-
         # Filtra o DataFrame base especificamente para o mês escolhido
         filtro_mes_cartao = f"{mes_map_cartao.get(mes_escolhido_cartao, '09')}/26"
         df_m_cartoes = df_base[df_base['Mes_Ano'] == filtro_mes_cartao].copy() if not df_base.empty else pd.DataFrame()
