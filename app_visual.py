@@ -2182,18 +2182,19 @@ if "💰" in st.session_state.page:
 
             
     
-   # 7. TABELA FINAL (COM TRANSFERÊNCIAS E ÚLTIMOS LANÇAMENTOS NO TOPO)
+    # 7. TABELA FINAL (COM ORDENAÇÃO FORÇADA PARA O MAIOR ID NO TOPO)
     st.write("---")
     st.subheader("🔍 Lançamentos do Mês")
     
     if 'df_m_br' in locals() and not df_m_br.empty:
         df_exibicao = df_m_br.copy()
         
-        # Ordenação invertida: ID maior (mais recente) no topo
+        # Converte o ID para numérico para garantir a ordenação correta do maior para o menor
         if 'ID' in df_exibicao.columns:
-            df_exibicao = df_exibicao.sort_values(by='ID', ascending=False)
+            df_exibicao['ID_num'] = pd.to_numeric(df_exibicao['ID'], errors='coerce')
+            df_exibicao = df_exibicao.sort_values(by='ID_num', ascending=False, na_position='last')
+            df_exibicao = df_exibicao.drop(columns=['ID_num'])
         elif 'Vencimento' in df_exibicao.columns:
-            # Se não tiver ID, ordena pelo vencimento do mais distante/recente conforme sua preferência
             df_exibicao = df_exibicao.sort_values(by='Vencimento', ascending=False, na_position='last')
         
         # Garante que as colunas exibidas existam no dataframe para evitar erros
