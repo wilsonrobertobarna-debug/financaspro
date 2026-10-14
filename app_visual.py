@@ -2607,224 +2607,224 @@ elif "🚗" in aba:
         
 
         elif "📄" in aba:
-    st.title("📄 Relatório WhatsApp")
-    
-    # Trava a data de início no primeiro dia do mês atual
-    primeiro_dia_mes = hoje_br.replace(day=1)
-    
-    c1, c2 = st.columns(2)
-    d_ini = c1.date_input("Início", primeiro_dia_mes, format="DD/MM/YYYY", key="zap_d1")
-    d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY", key="zap_d2")
-    
-    saldos_txt = ""
-    
-    # Subtotais separados por Moeda
-    sub_contas_invest_brl = 0.0
-    sub_contas_invest_usd = 0.0
-    sub_contas_invest_eur = 0.0
-    
-    sub_cartoes_brl = 0.0
-    sub_vr_brl = 0.0
-    sub_bens_veiculos_brl = 0.0
-    sub_bens_veiculos_usd = 0.0
-    sub_bens_veiculos_eur = 0.0
-    
-    # Funções de formatação de moeda
-    def m_fmt_usd(n): return f"U$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-    def m_fmt_eur(n): return f"€ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-
-    # 1. LOOP PELOS BANCOS E ATIVOS
-    for b in sorted(bancos_disponiveis):
-        valor_b = 0.0      
-        tipo_c = ""
-        moeda_b = "BRL"  # Padrão Real
-        dia_fech_d = 1    
-        dia_venc_e = 10   
-        
-        if not df_bancos_info.empty:
-            for _, row in df_bancos_info.iterrows():
-                if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
-                    try:
-                        # Leitura e limpeza segura de valores com Regex
-                        import re
-                        raw_val = str(row.iloc[1]).strip()
-                        clean_val = re.sub(r'[^\d,.-]', '', raw_val)
-                        
-                        if ',' in clean_val and '.' in clean_val:
-                            clean_val = clean_val.replace('.', '').replace(',', '.')
-                        elif ',' in clean_val:
-                            clean_val = clean_val.replace(',', '.')
-                        
-                        valor_b = float(clean_val) if clean_val else 0.0
-                        
-                        tipo_c = str(row.iloc[2]).strip().upper()
-                        
-                        # Tenta ler a moeda (Coluna F / Índice 5)
-                        if len(row) >= 6:
-                            m_raw = str(row.iloc[5]).strip().upper()
-                            if m_raw in ["USD", "EUR", "BRL"]:
-                                moeda_b = m_raw
-                        
-                        if len(row) >= 4:
-                            f_raw = str(row.iloc[3]).replace('R$', '').strip()
-                            dia_fech_d = int(float(f_raw)) if f_raw and f_raw != 'nan' else 1
-                            
-                        if len(row) >= 5:
-                            ven_raw = str(row.iloc[4]).replace('R$', '').strip()
-                            dia_venc_e = int(float(ven_raw)) if ven_raw and ven_raw != 'nan' else 10
-                    except: pass
-                    break
-
-        b_up = b.upper()
-        
-        # --- CARTÕES DE CRÉDITO ---
-        if "CARTA" in tipo_c or "CART" in b_up:
-            limite_cartao = valor_b
-            mask = (df_base['Banco'] == b) & \
-                   (df_base['Status'].str.upper() == 'PENDENTE') & \
-                   (pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True).dt.date <= d_fim)
-
-            usado = df_base.loc[mask, 'V_Num'].sum()
-            dispo = limite_cartao - usado
+            st.title("📄 Relatório WhatsApp")
             
-            # ATENÇÃO: Só soma no subtotal BRL se a moeda do cartão for Real
-            if moeda_b == "BRL":
-                sub_cartoes_brl += usado
+            # Trava a data de início no primeiro dia do mês atual
+            primeiro_dia_mes = hoje_br.replace(day=1)
             
-            usado_fmt = f"{m_fmt(usado)} 🔴" if usado > 0 else m_fmt(0)
-            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {usado_fmt} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+            c1, c2 = st.columns(2)
+            d_ini = c1.date_input("Início", primeiro_dia_mes, format="DD/MM/YYYY", key="zap_d1")
+            d_fim = c2.date_input("Fim", hoje_br, format="DD/MM/YYYY", key="zap_d2")
+            
+            saldos_txt = ""
+            
+            # Subtotais separados por Moeda
+            sub_contas_invest_brl = 0.0
+            sub_contas_invest_usd = 0.0
+            sub_contas_invest_eur = 0.0
+            
+            sub_cartoes_brl = 0.0
+            sub_vr_brl = 0.0
+            sub_bens_veiculos_brl = 0.0
+            sub_bens_veiculos_usd = 0.0
+            sub_bens_veiculos_eur = 0.0
+            
+            # Funções de formatação de moeda
+            def m_fmt_usd(n): return f"U$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+            def m_fmt_eur(n): return f"€ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
         
-        # --- VEÍCULOS E BENS ---
-        elif "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
-            saldo_bem = valor_b
-            if moeda_b == "USD":
-                sub_bens_veiculos_usd += saldo_bem
-                saldos_txt += f"🚗 {b}: {m_fmt_usd(saldo_bem)}\n"
-            elif moeda_b == "EUR":
-                sub_bens_veiculos_eur += saldo_bem
-                saldos_txt += f"🚗 {b}: {m_fmt_eur(saldo_bem)}\n"
+            # 1. LOOP PELOS BANCOS E ATIVOS
+            for b in sorted(bancos_disponiveis):
+                valor_b = 0.0      
+                tipo_c = ""
+                moeda_b = "BRL"  # Padrão Real
+                dia_fech_d = 1    
+                dia_venc_e = 10   
+                
+                if not df_bancos_info.empty:
+                    for _, row in df_bancos_info.iterrows():
+                        if str(row.iloc[0]).strip().upper() == str(b).strip().upper():
+                            try:
+                                # Leitura e limpeza segura de valores com Regex
+                                import re
+                                raw_val = str(row.iloc[1]).strip()
+                                clean_val = re.sub(r'[^\d,.-]', '', raw_val)
+                                
+                                if ',' in clean_val and '.' in clean_val:
+                                    clean_val = clean_val.replace('.', '').replace(',', '.')
+                                elif ',' in clean_val:
+                                    clean_val = clean_val.replace(',', '.')
+                                
+                                valor_b = float(clean_val) if clean_val else 0.0
+                                
+                                tipo_c = str(row.iloc[2]).strip().upper()
+                                
+                                # Tenta ler a moeda (Coluna F / Índice 5)
+                                if len(row) >= 6:
+                                    m_raw = str(row.iloc[5]).strip().upper()
+                                    if m_raw in ["USD", "EUR", "BRL"]:
+                                        moeda_b = m_raw
+                                
+                                if len(row) >= 4:
+                                    f_raw = str(row.iloc[3]).replace('R$', '').strip()
+                                    dia_fech_d = int(float(f_raw)) if f_raw and f_raw != 'nan' else 1
+                                    
+                                if len(row) >= 5:
+                                    ven_raw = str(row.iloc[4]).replace('R$', '').strip()
+                                    dia_venc_e = int(float(ven_raw)) if ven_raw and ven_raw != 'nan' else 10
+                            except: pass
+                            break
+        
+                b_up = b.upper()
+                
+                # --- CARTÕES DE CRÉDITO ---
+                if "CARTA" in tipo_c or "CART" in b_up:
+                    limite_cartao = valor_b
+                    mask = (df_base['Banco'] == b) & \
+                           (df_base['Status'].str.upper() == 'PENDENTE') & \
+                           (pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True).dt.date <= d_fim)
+        
+                    usado = df_base.loc[mask, 'V_Num'].sum()
+                    dispo = limite_cartao - usado
+                    
+                    # ATENÇÃO: Só soma no subtotal BRL se a moeda do cartão for Real
+                    if moeda_b == "BRL":
+                        sub_cartoes_brl += usado
+                    
+                    usado_fmt = f"{m_fmt(usado)} 🔴" if usado > 0 else m_fmt(0)
+                    saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {usado_fmt} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+                
+                # --- VEÍCULOS E BENS ---
+                elif "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
+                    saldo_bem = valor_b
+                    if moeda_b == "USD":
+                        sub_bens_veiculos_usd += saldo_bem
+                        saldos_txt += f"🚗 {b}: {m_fmt_usd(saldo_bem)}\n"
+                    elif moeda_b == "EUR":
+                        sub_bens_veiculos_eur += saldo_bem
+                        saldos_txt += f"🚗 {b}: {m_fmt_eur(saldo_bem)}\n"
+                    else:
+                        sub_bens_veiculos_brl += saldo_bem
+                        saldos_txt += f"🚗 {b}: {m_fmt(saldo_bem)}\n"
+        
+                # --- CONTAS CORRENTES E INVESTIMENTOS ---
+                else:
+                    saldo_inicial = valor_b
+                    mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
+                    rec_b = mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
+                    des_b = mov_paga[mov_paga['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
+                    s_final = saldo_inicial + rec_b - des_b
+                    
+                    icone = "💰" if "INVEST" in tipo_c else "🏦"
+                    if moeda_b == "USD":
+                        sub_contas_invest_usd += s_final
+                        saldos_txt += f"{icone} {b}: {m_fmt_usd(s_final)}\n"
+                    elif moeda_b == "EUR":
+                        sub_contas_invest_eur += s_final
+                        saldos_txt += f"{icone} {b}: {m_fmt_eur(s_final)}\n"
+                    else:
+                        sub_contas_invest_brl += s_final
+                        saldos_txt += f"{icone} {b}: {m_fmt(s_final)}\n"
+        
+            # Patrimônios Totais Separados por Moeda
+            patrimonio_brl = sub_contas_invest_brl + sub_vr_brl + sub_bens_veiculos_brl - sub_cartoes_brl
+            patrimonio_usd = sub_contas_invest_usd + sub_bens_veiculos_usd
+            patrimonio_eur = sub_contas_invest_eur + sub_bens_veiculos_eur
+        
+            # Identifica quais bancos são estrangeiros para isolar dos cálculos em Reais
+            bancos_estrangeiros_zap = []
+            if not df_bancos_info.empty:
+                for _, row_b in df_bancos_info.iterrows():
+                    if len(row_b) >= 6:
+                        m_val = str(row_b.iloc[5]).strip().upper()
+                        if m_val in ["USD", "EUR"]:
+                            bancos_estrangeiros_zap.append(str(row_b.iloc[0]).strip())
+        
+            # 2. RESUMO DO PERÍODO ORIGINAL (Excluindo Bancos Estrangeiros)
+            df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
+            df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
+        
+            # Remove transações de bancos estrangeiros do resumo em Reais
+            if bancos_estrangeiros_zap:
+                df_per = df_per[~df_per['Banco'].isin(bancos_estrangeiros_zap)]
+        
+            if not df_per.empty:
+                df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
+                df_per['C_UP'] = df_per['Categoria'].astype(str).str.upper().str.strip()
+                
+                mask_rend = (df_per['T_UP'].str.contains('REND', na=False)) | (df_per['C_UP'].str.contains('REND', na=False))
+                rend_v = df_per[mask_rend & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+                
+                filtro_transf = df_per['C_UP'].isin(['TRANSFERÊNCIA', 'TRANSFERENCIA'])
+                
+                rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (~filtro_transf)]['V_Num'].sum()
+                des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (~filtro_transf)]['V_Num'].sum()
+                sobra = rec_v - des_v
+        
+                val_pendente = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'].str.upper() == 'PENDENTE') & (~filtro_transf)]['V_Num'].sum()
             else:
-                sub_bens_veiculos_brl += saldo_bem
-                saldos_txt += f"🚗 {b}: {m_fmt(saldo_bem)}\n"
-
-        # --- CONTAS CORRENTES E INVESTIMENTOS ---
-        else:
-            saldo_inicial = valor_b
-            mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
-            rec_b = mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
-            des_b = mov_paga[mov_paga['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
-            s_final = saldo_inicial + rec_b - des_b
-            
-            icone = "💰" if "INVEST" in tipo_c else "🏦"
-            if moeda_b == "USD":
-                sub_contas_invest_usd += s_final
-                saldos_txt += f"{icone} {b}: {m_fmt_usd(s_final)}\n"
-            elif moeda_b == "EUR":
-                sub_contas_invest_eur += s_final
-                saldos_txt += f"{icone} {b}: {m_fmt_eur(s_final)}\n"
+                rec_v = des_v = rend_v = sobra = val_pendente = 0.0
+        
+            # 3. MONTAGEM DO TEXTO DO RELATÓRIO
+            if not df_per.empty:
+                pagar_pendente = df_per[(df_per['Status'].str.upper() == 'PENDENTE') & (df_per['T_UP'] == 'DESPESA')]['V_Num'].sum()
+                receber_pendente = df_per[(df_per['Status'].str.upper() == 'PENDENTE') & (df_per['T_UP'] == 'RECEITA')]['V_Num'].sum()
             else:
-                sub_contas_invest_brl += s_final
-                saldos_txt += f"{icone} {b}: {m_fmt(s_final)}\n"
-
-    # Patrimônios Totais Separados por Moeda
-    patrimonio_brl = sub_contas_invest_brl + sub_vr_brl + sub_bens_veiculos_brl - sub_cartoes_brl
-    patrimonio_usd = sub_contas_invest_usd + sub_bens_veiculos_usd
-    patrimonio_eur = sub_contas_invest_eur + sub_bens_veiculos_eur
-
-    # Identifica quais bancos são estrangeiros para isolar dos cálculos em Reais
-    bancos_estrangeiros_zap = []
-    if not df_bancos_info.empty:
-        for _, row_b in df_bancos_info.iterrows():
-            if len(row_b) >= 6:
-                m_val = str(row_b.iloc[5]).strip().upper()
-                if m_val in ["USD", "EUR"]:
-                    bancos_estrangeiros_zap.append(str(row_b.iloc[0]).strip())
-
-    # 2. RESUMO DO PERÍODO ORIGINAL (Excluindo Bancos Estrangeiros)
-    df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
-    df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
-
-    # Remove transações de bancos estrangeiros do resumo em Reais
-    if bancos_estrangeiros_zap:
-        df_per = df_per[~df_per['Banco'].isin(bancos_estrangeiros_zap)]
-
-    if not df_per.empty:
-        df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
-        df_per['C_UP'] = df_per['Categoria'].astype(str).str.upper().str.strip()
+                pagar_pendente = receber_pendente = 0.0
         
-        mask_rend = (df_per['T_UP'].str.contains('REND', na=False)) | (df_per['C_UP'].str.contains('REND', na=False))
-        rend_v = df_per[mask_rend & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+            relat = f"RELATÓRIO WILSON & FABIANA\n"
+            relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
+            relat += f"========================================\n"
+            relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
+            relat += f"DES: {m_fmt(des_v)} | SOBRA: {m_fmt(sobra)}\n"
+            relat += f"🔴 A Pagar: {m_fmt(abs(pagar_pendente))}\n"
+            relat += f"🟢 A Receber: {m_fmt(receber_pendente)}\n"
+            relat += f"========================================\n\n"
+            relat += f"SALDOS E CONTAS:\n{saldos_txt}\n"
+            relat += f"----------------------------------------\n"
+            relat += f"📊 Subtotal Contas & Invest. (BRL): {m_fmt(sub_contas_invest_brl)}\n"
+            if sub_contas_invest_usd > 0: relat += f"📊 Subtotal Contas & Invest. (USD): {m_fmt_usd(sub_contas_invest_usd)}\n"
+            if sub_contas_invest_eur > 0: relat += f"📊 Subtotal Contas & Invest. (EUR): {m_fmt_eur(sub_contas_invest_eur)}\n"
+            relat += f"💳 Subtotal Cartões Usados: {m_fmt(sub_cartoes_brl)}\n"
+            relat += f"🚗 Subtotal T-Cross + Moto Lead (BRL): {m_fmt(sub_bens_veiculos_brl)}\n"
+            if sub_bens_veiculos_usd > 0: relat += f"🚗 Subtotal Bens (USD): {m_fmt_usd(sub_bens_veiculos_usd)}\n"
+            if sub_bens_veiculos_eur > 0: relat += f"🚗 Subtotal Bens (EUR): {m_fmt_eur(sub_bens_veiculos_eur)}\n"
+            relat += f"========================================\n"
+            relat += f"💎 PATRIMÔNIO TOTAL:\n"
+            relat += f"🇧🇷 Real: {m_fmt(patrimonio_brl)}\n"
+            if patrimonio_usd > 0: relat += f"🇺🇸 Dólar: {m_fmt_usd(patrimonio_usd)}\n"
+            if patrimonio_eur > 0: relat += f"🇪🇺 Euro: {m_fmt_eur(patrimonio_eur)}"
+            
+            st.text_area("Copiar Relatório para o WhatsApp", relat, height=380)
         
-        filtro_transf = df_per['C_UP'].isin(['TRANSFERÊNCIA', 'TRANSFERENCIA'])
+            # ==========================================
+            # BOTÃO PARA ABRIR O WHATSAPP COM O TEXTO
+            # ==========================================
+            import urllib.parse
+            import streamlit.components.v1 as components
         
-        rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (~filtro_transf)]['V_Num'].sum()
-        des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (~filtro_transf)]['V_Num'].sum()
-        sobra = rec_v - des_v
-
-        val_pendente = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'].str.upper() == 'PENDENTE') & (~filtro_transf)]['V_Num'].sum()
-    else:
-        rec_v = des_v = rend_v = sobra = val_pendente = 0.0
-
-    # 3. MONTAGEM DO TEXTO DO RELATÓRIO
-    if not df_per.empty:
-        pagar_pendente = df_per[(df_per['Status'].str.upper() == 'PENDENTE') & (df_per['T_UP'] == 'DESPESA')]['V_Num'].sum()
-        receber_pendente = df_per[(df_per['Status'].str.upper() == 'PENDENTE') & (df_per['T_UP'] == 'RECEITA')]['V_Num'].sum()
-    else:
-        pagar_pendente = receber_pendente = 0.0
-
-    relat = f"RELATÓRIO WILSON & FABIANA\n"
-    relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
-    relat += f"========================================\n"
-    relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
-    relat += f"DES: {m_fmt(des_v)} | SOBRA: {m_fmt(sobra)}\n"
-    relat += f"🔴 A Pagar: {m_fmt(abs(pagar_pendente))}\n"
-    relat += f"🟢 A Receber: {m_fmt(receber_pendente)}\n"
-    relat += f"========================================\n\n"
-    relat += f"SALDOS E CONTAS:\n{saldos_txt}\n"
-    relat += f"----------------------------------------\n"
-    relat += f"📊 Subtotal Contas & Invest. (BRL): {m_fmt(sub_contas_invest_brl)}\n"
-    if sub_contas_invest_usd > 0: relat += f"📊 Subtotal Contas & Invest. (USD): {m_fmt_usd(sub_contas_invest_usd)}\n"
-    if sub_contas_invest_eur > 0: relat += f"📊 Subtotal Contas & Invest. (EUR): {m_fmt_eur(sub_contas_invest_eur)}\n"
-    relat += f"💳 Subtotal Cartões Usados: {m_fmt(sub_cartoes_brl)}\n"
-    relat += f"🚗 Subtotal T-Cross + Moto Lead (BRL): {m_fmt(sub_bens_veiculos_brl)}\n"
-    if sub_bens_veiculos_usd > 0: relat += f"🚗 Subtotal Bens (USD): {m_fmt_usd(sub_bens_veiculos_usd)}\n"
-    if sub_bens_veiculos_eur > 0: relat += f"🚗 Subtotal Bens (EUR): {m_fmt_eur(sub_bens_veiculos_eur)}\n"
-    relat += f"========================================\n"
-    relat += f"💎 PATRIMÔNIO TOTAL:\n"
-    relat += f"🇧🇷 Real: {m_fmt(patrimonio_brl)}\n"
-    if patrimonio_usd > 0: relat += f"🇺🇸 Dólar: {m_fmt_usd(patrimonio_usd)}\n"
-    if patrimonio_eur > 0: relat += f"🇪🇺 Euro: {m_fmt_eur(patrimonio_eur)}"
-    
-    st.text_area("Copiar Relatório para o WhatsApp", relat, height=380)
-
-    # ==========================================
-    # BOTÃO PARA ABRIR O WHATSAPP COM O TEXTO
-    # ==========================================
-    import urllib.parse
-    import streamlit.components.v1 as components
-
-    relat_encoded = urllib.parse.quote(relat)
-    
-    html_botao_whatsapp = f"""
-    <div style="margin-top: 10px; margin-bottom: 20px;">
-        <a href="https://api.whatsapp.com/send?text={relat_encoded}" target="_blank" style="
-            display: block;
-            background-color: #25D366;
-            color: white;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: bold;
-            text-align: center;
-            text-decoration: none;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-            💬 Enviar Relatório no WhatsApp
-        </a>
-    </div>
-    """
-    components.html(html_botao_whatsapp, height=60)
+            relat_encoded = urllib.parse.quote(relat)
+            
+            html_botao_whatsapp = f"""
+            <div style="margin-top: 10px; margin-bottom: 20px;">
+                <a href="https://api.whatsapp.com/send?text={relat_encoded}" target="_blank" style="
+                    display: block;
+                    background-color: #25D366;
+                    color: white;
+                    padding: 12px 20px;
+                    border: none;
+                    border-radius: 5px;
+                    font-size: 16px;
+                    font-weight: bold;
+                    text-align: center;
+                    text-decoration: none;
+                    cursor: pointer;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                    💬 Enviar Relatório no WhatsApp
+                </a>
+            </div>
+            """
+            components.html(html_botao_whatsapp, height=60)
             
         # --- CARTÕES DE CRÉDITO ---
         if "CARTA" in tipo_c or "CART" in b_up:
