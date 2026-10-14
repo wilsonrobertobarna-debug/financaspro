@@ -2687,7 +2687,6 @@ elif "📄" in aba:
             usado = df_base.loc[mask, 'V_Num'].sum()
             dispo = limite_cartao - usado
             
-            # ATENÇÃO: Só soma no subtotal BRL se a moeda do cartão for Real
             if moeda_b == "BRL":
                 sub_cartoes_brl += usado
             
@@ -2744,7 +2743,6 @@ elif "📄" in aba:
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
 
-    # Remove transações de bancos estrangeiros do resumo em Reais
     if bancos_estrangeiros_zap:
         df_per = df_per[~df_per['Banco'].isin(bancos_estrangeiros_zap)]
 
@@ -2824,8 +2822,7 @@ elif "📄" in aba:
         </a>
     </div>
     """
-    components.html(html_botao_whatsapp, height=60)
-            
+    components.html(html_botao_whatsapp, height=60)            
         # --- CARTÕES DE CRÉDITO ---
         if "CARTA" in tipo_c or "CART" in b_up:
             limite_cartao = valor_b
