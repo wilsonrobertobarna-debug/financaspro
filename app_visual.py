@@ -2689,9 +2689,42 @@ elif "📄" in aba:
 
             usado = df_base.loc[mask, 'V_Num'].sum()
             dispo = limite_cartao - usado
+            
+            # Acumula subtotais de cartões
+            if moeda_b == "BRL":
+                sub_cartoes_brl += dispo
+
+        # --- CONTAS E INVESTIMENTOS ---
+        elif "CONTA" in tipo_c or "INVEST" in tipo_c or "DINHEIRO" in tipo_c or "BANCO" in tipo_c:
+            if moeda_b == "BRL":
+                sub_contas_invest_brl += valor_b
+            elif moeda_b == "USD":
+                sub_contas_invest_usd += valor_b
+            elif moeda_b == "EUR":
+                sub_contas_invest_eur += valor_b
+
+        # --- VALE REFEIÇÃO / ALIMENTAÇÃO ---
+        elif "VR" in tipo_c or "VA" in tipo_c or "REFEIÇÃO" in tipo_c or "ALIMENTAÇÃO" in tipo_c:
+            if moeda_b == "BRL":
+                sub_vr_brl += valor_b
+
+        # --- BENS / VEÍCULOS ---
+        elif "VEÍCULO" in tipo_c or "BEM" in tipo_c or "CARRO" in tipo_c or "MOTO" in tipo_c:
+            if moeda_b == "BRL":
+                sub_bens_veiculos_brl += valor_b
+            elif moeda_b == "USD":
+                sub_bens_veiculos_usd += valor_b
+            elif moeda_b == "EUR":
+                sub_bens_veiculos_eur += valor_b
+
+    # Exibição básica dos saldos processados no relatório
+    st.subheader("Resumo Consolidado para Envio")
+    st.write(f"💰 **Total Contas/Investimentos (BRL):** R$ {sub_contas_invest_brl:,.2f}")
+    st.write(f"💳 **Total Disponível Cartões (BRL):** R$ {sub_cartoes_brl:,.2f}")
+    st.write(f"🍽️ **Total VR/VA (BRL):** R$ {sub_vr_brl:,.2f}")
 
     # =========================================================================
-    # 💬 BOTÃO ATALHO DO WHATSAPP (RODAPÉ DO RELATÓRIO)
+    # 💬 BOTÃO ATALHO DO WHATSAPP (AGORA SIM NO RODAPÉ DA PÁGINA)
     # =========================================================================
     st.markdown("---")
 
