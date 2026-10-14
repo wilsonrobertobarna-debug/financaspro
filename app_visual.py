@@ -1917,9 +1917,6 @@ if "💰" in st.session_state.page:
             st.markdown("##### 🚦 Status de Utilização dos Cartões")
             cols_status = st.columns(len(lista_cartoes_controle))
             
-            st.markdown("##### 🚦 Status de Utilização dos Cartões")
-            cols_status = st.columns(len(lista_cartoes_controle))
-            
             # Descobre o mês e ano atual do sistema (Outubro de 2026)
             mes_atual_sistema = hoje_br.month
             ano_atual_sistema = hoje_br.year
