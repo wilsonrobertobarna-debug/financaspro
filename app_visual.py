@@ -2606,7 +2606,7 @@ elif "🚗" in aba:
                 st.info("Nenhum lançamento de veículo encontrado na base.")
         
 
-elif "📄" in aba:
+    elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
     
     # Trava a data de início no primeiro dia do mês atual
@@ -2766,7 +2766,6 @@ elif "📄" in aba:
         rec_v = des_v = rend_v = sobra = val_pendente = 0.0
 
     # 3. MONTAGEM DO TEXTO DO RELATÓRIO
-    # Calculando separadamente o que é a pagar e o que é a receber para o relatório
     if not df_per.empty:
         pagar_pendente = df_per[(df_per['Status'].str.upper() == 'PENDENTE') & (df_per['T_UP'] == 'DESPESA')]['V_Num'].sum()
         receber_pendente = df_per[(df_per['Status'].str.upper() == 'PENDENTE') & (df_per['T_UP'] == 'RECEITA')]['V_Num'].sum()
@@ -2804,7 +2803,6 @@ elif "📄" in aba:
     import urllib.parse
     import streamlit.components.v1 as components
 
-    # Codifica o texto do relatório para a URL do WhatsApp funcionar perfeitamente com quebras de linha e acentos
     relat_encoded = urllib.parse.quote(relat)
     
     html_botao_whatsapp = f"""
