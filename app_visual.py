@@ -2719,12 +2719,11 @@ elif "📄" in aba:
                 sub_bens_veiculos_eur += valor_b
 
     # =========================================================================
-    # EXIBIÇÃO COMPLETA DO RELATÓRIO NA TELA
+    # EXIBIÇÃO COMPLETA DO RELATÓRIO (APENAS A PARTE CERTA E COMPLETA)
     # =========================================================================
     st.markdown("### 📋 Texto Consolidado para Envio")
     st.text_area("Mensagem pronta para o WhatsApp:", value=saldos_txt, height=300)
 
-    # Exibição dos subtotais consolidados abaixo da caixa de texto
     st.markdown("---")
     st.markdown("#### 📊 Totais Calculados")
     col_t1, col_t2, col_t3 = st.columns(3)
@@ -2733,7 +2732,7 @@ elif "📄" in aba:
     col_t3.metric("VR / VA", f"R$ {sub_vr_brl:,.2f}")
 
     # =========================================================================
-    # 💬 BOTÃO ATALHO DO WHATSAPP (ESTRICTAMENTE NO RODAPÉ DA ABA)
+    # 💬 BOTÃO ATALHO DO WHATSAPP (EXCLUSIVAMENTE NO RODAPÉ DA ABA)
     # =========================================================================
     st.markdown("---")
     
