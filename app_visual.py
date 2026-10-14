@@ -2606,7 +2606,7 @@ elif "🚗" in aba:
                 st.info("Nenhum lançamento de veículo encontrado na base.")
         
 
-elif "📄" in aba:
+eelif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
     
     # Trava a data de início no primeiro dia do mês atual
@@ -2687,7 +2687,6 @@ elif "📄" in aba:
             usado = df_base.loc[mask, 'V_Num'].sum()
             dispo = limite_cartao - usado
             
-            # ATENÇÃO: Só soma no subtotal BRL se a moeda do cartão for Real
             if moeda_b == "BRL":
                 sub_cartoes_brl += usado
             
@@ -2744,7 +2743,6 @@ elif "📄" in aba:
     df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
     df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
 
-    # Remove transações de bancos estrangeiros do resumo em Reais
     if bancos_estrangeiros_zap:
         df_per = df_per[~df_per['Banco'].isin(bancos_estrangeiros_zap)]
 
@@ -2795,7 +2793,7 @@ elif "📄" in aba:
     if patrimonio_usd > 0: relat += f"🇺🇸 Dólar: {m_fmt_usd(patrimonio_usd)}\n"
     if patrimonio_eur > 0: relat += f"🇪🇺 Euro: {m_fmt_eur(patrimonio_eur)}"
     
-    st.text_area("Copiar Relatório para o WhatsApp", relat, height=380)
+    st.text_area("Copiar Relatório para o WhatsApp", relat, height=380, key="txt_area_relat_zap_principal")
 
     # ==========================================
     # 4. NOVA SEÇÃO: BUSCA E ENVIO DE LANÇAMENTO ESPECÍFICO
@@ -2803,15 +2801,15 @@ elif "📄" in aba:
     st.markdown("---")
     st.subheader("🔍 Buscar Lançamento Específico para Enviar no WhatsApp")
 
-    if "reset_busca" not in st.session_state:
-        st.session_state["reset_busca"] = 0
+    if "reset_busca_zap" not in st.session_state:
+        st.session_state["reset_busca_zap"] = 0
 
     col_b1, col_b2, col_b3 = st.columns(3)
     
-    r_id = st.session_state["reset_busca"]
+    r_id = st.session_state["reset_busca_zap"]
     
-    bs_ini = col_b1.date_input("Início (Busca)", primeiro_dia_mes, format="DD/MM/YYYY", key=f"bus_d1_{r_id}")
-    bs_fim = col_b2.date_input("Fim (Busca)", hoje_br, format="DD/MM/YYYY", key=f"bus_d2_{r_id}")
+    bs_ini = col_b1.date_input("Início (Busca)", primeiro_dia_mes, format="DD/MM/YYYY", key=f"zap_bus_d1_{r_id}")
+    bs_fim = col_b2.date_input("Fim (Busca)", hoje_br, format="DD/MM/YYYY", key=f"zap_bus_d2_{r_id}")
     
     beneficiarios_busca = ["Todos"]
     if 'Beneficiário' in df_base.columns:
@@ -2819,7 +2817,7 @@ elif "📄" in aba:
     elif 'Beneficiario' in df_base.columns:
         beneficiarios_busca += sorted([b for b in df_base['Beneficiario'].dropna().astype(str).str.strip().unique() if b and b != 'N/D'])
     
-    sel_beneficiario = col_b3.selectbox("Filtrar Beneficiário", beneficiarios_busca, key=f"bus_benef_{r_id}")
+    sel_beneficiario = col_b3.selectbox("Filtrar Beneficiário", beneficiarios_busca, key=f"zap_bus_benef_{r_id}")
 
     lista_cat_busca = ["Todas", "Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", "Aplicação", 
                        "Vale Alimentação", "Restaurante", "Celular", "Anuidade", "Seguro", "Internet", 
@@ -2827,11 +2825,11 @@ elif "📄" in aba:
                        "Plano Assistencial", "Transporte", "Previdência", "Outros", "Pet: Milo", 
                        "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção", "Transferência"]
     
-    sel_categoria = st.selectbox("Filtrar Categoria", lista_cat_busca, key=f"bus_cat_{r_id}")
+    sel_categoria = st.selectbox("Filtrar Categoria", lista_cat_busca, key=f"zap_bus_cat_{r_id}")
 
     st.write("")
-    if st.button("🔄 Limpar Busca e Filtros", key="btn_limpar_busca"):
-        st.session_state["reset_busca"] += 1
+    if st.button("🔄 Limpar Busca e Filtros", key="btn_limpar_busca_zap_exclusivo"):
+        st.session_state["reset_busca_zap"] += 1
         st.rerun()
 
     df_busca_lanc = df_base[(df_base['DT_ONLY'] >= bs_ini) & (df_base['DT_ONLY'] <= bs_fim)].copy()
@@ -2856,7 +2854,7 @@ elif "📄" in aba:
 
         st.write("")
         opcoes_select = ["Selecione um lançamento..."] + list(lista_lanc_encontrar.keys())
-        escolha_lanc = st.selectbox("Selecione o Lançamento para Enviar:", opcoes_select, key=f"select_lanc_especifico_{r_id}")
+        escolha_lanc = st.selectbox("Selecione o Lançamento para Enviar:", opcoes_select, key=f"zap_select_lanc_especifico_{r_id}")
 
         if escolha_lanc and escolha_lanc != "Selecione um lançamento...":
             item_esp = lista_lanc_encontrar[escolha_lanc]
@@ -2874,7 +2872,7 @@ elif "📄" in aba:
             card_lanc += f"========================================\n"
 
             st.write("") 
-            st.text_area("Card do Lançamento para Copiar", card_lanc, height=200, key=f"txt_card_esp_{r_id}")
+            st.text_area("Card do Lançamento para Copiar", card_lanc, height=200, key=f"zap_txt_card_esp_{r_id}")
 
             link_zap_lanc = f"https://wa.me/?text={urllib.parse.quote(card_lanc)}"
             st.markdown(f'[📲 Enviar este Lançamento para o WhatsApp]({link_zap_lanc})', unsafe_allow_html=True)
@@ -2913,7 +2911,9 @@ elif "📄" in aba:
             </a>
             """,
             unsafe_allow_html=True
-        )        
+        )    
+        
+        
         # --- CARTÕES DE CRÉDITO ---
         if "CARTA" in tipo_c or "CART" in b_up:
             limite_cartao = valor_b
