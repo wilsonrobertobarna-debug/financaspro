@@ -2602,9 +2602,12 @@ elif "🚗" in aba:
                     st.dataframe(df_exibicao.iloc[::-1].style.format(formatos_tabela, na_rep="-"), use_container_width=True, hide_index=True)
                 else:
                     st.info("Nenhum lançamento encontrado com esses filtros.")
-            else:
-                st.info("Nenhum lançamento de veículo encontrado na base.")
+            #else:
+                #st.info("Nenhum lançamento de veículo encontrado na base.")
         
+
+else:
+                st.info("Nenhum lançamento de veículo encontrado na base.")
 
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
@@ -2633,7 +2636,6 @@ elif "📄" in aba:
     def m_fmt_usd(n): return f"U$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
     def m_fmt_eur(n): return f"€ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-    # 1. LOOP PELOS BANCOS E ATIVOS
     # 1. LOOP PELOS BANCOS E ATIVOS
     for b in sorted(bancos_disponiveis):
         valor_b = 0.0      
@@ -2678,38 +2680,48 @@ elif "📄" in aba:
 
         b_up = b.upper()
 
-# =========================================================================
-# 💬 BOTÃO ATALHO DO WHATSAPP (RODAPÉ)
-# =========================================================================
-st.markdown("---")
+        # --- CARTÕES DE CRÉDITO ---
+        if "CARTA" in tipo_c or "CART" in b_up:
+            limite_cartao = valor_b
+            mask = (df_base['Banco'] == b) & \
+                   (df_base['Status'].str.upper() == 'PENDENTE') & \
+                   (pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True).dt.date <= d_fim)
 
-col_ws1, col_ws2, col_ws3 = st.columns([1, 2, 1])
+            usado = df_base.loc[mask, 'V_Num'].sum()
+            dispo = limite_cartao - usado
 
-with col_ws2:
-    st.markdown(
-        """
-        <a href="https://web.whatsapp.com/" target="_blank" style="text-decoration: none;">
-            <div style="
-                background-color: #25D366;
-                color: white;
-                padding: 12px 20px;
-                border-radius: 8px;
-                text-align: center;
-                font-weight: bold;
-                font-size: 16px;
-                box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
-            ">
-                💬 Abrir WhatsApp
-            </div>
-        </a>
-        """,
-        unsafe_allow_html=True
-    )
+    # =========================================================================
+    # 💬 BOTÃO ATALHO DO WHATSAPP (RODAPÉ DO RELATÓRIO)
+    # =========================================================================
+    st.markdown("---")
+
+    col_ws1, col_ws2, col_ws3 = st.columns([1, 2, 1])
+
+    with col_ws2:
+        st.markdown(
+            """
+            <a href="https://web.whatsapp.com/" target="_blank" style="text-decoration: none;">
+                <div style="
+                    background-color: #25D366;
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    text-align: center;
+                    font-weight: bold;
+                    font-size: 16px;
+                    box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                ">
+                    💬 Abrir WhatsApp
+                </div>
+            </a>
+            """,
+            unsafe_allow_html=True
+        )
         
         
         # --- CARTÕES DE CRÉDITO ---
