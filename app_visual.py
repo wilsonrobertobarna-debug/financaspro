@@ -2767,6 +2767,7 @@ elif "📄" in aba:
         rec_v = des_v = rend_v = sobra = val_pendente = 0.0
 
     # 3. MONTAGEM DO TEXTO DO RELATÓRIO
+     # 3. MONTAGEM DO TEXTO DO RELATÓRIO
     # Calculando separadamente o que é a pagar e o que é a receber para o relatório
     if not df_per.empty:
         pagar_pendente = df_per[(df_per['Status'].str.upper() == 'PENDENTE') & (df_per['T_UP'] == 'DESPESA')]['V_Num'].sum()
@@ -2798,6 +2799,36 @@ elif "📄" in aba:
     if patrimonio_eur > 0: relat += f"🇪🇺 Euro: {m_fmt_eur(patrimonio_eur)}"
     
     st.text_area("Copiar Relatório para o WhatsApp", relat, height=380)
+
+    # ==========================================
+    # BOTÃO PARA ABRIR O WHATSAPP COM O TEXTO
+    # ==========================================
+    import urllib.parse
+    import streamlit.components.v1 as components
+
+    # Codifica o texto do relatório para a URL do WhatsApp funcionar perfeitamente com quebras de linha e acentos
+    relat_encoded = urllib.parse.quote(relat)
+    
+    html_botao_whatsapp = f"""
+    <div style="margin-top: 10px; margin-bottom: 20px;">
+        <a href="https://api.whatsapp.com/send?text={relat_encoded}" target="_blank" style="
+            display: block;
+            background-color: #25D366;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+            💬 Enviar Relatório no WhatsApp
+        </a>
+    </div>
+    """
+    components.html(html_botao_whatsapp, height=60)
 
 
     
