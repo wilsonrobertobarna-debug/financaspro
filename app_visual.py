@@ -344,7 +344,69 @@ def carregar_dados_gs():
     # ---------------------------------------------------------
         
     return df
+
     
+
+    df = carregar_dados_gs()
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("🔔 Central de Alertas")
+
+if not df.empty:
+  hoje = datetime.now().date()
+  df_temp = df.copy()
+  if "DT" in df_temp.columns and "Status" in df_temp.columns:
+    df_temp["DataVencimento"] = pd.to_datetime(df_temp["DT"]).dt.date
+    pendentes = df_temp[df_temp["Status"] != "Pago"]
+
+    vencidas = pendentes[pendentes["DataVencimento"] < hoje]
+    vencem_hoje = pendentes[pendentes["DataVencimento"] == hoje]
+    limite_3dias = hoje + timedelta(days=3)
+    proximas_3dias = pendentes[
+        (pendentes["DataVencimento"] > hoje)
+        & (pendentes["DataVencimento"] <= limite_3dias)
+    ]
+
+    if len(vencidas) > 0:
+      st.sidebar.error(f"🚨 **{len(vencidas)}** conta(s) VENCIDA(S)")
+      with st.sidebar.expander("Ver detalhes (Vencidas)"):
+        for _, row in vencidas.iterrows():
+          desc = row.get("Descricao", row.get("Histórico", "Lançamento"))
+          val = row.get("V_Num", 0.0)
+          st.caption(
+              f"• **{desc}**: R$ {val:.2f}"
+              f" ({row['DataVencimento'].strftime('%d/%m')})"
+          )
+
+    if len(vencem_hoje) > 0:
+      st.sidebar.warning(f"⚠️ **{len(vencem_hoje)}** vence(m) HOJE")
+      with st.sidebar.expander("Ver detalhes (Hoje)"):
+        for _, row in vencem_hoje.iterrows():
+          desc = row.get("Descricao", row.get("Histórico", "Lançamento"))
+          val = row.get("V_Num", 0.0)
+          st.caption(f"• **{desc}**: R$ {val:.2f}")
+
+    if len(proximas_3dias) > 0:
+      st.sidebar.info(f"📅 **{len(proximas_3dias)}** vencem em até 3 dias")
+      with st.sidebar.expander("Ver radar (Próximos 3 dias)"):
+        for _, row in proximas_3dias.iterrows():
+          desc = row.get("Descricao", row.get("Histórico", "Lançamento"))
+          val = row.get("V_Num", 0.0)
+          st.caption(
+              f"• **{desc}**: R$ {val:.2f}"
+              f" ({row['DataVencimento'].strftime('%d/%m')})"
+          )
+
+    if (
+        len(vencidas) == 0
+        and len(vencem_hoje) == 0
+        and len(proximas_3dias) == 0
+    ):
+      st.sidebar.success("✅ Nenhuma conta pendente nos próximos 3 dias!")
+
+st.sidebar.markdown("---")
+
+
  
 def carregar_bancos_manual_gs():
     if ws_bancos:
