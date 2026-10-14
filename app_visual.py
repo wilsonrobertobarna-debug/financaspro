@@ -2710,7 +2710,7 @@ elif "📄" in aba:
                 """,
                 unsafe_allow_html=True    )
 
-          b_up = b.upper()
+                b_up = b.upper()
         
         
         # --- CARTÕES DE CRÉDITO ---
