@@ -2634,7 +2634,6 @@ elif "📄" in aba:
     def m_fmt_eur(n): return f"€ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
     # 1. LOOP PELOS BANCOS E ATIVOS
-    # 1. LOOP PELOS BANCOS E ATIVOS
     for b in sorted(bancos_disponiveis):
         valor_b = 0.0      
         tipo_c = ""
@@ -2678,8 +2677,53 @@ elif "📄" in aba:
 
         b_up = b.upper()
 
-        # =========================================================================
-    # 💬 BOTÃO ATALHO DO WHATSAPP (NO RODAPÉ DA ABA)
+        # --- CARTÕES DE CRÉDITO ---
+        if "CARTA" in tipo_c or "CART" in b_up:
+            limite_cartao = valor_b
+            mask = (df_base['Banco'] == b) & \
+                   (df_base['Status'].str.upper() == 'PENDENTE') & \
+                   (pd.to_datetime(df_base['Vencimento'], errors='coerce', dayfirst=True).dt.date <= d_fim)
+
+            usado = df_base.loc[mask, 'V_Num'].sum()
+            dispo = limite_cartao - usado
+            
+            if moeda_b == "BRL":
+                sub_cartoes_brl += dispo
+                saldos_txt += f"• Cartão {b}: Limite R$ {limite_cartao:,.2f} | Usado: R$ {usado:,.2f} | Disponível: R$ {dispo:,.2f}\n"
+
+        # --- CONTAS E INVESTIMENTOS ---
+        elif "CONTA" in tipo_c or "INVEST" in tipo_c or "DINHEIRO" in tipo_c or "BANCO" in tipo_c:
+            if moeda_b == "BRL":
+                sub_contas_invest_brl += valor_b
+                saldos_txt += f"• {b}: R$ {valor_b:,.2f}\n"
+            elif moeda_b == "USD":
+                sub_contas_invest_usd += valor_b
+                saldos_txt += f"• {b}: {m_fmt_usd(valor_b)}\n"
+            elif moeda_b == "EUR":
+                sub_contas_invest_eur += valor_b
+                saldos_txt += f"• {b}: {m_fmt_eur(valor_b)}\n"
+
+        # --- VALE REFEIÇÃO / ALIMENTAÇÃO ---
+        elif "VR" in tipo_c or "VA" in tipo_c or "REFEIÇÃO" in tipo_c or "ALIMENTAÇÃO" in tipo_c:
+            if moeda_b == "BRL":
+                sub_vr_brl += valor_b
+                saldos_txt += f"• {b}: R$ {valor_b:,.2f}\n"
+
+        # --- BENS / VEÍCULOS ---
+        elif "VEÍCULO" in tipo_c or "BEM" in tipo_c or "CARRO" in tipo_c or "MOTO" in tipo_c:
+            if moeda_b == "BRL":
+                sub_bens_veiculos_brl += valor_b
+            elif moeda_b == "USD":
+                sub_bens_veiculos_usd += valor_b
+            elif moeda_b == "EUR":
+                sub_bens_veiculos_eur += valor_b
+
+    # Exibição do relatório completo na tela (com todos os bancos e textos gerados)
+    st.subheader("Resumo Consolidado para Envio")
+    st.text_area("Texto do Relatório:", value=saldos_txt, height=300)
+
+    # =========================================================================
+    # 💬 BOTÃO ATALHO DO WHATSAPP (AGORA SIM, EXCLUSIVAMENTE NO RODAPÉ DA ABA)
     # =========================================================================
     st.markdown("---")
 
