@@ -2891,8 +2891,7 @@ elif "📄" in aba:
             </a>
             """,
             unsafe_allow_html=True
-        )        
-        # --- CARTÕES DE CRÉDITO ---
+        )        # --- CARTÕES DE CRÉDITO ---
         if "CARTA" in tipo_c or "CART" in b_up:
             limite_cartao = valor_b
             mask = (df_base['Banco'] == b) & \
