@@ -1913,8 +1913,13 @@ if "💰" in st.session_state.page:
                 }
             )
                        
+            
             st.markdown("##### 🚦 Status de Utilização dos Cartões")
             cols_status = st.columns(len(lista_cartoes_controle))
+            
+            # Descobre o mês e ano atual do sistema (Outubro de 2026)
+            mes_atual_sistema = hoje_br.month
+            ano_atual_sistema = hoje_br.year
             
             for idx, row in df_cartoes_graph.iterrows():
                 cartao_nome = row['Nome do Banco']
@@ -1934,11 +1939,31 @@ if "💰" in st.session_state.page:
                                 pass
                             break
         
-                # 2. DETERMINA O STATUS DE CICLO COM BASE NO DIA DE HOJE
-                dia_atual = hoje_br.day
-                # Se hoje for menor que o fechamento, está Aberta. Se hoje for maior ou igual ao fechamento, está Fechada.
-                ciclo_fatura = "Aberta" if dia_atual < dia_fechamento_cartao else "Fechada"
+                # 2. LÓGICA INTELIGENTE DE CICLO (Considerando o mês que está sendo exibido na tela)
+                # Nota: Certifique-se de que 'mes_sel_num' e 'ano_sel' são as variáveis do seu seletor de mês/ano na tela.
+                # Se na sua tela o mês selecionado for futuro em relação a hoje, a fatura é Aberta.
+                # Se for o mês atual, compara com o dia de hoje. Se for passado, considera Fechada/Passada.
                 
+                # Tentamos pegar o mês selecionado no seu app (ajuste o nome da variável se necessário, ex: mes_selecionado)
+                try:
+                    m_sel = int(mes_sel_num) # ou mes_selecionado
+                    a_sel = int(ano_sel)     # ou ano_selecionado
+                except:
+                    m_sel = mes_atual_sistema
+                    a_sel = ano_atual_sistema
+        
+                # Compara a competência selecionada com a atual
+                if (a_sel > ano_atual_sistema) or (a_sel == ano_atual_sistema and m_sel > mes_atual_sistema):
+                    # Mês futuro: faturas estão abertas para receber lançamentos
+                    ciclo_fatura = "Aberta"
+                elif (a_sel == ano_atual_sistema and m_sel == mes_atual_sistema):
+                    # Mês atual (Outubro/2026): Compara com o dia de hoje (14)
+                    dia_atual = hoje_br.day
+                    ciclo_fatura = "Aberta" if dia_atual < dia_fechamento_cartao else "Fechada"
+                else:
+                    # Mês passado: Ciclo já encerrado
+                    ciclo_fatura = "Fechada"
+        
                 # Status de pagamento vindo da base de dados (Pago / Pendente)
                 status_pagamento = status_cartoes_mes.get(cartao_nome, "Pendente")
                 
