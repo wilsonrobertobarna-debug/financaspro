@@ -2677,6 +2677,39 @@ elif "📄" in aba:
                     break
 
         b_up = b.upper()
+
+        # =========================================================================
+    # 💬 BOTÃO ATALHO DO WHATSAPP (NO RODAPÉ DA ABA)
+    # =========================================================================
+    st.markdown("---")
+
+    col_ws1, col_ws2, col_ws3 = st.columns([1, 2, 1])
+
+    with col_ws2:
+        st.markdown(
+            """
+            <a href="https://web.whatsapp.com/" target="_blank" style="text-decoration: none;">
+                <div style="
+                    background-color: #25D366;
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    text-align: center;
+                    font-weight: bold;
+                    font-size: 16px;
+                    box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                ">
+                    💬 Abrir WhatsApp
+                </div>
+            </a>
+            """,
+            unsafe_allow_html=True
+        )
         
         # --- CARTÕES DE CRÉDITO ---
         if "CARTA" in tipo_c or "CART" in b_up:
