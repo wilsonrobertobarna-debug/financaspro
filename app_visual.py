@@ -2796,7 +2796,7 @@ elif "📄" in aba:
     st.text_area("Copiar Relatório para o WhatsApp", relat, height=380, key="txt_area_relat_zap_principal")
 
     # ==========================================
-    # 4. NOVA SEÇÃO: BUSCA DE LANÇAMENTO ESPECÍFICO
+    # 4. SEÇÃO DE BUSCA DE LANÇAMENTO (Apenas os filtros)
     # ==========================================
     st.markdown("---")
     st.subheader("🔍 Buscar Lançamento Específico para Enviar no WhatsApp")
@@ -2854,25 +2854,8 @@ elif "📄" in aba:
 
         st.write("")
         opcoes_select = ["Selecione um lançamento..."] + list(lista_lanc_encontrar.keys())
-        escolha_lanc = st.selectbox("Selecione o Lançamento para Enviar:", opcoes_select, key=f"zap_select_lanc_especifico_{r_id}")
-
-        if escolha_lanc and escolha_lanc != "Selecione um lançamento...":
-            item_esp = lista_lanc_encontrar[escolha_lanc]
-            
-            benef_esp = item_esp.get('Beneficiário', item_esp.get('Beneficiario', 'N/D'))
-            card_lanc = f"📌 *LANÇAMENTO - WILSON & FABIANA*\n"
-            card_lanc += f"========================================\n"
-            card_lanc += f"📝 *Descrição:* {item_esp['Descrição']}\n"
-            card_lanc += f"💰 *Valor:* R$ {item_esp['Valor']}\n"
-            card_lanc += f"📅 *Vencimento:* {item_esp['Vencimento']}\n"
-            card_lanc += f"🏦 *Banco:* {item_esp['Banco']}\n"
-            card_lanc += f"🏷️ *Categoria:* {item_esp.get('Categoria', 'N/D')}\n"
-            card_lanc += f"👤 *Beneficiário:* {benef_esp}\n"
-            card_lanc += f"📋 *Tipo:* {item_esp.get('Tipo', 'N/D')} | *Status:* {item_esp['Status']}\n"
-            card_lanc += f"========================================\n"
-
-            st.write("") 
-            st.text_area("Card do Lançamento para Copiar", card_lanc, height=200, key=f"zap_txt_card_esp_{r_id}")
+        # Apenas seleciona o item, sem exibir caixas de texto duplicadas abaixo
+        st.selectbox("Selecione o Lançamento:", opcoes_select, key=f"zap_select_lanc_especifico_{r_id}")
     else:
         st.write("")
         st.info("Nenhum lançamento encontrado com os filtros selecionados no período.")
@@ -2909,7 +2892,6 @@ elif "📄" in aba:
             """,
             unsafe_allow_html=True
         )        
-        
         # --- CARTÕES DE CRÉDITO ---
         if "CARTA" in tipo_c or "CART" in b_up:
             limite_cartao = valor_b
