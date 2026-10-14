@@ -1926,14 +1926,18 @@ if "💰" in st.session_state.page:
                 gasto_real = row['V_Num']
                 meta_teto = row['Meta']
                 
-                # 1. BUSCA O DIA DE FECHAMENTO CADASTRADO NA PLANILHA DE BANCOS
-                dia_fechamento_cartao = 1  # Padrão caso não encontre
+
+                # 1. BUSCA O DIA DE FECHAMENTO CADASTRADO NA PLANILHA DE BANCOS DE FORMA ROBUSTA
+                dia_fechamento_cartao = 1  # Padrão seguro
                 if not df_bancos_info.empty:
                     for _, r_banco in df_bancos_info.iterrows():
-                        if str(r_banco.iloc[0]).strip().upper() == str(cartao_nome).strip().upper():
+                        banco_planilha = str(r_banco.iloc[0]).strip().upper()
+                        banco_atual = str(cartao_nome).strip().upper()
+                        # Verifica se o nome do banco bate (ex: INTER na planilha bate com Mastercard - Inter)
+                        if banco_atual in banco_planilha or banco_planilha in banco_atual:
                             try:
                                 if len(r_banco) >= 4:
-                                    f_raw = str(r_banco.iloc[3]).replace('R$', '').strip()
+                                    f_raw = str(r_banco.iloc[3]).replace('R$', '').replace(' ', '').strip()
                                     dia_fechamento_cartao = int(float(f_raw)) if f_raw and f_raw != 'nan' else 1
                             except:
                                 pass
@@ -1949,21 +1953,17 @@ if "💰" in st.session_state.page:
                     a_sel = ano_atual_sistema
         
                 # Compara a competência selecionada com a atual
-                # Compara a competência selecionada com a atual
                 if (a_sel > ano_atual_sistema) or (a_sel == ano_atual_sistema and m_sel > mes_atual_sistema):
-                    # Mês futuro (ex: Nov/Dez): faturas estão abertas
                     ciclo_fatura = "Aberta"
                 elif (a_sel == ano_atual_sistema and m_sel == mes_atual_sistema):
-                    # Mês atual (Outubro/2026): 
-                    # Se o dia de hoje FOR MENOR QUE o fechamento, está Aberta. 
-                    # Se hoje FOR MAIOR OU IGUAL ao fechamento, está Fechada.
                     dia_atual = hoje_br.day
+                    # Se o dia de hoje for estritamente menor que o fechamento, está Aberta.
+                    # Se hoje for igual ou maior que o fechamento, está Fechada.
                     if dia_atual < dia_fechamento_cartao:
                         ciclo_fatura = "Aberta"
                     else:
                         ciclo_fatura = "Fechada"
                 else:
-                    # Mês passado (ex: Setembro): Ciclo já encerrado/fechado
                     ciclo_fatura = "Fechada"
         
                 # Status de pagamento vindo da base de dados (Pago / Pendente)
