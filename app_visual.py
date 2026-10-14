@@ -2796,7 +2796,7 @@ elif "📄" in aba:
     st.text_area("Copiar Relatório para o WhatsApp", relat, height=380, key="txt_area_relat_zap_principal")
 
     # ==========================================
-    # 4. NOVA SEÇÃO: BUSCA E ENVIO DE LANÇAMENTO ESPECÍFICO
+    # 4. NOVA SEÇÃO: BUSCA DE LANÇAMENTO ESPECÍFICO
     # ==========================================
     st.markdown("---")
     st.subheader("🔍 Buscar Lançamento Específico para Enviar no WhatsApp")
@@ -2873,15 +2873,12 @@ elif "📄" in aba:
 
             st.write("") 
             st.text_area("Card do Lançamento para Copiar", card_lanc, height=200, key=f"zap_txt_card_esp_{r_id}")
-
-            link_zap_lanc = f"https://wa.me/?text={urllib.parse.quote(card_lanc)}"
-            st.markdown(f'[📲 Enviar este Lançamento para o WhatsApp]({link_zap_lanc})', unsafe_allow_html=True)
     else:
         st.write("")
         st.info("Nenhum lançamento encontrado com os filtros selecionados no período.")
 
     # =========================================================================
-    # 💬 BOTÃO ATALHO DO WHATSAPP (EXCLUSIVAMENTE NO RODAPÉ DA ABA)
+    # 💬 BOTÃO ATALHO DO WHATSAPP (ÚNICO E EXCLUSIVO NO RODAPÉ DA ABA)
     # =========================================================================
     st.markdown("---")
     
@@ -2911,8 +2908,7 @@ elif "📄" in aba:
             </a>
             """,
             unsafe_allow_html=True
-        )    
-        
+        )        
         
         # --- CARTÕES DE CRÉDITO ---
         if "CARTA" in tipo_c or "CART" in b_up:
