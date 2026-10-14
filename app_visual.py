@@ -2676,7 +2676,7 @@ elif "📄" in aba:
                     except: pass
                     break
 
-        b_up = b.upper()
+      
 
         # =========================================================================
         # 💬 BOTÃO ATALHO DO WHATSAPP (RODAPÉ)
@@ -2709,6 +2709,8 @@ elif "📄" in aba:
                 </a>
                 """,
                 unsafe_allow_html=True    )
+
+          b_up = b.upper()
         
         
         # --- CARTÕES DE CRÉDITO ---
