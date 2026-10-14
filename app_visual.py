@@ -2602,12 +2602,12 @@ elif "🚗" in aba:
                     st.dataframe(df_exibicao.iloc[::-1].style.format(formatos_tabela, na_rep="-"), use_container_width=True, hide_index=True)
                 else:
                     st.info("Nenhum lançamento encontrado com esses filtros.")
-            #else:
-                #st.info("Nenhum lançamento de veículo encontrado na base.")
+            else:
+                st.info("Nenhum lançamento de veículo encontrado na base.")
         
 
-else:
-                st.info("Nenhum lançamento de veículo encontrado na base.")
+#else:
+                #st.info("Nenhum lançamento de veículo encontrado na base.")
 
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
