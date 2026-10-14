@@ -2718,9 +2718,19 @@ elif "📄" in aba:
             elif moeda_b == "EUR":
                 sub_bens_veiculos_eur += valor_b
 
-    # Exibição do relatório completo na tela (com todos os bancos e textos gerados)
-    st.subheader("Resumo Consolidado para Envio")
-    st.text_area("Texto do Relatório:", value=saldos_txt, height=300)
+    # =========================================================================
+    # EXIBIÇÃO COMPLETA DO RELATÓRIO NA TELA
+    # =========================================================================
+    st.markdown("### 📋 Texto Consolidado para Envio")
+    st.text_area("Mensagem pronta para o WhatsApp:", value=saldos_txt, height=300)
+
+    # Exibição dos subtotais consolidados abaixo da caixa de texto
+    st.markdown("---")
+    st.markdown("#### 📊 Totais Calculados")
+    col_t1, col_t2, col_t3 = st.columns(3)
+    col_t1.metric("Contas/Invest. (BRL)", f"R$ {sub_contas_invest_brl:,.2f}")
+    col_t2.metric("Cartões Disponível", f"R$ {sub_cartoes_brl:,.2f}")
+    col_t3.metric("VR / VA", f"R$ {sub_vr_brl:,.2f}")
 
     # =========================================================================
     # 💬 BOTÃO ATALHO DO WHATSAPP (ESTRICTAMENTE NO RODAPÉ DA ABA)
