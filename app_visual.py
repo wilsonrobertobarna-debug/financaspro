@@ -2676,7 +2676,7 @@ elif "📄" in aba:
                     break
 
         b_up = b.upper()
-
+        
         # --- CARTÕES DE CRÉDITO ---
         if "CARTA" in tipo_c or "CART" in b_up:
             limite_cartao = valor_b
@@ -2687,52 +2687,203 @@ elif "📄" in aba:
             usado = df_base.loc[mask, 'V_Num'].sum()
             dispo = limite_cartao - usado
             
+            # ATENÇÃO: Só soma no subtotal BRL se a moeda do cartão for Real
             if moeda_b == "BRL":
-                sub_cartoes_brl += dispo
-                saldos_txt += f"• Cartão {b}: Limite R$ {limite_cartao:,.2f} | Usado: R$ {usado:,.2f} | Disponível: R$ {dispo:,.2f}\n"
-
-        # --- CONTAS E INVESTIMENTOS ---
-        elif "CONTA" in tipo_c or "INVEST" in tipo_c or "DINHEIRO" in tipo_c or "BANCO" in tipo_c:
-            if moeda_b == "BRL":
-                sub_contas_invest_brl += valor_b
-                saldos_txt += f"• {b}: R$ {valor_b:,.2f}\n"
-            elif moeda_b == "USD":
-                sub_contas_invest_usd += valor_b
-                saldos_txt += f"• {b}: {m_fmt_usd(valor_b)}\n"
+                sub_cartoes_brl += usado
+            
+            usado_fmt = f"{m_fmt(usado)} 🔴" if usado > 0 else m_fmt(0)
+            saldos_txt += f"💳 {b}: Limite: {m_fmt(limite_cartao)} | Usado: {usado_fmt} | Disp: {m_fmt(dispo)} (Venc: {dia_venc_e})\n"
+        
+        # --- VEÍCULOS E BENS ---
+        elif "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
+            saldo_bem = valor_b
+            if moeda_b == "USD":
+                sub_bens_veiculos_usd += saldo_bem
+                saldos_txt += f"🚗 {b}: {m_fmt_usd(saldo_bem)}\n"
             elif moeda_b == "EUR":
-                sub_contas_invest_eur += valor_b
-                saldos_txt += f"• {b}: {m_fmt_eur(valor_b)}\n"
+                sub_bens_veiculos_eur += saldo_bem
+                saldos_txt += f"🚗 {b}: {m_fmt_eur(saldo_bem)}\n"
+            else:
+                sub_bens_veiculos_brl += saldo_bem
+                saldos_txt += f"🚗 {b}: {m_fmt(saldo_bem)}\n"
 
-        # --- VALE REFEIÇÃO / ALIMENTAÇÃO ---
-        elif "VR" in tipo_c or "VA" in tipo_c or "REFEIÇÃO" in tipo_c or "ALIMENTAÇÃO" in tipo_c:
-            if moeda_b == "BRL":
-                sub_vr_brl += valor_b
-                saldos_txt += f"• {b}: R$ {valor_b:,.2f}\n"
-
-        # --- BENS / VEÍCULOS ---
-        elif "VEÍCULO" in tipo_c or "BEM" in tipo_c or "CARRO" in tipo_c or "MOTO" in tipo_c:
-            if moeda_b == "BRL":
-                sub_bens_veiculos_brl += valor_b
-            elif moeda_b == "USD":
-                sub_bens_veiculos_usd += valor_b
+        # --- CONTAS CORRENTES E INVESTIMENTOS ---
+        else:
+            saldo_inicial = valor_b
+            mov_paga = df_base[(df_base['Banco'] == b) & (df_base['Status'].str.upper() == 'PAGO')]
+            rec_b = mov_paga[mov_paga['Tipo'].str.upper().str.contains('RECEITA|REND', na=False)]['V_Num'].sum()
+            des_b = mov_paga[mov_paga['Tipo'].str.upper() == 'DESPESA']['V_Num'].sum()
+            s_final = saldo_inicial + rec_b - des_b
+            
+            icone = "💰" if "INVEST" in tipo_c else "🏦"
+            if moeda_b == "USD":
+                sub_contas_invest_usd += s_final
+                saldos_txt += f"{icone} {b}: {m_fmt_usd(s_final)}\n"
             elif moeda_b == "EUR":
-                sub_bens_veiculos_eur += valor_b
+                sub_contas_invest_eur += s_final
+                saldos_txt += f"{icone} {b}: {m_fmt_eur(s_final)}\n"
+            else:
+                sub_contas_invest_brl += s_final
+                saldos_txt += f"{icone} {b}: {m_fmt(s_final)}\n"
 
-    # =========================================================================
-    # EXIBIÇÃO COMPLETA: CONTAS EM CIMA E TOTAIS EMBAIXO
-    # =========================================================================
-    st.markdown("### 📋 Contas e Saldos do Período")
-    st.text_area("Texto Consolidado para o WhatsApp:", value=saldos_txt, height=250)
+    # Patrimônios Totais Separados por Moeda
+    patrimonio_brl = sub_contas_invest_brl + sub_vr_brl + sub_bens_veiculos_brl - sub_cartoes_brl
+    patrimonio_usd = sub_contas_invest_usd + sub_bens_veiculos_usd
+    patrimonio_eur = sub_contas_invest_eur + sub_bens_veiculos_eur
 
+    # Identifica quais bancos são estrangeiros para isolar dos cálculos em Reais
+    bancos_estrangeiros_zap = []
+    if not df_bancos_info.empty:
+        for _, row_b in df_bancos_info.iterrows():
+            if len(row_b) >= 6:
+                m_val = str(row_b.iloc[5]).strip().upper()
+                if m_val in ["USD", "EUR"]:
+                    bancos_estrangeiros_zap.append(str(row_b.iloc[0]).strip())
+
+    # 2. RESUMO DO PERÍODO ORIGINAL (Excluindo Bancos Estrangeiros)
+    df_base['DT_ONLY'] = pd.to_datetime(df_base['DT']).dt.date
+    df_per = df_base[(df_base['DT_ONLY'] >= d_ini) & (df_base['DT_ONLY'] <= d_fim)].copy()
+
+    # Remove transações de bancos estrangeiros do resumo em Reais
+    if bancos_estrangeiros_zap:
+        df_per = df_per[~df_per['Banco'].isin(bancos_estrangeiros_zap)]
+
+    if not df_per.empty:
+        df_per['T_UP'] = df_per['Tipo'].astype(str).str.upper().str.strip()
+        df_per['C_UP'] = df_per['Categoria'].astype(str).str.upper().str.strip()
+        
+        mask_rend = (df_per['T_UP'].str.contains('REND', na=False)) | (df_per['C_UP'].str.contains('REND', na=False))
+        rend_v = df_per[mask_rend & (df_per['Status'] == 'Pago')]['V_Num'].sum()
+        
+        filtro_transf = df_per['C_UP'].isin(['TRANSFERÊNCIA', 'TRANSFERENCIA'])
+        
+        rec_v = df_per[(df_per['T_UP'] == 'RECEITA') & (df_per['Status'] == 'Pago') & (~filtro_transf)]['V_Num'].sum()
+        des_v = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'] == 'Pago') & (~filtro_transf)]['V_Num'].sum()
+        sobra = rec_v - des_v
+
+        val_pendente = df_per[(df_per['T_UP'] == 'DESPESA') & (df_per['Status'].str.upper() == 'PENDENTE') & (~filtro_transf)]['V_Num'].sum()
+    else:
+        rec_v = des_v = rend_v = sobra = val_pendente = 0.0
+
+    # 3. MONTAGEM DO TEXTO DO RELATÓRIO
+    if not df_per.empty:
+        pagar_pendente = df_per[(df_per['Status'].str.upper() == 'PENDENTE') & (df_per['T_UP'] == 'DESPESA')]['V_Num'].sum()
+        receber_pendente = df_per[(df_per['Status'].str.upper() == 'PENDENTE') & (df_per['T_UP'] == 'RECEITA')]['V_Num'].sum()
+    else:
+        pagar_pendente = receber_pendente = 0.0
+
+    relat = f"RELATÓRIO WILSON & FABIANA\n"
+    relat += f"Período: {d_ini.strftime('%d/%m/%Y')} a {d_fim.strftime('%d/%m/%Y')}\n"
+    relat += f"========================================\n"
+    relat += f"REC: {m_fmt(rec_v)} | REND: {m_fmt(rend_v)} (Info)\n"
+    relat += f"DES: {m_fmt(des_v)} | SOBRA: {m_fmt(sobra)}\n"
+    relat += f"🔴 A Pagar: {m_fmt(abs(pagar_pendente))}\n"
+    relat += f"🟢 A Receber: {m_fmt(receber_pendente)}\n"
+    relat += f"========================================\n\n"
+    relat += f"SALDOS E CONTAS:\n{saldos_txt}\n"
+    relat += f"----------------------------------------\n"
+    relat += f"📊 Subtotal Contas & Invest. (BRL): {m_fmt(sub_contas_invest_brl)}\n"
+    if sub_contas_invest_usd > 0: relat += f"📊 Subtotal Contas & Invest. (USD): {m_fmt_usd(sub_contas_invest_usd)}\n"
+    if sub_contas_invest_eur > 0: relat += f"📊 Subtotal Contas & Invest. (EUR): {m_fmt_eur(sub_contas_invest_eur)}\n"
+    relat += f"💳 Subtotal Cartões Usados: {m_fmt(sub_cartoes_brl)}\n"
+    relat += f"🚗 Subtotal T-Cross + Moto Lead (BRL): {m_fmt(sub_bens_veiculos_brl)}\n"
+    if sub_bens_veiculos_usd > 0: relat += f"🚗 Subtotal Bens (USD): {m_fmt_usd(sub_bens_veiculos_usd)}\n"
+    if sub_bens_veiculos_eur > 0: relat += f"🚗 Subtotal Bens (EUR): {m_fmt_eur(sub_bens_veiculos_eur)}\n"
+    relat += f"========================================\n"
+    relat += f"💎 PATRIMÔNIO TOTAL:\n"
+    relat += f"🇧🇷 Real: {m_fmt(patrimonio_brl)}\n"
+    if patrimonio_usd > 0: relat += f"🇺🇸 Dólar: {m_fmt_usd(patrimonio_usd)}\n"
+    if patrimonio_eur > 0: relat += f"🇪🇺 Euro: {m_fmt_eur(patrimonio_eur)}"
+    
+    st.text_area("Copiar Relatório para o WhatsApp", relat, height=380)
+
+    # ==========================================
+    # 4. NOVA SEÇÃO: BUSCA E ENVIO DE LANÇAMENTO ESPECÍFICO
+    # ==========================================
     st.markdown("---")
-    st.markdown("#### 📊 Totais Calculados")
-    col_t1, col_t2, col_t3 = st.columns(3)
-    col_t1.metric("Contas/Invest. (BRL)", f"R$ {sub_contas_invest_brl:,.2f}")
-    col_t2.metric("Cartões Disponível", f"R$ {sub_cartoes_brl:,.2f}")
-    col_t3.metric("VR / VA", f"R$ {sub_vr_brl:,.2f}")
+    st.subheader("🔍 Buscar Lançamento Específico para Enviar no WhatsApp")
+
+    if "reset_busca" not in st.session_state:
+        st.session_state["reset_busca"] = 0
+
+    col_b1, col_b2, col_b3 = st.columns(3)
+    
+    r_id = st.session_state["reset_busca"]
+    
+    bs_ini = col_b1.date_input("Início (Busca)", primeiro_dia_mes, format="DD/MM/YYYY", key=f"bus_d1_{r_id}")
+    bs_fim = col_b2.date_input("Fim (Busca)", hoje_br, format="DD/MM/YYYY", key=f"bus_d2_{r_id}")
+    
+    beneficiarios_busca = ["Todos"]
+    if 'Beneficiário' in df_base.columns:
+        beneficiarios_busca += sorted([b for b in df_base['Beneficiário'].dropna().astype(str).str.strip().unique() if b and b != 'N/D'])
+    elif 'Beneficiario' in df_base.columns:
+        beneficiarios_busca += sorted([b for b in df_base['Beneficiario'].dropna().astype(str).str.strip().unique() if b and b != 'N/D'])
+    
+    sel_beneficiario = col_b3.selectbox("Filtrar Beneficiário", beneficiarios_busca, key=f"bus_benef_{r_id}")
+
+    lista_cat_busca = ["Todas", "Mercado", "Aluguel", "Luz/Água", "Assinatura", "Rendimento", "Aplicação", 
+                       "Vale Alimentação", "Restaurante", "Celular", "Anuidade", "Seguro", "Internet", 
+                       "Vestuário", "Salário", "Reembolso", "Moradia", "Saúde", "Taxas", "Depósito", 
+                       "Plano Assistencial", "Transporte", "Previdência", "Outros", "Pet: Milo", 
+                       "Pet: Bolt", "Milo & Bolt", "Veículo", "Combustível", "Manutenção", "Transferência"]
+    
+    sel_categoria = st.selectbox("Filtrar Categoria", lista_cat_busca, key=f"bus_cat_{r_id}")
+
+    st.write("")
+    if st.button("🔄 Limpar Busca e Filtros", key="btn_limpar_busca"):
+        st.session_state["reset_busca"] += 1
+        st.rerun()
+
+    df_busca_lanc = df_base[(df_base['DT_ONLY'] >= bs_ini) & (df_base['DT_ONLY'] <= bs_fim)].copy()
+
+    if sel_beneficiario != "Todos":
+        if 'Beneficiário' in df_busca_lanc.columns:
+            df_busca_lanc = df_busca_lanc[df_busca_lanc['Beneficiário'].astype(str).str.strip() == sel_beneficiario]
+        elif 'Beneficiario' in df_busca_lanc.columns:
+            df_busca_lanc = df_busca_lanc[df_busca_lanc['Beneficiario'].astype(str).str.strip() == sel_beneficiario]
+
+    if sel_categoria != "Todas":
+        df_busca_lanc = df_busca_lanc[df_busca_lanc['Categoria'].astype(str).str.strip() == sel_categoria]
+
+    if not df_busca_lanc.empty:
+        lista_lanc_encontrar = {}
+        for _, r in df_busca_lanc.iloc[::-1].iterrows():
+            benef = r.get('Beneficiário', r.get('Beneficiario', 'N/D'))
+            cat = r.get('Categoria', 'N/D')
+            tipo = r.get('Tipo', 'N/D')
+            label_lanc = f"ID {r['ID']} | {r['Vencimento']} | {r['Descrição']} | Benef: {benef} | Cat: {cat} ({tipo}) | R$ {r['Valor']}"
+            lista_lanc_encontrar[label_lanc] = r
+
+        st.write("")
+        opcoes_select = ["Selecione um lançamento..."] + list(lista_lanc_encontrar.keys())
+        escolha_lanc = st.selectbox("Selecione o Lançamento para Enviar:", opcoes_select, key=f"select_lanc_especifico_{r_id}")
+
+        if escolha_lanc and escolha_lanc != "Selecione um lançamento...":
+            item_esp = lista_lanc_encontrar[escolha_lanc]
+            
+            benef_esp = item_esp.get('Beneficiário', item_esp.get('Beneficiario', 'N/D'))
+            card_lanc = f"📌 *LANÇAMENTO - WILSON & FABIANA*\n"
+            card_lanc += f"========================================\n"
+            card_lanc += f"📝 *Descrição:* {item_esp['Descrição']}\n"
+            card_lanc += f"💰 *Valor:* R$ {item_esp['Valor']}\n"
+            card_lanc += f"📅 *Vencimento:* {item_esp['Vencimento']}\n"
+            card_lanc += f"🏦 *Banco:* {item_esp['Banco']}\n"
+            card_lanc += f"🏷️ *Categoria:* {item_esp.get('Categoria', 'N/D')}\n"
+            card_lanc += f"👤 *Beneficiário:* {benef_esp}\n"
+            card_lanc += f"📋 *Tipo:* {item_esp.get('Tipo', 'N/D')} | *Status:* {item_esp['Status']}\n"
+            card_lanc += f"========================================\n"
+
+            st.write("") 
+            st.text_area("Card do Lançamento para Copiar", card_lanc, height=200, key=f"txt_card_esp_{r_id}")
+
+            link_zap_lanc = f"https://wa.me/?text={urllib.parse.quote(card_lanc)}"
+            st.markdown(f'[📲 Enviar este Lançamento para o WhatsApp]({link_zap_lanc})', unsafe_allow_html=True)
+    else:
+        st.write("")
+        st.info("Nenhum lançamento encontrado com os filtros selecionados no período.")
 
     # =========================================================================
-    # 💬 BOTÃO ATALHO DO WHATSAPP (ESTRICTAMENTE NO RODAPÉ DA ABA)
+    # 💬 BOTÃO ATALHO DO WHATSAPP (EXCLUSIVAMENTE NO RODAPÉ DA ABA)
     # =========================================================================
     st.markdown("---")
     
@@ -2762,8 +2913,7 @@ elif "📄" in aba:
             </a>
             """,
             unsafe_allow_html=True
-        )
-        
+        )        
         # --- CARTÕES DE CRÉDITO ---
         if "CARTA" in tipo_c or "CART" in b_up:
             limite_cartao = valor_b
