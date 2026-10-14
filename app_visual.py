@@ -1917,6 +1917,9 @@ if "💰" in st.session_state.page:
             st.markdown("##### 🚦 Status de Utilização dos Cartões")
             cols_status = st.columns(len(lista_cartoes_controle))
             
+            st.markdown("##### 🚦 Status de Utilização dos Cartões")
+            cols_status = st.columns(len(lista_cartoes_controle))
+            
             # Descobre o mês e ano atual do sistema (Outubro de 2026)
             mes_atual_sistema = hoje_br.month
             ano_atual_sistema = hoje_br.year
@@ -1939,29 +1942,24 @@ if "💰" in st.session_state.page:
                                 pass
                             break
         
-                # 2. LÓGICA INTELIGENTE DE CICLO (Considerando o mês que está sendo exibido na tela)
-                # Nota: Certifique-se de que 'mes_sel_num' e 'ano_sel' são as variáveis do seu seletor de mês/ano na tela.
-                # Se na sua tela o mês selecionado for futuro em relação a hoje, a fatura é Aberta.
-                # Se for o mês atual, compara com o dia de hoje. Se for passado, considera Fechada/Passada.
-                
-                # Tentamos pegar o mês selecionado no seu app (ajuste o nome da variável se necessário, ex: mes_selecionado)
+                # 2. LÓGICA INTELIGENTE DE CICLO (Lendo direto do mês escolhido no pills)
                 try:
-                    m_sel = int(mes_sel_num) # ou mes_selecionado
-                    a_sel = int(ano_sel)     # ou ano_selecionado
+                    m_sel = int(mes_map_cartao.get(mes_escolhido_cartao, mes_atual_sistema))
+                    a_sel = ano_atual_sistema  # Mantém o ano corrente do sistema
                 except:
                     m_sel = mes_atual_sistema
                     a_sel = ano_atual_sistema
         
                 # Compara a competência selecionada com a atual
                 if (a_sel > ano_atual_sistema) or (a_sel == ano_atual_sistema and m_sel > mes_atual_sistema):
-                    # Mês futuro: faturas estão abertas para receber lançamentos
+                    # Mês futuro (ex: Novembro): faturas estão abertas para receber lançamentos
                     ciclo_fatura = "Aberta"
                 elif (a_sel == ano_atual_sistema and m_sel == mes_atual_sistema):
                     # Mês atual (Outubro/2026): Compara com o dia de hoje (14)
                     dia_atual = hoje_br.day
                     ciclo_fatura = "Aberta" if dia_atual < dia_fechamento_cartao else "Fechada"
                 else:
-                    # Mês passado: Ciclo já encerrado
+                    # Mês passado (ex: Setembro): Ciclo já encerrado
                     ciclo_fatura = "Fechada"
         
                 # Status de pagamento vindo da base de dados (Pago / Pendente)
