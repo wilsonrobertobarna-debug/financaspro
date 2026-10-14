@@ -1940,23 +1940,30 @@ if "💰" in st.session_state.page:
                             break
         
                 # 2. LÓGICA INTELIGENTE DE CICLO (Lendo direto do mês escolhido no pills)
+
                 try:
                     m_sel = int(mes_map_cartao.get(mes_escolhido_cartao, mes_atual_sistema))
-                    a_sel = ano_atual_sistema  # Mantém o ano corrente do sistema
+                    a_sel = ano_atual_sistema
                 except:
                     m_sel = mes_atual_sistema
                     a_sel = ano_atual_sistema
         
                 # Compara a competência selecionada com a atual
+                # Compara a competência selecionada com a atual
                 if (a_sel > ano_atual_sistema) or (a_sel == ano_atual_sistema and m_sel > mes_atual_sistema):
-                    # Mês futuro (ex: Novembro): faturas estão abertas para receber lançamentos
+                    # Mês futuro (ex: Nov/Dez): faturas estão abertas
                     ciclo_fatura = "Aberta"
                 elif (a_sel == ano_atual_sistema and m_sel == mes_atual_sistema):
-                    # Mês atual (Outubro/2026): Compara com o dia de hoje (14)
+                    # Mês atual (Outubro/2026): 
+                    # Se o dia de hoje FOR MENOR QUE o fechamento, está Aberta. 
+                    # Se hoje FOR MAIOR OU IGUAL ao fechamento, está Fechada.
                     dia_atual = hoje_br.day
-                    ciclo_fatura = "Aberta" if dia_atual < dia_fechamento_cartao else "Fechada"
+                    if dia_atual < dia_fechamento_cartao:
+                        ciclo_fatura = "Aberta"
+                    else:
+                        ciclo_fatura = "Fechada"
                 else:
-                    # Mês passado (ex: Setembro): Ciclo já encerrado
+                    # Mês passado (ex: Setembro): Ciclo já encerrado/fechado
                     ciclo_fatura = "Fechada"
         
                 # Status de pagamento vindo da base de dados (Pago / Pendente)
