@@ -1913,82 +1913,47 @@ if "💰" in st.session_state.page:
                 }
             )
             
-           
-           st.markdown("##### 🚦 Status de Utilização dos Cartões")
-    cols_status = st.columns(len(lista_cartoes_controle))
-    
-    for idx, row in df_cartoes_graph.iterrows():
-        cartao_nome = row['Nome do Banco']
-        gasto_real = row['V_Num']
-        meta_teto = row['Meta']
-        
-        # 1. BUSCA O DIA DE FECHAMENTO CADASTRADO NA PLANILHA DE BANCOS
-        dia_fechamento_cartao = 1  # Padrão caso não encontre
-        if not df_bancos_info.empty:
-            for _, r_banco in df_bancos_info.iterrows():
-                if str(r_banco.iloc[0]).strip().upper() == str(cartao_nome).strip().upper():
-                    try:
-                        if len(r_banco) >= 4:
-                            f_raw = str(r_banco.iloc[3]).replace('R$', '').strip()
-                            dia_fechamento_cartao = int(float(f_raw)) if f_raw and f_raw != 'nan' else 1
-                    except:
-                        pass
-                    break
-
-        # 2. DETERMINA O STATUS DE CICLO (Aberta ou Fechada) COM BASE NO DIA DE HOJE
-        dia_atual = hoje_br.day
-        # Se o dia atual for menor que o fechamento, a fatura está Aberta. Passou do fechamento, está Fechada.
-        ciclo_fatura = "Aberta" if dia_atual < dia_fechamento_cartao else "Fechada"
-        
-        # Status de pagamento vindo da base de dados (Pago / Pendente)
-        status_pagamento = status_cartoes_mes.get(cartao_nome, "Pendente")
-        
-        # Cores e emojis dinâmicos para o ciclo e pagamento
-        if status_pagamento.upper() == 'PAGO':
-            cor_status = "#2e7d32"
-            emoji_status = "✅"
-            texto_exibicao = "Pago"
+            st.markdown("##### 🚦 Status de Utilização dos Cartões")
+            cols_status = st.columns(len(lista_cartoes_controle))
+            
+            for idx, row in df_cartoes_graph.iterrows():
+                cartao_nome = row['Nome do Banco']
+                gasto_real = row['V_Num']
+                meta_teto = row['Meta']
+                
+                status_fatura = status_cartoes_mes.get(cartao_nome, "Pendente")
+                cor_status = "#2e7d32" if status_fatura == 'Pago' else "#d32f2f"
+                emoji_status = "✅" if status_fatura == 'Pago' else "⏳"
+                
+                if meta_teto > 0:
+                    percentual = (gasto_real / meta_teto) * 100
+                else:
+                    percentual = 0.0 if gasto_real == 0 else 100.0
+                
+                if percentual <= 80:
+                    bolinha = "🟢"
+                    status_txt = "OK"
+                elif percentual <= 100:
+                    bolinha = "🟡"
+                    status_txt = "Atenção"
+                else:
+                    bolinha = "🔴"
+                    status_txt = "Tô na lona"
+                
+                with cols_status[idx % len(cols_status)]:
+                    st.metric(
+                        label=cartao_nome,
+                        value=f"R$ {gasto_real:,.2f}",
+                        delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
+                    )
+                    st.markdown(
+                        f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 10px; color: {cor_status}; font-weight: bold;'>"
+                        f"{emoji_status} {status_fatura}"
+                        f"</div>", 
+                        unsafe_allow_html=True
+                    )
         else:
-            # Se for pendente, mostra se está Aberta ou Fechada
-            if ciclo_fatura == "Aberta":
-                cor_status = "#1565c0"  # Azul para aberta
-                emoji_status = "🔓"
-                texto_exibicao = "Fatura Aberta"
-            else:
-                cor_status = "#d32f2f"  # Vermelho/Laranja para fechada aguardando pagamento
-                emoji_status = "🔒"
-                texto_exibicao = "Fatura Fechada"
-        
-        if meta_teto > 0:
-            percentual = (gasto_real / meta_teto) * 100
-        else:
-            percentual = 0.0 if gasto_real == 0 else 100.0
-        
-        if percentual <= 80:
-            bolinha = "🟢"
-            status_txt = "OK"
-        elif percentual <= 100:
-            bolinha = "🟡"
-            status_txt = "Atenção"
-        else:
-            bolinha = "🔴"
-            status_txt = "Tô na lona"
-        
-        with cols_status[idx % len(cols_status)]:
-            st.metric(
-                label=cartao_nome,
-                value=f"R$ {gasto_real:,.2f}",
-                delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
-            )
-            # Exibe o status refinado (Aberta / Fechada / Pago) logo acima do indicador
-            st.markdown(
-                f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 10px; color: {cor_status}; font-weight: bold;'>"
-                f"{emoji_status} {texto_exibicao}"
-                f"</div>", 
-                unsafe_allow_html=True
-            )
-else:
-    st.info("Nenhum lançamento encontrado para os cartões neste mês.")
+            st.info("Nenhum lançamento encontrado para os cartões neste mês.")
             
      # =========================================================================
      # =========================================================================
