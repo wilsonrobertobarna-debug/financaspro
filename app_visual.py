@@ -1912,7 +1912,7 @@ if "💰" in st.session_state.page:
                     'displayModeBar': False
                 }
             )
-            
+                       
             st.markdown("##### 🚦 Status de Utilização dos Cartões")
             cols_status = st.columns(len(lista_cartoes_controle))
             
@@ -1934,27 +1934,26 @@ if "💰" in st.session_state.page:
                                 pass
                             break
         
-                # 2. DETERMINA O STATUS DE CICLO (Aberta ou Fechada) COM BASE NO DIA DE HOJE
+                # 2. DETERMINA O STATUS DE CICLO COM BASE NO DIA DE HOJE
                 dia_atual = hoje_br.day
-                # Se o dia atual for menor que o fechamento, a fatura está Aberta. Passou do fechamento, está Fechada.
+                # Se hoje for menor que o fechamento, está Aberta. Se hoje for maior ou igual ao fechamento, está Fechada.
                 ciclo_fatura = "Aberta" if dia_atual < dia_fechamento_cartao else "Fechada"
                 
                 # Status de pagamento vindo da base de dados (Pago / Pendente)
                 status_pagamento = status_cartoes_mes.get(cartao_nome, "Pendente")
                 
-                # Cores e emojis dinâmicos para o ciclo e pagamento
+                # Cores e emojis dinâmicos
                 if status_pagamento.upper() == 'PAGO':
                     cor_status = "#2e7d32"
                     emoji_status = "✅"
                     texto_exibicao = "Pago"
                 else:
-                    # Se for pendente, mostra se está Aberta ou Fechada
                     if ciclo_fatura == "Aberta":
                         cor_status = "#1565c0"  # Azul para aberta
                         emoji_status = "🔓"
                         texto_exibicao = "Fatura Aberta"
                     else:
-                        cor_status = "#d32f2f"  # Vermelho/Laranja para fechada aguardando pagamento
+                        cor_status = "#d32f2f"  # Vermelho para fechada aguardando pagamento
                         emoji_status = "🔒"
                         texto_exibicao = "Fatura Fechada"
                 
@@ -1979,7 +1978,6 @@ if "💰" in st.session_state.page:
                         value=f"R$ {gasto_real:,.2f}",
                         delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
                     )
-                    # Exibe o status refinado (Aberta / Fechada / Pago) logo acima do indicador
                     st.markdown(
                         f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 10px; color: {cor_status}; font-weight: bold;'>"
                         f"{emoji_status} {texto_exibicao}"
