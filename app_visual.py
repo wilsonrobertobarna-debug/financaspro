@@ -488,39 +488,66 @@ def carregar_bancos_manual_gs():
 with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
     df = carregar_dados_gs()
     df_bancos = carregar_bancos_manual_gs()
-    
+
     # 1. Ajuste de Datas
-    df['DT'] = pd.to_datetime(df['DT'], errors='coerce')
+    df["DT"] = pd.to_datetime(df["DT"], errors="coerce")
     hoje = pd.Timestamp.today().normalize()
-    
+
     # 2. Garantir que V_Num seja numérico
-    df['V_Num'] = pd.to_numeric(df['V_Num'], errors='coerce').fillna(0)
-    
+    df["V_Num"] = pd.to_numeric(df["V_Num"], errors="coerce").fillna(0)
+
+    # Listas para acumular o resumo do alerta automático
+    resumo_cartoes = []
+    total_faturas_mes = 0.0
+
     if not df_bancos.empty:
         qtd_colunas = 4
-        
+
         # Função de formatação adaptável para receber o símbolo da moeda (ex: R$, US$, €)
         def formatar_moeda(valor, simbolo="R$"):
             try:
-                val_formatado = f"{float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                val_formatado = (
+                    f"{float(valor):,.2f}"
+                    .replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", ".")
+                )
                 return f"{simbolo} {val_formatado}"
             except:
                 return f"{simbolo} 0,00"
 
         for i in range(0, len(df_bancos), qtd_colunas):
             cols = st.columns(qtd_colunas)
-            linha = df_bancos.iloc[i:i + qtd_colunas]
-            
+            linha = df_bancos.iloc[i : i + qtd_colunas]
+
             for j, (index, row) in enumerate(linha.iterrows()):
                 with cols[j]:
-                    nome_banco = row.iloc[0] if len(row) > 0 else 'Banco'
-                    val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
-                    saldo_inicial = float(val_str) if val_str and val_str != 'nan' else 0.0
-                    tipo_c = str(row.iloc[2]).strip().upper() if len(row) > 2 else ''
-                    
+                    nome_banco = row.iloc[0] if len(row) > 0 else "Banco"
+                    val_str = (
+                        str(row.iloc[1])
+                        .replace("R$", "")
+                        .replace("US$", "")
+                        .replace("€", "")
+                        .replace(".", "")
+                        .replace(",", ".")
+                        .strip()
+                        if len(row) > 1
+                        else "0"
+                    )
+                    saldo_inicial = (
+                        float(val_str) if val_str and val_str != "nan" else 0.0
+                    )
+                    tipo_c = (
+                        str(row.iloc[2]).strip().upper() if len(row) > 2 else ""
+                    )
+
                     # --- CAPTURA DA MOEDA DA COLUNA F (ÍNDICE 5) ---
-                    moeda_banco = str(row.iloc[5]).strip().upper() if len(row) > 5 and str(row.iloc[5]).strip() else "BRL"
-                    
+                    moeda_banco = (
+                        str(row.iloc[5]).strip().upper()
+                        if len(row) > 5 and str(row.iloc[5]).strip()
+                        else "BRL"
+                    )
+
                     # Define o símbolo correto com base na sigla da moeda
                     if moeda_banco == "USD":
                         simb_moeda = "US$"
@@ -530,77 +557,140 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                         simb_moeda = "R$"
 
                     b_up = str(nome_banco).upper()
-                    
+
                     # --- IDENTIFICAÇÃO DE CARTÃO DE CRÉDITO (Focado no mês atual) ---
                     if "CARTA" in tipo_c or "CART" in b_up:
                         limite_cartao = saldo_inicial
-                        
+
                         # Pega as despesas pendentes do cartão filtrando pelo MÊS E ANO ATUAIS
-                        mask = (df['Banco'] == nome_banco) & \
-                               (df['Status'].str.upper() == 'PENDENTE') & \
-                               (df['DT'].dt.month == hoje.month) & \
-                               (df['DT'].dt.year == hoje.year)
-                               
-                        usado = df.loc[mask, 'V_Num'].sum()
+                        mask = (
+                            (df["Banco"] == nome_banco)
+                            & (df["Status"].str.upper() == "PENDENTE")
+                            & (df["DT"].dt.month == hoje.month)
+                            & (df["DT"].dt.year == hoje.year)
+                        )
+
+                        usado = df.loc[mask, "V_Num"].sum()
                         dispo = limite_cartao - usado
-                        
+
                         # Formatação com negativo e bolinha vermelha se houver uso no mês
                         if usado > 0:
-                            val_exibicao = f"-{formatar_moeda(usado, simb_moeda)} 🔴"
+                            val_exibicao = (
+                                f"-{formatar_moeda(usado, simb_moeda)} 🔴"
+                            )
+                            # Guarda os dados para a notificação do celular
+                            resumo_cartoes.append(
+                                f"• {nome_banco}:"
+                                f" {formatar_moeda(usado, simb_moeda)}"
+                            )
+                            total_faturas_mes += usado
                         else:
                             val_exibicao = formatar_moeda(0, simb_moeda)
-                            
-                        st.metric(label=f"💳 {nome_banco} (Usado Mês)", value=val_exibicao)
-                    
+
+                        st.metric(
+                            label=f"💳 {nome_banco} (Usado Mês)",
+                            value=val_exibicao,
+                        )
+
                     # --- VALE REFEIÇÃO / BENS / CONTAS NORMAIS ---
-                    elif "REFEIÇÃO" in tipo_c or "VR" in b_up or "VA" in b_up or "ALIMENTAÇÃO" in b_up:
+                    elif (
+                        "REFEIÇÃO" in tipo_c
+                        or "VR" in b_up
+                        or "VA" in b_up
+                        or "ALIMENTAÇÃO" in b_up
+                    ):
                         saldo_vr = saldo_inicial
-                        st.metric(label=f"🍽️ {nome_banco}", value=formatar_moeda(saldo_vr, simb_moeda))
-                        
-                    elif "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
+                        st.metric(
+                            label=f"🍽️ {nome_banco}",
+                            value=formatar_moeda(saldo_vr, simb_moeda),
+                        )
+
+                    elif (
+                        "VEICULO" in tipo_c
+                        or "BEM" in tipo_c
+                        or "CROSS" in b_up
+                        or "LEAD" in b_up
+                        or "MOTO" in b_up
+                    ):
                         saldo_bem = saldo_inicial
-                        st.metric(label=f"🚗 {nome_banco}", value=formatar_moeda(saldo_bem, simb_moeda))
-                        
+                        st.metric(
+                            label=f"🚗 {nome_banco}",
+                            value=formatar_moeda(saldo_bem, simb_moeda),
+                        )
+
                     else:
                         # 3. Filtrar transações deste banco até hoje (Conta Corrente / Investimento)
-                        #filtro = (df['Banco'] == nome_banco) & (df['DT'] <= hoje)
-                        filtro = (df['Banco'] == nome_banco) & ((df['Status'].str.upper() == 'PAGO') | (df['Status'] == ''))
+                        filtro = (df["Banco"] == nome_banco) & (
+                            (df["Status"].str.upper() == "PAGO")
+                            | (df["Status"] == "")
+                        )
                         df_banco_atual = df[filtro]
-                        
-                        
-                        entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
-                        saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
-                        
+
+                        entradas = df_banco_atual[
+                            df_banco_atual["Tipo"] != "Despesa"
+                        ]["V_Num"].sum()
+                        saidas = df_banco_atual[
+                            df_banco_atual["Tipo"] == "Despesa"
+                        ]["V_Num"].sum()
+
                         saldo_atual = saldo_inicial + entradas - saidas
                         icone = "💰" if "INVEST" in tipo_c else "🏦"
-                        
-                        st.metric(label=f"{icone} {nome_banco}", value=formatar_moeda(saldo_atual, simb_moeda))
+
+                        st.metric(
+                            label=f"{icone} {nome_banco}",
+                            value=formatar_moeda(saldo_atual, simb_moeda),
+                        )
+
+        # ==========================================
+        # 🔔 DISPARO AUTOMÁTICO DO ALERTA (1X POR DIA)
+        # ==========================================
+        if "alerta_enviado_hoje" not in st.session_state:
+            st.session_state["alerta_enviado_hoje"] = False
+
+        if not st.session_state["alerta_enviado_hoje"] and total_faturas_mes > 0:
+            texto_faturas = "\n".join(resumo_cartoes)
+            mensagem_alerta = (
+                f"Olá Wilson! Resumo das suas faturas de cartão este mês:\n\n"
+                f"{texto_faturas}\n\n"
+                f"-----------------------------\n"
+                f"💰 Total Geral: R$ {total_faturas_mes:,.2f}"
+            )
+
+            # Envia a notificação automática para o seu celular
+            enviar_alerta_financas(
+                titulo="FinancasPro - Faturas do Mes",
+                mensagem=mensagem_alerta,
+                prioridade="high",
+                tags="credit_card,moneybag",
+            )
+
+            # Guarda na sessão que já enviou hoje
+            st.session_state["alerta_enviado_hoje"] = True
 
 # INICIALIZA O CACHE NA SESSÃO
-if 'df_base' not in st.session_state:
-    st.session_state['df_base'] = carregar_dados_gs()
-if 'df_bancos_info' not in st.session_state:
-    st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
+if "df_base" not in st.session_state:
+    st.session_state["df_base"] = carregar_dados_gs()
+if "df_bancos_info" not in st.session_state:
+    st.session_state["df_bancos_info"] = carregar_bancos_manual_gs()
 
 # 2. Agora criamos as variáveis locais para usar nas barras
-df_base = st.session_state['df_base']
-df_bancos_info = st.session_state['df_bancos_info']
+df_base = st.session_state["df_base"]
+df_bancos_info = st.session_state["df_bancos_info"]
+
 
 # FUNÇÃO PARA ATUALIZAR O ESTADO
 def atualizar_sessao():
-    st.session_state['df_base'] = carregar_dados_gs()
-    st.session_state['df_bancos_info'] = carregar_bancos_manual_gs()
+    st.session_state["df_base"] = carregar_dados_gs()
+    st.session_state["df_bancos_info"] = carregar_bancos_manual_gs()
 
-# A "MÉCÂNICA" DE SEGURANÇA:
-# Se o programa acabou de abrir e não tem nada na memória, ele carrega.
-# Se já tem algo na memória (mesmo que você tenha fechado e aberto), 
-# ele NÃO limpa, ele mantém o que está lá até que você aperte o botão de atualizar.
-if 'df_base' not in st.session_state:
+
+# A "MECÂNICA" DE SEGURANÇA:
+if "df_base" not in st.session_state:
     atualizar_sessao()
 
 # Agora, as variáveis sempre terão o conteúdo que foi carregado
-df_base = st.session_state['df_base']
-df_bancos_info = st.session_state['df_bancos_info']
+df_base = st.session_state["df_base"]
+df_bancos_info = st.session_state["df_bancos_info"]
 
 
 
