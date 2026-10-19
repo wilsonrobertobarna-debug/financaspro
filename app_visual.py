@@ -19,7 +19,7 @@ st.set_page_config(
 
 
 # ==========================================
-# 🔔 FUNÇÃO DE ALARME PARA O CELULAR (NTFY - NATIVO)
+# 🔔 FUNÇÃO DE ALARME PARA O CELULAR (CORRIGIDA)
 # ==========================================
 def enviar_alerta_financas(
     titulo, mensagem, prioridade="high", tags="bell,moneybag"
@@ -28,11 +28,16 @@ def enviar_alerta_financas(
     url = f"https://ntfy.sh/{topico_secreto}"
 
     try:
+        # Garante que o título e a mensagem sejam convertidos para bytes UTF-8 corretamente
         data_bytes = mensagem.encode("utf-8")
+        
+        # Removemos emojis do título do cabeçalho para evitar o erro do Windows
+        titulo_limpo = titulo.encode("latin-1", "ignore").decode("latin-1")
+
         req = urllib.request.Request(
             url,
             data=data_bytes,
-            headers={"Title": titulo, "Priority": prioridade, "Tags": tags},
+            headers={"Title": titulo_limpo, "Priority": prioridade, "Tags": tags},
             method="POST",
         )
         context = ssl._create_unverified_context()
@@ -40,7 +45,6 @@ def enviar_alerta_financas(
         return True, resposta.getcode()
     except Exception as e:
         return False, str(e)
-
 
 # 2. Cria um "alvo" no topo
 st.markdown('<a id="top"></a>', unsafe_allow_html=True)
