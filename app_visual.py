@@ -49,8 +49,13 @@ def enviar_alerta_financas(
 # 2. Cria um "alvo" no topo
 st.markdown('<a id="top"></a>', unsafe_allow_html=True)
 
-# 3. BOTÃO DE TESTE COM DIAGNÓSTICO NA TELA
-if st.button("🔔 Testar Som no Celular agora"):
+# ==========================================
+# 🔔 BOTÃO DE TESTE NA BARRA LATERAL (SIDEBAR)
+# ==========================================
+st.sidebar.markdown("---")  # Uma linha divisória elegante na lateral
+st.sidebar.subheader("⚙️ Configurações do Sistema")
+
+if st.sidebar.button("🔔 Testar Som no Celular"):
     sucesso, resultado = enviar_alerta_financas(
         titulo="🚨 FinançasPro - Teste!",
         mensagem="Wilson, o alarme do FinançasPro foi disparado do computador!",
@@ -59,12 +64,11 @@ if st.button("🔔 Testar Som no Celular agora"):
     )
 
     if sucesso:
-        st.success(
-            f"✅ O Python enviou com sucesso! (Código HTTP: {resultado}). Verifique"
-            " se o celular apitou."
+        st.sidebar.success(
+            f"✅ Enviado com sucesso! (HTTP: {resultado}). Veja o celular."
         )
     else:
-        st.error(f"❌ Ocorreu um erro no envio: {resultado}")
+        st.sidebar.error(f"❌ Erro no envio: {resultado}")
 
 # Seu CSS que você já tinha:
 st.markdown(
