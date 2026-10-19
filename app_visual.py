@@ -489,16 +489,15 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
     df = carregar_dados_gs()
     df_bancos = carregar_bancos_manual_gs()
 
-    # 1. Ajuste de Datas
+    # 1. Ajuste de Datas e Valores na Planilha Principal
     df["DT"] = pd.to_datetime(df["DT"], errors="coerce")
     hoje = pd.Timestamp.today().normalize()
-
-    # 2. Garantir que V_Num seja numérico
     df["V_Num"] = pd.to_numeric(df["V_Num"], errors="coerce").fillna(0)
 
-    # Listas para guardar faturas que estão A 3 DIAS (OU MENOS) DE VENCER
+    # Listas para guardar faturas e lançamentos prestes a vencer (janela de 3 dias)
     cartoes_perto_vencer = []
-    total_prestes_a_vencer = 0.0
+    contas_perto_vencer = []
+    total_geral_prestes_vencer = 0.0
 
     if not df_bancos.empty:
         qtd_colunas = 4
@@ -515,6 +514,7 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
             except:
                 return f"{simbolo} 0,00"
 
+        # --- 1. VARREDURA DOS BANCOS E CARTÕES DE CRÉDITO ---
         for i in range(0, len(df_bancos), qtd_colunas):
             cols = st.columns(qtd_colunas)
             linha = df_bancos.iloc[i : i + qtd_colunas]
@@ -540,10 +540,10 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                         str(row.iloc[2]).strip().upper() if len(row) > 2 else ""
                     )
 
-                    # --- CAPTURA DA COLUNA E (ÍNDICE 4) -> DIA DE VENCIMENTO ---
+                    # Coluna E (índice 4) -> Dia de Vencimento do Cartão
                     dia_venc_raw = str(row.iloc[4]).strip() if len(row) > 4 else ""
 
-                    # --- CAPTURA DA MOEDA DA COLUNA F (ÍNDICE 5) ---
+                    # Coluna F (índice 5) -> Moeda
                     moeda_banco = (
                         str(row.iloc[5]).strip().upper()
                         if len(row) > 5 and str(row.iloc[5]).strip()
@@ -559,11 +559,10 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
 
                     b_up = str(nome_banco).upper()
 
-                    # --- IDENTIFICAÇÃO DE CARTÃO DE CRÉDITO ---
+                    # --- CARTÃO DE CRÉDITO ---
                     if "CARTA" in tipo_c or "CART" in b_up:
                         limite_cartao = saldo_inicial
 
-                        # Filtra despesas pendentes do mês e ano atuais
                         mask = (
                             (df["Banco"] == nome_banco)
                             & (df["Status"].str.upper() == "PENDENTE")
@@ -578,7 +577,6 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                                 f"-{formatar_moeda(usado, simb_moeda)} 🔴"
                             )
 
-                            # --- REGRA DOS 3 DIAS DE VENCIMENTO ---
                             if dia_venc_raw.isdigit():
                                 dia_venc = int(dia_venc_raw)
                                 try:
@@ -589,7 +587,6 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                                     )
                                     dias_restantes = (dt_vencimento - hoje).days
 
-                                    # Se faltarem 3 dias ou menos (e já não tiver passado de 30 dias do vencimento):
                                     if -30 <= dias_restantes <= 3:
                                         if dias_restantes == 0:
                                             status_prazo = "VENCE HOJE!"
@@ -601,7 +598,7 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                                         cartoes_perto_vencer.append(
                                             f"• {nome_banco}: {formatar_moeda(usado, simb_moeda)} ({status_prazo})"
                                         )
-                                        total_prestes_a_vencer += usado
+                                        total_geral_prestes_vencer += usado
                                 except Exception:
                                     pass
                         else:
@@ -612,7 +609,6 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                             value=val_exibicao,
                         )
 
-                    # --- VALE REFEIÇÃO / BENS / CONTAS NORMAIS ---
                     elif (
                         "REFEIÇÃO" in tipo_c
                         or "VR" in b_up
@@ -660,27 +656,81 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                             value=formatar_moeda(saldo_atual, simb_moeda),
                         )
 
+        # --- 2. VARREDURA DOS LANÇAMENTOS E BOLETOS INDIVIDUAIS (COLUNAS A, B, G, J) ---
+        # Filtra despesas com Status PENDENTE
+        mask_pendentes = (df["Status"].str.upper() == "PENDENTE") & (
+            df["Tipo"] == "Despesa"
+        )
+        df_pendentes = df[mask_pendentes]
+
+        for index_p, row_p in df_pendentes.iterrows():
+            # Evita contabilizar novamente transações de cartão de crédito que já foram agrupadas
+            banco_transacao = str(row_p.get("Banco", "")).upper()
+            if "CARTA" in banco_transacao or "CART" in banco_transacao:
+                continue
+
+            dt_venc = row_p["DT"]
+            if pd.notnull(dt_venc):
+                dias_restantes = (dt_venc - hoje).days
+
+                # Regra dos 3 dias para boletos
+                if -30 <= dias_restantes <= 3:
+                    valor_conta = row_p["V_Num"]
+
+                    # Captura Beneficiário na Coluna J (índice 9), fallback para Descrição se vazio
+                    beneficiario = ""
+                    if len(row_p) > 9 and str(row_p.iloc[9]).strip():
+                        beneficiario = str(row_p.iloc[9]).strip()
+                    elif "Descrição" in row_p and str(row_p["Descrição"]).strip():
+                        beneficiario = str(row_p["Descrição"]).strip()
+                    else:
+                        beneficiario = "Lançamento Pendente"
+
+                    if dias_restantes == 0:
+                        status_prazo = "VENCE HOJE!"
+                    elif dias_restantes < 0:
+                        status_prazo = f"VENCIDA HÁ {abs(dias_restantes)} DIA(S)"
+                    else:
+                        status_prazo = f"Vence em {dias_restantes} dia(s)"
+
+                    contas_perto_vencer.append(
+                        f"• {beneficiario}: R$ {valor_conta:,.2f} ({status_prazo})"
+                    )
+                    total_geral_prestes_vencer += valor_conta
+
         # ==========================================
-        # 🔔 ALERTA AUTOMÁTICO (SÓ CARTÕES A 3 DIAS DO VENCIMENTO)
+        # 🔔 ENVIAR NOTIFICAÇÃO CONSOLIDADA NO CELULAR
         # ==========================================
         if "alerta_enviado_hoje" not in st.session_state:
             st.session_state["alerta_enviado_hoje"] = False
 
-        if not st.session_state["alerta_enviado_hoje"] and total_prestes_a_vencer > 0:
-            texto_faturas = "\n".join(cartoes_perto_vencer)
+        if not st.session_state["alerta_enviado_hoje"] and (
+            cartoes_perto_vencer or contas_perto_vencer
+        ):
+            blocos_mensagem = []
+
+            if cartoes_perto_vencer:
+                lista_cartoes = "\n".join(cartoes_perto_vencer)
+                blocos_mensagem.append(f"💳 CARTÕES DE CRÉDITO:\n{lista_cartoes}")
+
+            if contas_perto_vencer:
+                lista_contas = "\n".join(contas_perto_vencer)
+                blocos_mensagem.append(f"📋 CONTAS E BOLETOS:\n{lista_contas}")
+
+            corpo_mensagem = "\n\n".join(blocos_mensagem)
             mensagem_alerta = (
-                f"Olá Wilson! Faturas de cartão próximas do vencimento:\n\n"
-                f"{texto_faturas}\n\n"
+                f"Olá Wilson! Lançamentos próximos do vencimento:\n\n"
+                f"{corpo_mensagem}\n\n"
                 f"-----------------------------\n"
-                f"💰 Total a Pagar: R$ {total_prestes_a_vencer:,.2f}"
+                f"💰 Total Geral: R$ {total_geral_prestes_vencer:,.2f}"
             )
 
-            # Envia para o celular
+            # Dispara a notificação
             enviar_alerta_financas(
-                titulo="FinancasPro - Faturas a Vencer",
+                titulo="FinancasPro - Avisos de Vencimento",
                 mensagem=mensagem_alerta,
                 prioridade="high",
-                tags="credit_card,warning",
+                tags="credit_card,warning,moneybag",
             )
 
             st.session_state["alerta_enviado_hoje"] = True
@@ -703,14 +753,6 @@ def atualizar_sessao():
 if "df_base" not in st.session_state:
     atualizar_sessao()
 
-df_base = st.session_state["df_base"]
-df_bancos_info = st.session_state["df_bancos_info"]
-
-# A "MECÂNICA" DE SEGURANÇA:
-if "df_base" not in st.session_state:
-    atualizar_sessao()
-
-# Agora, as variáveis sempre terão o conteúdo que foi carregado
 df_base = st.session_state["df_base"]
 df_bancos_info = st.session_state["df_bancos_info"]
 
