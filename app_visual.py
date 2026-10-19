@@ -10,11 +10,29 @@ from fpdf import FPDF
 import urllib.parse
 import streamlit.components.v1 as components
 from datetime import datetime
-#fuso_br = pytz.timezone('America/Sao_Paulo')
-#data_hoje_br = datetime.now(fuso_br).date()
+import requests
 
 # Cria um "alvo" no topo
 st.markdown('<a id="top"></a>', unsafe_allow_html=True)
+
+
+# ==========================================
+# 🔔 FUNÇÃO DE ALARME PARA O CELULAR (NTFY)
+# ==========================================
+def enviar_alerta_financas(
+    titulo, mensagem, prioridade="high", tags="bell,moneybag"
+):
+    topico_secreto = "financaspro_wilson_segredo_777_WFPYChe815mnD"
+    url = f"https://ntfy.sh/{topico_secreto}"
+    try:
+        requests.post(
+            url,
+            data=mensagem.encode("utf-8"),
+            headers={"Title": titulo, "Priority": prioridade, "Tags": tags},
+        )
+    except Exception as e:
+        print(f"Erro ao enviar notificação: {e}")
+
 
 # Configuração da página
 st.set_page_config(
