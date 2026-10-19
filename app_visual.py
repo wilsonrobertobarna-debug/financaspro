@@ -26,10 +26,12 @@ def enviar_alerta_financas(
     topico_secreto = "financaspro_wilson_segredo_777_WFPYChe815mnD"
     url = f"https://ntfy.sh/{topico_secreto}"
     try:
+        # O verify=False desativa a checagem chata de certificado do Windows
         requests.post(
             url,
             data=mensagem.encode("utf-8"),
             headers={"Title": titulo, "Priority": prioridade, "Tags": tags},
+            verify=False,
         )
     except Exception as e:
         print(f"Erro ao enviar notificação: {e}")
