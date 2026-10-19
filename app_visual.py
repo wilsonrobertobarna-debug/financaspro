@@ -6,18 +6,16 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import requests
+import ssl
 import streamlit as st
 import streamlit.components.v1 as components
 import urllib.parse
+import urllib.request
 
-# 1. CONFIGURAÇÃO DA PÁGINA (Deve ser SEMPRE a primeira instrução do Streamlit!)
+# 1. CONFIGURAÇÃO DA PÁGINA (Deve ser SEMPRE a primeira instrução do Streamlit)
 st.set_page_config(
     page_title="Painel Wilson", layout="wide", initial_sidebar_state="collapsed"
 )
-
-
-import urllib.request
 
 
 # ==========================================
@@ -30,7 +28,6 @@ def enviar_alerta_financas(
     url = f"https://ntfy.sh/{topico_secreto}"
 
     try:
-        # Prepara os dados e cabeçalhos usando o motor padrão do Python
         data_bytes = mensagem.encode("utf-8")
         req = urllib.request.Request(
             url,
@@ -38,33 +35,46 @@ def enviar_alerta_financas(
             headers={"Title": titulo, "Priority": prioridade, "Tags": tags},
             method="POST",
         )
-
-        # Envia a mensagem ignorando checagens de certificado do Windows
-        import ssl
-
         context = ssl._create_unverified_context()
-        urllib.request.urlopen(req, context=context)
-        print("✅ Alerta enviado com sucesso!")
+        resposta = urllib.request.urlopen(req, context=context)
+        return True, resposta.getcode()
     except Exception as e:
-        print(f"❌ Erro ao enviar notificação: {e}")
+        return False, str(e)
 
 
-# 2. Cria um "alvo" no topo (já com a página configurada)
+# 2. Cria um "alvo" no topo
 st.markdown('<a id="top"></a>', unsafe_allow_html=True)
 
-# BOTÃO DE TESTE RÁPIDO DO ALARME
+# 3. BOTÃO DE TESTE COM DIAGNÓSTICO NA TELA
 if st.button("🔔 Testar Som no Celular agora"):
-    enviar_alerta_financas(
-        titulo="🚨 FinançasPro - Teste Concluído!",
-        mensagem=(
-            "Wilson, o alarme do FinançasPro está configurado e funcionando"
-            " perfeitamente!"
-        ),
+    sucesso, resultado = enviar_alerta_financas(
+        titulo="🚨 FinançasPro - Teste!",
+        mensagem="Wilson, o alarme do FinançasPro foi disparado do computador!",
         prioridade="high",
         tags="bell,moneybag",
     )
-    st.success("Sinal disparado! O celular deve ter apitado.")
 
+    if sucesso:
+        st.success(
+            f"✅ O Python enviou com sucesso! (Código HTTP: {resultado}). Verifique"
+            " se o celular apitou."
+        )
+    else:
+        st.error(f"❌ Ocorreu um erro no envio: {resultado}")
+
+# Seu CSS que você já tinha:
+st.markdown(
+    """
+<style>
+    [data-testid="stSidebarNav"] { display: none !important; }
+    .block-container { padding-top: 2.2rem !important; }
+    div.stSelectbox { margin-bottom: -1.5rem !important; }
+    hr { margin-top: 0.2rem !important; margin-bottom: 0.5rem !important; }
+    header[data-testid="stHeader"] { background: transparent; }
+</style>
+""",
+    unsafe_allow_html=True,
+)
 
 # Configuração da página
 st.set_page_config(
