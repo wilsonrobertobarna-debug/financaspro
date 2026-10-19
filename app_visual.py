@@ -17,24 +17,36 @@ st.set_page_config(
 )
 
 
+import urllib.request
+
+
 # ==========================================
-# 🔔 FUNÇÃO DE ALARME PARA O CELULAR (NTFY)
+# 🔔 FUNÇÃO DE ALARME PARA O CELULAR (NTFY - NATIVO)
 # ==========================================
 def enviar_alerta_financas(
     titulo, mensagem, prioridade="high", tags="bell,moneybag"
 ):
     topico_secreto = "financaspro_wilson_segredo_777_WFPYChe815mnD"
     url = f"https://ntfy.sh/{topico_secreto}"
+
     try:
-        # O verify=False desativa a checagem chata de certificado do Windows
-        requests.post(
+        # Prepara os dados e cabeçalhos usando o motor padrão do Python
+        data_bytes = mensagem.encode("utf-8")
+        req = urllib.request.Request(
             url,
-            data=mensagem.encode("utf-8"),
+            data=data_bytes,
             headers={"Title": titulo, "Priority": prioridade, "Tags": tags},
-            verify=False,
+            method="POST",
         )
+
+        # Envia a mensagem ignorando checagens de certificado do Windows
+        import ssl
+
+        context = ssl._create_unverified_context()
+        urllib.request.urlopen(req, context=context)
+        print("✅ Alerta enviado com sucesso!")
     except Exception as e:
-        print(f"Erro ao enviar notificação: {e}")
+        print(f"❌ Erro ao enviar notificação: {e}")
 
 
 # 2. Cria um "alvo" no topo (já com a página configurada)
