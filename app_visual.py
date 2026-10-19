@@ -1,19 +1,20 @@
-import streamlit as st
-import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
-import plotly.express as px
-import plotly.graph_objects as go
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from fpdf import FPDF
-import urllib.parse
-import streamlit.components.v1 as components
-from datetime import datetime
+import gspread
+from google.oauth2.service_account import Credentials
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 import requests
+import streamlit as st
+import streamlit.components.v1 as components
+import urllib.parse
 
-# Cria um "alvo" no topo
-st.markdown('<a id="top"></a>', unsafe_allow_html=True)
+# 1. CONFIGURAÇÃO DA PÁGINA (Deve ser SEMPRE a primeira instrução do Streamlit!)
+st.set_page_config(
+    page_title="Painel Wilson", layout="wide", initial_sidebar_state="collapsed"
+)
 
 
 # ==========================================
@@ -32,6 +33,23 @@ def enviar_alerta_financas(
         )
     except Exception as e:
         print(f"Erro ao enviar notificação: {e}")
+
+
+# 2. Cria um "alvo" no topo (já com a página configurada)
+st.markdown('<a id="top"></a>', unsafe_allow_html=True)
+
+# BOTÃO DE TESTE RÁPIDO DO ALARME
+if st.button("🔔 Testar Som no Celular agora"):
+    enviar_alerta_financas(
+        titulo="🚨 FinançasPro - Teste Concluído!",
+        mensagem=(
+            "Wilson, o alarme do FinançasPro está configurado e funcionando"
+            " perfeitamente!"
+        ),
+        prioridade="high",
+        tags="bell,moneybag",
+    )
+    st.success("Sinal disparado! O celular deve ter apitado.")
 
 
 # Configuração da página
