@@ -694,7 +694,8 @@ def get_valor_pendente(df):
 
 
 # 4. SIDEBAR - NAVEGAÇÃO
-st.sidebar.title("🎮 Painel Wilson")
+# Exibe o teu logótipo diretamente do repositório
+st.sidebar.image("FinançasPro - Wilson.png", use_container_width=True)
 
 if st.sidebar.button("🔄 Atualizar dados do Sheets"):
     atualizar_sessao()
