@@ -49,26 +49,6 @@ def enviar_alerta_financas(
 # 2. Cria um "alvo" no topo
 st.markdown('<a id="top"></a>', unsafe_allow_html=True)
 
-# ==========================================
-# 🔔 BOTÃO DE TESTE NA BARRA LATERAL (SIDEBAR)
-# ==========================================
-st.sidebar.markdown("---")  # Uma linha divisória elegante na lateral
-st.sidebar.subheader("⚙️ Configurações do Sistema")
-
-if st.sidebar.button("🔔 Testar Som no Celular"):
-    sucesso, resultado = enviar_alerta_financas(
-        titulo="🚨 FinançasPro - Teste!",
-        mensagem="Wilson, o alarme do FinançasPro foi disparado do computador!",
-        prioridade="high",
-        tags="bell,moneybag",
-    )
-
-    if sucesso:
-        st.sidebar.success(
-            f"✅ Enviado com sucesso! (HTTP: {resultado}). Veja o celular."
-        )
-    else:
-        st.sidebar.error(f"❌ Erro no envio: {resultado}")
 
 # Seu CSS que você já tinha:
 st.markdown(
@@ -3710,6 +3690,21 @@ if aba == "📋 Relatório PDF":
 # =========================================================================
 if aba == "📊 Análises & Configurações":
     st.markdown("## 📊 Painel de Análises & Configurações")
+    st.subheader("⚙️ Configurações e Testes do Sistema")
+    
+    # O botão fica guardado aqui dentro com segurança!
+    if st.button("🔔 Testar Som no Celular"):
+        sucesso, resultado = enviar_alerta_financas(
+            titulo="🚨 FinançasPro - Teste!",
+            mensagem="Wilson, o alarme do FinançasPro foi disparado do computador!",
+            prioridade="high",
+            tags="bell,moneybag",
+        )
+
+        if sucesso:
+            st.success(f"✅ Enviado com sucesso! (HTTP: {resultado}). Veja o celular.")
+        else:
+            st.error(f"❌ Erro no envio: {resultado}")
     
    # =========================================================================
     # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
