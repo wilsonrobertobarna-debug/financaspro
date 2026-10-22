@@ -616,6 +616,77 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     )
                     total_geral_prestes_vencer += valor_conta
 
+        # =========================================================================
+# 🔔 VERIFICAÇÃO AUTOMÁTICA DA RESERVA DE EMERGÊNCIA
+# =========================================================================
+import datetime
+
+# Recupera os parâmetros definidos na aba de configurações
+aporte_planejado = st.session_state.get('reserva_aporte_mensal', 0.0)
+banco_reserva = st.session_state.get('reserva_banco_escolhido', None)
+dia_limite = st.session_state.get('reserva_dia_vencimento', 10)
+
+if aporte_planejado > 0 and banco_reserva:
+    hoje = datetime.date.today()
+    mes_atual = hoje.month
+    ano_atual = hoje.year
+    dia_atual = hoje.day
+
+    # Garante que a coluna de data esteja em formato datetime para filtragem
+    try:
+        df_base['Data_DT'] = pd.to_datetime(df_base['Data'], errors='coerce')
+        
+        # Filtra lançamentos do mês/ano atual para o banco escolhido
+        filtro_mes_banco = (
+            (df_base['Data_DT'].dt.month == mes_atual) & 
+            (df_base['Data_DT'].dt.year == ano_atual) &
+            (df_base['Banco'] == banco_reserva) &
+            (df_base['Descrição'].astype(str).str.contains('reserva', case=False, na=False)) &
+            ((df_base['Status'].str.upper() == 'PAGO') | (df_base['Status'] == ''))
+        )
+        
+        # Soma o total já aportado no mês atual
+        total_aportado_mes = df_base[filtro_mes_banco]['V_Num'].sum()
+        
+    except Exception as e:
+        total_aportado_mes = 0.0
+
+    # Valor restante para atingir o aporte do mês
+    falta_aportar = max(0.0, aporte_planejado - total_aportado_mes)
+
+    st.markdown("### 🛡️ Status do Aporte Mensal - Reserva de Emergência")
+
+    # CENÁRIO 1: Meta do mês atingida!
+    if total_aportado_mes >= aporte_planejado:
+        st.success(
+            f"🎉 **Aporte do mês concluído!**\n\n"
+            f"• **Banco:** {banco_reserva}\n"
+            f"• **Planejado:** R$ {aporte_planejado:,.2f}\n"
+            f"• **Aportado:** R$ {total_aportado_mes:,.2f}"
+        )
+
+    # CENÁRIO 2: Aporte pendente, mas ainda dentro do prazo
+    elif dia_atual <= dia_limite:
+        st.info(
+            f"⏳ **Aporte em andamento (Vencimento: Dia {dia_limite}):**\n\n"
+            f"• **Banco:** {banco_reserva}\n"
+            f"• **Aportado até agora:** R$ {total_aportado_mes:,.2f} / R$ {aporte_planejado:,.2f}\n"
+            f"• **Falta aportar:** R$ {falta_aportar:,.2f} até o dia {dia_limite}/{mes_atual:02d}."
+        )
+
+    # CENÁRIO 3: Aporte atrasado (Dia Limite já passou)
+    else:
+        st.warning(
+            f"🚨 **Atenção: Aporte da Reserva Pendente!**\n\n"
+            f"O dia limite ({dia_limite}/{mes_atual:02d}) já passou e o aporte não foi totalmente identificado.\n"
+            f"• **Banco:** {banco_reserva}\n"
+            f"• **Aportado:** R$ {total_aportado_mes:,.2f}\n"
+            f"• **Falta:** R$ {falta_aportar:,.2f}"
+        )
+
+
+        
+
         # ==========================================
         # 🔔 ENVIAR NOTIFICAÇÃO CONSOLIDADA NO CELULAR
         # ==========================================
