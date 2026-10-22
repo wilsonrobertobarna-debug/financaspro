@@ -616,6 +616,8 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     )
                     total_geral_prestes_vencer += valor_conta
 
+
+if aba_selecionada == "Dashboard":
 # =========================================================================
 # 🔔 VERIFICAÇÃO AUTOMÁTICA DA RESERVA DE EMERGÊNCIA
 # =========================================================================
