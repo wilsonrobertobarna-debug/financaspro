@@ -3793,11 +3793,11 @@ if aba == "📊 Análises & Configurações":
             meta_atual = 0.0
 
     # =========================================================================
-    # 🆕 NOVO BLOCO: CADASTRO DE APORTE DA RESERVA DE EMERGÊNCIA
+    # 🆕 NOVO BLOCO: CADASTRO DE APORTE DA RESERVA DE EMERGÊNCIA (FIXO NO GOOGLE SHEETS)
     # =========================================================================
     st.markdown("### 🛡️ Nova Reserva de Emergência")
     
-    # Pega a lista dos bancos disponíveis no seu sistema para preencher o selectbox
+    # 1. Carrega a lista dos bancos disponíveis no seu sistema
     lista_bancos_disponiveis = []
     try:
         if 'df_bancos_info' in locals() and not df_bancos_info.empty:
@@ -3808,21 +3808,40 @@ if aba == "📊 Análises & Configurações":
     if not lista_bancos_disponiveis:
         lista_bancos_disponiveis = ["Nubank", "Inter", "Sofisa", "Outro"]
 
+    # 2. Lê os valores salvos na aba Reserva_Financeira (se já existirem na planilha)
+    aporte_salvo = 500.00
+    banco_salvo = lista_bancos_disponiveis[0] if lista_bancos_disponiveis else "Nubank"
+    dia_salvo = 10
+
+    if 'dados_reserva' in locals() and len(dados_reserva) > 1:
+        try:
+            if len(dados_reserva[1]) > 1 and dados_reserva[1][1]:
+                aporte_salvo = float(str(dados_reserva[1][1]).replace('R$', '').replace('.', '').replace(',', '.').strip())
+            if len(dados_reserva[1]) > 2 and dados_reserva[1][2]:
+                banco_salvo = str(dados_reserva[1][2]).strip()
+            if len(dados_reserva[1]) > 3 and dados_reserva[1][3]:
+                dia_salvo = int(dados_reserva[1][3])
+        except:
+            pass
+
+    # 3. Formulário de Cadastro e Alteração
     with st.form("form_nova_reserva_emergencia"):
         col_ne1, col_ne2, col_ne3 = st.columns(3)
         
         with col_ne1:
             nova_reserva_valor = st.number_input(
-                "Valor do Aporte (R$):",
-                value=float(st.session_state.get('reserva_aporte_mensal', 500.00)),
+                "Valor do Aporte Mensal (R$):",
+                value=float(aporte_salvo),
                 step=50.0,
                 format="%.2f"
             )
             
         with col_ne2:
+            idx_banco = lista_bancos_disponiveis.index(banco_salvo) if banco_salvo in lista_bancos_disponiveis else 0
             banco_escolhido = st.selectbox(
                 "Banco de Aplicação:",
-                options=lista_bancos_disponiveis
+                options=lista_bancos_disponiveis,
+                index=idx_banco
             )
             
         with col_ne3:
@@ -3830,20 +3849,28 @@ if aba == "📊 Análises & Configurações":
                 "Dia Limite / Vencimento:",
                 min_value=1,
                 max_value=31,
-                value=int(st.session_state.get('reserva_dia_vencimento', 10))
+                value=int(dia_salvo)
             )
             
         salvar_nova_reserva = st.form_submit_button("💾 Salvar Parâmetros da Reserva de Emergência")
         
         if salvar_nova_reserva:
-            # Salva na sessão para o alerta usar na tela principal
+            # Garante que a meta anterior seja mantida
+            meta_para_salvar = meta_atual if 'meta_atual' in locals() else 0.0
+            
+            # Grava FIXO nas colunas A2:D2 da planilha
+            ws_reserva.update(
+                range_name='A2:D2',
+                values=[[str(meta_para_salvar), str(nova_reserva_valor), str(banco_escolhido), str(dia_limite_aporte)]]
+            )
+            
+            # Salva também na memória para atualização imediata na tela
             st.session_state['reserva_aporte_mensal'] = nova_reserva_valor
             st.session_state['reserva_banco_escolhido'] = banco_escolhido
             st.session_state['reserva_dia_vencimento'] = dia_limite_aporte
             
-            st.toast(f"✅ Reserva de Emergência salva! Banco: {banco_escolhido} | Valor: R$ {nova_reserva_valor:,.2f}", icon="🛡️")
+            st.toast(f"✅ Configurações salvas e FIXADAS no banco de dados! Banco: {banco_escolhido}", icon="🛡️")
             st.rerun()
-
     st.markdown("---")
 
    # --- FUNÇÃO DE CONVERSÃO SEGURA ---
