@@ -1800,8 +1800,7 @@ if "💰" in st.session_state.page:
             else:
                 st.info("Aguardando dados para o período...")
                         
-        # 🔍 RAIO-X DOS LANÇAMENTOS DE SAÚDE
-        st.write("🔍 **O que o sistema encontrou em df_m para a categoria Saúde:**", df_m[df_m['Categoria'] == 'Saúde'])
+        
 # 6. NOVO: GRÁFICO DE METAS
         st.subheader("🎯 Metas vs Realizado (Despesas)")
         
