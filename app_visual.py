@@ -617,12 +617,13 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     total_geral_prestes_vencer += valor_conta
 
 
-# Supondo que a sua aba principal se chame "Dashboard" ou "Visão Geral":
-if aba_selecionada == "Dashboard":  # <-- Coloque o nome exato da sua aba principal aqui
-
-    # =========================================================================
-    # 🔔 VERIFICAÇÃO AUTOMÁTICA DA RESERVA DE EMERGÊNCIA
-    # =========================================================================
+# Procure por algo assim no seu código:
+with tab1: # ou tab_dashboard, tab_principal, etc.
+    st.title("📊 Dashboard")
+    
+    # ---------------------------------------------------------------------
+    # 🔔 COLE O BLOCO DO ALERTA AQUI DENTRO DA ABA
+    # ---------------------------------------------------------------------
     from datetime import datetime
 
     aporte_planejado = st.session_state.get('reserva_aporte_mensal', 0.0)
