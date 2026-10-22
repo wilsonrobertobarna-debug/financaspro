@@ -1807,11 +1807,28 @@ if "💰" in st.session_state.page:
         df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
         
         if not df_metas_graph.empty:
-            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
+            # 1. Pega a tabela de metas atualizada do session_state
+            df_metas_conf = st.session_state.get('df_metas_config', pd.DataFrame())
 
-            # --- ADICIONE ESTA LINHA TEMPORÁRIA DE TESTE ---
-            st.write("🔍 **Teste de Leitura do DataFrame:**", df_metas_graph[['Categoria', 'V_Num', 'Meta']])
-            
+            if not df_metas_conf.empty:
+                # Trata a coluna de valor alvo para garantir que seja float
+                df_metas_conf['Valor Alvo'] = df_metas_conf['Valor Alvo'].apply(
+                    lambda v: float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip()) if str(v).strip() != '' else 0.0
+                )
+                
+                # Cruza os gastos com a tabela oficial de metas pela Categoria
+                df_metas_graph = pd.merge(
+                    df_metas_graph, 
+                    df_metas_conf, 
+                    left_on='Categoria', 
+                    right_on='Nome da Meta', 
+                    how='left'
+                )
+                df_metas_graph['Meta'] = df_metas_graph['Valor Alvo'].fillna(0.0)
+            else:
+                df_metas_graph['Meta'] = 0.0
+
+            # 2. Desenha o gráfico
             fig_m = go.Figure()
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
@@ -1828,7 +1845,7 @@ if "💰" in st.session_state.page:
                 }
             )
 
-            # 🚨 ALERTAS DE METAS ULTRAPASSADAS (Só aparece se houver estouro)
+            # 🚨 3. ALERTAS DE METAS ULTRAPASSADAS (Só aparece se a meta for maior que zero e o gasto for maior que a meta)
             df_estouradas = df_metas_graph[
                 (df_metas_graph['Meta'] > 0) & 
                 (df_metas_graph['V_Num'] > df_metas_graph['Meta'])
@@ -1850,7 +1867,6 @@ if "💰" in st.session_state.page:
 
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
-
         
         # =========================================================================
         # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO)
