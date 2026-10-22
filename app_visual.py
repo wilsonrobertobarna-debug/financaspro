@@ -1807,26 +1807,25 @@ if "💰" in st.session_state.page:
         df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
         
         if not df_metas_graph.empty:
-            # 1. Pega a tabela de metas atualizada do session_state
+            # Busca a meta diretamente usando o session_state ou o dicionário de metas limpo
             df_metas_conf = st.session_state.get('df_metas_config', pd.DataFrame())
+            
+            # Cria um dicionário rápido de {Categoria: Meta} para evitar qualquer erro de merge
+            dict_metas_temp = {}
+            if not df_metas_conf.empty and 'Nome da Meta' in df_metas_conf.columns and 'Valor Alvo' in df_metas_conf.columns:
+                for _, row_m in df_metas_conf.iterrows():
+                    c_nome = row_m['Nome da Meta']
+                    c_val_raw = row_m['Valor Alvo']
+                    try:
+                        if isinstance(c_val_raw, str):
+                            c_val_raw = c_val_raw.replace('R$', '').replace('.', '').replace(',', '.').strip()
+                        c_val = float(c_val_raw) if str(c_val_raw).strip() != '' else 0.0
+                    except:
+                        c_val = 0.0
+                    dict_metas_temp[c_nome] = c_val
 
-            if not df_metas_conf.empty:
-                # Trata a coluna de valor alvo para garantir que seja float
-                df_metas_conf['Valor Alvo'] = df_metas_conf['Valor Alvo'].apply(
-                    lambda v: float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip()) if str(v).strip() != '' else 0.0
-                )
-                
-                # Cruza os gastos com a tabela oficial de metas pela Categoria
-                df_metas_graph = pd.merge(
-                    df_metas_graph, 
-                    df_metas_conf, 
-                    left_on='Categoria', 
-                    right_on='Nome da Meta', 
-                    how='left'
-                )
-                df_metas_graph['Meta'] = df_metas_graph['Valor Alvo'].fillna(0.0)
-            else:
-                df_metas_graph['Meta'] = 0.0
+            # Aplica a meta garantindo que o 'V_Num' (gasto real) fique intacto
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(dict_metas_temp).fillna(0.0)
 
             # 2. Desenha o gráfico
             fig_m = go.Figure()
@@ -1845,7 +1844,7 @@ if "💰" in st.session_state.page:
                 }
             )
 
-            # 🚨 3. ALERTAS DE METAS ULTRAPASSADAS (Só aparece se a meta for maior que zero e o gasto for maior que a meta)
+            # 🚨 3. ALERTAS DE METAS ULTRAPASSADAS
             df_estouradas = df_metas_graph[
                 (df_metas_graph['Meta'] > 0) & 
                 (df_metas_graph['V_Num'] > df_metas_graph['Meta'])
