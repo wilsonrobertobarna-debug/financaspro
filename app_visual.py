@@ -3721,6 +3721,60 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
+    # =========================================================================
+    # 🆕 NOVO BLOCO: CADASTRO DE APORTE DA RESERVA DE EMERGÊNCIA
+    # =========================================================================
+    st.markdown("### 🛡️ Nova Reserva de Emergência")
+    
+    # Pega a lista dos bancos disponíveis no seu sistema para preencher o selectbox
+    lista_bancos_disponiveis = []
+    try:
+        if 'df_bancos_info' in locals() and not df_bancos_info.empty:
+            lista_bancos_disponiveis = df_bancos_info.iloc[:, 0].dropna().unique().tolist()
+    except:
+        pass
+    
+    if not lista_bancos_disponiveis:
+        lista_bancos_disponiveis = ["Nubank", "Inter", "Sofisa", "Outro"]
+
+    with st.form("form_nova_reserva_emergencia"):
+        col_ne1, col_ne2, col_ne3 = st.columns(3)
+        
+        with col_ne1:
+            nova_reserva_valor = st.number_input(
+                "Valor do Aporte (R$):",
+                value=float(st.session_state.get('reserva_aporte_mensal', 500.00)),
+                step=50.0,
+                format="%.2f"
+            )
+            
+        with col_ne2:
+            banco_escolhido = st.selectbox(
+                "Banco de Aplicação:",
+                options=lista_bancos_disponiveis
+            )
+            
+        with col_ne3:
+            dia_limite_aporte = st.number_input(
+                "Dia Limite / Vencimento:",
+                min_value=1,
+                max_value=31,
+                value=int(st.session_state.get('reserva_dia_vencimento', 10))
+            )
+            
+        salvar_nova_reserva = st.form_submit_button("💾 Salvar Parâmetros da Reserva de Emergência")
+        
+        if salvar_nova_reserva:
+            # Salva na sessão para o alerta usar na tela principal
+            st.session_state['reserva_aporte_mensal'] = nova_reserva_valor
+            st.session_state['reserva_banco_escolhido'] = banco_escolhido
+            st.session_state['reserva_dia_vencimento'] = dia_limite_aporte
+            
+            st.toast(f"✅ Reserva de Emergência salva! Banco: {banco_escolhido} | Valor: R$ {nova_reserva_valor:,.2f}", icon="🛡️")
+            st.rerun()
+
+    st.markdown("---")
+
    # --- FUNÇÃO DE CONVERSÃO SEGURA ---
     def converter_valor_br_seguro(val):
         if pd.isna(val):
