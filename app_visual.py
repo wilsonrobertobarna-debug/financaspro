@@ -3696,8 +3696,8 @@ if aba == "📊 Análises & Configurações":
         else:
             st.error(f"❌ Erro no envio: {resultado}")
     
-    # =========================================================================
-    # 💰 PAINEL DE RESERVA FINANCEIRA (COMPLETO E CORRETO)
+   # =========================================================================
+    # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
     # =========================================================================
     st.markdown("---")
     st.subheader("🎯 Planejamento de Reserva Financeira")
@@ -3721,7 +3721,7 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
-    # --- FUNÇÃO DE CONVERSÃO SEGURA ---
+   # --- FUNÇÃO DE CONVERSÃO SEGURA ---
     def converter_valor_br_seguro(val):
         if pd.isna(val):
             return 0.0
@@ -3745,11 +3745,11 @@ if aba == "📊 Análises & Configurações":
             return 0.0
 
     # Inicializadores dos totais
-    guardado_atual = 0.0             # Investimentos BRL
-    saldo_outras_brl = 0.0           # Contas Correntes BRL
-    saldo_veiculos_brl = 0.0         # Veículos BRL
-    total_invest_usd = 0.0           # Investimentos USD
-    total_invest_eur = 0.0           # Investimentos EUR
+    guardado_atual = 0.0            # Investimentos BRL
+    saldo_outras_brl = 0.0          # Contas Correntes BRL
+    saldo_veiculos_brl = 0.0        # Veículos BRL
+    total_invest_usd = 0.0          # Investimentos USD
+    total_invest_eur = 0.0          # Investimentos EUR
     saldo_outras_usd = 0.0
     saldo_outras_eur = 0.0
 
@@ -3818,51 +3818,11 @@ if aba == "📊 Análises & Configurações":
 
     except Exception as e:
         st.error(f"Erro ao calcular os saldos: {e}")
-
-    # 1. EXIBIÇÃO DE MÉTRICAS E PROGRESSO (Agora com o 'guardado_atual' já calculado)
-    if meta_atual > 0:
-        progresso = min(guardado_atual / meta_atual, 1.0)
-        percentual_reserva = (guardado_atual / meta_atual) * 100
-    else:
-        progresso = 0.0
-        percentual_reserva = 0.0
-
-    col_m1, col_m2, col_m3 = st.columns(3)
-    col_m1.metric("🎯 Meta Alvo", f"R$ {meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    col_m2.metric("💰 Apenas Investimentos", f"R$ {guardado_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    col_m3.metric("📈 Conclusão da Meta", f"{percentual_reserva:.1f}%")
-
-    st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")
-
-    # 2. FORMULÁRIO DE CONFIGURAÇÕES (Meta, Aporte e Vencimento lado a lado)
-    st.markdown("### ⚙️ Configurações do Aporte Mensal")
-   # Formulário para salvar a meta e configurações do aporte
+        
+    # Formulário para salvar a meta
     with st.form("form_reserva_financeira"):
-        col_f1, col_f2, col_f3 = st.columns(3)
-        
-        with col_f1:
-            meta_str_input = st.text_input(
-                "Definir Meta Total da Reserva (R$):", 
-                value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            )
-        
-        with col_f2:
-            meta_aporte_mensal = st.number_input(
-                "Aporte Mensal Planejado (R$):",
-                value=float(st.session_state.get('reserva_aporte_mensal', 500.00)),
-                step=50.0,
-                format="%.2f"
-            )
-        
-        with col_f3:
-            dia_vencimento = st.number_input(
-                "Dia Limite do Aporte:",
-                min_value=1,
-                max_value=31,
-                value=int(st.session_state.get('reserva_dia_vencimento', 10))
-            )
-        
-        salvar_reserva = st.form_submit_button("💾 Salvar Configurações da Reserva")
+        meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        salvar_reserva = st.form_submit_button("💾 Salvar Meta")
         
         if salvar_reserva:
             try:
@@ -3870,15 +3830,13 @@ if aba == "📊 Análises & Configurações":
                 meta_limpa = meta_limpa.replace('.', '').replace(',', '.')
                 nova_meta = float(meta_limpa)
                 
-                # Salva os parâmetros na sessão
-                st.session_state['reserva_aporte_mensal'] = meta_aporte_mensal
-                st.session_state['reserva_dia_vencimento'] = dia_vencimento
-                
                 ws_reserva.update(values=[[str(nova_meta)]], range_name='A2:A2')
-                st.toast("✅ Configurações salvas com sucesso!", icon="🎯")
+                st.toast("✅ Meta da reserva salva com sucesso!", icon="🎯")
                 st.rerun()
             except ValueError:
-                st.error("⚠️ Formato de valor inválido.")    # Exibição de Métricas e Progresso Visual
+                st.error("⚠️ Formato de valor inválido. Use o formato como 300000 ou 300.000,00")
+
+    # Exibição de Métricas e Progresso Visual
     if meta_atual > 0:
         progresso = min(guardado_atual / meta_atual, 1.0)
         percentual_reserva = (guardado_atual / meta_atual) * 100
