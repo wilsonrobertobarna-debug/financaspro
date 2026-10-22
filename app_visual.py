@@ -3836,6 +3836,7 @@ if aba == "📊 Análises & Configurações":
 
     # 2. FORMULÁRIO DE CONFIGURAÇÕES (Meta, Aporte e Vencimento lado a lado)
     st.markdown("### ⚙️ Configurações do Aporte Mensal")
+   # Formulário para salvar a meta e configurações do aporte
     with st.form("form_reserva_financeira"):
         col_f1, col_f2, col_f3 = st.columns(3)
         
@@ -3869,15 +3870,15 @@ if aba == "📊 Análises & Configurações":
                 meta_limpa = meta_limpa.replace('.', '').replace(',', '.')
                 nova_meta = float(meta_limpa)
                 
+                # Salva os parâmetros na sessão
                 st.session_state['reserva_aporte_mensal'] = meta_aporte_mensal
                 st.session_state['reserva_dia_vencimento'] = dia_vencimento
                 
                 ws_reserva.update(values=[[str(nova_meta)]], range_name='A2:A2')
-                st.toast("✅ Configurações da reserva salvas com sucesso!", icon="🎯")
+                st.toast("✅ Configurações salvas com sucesso!", icon="🎯")
                 st.rerun()
             except ValueError:
-                st.error("⚠️ Formato de valor inválido. Use o formato como 300000 ou 300.000,00")
-    # Exibição de Métricas e Progresso Visual
+                st.error("⚠️ Formato de valor inválido.")    # Exibição de Métricas e Progresso Visual
     if meta_atual > 0:
         progresso = min(guardado_atual / meta_atual, 1.0)
         percentual_reserva = (guardado_atual / meta_atual) * 100
