@@ -3761,7 +3761,7 @@ if aba == "📊 Análises & Configurações":
         else:
             st.error(f"❌ Erro no envio: {resultado}")
     
-   # =========================================================================
+ # =========================================================================
     # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
     # =========================================================================
     st.markdown("---")
@@ -3773,8 +3773,8 @@ if aba == "📊 Análises & Configurações":
         ws_reserva = sh.worksheet("Reserva_Financeira")
     except:
         ws_reserva = sh.add_worksheet(title="Reserva_Financeira", rows="10", cols="5")
-        ws_reserva.append_row(["Meta_Reserva"])
-        ws_reserva.append_row(["0.0"])
+        ws_reserva.append_row(["Meta_Reserva", "Aporte_Mensal", "Banco", "Dia_Limite"])
+        ws_reserva.append_row(["0.0", "300.00", "Invest Pag. Bank", "10"])
 
     # Pega os dados da aba de reserva
     dados_reserva = ws_reserva.get_all_values()
@@ -3782,7 +3782,12 @@ if aba == "📊 Análises & Configurações":
 
     if len(dados_reserva) > 1:
         try:
-            meta_atual = float(str(dados_reserva[1][0]).replace('R$', '').replace('.', '').replace(',', '.').strip())
+            val_meta_raw = str(dados_reserva[1][0]).replace('R$', '').strip()
+            if ',' in val_meta_raw and '.' in val_meta_raw:
+                val_meta_raw = val_meta_raw.replace('.', '').replace(',', '.')
+            else:
+                val_meta_raw = val_meta_raw.replace(',', '.')
+            meta_atual = float(val_meta_raw)
         except:
             meta_atual = 0.0
 
@@ -3800,23 +3805,31 @@ if aba == "📊 Análises & Configurações":
         pass
     
     if not lista_bancos_disponiveis:
-        lista_bancos_disponiveis = ["Nubank", "Inter", "Sofisa", "Outro"]
+        lista_bancos_disponiveis = ["Nubank", "Inter", "Sofisa", "Invest Pag. Bank", "Outro"]
 
     # 2. Lê os valores salvos na aba Reserva_Financeira (se já existirem na planilha)
-    aporte_salvo = 500.00
+    aporte_salvo = 300.00
     banco_salvo = lista_bancos_disponiveis[0] if lista_bancos_disponiveis else "Nubank"
     dia_salvo = 10
 
-    if 'dados_reserva' in locals() and len(dados_reserva) > 1:
+    if len(dados_reserva) > 1:
         try:
+            # 🛡️ TRATAMENTO SEGURO DE CONVERSÃO DECIMAL (EVITA 3000.00)
             if len(dados_reserva[1]) > 1 and dados_reserva[1][1]:
-                aporte_salvo = float(str(dados_reserva[1][1]).replace('R$', '').replace('.', '').replace(',', '.').strip())
+                val_raw = str(dados_reserva[1][1]).replace('R$', '').strip()
+                if ',' in val_raw and '.' in val_raw:
+                    val_raw = val_raw.replace('.', '').replace(',', '.')
+                else:
+                    val_raw = val_raw.replace(',', '.')
+                aporte_salvo = float(val_raw)
+                
             if len(dados_reserva[1]) > 2 and dados_reserva[1][2]:
                 banco_salvo = str(dados_reserva[1][2]).strip()
+                
             if len(dados_reserva[1]) > 3 and dados_reserva[1][3]:
-                dia_salvo = int(dados_reserva[1][3])
+                dia_salvo = int(float(str(dados_reserva[1][3]).replace(',', '.')))
         except:
-            pass
+            aporte_salvo = 300.00
 
     # 3. Formulário de Cadastro e Alteração
     with st.form("form_nova_reserva_emergencia"):
@@ -3850,12 +3863,15 @@ if aba == "📊 Análises & Configurações":
         
         if salvar_nova_reserva:
             # Garante que a meta anterior seja mantida
-            meta_para_salvar = meta_atual if 'meta_atual' in locals() else 0.0
+            meta_para_salvar = f"{meta_atual:.2f}"
+            
+            # 🛡️ Formata o valor fixo com duas casas decimais e ponto (ex: "300.00")
+            aporte_para_salvar = f"{nova_reserva_valor:.2f}"
             
             # Grava FIXO nas colunas A2:D2 da planilha
             ws_reserva.update(
                 range_name='A2:D2',
-                values=[[str(meta_para_salvar), str(nova_reserva_valor), str(banco_escolhido), str(dia_limite_aporte)]]
+                values=[[meta_para_salvar, aporte_para_salvar, str(banco_escolhido), str(dia_limite_aporte)]]
             )
             
             # Salva também na memória para atualização imediata na tela
@@ -3866,7 +3882,6 @@ if aba == "📊 Análises & Configurações":
             st.toast(f"✅ Configurações salvas e FIXADAS no banco de dados! Banco: {banco_escolhido}", icon="🛡️")
             st.rerun()
     st.markdown("---")
-
    # --- FUNÇÃO DE CONVERSÃO SEGURA ---
     def converter_valor_br_seguro(val):
         if pd.isna(val):
