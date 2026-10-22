@@ -1808,6 +1808,9 @@ if "💰" in st.session_state.page:
         
         if not df_metas_graph.empty:
             df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
+
+            # --- ADICIONE ESTA LINHA TEMPORÁRIA DE TESTE ---
+            st.write("🔍 **Teste de Leitura do DataFrame:**", df_metas_graph[['Categoria', 'V_Num', 'Meta']])
             
             fig_m = go.Figure()
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
