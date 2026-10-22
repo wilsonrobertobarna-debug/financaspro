@@ -616,10 +616,10 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     )
                     total_geral_prestes_vencer += valor_conta
 
-        # =========================================================================
+# =========================================================================
 # 🔔 VERIFICAÇÃO AUTOMÁTICA DA RESERVA DE EMERGÊNCIA
 # =========================================================================
-import datetime
+from datetime import datetime
 
 # Recupera os parâmetros definidos na aba de configurações
 aporte_planejado = st.session_state.get('reserva_aporte_mensal', 0.0)
