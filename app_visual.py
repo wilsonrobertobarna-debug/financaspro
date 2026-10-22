@@ -1824,6 +1824,27 @@ if "💰" in st.session_state.page:
                     'displayModeBar': False
                 }
             )
+
+            # 🚨 ALERTAS DE METAS ULTRAPASSADAS (Só aparece se houver estouro)
+            df_estouradas = df_metas_graph[
+                (df_metas_graph['Meta'] > 0) & 
+                (df_metas_graph['V_Num'] > df_metas_graph['Meta'])
+            ]
+
+            if not df_estouradas.empty:
+                for _, linha in df_estouradas.iterrows():
+                    cat = linha['Categoria']
+                    gasto = linha['V_Num']
+                    meta = linha['Meta']
+                    excedente = gasto - meta
+                    percentual = (gasto / meta) * 100
+
+                    st.error(
+                        f"🚨 **Alerta de Teto:** A categoria **{cat}** ultrapassou a meta!  \n"
+                        f"📊 Gastos: **R$ {gasto:,.2f}** | Meta: **R$ {meta:,.2f}** "
+                        f"({percentual:.0f}% - Excedente: **R$ {excedente:,.2f}**)"
+                    )
+
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
 
