@@ -617,13 +617,12 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     total_geral_prestes_vencer += valor_conta
 
 
-# Procure por algo assim no seu código:
-with tab1: # ou tab_dashboard, tab_principal, etc.
-    st.title("📊 Dashboard")
-    
-    # ---------------------------------------------------------------------
-    # 🔔 COLE O BLOCO DO ALERTA AQUI DENTRO DA ABA
-    # ---------------------------------------------------------------------
+
+
+   # =========================================================================
+# 🔔 VERIFICAÇÃO AUTOMÁTICA DA RESERVA DE EMERGÊNCIA (EXCLUSIVO TELA PRINCIPAL)
+# =========================================================================
+if st.session_state.get('page') == "💰 Finanças & Bancos":
     from datetime import datetime
 
     aporte_planejado = st.session_state.get('reserva_aporte_mensal', 0.0)
@@ -637,7 +636,7 @@ with tab1: # ou tab_dashboard, tab_principal, etc.
         dia_atual = hoje.day
 
         try:
-            df_base_reserva = df.copy()
+            df_base_reserva = df.copy() if 'df' in locals() else df_base.copy()
             df_base_reserva['DT_Res'] = pd.to_datetime(df_base_reserva['DT'], errors='coerce')
             
             filtro_mes_banco = (
@@ -679,7 +678,6 @@ with tab1: # ou tab_dashboard, tab_principal, etc.
                 f"• **Aportado:** R$ {total_aportado_mes:,.2f}\n"
                 f"• **Falta:** R$ {falta_aportar:,.2f}"
             )
-
 
         
 
