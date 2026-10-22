@@ -1842,11 +1842,10 @@ if "💰" in st.session_state.page:
                     percentual = (gasto / meta) * 100
 
                     st.error(
-                        f"🚨 **TESTE NOVO - Alerta de Teto:** A categoria **{cat}** ultrapassou a meta!  \n"
+                        f"🚨 **Alerta de Teto:** A categoria **{cat}** ultrapassou a meta!  \n"
                         f"📊 Gastos: **R$ {gasto:,.2f}** | Meta: **R$ {meta:,.2f}** "
                         f"({percentual:.0f}% - Excedente: **R$ {excedente:,.2f}**)"
                     )
-
         else:
             st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")        
         # =========================================================================
