@@ -621,13 +621,12 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
 # =========================================================================
 from datetime import datetime
 
-# Recupera os parâmetros definidos na aba de configurações
 aporte_planejado = st.session_state.get('reserva_aporte_mensal', 0.0)
 banco_reserva = st.session_state.get('reserva_banco_escolhido', None)
 dia_limite = st.session_state.get('reserva_dia_vencimento', 10)
 
 if aporte_planejado > 0 and banco_reserva:
-    hoje = datetime.date.today()
+    hoje = datetime.now()  # 💡 Correção da data aqui
     mes_atual = hoje.month
     ano_atual = hoje.year
     dia_atual = hoje.day
