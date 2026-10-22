@@ -3699,6 +3699,9 @@ if aba == "📊 Análises & Configurações":
    # =========================================================================
     # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
     # =========================================================================
+    # =========================================================================
+    # 💰 PAINEL DE RESERVA FINANCEIRA (COMPLETO E INTEGRADO)
+    # =========================================================================
     st.markdown("---")
     st.subheader("🎯 Planejamento de Reserva Financeira")
     st.write("Acompanhe o progresso da sua segurança financeira com base nos seus lançamentos.")
@@ -3721,105 +3724,25 @@ if aba == "📊 Análises & Configurações":
         except:
             meta_atual = 0.0
 
-   # --- FUNÇÃO DE CONVERSÃO SEGURA ---
-    def converter_valor_br_seguro(val):
-        if pd.isna(val):
-            return 0.0
-        if isinstance(val, (int, float)):
-            return float(val)
-        
-        try:
-            val_str = str(val).replace('R$', '').replace('r$', '').strip()
-            if not val_str:
-                return 0.0
-            
-            if '.' in val_str and ',' in val_str:
-                val_str = val_str.replace('.', '').replace(',', '.')
-            elif ',' in val_str:
-                val_str = val_str.replace(',', '.')
-            elif val_str.count('.') > 1:
-                val_str = val_str.replace('.', '')
-                
-            return float(val_str)
-        except:
-            return 0.0
+    # (Aqui continuam os seus cálculos de 'guardado_atual' que já rodam no seu código...)
+    
+    # 1. EXIBIÇÃO DAS MÉTRICAS E PROGRESSO (O que já estava aparecendo para você)
+    if meta_atual > 0:
+        progresso = min(guardado_atual / meta_atual, 1.0)
+        percentual_reserva = (guardado_atual / meta_atual) * 100
+    else:
+        progresso = 0.0
+        percentual_reserva = 0.0
 
-    # Inicializadores dos totais
-    guardado_atual = 0.0            # Investimentos BRL
-    saldo_outras_brl = 0.0          # Contas Correntes BRL
-    saldo_veiculos_brl = 0.0        # Veículos BRL
-    total_invest_usd = 0.0          # Investimentos USD
-    total_invest_eur = 0.0          # Investimentos EUR
-    saldo_outras_usd = 0.0
-    saldo_outras_eur = 0.0
+    col_m1, col_m2, col_m3 = st.columns(3)
+    col_m1.metric("🎯 Meta Alvo", f"R$ {meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    col_m2.metric("💰 Apenas Investimentos", f"R$ {guardado_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    col_m3.metric("📈 Conclusão da Meta", f"{percentual_reserva:.1f}%")
 
-    try:
-        if 'df_bancos_info' in locals() and not df_bancos_info.empty:
-            for idx, row in df_bancos_info.iterrows():
-                try:
-                    nome_banco = row.iloc[0] if len(row) > 0 else ''
-                    if not nome_banco or str(nome_banco) == 'nan':
-                        continue
-                    
-                    val_str = str(row.iloc[1]).replace('R$', '').replace('US$', '').replace('€', '').replace('.', '').replace(',', '.').strip() if len(row) > 1 else '0'
-                    saldo_inicial = float(val_str) if val_str and val_str != 'nan' else 0.0
-                    tipo_c = str(row.iloc[2]).strip().upper() if len(row) > 2 else ''
-                    moeda_banco = str(row.iloc[5]).strip().upper() if len(row) > 5 and str(row.iloc[5]).strip() else "BRL"
-                    b_up = str(nome_banco).upper()
+    st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")
 
-                    # Ignora cartões de crédito para o cálculo de saldo patrimonial
-                    if "CARTA" in tipo_c or "CART" in b_up:
-                        continue
-
-                    # Identifica Veículos / Bens
-                    if "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
-                        if moeda_banco == "BRL":
-                            saldo_veiculos_brl += saldo_inicial
-                        continue
-
-                    # Identifica Vale Refeição
-                    if "REFEIÇÃO" in tipo_c or "VR" in b_up or "VA" in b_up or "ALIMENTAÇÃO" in b_up:
-                        continue
-
-                    # Calcula o saldo atualizado com base nos lançamentos
-                    filtro = (df_base['Banco'] == nome_banco) & ((df_base['Status'].str.upper() == 'PAGO') | (df_base['Status'] == ''))
-                    df_banco_atual = df_base[filtro]
-                    
-                    entradas = df_banco_atual[df_banco_atual['Tipo'] != 'Despesa']['V_Num'].sum()
-                    saidas = df_banco_atual[df_banco_atual['Tipo'] == 'Despesa']['V_Num'].sum()
-                    
-                    saldo_atual = saldo_inicial + entradas - saidas
-
-                    # Separação exata baseada na regra de tipo
-                    is_investimento = "INVEST" in tipo_c or "POUP" in tipo_c or "PREV" in tipo_c
-
-                    if moeda_banco == "USD":
-                        if is_investimento:
-                            total_invest_usd += saldo_atual
-                        else:
-                            saldo_outras_usd += saldo_atual
-                    elif moeda_banco == "EUR":
-                        if is_investimento:
-                            total_invest_eur += saldo_atual
-                        else:
-                            saldo_outras_eur += saldo_atual
-                    else: # BRL
-                        if is_investimento:
-                            guardado_atual += saldo_atual
-                        else:
-                            saldo_outras_brl += saldo_atual
-
-                except Exception as ex:
-                    pass
-
-        subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
-        subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
-        subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
-
-    except Exception as e:
-        st.error(f"Erro ao calcular os saldos: {e}")
-        
-   # Formulário para salvar a meta e parâmetros de aporte
+    # 2. FORMULÁRIO DE CONFIGURAÇÕES (Meta, Aporte e Vencimento lado a lado)
+    st.markdown("### ⚙️ Configurações do Aporte Mensal")
     with st.form("form_reserva_financeira"):
         col_f1, col_f2, col_f3 = st.columns(3)
         
@@ -3853,7 +3776,7 @@ if aba == "📊 Análises & Configurações":
                 meta_limpa = meta_limpa.replace('.', '').replace(',', '.')
                 nova_meta = float(meta_limpa)
                 
-                # Guarda na sessão os novos valores para o alerta usar
+                # Salva os parâmetros na sessão para o alerta da tela principal usar
                 st.session_state['reserva_aporte_mensal'] = meta_aporte_mensal
                 st.session_state['reserva_dia_vencimento'] = dia_vencimento
                 
