@@ -3819,10 +3819,33 @@ if aba == "📊 Análises & Configurações":
     except Exception as e:
         st.error(f"Erro ao calcular os saldos: {e}")
         
-    # Formulário para salvar a meta
+   # Formulário para salvar a meta e parâmetros de aporte
     with st.form("form_reserva_financeira"):
-        meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-        salvar_reserva = st.form_submit_button("💾 Salvar Meta")
+        col_f1, col_f2, col_f3 = st.columns(3)
+        
+        with col_f1:
+            meta_str_input = st.text_input(
+                "Definir Meta Total da Reserva (R$):", 
+                value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            )
+        
+        with col_f2:
+            meta_aporte_mensal = st.number_input(
+                "Aporte Mensal Planejado (R$):",
+                value=float(st.session_state.get('reserva_aporte_mensal', 500.00)),
+                step=50.0,
+                format="%.2f"
+            )
+        
+        with col_f3:
+            dia_vencimento = st.number_input(
+                "Dia Limite do Aporte:",
+                min_value=1,
+                max_value=31,
+                value=int(st.session_state.get('reserva_dia_vencimento', 10))
+            )
+        
+        salvar_reserva = st.form_submit_button("💾 Salvar Configurações da Reserva")
         
         if salvar_reserva:
             try:
@@ -3830,8 +3853,12 @@ if aba == "📊 Análises & Configurações":
                 meta_limpa = meta_limpa.replace('.', '').replace(',', '.')
                 nova_meta = float(meta_limpa)
                 
+                # Guarda na sessão os novos valores para o alerta usar
+                st.session_state['reserva_aporte_mensal'] = meta_aporte_mensal
+                st.session_state['reserva_dia_vencimento'] = dia_vencimento
+                
                 ws_reserva.update(values=[[str(nova_meta)]], range_name='A2:A2')
-                st.toast("✅ Meta da reserva salva com sucesso!", icon="🎯")
+                st.toast("✅ Configurações da reserva salvas com sucesso!", icon="🎯")
                 st.rerun()
             except ValueError:
                 st.error("⚠️ Formato de valor inválido. Use o formato como 300000 ou 300.000,00")
