@@ -1807,25 +1807,8 @@ if "💰" in st.session_state.page:
         df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
         
         if not df_metas_graph.empty:
-            # Busca a meta diretamente usando o session_state ou o dicionário de metas limpo
-            df_metas_conf = st.session_state.get('df_metas_config', pd.DataFrame())
-            
-            # Cria um dicionário rápido de {Categoria: Meta} para evitar qualquer erro de merge
-            dict_metas_temp = {}
-            if not df_metas_conf.empty and 'Nome da Meta' in df_metas_conf.columns and 'Valor Alvo' in df_metas_conf.columns:
-                for _, row_m in df_metas_conf.iterrows():
-                    c_nome = row_m['Nome da Meta']
-                    c_val_raw = row_m['Valor Alvo']
-                    try:
-                        if isinstance(c_val_raw, str):
-                            c_val_raw = c_val_raw.replace('R$', '').replace('.', '').replace(',', '.').strip()
-                        c_val = float(c_val_raw) if str(c_val_raw).strip() != '' else 0.0
-                    except:
-                        c_val = 0.0
-                    dict_metas_temp[c_nome] = c_val
-
-            # Aplica a meta garantindo que o 'V_Num' (gasto real) fique intacto
-            df_metas_graph['Meta'] = df_metas_graph['Categoria'].map(dict_metas_temp).fillna(0.0)
+            # Pega a meta direto do session_state (mesmo padrão dos inputs de configuração)
+            df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
 
             # 2. Desenha o gráfico
             fig_m = go.Figure()
@@ -1865,8 +1848,7 @@ if "💰" in st.session_state.page:
                     )
 
         else:
-            st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
-        
+            st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")        
         # =========================================================================
         # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO)
         # =========================================================================
