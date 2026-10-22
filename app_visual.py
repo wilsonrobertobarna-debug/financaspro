@@ -1827,7 +1827,7 @@ if "💰" in st.session_state.page:
                 }
             )
 
-            # 🚨 3. ALERTAS DE METAS ULTRAPASSADAS
+           # 🚨 3. ALERTAS DE METAS ULTRAPASSADAS
             df_estouradas = df_metas_graph[
                 (df_metas_graph['Meta'] > 0) & 
                 (df_metas_graph['V_Num'] > df_metas_graph['Meta'])
@@ -1836,8 +1836,8 @@ if "💰" in st.session_state.page:
             if not df_estouradas.empty:
                 for _, linha in df_estouradas.iterrows():
                     cat = linha['Categoria']
-                    gasto = linha['V_Num']
-                    meta = linha['Meta']
+                    gasto = float(linha['V_Num'])
+                    meta = float(linha['Meta'])
                     excedente = gasto - meta
                     percentual = (gasto / meta) * 100
 
