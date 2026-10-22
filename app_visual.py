@@ -1827,7 +1827,7 @@ if "💰" in st.session_state.page:
                 }
             )
 
-           # 🚨 3. ALERTAS DE METAS ULTRAPASSADAS
+          # 🚨 3. ALERTAS DE METAS ULTRAPASSADAS
             df_estouradas = df_metas_graph[
                 (df_metas_graph['Meta'] > 0) & 
                 (df_metas_graph['V_Num'] > df_metas_graph['Meta'])
@@ -1842,7 +1842,7 @@ if "💰" in st.session_state.page:
                     percentual = (gasto / meta) * 100
 
                     st.error(
-                        f"🚨 **Alerta de Teto:** A categoria **{cat}** ultrapassou a meta!  \n"
+                        f"🚨 **TESTE NOVO - Alerta de Teto:** A categoria **{cat}** ultrapassou a meta!  \n"
                         f"📊 Gastos: **R$ {gasto:,.2f}** | Meta: **R$ {meta:,.2f}** "
                         f"({percentual:.0f}% - Excedente: **R$ {excedente:,.2f}**)"
                     )
