@@ -12,6 +12,21 @@ import streamlit.components.v1 as components
 import urllib.parse
 import urllib.request
 
+# =============================================================================
+# 📌 CARREGAMENTO INICIAL DO PLANEJAMENTO DE RESERVA (LOGO ABAIXO DOS IMPORTS)
+# =============================================================================
+try:
+    ws_reserva = sh.worksheet("Reserva_Financeira")
+    dados_reserva = ws_reserva.get_all_values()
+    banco_res_exibicao = dados_reserva[1][1] if len(dados_reserva) > 1 and len(dados_reserva[1]) > 1 else "Itaú"
+    aporte_res_exibicao = float(dados_reserva[1][2]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 2 else 0.0
+    dia_res_exibicao = int(dados_reserva[1][3]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 3 else 10
+except:
+    banco_res_exibicao = "Definir nas Configurações"
+    aporte_res_exibicao = 0.0
+    dia_res_exibicao = 10
+
+
 # 1. CONFIGURAÇÃO DA PÁGINA (Deve ser SEMPRE a primeira instrução do Streamlit)
 st.set_page_config(
     page_title="Painel Wilson", layout="wide", initial_sidebar_state="collapsed"
@@ -616,33 +631,33 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     )
                     total_geral_prestes_vencer += valor_conta
 
-        # =============================================================================
-        # 📌 AVISO DINÂMICO: PLANEJAMENTO DE RESERVA FINANCEIRA (LÊ DO GOOGLE SHEETS)
-        # =============================================================================
-        try:
-            ws_reserva = sh.worksheet("Reserva_Financeira")
-            dados_reserva = ws_reserva.get_all_values()
-            banco_res_exibicao = dados_reserva[1][1] if len(dados_reserva) > 1 and len(dados_reserva[1]) > 1 else "Itaú"
-            aporte_res_exibicao = float(dados_reserva[1][2]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 2 else 0.0
-            dia_res_exibicao = int(dados_reserva[1][3]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 3 else 10
-        except:
-            banco_res_exibicao = "Definir nas Configurações"
-            aporte_res_exibicao = 0.0
-            dia_res_exibicao = 10
+      # =============================================================================
+    # 📌 AVISO DINÂMICO: PLANEJAMENTO DE RESERVA FINANCEIRA
+    # =============================================================================
+    try:
+        ws_reserva = sh.worksheet("Reserva_Financeira")
+        dados_reserva = ws_reserva.get_all_values()
+        banco_res_exibicao = dados_reserva[1][1] if len(dados_reserva) > 1 and len(dados_reserva[1]) > 1 else "Itaú"
+        aporte_res_exibicao = float(dados_reserva[1][2]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 2 else 0.0
+        dia_res_exibicao = int(dados_reserva[1][3]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 3 else 10
+    except:
+        banco_res_exibicao = "Definir nas Configurações"
+        aporte_res_exibicao = 0.0
+        dia_res_exibicao = 10
 
-        if aporte_res_exibicao > 0:
-            st.info(
-                f"💡 **Planejamento de Reserva Financeira:** "
-                f"Lembre-se da regra do **dia {dia_res_exibicao}**! O seu aporte programado é de "
-                f"**R$ {aporte_res_exibicao:,.2f}** no banco **{banco_res_exibicao}**. "
-                f"Insira o valor no formulário abaixo sem alterar os registros anteriores."
-            )
-        else:
-            st.info(
-                f"💡 **Planejamento de Reserva Financeira:** "
-                f"Lembre-se da regra do **dia {dia_res_exibicao}** para a realização do aporte da sua reserva. "
-                f"(Configure o valor e o banco desejado na aba **📊 Análises & Configurações**)."
-            )
+    if aporte_res_exibicao > 0:
+        st.info(
+            f"💡 **Planejamento de Reserva Financeira:** "
+            f"Lembre-se da regra do **dia {dia_res_exibicao}**! O seu aporte programado é de "
+            f"**R$ {aporte_res_exibicao:,.2f}** no banco **{banco_res_exibicao}**. "
+            f"Insira o valor no formulário abaixo sem alterar os registros anteriores."
+        )
+    else:
+        st.info(
+            f"💡 **Planejamento de Reserva Financeira:** "
+            f"Lembre-se da regra do **dia {dia_res_exibicao}** para a realização do aporte da sua reserva. "
+            f"(Configure o valor e o banco desejado na aba **📊 Análises & Configurações**)."
+        )
         # ==========================================
         # 🔔 ENVIAR NOTIFICAÇÃO CONSOLIDADA NO CELULAR
         # ==========================================
