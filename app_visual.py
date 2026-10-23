@@ -617,25 +617,25 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     total_geral_prestes_vencer += valor_conta
 
            # =============================================================================
-# 📌 AVISO DINÂMICO: PLANEJAMENTO DE RESERVA FINANCEIRA
-# =============================================================================
-banco_res_exibicao = st.session_state.get("reserva_banco", "Definir nas Configurações")
-aporte_res_exibicao = st.session_state.get("reserva_aporte", 0.0)
-dia_res_exibicao = st.session_state.get("reserva_dia", 10)
-
-if aporte_res_exibicao > 0:
-    st.info(
-        f"💡 **Planejamento de Reserva Financeira:** "
-        f"Lembre-se da regra do **dia {dia_res_exibicao}**! O seu aporte programado é de "
-        f"**R$ {aporte_res_exibicao:,.2f}** no banco **{banco_res_exibicao}**. "
-        f"Insira o valor no formulário abaixo sem alterar os registros anteriores."
-    )
-else:
-    st.info(
-        f"💡 **Planejamento de Reserva Financeira:** "
-        f"Lembre-se da regra do **dia {dia_res_exibicao}** para a realização do aporte da sua reserva. "
-        f"(Configure o valor e o banco desejado na aba **📊 Análises & Configurações**)."
-    )
+    # 📌 AVISO DINÂMICO: PLANEJAMENTO DE RESERVA FINANCEIRA
+    # =============================================================================
+    banco_res_exibicao = st.session_state.get("reserva_banco", "Definir nas Configurações")
+    aporte_res_exibicao = st.session_state.get("reserva_aporte", 0.0)
+    dia_res_exibicao = st.session_state.get("reserva_dia", 10)
+    
+    if aporte_res_exibicao > 0:
+        st.info(
+            f"💡 **Planejamento de Reserva Financeira:** "
+            f"Lembre-se da regra do **dia {dia_res_exibicao}**! O seu aporte programado é de "
+            f"**R$ {aporte_res_exibicao:,.2f}** no banco **{banco_res_exibicao}**. "
+            f"Insira o valor no formulário abaixo sem alterar os registros anteriores."
+        )
+    else:
+        st.info(
+            f"💡 **Planejamento de Reserva Financeira:** "
+            f"Lembre-se da regra do **dia {dia_res_exibicao}** para a realização do aporte da sua reserva. "
+            f"(Configure o valor e o banco desejado na aba **📊 Análises & Configurações**)."
+        )
 
         # ==========================================
         # 🔔 ENVIAR NOTIFICAÇÃO CONSOLIDADA NO CELULAR
