@@ -12,21 +12,6 @@ import streamlit.components.v1 as components
 import urllib.parse
 import urllib.request
 
-# =============================================================================
-# 📌 CARREGAMENTO INICIAL DO PLANEJAMENTO DE RESERVA (LOGO ABAIXO DOS IMPORTS)
-# =============================================================================
-try:
-    ws_reserva = sh.worksheet("Reserva_Financeira")
-    dados_reserva = ws_reserva.get_all_values()
-    banco_res_exibicao = dados_reserva[1][1] if len(dados_reserva) > 1 and len(dados_reserva[1]) > 1 else "Itaú"
-    aporte_res_exibicao = float(dados_reserva[1][2]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 2 else 0.0
-    dia_res_exibicao = int(dados_reserva[1][3]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 3 else 10
-except:
-    banco_res_exibicao = "Definir nas Configurações"
-    aporte_res_exibicao = 0.0
-    dia_res_exibicao = 10
-
-
 # 1. CONFIGURAÇÃO DA PÁGINA (Deve ser SEMPRE a primeira instrução do Streamlit)
 st.set_page_config(
     page_title="Painel Wilson", layout="wide", initial_sidebar_state="collapsed"
@@ -631,33 +616,6 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     )
                     total_geral_prestes_vencer += valor_conta
 
-      # =============================================================================
-    # 📌 AVISO DINÂMICO: PLANEJAMENTO DE RESERVA FINANCEIRA
-    # =============================================================================
-    try:
-        ws_reserva = sh.worksheet("Reserva_Financeira")
-        dados_reserva = ws_reserva.get_all_values()
-        banco_res_exibicao = dados_reserva[1][1] if len(dados_reserva) > 1 and len(dados_reserva[1]) > 1 else "Itaú"
-        aporte_res_exibicao = float(dados_reserva[1][2]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 2 else 0.0
-        dia_res_exibicao = int(dados_reserva[1][3]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 3 else 10
-    except:
-        banco_res_exibicao = "Definir nas Configurações"
-        aporte_res_exibicao = 0.0
-        dia_res_exibicao = 10
-
-    if aporte_res_exibicao > 0:
-        st.info(
-            f"💡 **Planejamento de Reserva Financeira:** "
-            f"Lembre-se da regra do **dia {dia_res_exibicao}**! O seu aporte programado é de "
-            f"**R$ {aporte_res_exibicao:,.2f}** no banco **{banco_res_exibicao}**. "
-            f"Insira o valor no formulário abaixo sem alterar os registros anteriores."
-        )
-    else:
-        st.info(
-            f"💡 **Planejamento de Reserva Financeira:** "
-            f"Lembre-se da regra do **dia {dia_res_exibicao}** para a realização do aporte da sua reserva. "
-            f"(Configure o valor e o banco desejado na aba **📊 Análises & Configurações**)."
-        )
         # ==========================================
         # 🔔 ENVIAR NOTIFICAÇÃO CONSOLIDADA NO CELULAR
         # ==========================================
@@ -3737,65 +3695,6 @@ if aba == "📊 Análises & Configurações":
             st.success(f"✅ Enviado com sucesso! (HTTP: {resultado}). Veja o celular.")
         else:
             st.error(f"❌ Erro no envio: {resultado}")
-
-  # =========================================================================
-    # 📌 CONFIGURAÇÃO DO APORTE MENSAL DA RESERVA (SALVO NO GOOGLE SHEETS)
-    # =========================================================================
-    st.markdown("---")
-    st.subheader("📅 Planejamento de Aporte Mensal da Reserva")
-    
-    # Tenta carregar a aba 'Reserva_Financeira' no Google Sheets
-    try:
-        ws_reserva = sh.worksheet("Reserva_Financeira")
-    except:
-        ws_reserva = sh.add_worksheet(title="Reserva_Financeira", rows="10", cols="5")
-        ws_reserva.append_row(["Meta_Reserva", "Banco_Aporte", "Valor_Aporte", "Dia_Aporte"])
-        ws_reserva.append_row(["0.0", "Itaú", "500.0", "10"])
-
-    dados_reserva = ws_reserva.get_all_values()
-    
-    # Carrega os valores salvos no Sheets (com fallbacks seguros)
-    banco_salvo = dados_reserva[1][1] if len(dados_reserva) > 1 and len(dados_reserva[1]) > 1 and dados_reserva[1][1] else "Itaú"
-    
-    try:
-        valor_salvo = float(dados_reserva[1][2]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 2 else 500.0
-    except:
-        valor_salvo = 500.0
-        
-    try:
-        dia_salvo = int(dados_reserva[1][3]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 3 else 10
-    except:
-        dia_salvo = 10
-
-    # Puxa os bancos cadastrados para a barrinha (selectbox)
-    lista_bancos_opcoes = ["Itaú", "Nubank", "Bradesco", "Inter", "Caixa", "C6 Bank", "Banco do Brasil"]
-    df_b_cfg = carregar_bancos_manual_gs()
-    if not df_b_cfg.empty:
-        bancos_extraidos = df_b_cfg.iloc[:, 0].dropna().astype(str).str.strip().tolist()
-        if bancos_extraidos:
-            lista_bancos_opcoes = list(dict.fromkeys(bancos_extraidos))
-
-    index_banco = lista_bancos_opcoes.index(banco_salvo) if banco_salvo in lista_bancos_opcoes else 0
-
-    with st.form("form_aporte_reserva"):
-        col_res1, col_res2, col_res3 = st.columns(3)
-        with col_res1:
-            banco_reserva_in = st.selectbox("Selecione o Banco do Aporte:", options=lista_bancos_opcoes, index=index_banco)
-        with col_res2:
-            valor_aporte_in = st.number_input("Valor do Aporte (R$):", min_value=0.0, value=valor_salvo, step=50.0)
-        with col_res3:
-            dia_aporte_in = st.number_input("Dia do Aporte no Mês:", min_value=1, max_value=31, value=dia_salvo)
-            
-        btn_salvar_aporte = st.form_submit_button("💾 Salvar Planejamento de Aporte")
-        
-        if btn_salvar_aporte:
-            try:
-                # Salva os valores diretamente nas células B2, C2 e D2 do Google Sheets
-                ws_reserva.update(values=[[str(banco_reserva_in), str(valor_aporte_in), str(dia_aporte_in)]], range_name='B2:D2')
-                st.toast("✅ Configuração fixa salva no Google Sheets!", icon="🎯")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Erro ao salvar no Sheets: {e}")
     
    # =========================================================================
     # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
