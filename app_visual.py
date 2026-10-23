@@ -616,15 +616,6 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     )
                     total_geral_prestes_vencer += valor_conta
 
-        # =============================================================================
-        # 📌 AVISO: PLANEJAMENTO DE RESERVA FINANCEIRA (Dia 10 / Aporte)
-        # =============================================================================
-        st.info(
-            "💡 **Planejamento de Reserva Financeira:** "
-            "Lembre-se da regra do **dia 10** para a definição do banco e a realização do aporte da sua reserva. "
-            "Insira o valor no formulário abaixo sem alterar os registros anteriores."
-        )
-
         # ==========================================
         # 🔔 ENVIAR NOTIFICAÇÃO CONSOLIDADA NO CELULAR
         # ==========================================
