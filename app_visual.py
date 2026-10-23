@@ -94,13 +94,18 @@ def enviar_alerta_financas(titulo, mensagem, prioridade="high", tags="bell,money
 # =============================================================================
 # 4. CHECAGEM AUTOMÁTICA DE PENDÊNCIAS NA ABERTURA
 # =============================================================================
-def verificar_e_disparar_alerta_inicial(df):
-    """Lê a planilha assim que o app abre e manda o alerta pro ntfy se houver pendências"""
-    if df is None or df.empty:
+# =============================================================================
+# 4. CHECAGEM AUTOMÁTICA DE PENDÊNCIAS NA ABERTURA
+# =============================================================================
+def verificar_e_disparar_alerta_inicial():
+    """Busca o df_base na memória do Streamlit e dispara o alerta no celular"""
+    if 'alerta_abertura_enviado' in st.session_state:
         return
 
-    # Manda a notificação apenas uma vez por inicialização da página
-    if 'alerta_abertura_enviado' not in st.session_state:
+    # Tenta pegar a base de dados onde quer que ela esteja na memória
+    df = st.session_state.get('df_base', globals().get('df_base', None))
+
+    if df is not None and isinstance(df, pd.DataFrame) and not df.empty:
         try:
             hoje = datetime.now().date()
             col_data = next((c for c in df.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
