@@ -13,7 +13,7 @@ import urllib.parse
 import urllib.request
 
 # =============================================================================
-# 1. CONFIGURAÇÃO DA PÁGINA (Apenas UMA vez e como PRIMEIRA instrução Streamlit)
+# 1. CONFIGURAÇÃO DA PÁGINA (Deve ser SEMPRE a primeira instrução Streamlit)
 # =============================================================================
 st.set_page_config(
     page_title="Painel Wilson", 
@@ -25,7 +25,7 @@ st.set_page_config(
 st.markdown('<a id="top"></a>', unsafe_allow_html=True)
 
 # =============================================================================
-# 2. CSS GLOBAL DE ESTILIZAÇÃO (Consolidado e Sem Repetições)
+# 2. CSS GLOBAL DE ESTILIZAÇÃO
 # =============================================================================
 st.markdown("""
 <style>
@@ -73,10 +73,7 @@ def enviar_alerta_financas(titulo, mensagem, prioridade="high", tags="bell,money
     url = f"https://ntfy.sh/{topico_secreto}"
 
     try:
-        # Garante que a mensagem seja convertida para bytes UTF-8 corretamente
         data_bytes = mensagem.encode("utf-8")
-        
-        # Remove emojis do título do cabeçalho para evitar erro de encoding no protocolo HTTP
         titulo_limpo = titulo.encode("latin-1", "ignore").decode("latin-1")
 
         req = urllib.request.Request(
@@ -91,7 +88,6 @@ def enviar_alerta_financas(titulo, mensagem, prioridade="high", tags="bell,money
     except Exception as e:
         return False, str(e)
 
-
 # =============================================================================
 # 4. CHECAGEM AUTOMÁTICA DE PENDÊNCIAS NA ABERTURA
 # =============================================================================
@@ -100,7 +96,6 @@ def verificar_e_disparar_alerta_inicial():
     if 'alerta_abertura_enviado' in st.session_state:
         return
 
-    # Tenta pegar a base de dados onde quer que ela esteja na memória
     df = st.session_state.get('df_base', globals().get('df_base', None))
 
     if df is not None and isinstance(df, pd.DataFrame) and not df.empty:
@@ -113,7 +108,6 @@ def verificar_e_disparar_alerta_inicial():
                 df_temp = df.copy()
                 df_temp['DT_OBJ'] = pd.to_datetime(df_temp[col_data], format="%d/%m/%Y", errors='coerce').dt.date
                 
-                # Pega pendentes com vencimento até hoje
                 pendentes_hoje = df_temp[
                     (df_temp[col_status].astype(str).str.upper().str.strip() == "PENDENTE") &
                     (df_temp['DT_OBJ'] <= hoje)
@@ -130,8 +124,30 @@ def verificar_e_disparar_alerta_inicial():
                     st.session_state['alerta_abertura_enviado'] = True
         except Exception:
             pass
-            # Tenta disparar o alerta de abertura automaticamente
-            verificar_e_disparar_alerta_inicial()
+
+# =============================================================================
+# 5. INICIALIZAÇÃO DA SESSÃO E CARREGAMENTO DOS DADOS
+# =============================================================================
+if "df_base" not in st.session_state:
+    st.session_state["df_base"] = carregar_dados_gs()
+if "df_bancos_info" not in st.session_state:
+    st.session_state["df_bancos_info"] = carregar_bancos_manual_gs()
+
+df_base = st.session_state["df_base"]
+df_bancos_info = st.session_state["df_bancos_info"]
+
+def atualizar_sessao():
+    st.session_state["df_base"] = carregar_dados_gs()
+    st.session_state["df_bancos_info"] = carregar_bancos_manual_gs()
+
+if "df_base" not in st.session_state:
+    atualizar_sessao()
+
+df_base = st.session_state["df_base"]
+df_bancos_info = st.session_state["df_bancos_info"]
+
+# Dispara o alerta de abertura automaticamente agora que os dados foram carregados
+verificar_e_disparar_alerta_inicial()
 
 # ========================================================
 # 1. TELA DE LOGIN (COMPACTA E CENTRALIZADA)
