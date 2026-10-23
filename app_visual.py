@@ -12,58 +12,49 @@ import streamlit.components.v1 as components
 import urllib.parse
 import urllib.request
 
-# =============================================================================
-# 1. CONFIGURAÇÃO DA PÁGINA (Deve ser SEMPRE a primeira instrução Streamlit)
-# =============================================================================
+# 1. CONFIGURAÇÃO DA PÁGINA (Deve ser SEMPRE a primeira instrução do Streamlit)
 st.set_page_config(
-    page_title="Painel Wilson", 
-    layout="wide", 
-    initial_sidebar_state="collapsed"
+    page_title="Painel Wilson", layout="wide", initial_sidebar_state="collapsed"
 )
 
-# Cria um "alvo" para rolar até o topo se necessário
+# 2. ALARME PARA O CELULAR (NTFY)
+def enviar_alerta_financas(
+    titulo, mensagem, prioridade="high", tags="bell,moneybag"
+):
+    topico_secreto = "financaspro_wilson_segredo_777_WFPYChe815mnD"
+    url = f"https://ntfy.sh/{topico_secreto}"
+
+    try:
+        data_bytes = mensagem.encode("utf-8")
+        titulo_limpo = titulo.encode("latin-1", "ignore").decode("latin-1")
+
+        req = urllib.request.Request(
+            url,
+            data=data_bytes,
+            headers={"Title": titulo_limpo, "Priority": prioridade, "Tags": tags},
+            method="POST",
+        )
+        context = ssl._create_unverified_context()
+        resposta = urllib.request.urlopen(req, context=context)
+        return True, resposta.getcode()
+    except Exception as e:
+        return False, str(e)
+
+# 3. Alvo e CSS
 st.markdown('<a id="top"></a>', unsafe_allow_html=True)
 
-# =============================================================================
-# 2. CSS GLOBAL DE ESTILIZAÇÃO
-# =============================================================================
-st.markdown("""
+st.markdown(
+    """
 <style>
-    /* Oculta o menu lateral padrão */
-    [data-testid="stSidebarNav"] {
-        display: none !important;
-    }
-    
-    /* Respiro ideal no topo */
-    .block-container {
-        padding-top: 2.2rem !important;
-    }
-    
-    /* Aproxima bem o menu da linha divisória */
-    div.stSelectbox {
-        margin-bottom: -1.5rem !important;
-    }
-    hr {
-        margin-top: 0.2rem !important;
-        margin-bottom: 0.5rem !important;
-    }
-
-    /* CONGELA O TOPO (Painel Wilson, menu e linha) */
-    header[data-testid="stHeader"] {
-        background: transparent;
-    }
-    
-    /* Cria uma barra flutuante fixa com fundo sólido para o menu e título */
-    .st-emotion-cache-18ni7ap, [data-testid="stVerticalBlock"]:has(> div > div > label:contains("Navegue pelo sistema")) {
-        position: sticky;
-        top: 0px;
-        z-index: 99999;
-        background-color: var(--background-color, #0e1117);
-        padding-top: 10px;
-        padding-bottom: 5px;
-    }
+    [data-testid="stSidebarNav"] { display: none !important; }
+    .block-container { padding-top: 2.2rem !important; }
+    div.stSelectbox { margin-bottom: -1.5rem !important; }
+    hr { margin-top: 0.2rem !important; margin-bottom: 0.5rem !important; }
+    header[data-testid="stHeader"] { background: transparent; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # =============================================================================
 # 3. FUNÇÃO DE ALARME PARA O CELULAR (NTFY)
