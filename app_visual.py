@@ -12,66 +12,21 @@ import streamlit.components.v1 as components
 import urllib.parse
 import urllib.request
 
-# 1. CONFIGURAÇÃO DA PÁGINA (Deve ser SEMPRE a primeira instrução do Streamlit)
+# =============================================================================
+# 1. CONFIGURAÇÃO DA PÁGINA (Apenas UMA vez e como PRIMEIRA instrução Streamlit)
+# =============================================================================
 st.set_page_config(
-    page_title="Painel Wilson", layout="wide", initial_sidebar_state="collapsed"
-)
-
-
-# ==========================================
-# 🔔 FUNÇÃO DE ALARME PARA O CELULAR (CORRIGIDA)
-# ==========================================
-def enviar_alerta_financas(
-    titulo, mensagem, prioridade="high", tags="bell,moneybag"
-):
-    topico_secreto = "financaspro_wilson_segredo_777_WFPYChe815mnD"
-    url = f"https://ntfy.sh/{topico_secreto}"
-
-    try:
-        # Garante que o título e a mensagem sejam convertidos para bytes UTF-8 corretamente
-        data_bytes = mensagem.encode("utf-8")
-        
-        # Removemos emojis do título do cabeçalho para evitar o erro do Windows
-        titulo_limpo = titulo.encode("latin-1", "ignore").decode("latin-1")
-
-        req = urllib.request.Request(
-            url,
-            data=data_bytes,
-            headers={"Title": titulo_limpo, "Priority": prioridade, "Tags": tags},
-            method="POST",
-        )
-        context = ssl._create_unverified_context()
-        resposta = urllib.request.urlopen(req, context=context)
-        return True, resposta.getcode()
-    except Exception as e:
-        return False, str(e)
-
-# 2. Cria um "alvo" no topo
-st.markdown('<a id="top"></a>', unsafe_allow_html=True)
-
-
-# Seu CSS que você já tinha:
-st.markdown(
-    """
-<style>
-    [data-testid="stSidebarNav"] { display: none !important; }
-    .block-container { padding-top: 2.2rem !important; }
-    div.stSelectbox { margin-bottom: -1.5rem !important; }
-    hr { margin-top: 0.2rem !important; margin-bottom: 0.5rem !important; }
-    header[data-testid="stHeader"] { background: transparent; }
-</style>
-""",
-    unsafe_allow_html=True,
-)
-
-# Configuração da página
-st.set_page_config(
-    page_title="Painel Wilson",
-    layout="wide",
+    page_title="Painel Wilson", 
+    layout="wide", 
     initial_sidebar_state="collapsed"
 )
 
-# CSS GLOBAL: Joga para o topo e elimina espaçamentos excessivos de uma vez
+# Cria um "alvo" para rolar até o topo se necessário
+st.markdown('<a id="top"></a>', unsafe_allow_html=True)
+
+# =============================================================================
+# 2. CSS GLOBAL DE ESTILIZAÇÃO (Consolidado e Sem Repetições)
+# =============================================================================
 st.markdown("""
 <style>
     /* Oculta o menu lateral padrão */
@@ -94,12 +49,11 @@ st.markdown("""
     }
 
     /* CONGELA O TOPO (Painel Wilson, menu e linha) */
-    /* Fixa o cabeçalho principal do Streamlit no topo da página */
     header[data-testid="stHeader"] {
         background: transparent;
     }
     
-    /* Cria uma barra flutuante fixa com fundo sólido para o seu menu e título */
+    /* Cria uma barra flutuante fixa com fundo sólido para o menu e título */
     .st-emotion-cache-18ni7ap, [data-testid="stVerticalBlock"]:has(> div > div > label:contains("Navegue pelo sistema")) {
         position: sticky;
         top: 0px;
@@ -110,6 +64,69 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+# =============================================================================
+# 3. FUNÇÃO DE ALARME PARA O CELULAR (NTFY)
+# =============================================================================
+def enviar_alerta_financas(titulo, mensagem, prioridade="high", tags="bell,moneybag"):
+    topico_secreto = "financaspro_wilson_segredo_777_WFPYChe815mnD"
+    url = f"https://ntfy.sh/{topico_secreto}"
+
+    try:
+        # Garante que a mensagem seja convertida para bytes UTF-8 corretamente
+        data_bytes = mensagem.encode("utf-8")
+        
+        # Remove emojis do título do cabeçalho para evitar erro de encoding no protocolo HTTP
+        titulo_limpo = titulo.encode("latin-1", "ignore").decode("latin-1")
+
+        req = urllib.request.Request(
+            url,
+            data=data_bytes,
+            headers={"Title": titulo_limpo, "Priority": prioridade, "Tags": tags},
+            method="POST",
+        )
+        context = ssl._create_unverified_context()
+        resposta = urllib.request.urlopen(req, context=context)
+        return True, resposta.getcode()
+    except Exception as e:
+        return False, str(e)
+
+# =============================================================================
+# 4. CHECAGEM AUTOMÁTICA DE PENDÊNCIAS NA ABERTURA
+# =============================================================================
+def verificar_e_disparar_alerta_inicial(df):
+    """Lê a planilha assim que o app abre e manda o alerta pro ntfy se houver pendências"""
+    if df is None or df.empty:
+        return
+
+    # Manda a notificação apenas uma vez por inicialização da página
+    if 'alerta_abertura_enviado' not in st.session_state:
+        try:
+            hoje = datetime.now().date()
+            col_data = next((c for c in df.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
+            col_status = next((c for c in df.columns if c.upper() in ['STATUS']), None)
+
+            if col_data and col_status:
+                df_temp = df.copy()
+                df_temp['DT_OBJ'] = pd.to_datetime(df_temp[col_data], format="%d/%m/%Y", errors='coerce').dt.date
+                
+                # Pega pendentes com vencimento até hoje
+                pendentes_hoje = df_temp[
+                    (df_temp[col_status].astype(str).str.upper().str.strip() == "PENDENTE") &
+                    (df_temp['DT_OBJ'] <= hoje)
+                ]
+
+                total_pendentes = len(pendentes_hoje)
+                if total_pendentes > 0:
+                    enviar_alerta_financas(
+                        titulo="Atencao: Contas Pendentes!",
+                        mensagem=f"FinancasPro: Voce possui {total_pendentes} lancamento(s) pendente(s) vencendo hoje ou em atraso.",
+                        prioridade="high",
+                        tags="warning,dollar"
+                    )
+                    st.session_state['alerta_abertura_enviado'] = True
+        except Exception:
+            pass
 
 # ========================================================
 # 1. TELA DE LOGIN (COMPACTA E CENTRALIZADA)
