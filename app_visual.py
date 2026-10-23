@@ -17,7 +17,10 @@ st.set_page_config(
     page_title="Painel Wilson", layout="wide", initial_sidebar_state="collapsed"
 )
 
-# 2. ALARME PARA O CELULAR (NTFY)
+
+# ==========================================
+# 🔔 FUNÇÃO DE ALARME PARA O CELULAR (CORRIGIDA)
+# ==========================================
 def enviar_alerta_financas(
     titulo, mensagem, prioridade="high", tags="bell,moneybag"
 ):
@@ -25,7 +28,10 @@ def enviar_alerta_financas(
     url = f"https://ntfy.sh/{topico_secreto}"
 
     try:
+        # Garante que o título e a mensagem sejam convertidos para bytes UTF-8 corretamente
         data_bytes = mensagem.encode("utf-8")
+        
+        # Removemos emojis do título do cabeçalho para evitar o erro do Windows
         titulo_limpo = titulo.encode("latin-1", "ignore").decode("latin-1")
 
         req = urllib.request.Request(
@@ -40,9 +46,11 @@ def enviar_alerta_financas(
     except Exception as e:
         return False, str(e)
 
-# 3. Alvo e CSS
+# 2. Cria um "alvo" no topo
 st.markdown('<a id="top"></a>', unsafe_allow_html=True)
 
+
+# Seu CSS que você já tinha:
 st.markdown(
     """
 <style>
@@ -56,95 +64,52 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# 4. FUNÇÕES DE CARREGAMENTO DIRETO (Alinhadas corretamente na margem)
-def carregar_dados_gs():
-    dados = ws_base.get_all_values()
-    if len(dados) <= 1: 
-        return pd.DataFrame()
+# Configuração da página
+st.set_page_config(
+    page_title="Painel Wilson",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-# =============================================================================
-# 3. FUNÇÃO DE ALARME PARA O CELULAR (NTFY)
-# =============================================================================
-def enviar_alerta_financas(titulo, mensagem, prioridade="high", tags="bell,moneybag"):
-    topico_secreto = "financaspro_wilson_segredo_777_WFPYChe815mnD"
-    url = f"https://ntfy.sh/{topico_secreto}"
+# CSS GLOBAL: Joga para o topo e elimina espaçamentos excessivos de uma vez
+st.markdown("""
+<style>
+    /* Oculta o menu lateral padrão */
+    [data-testid="stSidebarNav"] {
+        display: none !important;
+    }
+    
+    /* Respiro ideal no topo */
+    .block-container {
+        padding-top: 2.2rem !important;
+    }
+    
+    /* Aproxima bem o menu da linha divisória */
+    div.stSelectbox {
+        margin-bottom: -1.5rem !important;
+    }
+    hr {
+        margin-top: 0.2rem !important;
+        margin-bottom: 0.5rem !important;
+    }
 
-    try:
-        data_bytes = mensagem.encode("utf-8")
-        titulo_limpo = titulo.encode("latin-1", "ignore").decode("latin-1")
-
-        req = urllib.request.Request(
-            url,
-            data=data_bytes,
-            headers={"Title": titulo_limpo, "Priority": prioridade, "Tags": tags},
-            method="POST",
-        )
-        context = ssl._create_unverified_context()
-        resposta = urllib.request.urlopen(req, context=context)
-        return True, resposta.getcode()
-    except Exception as e:
-        return False, str(e)
-
-# =============================================================================
-# 4. CHECAGEM AUTOMÁTICA DE PENDÊNCIAS NA ABERTURA
-# =============================================================================
-def verificar_e_disparar_alerta_inicial():
-    """Busca o df_base na memória do Streamlit e dispara o alerta no celular"""
-    if 'alerta_abertura_enviado' in st.session_state:
-        return
-
-    df = st.session_state.get('df_base', globals().get('df_base', None))
-
-    if df is not None and isinstance(df, pd.DataFrame) and not df.empty:
-        try:
-            hoje = datetime.now().date()
-            col_data = next((c for c in df.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
-            col_status = next((c for c in df.columns if c.upper() in ['STATUS']), None)
-
-            if col_data and col_status:
-                df_temp = df.copy()
-                df_temp['DT_OBJ'] = pd.to_datetime(df_temp[col_data], format="%d/%m/%Y", errors='coerce').dt.date
-                
-                pendentes_hoje = df_temp[
-                    (df_temp[col_status].astype(str).str.upper().str.strip() == "PENDENTE") &
-                    (df_temp['DT_OBJ'] <= hoje)
-                ]
-
-                total_pendentes = len(pendentes_hoje)
-                if total_pendentes > 0:
-                    enviar_alerta_financas(
-                        titulo="Atencao: Contas Pendentes!",
-                        mensagem=f"FinancasPro: Voce possui {total_pendentes} lancamento(s) pendente(s) vencendo hoje ou em atraso.",
-                        prioridade="high",
-                        tags="warning,dollar"
-                    )
-                    st.session_state['alerta_abertura_enviado'] = True
-        except Exception:
-            pass
-
-# =============================================================================
-# 5. INICIALIZAÇÃO DA SESSÃO E CARREGAMENTO DOS DADOS
-# =============================================================================
-if "df_base" not in st.session_state:
-    st.session_state["df_base"] = carregar_dados_gs()
-if "df_bancos_info" not in st.session_state:
-    st.session_state["df_bancos_info"] = carregar_bancos_manual_gs()
-
-df_base = st.session_state["df_base"]
-df_bancos_info = st.session_state["df_bancos_info"]
-
-def atualizar_sessao():
-    st.session_state["df_base"] = carregar_dados_gs()
-    st.session_state["df_bancos_info"] = carregar_bancos_manual_gs()
-
-if "df_base" not in st.session_state:
-    atualizar_sessao()
-
-df_base = st.session_state["df_base"]
-df_bancos_info = st.session_state["df_bancos_info"]
-
-# Dispara o alerta de abertura automaticamente agora que os dados foram carregados
-verificar_e_disparar_alerta_inicial()
+    /* CONGELA O TOPO (Painel Wilson, menu e linha) */
+    /* Fixa o cabeçalho principal do Streamlit no topo da página */
+    header[data-testid="stHeader"] {
+        background: transparent;
+    }
+    
+    /* Cria uma barra flutuante fixa com fundo sólido para o seu menu e título */
+    .st-emotion-cache-18ni7ap, [data-testid="stVerticalBlock"]:has(> div > div > label:contains("Navegue pelo sistema")) {
+        position: sticky;
+        top: 0px;
+        z-index: 99999;
+        background-color: var(--background-color, #0e1117);
+        padding-top: 10px;
+        padding-bottom: 5px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # ========================================================
 # 1. TELA DE LOGIN (COMPACTA E CENTRALIZADA)
@@ -650,148 +615,6 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                         f"• {beneficiario}: R$ {valor_conta:,.2f} ({status_prazo})"
                     )
                     total_geral_prestes_vencer += valor_conta
-
-
-
-
-# =========================================================================
-# 🔔 VERIFICAÇÃO AUTOMÁTICA DA RESERVA DE EMERGÊNCIA (COM MÊS DE INÍCIO)
-# =========================================================================
-if st.session_state.get('page') == "💰 Finanças & Bancos":
-    from datetime import datetime
-    from dateutil.relativedelta import relativedelta
-
-    aporte_planejado = st.session_state.get('reserva_aporte_mensal', 0.0)
-    banco_reserva = st.session_state.get('reserva_banco_escolhido', None)
-    dia_limite = st.session_state.get('reserva_dia_vencimento', 10)
-
-    # 🛡️ Defina aqui o mês e ano em que o controle deve começar oficialmente (Ex: Novembro de 2026)
-    MES_INICIO_CONTROLE = 11
-    ANO_INICIO_CONTROLE = 2026
-
-    if aporte_planejado > 0 and banco_reserva:
-        hoje_dt = datetime.now()
-        mes_atual = hoje_dt.month
-        ano_atual = hoje_dt.year
-        dia_atual = hoje_dt.day
-
-        # Verifica se já passamos da data de início do sistema
-        data_atual_tupla = (ano_atual, mes_atual)
-        data_inicio_tupla = (ANO_INICIO_CONTROLE, MES_INICIO_CONTROLE)
-
-        exibir_alerta = False
-        tipo_alerta = None
-        falta_aportar = 0.0
-
-        if data_atual_tupla >= data_inicio_tupla:
-            # Calcula o mês anterior para checar pendências (apenas se já estivermos no mês de início ou depois)
-            data_mes_anterior = hoje_dt - relativedelta(months=1)
-            mes_anterior = data_mes_anterior.month
-            ano_anterior = data_mes_anterior.year
-
-            try:
-                df_base_reserva = df.copy() if 'df' in locals() else df_base.copy()
-                df_base_reserva['DT_Res'] = pd.to_datetime(df_base_reserva['DT'], errors='coerce')
-                
-                # Só checa mês anterior se o mês anterior também for >= ao mês de início
-                checar_mes_ant = (ano_anterior, mes_anterior) >= data_inicio_tupla
-                total_aportado_ant = aporte_planejado # Assume ok por padrão
-
-                if checar_mes_ant:
-                    filtro_mes_ant = (
-                        (df_base_reserva['DT_Res'].dt.month == mes_anterior) & 
-                        (df_base_reserva['DT_Res'].dt.year == ano_anterior) &
-                        (df_base_reserva['Banco'] == banco_reserva) &
-                        (df_base_reserva['Descrição'].astype(str).str.contains('reserva', case=False, na=False)) &
-                        ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
-                    )
-                    total_aportado_ant = df_base_reserva[filtro_mes_ant]['V_Num'].sum()
-
-                # Filtros para o mês atual
-                filtro_mes_atual = (
-                    (df_base_reserva['DT_Res'].dt.month == mes_atual) & 
-                    (df_base_reserva['DT_Res'].dt.year == ano_atual) &
-                    (df_base_reserva['Banco'] == banco_reserva) &
-                    (df_base_reserva['Descrição'].astype(str).str.contains('reserva', case=False, na=False)) &
-                    ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
-                )
-                df_aportes_atual = df_base_reserva[filtro_mes_atual]
-                total_aportado_mes = df_aportes_atual['V_Num'].sum()
-                
-                data_ultimo_aporte = None
-                if not df_aportes_atual.empty:
-                    data_ultimo_aporte = df_aportes_atual['DT_Res'].max()
-                    
-            except Exception as e:
-                total_aportado_ant = aporte_planejado
-                total_aportado_mes = 0.0
-                data_ultimo_aporte = None
-                checar_mes_ant = False
-
-            falta_aportar_mes = max(0.0, aporte_planejado - total_aportado_mes)
-            falta_aportar_ant = max(0.0, aporte_planejado - total_aportado_ant)
-
-            # 1. Checa se o mês anterior ficou pendente (e se era um mês monitorado)
-            if checar_mes_ant and total_aportado_ant < aporte_planejado:
-                exibir_alerta = True
-                tipo_alerta = "vermelho_atrasado"
-                falta_aportar = falta_aportar_ant
-                mes_ref = f"{mes_anterior:02d}/{ano_anterior}"
-                texto_personalizado = f"🚨 **Atenção: Aporte da Reserva de {mes_ref} Pendente!**\n\nO mês anterior fechou sem a identificação total do aporte."
-            else:
-                # 2. Avalia o mês atual
-                if total_aportado_mes >= aporte_planejado:
-                    if data_ultimo_aporte is not None:
-                        dias_desde_aporte = (hoje_dt - data_ultimo_aporte).days
-                        if 0 <= dias_desde_aporte <= 3:
-                            exibir_alerta = True
-                            tipo_alerta = "verde"
-                    else:
-                        exibir_alerta = True
-                        tipo_alerta = "verde"
-                else:
-                    if dia_atual <= dia_limite:
-                        exibir_alerta = True
-                        tipo_alerta = "azul"
-                        falta_aportar = falta_aportar_mes
-                    else:
-                        exibir_alerta = True
-                        tipo_alerta = "vermelho_atual"
-                        falta_aportar = falta_aportar_mes
-
-        # Renderização visual
-        if exibir_alerta:
-            if tipo_alerta == "verde":
-                st.success(
-                    f"🎉 **Aporte do mês concluído!**\n\n"
-                    f"• **Banco:** {banco_reserva}\n"
-                    f"• **Planejado:** R$ {aporte_planejado:,.2f}\n"
-                    f"• **Aportado:** R$ {total_aportado_mes:,.2f}"
-                )
-            elif tipo_alerta == "azul":
-                st.info(
-                    f"⏳ **Aporte em andamento (Vencimento: Dia {dia_limite}):**\n\n"
-                    f"• **Banco:** {banco_reserva}\n"
-                    f"• **Aportado até agora:** R$ {total_aportado_mes:,.2f} / R$ {aporte_planejado:,.2f}\n"
-                    f"• **Falta aportar:** R$ {falta_aportar:,.2f} até o dia {dia_limite}/{mes_atual:02d}."
-                )
-            elif tipo_alerta == "vermelho_atual":
-                st.warning(
-                    f"🚨 **Atenção: Aporte da Reserva Pendente!**\n\n"
-                    f"O dia limite ({dia_limite}/{mes_atual:02d}) já passou e o aporte não foi totalmente identificado.\n"
-                    f"• **Banco:** {banco_reserva}\n"
-                    f"• **Aportado:** R$ {total_aportado_mes:,.2f}\n"
-                    f"• **Falta:** R$ {falta_aportar:,.2f}"
-                )
-            elif tipo_alerta == "vermelho_atrasado":
-                st.error(
-                    f"{texto_personalizado}\n\n"
-                    f"• **Banco:** {banco_reserva}\n"
-                    f"• **Falta pagar:** R$ {falta_aportar:,.2f}\n\n"
-                    f"*(Este alerta continuará fixo na tela até que você realize o lançamento do depósito pendente.)*"
-                )
-
-        
 
         # ==========================================
         # 🔔 ENVIAR NOTIFICAÇÃO CONSOLIDADA NO CELULAR
@@ -3349,12 +3172,6 @@ elif "📄" in aba:
 if aba == "📋 Relatório PDF":
     st.markdown("### 📋 Emissão de Relatório Financeiro")
 
-    # Função auxiliar para limpar emojis e evitar erro de encoding no PDF
-    def limpar_texto_pdf(texto):
-        if not isinstance(texto, str):
-            texto = str(texto)
-        return texto.encode('latin-1', 'ignore').decode('latin-1')
-
     # -------------------------------------------------------------------------
     # 1. FILTROS DA TELA (Com chaves exclusivas e espaçamentos blindados)
     # -------------------------------------------------------------------------
@@ -3364,6 +3181,7 @@ if aba == "📋 Relatório PDF":
         banco_relatorio = st.selectbox("Filtrar Banco:", opcoes_banco_rel, key="sb_rel_banco")
         
     with col_rel2:
+        # Espaço dedicado para baixar um pouquinho a legenda e o seletor de Período
         st.markdown("<div style='height: 2px;'></div>", unsafe_allow_html=True)
         
         hoje_atual = datetime.now()
@@ -3375,6 +3193,7 @@ if aba == "📋 Relatório PDF":
 
         periodo_pdf = st.date_input("Período do Relatório:", [primeiro_dia_mes, ultimo_dia_mes], format="DD/MM/YYYY", key="dt_rel_periodo")
 
+    # Respiro seguro entre a linha 1 e a linha 2
     st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
     col_rel3, col_rel4, col_rel5 = st.columns(3)
@@ -3382,6 +3201,7 @@ if aba == "📋 Relatório PDF":
             busca_desc = st.text_input("🔍 Pesquisar por Descrição:", "", key="txt_rel_desc").strip()
             
     with col_rel4:
+        # Puxa os beneficiários únicos da coluna correspondente para formar a lista
         beneficiarios_unicos = []
         df_temp = df_base if 'df_base' in locals() else df_report
         
@@ -3398,13 +3218,16 @@ if aba == "📋 Relatório PDF":
             beneficiarios_unicos = sorted(list(unicos_dict.values()))
 
         opcoes_benef = ["Todos"] + beneficiarios_unicos
+        
         busca_benef_select = st.selectbox("👤 Filtrar Beneficiário:", options=opcoes_benef, key="sb_beneficiario_rel")
         busca_benef = "" if busca_benef_select == "Todos" else busca_benef_select
         
     with col_rel5:
+            # Espaço dedicado empurrando a legenda do Status para baixo
             st.markdown("<div style='height: 2px;'></div>", unsafe_allow_html=True)
             busca_status = st.selectbox("📌 Filtrar Status:", ["Todos", "Pago", "Pendente"], key="sb_rel_status")
 
+    # Respiro seguro antes dos filtros de Categoria e Tipo da última linha
     st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
     col_rel6, col_rel7 = st.columns(2)
@@ -3414,6 +3237,7 @@ if aba == "📋 Relatório PDF":
         busca_categoria = st.selectbox("📂 Filtrar Categoria:", opcoes_cat_rel, key="sb_rel_categoria")
 
     with col_rel7:
+        # Espaço dedicado empurrando a legenda do Tipo para baixo
         st.markdown("<div style='height: 2px;'></div>", unsafe_allow_html=True)
         if 'Tipo' in df_base.columns:
             tipos_brutos = df_base['Tipo'].dropna().unique()
@@ -3435,11 +3259,17 @@ if aba == "📋 Relatório PDF":
             else:
                 b_ini = b_fim = periodo_pdf
 
+            # ========================================================
+            # INICIALIZAÇÃO DO PDF
+            # ========================================================
             from fpdf import FPDF
             pdf = FPDF(orientation='P', unit='mm', format='A4')
             pdf.set_margins(left=8, top=10, right=8)
             pdf.add_page()
 
+            # ========================================================
+            # CAPTURA E FILTRAGEM COMPLETA DOS DADOS (PDF)
+            # ========================================================
             df_report = df_base.copy()
 
             col_banco_df = next((c for c in df_report.columns if c.upper() in ['BANCO', 'CONTA']), None)
@@ -3464,6 +3294,7 @@ if aba == "📋 Relatório PDF":
             t_ini = pd.to_datetime(b_ini)
             t_fim = pd.to_datetime(b_fim)
 
+            # Aplica os filtros
             df_report = df_report[(df_report['DT_FILTRO'] >= t_ini) & (df_report['DT_FILTRO'] <= t_fim)]
 
             if banco_relatorio != "Todos" and col_banco_df:
@@ -3473,18 +3304,21 @@ if aba == "📋 Relatório PDF":
                 df_report = df_report[df_report[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
 
             if busca_benef:
-                col_benef_nome = df_report.columns[9] 
+                col_benef_nome = df_report.columns[9]  # Coluna J
                 df_report = df_report[df_report[col_benef_nome].astype(str).str.contains(busca_benef, case=False, na=False)]
 
             if busca_status != "Todos" and col_status_df:
                 df_report = df_report[df_report[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
+            # Filtro de Categoria
             if busca_categoria != "Todas" and 'Categoria' in df_report.columns:
                 df_report = df_report[df_report['Categoria'].str.upper().str.strip() == str(busca_categoria).upper()]
 
+            # Aplica Tipo no PDF
             if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_report.columns:
                 df_report = df_report[df_report['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
+            # BLINDAGEM INTELIGENTE DO PDF: Só oculta transferências se Categoria E Tipo estiverem em "Todos"
             modo_geral_pdf = (
                 busca_categoria == "Todos" and 
                 (not 'busca_tipo' in locals() or busca_tipo == "Todos")
@@ -3492,6 +3326,9 @@ if aba == "📋 Relatório PDF":
             if modo_geral_pdf and 'Categoria' in df_report.columns:
                 df_report = df_report[~df_report['Categoria'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
 
+            # ========================================================
+            # ORDENAÇÃO INTELIGENTE
+            # ========================================================
             if banco_relatorio == "Todos":
                 def pega_data_ordenacao(row):
                     b_linha = str(row.get(col_banco_df, '')).upper()
@@ -3510,9 +3347,16 @@ if aba == "📋 Relatório PDF":
 
             df_report = df_report.sort_values(by='DT_ORDEM')
 
+            # ========================================================
+            # 3. BUSCA DO SALDO DE ABERTURA - REGRA INTELIGENTE
+            # ========================================================
             base_inicial = 0.0
+            
+            # Identifica se o usuário selecionou um Banco/Cartão específico no relatório
+            # (Se for "Todos", significa que é um relatório geral, por beneficiário, categoria, etc.)
             eh_relatorio_de_banco_especifico = (banco_relatorio != "Todos" and banco_relatorio != "" and banco_relatorio is not None)
 
+            # SÓ BUSCA SALDO ANTERIOR SE FOR RELATÓRIO DE BANCO/CARTÃO ESPECÍFICO
             if eh_relatorio_de_banco_especifico:
                 try:
                     saldo_sistema_abril = 0.0
@@ -3586,10 +3430,14 @@ if aba == "📋 Relatório PDF":
                 except:
                     base_inicial = 0.0
             else:
+                # SE FOR POR BENEFICIÁRIO, CATEGORIA, TIPO OU GERAL: Começa zerado!
                 base_inicial = 0.0
 
             saldo_anterior = base_inicial
 
+            # ========================================================
+            # 4. CÁLCULO DOS LANÇAMENTOS E SALDO ACUMULADO
+            # ========================================================
             corrente = saldo_anterior 
             saldos_lista = []
 
@@ -3605,14 +3453,16 @@ if aba == "📋 Relatório PDF":
                 saldos_lista.append(corrente)
             
             df_report['Saldo_Acum'] = saldos_lista
-
+            # ========================================================
+            # 5. MONTAGEM DO CABEÇALHO DO PDF
+            # ========================================================
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(200, 10, txt="RELATORIO DE LANCAMENTOS - FINANCASPRO", ln=1, align="C")
             
             val_benef = str(locals().get('busca_benef', 'Todos')).strip()
             if val_benef and val_benef.upper() != "TODOS" and val_benef != "---":
                 pdf.set_font("Arial", 'B', 10)
-                pdf.cell(200, 6, txt=limpar_texto_pdf(f"BENEFICIARIO: {val_benef.upper()}"), ln=1, align="L")
+                pdf.cell(200, 6, txt=f"BENEFICIARIO: {val_benef.upper()}", ln=1, align="L")
             
             pdf.ln(2)
             pdf.set_font("Arial", '', 10)
@@ -3620,7 +3470,7 @@ if aba == "📋 Relatório PDF":
             p_fim = pd.to_datetime(b_fim).strftime('%d/%m/%Y')
             
             pdf.set_font("Arial", 'B', 10)
-            pdf.cell(200, 6, txt=limpar_texto_pdf(f"BANCO / CARTAO: {str(banco_nome).upper()}"), ln=1, align="L")
+            pdf.cell(200, 6, txt=f"BANCO / CARTAO: {str(banco_nome).upper()}", ln=1, align="L")
         
             if eh_cartao_geral:
                 dt_fim_obj = pd.to_datetime(b_fim)
@@ -3649,25 +3499,32 @@ if aba == "📋 Relatório PDF":
             pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
             pdf.ln(5)
             
+            # --- TÍTULO DA COLUNA DINÂMICO (Reduzido para abrir espaço para a Descrição) ---
             nome_coluna_data_pdf = "Dt Compra" if eh_cartao_geral else "Dt Venc"
 
-            pdf.set_font("Arial", 'B', 8)
-            pdf.cell(18, 7, nome_coluna_data_pdf, 1)
-            pdf.cell(14, 7, "Tipo", 1)
-            pdf.cell(26, 7, "Categoria", 1)
-            pdf.cell(32, 7, "Beneficiario", 1)
-            pdf.cell(38, 7, "Descricao", 1)
-            pdf.cell(20, 7, "Valor", 1)
-            pdf.cell(26, 7, "Saldo Acum.", 1)
-            pdf.cell(20, 7, "Status", 1)
+            pdf.set_font("Arial", 'B', 8)  # Fonte levemente menor para caber melhor nos títulos
+            pdf.cell(18, 7, nome_coluna_data_pdf, 1)  # Data (18mm)
+            pdf.cell(14, 7, "Tipo", 1)               # Tipo (14mm)
+            pdf.cell(26, 7, "Categoria", 1)          # Categoria (26mm)
+            pdf.cell(32, 7, "Beneficiario", 1)       # Beneficiário (32mm)
+            pdf.cell(38, 7, "Descricao", 1)          # Descrição adicionada! (38mm)
+            pdf.cell(20, 7, "Valor", 1)              # Valor (20mm)
+            pdf.cell(26, 7, "Saldo Acum.", 1)        # Saldo Acumulado (26mm)
+            pdf.cell(20, 7, "Status", 1)             # Status (20mm) -> Total = 194mm exatos da página!
             pdf.ln()
 
+            # ========================================================
+            # 6. LOOP DE IMPRESSÃO DAS LINHAS NO PDF
+            # ========================================================
             if not df_report.empty:
                 col_benef_real = df_report.columns[9] if len(df_report.columns) > 9 else 'Beneficiario'
+                
+                # Identifica qual coluna é a Descrição de verdade no seu df_base
                 col_desc_real = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
 
-            pdf.set_font("Arial", '', 8)
+            pdf.set_font("Arial", '', 8)  # Fonte 8 nas linhas para caber perfeitamente
             for index, row in df_report.iterrows():
+                # Para cartão, força exibir a Data da Compra na linha da tabela
                 b_linha_atual = str(row.get(col_banco_df, '')).upper()
                 is_cartao_linha = "CARTAO" in b_linha_atual or "CARTÃO" in b_linha_atual
                 
@@ -3676,31 +3533,34 @@ if aba == "📋 Relatório PDF":
                 else:
                     data_str = str(row.get(col_data_df, '---'))
                 
-                tipo_str = limpar_texto_pdf(str(row.get('Tipo', '---')).strip()[:6])
-                cat_val = limpar_texto_pdf(str(row.get('Categoria', 'Geral'))[:14])
+                tipo_str = str(row.get('Tipo', '---')).strip()[:6]  # Abrevia um pouco se precisar (ex: Despesa/Receita)
+                cat_val = str(row.get('Categoria', 'Geral'))[:14]   # Corta com limite seguro para 14 caracteres
                 
+                # Pega o Beneficiário
                 desc_base = str(row.get(col_benef_real, row.get('Beneficiario', 'Sem nome'))).strip()
                 p_atual = row.get('_parc_atual', 1)
                 p_total = row.get('_parc_total', 1)
                 
                 if int(p_total) > 1:
-                    benef_val = limpar_texto_pdf(f"{desc_base} {int(p_atual)}/{int(p_total)}"[:16])
+                    benef_val = f"{desc_base} {int(p_atual)}/{int(p_total)}"[:16]
                 else:
-                    benef_val = limpar_texto_pdf(desc_base[:16])
+                    benef_val = desc_base[:16]
 
+                # Pega a Descrição real (caso exista a coluna)
                 if col_desc_real:
-                    desc_val = limpar_texto_pdf(str(row.get(col_desc_real, '')).strip()[:20])
+                    desc_val = str(row.get(col_desc_real, '')).strip()[:20]
                 else:
                     desc_val = ""
 
                 valor_val = pd.to_numeric(row.get('V_Num', row.get('Valor', 0)), errors='coerce')
                 if pd.isna(valor_val): valor_val = 0.0
                 saldo_val = row.get('Saldo_Acum', 0.0)
-                status_val = limpar_texto_pdf(str(row.get('Status', '-'))[:10])
+                status_val = str(row.get('Status', '-'))[:10]
                 
+                # --- VALORES NEGATIVOS DESTACADOS EM VERMELHO COM SINAL ---
                 if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper() or valor_val < 0:
                     texto_valor = f"- R$ {abs(valor_val):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                    cor_valor = (255, 0, 0)
+                    cor_valor = (255, 0, 0) # Vermelho
                 else:
                     texto_valor = f"R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                     cor_valor = (0, 0, 0)
@@ -3708,11 +3568,12 @@ if aba == "📋 Relatório PDF":
                 texto_saldo = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                 cor_saldo = (255, 0, 0) if saldo_val < 0 else (0, 0, 0)
 
+                # Impressão das colunas com larguras proporcionais somando exatos 194mm
                 pdf.cell(18, 6, data_str, 1)
                 pdf.cell(14, 6, tipo_str, 1)
                 pdf.cell(26, 6, cat_val, 1)
                 pdf.cell(32, 6, benef_val, 1)
-                pdf.cell(38, 6, desc_val, 1)
+                pdf.cell(38, 6, desc_val, 1)  # Nova coluna de descrição encaixada!
                 
                 pdf.set_text_color(*cor_valor)
                 pdf.cell(20, 6, texto_valor, 1)
@@ -3738,6 +3599,7 @@ if aba == "📋 Relatório PDF":
 
         except Exception as e:
             st.error(f"Erro ao gerar o PDF: {e}")
+   
 
     # =========================================================================
     # 7. EXIBIÇÃO DA TABELA NA TELA COM OS MESMOS FILTROS (VISUAL LIMPO)
@@ -3751,32 +3613,40 @@ if aba == "📋 Relatório PDF":
     col_desc_df = next((c for c in df_tela.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
     col_status_df = next((c for c in df_tela.columns if c.upper() in ['STATUS']), None)
 
+    # Aplica Data na tela
     if col_data_df:
         df_tela['DT_FILTRO'] = pd.to_datetime(df_tela[col_data_df], format="%d/%m/%Y", errors='coerce')
         if isinstance(periodo_pdf, (list, tuple)) and len(periodo_pdf) == 2:
             df_tela = df_tela[(df_tela['DT_FILTRO'] >= pd.to_datetime(periodo_pdf[0])) & 
                               (df_tela['DT_FILTRO'] <= pd.to_datetime(periodo_pdf[1]))]
 
+   # Aplica Banco na tela
     if banco_relatorio != "Todos" and col_banco_df:
         df_tela = df_tela[df_tela[col_banco_df].str.upper().str.strip() == str(banco_relatorio).upper()]
 
+    # Aplica Descrição na tela
     if busca_desc and col_desc_df:
         df_tela = df_tela[df_tela[col_desc_df].astype(str).str.contains(busca_desc, case=False, na=False)]
 
+    # Aplica Beneficiário na tela
     if busca_benef:
         if 'df_tela' in locals() and len(df_tela.columns) > 9:
             col_benef_nome = df_tela.columns[9]
             df_tela = df_tela[df_tela[col_benef_nome].astype(str).str.contains(busca_benef, case=False, na=False)]
 
+    # Aplica Status na tela
     if busca_status != "Todos" and col_status_df:
         df_tela = df_tela[df_tela[col_status_df].str.upper().str.strip() == str(busca_status).upper()]
 
+    # Aplica Categoria na tela
     if 'busca_categoria' in locals() and busca_categoria != "Todas" and 'Categoria' in df_tela.columns:
         df_tela = df_tela[df_tela['Categoria'].str.upper().str.strip() == str(busca_categoria).upper()]
 
+    # Aplica Tipo na tela
     if 'busca_tipo' in locals() and busca_tipo != "Todos" and 'Tipo' in df_tela.columns:
         df_tela = df_tela[df_tela['Tipo'].str.upper().str.strip() == str(busca_tipo).upper()]
 
+    # BLINDAGEM INTELIGENTE DA TELA: Só oculta transferências se Categoria E Tipo estiverem em "Todos"
     modo_geral_tela = (
         ('busca_categoria' in locals() and busca_categoria == "Todos") and 
         ('busca_tipo' in locals() and busca_tipo == "Todos")
@@ -3784,6 +3654,11 @@ if aba == "📋 Relatório PDF":
     if modo_geral_tela and 'Categoria' in df_tela.columns:
         df_tela = df_tela[~df_tela['Categoria'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
 
+    
+    # --- FAXINA RIGOROSA ---
+    colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
+
+    # --- FAXINA RIGOROSA ---
     colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
     
     colunas_visiveis = [
@@ -3793,10 +3668,12 @@ if aba == "📋 Relatório PDF":
     
     df_tela_limpo = df_tela[colunas_visiveis]
 
+    # Exibe os dados
     if not df_tela_limpo.empty:
         st.dataframe(df_tela_limpo, use_container_width=True)
     else:
         st.info("Nenhum lançamento encontrado para os filtros aplicados.")
+
 
 # =========================================================================
 # NOVA ABA: 📊 ANÁLISES & CONFIGURAÇÕES
@@ -3819,7 +3696,7 @@ if aba == "📊 Análises & Configurações":
         else:
             st.error(f"❌ Erro no envio: {resultado}")
     
- # =========================================================================
+   # =========================================================================
     # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
     # =========================================================================
     st.markdown("---")
@@ -3831,8 +3708,8 @@ if aba == "📊 Análises & Configurações":
         ws_reserva = sh.worksheet("Reserva_Financeira")
     except:
         ws_reserva = sh.add_worksheet(title="Reserva_Financeira", rows="10", cols="5")
-        ws_reserva.append_row(["Meta_Reserva", "Aporte_Mensal", "Banco", "Dia_Limite"])
-        ws_reserva.append_row(["0.0", "300.00", "Invest Pag. Bank", "10"])
+        ws_reserva.append_row(["Meta_Reserva"])
+        ws_reserva.append_row(["0.0"])
 
     # Pega os dados da aba de reserva
     dados_reserva = ws_reserva.get_all_values()
@@ -3840,106 +3717,10 @@ if aba == "📊 Análises & Configurações":
 
     if len(dados_reserva) > 1:
         try:
-            val_meta_raw = str(dados_reserva[1][0]).replace('R$', '').strip()
-            if ',' in val_meta_raw and '.' in val_meta_raw:
-                val_meta_raw = val_meta_raw.replace('.', '').replace(',', '.')
-            else:
-                val_meta_raw = val_meta_raw.replace(',', '.')
-            meta_atual = float(val_meta_raw)
+            meta_atual = float(str(dados_reserva[1][0]).replace('R$', '').replace('.', '').replace(',', '.').strip())
         except:
             meta_atual = 0.0
 
-    # =========================================================================
-    # 🆕 NOVO BLOCO: CADASTRO DE APORTE DA RESERVA DE EMERGÊNCIA (FIXO NO GOOGLE SHEETS)
-    # =========================================================================
-    st.markdown("### 🛡️ Nova Reserva de Emergência")
-    
-    # 1. Carrega a lista dos bancos disponíveis no seu sistema
-    lista_bancos_disponiveis = []
-    try:
-        if 'df_bancos_info' in locals() and not df_bancos_info.empty:
-            lista_bancos_disponiveis = df_bancos_info.iloc[:, 0].dropna().unique().tolist()
-    except:
-        pass
-    
-    if not lista_bancos_disponiveis:
-        lista_bancos_disponiveis = ["Nubank", "Inter", "Sofisa", "Invest Pag. Bank", "Outro"]
-
-    # 2. Lê os valores salvos na aba Reserva_Financeira (se já existirem na planilha)
-    aporte_salvo = 300.00
-    banco_salvo = lista_bancos_disponiveis[0] if lista_bancos_disponiveis else "Nubank"
-    dia_salvo = 10
-
-    if len(dados_reserva) > 1:
-        try:
-            # 🛡️ TRATAMENTO SEGURO DE CONVERSÃO DECIMAL (EVITA 3000.00)
-            if len(dados_reserva[1]) > 1 and dados_reserva[1][1]:
-                val_raw = str(dados_reserva[1][1]).replace('R$', '').strip()
-                if ',' in val_raw and '.' in val_raw:
-                    val_raw = val_raw.replace('.', '').replace(',', '.')
-                else:
-                    val_raw = val_raw.replace(',', '.')
-                aporte_salvo = float(val_raw)
-                
-            if len(dados_reserva[1]) > 2 and dados_reserva[1][2]:
-                banco_salvo = str(dados_reserva[1][2]).strip()
-                
-            if len(dados_reserva[1]) > 3 and dados_reserva[1][3]:
-                dia_salvo = int(float(str(dados_reserva[1][3]).replace(',', '.')))
-        except:
-            aporte_salvo = 300.00
-
-    # 3. Formulário de Cadastro e Alteração
-    with st.form("form_nova_reserva_emergencia"):
-        col_ne1, col_ne2, col_ne3 = st.columns(3)
-        
-        with col_ne1:
-            nova_reserva_valor = st.number_input(
-                "Valor do Aporte Mensal (R$):",
-                value=float(aporte_salvo),
-                step=50.0,
-                format="%.2f"
-            )
-            
-        with col_ne2:
-            idx_banco = lista_bancos_disponiveis.index(banco_salvo) if banco_salvo in lista_bancos_disponiveis else 0
-            banco_escolhido = st.selectbox(
-                "Banco de Aplicação:",
-                options=lista_bancos_disponiveis,
-                index=idx_banco
-            )
-            
-        with col_ne3:
-            dia_limite_aporte = st.number_input(
-                "Dia Limite / Vencimento:",
-                min_value=1,
-                max_value=31,
-                value=int(dia_salvo)
-            )
-            
-        salvar_nova_reserva = st.form_submit_button("💾 Salvar Parâmetros da Reserva de Emergência")
-        
-        if salvar_nova_reserva:
-            # Garante que a meta anterior seja mantida
-            meta_para_salvar = f"{meta_atual:.2f}"
-            
-            # 🛡️ Formata o valor fixo com duas casas decimais e ponto (ex: "300.00")
-            aporte_para_salvar = f"{nova_reserva_valor:.2f}"
-            
-            # Grava FIXO nas colunas A2:D2 da planilha
-            ws_reserva.update(
-                range_name='A2:D2',
-                values=[[meta_para_salvar, aporte_para_salvar, str(banco_escolhido), str(dia_limite_aporte)]]
-            )
-            
-            # Salva também na memória para atualização imediata na tela
-            st.session_state['reserva_aporte_mensal'] = nova_reserva_valor
-            st.session_state['reserva_banco_escolhido'] = banco_escolhido
-            st.session_state['reserva_dia_vencimento'] = dia_limite_aporte
-            
-            st.toast(f"✅ Configurações salvas e FIXADAS no banco de dados! Banco: {banco_escolhido}", icon="🛡️")
-            st.rerun()
-    st.markdown("---")
    # --- FUNÇÃO DE CONVERSÃO SEGURA ---
     def converter_valor_br_seguro(val):
         if pd.isna(val):
