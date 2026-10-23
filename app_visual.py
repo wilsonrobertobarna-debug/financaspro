@@ -3717,46 +3717,64 @@ if aba == "📊 Análises & Configurações":
         else:
             st.error(f"❌ Erro no envio: {resultado}")
 
-    # =========================================================================
-    # 📌 CONFIGURAÇÃO DO APORTE MENSAL DA RESERVA (REGRA DO DIA 10)
+  # =========================================================================
+    # 📌 CONFIGURAÇÃO DO APORTE MENSAL DA RESERVA (SALVO NO GOOGLE SHEETS)
     # =========================================================================
     st.markdown("---")
     st.subheader("📅 Planejamento de Aporte Mensal da Reserva")
     
-    # Busca lista de bancos cadastrados ou usa fallback padrão
+    # Tenta carregar a aba 'Reserva_Financeira' no Google Sheets
+    try:
+        ws_reserva = sh.worksheet("Reserva_Financeira")
+    except:
+        ws_reserva = sh.add_worksheet(title="Reserva_Financeira", rows="10", cols="5")
+        ws_reserva.append_row(["Meta_Reserva", "Banco_Aporte", "Valor_Aporte", "Dia_Aporte"])
+        ws_reserva.append_row(["0.0", "Itaú", "500.0", "10"])
+
+    dados_reserva = ws_reserva.get_all_values()
+    
+    # Carrega os valores salvos no Sheets (com fallbacks seguros)
+    banco_salvo = dados_reserva[1][1] if len(dados_reserva) > 1 and len(dados_reserva[1]) > 1 and dados_reserva[1][1] else "Itaú"
+    
+    try:
+        valor_salvo = float(dados_reserva[1][2]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 2 else 500.0
+    except:
+        valor_salvo = 500.0
+        
+    try:
+        dia_salvo = int(dados_reserva[1][3]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 3 else 10
+    except:
+        dia_salvo = 10
+
+    # Puxa os bancos cadastrados para a barrinha (selectbox)
     lista_bancos_opcoes = ["Itaú", "Nubank", "Bradesco", "Inter", "Caixa", "C6 Bank", "Banco do Brasil"]
-    if 'df_bancos_info' in locals() and not df_bancos_info.empty:
-        bancos_extraidos = df_bancos_info.iloc[:, 0].dropna().astype(str).str.strip().tolist()
+    df_b_cfg = carregar_bancos_manual_gs()
+    if not df_b_cfg.empty:
+        bancos_extraidos = df_b_cfg.iloc[:, 0].dropna().astype(str).str.strip().tolist()
         if bancos_extraidos:
-            lista_bancos_opcoes = list(dict.fromkeys(bancos_extraidos)) # Remove duplicados mantendo a ordem
+            lista_bancos_opcoes = list(dict.fromkeys(bancos_extraidos))
 
-    # Busca os valores atuais salvos ou define padrões
-    banco_res_atual = st.session_state.get("reserva_banco", lista_bancos_opcoes[0])
-    aporte_res_atual = st.session_state.get("reserva_aporte", 500.0)
-    dia_res_atual = st.session_state.get("reserva_dia", 10)
-
-    # Garante que o banco selecionado anteriormente esteja na lista
-    index_banco = 0
-    if banco_res_atual in lista_bancos_opcoes:
-        index_banco = lista_bancos_opcoes.index(banco_res_atual)
+    index_banco = lista_bancos_opcoes.index(banco_salvo) if banco_salvo in lista_bancos_opcoes else 0
 
     with st.form("form_aporte_reserva"):
         col_res1, col_res2, col_res3 = st.columns(3)
         with col_res1:
             banco_reserva_in = st.selectbox("Selecione o Banco do Aporte:", options=lista_bancos_opcoes, index=index_banco)
         with col_res2:
-            valor_aporte_in = st.number_input("Valor do Aporte (R$):", min_value=0.0, value=float(aporte_res_atual), step=50.0)
+            valor_aporte_in = st.number_input("Valor do Aporte (R$):", min_value=0.0, value=valor_salvo, step=50.0)
         with col_res3:
-            dia_aporte_in = st.number_input("Dia do Aporte no Mês:", min_value=1, max_value=31, value=int(dia_res_atual))
+            dia_aporte_in = st.number_input("Dia do Aporte no Mês:", min_value=1, max_value=31, value=dia_salvo)
             
         btn_salvar_aporte = st.form_submit_button("💾 Salvar Planejamento de Aporte")
         
         if btn_salvar_aporte:
-            st.session_state["reserva_banco"] = banco_reserva_in
-            st.session_state["reserva_aporte"] = valor_aporte_in
-            st.session_state["reserva_dia"] = dia_aporte_in
-            st.toast("✅ Planejamento do aporte salvo com sucesso!", icon="🎯")
-            st.rerun()
+            try:
+                # Salva os valores diretamente nas células B2, C2 e D2 do Google Sheets
+                ws_reserva.update(values=[[str(banco_reserva_in), str(valor_aporte_in), str(dia_aporte_in)]], range_name='B2:D2')
+                st.toast("✅ Configuração fixa salva no Google Sheets!", icon="🎯")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro ao salvar no Sheets: {e}")
     
    # =========================================================================
     # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
