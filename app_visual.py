@@ -3695,6 +3695,35 @@ if aba == "📊 Análises & Configurações":
             st.success(f"✅ Enviado com sucesso! (HTTP: {resultado}). Veja o celular.")
         else:
             st.error(f"❌ Erro no envio: {resultado}")
+
+    # =========================================================================
+    # 📌 CONFIGURAÇÃO DO APORTE MENSAL DA RESERVA (REGRA DO DIA 10)
+    # =========================================================================
+    st.markdown("---")
+    st.subheader("📅 Planejamento de Aporte Mensal da Reserva")
+    
+    # Busca os valores atuais salvos ou define padrões
+    banco_res_atual = st.session_state.get("reserva_banco", "Itaú")
+    aporte_res_atual = st.session_state.get("reserva_aporte", 500.0)
+    dia_res_atual = st.session_state.get("reserva_dia", 10)
+
+    with st.form("form_aporte_reserva"):
+        col_res1, col_res2, col_res3 = st.columns(3)
+        with col_res1:
+            banco_reserva_in = st.text_input("Banco do Aporte:", value=banco_res_atual)
+        with col_res2:
+            valor_aporte_in = st.number_input("Valor do Aporte (R$):", min_value=0.0, value=float(aporte_res_atual), step=50.0)
+        with col_res3:
+            dia_aporte_in = st.number_input("Dia do Aporte no Mês:", min_value=1, max_value=31, value=int(dia_res_atual))
+            
+        btn_salvar_aporte = st.form_submit_button("💾 Salvar Planejamento de Aporte")
+        
+        if btn_salvar_aporte:
+            st.session_state["reserva_banco"] = banco_reserva_in
+            st.session_state["reserva_aporte"] = valor_aporte_in
+            st.session_state["reserva_dia"] = dia_aporte_in
+            st.toast("✅ Planejamento do aporte salvo com sucesso!", icon="🎯")
+            st.rerun()
     
    # =========================================================================
     # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
