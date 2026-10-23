@@ -55,6 +55,10 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
+    # FUNÇÕES DE CARREGAMENTO DIRETO
+    def carregar_dados_gs():
+        dados = ws_base.get_all_values()
+        if len(dados) <= 1: return pd.DataFrame()
 
 # =============================================================================
 # 3. FUNÇÃO DE ALARME PARA O CELULAR (NTFY)
