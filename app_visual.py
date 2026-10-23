@@ -616,6 +616,50 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     )
                     total_geral_prestes_vencer += valor_conta
 
+        # Definição das variáveis configuradas
+meta_total = st.session_state['reserva_meta_total']
+meta_aporte = st.session_state['reserva_aporte_mensal']
+dia_venc = st.session_state['reserva_dia_vencimento']
+
+hoje = datetime.date.today()
+mes_atual = hoje.month
+ano_atual = hoje.year
+
+# Checagem nas transferências do mês se a palavra "reserva" está na Descrição
+# (Ajuste 'df_lancamentos', 'Tipo' e 'Descrição' caso suas colunas tenham nomes diferentes)
+try:
+    # Garante a conversão de datas para verificação do mês/ano
+    df_temp = df_lancamentos.copy()
+    df_temp['Data_DT'] = pd.to_datetime(df_temp['Data'], errors='coerce')
+    
+    aporte_realizado = not df_temp[
+        (df_temp['Tipo'] == 'Transferência') &
+        (df_temp['Descrição'].astype(str).str.contains('reserva', case=False, na=False)) &
+        (df_temp['Data_DT'].dt.month == mes_atual) &
+        (df_temp['Data_DT'].dt.year == ano_atual)
+    ].empty
+except Exception:
+    aporte_realizado = False
+
+# Lógica de exibição do alerta em tela
+if aporte_realizado:
+    st.success("✅ **Reserva de Emergência:** Aporte deste mês identificado com sucesso!")
+else:
+    # Período de alerta: 3 dias antes do dia limite até o dia limite
+    if (dia_venc - 3) <= hoje.day <= dia_venc:
+        dias_restantes = dia_venc - hoje.day
+        msg_prazo = "Hoje é o dia do aporte!" if dias_restantes == 0 else f"Faltam **{dias_restantes} dia(s)** para o vencimento (Dia {dia_venc})!"
+        
+        st.warning(
+            f"🔔 **Lembrete de Reserva de Emergência:** {msg_prazo}  \n"
+            f"💰 Lembre-se de transferir **R$ {meta_aporte:,.2f}** e colocar *'Reserva'* na descrição do lançamento."
+        )
+    elif hoje.day > dia_venc:
+        st.error(
+            f"🚨 **Atenção:** O aporte da sua Reserva de Emergência "
+            f"(**R$ {meta_aporte:,.2f}**) ainda não foi identificado neste mês!"
+        )
+
         # ==========================================
         # 🔔 ENVIAR NOTIFICAÇÃO CONSOLIDADA NO CELULAR
         # ==========================================
