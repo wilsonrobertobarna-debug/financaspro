@@ -3702,15 +3702,27 @@ if aba == "📊 Análises & Configurações":
     st.markdown("---")
     st.subheader("📅 Planejamento de Aporte Mensal da Reserva")
     
+    # Busca lista de bancos cadastrados ou usa fallback padrão
+    lista_bancos_opcoes = ["Itaú", "Nubank", "Bradesco", "Inter", "Caixa", "C6 Bank", "Banco do Brasil"]
+    if 'df_bancos_info' in locals() and not df_bancos_info.empty:
+        bancos_extraidos = df_bancos_info.iloc[:, 0].dropna().astype(str).str.strip().tolist()
+        if bancos_extraidos:
+            lista_bancos_opcoes = list(dict.fromkeys(bancos_extraidos)) # Remove duplicados mantendo a ordem
+
     # Busca os valores atuais salvos ou define padrões
-    banco_res_atual = st.session_state.get("reserva_banco", "Itaú")
+    banco_res_atual = st.session_state.get("reserva_banco", lista_bancos_opcoes[0])
     aporte_res_atual = st.session_state.get("reserva_aporte", 500.0)
     dia_res_atual = st.session_state.get("reserva_dia", 10)
+
+    # Garante que o banco selecionado anteriormente esteja na lista
+    index_banco = 0
+    if banco_res_atual in lista_bancos_opcoes:
+        index_banco = lista_bancos_opcoes.index(banco_res_atual)
 
     with st.form("form_aporte_reserva"):
         col_res1, col_res2, col_res3 = st.columns(3)
         with col_res1:
-            banco_reserva_in = st.text_input("Banco do Aporte:", value=banco_res_atual)
+            banco_reserva_in = st.selectbox("Selecione o Banco do Aporte:", options=lista_bancos_opcoes, index=index_banco)
         with col_res2:
             valor_aporte_in = st.number_input("Valor do Aporte (R$):", min_value=0.0, value=float(aporte_res_atual), step=50.0)
         with col_res3:
