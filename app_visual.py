@@ -91,9 +91,7 @@ def enviar_alerta_financas(titulo, mensagem, prioridade="high", tags="bell,money
     except Exception as e:
         return False, str(e)
 
-# =============================================================================
-# 4. CHECAGEM AUTOMÁTICA DE PENDÊNCIAS NA ABERTURA
-# =============================================================================
+
 # =============================================================================
 # 4. CHECAGEM AUTOMÁTICA DE PENDÊNCIAS NA ABERTURA
 # =============================================================================
@@ -132,6 +130,8 @@ def verificar_e_disparar_alerta_inicial():
                     st.session_state['alerta_abertura_enviado'] = True
         except Exception:
             pass
+            # Tenta disparar o alerta de abertura automaticamente
+            verificar_e_disparar_alerta_inicial()
 
 # ========================================================
 # 1. TELA DE LOGIN (COMPACTA E CENTRALIZADA)
