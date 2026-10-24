@@ -616,23 +616,26 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     )
                     total_geral_prestes_vencer += valor_conta
 
-                    # Aviso simples na aba principal
-                st.info(
-                    f"💡 **Planejamento de Reserva Financeira:** "
-                    # Bloco de segurança para carregar as variáveis antes de exibir
-                try:
-                    ws_reserva = sh.worksheet("Reserva_Financeira")
-                    dados_reserva = ws_reserva.get_all_values()
-                    banco_res_exibicao = dados_reserva[1][1] if len(dados_reserva) > 1 and len(dados_reserva[1]) > 1 else "Itaú"
-                    aporte_res_exibicao = float(dados_reserva[1][2]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 2 else 0.0
-                    dia_res_exibicao = int(dados_reserva[1][3]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 3 else 10
-                except:
-                    banco_res_exibicao = "Itaú"
-                    aporte_res_exibicao = 0.0
-                    dia_res_exibicao = 10
-                                f"Lembre-se da regra do **dia {dia_res_exibicao}**! Aporte programado de "
-                    f"**R$ {aporte_res_exibicao:,.2f}** no banco **{banco_res_exibicao}**."
-                )
+        # =========================================================================
+        # 📌 AVISO DO PLANEJAMENTO DE RESERVA (COM INDENTAÇÃO CORRETA)
+        # =========================================================================
+        try:
+            ws_reserva = sh.worksheet("Reserva_Financeira")
+            dados_reserva = ws_reserva.get_all_values()
+            banco_res_exibicao = dados_reserva[1][1] if len(dados_reserva) > 1 and len(dados_reserva[1]) > 1 else "Itaú"
+            aporte_res_exibicao = float(dados_reserva[1][2]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 2 else 0.0
+            dia_res_exibicao = int(dados_reserva[1][3]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 3 else 10
+        except:
+            banco_res_exibicao = "Itaú"
+            aporte_res_exibicao = 0.0
+            dia_res_exibicao = 10
+    
+        st.info(
+            f"💡 **Planejamento de Reserva Financeira:** "
+            f"Lembre-se da regra do **dia {dia_res_exibicao}**! Aporte programado de "
+            f"**R$ {aporte_res_exibicao:,.2f}** no banco **{banco_res_exibicao}**."
+        )
+                  
 
         # ==========================================
         # 🔔 ENVIAR NOTIFICAÇÃO CONSOLIDADA NO CELULAR
