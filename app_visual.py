@@ -617,7 +617,7 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     total_geral_prestes_vencer += valor_conta
 
         # Definição das variáveis configuradas
-meta_total = st.session_state['reserva_meta_total']
+meta_total = st.session_state.get('reserva_meta_total', 10000.0)
 meta_aporte = st.session_state['reserva_aporte_mensal']
 dia_venc = st.session_state['reserva_dia_vencimento']
 
