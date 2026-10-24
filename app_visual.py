@@ -616,7 +616,14 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     )
                     total_geral_prestes_vencer += valor_conta
 
-        # Definição das variáveis configuradas
+ # Garante todas as chaves da reserva de uma vez para nunca mais dar KeyError
+for chave, valor_padrao in [
+    ('reserva_meta_total', 10000.0),
+    ('reserva_aporte_mensal', 500.0),
+    ('reserva_dia_vencimento', 10)
+]:
+    if chave not in st.session_state:
+        st.session_state[chave] = valor_padrao
 meta_total = st.session_state.get('reserva_meta_total', 10000.0)
 meta_aporte = st.session_state.get('reserva_aporte_mensal', 500.0)
 dia_venc = st.session_state.get('reserva_dia_vencimento', 10)
