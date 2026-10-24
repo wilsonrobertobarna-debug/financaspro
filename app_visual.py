@@ -3717,9 +3717,10 @@ if aba == "📊 Análises & Configurações":
         else:
             st.error(f"❌ Erro no envio: {resultado}")
 
-    # =========================================================================
-    # 🔔 VERIFICAÇÃO AUTOMÁTICA DA RESERVA DE EMERGÊNCIA (COM MÊS DE INÍCIO)
-    # =========================================================================
+   # =========================================================================
+# 🔔 VERIFICAÇÃO AUTOMÁTICA DA RESERVA DE EMERGÊNCIA (COM MÊS DE INÍCIO)
+# =========================================================================
+if st.session_state.get('page') == "💰 Finanças & Bancos":
     from datetime import datetime
     from dateutil.relativedelta import relativedelta
 
@@ -3727,7 +3728,7 @@ if aba == "📊 Análises & Configurações":
     banco_reserva = st.session_state.get('reserva_banco_escolhido', None)
     dia_limite = st.session_state.get('reserva_dia_vencimento', 10)
 
-    # 🛡️ Mês e ano de início oficial do controle
+    # 🛡️ Defina aqui o mês e ano em que o controle deve começar oficialmente (Ex: Novembro de 2026)
     MES_INICIO_CONTROLE = 11
     ANO_INICIO_CONTROLE = 2026
 
@@ -3737,6 +3738,7 @@ if aba == "📊 Análises & Configurações":
         ano_atual = hoje_dt.year
         dia_atual = hoje_dt.day
 
+        # Verifica se já passamos da data de início do sistema
         data_atual_tupla = (ano_atual, mes_atual)
         data_inicio_tupla = (ANO_INICIO_CONTROLE, MES_INICIO_CONTROLE)
 
@@ -3745,6 +3747,7 @@ if aba == "📊 Análises & Configurações":
         falta_aportar = 0.0
 
         if data_atual_tupla >= data_inicio_tupla:
+            # Calcula o mês anterior para checar pendências (apenas se já estivermos no mês de início ou depois)
             data_mes_anterior = hoje_dt - relativedelta(months=1)
             mes_anterior = data_mes_anterior.month
             ano_anterior = data_mes_anterior.year
@@ -3753,8 +3756,9 @@ if aba == "📊 Análises & Configurações":
                 df_base_reserva = df.copy() if 'df' in locals() else df_base.copy()
                 df_base_reserva['DT_Res'] = pd.to_datetime(df_base_reserva['DT'], errors='coerce')
                 
+                # Só checa mês anterior se o mês anterior também for >= ao mês de início
                 checar_mes_ant = (ano_anterior, mes_anterior) >= data_inicio_tupla
-                total_aportado_ant = aporte_planejado
+                total_aportado_ant = aporte_planejado # Assume ok por padrão
 
                 if checar_mes_ant:
                     filtro_mes_ant = (
@@ -3766,6 +3770,7 @@ if aba == "📊 Análises & Configurações":
                     )
                     total_aportado_ant = df_base_reserva[filtro_mes_ant]['V_Num'].sum()
 
+                # Filtros para o mês atual
                 filtro_mes_atual = (
                     (df_base_reserva['DT_Res'].dt.month == mes_atual) & 
                     (df_base_reserva['DT_Res'].dt.year == ano_atual) &
@@ -3789,6 +3794,7 @@ if aba == "📊 Análises & Configurações":
             falta_aportar_mes = max(0.0, aporte_planejado - total_aportado_mes)
             falta_aportar_ant = max(0.0, aporte_planejado - total_aportado_ant)
 
+            # 1. Checa se o mês anterior ficou pendente (e se era um mês monitorado)
             if checar_mes_ant and total_aportado_ant < aporte_planejado:
                 exibir_alerta = True
                 tipo_alerta = "vermelho_atrasado"
@@ -3796,6 +3802,7 @@ if aba == "📊 Análises & Configurações":
                 mes_ref = f"{mes_anterior:02d}/{ano_anterior}"
                 texto_personalizado = f"🚨 **Atenção: Aporte da Reserva de {mes_ref} Pendente!**\n\nO mês anterior fechou sem a identificação total do aporte."
             else:
+                # 2. Avalia o mês atual
                 if total_aportado_mes >= aporte_planejado:
                     if data_ultimo_aporte is not None:
                         dias_desde_aporte = (hoje_dt - data_ultimo_aporte).days
@@ -3815,16 +3822,37 @@ if aba == "📊 Análises & Configurações":
                         tipo_alerta = "vermelho_atual"
                         falta_aportar = falta_aportar_mes
 
-            if exibir_alerta:
-                if tipo_alerta == "verde":
-                    st.success(f"🎉 **Aporte do mês concluído!**\n\n• **Banco:** {banco_reserva}\n• **Planejado:** R$ {aporte_planejado:,.2f}\n• **Aportado:** R$ {total_aportado_mes:,.2f}")
-                elif tipo_alerta == "azul":
-                    st.info(f"⏳ **Aporte em andamento (Vencimento: Dia {dia_limite}):**\n\n• **Banco:** {banco_reserva}\n• **Aportado até agora:** R$ {total_aportado_mes:,.2f} / R$ {aporte_planejado:,.2f}\n• **Falta aportar:** R$ {falta_aportar:,.2f} até o dia {dia_limite}/{mes_atual:02d}.")
-                elif tipo_alerta == "vermelho_atual":
-                    st.warning(f"🚨 **Atenção: Aporte da Reserva Pendente!**\n\nO dia limite ({dia_limite}/{mes_atual:02d}) já passou.\n• **Banco:** {banco_reserva}\n• **Aportado:** R$ {total_aportado_mes:,.2f}\n• **Falta:** R$ {falta_aportar:,.2f}")
-                elif tipo_alerta == "vermelho_atrasado":
-                    st.error(f"{texto_personalizado}\n\n• **Banco:** {banco_reserva}\n• **Falta pagar:** R$ {falta_aportar:,.2f}")
-
+        # Renderização visual
+        if exibir_alerta:
+            if tipo_alerta == "verde":
+                st.success(
+                    f"🎉 **Aporte do mês concluído!**\n\n"
+                    f"• **Banco:** {banco_reserva}\n"
+                    f"• **Planejado:** R$ {aporte_planejado:,.2f}\n"
+                    f"• **Aportado:** R$ {total_aportado_mes:,.2f}"
+                )
+            elif tipo_alerta == "azul":
+                st.info(
+                    f"⏳ **Aporte em andamento (Vencimento: Dia {dia_limite}):**\n\n"
+                    f"• **Banco:** {banco_reserva}\n"
+                    f"• **Aportado até agora:** R$ {total_aportado_mes:,.2f} / R$ {aporte_planejado:,.2f}\n"
+                    f"• **Falta aportar:** R$ {falta_aportar:,.2f} até o dia {dia_limite}/{mes_atual:02d}."
+                )
+            elif tipo_alerta == "vermelho_atual":
+                st.warning(
+                    f"🚨 **Atenção: Aporte da Reserva Pendente!**\n\n"
+                    f"O dia limite ({dia_limite}/{mes_atual:02d}) já passou e o aporte não foi totalmente identificado.\n"
+                    f"• **Banco:** {banco_reserva}\n"
+                    f"• **Aportado:** R$ {total_aportado_mes:,.2f}\n"
+                    f"• **Falta:** R$ {falta_aportar:,.2f}"
+                )
+            elif tipo_alerta == "vermelho_atrasado":
+                st.error(
+                    f"{texto_personalizado}\n\n"
+                    f"• **Banco:** {banco_reserva}\n"
+                    f"• **Falta pagar:** R$ {falta_aportar:,.2f}\n\n"
+                    f"*(Este alerta continuará fixo na tela até que você realize o lançamento do depósito pendente.)*"
+                )
     
     
     #  =========================================================================
