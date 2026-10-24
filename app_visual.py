@@ -616,6 +616,13 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     )
                     total_geral_prestes_vencer += valor_conta
 
+                    # Aviso simples na aba principal
+                st.info(
+                    f"💡 **Planejamento de Reserva Financeira:** "
+                    f"Lembre-se da regra do **dia {dia_res_exibicao}**! Aporte programado de "
+                    f"**R$ {aporte_res_exibicao:,.2f}** no banco **{banco_res_exibicao}**."
+                )
+
         # ==========================================
         # 🔔 ENVIAR NOTIFICAÇÃO CONSOLIDADA NO CELULAR
         # ==========================================
