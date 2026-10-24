@@ -3726,7 +3726,7 @@ if aba == "📊 Análises & Configurações":
     st.markdown("## 📊 Painel de Análises & Configurações")
     st.subheader("⚙️ Configurações e Testes do Sistema")
     
-    # O botão fica guardado aqui dentro com segurança!
+    # Botão de Teste no Celular
     if st.button("🔔 Testar Som no Celular"):
         sucesso, resultado = enviar_alerta_financas(
             titulo="🚨 FinançasPro - Teste!",
@@ -3740,58 +3740,20 @@ if aba == "📊 Análises & Configurações":
         else:
             st.error(f"❌ Erro no envio: {resultado}")
 
-    st.subheader("🎯 Planejamento de Reserva Financeira")
-
-# Inicializa os valores padrão na sessão se ainda não existirem
-if 'reserva_meta_total' not in st.session_state:
-    st.session_state['reserva_meta_total'] = 10000.00
-if 'reserva_aporte_mensal' not in st.session_state:
-    st.session_state['reserva_aporte_mensal'] = 500.00
-if 'reserva_dia_vencimento' not in st.session_state:
-    st.session_state['reserva_dia_vencimento'] = 10
-
-col_c1, col_c2, col_c3 = st.columns(3)
-
-with col_c1:
-    st.session_state['reserva_meta_total'] = st.number_input(
-        "Meta Total (R$):",
-        value=float(st.session_state['reserva_meta_total']),
-        step=500.0,
-        format="%.2f"
-    )
-
-with col_c2:
-    st.session_state['reserva_aporte_mensal'] = st.number_input(
-        "Aporte Mensal (R$):",
-        value=float(st.session_state['reserva_aporte_mensal']),
-        step=50.0,
-        format="%.2f"
-    )
-
-with col_c3:
-    st.session_state['reserva_dia_vencimento'] = st.number_input(
-        "Dia Limite do Aporte:",
-        min_value=1,
-        max_value=31,
-        value=int(st.session_state['reserva_dia_vencimento'])
-    )
-    
-   # =========================================================================
-    # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
+    # =========================================================================
+    # 💰 PAINEL DE RESERVA FINANCEIRA (GERENCIAMENTO DE META)
     # =========================================================================
     st.markdown("---")
-    st.subheader("🎯 Planejamento de Reserva Financeira")
+    st.subheader("🎯 Meta Total da Reserva Financeira")
     st.write("Acompanhe o progresso da sua segurança financeira com base nos seus lançamentos.")
 
-    # Tenta carregar ou criar a aba 'Reserva_Financeira' no Google Sheets
     try:
         ws_reserva = sh.worksheet("Reserva_Financeira")
     except:
         ws_reserva = sh.add_worksheet(title="Reserva_Financeira", rows="10", cols="5")
-        ws_reserva.append_row(["Meta_Reserva"])
-        ws_reserva.append_row(["0.0"])
+        ws_reserva.append_row(["Meta_Reserva", "Banco_Aporte", "Valor_Aporte", "Dia_Aporte"])
+        ws_reserva.append_row(["0.0", "Itaú", "500.0", "10"])
 
-    # Pega os dados da aba de reserva
     dados_reserva = ws_reserva.get_all_values()
     meta_atual = 0.0
 
@@ -3801,37 +3763,66 @@ with col_c3:
         except:
             meta_atual = 0.0
 
-   # --- FUNÇÃO DE CONVERSÃO SEGURA ---
-    def converter_valor_br_seguro(val):
-        if pd.isna(val):
-            return 0.0
-        if isinstance(val, (int, float)):
-            return float(val)
+    # Formulário de Meta Total
+    with st.form("form_reserva_financeira"):
+        meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        salvar_reserva = st.form_submit_button("💾 Salvar Meta Total", use_container_width=True)
         
-        try:
-            val_str = str(val).replace('R$', '').replace('r$', '').strip()
-            if not val_str:
-                return 0.0
-            
-            if '.' in val_str and ',' in val_str:
-                val_str = val_str.replace('.', '').replace(',', '.')
-            elif ',' in val_str:
-                val_str = val_str.replace(',', '.')
-            elif val_str.count('.') > 1:
-                val_str = val_str.replace('.', '')
+        if salvar_reserva:
+            try:
+                meta_limpa = meta_str_input.replace('R$', '').strip().replace('.', '').replace(',', '.')
+                nova_meta = float(meta_limpa)
                 
-            return float(val_str)
-        except:
-            return 0.0
+                ws_reserva.update(values=[[str(nova_meta)]], range_name='A2:A2')
+                st.toast("✅ Meta da reserva salva com sucesso!", icon="🎯")
+                st.rerun()
+            except ValueError:
+                st.error("⚠️ Formato de valor inválido. Use o formato como 300000 ou 300.000,00")
 
-    # Inicializadores dos totais
-    guardado_atual = 0.0            # Investimentos BRL
-    saldo_outras_brl = 0.0          # Contas Correntes BRL
-    saldo_veiculos_brl = 0.0        # Veículos BRL
-    total_invest_usd = 0.0          # Investimentos USD
-    total_invest_eur = 0.0          # Investimentos EUR
-    saldo_outras_usd = 0.0
-    saldo_outras_eur = 0.0
+    # =========================================================================
+    # 📅 PLANEJAMENTO DE APORTE MENSAL (ORGANIZADO E VERTICAL)
+    # =========================================================================
+    st.markdown("---")
+    st.subheader("📅 Planejamento de Aporte Mensal")
+    
+    banco_salvo = dados_reserva[1][1] if len(dados_reserva) > 1 and len(dados_reserva[1]) > 1 and dados_reserva[1][1] else "Itaú"
+    try:
+        valor_salvo = float(dados_reserva[1][2]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 2 else 500.0
+    except:
+        valor_salvo = 500.0
+        
+    try:
+        dia_salvo = int(dados_reserva[1][3]) if len(dados_reserva) > 1 and len(dados_reserva[1]) > 3 else 10
+    except:
+        dia_salvo = 10
+
+    lista_bancos_opcoes = ["Itaú", "Nubank", "Bradesco", "Inter", "Caixa", "C6 Bank", "Banco do Brasil"]
+    if 'df_bancos_info' in locals() and not df_bancos_info.empty:
+        bancos_extraidos = df_bancos_info.iloc[:, 0].dropna().astype(str).str.strip().tolist()
+        if bancos_extraidos:
+            lista_bancos_opcoes = list(dict.fromkeys(bancos_extraidos))
+
+    index_banco = lista_bancos_opcoes.index(banco_salvo) if banco_salvo in lista_bancos_opcoes else 0
+
+    with st.form("form_aporte_reserva"):
+        banco_reserva_in = st.selectbox("Selecione o Banco do Aporte:", options=lista_bancos_opcoes, index=index_banco)
+        valor_aporte_in = st.number_input("Valor do Aporte Mensal (R$):", min_value=0.0, value=valor_salvo, step=50.0)
+        dia_aporte_in = st.number_input("Dia Limite do Aporte no Mês:", min_value=1, max_value=31, value=dia_salvo)
+            
+        btn_salvar_aporte = st.form_submit_button("💾 Salvar Planejamento de Aporte", use_container_width=True)
+        
+        if btn_salvar_aporte:
+            try:
+                ws_reserva.update(values=[[str(banco_reserva_in), str(valor_aporte_in), str(dia_aporte_in)]], range_name='B2:D2')
+                st.toast("✅ Planejamento de aporte salvo no Google Sheets!", icon="🎯")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro ao salvar no Sheets: {e}")
+
+    # =========================================================================
+    # 📈 CÁLCULO E PROGRESSO VISUAL DA RESERVA
+    # =========================================================================
+    guardado_atual = 0.0
 
     try:
         if 'df_bancos_info' in locals() and not df_bancos_info.empty:
@@ -3847,21 +3838,9 @@ with col_c3:
                     moeda_banco = str(row.iloc[5]).strip().upper() if len(row) > 5 and str(row.iloc[5]).strip() else "BRL"
                     b_up = str(nome_banco).upper()
 
-                    # Ignora cartões de crédito para o cálculo de saldo patrimonial
-                    if "CARTA" in tipo_c or "CART" in b_up:
+                    if "CARTA" in tipo_c or "CART" in b_up or "VEICULO" in tipo_c or "BEM" in tipo_c or "REFEIÇÃO" in tipo_c:
                         continue
 
-                    # Identifica Veículos / Bens
-                    if "VEICULO" in tipo_c or "BEM" in tipo_c or "CROSS" in b_up or "LEAD" in b_up or "MOTO" in b_up:
-                        if moeda_banco == "BRL":
-                            saldo_veiculos_brl += saldo_inicial
-                        continue
-
-                    # Identifica Vale Refeição
-                    if "REFEIÇÃO" in tipo_c or "VR" in b_up or "VA" in b_up or "ALIMENTAÇÃO" in b_up:
-                        continue
-
-                    # Calcula o saldo atualizado com base nos lançamentos
                     filtro = (df_base['Banco'] == nome_banco) & ((df_base['Status'].str.upper() == 'PAGO') | (df_base['Status'] == ''))
                     df_banco_atual = df_base[filtro]
                     
@@ -3870,53 +3849,16 @@ with col_c3:
                     
                     saldo_atual = saldo_inicial + entradas - saidas
 
-                    # Separação exata baseada na regra de tipo
                     is_investimento = "INVEST" in tipo_c or "POUP" in tipo_c or "PREV" in tipo_c
+                    if moeda_banco == "BRL" and is_investimento:
+                        guardado_atual += saldo_atual
 
-                    if moeda_banco == "USD":
-                        if is_investimento:
-                            total_invest_usd += saldo_atual
-                        else:
-                            saldo_outras_usd += saldo_atual
-                    elif moeda_banco == "EUR":
-                        if is_investimento:
-                            total_invest_eur += saldo_atual
-                        else:
-                            saldo_outras_eur += saldo_atual
-                    else: # BRL
-                        if is_investimento:
-                            guardado_atual += saldo_atual
-                        else:
-                            saldo_outras_brl += saldo_atual
-
-                except Exception as ex:
+                except Exception:
                     pass
-
-        subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
-        subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
-        subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
 
     except Exception as e:
         st.error(f"Erro ao calcular os saldos: {e}")
-        
-    # Formulário para salvar a meta
-    with st.form("form_reserva_financeira"):
-        meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-        salvar_reserva = st.form_submit_button("💾 Salvar Meta")
-        
-        if salvar_reserva:
-            try:
-                meta_limpa = meta_str_input.replace('R$', '').strip()
-                meta_limpa = meta_limpa.replace('.', '').replace(',', '.')
-                nova_meta = float(meta_limpa)
-                
-                ws_reserva.update(values=[[str(nova_meta)]], range_name='A2:A2')
-                st.toast("✅ Meta da reserva salva com sucesso!", icon="🎯")
-                st.rerun()
-            except ValueError:
-                st.error("⚠️ Formato de valor inválido. Use o formato como 300000 ou 300.000,00")
 
-    # Exibição de Métricas e Progresso Visual
     if meta_atual > 0:
         progresso = min(guardado_atual / meta_atual, 1.0)
         percentual_reserva = (guardado_atual / meta_atual) * 100
@@ -3924,12 +3866,15 @@ with col_c3:
         progresso = 0.0
         percentual_reserva = 0.0
 
+    st.markdown("---")
     col_m1, col_m2, col_m3 = st.columns(3)
     col_m1.metric("🎯 Meta Alvo", f"R$ {meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
     col_m2.metric("💰 Apenas Investimentos", f"R$ {guardado_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
     col_m3.metric("📈 Conclusão da Meta", f"{percentual_reserva:.1f}%")
 
     st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")
+
+    
 
     # =========================================================================
     # 🔍 PAINEL DE CONFERÊNCIA POR MOEDA (Espelho do WhatsApp)
