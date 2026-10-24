@@ -3882,7 +3882,9 @@ if aba == "📊 Análises & Configurações":
     with st.expander("📊 Conferência de Subtotais por Moeda (Espelho do WhatsApp)", expanded=True):
         col_w1, col_w2, col_w3 = st.columns(3)
         with col_w1:
-            st.metric("🇧🇷 Subtotal Contas & Invest. (BRL)", f"R$ {subtotal_contas_invest_brl:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+           # Garante que a variável exista para não dar erro na tela
+    if 'subtotal_contas_invest_brl' not in locals():
+        subtotal_contas_invest_brl = guardado_atual if 'guardado_atual' in locals() else 0.0
             st.caption(f"• Investimentos BRL: R$ {guardado_atual:,.2f}\n• Contas Correntes BRL: R$ {saldo_outras_brl:,.2f}")
         with col_w2:
             st.metric("🇺🇸 Subtotal Contas & Invest. (USD)", f"U$ {subtotal_invest_usd_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
