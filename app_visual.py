@@ -619,8 +619,7 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
         # Definição das variáveis configuradas
 meta_total = st.session_state.get('reserva_meta_total', 10000.0)
 meta_aporte = st.session_state.get('reserva_aporte_mensal', 500.0)
-dia_venc = st.session_state['reserva_dia_vencimento']
-
+dia_venc = st.session_state.get('reserva_dia_vencimento', 10)
 hoje = datetime.date.today()
 mes_atual = hoje.month
 ano_atual = hoje.year
