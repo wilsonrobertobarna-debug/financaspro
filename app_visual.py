@@ -621,7 +621,7 @@ meta_total = st.session_state['reserva_meta_total']
 meta_aporte = st.session_state['reserva_aporte_mensal']
 dia_venc = st.session_state['reserva_dia_vencimento']
 
-hoje = datetime.date.today()
+hoje = datetime.today().date()
 mes_atual = hoje.month
 ano_atual = hoje.year
 
