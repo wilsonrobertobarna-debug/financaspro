@@ -4126,7 +4126,7 @@ if aba == "📊 Análises & Configurações":
     # =========================================================================
     # 🎯 LEITURA E FORMULÁRIO DA META TOTAL DA RESERVA (PADRÃO SEGURO)
     # =========================================================================
-    meta_atual = 0.0
+        meta_atual = 0.0
 
     if len(dados_reserva) > 1 and len(dados_reserva[1]) > 0 and dados_reserva[1][0]:
         try:
