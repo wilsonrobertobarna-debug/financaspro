@@ -620,55 +620,6 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
 import pandas as pd
 import datetime
 
-# ==============================================================================
-# PASSO 1: CONFIGURAÇÕES DA RESERVA (ABA ANÁLISE E CONFIGURAÇÕES)
-# Coloque este bloco dentro da sua Aba "Análise e Configurações"
-# (Abaixo de 'Planejamento de Reserva Financeira')
-# ==============================================================================
-
-st.subheader("🎯 Planejamento de Reserva Financeira")
-
-# Inicializa os valores padrão na sessão se ainda não existirem
-if 'reserva_meta_total' not in st.session_state:
-    st.session_state['reserva_meta_total'] = 10000.00
-if 'reserva_aporte_mensal' not in st.session_state:
-    st.session_state['reserva_aporte_mensal'] = 500.00
-if 'reserva_dia_vencimento' not in st.session_state:
-    st.session_state['reserva_dia_vencimento'] = 10
-
-col_c1, col_c2, col_c3 = st.columns(3)
-
-with col_c1:
-    st.session_state['reserva_meta_total'] = st.number_input(
-        "Meta Total (R$):",
-        value=float(st.session_state['reserva_meta_total']),
-        step=500.0,
-        format="%.2f"
-    )
-
-with col_c2:
-    st.session_state['reserva_aporte_mensal'] = st.number_input(
-        "Aporte Mensal (R$):",
-        value=float(st.session_state['reserva_aporte_mensal']),
-        step=50.0,
-        format="%.2f"
-    )
-
-with col_c3:
-    st.session_state['reserva_dia_vencimento'] = st.number_input(
-        "Dia Limite do Aporte:",
-        min_value=1,
-        max_value=31,
-        value=int(st.session_state['reserva_dia_vencimento'])
-    )
-
-
-# ==============================================================================
-# PASSO 2: ALERTA INTELIGENTE (TELA PRINCIPAL)
-# Coloque este bloco na Tela Principal, LOGO ABAIXO da barrinha
-# "📊 Clique aqui para ver o Relatório Bancário Completo"
-# ==============================================================================
-
 # Definição das variáveis configuradas
 meta_total = st.session_state['reserva_meta_total']
 meta_aporte = st.session_state['reserva_aporte_mensal']
