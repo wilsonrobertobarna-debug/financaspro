@@ -4123,8 +4123,8 @@ if aba == "📊 Análises & Configurações":
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
         subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
 
-  # =========================================================================
-    # 🎯 LEITURA E FORMULÁRIO DA META TOTAL DA RESERVA (VERSÃO SEM CONFLITO)
+ # =========================================================================
+    # 🎯 LEITURA E FORMULÁRIO DA META TOTAL DA RESERVA (VERSÃO LIMPA)
     # =========================================================================
     meta_atual = 0.0
     if 'dados_reserva' in locals() and len(dados_reserva) > 1:
