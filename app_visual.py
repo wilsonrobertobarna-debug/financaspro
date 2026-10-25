@@ -4123,19 +4123,40 @@ if aba == "📊 Análises & Configurações":
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
         subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
 
-    except Exception as e:
+   except Exception as e:
         st.error(f"Erro ao calcular os saldos: {e}")
         
+    # Função auxiliar local para limpar qualquer valor monetário digitado
+    def limpar_valor_str(val):
+        if not val:
+            return 0.0
+        val_s = str(val).replace('R$', '').replace('\xa0', '').strip()
+        # Se tem ponto e vírgula (ex: 300.000,00)
+        if '.' in val_s and ',' in val_s:
+            val_s = val_s.replace('.', '').replace(',', '.')
+        elif ',' in val_s:
+            val_s = val_s.replace(',', '.')
+        elif '.' in val_s and len(val_s.split('.')[-1]) != 2:
+            val_s = val_s.replace('.', '')
+        try:
+            return float(val_s)
+        except:
+            return 0.0
+
+    # Garante que o meta_atual é um float limpo antes de formatar
+    meta_atual = limpar_valor_str(meta_atual)
+
     # Formulário para salvar a meta
     with st.form("form_reserva_financeira"):
-        meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        # Formata de forma limpa e segura para PT-BR no input
+        val_inicial_formatado = f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=val_inicial_formatado)
         salvar_reserva = st.form_submit_button("💾 Salvar Meta")
         
         if salvar_reserva:
             try:
-                meta_limpa = meta_str_input.replace('R$', '').strip()
-                meta_limpa = meta_limpa.replace('.', '').replace(',', '.')
-                nova_meta = float(meta_limpa)
+                # Usa a mesma função robusta para limpar o que você digitou
+                nova_meta = limpar_valor_str(meta_str_input)
                 
                 ws_reserva.update(values=[[str(nova_meta)]], range_name='A2:A2')
                 st.toast("✅ Meta da reserva salva com sucesso!", icon="🎯")
