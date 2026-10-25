@@ -616,6 +616,103 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     )
                     total_geral_prestes_vencer += valor_conta
 
+        import streamlit as st
+import pandas as pd
+import datetime
+
+# ==============================================================================
+# PASSO 1: CONFIGURAÇÕES DA RESERVA (ABA ANÁLISE E CONFIGURAÇÕES)
+# Coloque este bloco dentro da sua Aba "Análise e Configurações"
+# (Abaixo de 'Planejamento de Reserva Financeira')
+# ==============================================================================
+
+st.subheader("🎯 Planejamento de Reserva Financeira")
+
+# Inicializa os valores padrão na sessão se ainda não existirem
+if 'reserva_meta_total' not in st.session_state:
+    st.session_state['reserva_meta_total'] = 10000.00
+if 'reserva_aporte_mensal' not in st.session_state:
+    st.session_state['reserva_aporte_mensal'] = 500.00
+if 'reserva_dia_vencimento' not in st.session_state:
+    st.session_state['reserva_dia_vencimento'] = 10
+
+col_c1, col_c2, col_c3 = st.columns(3)
+
+with col_c1:
+    st.session_state['reserva_meta_total'] = st.number_input(
+        "Meta Total (R$):",
+        value=float(st.session_state['reserva_meta_total']),
+        step=500.0,
+        format="%.2f"
+    )
+
+with col_c2:
+    st.session_state['reserva_aporte_mensal'] = st.number_input(
+        "Aporte Mensal (R$):",
+        value=float(st.session_state['reserva_aporte_mensal']),
+        step=50.0,
+        format="%.2f"
+    )
+
+with col_c3:
+    st.session_state['reserva_dia_vencimento'] = st.number_input(
+        "Dia Limite do Aporte:",
+        min_value=1,
+        max_value=31,
+        value=int(st.session_state['reserva_dia_vencimento'])
+    )
+
+
+# ==============================================================================
+# PASSO 2: ALERTA INTELIGENTE (TELA PRINCIPAL)
+# Coloque este bloco na Tela Principal, LOGO ABAIXO da barrinha
+# "📊 Clique aqui para ver o Relatório Bancário Completo"
+# ==============================================================================
+
+# Definição das variáveis configuradas
+meta_total = st.session_state['reserva_meta_total']
+meta_aporte = st.session_state['reserva_aporte_mensal']
+dia_venc = st.session_state['reserva_dia_vencimento']
+
+hoje = datetime.date.today()
+mes_atual = hoje.month
+ano_atual = hoje.year
+
+# Checagem nas transferências do mês se a palavra "reserva" está na Descrição
+# (Ajuste 'df_lancamentos', 'Tipo' e 'Descrição' caso suas colunas tenham nomes diferentes)
+try:
+    # Garante a conversão de datas para verificação do mês/ano
+    df_temp = df_lancamentos.copy()
+    df_temp['Data_DT'] = pd.to_datetime(df_temp['Data'], errors='coerce')
+    
+    aporte_realizado = not df_temp[
+        (df_temp['Tipo'] == 'Transferência') &
+        (df_temp['Descrição'].astype(str).str.contains('reserva', case=False, na=False)) &
+        (df_temp['Data_DT'].dt.month == mes_atual) &
+        (df_temp['Data_DT'].dt.year == ano_atual)
+    ].empty
+except Exception:
+    aporte_realizado = False
+
+# Lógica de exibição do alerta em tela
+if aporte_realizado:
+    st.success("✅ **Reserva de Emergência:** Aporte deste mês identificado com sucesso!")
+else:
+    # Período de alerta: 3 dias antes do dia limite até o dia limite
+    if (dia_venc - 3) <= hoje.day <= dia_venc:
+        dias_restantes = dia_venc - hoje.day
+        msg_prazo = "Hoje é o dia do aporte!" if dias_restantes == 0 else f"Faltam **{dias_restantes} dia(s)** para o vencimento (Dia {dia_venc})!"
+        
+        st.warning(
+            f"🔔 **Lembrete de Reserva de Emergência:** {msg_prazo}  \n"
+            f"💰 Lembre-se de transferir **R$ {meta_aporte:,.2f}** e colocar *'Reserva'* na descrição do lançamento."
+        )
+    elif hoje.day > dia_venc:
+        st.error(
+            f"🚨 **Atenção:** O aporte da sua Reserva de Emergência "
+            f"(**R$ {meta_aporte:,.2f}**) ainda não foi identificado neste mês!"
+        )
+
         # ==========================================
         # 🔔 ENVIAR NOTIFICAÇÃO CONSOLIDADA NO CELULAR
         # ==========================================
