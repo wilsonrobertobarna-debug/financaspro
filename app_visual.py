@@ -623,177 +623,183 @@ import datetime
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in st.session_state.page:
     
-    # =========================================================================
-    # 🔔 VERIFICAÇÃO AUTOMÁTICA E NTFY DA RESERVA DE EMERGÊNCIA
-    # =========================================================================
-    import datetime as dt_mod
-    from datetime import datetime
-    import pandas as pd
-    import requests
+   # =========================================================================
+# 🔔 VERIFICAÇÃO AUTOMÁTICA E NTFY DA RESERVA DE EMERGÊNCIA (REGRAS EXATAS)
+# =========================================================================
+import datetime as dt_mod
+from datetime import datetime
+import pandas as pd
+import requests
 
-    try:
-        from dateutil.relativedelta import relativedelta
-    except ImportError:
-        relativedelta = None
+try:
+    from dateutil.relativedelta import relativedelta
+except ImportError:
+    relativedelta = None
 
-    # 1. Carrega os parâmetros atualizados salvos no Google Sheets ou no session_state
-    try:
-        ws_reserva_check = sh.worksheet("Reserva_Financeira")
-        dados_res_check = ws_res_check.get_all_values()
-        if len(dados_res_check) > 1:
-            val_ap_raw = str(dados_res_check[1][1]).replace('R$', '').strip()
-            if ',' in val_ap_raw and '.' in val_ap_raw:
-                val_ap_raw = val_ap_raw.replace('.', '').replace(',', '.')
-            else:
-                val_ap_raw = val_ap_raw.replace(',', '.')
-                
-            aporte_planejado = float(val_ap_raw) if val_ap_raw else 300.0
-            banco_reserva = str(dados_res_check[1][2]).strip() if len(dados_res_check[1]) > 2 and dados_res_check[1][2] else "Invest Pag. Bank"
-            dia_limite = int(float(str(dados_res_check[1][3]).replace(',', '.'))) if len(dados_res_check[1]) > 3 and dados_res_check[1][3] else 10
+# 1. Carrega os parâmetros atualizados salvos no Google Sheets ou no session_state
+try:
+    ws_reserva_check = sh.worksheet("Reserva_Financeira")
+    dados_res_check = ws_reserva_check.get_all_values()
+    if len(dados_res_check) > 1:
+        val_ap_raw = str(dados_res_check[1][1]).replace('R$', '').strip()
+        if ',' in val_ap_raw and '.' in val_ap_raw:
+            val_ap_raw = val_ap_raw.replace('.', '').replace(',', '.')
         else:
-            aporte_planejado = float(st.session_state.get('reserva_aporte_mensal', 300.0))
-            banco_reserva = st.session_state.get('reserva_banco_escolhido', 'Invest Pag. Bank')
-            dia_limite = int(st.session_state.get('reserva_dia_vencimento', 10))
-    except Exception:
+            val_ap_raw = val_ap_raw.replace(',', '.')
+            
+        aporte_planejado = float(val_ap_raw) if val_ap_raw else 300.0
+        banco_reserva = str(dados_res_check[1][2]).strip() if len(dados_res_check[1]) > 2 and dados_res_check[1][2] else "Invest Pag. Bank"
+        dia_limite = int(float(str(dados_res_check[1][3]).replace(',', '.'))) if len(dados_res_check[1]) > 3 and dados_res_check[1][3] else 10
+    else:
         aporte_planejado = float(st.session_state.get('reserva_aporte_mensal', 300.0))
         banco_reserva = st.session_state.get('reserva_banco_escolhido', 'Invest Pag. Bank')
         dia_limite = int(st.session_state.get('reserva_dia_vencimento', 10))
+except Exception:
+    aporte_planejado = float(st.session_state.get('reserva_aporte_mensal', 300.0))
+    banco_reserva = st.session_state.get('reserva_banco_escolhido', 'Invest Pag. Bank')
+    dia_limite = int(st.session_state.get('reserva_dia_vencimento', 10))
 
-    # 🛡️ Mês e ano de início oficial do controle
-    MES_INICIO_CONTROLE = 10
-    ANO_INICIO_CONTROLE = 2026
+# 🛡️ Mês e ano de início oficial do controle solicitado (Novembro de 2026)
+MES_INICIO_CONTROLE = 11
+ANO_INICIO_CONTROLE = 2026
 
-    if aporte_planejado > 0 and banco_reserva:
-        hoje_dt = datetime.now()
-        mes_atual = hoje_dt.month
-        ano_atual = hoje_dt.year
-        dia_atual = hoje_dt.day
+if aporte_planejado > 0 and banco_reserva:
+    hoje_dt = datetime.now()
+    mes_atual = hoje_dt.month
+    ano_atual = hoje_dt.year
+    dia_atual = hoje_dt.day
 
-        data_atual_tupla = (ano_atual, mes_atual)
-        data_inicio_tupla = (ANO_INICIO_CONTROLE, MES_INICIO_CONTROLE)
+    data_atual_tupla = (ano_atual, mes_atual)
+    data_inicio_tupla = (ANO_INICIO_CONTROLE, MES_INICIO_CONTROLE)
 
-        exibir_alerta = False
-        tipo_alerta = None
-        falta_aportar = 0.0
-        msg_ntfy = ""
+    exibir_alerta = False
+    tipo_alerta = None
+    falta_aportar = 0.0
+    msg_ntfy = ""
 
-        if data_atual_tupla >= data_inicio_tupla:
-            if relativedelta is not None:
-                data_mes_anterior = hoje_dt - relativedelta(months=1)
-                mes_anterior = data_mes_anterior.month
-                ano_anterior = data_mes_anterior.year
+    # Só começa a rodar a inteligência a partir de Novembro/2026
+    if data_atual_tupla >= data_inicio_tupla:
+        if relativedelta is not None:
+            data_mes_anterior = hoje_dt - relativedelta(months=1)
+            mes_anterior = data_mes_anterior.month
+            ano_anterior = data_mes_anterior.year
+        else:
+            mes_anterior = 12 if mes_atual == 1 else mes_atual - 1
+            ano_anterior = ano_atual - 1 if mes_atual == 1 else ano_atual
+
+        try:
+            # Garante o DataFrame base correto
+            if 'df' in locals():
+                df_base_reserva = df.copy()
+            elif 'df_lancamentos' in locals():
+                df_base_reserva = df_lancamentos.copy()
             else:
-                mes_anterior = 12 if mes_atual == 1 else mes_atual - 1
-                ano_anterior = ano_atual - 1 if mes_atual == 1 else ano_atual
+                df_base_reserva = df_base.copy()
 
-            try:
-                # Garante o DataFrame base correto
-                if 'df' in locals():
-                    df_base_reserva = df.copy()
-                elif 'df_lancamentos' in locals():
-                    df_base_reserva = df_lancamentos.copy()
-                else:
-                    df_base_reserva = df_base.copy()
+            # Flexibilidade de nome da coluna de data (DT ou Data)
+            col_dt = 'DT' if 'DT' in df_base_reserva.columns else ('Data' if 'Data' in df_base_reserva.columns else df_base_reserva.columns[0])
+            df_base_reserva['DT_Res'] = pd.to_datetime(df_base_reserva[col_dt], errors='coerce')
+            
+            # Flexibilidade de nome da coluna de valor
+            col_v = 'V_Num' if 'V_Num' in df_base_reserva.columns else ('Valor' if 'Valor' in df_base_reserva.columns else 'V_NUM')
 
-                # Flexibilidade de nome da coluna de data (DT ou Data)
-                col_dt = 'DT' if 'DT' in df_base_reserva.columns else ('Data' if 'Data' in df_base_reserva.columns else df_base_reserva.columns[0])
-                df_base_reserva['DT_Res'] = pd.to_datetime(df_base_reserva[col_dt], errors='coerce')
-                
-                # Flexibilidade de nome da coluna de valor
-                col_v = 'V_Num' if 'V_Num' in df_base_reserva.columns else ('Valor' if 'Valor' in df_base_reserva.columns else 'V_NUM')
+            checar_mes_ant = (ano_anterior, mes_anterior) >= data_inicio_tupla
+            total_aportado_ant = aporte_planejado
 
-                checar_mes_ant = (ano_anterior, mes_anterior) >= data_inicio_tupla
-                total_aportado_ant = aporte_planejado
-
-                if checar_mes_ant:
-                    filtro_mes_ant = (
-                        (df_base_reserva['DT_Res'].dt.month == mes_anterior) & 
-                        (df_base_reserva['DT_Res'].dt.year == ano_anterior) &
-                        (df_base_reserva['Banco'].astype(str).str.strip().str.upper() == str(banco_reserva).strip().upper()) &
-                        (df_base_reserva['Descrição'].astype(str).str.contains('reserva', case=False, na=False))
-                    )
-                    if 'Status' in df_base_reserva.columns:
-                        filtro_mes_ant = filtro_mes_ant & ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
-                    total_aportado_ant = df_base_reserva[filtro_mes_ant][col_v].sum()
-
-                filtro_mes_atual = (
-                    (df_base_reserva['DT_Res'].dt.month == mes_atual) & 
-                    (df_base_reserva['DT_Res'].dt.year == ano_atual) &
+            # Verifica mês anterior (se aplicável)
+            if checar_mes_ant:
+                filtro_mes_ant = (
+                    (df_base_reserva['DT_Res'].dt.month == mes_anterior) & 
+                    (df_base_reserva['DT_Res'].dt.year == ano_anterior) &
                     (df_base_reserva['Banco'].astype(str).str.strip().str.upper() == str(banco_reserva).strip().upper()) &
                     (df_base_reserva['Descrição'].astype(str).str.contains('reserva', case=False, na=False))
                 )
                 if 'Status' in df_base_reserva.columns:
-                    filtro_mes_atual = filtro_mes_atual & ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
+                    filtro_mes_ant = filtro_mes_ant & ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
+                total_aportado_ant = df_base_reserva[filtro_mes_ant][col_v].sum()
 
-                df_aportes_atual = df_base_reserva[filtro_mes_atual]
-                total_aportado_mes = df_aportes_atual[col_v].sum()
+            # Verifica mês atual
+            filtro_mes_atual = (
+                (df_base_reserva['DT_Res'].dt.month == mes_atual) & 
+                (df_base_reserva['DT_Res'].dt.year == ano_atual) &
+                (df_base_reserva['Banco'].astype(str).str.strip().str.upper() == str(banco_reserva).strip().upper()) &
+                (df_base_reserva['Descrição'].astype(str).str.contains('reserva', case=False, na=False))
+            )
+            if 'Status' in df_base_reserva.columns:
+                filtro_mes_atual = filtro_mes_atual & ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
+
+            df_aportes_atual = df_base_reserva[filtro_mes_atual]
+            total_aportado_mes = df_aportes_atual[col_v].sum()
+            
+            data_ultimo_aporte = None
+            if not df_aportes_atual.empty:
+                data_ultimo_aporte = df_aportes_atual['DT_Res'].max()
                 
-                data_ultimo_aporte = None
-                if not df_aportes_atual.empty:
-                    data_ultimo_aporte = df_aportes_atual['DT_Res'].max()
-                    
-            except Exception:
-                total_aportado_ant = aporte_planejado
-                total_aportado_mes = 0.0
-                data_ultimo_aporte = None
-                checar_mes_ant = False
+        except Exception:
+            total_aportado_ant = aporte_planejado
+            total_aportado_mes = 0.0
+            data_ultimo_aporte = None
+            checar_mes_ant = False
 
-            falta_aportar_mes = max(0.0, aporte_planejado - total_aportado_mes)
-            falta_aportar_ant = max(0.0, aporte_planejado - total_aportado_ant)
+        falta_aportar_mes = max(0.0, aporte_planejado - total_aportado_mes)
+        falta_aportar_ant = max(0.0, aporte_planejado - total_aportado_ant)
 
-            if checar_mes_ant and total_aportado_ant < aporte_planejado:
-                exibir_alerta = True
-                tipo_alerta = "vermelho_atrasado"
-                falta_aportar = falta_aportar_ant
-                mes_ref = f"{mes_anterior:02d}/{ano_anterior}"
-                texto_personalizado = f"🚨 **Atenção: Aporte da Reserva de {mes_ref} Pendente!**\n\nO mês anterior fechou sem a identificação total do aporte."
-                msg_ntfy = f"Aporte de Reserva ({mes_ref}) pendente! Falta R$ {falta_aportar:,.2f} no banco {banco_reserva}."
-            else:
-                if total_aportado_mes >= aporte_planejado:
-                    if data_ultimo_aporte is not None:
-                        dias_desde_aporte = (hoje_dt - data_ultimo_aporte).days
-                        if 0 <= dias_desde_aporte <= 3:
-                            exibir_alerta = True
-                            tipo_alerta = "verde"
-                    else:
+        # Regras de Negócio Estritas:
+        if checar_mes_ant and total_aportado_ant < aporte_planejado:
+            exibir_alerta = True
+            tipo_alerta = "vermelho_atrasado"
+            falta_aportar = falta_aportar_ant
+            mes_ref = f"{mes_anterior:02d}/{ano_anterior}"
+            texto_personalizado = f"🚨 **Atenção: Aporte da Reserva de {mes_ref} Pendente!**\n\nO mês anterior fechou sem a identificação total do aporte."
+            msg_ntfy = f"Aporte de Reserva ({mes_ref}) pendente! Falta R$ {falta_aportar:,.2f} no banco {banco_reserva}."
+        else:
+            if total_aportado_mes >= aporte_planejado:
+                # Concluído: Verde fica visível por até 3 dias após o depósito, depois some o mês todo
+                if data_ultimo_aporte is not None:
+                    dias_desde_aporte = (hoje_dt - data_ultimo_aporte).days
+                    if 0 <= dias_desde_aporte <= 3:
                         exibir_alerta = True
                         tipo_alerta = "verde"
                 else:
-                    if dia_atual <= dia_limite:
-                        exibir_alerta = True
-                        tipo_alerta = "azul"
-                        falta_aportar = falta_aportar_mes
-                        msg_ntfy = f"Lembrete: Aporte da Reserva de R$ {falta_aportar:,.2f} vence dia {dia_limite}/{mes_atual:02d} ({banco_reserva})."
-                    else:
-                        exibir_alerta = True
-                        tipo_alerta = "vermelho_atual"
-                        falta_aportar = falta_aportar_mes
-                        msg_ntfy = f"ATENÇÃO: Aporte da Reserva atrasado! Falta R$ {falta_aportar:,.2f} no banco {banco_reserva}."
+                    exibir_alerta = True
+                    tipo_alerta = "verde"
+            else:
+                # Não concluído: Azul até o dia limite, Vermelho fixo após o dia limite
+                if dia_atual <= dia_limite:
+                    exibir_alerta = True
+                    tipo_alerta = "azul"
+                    falta_aportar = falta_aportar_mes
+                    msg_ntfy = f"Lembrete: Aporte da Reserva de R$ {falta_aportar:,.2f} vence dia {dia_limite}/{mes_atual:02d} ({banco_reserva})."
+                else:
+                    exibir_alerta = True
+                    tipo_alerta = "vermelho_atual"
+                    falta_aportar = falta_aportar_mes
+                    msg_ntfy = f"ATENÇÃO: Aporte da Reserva atrasado! Falta R$ {falta_aportar:,.2f} no banco {banco_reserva}."
 
-            # Exibição dos Alertas Visuais (Exclusivo desta aba)
-            if exibir_alerta:
-                if tipo_alerta == "verde":
-                    st.success(f"🎉 **Aporte do mês concluído!**\n\n• **Banco:** {banco_reserva}\n• **Planejado:** R$ {aporte_planejado:,.2f}\n• **Aportado:** R$ {total_aportado_mes:,.2f}")
-                elif tipo_alerta == "azul":
-                    st.info(f"⏳ **Aporte em andamento (Vencimento: Dia {dia_limite}):**\n\n• **Banco:** {banco_reserva}\n• **Aportado até agora:** R$ {total_aportado_mes:,.2f} / R$ {aporte_planejado:,.2f}\n• **Falta aportar:** R$ {falta_aportar:,.2f} até o dia {dia_limite}/{mes_atual:02d}.")
-                elif tipo_alerta == "vermelho_atual":
-                    st.warning(f"🚨 **Atenção: Aporte da Reserva Pendente!**\n\nO dia limite ({dia_limite}/{mes_atual:02d}) já passou.\n• **Banco:** {banco_reserva}\n• **Aportado:** R$ {total_aportado_mes:,.2f}\n• **Falta:** R$ {falta_aportar:,.2f}")
-                elif tipo_alerta == "vermelho_atrasado":
-                    st.error(f"{texto_personalizado}\n\n• **Banco:** {banco_reserva}\n• **Falta pagar:** R$ {falta_aportar:,.2f}")
+        # Exibição dos Alertas Visuais na tela
+        if exibir_alerta:
+            if tipo_alerta == "verde":
+                st.success(f"🎉 **Aporte do mês concluído!**\n\n• **Banco:** {banco_reserva}\n• **Planejado:** R$ {aporte_planejado:,.2f}\n• **Aportado:** R$ {total_aportado_mes:,.2f}")
+            elif tipo_alerta == "azul":
+                st.info(f"⏳ **Aporte em andamento (Vencimento: Dia {dia_limite}):**\n\n• **Banco:** {banco_reserva}\n• **Aportado até agora:** R$ {total_aportado_mes:,.2f} / R$ {aporte_planejado:,.2f}\n• **Falta aportar:** R$ {falta_aportar:,.2f} até o dia {dia_limite}/{mes_atual:02d}.")
+            elif tipo_alerta == "vermelho_atual":
+                st.warning(f"🚨 **Atenção: Aporte da Reserva Pendente!**\n\nO dia limite ({dia_limite}/{mes_atual:02d}) já passou.\n• **Banco:** {banco_reserva}\n• **Aportado:** R$ {total_aportado_mes:,.2f}\n• **Falta:** R$ {falta_aportar:,.2f}")
+            elif tipo_alerta == "vermelho_atrasado":
+                st.error(f"{texto_personalizado}\n\n• **Banco:** {banco_reserva}\n• **Falta pagar:** R$ {falta_aportar:,.2f}")
 
-                # 📲 DISPARO DA NOTIFICAÇÃO NO NTFY
-                if msg_ntfy and tipo_alerta in ["azul", "vermelho_atual", "vermelho_atrasado"]:
-                    if 'ntfy_disparado_hoje' not in st.session_state:
-                        try:
-                            TOPICO_NTFY = st.session_state.get('topico_ntfy', 'financaspro_wilson')
-                            requests.post(
-                                f"https://ntfy.sh/{TOPICO_NTFY}",
-                                data=msg_ntfy.encode('utf-8'),
-                                headers={"Title": "FinançasPro - Alerta de Reserva", "Priority": "high"}
-                            )
-                            st.session_state['ntfy_disparado_hoje'] = True
-                        except Exception:
-                            pass
+            # 📲 DISPARO DO NOTIFICATION NTFY
+            if msg_ntfy and tipo_alerta in ["azul", "vermelho_atual", "vermelho_atrasado"]:
+                if 'ntfy_disparado_hoje' not in st.session_state:
+                    try:
+                        TOPICO_NTFY = st.session_state.get('topico_ntfy', 'financaspro_wilson')
+                        requests.post(
+                            f"https://ntfy.sh/{TOPICO_NTFY}",
+                            data=msg_ntfy.encode('utf-8'),
+                            headers={"Title": "FinançasPro - Alerta de Reserva", "Priority": "high"}
+                        )
+                        st.session_state['ntfy_disparado_hoje'] = True
+                    except Exception:
+                        pass
         
         # ==========================================
         # 🔔 ENVIAR NOTIFICAÇÃO CONSOLIDADA NO CELULAR
