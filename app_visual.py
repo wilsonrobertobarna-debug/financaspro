@@ -4123,46 +4123,54 @@ if aba == "📊 Análises & Configurações":
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
         subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
 
-    except Exception as e:
-        st.error(f"Erro ao calcular os saldos: {e}")
-        
-    # Função auxiliar local para limpar qualquer valor monetário digitado
-    def limpar_valor_str(val):
-        if not val:
-            return 0.0
-        val_s = str(val).replace('R$', '').replace('\xa0', '').strip()
-        # Se tem ponto e vírgula (ex: 300.000,00)
-        if '.' in val_s and ',' in val_s:
-            val_s = val_s.replace('.', '').replace(',', '.')
-        elif ',' in val_s:
-            val_s = val_s.replace(',', '.')
-        elif '.' in val_s and len(val_s.split('.')[-1]) != 2:
-            val_s = val_s.replace('.', '')
+    # =========================================================================
+    # 🎯 LEITURA E FORMULÁRIO DA META TOTAL DA RESERVA (PADRÃO SEGURO)
+    # =========================================================================
+    meta_atual = 0.0
+
+    if len(dados_reserva) > 1 and len(dados_reserva[1]) > 0 and dados_reserva[1][0]:
         try:
-            return float(val_s)
+            # 🛡️ Mesma lógica do Aporte Mensal: tratamento seguro de decimal sem apagar o ponto correto
+            val_meta_raw = str(dados_reserva[1][0]).replace('R$', '').strip()
+            if ',' in val_meta_raw and '.' in val_meta_raw:
+                val_meta_raw = val_meta_raw.replace('.', '').replace(',', '.')
+            else:
+                val_meta_raw = val_meta_raw.replace(',', '.')
+            meta_atual = float(val_meta_raw)
         except:
-            return 0.0
+            meta_atual = 0.0
 
-    # Garante que o meta_atual é um float limpo antes de formatar
-    meta_atual = limpar_valor_str(meta_atual)
-
-    # Formulário para salvar a meta
+    # Formulário para Salvar/Alterar a Meta
     with st.form("form_reserva_financeira"):
-        # Formata de forma limpa e segura para PT-BR no input
-        val_inicial_formatado = f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=val_inicial_formatado)
+        # Caixinha numérica idêntica à do Aporte Mensal (evita erros de digitação de texto)
+        nova_meta_input = st.number_input(
+            "Definir Meta Total da Reserva (R$):",
+            value=float(meta_atual),
+            step=1000.0,
+            format="%.2f"
+        )
         salvar_reserva = st.form_submit_button("💾 Salvar Meta")
         
         if salvar_reserva:
             try:
-                # Usa a mesma função robusta para limpar o que você digitou
-                nova_meta = limpar_valor_str(meta_str_input)
+                # Formata exatamente como duas casas decimais (ex: "300000.00")
+                meta_para_salvar = f"{nova_meta_input:.2f}"
                 
-                ws_reserva.update(values=[[str(nova_meta)]], range_name='A2:A2')
+                # Mantém os outros parâmetros salvos se existirem
+                aporte_p = f"{aporte_salvo:.2f}" if 'aporte_salvo' in locals() else "300.00"
+                banco_p = str(banco_salvo) if 'banco_salvo' in locals() else "Nubank"
+                dia_p = str(dia_salvo) if 'dia_salvo' in locals() else "10"
+
+                # Atualiza mantendo as 4 colunas intactas
+                ws_reserva.update(
+                    range_name='A2:D2',
+                    values=[[meta_para_salvar, aporte_p, banco_p, dia_p]]
+                )
+                
                 st.toast("✅ Meta da reserva salva com sucesso!", icon="🎯")
                 st.rerun()
-            except ValueError:
-                st.error("⚠️ Formato de valor inválido. Use o formato como 300000 ou 300.000,00")
+            except Exception as ex:
+                st.error(f"⚠️ Erro ao salvar meta: {ex}")
 
     # Exibição de Métricas e Progresso Visual
     if meta_atual > 0:
