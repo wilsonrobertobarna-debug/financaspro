@@ -4123,26 +4123,24 @@ if aba == "📊 Análises & Configurações":
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
         subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
 
-   # =========================================================================
+  # =========================================================================
     # 🎯 LEITURA E FORMULÁRIO DA META TOTAL DA RESERVA (PADRÃO SEGURO)
     # =========================================================================
     meta_atual = 0.0
 
-    if len(dados_reserva) > 1 and len(dados_reserva[1]) > 0 and dados_reserva[1][0]:
-        try:
-            # 🛡️ Mesma lógica do Aporte Mensal: tratamento seguro de decimal sem apagar o ponto correto
+    try:
+        if len(dados_reserva) > 1 and len(dados_reserva[1]) > 0 and dados_reserva[1][0]:
             val_meta_raw = str(dados_reserva[1][0]).replace('R$', '').strip()
             if ',' in val_meta_raw and '.' in val_meta_raw:
                 val_meta_raw = val_meta_raw.replace('.', '').replace(',', '.')
             else:
                 val_meta_raw = val_meta_raw.replace(',', '.')
             meta_atual = float(val_meta_raw)
-        except:
-            meta_atual = 0.0
+    except:
+        meta_atual = 0.0
 
     # Formulário para Salvar/Alterar a Meta
     with st.form("form_reserva_financeira"):
-        # Caixinha numérica idêntica à do Aporte Mensal (evita erros de digitação de texto)
         nova_meta_input = st.number_input(
             "Definir Meta Total da Reserva (R$):",
             value=float(meta_atual),
@@ -4153,15 +4151,12 @@ if aba == "📊 Análises & Configurações":
         
         if salvar_reserva:
             try:
-                # Formata exatamente como duas casas decimais (ex: "300000.00")
                 meta_para_salvar = f"{nova_meta_input:.2f}"
                 
-                # Mantém os outros parâmetros salvos se existirem
                 aporte_p = f"{aporte_salvo:.2f}" if 'aporte_salvo' in locals() else "300.00"
                 banco_p = str(banco_salvo) if 'banco_salvo' in locals() else "Nubank"
                 dia_p = str(dia_salvo) if 'dia_salvo' in locals() else "10"
 
-                # Atualiza mantendo as 4 colunas intactas
                 ws_reserva.update(
                     range_name='A2:D2',
                     values=[[meta_para_salvar, aporte_p, banco_p, dia_p]]
