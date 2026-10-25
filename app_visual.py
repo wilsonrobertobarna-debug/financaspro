@@ -4124,20 +4124,20 @@ if aba == "📊 Análises & Configurações":
         subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
 
   # =========================================================================
-    # 🎯 LEITURA E FORMULÁRIO DA META TOTAL DA RESERVA (PADRÃO SEGURO)
+    # 🎯 LEITURA E FORMULÁRIO DA META TOTAL DA RESERVA (VERSÃO SEM CONFLITO)
     # =========================================================================
     meta_atual = 0.0
-
-    try:
-        if len(dados_reserva) > 1 and len(dados_reserva[1]) > 0 and dados_reserva[1][0]:
+    if 'dados_reserva' in locals() and len(dados_reserva) > 1:
+        if len(dados_reserva[1]) > 0 and dados_reserva[1][0]:
             val_meta_raw = str(dados_reserva[1][0]).replace('R$', '').strip()
             if ',' in val_meta_raw and '.' in val_meta_raw:
                 val_meta_raw = val_meta_raw.replace('.', '').replace(',', '.')
             else:
                 val_meta_raw = val_meta_raw.replace(',', '.')
-            meta_atual = float(val_meta_raw)
-    except:
-        meta_atual = 0.0
+            try:
+                meta_atual = float(val_meta_raw)
+            except:
+                meta_atual = 0.0
 
     # Formulário para Salvar/Alterar a Meta
     with st.form("form_reserva_financeira"):
