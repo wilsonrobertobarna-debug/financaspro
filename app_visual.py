@@ -4123,64 +4123,64 @@ if aba == "📊 Análises & Configurações":
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
         subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
 
-    # =========================================================================
-    # 🎯 LEITURA E FORMULÁRIO DA META TOTAL DA RESERVA (VERSÃO LIMPA)
-    # =========================================================================
-    meta_atual = 0.0
-    if 'dados_reserva' in locals() and len(dados_reserva) > 1:
-        if len(dados_reserva[1]) > 0 and dados_reserva[1][0]:
-            val_meta_raw = str(dados_reserva[1][0]).replace('R$', '').strip()
-            if ',' in val_meta_raw and '.' in val_meta_raw:
-                val_meta_raw = val_meta_raw.replace('.', '').replace(',', '.')
-            else:
-                val_meta_raw = val_meta_raw.replace(',', '.')
-            try:
-                meta_atual = float(val_meta_raw)
-            except:
-                meta_atual = 0.0
-
-    # Formulário para Salvar/Alterar a Meta
-    with st.form("form_reserva_financeira"):
-        nova_meta_input = st.number_input(
-            "Definir Meta Total da Reserva (R$):",
-            value=float(meta_atual),
-            step=1000.0,
-            format="%.2f"
-        )
-        salvar_reserva = st.form_submit_button("💾 Salvar Meta")
-        
-        if salvar_reserva:
-            try:
-                meta_para_salvar = f"{nova_meta_input:.2f}"
-                
-                aporte_p = f"{aporte_salvo:.2f}" if 'aporte_salvo' in locals() else "300.00"
-                banco_p = str(banco_salvo) if 'banco_salvo' in locals() else "Nubank"
-                dia_p = str(dia_salvo) if 'dia_salvo' in locals() else "10"
-
-                ws_reserva.update(
-                    range_name='A2:D2',
-                    values=[[meta_para_salvar, aporte_p, banco_p, dia_p]]
-                )
-                
-                st.toast("✅ Meta da reserva salva com sucesso!", icon="🎯")
-                st.rerun()
-            except Exception as ex:
-                st.error(f"⚠️ Erro ao salvar meta: {ex}")
-
-    # Exibição de Métricas e Progresso Visual
-    if meta_atual > 0:
-        progresso = min(guardado_atual / meta_atual, 1.0)
-        percentual_reserva = (guardado_atual / meta_atual) * 100
-    else:
-        progresso = 0.0
-        percentual_reserva = 0.0
-
-    col_m1, col_m2, col_m3 = st.columns(3)
-    col_m1.metric("🎯 Meta Alvo", f"R$ {meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    col_m2.metric("💰 Apenas Investimentos", f"R$ {guardado_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-    col_m3.metric("📈 Conclusão da Meta", f"{percentual_reserva:.1f}%")
-
-    st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")
+        # =========================================================================
+        # 🎯 LEITURA E FORMULÁRIO DA META TOTAL DA RESERVA (VERSÃO LIMPA)
+        # =========================================================================
+        meta_atual = 0.0
+        if 'dados_reserva' in locals() and len(dados_reserva) > 1:
+            if len(dados_reserva[1]) > 0 and dados_reserva[1][0]:
+                val_meta_raw = str(dados_reserva[1][0]).replace('R$', '').strip()
+                if ',' in val_meta_raw and '.' in val_meta_raw:
+                    val_meta_raw = val_meta_raw.replace('.', '').replace(',', '.')
+                else:
+                    val_meta_raw = val_meta_raw.replace(',', '.')
+                try:
+                    meta_atual = float(val_meta_raw)
+                except:
+                    meta_atual = 0.0
+    
+        # Formulário para Salvar/Alterar a Meta
+        with st.form("form_reserva_financeira"):
+            nova_meta_input = st.number_input(
+                "Definir Meta Total da Reserva (R$):",
+                value=float(meta_atual),
+                step=1000.0,
+                format="%.2f"
+            )
+            salvar_reserva = st.form_submit_button("💾 Salvar Meta")
+            
+            if salvar_reserva:
+                try:
+                    meta_para_salvar = f"{nova_meta_input:.2f}"
+                    
+                    aporte_p = f"{aporte_salvo:.2f}" if 'aporte_salvo' in locals() else "300.00"
+                    banco_p = str(banco_salvo) if 'banco_salvo' in locals() else "Nubank"
+                    dia_p = str(dia_salvo) if 'dia_salvo' in locals() else "10"
+    
+                    ws_reserva.update(
+                        range_name='A2:D2',
+                        values=[[meta_para_salvar, aporte_p, banco_p, dia_p]]
+                    )
+                    
+                    st.toast("✅ Meta da reserva salva com sucesso!", icon="🎯")
+                    st.rerun()
+                except Exception as ex:
+                    st.error(f"⚠️ Erro ao salvar meta: {ex}")
+    
+        # Exibição de Métricas e Progresso Visual
+        if meta_atual > 0:
+            progresso = min(guardado_atual / meta_atual, 1.0)
+            percentual_reserva = (guardado_atual / meta_atual) * 100
+        else:
+            progresso = 0.0
+            percentual_reserva = 0.0
+    
+        col_m1, col_m2, col_m3 = st.columns(3)
+        col_m1.metric("🎯 Meta Alvo", f"R$ {meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        col_m2.metric("💰 Apenas Investimentos", f"R$ {guardado_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        col_m3.metric("📈 Conclusão da Meta", f"{percentual_reserva:.1f}%")
+    
+        st.progress(progresso, text=f"Progresso da Reserva: {percentual_reserva:.1f}% concluído")
 
     # =========================================================================
     # 🔍 PAINEL DE CONFERÊNCIA POR MOEDA (Espelho do WhatsApp)
