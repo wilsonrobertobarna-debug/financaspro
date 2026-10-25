@@ -620,50 +620,134 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
 import pandas as pd
 import datetime
 
-# Definição das variáveis configuradas
-meta_total = st.session_state['reserva_meta_total']
-meta_aporte = st.session_state['reserva_aporte_mensal']
-dia_venc = st.session_state['reserva_dia_vencimento']
+# =========================================================================
+# 🔔 VERIFICAÇÃO AUTOMÁTICA DA RESERVA DE EMERGÊNCIA (SOMENTE TELA PRINCIPAL)
+# =========================================================================
+import datetime as dt_mod
+from datetime import datetime
 
-hoje = datetime.date.today()
-mes_atual = hoje.month
-ano_atual = hoje.year
-
-# Checagem nas transferências do mês se a palavra "reserva" está na Descrição
-# (Ajuste 'df_lancamentos', 'Tipo' e 'Descrição' caso suas colunas tenham nomes diferentes)
 try:
-    # Garante a conversão de datas para verificação do mês/ano
-    df_temp = df_lancamentos.copy()
-    df_temp['Data_DT'] = pd.to_datetime(df_temp['Data'], errors='coerce')
-    
-    aporte_realizado = not df_temp[
-        (df_temp['Tipo'] == 'Transferência') &
-        (df_temp['Descrição'].astype(str).str.contains('reserva', case=False, na=False)) &
-        (df_temp['Data_DT'].dt.month == mes_atual) &
-        (df_temp['Data_DT'].dt.year == ano_atual)
-    ].empty
+    from dateutil.relativedelta import relativedelta
+except ImportError:
+    relativedelta = None
+
+# 1. Carrega os parâmetros atualizados salvos no Google Sheets ou no session_state
+try:
+    ws_reserva_check = sh.worksheet("Reserva_Financeira")
+    dados_res_check = ws_reserva_check.get_all_values()
+    if len(dados_res_check) > 1:
+        val_ap_raw = str(dados_res_check[1][1]).replace('R$', '').strip().replace('.', '').replace(',', '.') if ',' in str(dados_res_check[1][1]) and '.' in str(dados_res_check[1][1]) else str(dados_res_check[1][1]).replace('R$', '').strip().replace(',', '.')
+        aporte_planejado = float(val_ap_raw) if val_ap_raw else 0.0
+        banco_reserva = str(dados_res_check[1][2]).strip() if len(dados_res_check[1]) > 2 else None
+        dia_limite = int(float(str(dados_res_check[1][3]).replace(',', '.'))) if len(dados_res_check[1]) > 3 else 10
+    else:
+        aporte_planejado = float(st.session_state.get('reserva_aporte_mensal', 0.0))
+        banco_reserva = st.session_state.get('reserva_banco_escolhido', None)
+        dia_limite = int(st.session_state.get('reserva_dia_vencimento', 10))
 except Exception:
-    aporte_realizado = False
+    aporte_planejado = float(st.session_state.get('reserva_aporte_mensal', 0.0))
+    banco_reserva = st.session_state.get('reserva_banco_escolhido', None)
+    dia_limite = int(st.session_state.get('reserva_dia_vencimento', 10))
 
-# Lógica de exibição do alerta em tela
-if aporte_realizado:
-    st.success("✅ **Reserva de Emergência:** Aporte deste mês identificado com sucesso!")
-else:
-    # Período de alerta: 3 dias antes do dia limite até o dia limite
-    if (dia_venc - 3) <= hoje.day <= dia_venc:
-        dias_restantes = dia_venc - hoje.day
-        msg_prazo = "Hoje é o dia do aporte!" if dias_restantes == 0 else f"Faltam **{dias_restantes} dia(s)** para o vencimento (Dia {dia_venc})!"
+# 🛡️ Mês e ano de início oficial do controle
+MES_INICIO_CONTROLE = 11
+ANO_INICIO_CONTROLE = 2026
+
+if aporte_planejado > 0 and banco_reserva:
+    hoje_dt = datetime.now()
+    mes_atual = hoje_dt.month
+    ano_atual = hoje_dt.year
+    dia_atual = hoje_dt.day
+
+    data_atual_tupla = (ano_atual, mes_atual)
+    data_inicio_tupla = (ANO_INICIO_CONTROLE, MES_INICIO_CONTROLE)
+
+    exibir_alerta = False
+    tipo_alerta = None
+    falta_aportar = 0.0
+
+    if data_atual_tupla >= data_inicio_tupla and relativedelta is not None:
+        data_mes_anterior = hoje_dt - relativedelta(months=1)
+        mes_anterior = data_mes_anterior.month
+        ano_anterior = data_mes_anterior.year
+
+        try:
+            df_base_reserva = df.copy() if 'df' in locals() else df_base.copy()
+            df_base_reserva['DT_Res'] = pd.to_datetime(df_base_reserva['DT'], errors='coerce')
+            
+            checar_mes_ant = (ano_anterior, mes_anterior) >= data_inicio_tupla
+            total_aportado_ant = aporte_planejado
+
+            if checar_mes_ant:
+                filtro_mes_ant = (
+                    (df_base_reserva['DT_Res'].dt.month == mes_anterior) & 
+                    (df_base_reserva['DT_Res'].dt.year == ano_anterior) &
+                    (df_base_reserva['Banco'].astype(str).str.strip().str.upper() == str(banco_reserva).strip().upper()) &
+                    (df_base_reserva['Descrição'].astype(str).str.contains('reserva', case=False, na=False)) &
+                    ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
+                )
+                total_aportado_ant = df_base_reserva[filtro_mes_ant]['V_Num'].sum()
+
+            filtro_mes_atual = (
+                (df_base_reserva['DT_Res'].dt.month == mes_atual) & 
+                (df_base_reserva['DT_Res'].dt.year == ano_atual) &
+                (df_base_reserva['Banco'].astype(str).str.strip().str.upper() == str(banco_reserva).strip().upper()) &
+                (df_base_reserva['Descrição'].astype(str).str.contains('reserva', case=False, na=False)) &
+                ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
+            )
+            df_aportes_atual = df_base_reserva[filtro_mes_atual]
+            total_aportado_mes = df_aportes_atual['V_Num'].sum()
+            
+            data_ultimo_aporte = None
+            if not df_aportes_atual.empty:
+                data_ultimo_aporte = df_aportes_atual['DT_Res'].max()
+                
+        except Exception:
+            total_aportado_ant = aporte_planejado
+            total_aportado_mes = 0.0
+            data_ultimo_aporte = None
+            checar_mes_ant = False
+
+        falta_aportar_mes = max(0.0, aporte_planejado - total_aportado_mes)
+        falta_aportar_ant = max(0.0, aporte_planejado - total_aportado_ant)
+
+        if checar_mes_ant and total_aportado_ant < aporte_planejado:
+            exibir_alerta = True
+            tipo_alerta = "vermelho_atrasado"
+            falta_aportar = falta_aportar_ant
+            mes_ref = f"{mes_anterior:02d}/{ano_anterior}"
+            texto_personalizado = f"🚨 **Atenção: Aporte da Reserva de {mes_ref} Pendente!**\n\nO mês anterior fechou sem a identificação total do aporte."
+        else:
+            if total_aportado_mes >= aporte_planejado:
+                if data_ultimo_aporte is not None:
+                    dias_desde_aporte = (hoje_dt - data_ultimo_aporte).days
+                    if 0 <= dias_desde_aporte <= 3:
+                        exibir_alerta = True
+                        tipo_alerta = "verde"
+                else:
+                    exibir_alerta = True
+                    tipo_alerta = "verde"
+            else:
+                if dia_atual <= dia_limite:
+                    exibir_alerta = True
+                    tipo_alerta = "azul"
+                    falta_aportar = falta_aportar_mes
+                else:
+                    exibir_alerta = True
+                    tipo_alerta = "vermelho_atual"
+                    falta_aportar = falta_aportar_mes
+
+        if exibir_alerta:
+            if tipo_alerta == "verde":
+                st.success(f"🎉 **Aporte do mês concluído!**\n\n• **Banco:** {banco_reserva}\n• **Planejado:** R$ {aporte_planejado:,.2f}\n• **Aportado:** R$ {total_aportado_mes:,.2f}")
+            elif tipo_alerta == "azul":
+                st.info(f"⏳ **Aporte em andamento (Vencimento: Dia {dia_limite}):**\n\n• **Banco:** {banco_reserva}\n• **Aportado até agora:** R$ {total_aportado_mes:,.2f} / R$ {aporte_planejado:,.2f}\n• **Falta aportar:** R$ {falta_aportar:,.2f} até o dia {dia_limite}/{mes_atual:02d}.")
+            elif tipo_alerta == "vermelho_atual":
+                st.warning(f"🚨 **Atenção: Aporte da Reserva Pendente!**\n\nO dia limite ({dia_limite}/{mes_atual:02d}) já passou.\n• **Banco:** {banco_reserva}\n• **Aportado:** R$ {total_aportado_mes:,.2f}\n• **Falta:** R$ {falta_aportar:,.2f}")
+            elif tipo_alerta == "vermelho_atrasado":
+                st.error(f"{texto_personalizado}\n\n• **Banco:** {banco_reserva}\n• **Falta pagar:** R$ {falta_aportar:,.2f}")
+
         
-        st.warning(
-            f"🔔 **Lembrete de Reserva de Emergência:** {msg_prazo}  \n"
-            f"💰 Lembre-se de transferir **R$ {meta_aporte:,.2f}** e colocar *'Reserva'* na descrição do lançamento."
-        )
-    elif hoje.day > dia_venc:
-        st.error(
-            f"🚨 **Atenção:** O aporte da sua Reserva de Emergência "
-            f"(**R$ {meta_aporte:,.2f}**) ainda não foi identificado neste mês!"
-        )
-
         # ==========================================
         # 🔔 ENVIAR NOTIFICAÇÃO CONSOLIDADA NO CELULAR
         # ==========================================
