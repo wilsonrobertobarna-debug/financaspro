@@ -625,6 +625,7 @@ import datetime
 # =========================================================================
 import datetime as dt_mod
 from datetime import datetime
+import pandas as pd
 import requests
 
 try:
@@ -643,20 +644,20 @@ try:
         else:
             val_ap_raw = val_ap_raw.replace(',', '.')
             
-        aporte_planejado = float(val_ap_raw) if val_ap_raw else 0.0
-        banco_reserva = str(dados_res_check[1][2]).strip() if len(dados_res_check[1]) > 2 else None
-        dia_limite = int(float(str(dados_res_check[1][3]).replace(',', '.'))) if len(dados_res_check[1]) > 3 else 10
+        aporte_planejado = float(val_ap_raw) if val_ap_raw else 300.0
+        banco_reserva = str(dados_res_check[1][2]).strip() if len(dados_res_check[1]) > 2 and dados_res_check[1][2] else "Invest Pag. Bank"
+        dia_limite = int(float(str(dados_res_check[1][3]).replace(',', '.'))) if len(dados_res_check[1]) > 3 and dados_res_check[1][3] else 10
     else:
-        aporte_planejado = float(st.session_state.get('reserva_aporte_mensal', 0.0))
-        banco_reserva = st.session_state.get('reserva_banco_escolhido', None)
+        aporte_planejado = float(st.session_state.get('reserva_aporte_mensal', 300.0))
+        banco_reserva = st.session_state.get('reserva_banco_escolhido', 'Invest Pag. Bank')
         dia_limite = int(st.session_state.get('reserva_dia_vencimento', 10))
 except Exception:
-    aporte_planejado = float(st.session_state.get('reserva_aporte_mensal', 0.0))
-    banco_reserva = st.session_state.get('reserva_banco_escolhido', None)
+    aporte_planejado = float(st.session_state.get('reserva_aporte_mensal', 300.0))
+    banco_reserva = st.session_state.get('reserva_banco_escolhido', 'Invest Pag. Bank')
     dia_limite = int(st.session_state.get('reserva_dia_vencimento', 10))
 
-# 🛡️ Mês e ano de início oficial do controle
-MES_INICIO_CONTROLE = 11
+# 🛡️ Mês e ano de início oficial do controle (Liberado para o mês atual)
+MES_INICIO_CONTROLE = 10
 ANO_INICIO_CONTROLE = 2026
 
 if aporte_planejado > 0 and banco_reserva:
@@ -673,10 +674,14 @@ if aporte_planejado > 0 and banco_reserva:
     falta_aportar = 0.0
     msg_ntfy = ""
 
-    if data_atual_tupla >= data_inicio_tupla and relativedelta is not None:
-        data_mes_anterior = hoje_dt - relativedelta(months=1)
-        mes_anterior = data_mes_anterior.month
-        ano_anterior = data_mes_anterior.year
+    if data_atual_tupla >= data_inicio_tupla:
+        if relativedelta is not None:
+            data_mes_anterior = hoje_dt - relativedelta(months=1)
+            mes_anterior = data_mes_anterior.month
+            ano_anterior = data_mes_anterior.year
+        else:
+            mes_anterior = 12 if mes_atual == 1 else mes_atual - 1
+            ano_anterior = ano_atual - 1 if mes_atual == 1 else ano_atual
 
         try:
             # Garante o DataFrame base correto
@@ -773,11 +778,10 @@ if aporte_planejado > 0 and banco_reserva:
             elif tipo_alerta == "vermelho_atrasado":
                 st.error(f"{texto_personalizado}\n\n• **Banco:** {banco_reserva}\n• **Falta pagar:** R$ {falta_aportar:,.2f}")
 
-            # 📲 DISPARO DA NOTIFICAÇÃO NO NTFY
+            # 📲 DISPARO DA NOTIFICAÇÃO NO NTFY (Ajuste o tópico se usar outro nome no app)
             if msg_ntfy and tipo_alerta in ["azul", "vermelho_atual", "vermelho_atrasado"]:
                 if 'ntfy_disparado_hoje' not in st.session_state:
                     try:
-                        # Substitua 'seu_topico_ntfy' pelo nome do seu tópico no Ntfy
                         TOPICO_NTFY = st.session_state.get('topico_ntfy', 'financaspro_wilson')
                         requests.post(
                             f"https://ntfy.sh/{TOPICO_NTFY}",
@@ -787,7 +791,6 @@ if aporte_planejado > 0 and banco_reserva:
                         st.session_state['ntfy_disparado_hoje'] = True
                     except Exception:
                         pass
-
         
         # ==========================================
         # 🔔 ENVIAR NOTIFICAÇÃO CONSOLIDADA NO CELULAR
