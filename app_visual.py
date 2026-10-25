@@ -4119,11 +4119,13 @@ if aba == "📊 Análises & Configurações":
                 except Exception as ex:
                     pass
 
-        subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
+       subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
         subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
+    except Exception as e:
+        st.error(f"Erro ao calcular os saldos: {e}")
 
-      # =========================================================================
+    # =========================================================================
     # 🎯 LEITURA E FORMULÁRIO DA META TOTAL DA RESERVA (VERSÃO LIMPA)
     # =========================================================================
     meta_atual = 0.0
