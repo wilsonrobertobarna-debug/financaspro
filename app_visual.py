@@ -3695,6 +3695,128 @@ if aba == "📊 Análises & Configurações":
             st.success(f"✅ Enviado com sucesso! (HTTP: {resultado}). Veja o celular.")
         else:
             st.error(f"❌ Erro no envio: {resultado}")
+
+    # =========================================================================
+    # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
+    # =========================================================================
+    st.markdown("---")
+    st.subheader("🎯 Planejamento de Reserva Financeira")
+    st.write("Acompanhe o progresso da sua segurança financeira com base nos seus lançamentos.")
+
+    # Tenta carregar ou criar a aba 'Reserva_Financeira' no Google Sheets
+    try:
+        ws_reserva = sh.worksheet("Reserva_Financeira")
+    except:
+        ws_reserva = sh.add_worksheet(title="Reserva_Financeira", rows="10", cols="5")
+        ws_reserva.append_row(["Meta_Reserva", "Aporte_Mensal", "Banco", "Dia_Limite"])
+        ws_reserva.append_row(["0.0", "300.00", "Invest Pag. Bank", "10"])
+
+    # Pega os dados da aba de reserva
+    dados_reserva = ws_reserva.get_all_values()
+    meta_atual = 0.0
+
+    if len(dados_reserva) > 1:
+        try:
+            val_meta_raw = str(dados_reserva[1][0]).replace('R$', '').strip()
+            if ',' in val_meta_raw and '.' in val_meta_raw:
+                val_meta_raw = val_meta_raw.replace('.', '').replace(',', '.')
+            else:
+                val_meta_raw = val_meta_raw.replace(',', '.')
+            meta_atual = float(val_meta_raw)
+        except:
+            meta_atual = 0.0
+
+    # =========================================================================
+    # 🆕 NOVO BLOCO: CADASTRO DE APORTE DA RESERVA DE EMERGÊNCIA (FIXO NO GOOGLE SHEETS)
+    # =========================================================================
+    st.markdown("### 🛡️ Nova Reserva de Emergência")
+    
+    # 1. Carrega a lista dos bancos disponíveis no seu sistema
+    lista_bancos_disponiveis = []
+    try:
+        if 'df_bancos_info' in locals() and not df_bancos_info.empty:
+            lista_bancos_disponiveis = df_bancos_info.iloc[:, 0].dropna().unique().tolist()
+    except:
+        pass
+    
+    if not lista_bancos_disponiveis:
+        lista_bancos_disponiveis = ["Nubank", "Inter", "Sofisa", "Invest Pag. Bank", "Outro"]
+
+    # 2. Lê os valores salvos na aba Reserva_Financeira (se já existirem na planilha)
+    aporte_salvo = 300.00
+    banco_salvo = lista_bancos_disponiveis[0] if lista_bancos_disponiveis else "Nubank"
+    dia_salvo = 10
+
+    if len(dados_reserva) > 1:
+        try:
+            # 🛡️ TRATAMENTO SEGURO DE CONVERSÃO DECIMAL (EVITA 3000.00)
+            if len(dados_reserva[1]) > 1 and dados_reserva[1][1]:
+                val_raw = str(dados_reserva[1][1]).replace('R$', '').strip()
+                if ',' in val_raw and '.' in val_raw:
+                    val_raw = val_raw.replace('.', '').replace(',', '.')
+                else:
+                    val_raw = val_raw.replace(',', '.')
+                aporte_salvo = float(val_raw)
+                
+            if len(dados_reserva[1]) > 2 and dados_reserva[1][2]:
+                banco_salvo = str(dados_reserva[1][2]).strip()
+                
+            if len(dados_reserva[1]) > 3 and dados_reserva[1][3]:
+                dia_salvo = int(float(str(dados_reserva[1][3]).replace(',', '.')))
+        except:
+            aporte_salvo = 300.00
+
+    # 3. Formulário de Cadastro e Alteração
+    with st.form("form_nova_reserva_emergencia"):
+        col_ne1, col_ne2, col_ne3 = st.columns(3)
+        
+        with col_ne1:
+            nova_reserva_valor = st.number_input(
+                "Valor do Aporte Mensal (R$):",
+                value=float(aporte_salvo),
+                step=50.0,
+                format="%.2f"
+            )
+            
+        with col_ne2:
+            idx_banco = lista_bancos_disponiveis.index(banco_salvo) if banco_salvo in lista_bancos_disponiveis else 0
+            banco_escolhido = st.selectbox(
+                "Banco de Aplicação:",
+                options=lista_bancos_disponiveis,
+                index=idx_banco
+            )
+            
+        with col_ne3:
+            dia_limite_aporte = st.number_input(
+                "Dia Limite / Vencimento:",
+                min_value=1,
+                max_value=31,
+                value=int(dia_salvo)
+            )
+            
+        salvar_nova_reserva = st.form_submit_button("💾 Salvar Parâmetros da Reserva de Emergência")
+        
+        if salvar_nova_reserva:
+            # Garante que a meta anterior seja mantida
+            meta_para_salvar = f"{meta_atual:.2f}"
+            
+            # 🛡️ Formata o valor fixo com duas casas decimais e ponto (ex: "300.00")
+            aporte_para_salvar = f"{nova_reserva_valor:.2f}"
+            
+            # Grava FIXO nas colunas A2:D2 da planilha
+            ws_reserva.update(
+                range_name='A2:D2',
+                values=[[meta_para_salvar, aporte_para_salvar, str(banco_escolhido), str(dia_limite_aporte)]]
+            )
+            
+            # Salva também na memória para atualização imediata na tela
+            st.session_state['reserva_aporte_mensal'] = nova_reserva_valor
+            st.session_state['reserva_banco_escolhido'] = banco_escolhido
+            st.session_state['reserva_dia_vencimento'] = dia_limite_aporte
+            
+            st.toast(f"✅ Configurações salvas e FIXADAS no banco de dados! Banco: {banco_escolhido}", icon="🛡️")
+            st.rerun()
+    st.markdown("---")
     
    # =========================================================================
     # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
