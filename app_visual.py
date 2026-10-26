@@ -4348,6 +4348,60 @@ if aba == "📊 Análises & Configurações":
         st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
         
     st.divider()
+
+    # =====================================================================
+    # 🔮 MÓDULO 2: FLUXO DE CAIXA FUTURO (PREVISÃO 30, 60 E 90 DIAS)
+    # =====================================================================
+    st.subheader("🔮 Previsão de Fluxo de Caixa Futuro")
+    
+    dias_projecao = st.radio(
+        "Selecione a janela de previsão:", 
+        [30, 60, 90], 
+        horizontal=True,
+        key="radio_fluxo_futuro"
+    )
+    
+    hoje_dt = pd.Timestamp.today().normalize()
+    limite_dt = hoje_dt + pd.Timedelta(days=dias_projecao)
+
+    # Garante a existência do DataFrame principal
+    if 'df_base' in locals() and not df_base.empty:
+        # Prepara datas e status
+        df_base['DT_Proj'] = pd.to_datetime(df_base['DT'], errors='coerce')
+        
+        # Filtra lançamentos pendentes dentro da janela escolhida
+        mask_futuro = (
+            (df_base['Status'].astype(str).str.upper() == 'PENDENTE') & 
+            (df_base['DT_Proj'] >= hoje_dt) & 
+            (df_base['DT_Proj'] <= limite_dt)
+        )
+        df_futuro = df_base[mask_futuro].sort_values('DT_Proj')
+
+        rec_futura = df_futuro[df_futuro['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+        desp_futura = df_futuro[df_futuro['Tipo'] == 'Despesa']['V_Num'].sum()
+        resultado_projetado = rec_futura - desp_futura
+
+        f1, f2, f3 = st.columns(3)
+        f1.metric(f"Receitas a Receber ({dias_projecao}d)", m_fmt(rec_futura))
+        f2.metric(f"Despesas a Pagar ({dias_projecao}d)", m_fmt(desp_futura))
+        f3.metric("Saldo Projetado", m_fmt(resultado_projetado), delta=m_fmt(resultado_projetado))
+
+        if not df_futuro.empty:
+            st.markdown(f"**📋 Lançamentos Pendentes Próximos {dias_projecao} Dias:**")
+            
+            # Seleciona e limpa colunas para exibição bonita
+            cols_exibicao = [c for c in ['Vencimento', 'Descrição', 'Tipo', 'V_Num', 'Banco'] if c in df_futuro.columns]
+            st.dataframe(
+                df_futuro[cols_exibicao],
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.success(f"🎉 Nenhum lançamento pendente encontrado para os próximos {dias_projecao} dias!")
+    else:
+        st.info("Carregue os dados da planilha para visualizar o Fluxo de Caixa Futuro.")
+
+    st.divider()
     
  # 4. FORMULÁRIO: CONFIGURAR METAS E LIMITES DE CARTÃO
     with st.expander("🎯 Configurar Metas e Limites de Cartões", expanded=False):
