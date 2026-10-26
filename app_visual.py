@@ -574,15 +574,16 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                             value=formatar_moeda(saldo_atual, simb_moeda),
                         )
 
-        # --- 2. VARREDURA DOS LANÇAMENTOS E BOLETOS INDIVIDUAIS (COLUNAS A, B, G, J) ---
-        # Filtra despesas com Status PENDENTE
-        mask_pendentes = (df["Status"].str.upper() == "PENDENTE") & (
-            df["Tipo"] == "Despesa"
-        )
+       
+        # --- 2. VARREDURA DOS LANÇAMENTOS, BOLETOS E RECEITAS (DESPESAS E RECEITAS PENDENTES) ---
+        # Filtra lançamentos com Status PENDENTE (Despesas e Receitas)
+        mask_pendentes = (df["Status"].str.upper() == "PENDENTE")
         df_pendentes = df[mask_pendentes]
 
+        receitas_perto_vencer = []
+        
         for index_p, row_p in df_pendentes.iterrows():
-            # Evita contabilizar novamente transações de cartão de crédito que já foram agrupadas
+            # Evita contabilizar novamente transações de cartão de crédito agrupadas
             banco_transacao = str(row_p.get("Banco", "")).upper()
             if "CARTA" in banco_transacao or "CART" in banco_transacao:
                 continue
@@ -590,12 +591,13 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
             dt_venc = row_p["DT"]
             if pd.notnull(dt_venc):
                 dias_restantes = (dt_venc - hoje).days
+                tipo_transacao = str(row_p.get("Tipo", "Despesa")).strip()
 
-                # Regra dos 3 dias para boletos
+                # Regra dos 3 dias para lembretes
                 if -30 <= dias_restantes <= 3:
                     valor_conta = row_p["V_Num"]
 
-                    # Captura Beneficiário na Coluna J (índice 9), fallback para Descrição se vazio
+                    # Captura Beneficiário/Descrição
                     beneficiario = ""
                     if len(row_p) > 9 and str(row_p.iloc[9]).strip():
                         beneficiario = str(row_p.iloc[9]).strip()
@@ -605,20 +607,42 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                         beneficiario = "Lançamento Pendente"
 
                     if dias_restantes == 0:
-                        status_prazo = "VENCE HOJE!"
+                        status_prazo = "VENCE/RECEBE HOJE!"
                     elif dias_restantes < 0:
-                        status_prazo = f"VENCIDA HÁ {abs(dias_restantes)} DIA(S)"
+                        status_prazo = f"ATRASADO HÁ {abs(dias_restantes)} DIA(S)"
                     else:
-                        status_prazo = f"Vence em {dias_restantes} dia(s)"
+                        status_prazo = f"Em {dias_restantes} dia(s)"
 
-                    contas_perto_vencer.append(
-                        f"• {beneficiario}: R$ {valor_conta:,.2f} ({status_prazo})"
-                    )
-                    total_geral_prestes_vencer += valor_conta
+                    if tipo_transacao == "Despesa":
+                        contas_perto_vencer.append(
+                            f"• {beneficiario}: R$ {valor_conta:,.2f} ({status_prazo})"
+                        )
+                        total_geral_prestes_vencer += valor_conta
+                    else:
+                        # Receita a receber
+                        receitas_perto_vencer.append(
+                            f"• {beneficiario}: R$ {valor_conta:,.2f} ({status_prazo})"
+                        )
 
-        import streamlit as st
-import pandas as pd
-import datetime
+        # 📲 DISPARO AUTOMÁTICO DE NOTIFICAÇÃO DE CONTAS E RECEITAS DO DIA VIA NTFY
+        if 'ntfy_alertas_diarios_enviado' not in st.session_state:
+            mensagens_alerta = []
+            
+            if contas_perto_vencer:
+                mensagens_alerta.append("🔻 **CONTAS A PAGAR:**\n" + "\n".join(contas_perto_vencer))
+            
+            if receitas_perto_vencer:
+                mensagens_alerta.append("🟢 **RECEITAS A RECEBER:**\n" + "\n".join(receitas_perto_vencer))
+
+            if mensagens_alerta:
+                texto_final_ntfy = "\n\n".join(mensagens_alerta)
+                enviar_alerta_financas(
+                    titulo="FinancasPro - Lembretes do Dia",
+                    mensagem=texto_final_ntfy,
+                    prioridade="high",
+                    tags="moneybag,bell"
+                )
+            st.session_state['ntfy_alertas_diarios_enviado'] = True
 
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in st.session_state.page:
