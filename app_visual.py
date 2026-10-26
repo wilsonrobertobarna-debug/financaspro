@@ -12,6 +12,7 @@ import streamlit.components.v1 as components
 import urllib.parse
 import urllib.request
 
+
 # 1. CONFIGURAÇÃO DA PÁGINA (Deve ser SEMPRE a primeira instrução do Streamlit)
 st.set_page_config(
     page_title="Painel Wilson", layout="wide", initial_sidebar_state="collapsed"
