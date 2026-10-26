@@ -4340,15 +4340,7 @@ if aba == "📊 Análises & Configurações":
 
     st.divider()
   
-    # 3. DATAFRAME: BANCOS E CARTÕES
-    st.subheader("🏦 Informações de Contas e Cartões")
-    if not df_bancos_info.empty:
-        st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
-    else:
-        st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
-        
-    st.divider()
-
+   
     # =====================================================================
     # 🔮 MÓDULO 2: FLUXO DE CAIXA FUTURO (PREVISÃO 30, 60 E 90 DIAS)
     # =====================================================================
@@ -4402,6 +4394,81 @@ if aba == "📊 Análises & Configurações":
         st.info("Carregue os dados da planilha para visualizar o Fluxo de Caixa Futuro.")
 
     st.divider()
+
+    # =====================================================================
+    # 🟢 MÓDULO 4: COMPARATIVO MENSAL COMPLETO & EVOLUÇÃO HISTÓRICA
+    # =====================================================================
+    st.subheader("📊 Comparativo Mensal Completo & Evolução Histórica")
+
+    if 'df_base' in locals() and not df_base.empty:
+        # Garante a coluna de Mes/Ano formatada
+        df_base['DT_Comp'] = pd.to_datetime(df_base['DT'], errors='coerce')
+        df_base['Mes_Ano_Str'] = df_base['DT_Comp'].dt.strftime('%m/%y')
+        
+        meses_disponiveis = sorted([m for m in df_base['Mes_Ano_Str'].dropna().unique()], reverse=True)
+
+        if len(meses_disponiveis) >= 2:
+            # Padrão: 09/26 e 10/26 (ou os dois mais recentes)
+            idx_m1 = meses_disponiveis.index('09/26') if '09/26' in meses_disponiveis else 1
+            idx_m2 = meses_disponiveis.index('10/26') if '10/26' in meses_disponiveis else 0
+
+            col_cm1, col_cm2 = st.columns(2)
+            with col_cm1:
+                mes_escolhido_1 = st.selectbox("Selecione o 1º Mês para Comparar:", meses_disponiveis, index=idx_m1, key="sel_mes_1")
+            with col_cm2:
+                mes_escolhido_2 = st.selectbox("Selecione o 2º Mês para Comparar:", meses_disponiveis, index=idx_m2, key="sel_mes_2")
+
+            # Filtros e cálculos
+            df_comp1 = df_base[df_base['Mes_Ano_Str'] == mes_escolhido_1]
+            df_comp2 = df_base[df_base['Mes_Ano_Str'] == mes_escolhido_2]
+
+            rec_1 = df_comp1[df_comp1['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            desp_1 = df_comp1[df_comp1['Tipo'] == 'Despesa']['V_Num'].sum()
+            sobra_1 = rec_1 - desp_1
+
+            rec_2 = df_comp2[df_comp2['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
+            desp_2 = df_comp2[df_comp2['Tipo'] == 'Despesa']['V_Num'].sum()
+            sobra_2 = rec_2 - desp_2
+
+            st.markdown(f"### ⚔️ Confronto Direto: {mes_escolhido_1} vs. {mes_escolhido_2}")
+            
+            mc1, mc2, mc3 = st.columns(3)
+            mc1.metric(f"Receitas ({mes_escolhido_1} ➔ {mes_escolhido_2})", m_fmt(rec_2), delta=m_fmt(rec_2 - rec_1))
+            mc2.metric(f"Despesas ({mes_escolhido_1} ➔ {mes_escolhido_2})", m_fmt(desp_2), delta=m_fmt(desp_2 - desp_1), delta_color="inverse")
+            mc3.metric(f"Sobra Líquida ({mes_escolhido_1} ➔ {mes_escolhido_2})", m_fmt(sobra_2), delta=m_fmt(sobra_2 - sobra_1))
+
+            # Gráfico de Barras Agrupadas com Plotly
+            import plotly.graph_objects as go
+            fig_evolucao = go.Figure(data=[
+                go.Bar(name='Receitas', x=[mes_escolhido_1, mes_escolhido_2], y=[rec_1, rec_2], marker_color='#2ecc71'),
+                go.Bar(name='Despesas', x=[mes_escolhido_1, mes_escolhido_2], y=[desp_1, desp_2], marker_color='#e74c3c'),
+                go.Bar(name='Sobra Líquida', x=[mes_escolhido_1, mes_escolhido_2], y=[sobra_1, sobra_2], marker_color='#3498db')
+            ])
+            fig_evolucao.update_layout(
+                barmode='group', 
+                title=f"Evolução Gráfica: {mes_escolhido_1} x {mes_escolhido_2}", 
+                template="plotly_dark",
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)'
+            )
+            st.plotly_chart(fig_evolucao, use_container_width=True)
+        else:
+            st.info("Cadastre lançamentos em pelo menos 2 meses diferentes para habilitar o comparativo histórico completo.")
+    else:
+        st.warning("Dados indisponíveis para o comparativo.")
+
+    st.divider()
+
+     # 3. DATAFRAME: BANCOS E CARTÕES
+    st.subheader("🏦 Informações de Contas e Cartões")
+    if not df_bancos_info.empty:
+        st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
+    else:
+        st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
+        
+    st.divider()
+
+    
     
  # 4. FORMULÁRIO: CONFIGURAR METAS E LIMITES DE CARTÃO
     with st.expander("🎯 Configurar Metas e Limites de Cartões", expanded=False):
