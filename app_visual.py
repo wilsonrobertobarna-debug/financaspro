@@ -47,6 +47,17 @@ def enviar_alerta_financas(
     except Exception as e:
         return False, str(e)
 
+# ==========================================
+# 🧪 TESTE RÁPIDO DE ARRANCADA (DISPARA AO INICIAR)
+# ==========================================
+if 'teste_ntfy_executado' not in st.session_state:
+    enviar_alerta_financas(
+        titulo="FinancasPro - Teste de Arranque", 
+        mensagem="Alô Wilson! O canal com o ntfy.sh está ativo e operando com sucesso!", 
+        prioridade="high"
+    )
+    st.session_state['teste_ntfy_executado'] = True
+
 # 2. Cria um "alvo" no topo
 st.markdown('<a id="top"></a>', unsafe_allow_html=True)
 
