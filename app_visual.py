@@ -2732,90 +2732,107 @@ elif "Pendências" in aba:
                     key="banco_origem_pagamento_pend"
                 )
 
-            if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_final"):
-                headers = ws_base.row_values(1)
-                idx_status = headers.index('Status') + 1
-                idx_venc = [i for i, h in enumerate(headers) if 'VENC' in h.upper() or 'DATA' in h.upper()][0] + 1
+if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_final"):
                 
-                sucessos = 0
-                for idx_df, row in df_v.iterrows():
-                    linha_sheets = int(idx_df) + 2
-                    ws_base.update_cell(linha_sheets, idx_status, "Pago")
-                    ws_base.update_cell(linha_sheets, idx_venc, f"'{nova_data.strftime('%d/%m/%Y')}")
-                    sucessos += 1
+                # --- IDENTIFICAÇÃO DE CARTÃO DE CRÉDITO NAS PENDÊNCIAS SELECIONADAS ---
+                # Verifica se nos itens pendentes existe algum cartão (olhando se a palavra 'CART' ou 'CRED' está no banco do lançamento)
+                tem_cartao_nas_pendencias = False
+                if not df_v.empty and 'Banco' in df_v.columns:
+                    for b_item in df_v['Banco'].astype(str).str.upper():
+                        if "CARTA" in b_item or "CART" in b_item or "CRÉD" in b_item:
+                            tem_cartao_nas_pendencias = True
+                            break
                 
-                # --- MÁGICA DA TRANSFERÊNCIA AUTOMÁTICA SE ESCOLHEU UM BANCO ---
-                if banco_origem_pagamento and not df_v.empty:
-                    # Agrupa os valores por cartão/banco presente nas pendências selecionadas
-                    soma_por_cartao = df_v.groupby('Banco')['V_Num'].sum().reset_index()
+                # --- TRAVA CIRÚRGICA DE SEGURANÇA ---
+                # Se tem cartão na jogada E o usuário deixou o banco de pagamento vazio, bloqueia!
+                if tem_cartao_nas_pendencias and not banco_origem_pagamento:
+                    st.error("🚨 **Atenção, Wilson!** Você está baixando faturas de **Cartão de Crédito**, mas esqueceu de selecionar o **Banco** de onde vai sair o dinheiro para pagar! Selecione o banco pagador acima para continuar. 💳❌")
+                else:
+                    # Segue o fluxo normal de baixa do FinançasPro
+                    headers = ws_base.row_values(1)
+                    idx_status = headers.index('Status') + 1
+                    idx_venc = [i for i, h in enumerate(headers) if 'VENC' in h.upper() or 'DATA' in h.upper()][0] + 1
                     
-                    # Descobre o próximo ID disponível na planilha para evitar conflito
-                    try:
-                        raw_data_id = ws_base.get_all_values()
-                        header_id = [str(c).strip() for c in raw_data_id[0]]
-                        idx_id_col = header_id.index('ID') if 'ID' in header_id else -1
-                        
-                        max_id = 1
-                        if idx_id_col != -1 and len(raw_data_id) > 1:
-                            ids_existentes = []
-                            for r in raw_data_id[1:]:
-                                if len(r) > idx_id_col and r[idx_id_col].strip():
-                                    try:
-                                        ids_existentes.append(int(float(r[idx_id_col])))
-                                    except:
-                                        pass
-                            if ids_existentes:
-                                max_id = max(ids_existentes) + 1
-                    except:
-                        max_id = 9999
-                
-                    data_str_fmt = nova_data.strftime("%d/%m/%Y")
+                    sucessos = 0
+                    for idx_df, row in df_v.iterrows():
+                        linha_sheets = int(idx_df) + 2
+                        ws_base.update_cell(linha_sheets, idx_status, "Pago")
+                        ws_base.update_cell(linha_sheets, idx_venc, f"'{nova_data.strftime('%d/%m/%Y')}")
+                        sucessos += 1
                     
-                    for idx_c, row_c in soma_por_cartao.iterrows():
-                        cartao_destino = row_c['Banco']
-                        valor_total_fatura = row_c['V_Num']
+                    # --- MÁGICA DA TRANSFERÊNCIA AUTOMÁTICA SE ESCOLHEU UM BANCO ---
+                    if banco_origem_pagamento and not df_v.empty:
+                        # Agrupa os valores por cartão/banco presente nas pendências selecionadas
+                        soma_por_cartao = df_v.groupby('Banco')['V_Num'].sum().reset_index()
                         
-                        if valor_total_fatura <= 0:
-                            continue
+                        # Descobre o próximo ID disponível na planilha para evitar conflito
+                        try:
+                            raw_data_id = ws_base.get_all_values()
+                            header_id = [str(c).strip() for c in raw_data_id[0]]
+                            idx_id_col = header_id.index('ID') if 'ID' in header_id else -1
                             
-                        val_str_fmt = f"{valor_total_fatura:.2f}".replace('.', ',')
+                            max_id = 1
+                            if idx_id_col != -1 and len(raw_data_id) > 1:
+                                ids_existentes = []
+                                for r in raw_data_id[1:]:
+                                    if len(r) > idx_id_col and r[idx_id_col].strip():
+                                        try:
+                                            ids_existentes.append(int(float(r[idx_id_col])))
+                                        except:
+                                            pass
+                                if ids_existentes:
+                                    max_id = max(ids_existentes) + 1
+                        except:
+                            max_id = 9999
+                    
+                        data_str_fmt = nova_data.strftime("%d/%m/%Y")
                         
-                        # 1. Lançamento de SAÍDA (Débito) no Banco escolhido
-                        ws_base.append_row([
-                            data_str_fmt,           # Data
-                            val_str_fmt,            # Valor
-                            f"Pgto Fatura {cartao_destino}", # Descrição
-                            "Transferência",        # Categoria (ajuste se necessário)
-                            "Despesa",              # Tipo
-                            banco_origem_pagamento, # Banco de saída
-                            "Pago",                 # Status
-                            data_str_fmt,           # Data Compra
-                            max_id,                 # ID
-                            "Titular",              # Beneficiário
-                            "", "",                 # Km / Litros
-                        ])
-                        
-                        max_id += 1
-                        
-                        # 2. Lançamento de ENTRADA (Crédito) no Cartão
-                        ws_base.append_row([
-                            data_str_fmt,           # Data
-                            val_str_fmt,            # Valor
-                            f"Recebimento Pgto Fatura", # Descrição
-                            "Transferência",        # Categoria
-                            "Recendimento",         # Tipo (ou Receita, dependendo da sua regra de cartão)
-                            cartao_destino,         # Banco/Cartão de entrada
-                            "Pago",                 # Status
-                            data_str_fmt,           # Data Compra
-                            max_id,                 # ID
-                            "Titular",              # Beneficiário
-                            "", "",                 # Km / Litros
-                        ])
-                        max_id += 1
+                        for idx_c, row_c in soma_por_cartao.iterrows():
+                            cartao_destino = row_c['Banco']
+                            valor_total_fatura = row_c['V_Num']
+                            
+                            if valor_total_fatura <= 0:
+                                continue
+                                
+                            val_str_fmt = f"{valor_total_fatura:.2f}".replace('.', ',')
+                            
+                            # 1. Lançamento de SAÍDA (Débito) no Banco escolhido
+                            ws_base.append_row([
+                                data_str_fmt,           # Data
+                                val_str_fmt,            # Valor
+                                f"Pgto Fatura {cartao_destino}", # Descrição
+                                "Transferência",        # Categoria (ajuste se necessário)
+                                "Despesa",              # Tipo
+                                banco_origem_pagamento, # Banco de saída
+                                "Pago",                 # Status
+                                data_str_fmt,           # Data Compra
+                                max_id,                 # ID
+                                "Titular",              # Beneficiário
+                                "", "",                 # Km / Litros
+                            ])
+                            
+                            max_id += 1
+                            
+                            # 2. Lançamento de ENTRADA (Crédito) no Cartão
+                            ws_base.append_row([
+                                data_str_fmt,           # Data
+                                val_str_fmt,            # Valor
+                                f"Recebimento Pgto Fatura", # Descrição
+                                "Transferência",        # Categoria
+                                "Recendimento",         # Tipo (ou Receita, dependendo da sua regra de cartão)
+                                cartao_destino,         # Banco/Cartão de entrada
+                                "Pago",                 # Status
+                                data_str_fmt,           # Data Compra
+                                max_id,                 # ID
+                                "Titular",              # Beneficiário
+                                "", "",                 # Km / Litros
+                            ])
+                            max_id += 1
 
-                st.toast(f"✅ {sucessos} itens baixados e transferência gerada com sucesso!", icon="💰")
-                atualizar_sessao()
-                st.rerun()
+                    st.toast(f"✅ {sucessos} itens baixados e transferência gerada com sucesso!", icon="💰")
+                    atualizar_sessao()
+                    st.rerun()
+                
         else:
             st.info("Nenhum lançamento encontrado neste período.")
     
