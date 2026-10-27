@@ -2732,7 +2732,7 @@ elif "Pendências" in aba:
                     key="banco_origem_pagamento_pend"
                 )
 
-if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_final"):
+            if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_final"):
                 
                 # --- IDENTIFICAÇÃO DE CARTÃO DE CRÉDITO NAS PENDÊNCIAS SELECIONADAS ---
                 # Verifica se nos itens pendentes existe algum cartão (olhando se a palavra 'CART' ou 'CRED' está no banco do lançamento)
