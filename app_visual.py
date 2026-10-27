@@ -2874,14 +2874,27 @@ elif "Pendências" in aba:
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
     
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
+
+
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
     
+    # --- BLINDAGEM DE SEGURANÇA PARA A VARIÁVEL MES_ATUAL ---
+    if 'mes_atual' not in locals():
+        if 'filtro_mes' in locals():
+            mes_atual = filtro_mes
+        elif 'df_base' in locals() and not df_base.empty and 'Mes_Ano' in df_base.columns:
+            mes_atual = df_base['Mes_Ano'].iloc[-1]  # Pega o último mês disponível
+        else:
+            from datetime import datetime
+            mes_atual = datetime.now().strftime("%m/%Y")  # Fallback de emergência
+            
     df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
                      df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
     
     if not df_pet.empty:
-        df_pet_mes = df_pet[(df_pet['Mes_Ano'] == mes_atual) & (df_pet['Status'] == 'Pago')]
+        # Filtra os dados com segurança
+        df_pet_mes = df_pet[(df_pet['Mes_Ano'] == mes_atual) & (df_pet['Status'].str.lower() == 'pago')]
         gasto_total_mes = df_pet_mes['V_Num'].sum()
         
         df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
@@ -2889,8 +2902,8 @@ elif "🐾" in aba:
         df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
                           df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
         
-        m_milo = df_milo[(df_milo['Mes_Ano'] == mes_atual) & (df_milo['Status'] == 'Pago')]['V_Num'].sum()
-        m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'] == 'Pago')]['V_Num'].sum()
+        m_milo = df_milo[(df_milo['Mes_Ano'] == mes_atual) & (df_milo['Status'].str.lower() == 'pago')]['V_Num'].sum()
+        m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'].str.lower() == 'pago')]['V_Num'].sum()
         
         c_p1, c_p2, c_p3 = st.columns(3)
         c_p1.metric("📈 Gasto Total (Mês)", m_fmt(gasto_total_mes))
@@ -2924,6 +2937,7 @@ elif "🐾" in aba:
         st.dataframe(df_show_display.iloc[::-1], use_container_width=True, hide_index=True)
     else:
         st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
+        
 
 elif "🚗" in aba:
         st.title("🚗 Gestão do Veículo")
