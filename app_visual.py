@@ -4426,6 +4426,7 @@ if aba == "📊 Análises & Configurações":
 
     st.divider()
 
+   
     # =====================================================================
     # 🟢 MÓDULO 4: COMPARATIVO MENSAL COMPLETO & EVOLUÇÃO HISTÓRICA
     # =====================================================================
@@ -4449,9 +4450,22 @@ if aba == "📊 Análises & Configurações":
             with col_cm2:
                 mes_escolhido_2 = st.selectbox("Selecione o 2º Mês para Comparar:", meses_disponiveis, index=idx_m2, key="sel_mes_2")
 
-            # Filtros e cálculos
+            # Filtros básicos dos meses
             df_comp1 = df_base[df_base['Mes_Ano_Str'] == mes_escolhido_1]
             df_comp2 = df_base[df_base['Mes_Ano_Str'] == mes_escolhido_2]
+
+            # --- BLINDAGEM CONTRA TRANSFERÊNCIAS INTERNAS ---
+            # Remove linhas que sejam Transferências para não inflar as receitas e despesas reais
+            if 'Categoria' in df_comp1.columns:
+                df_comp1 = df_comp1[~df_comp1['Categoria'].str.contains('Transferência|Transf', case=False, na=False)]
+            if 'Tipo' in df_comp1.columns:
+                df_comp1 = df_comp1[~df_comp1['Tipo'].str.contains('Transferência|Transf', case=False, na=False)]
+
+            if 'Categoria' in df_comp2.columns:
+                df_comp2 = df_comp2[~df_comp2['Categoria'].str.contains('Transferência|Transf', case=False, na=False)]
+            if 'Tipo' in df_comp2.columns:
+                df_comp2 = df_comp2[~df_comp2['Tipo'].str.contains('Transferência|Transf', case=False, na=False)]
+            # -----------------------------------------------
 
             rec_1 = df_comp1[df_comp1['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
             desp_1 = df_comp1[df_comp1['Tipo'] == 'Despesa']['V_Num'].sum()
