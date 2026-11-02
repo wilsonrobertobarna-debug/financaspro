@@ -812,8 +812,15 @@ if "💰" in st.session_state.page:
                         falta_aportar = falta_aportar_mes
                         msg_ntfy = f"ATENÇÃO: Aporte da Reserva atrasado! Falta R$ {falta_aportar:,.2f} no banco {banco_reserva}."
     
-            # Exibição dos Alertas Visuais na tela
-            if exibir_alerta:
+            # --- TRAVA DE EXIBIÇÃO: Só mostra a tarja visual se a tela estiver no MÊS ATUAL ---
+            # (Verifica se o mês/ano selecionado no filtro é o mês/ano vigente)
+            mes_em_exibicao = locals().get('mes_selecionado', mes_atual)
+            ano_em_exibicao = locals().get('ano_selecionado', ano_atual)
+            
+            estabaco_no_mes_atual = (mes_em_exibicao == mes_atual) and (ano_em_exibicao == ano_atual)
+
+            # Exibição dos Alertas Visuais na tela (Apenas se o usuário estiver navegando no mês atual)
+            if exibir_alerta and estabaco_no_mes_atual:
                 if tipo_alerta == "verde":
                     st.success(f"🎉 **Aporte do mês concluído!**\n\n• **Banco:** {banco_reserva}\n• **Planejado:** R$ {aporte_planejado:,.2f}\n• **Aportado:** R$ {total_aportado_mes:,.2f}")
                 elif tipo_alerta == "azul":
