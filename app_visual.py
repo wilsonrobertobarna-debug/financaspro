@@ -12,7 +12,6 @@ import streamlit.components.v1 as components
 import urllib.parse
 import urllib.request
 
-
 # 1. CONFIGURAÇÃO DA PÁGINA (Deve ser SEMPRE a primeira instrução do Streamlit)
 st.set_page_config(
     page_title="Painel Wilson", layout="wide", initial_sidebar_state="collapsed"
@@ -46,17 +45,6 @@ def enviar_alerta_financas(
         return True, resposta.getcode()
     except Exception as e:
         return False, str(e)
-
-# ==========================================
-# 🧪 TESTE RÁPIDO DE ARRANCADA (DISPARA AO INICIAR)
-# ==========================================
-if 'teste_ntfy_executado' not in st.session_state:
-    enviar_alerta_financas(
-        titulo="FinancasPro - Teste de Arranque", 
-        mensagem="Alô Wilson! O canal com o ntfy.sh está ativo e operando com sucesso!", 
-        prioridade="high"
-    )
-    st.session_state['teste_ntfy_executado'] = True
 
 # 2. Cria um "alvo" no topo
 st.markdown('<a id="top"></a>', unsafe_allow_html=True)
@@ -586,16 +574,15 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                             value=formatar_moeda(saldo_atual, simb_moeda),
                         )
 
-       
-        # --- 2. VARREDURA DOS LANÇAMENTOS, BOLETOS E RECEITAS (DESPESAS E RECEITAS PENDENTES) ---
-        # Filtra lançamentos com Status PENDENTE (Despesas e Receitas)
-        mask_pendentes = (df["Status"].str.upper() == "PENDENTE")
+        # --- 2. VARREDURA DOS LANÇAMENTOS E BOLETOS INDIVIDUAIS (COLUNAS A, B, G, J) ---
+        # Filtra despesas com Status PENDENTE
+        mask_pendentes = (df["Status"].str.upper() == "PENDENTE") & (
+            df["Tipo"] == "Despesa"
+        )
         df_pendentes = df[mask_pendentes]
 
-        receitas_perto_vencer = []
-        
         for index_p, row_p in df_pendentes.iterrows():
-            # Evita contabilizar novamente transações de cartão de crédito agrupadas
+            # Evita contabilizar novamente transações de cartão de crédito que já foram agrupadas
             banco_transacao = str(row_p.get("Banco", "")).upper()
             if "CARTA" in banco_transacao or "CART" in banco_transacao:
                 continue
@@ -603,13 +590,12 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
             dt_venc = row_p["DT"]
             if pd.notnull(dt_venc):
                 dias_restantes = (dt_venc - hoje).days
-                tipo_transacao = str(row_p.get("Tipo", "Despesa")).strip()
 
-                # Regra dos 3 dias para lembretes
+                # Regra dos 3 dias para boletos
                 if -30 <= dias_restantes <= 3:
                     valor_conta = row_p["V_Num"]
 
-                    # Captura Beneficiário/Descrição
+                    # Captura Beneficiário na Coluna J (índice 9), fallback para Descrição se vazio
                     beneficiario = ""
                     if len(row_p) > 9 and str(row_p.iloc[9]).strip():
                         beneficiario = str(row_p.iloc[9]).strip()
@@ -619,224 +605,17 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                         beneficiario = "Lançamento Pendente"
 
                     if dias_restantes == 0:
-                        status_prazo = "VENCE/RECEBE HOJE!"
+                        status_prazo = "VENCE HOJE!"
                     elif dias_restantes < 0:
-                        status_prazo = f"ATRASADO HÁ {abs(dias_restantes)} DIA(S)"
+                        status_prazo = f"VENCIDA HÁ {abs(dias_restantes)} DIA(S)"
                     else:
-                        status_prazo = f"Em {dias_restantes} dia(s)"
+                        status_prazo = f"Vence em {dias_restantes} dia(s)"
 
-                    if tipo_transacao == "Despesa":
-                        contas_perto_vencer.append(
-                            f"• {beneficiario}: R$ {valor_conta:,.2f} ({status_prazo})"
-                        )
-                        total_geral_prestes_vencer += valor_conta
-                    else:
-                        # Receita a receber
-                        receitas_perto_vencer.append(
-                            f"• {beneficiario}: R$ {valor_conta:,.2f} ({status_prazo})"
-                        )
-
-        # 📲 DISPARO AUTOMÁTICO DE NOTIFICAÇÃO DE CONTAS E RECEITAS DO DIA VIA NTFY
-        if 'ntfy_alertas_diarios_enviado' not in st.session_state:
-            mensagens_alerta = []
-            
-            if contas_perto_vencer:
-                mensagens_alerta.append("🔻 **CONTAS A PAGAR:**\n" + "\n".join(contas_perto_vencer))
-            
-            if receitas_perto_vencer:
-                mensagens_alerta.append("🟢 **RECEITAS A RECEBER:**\n" + "\n".join(receitas_perto_vencer))
-
-            if mensagens_alerta:
-                texto_final_ntfy = "\n\n".join(mensagens_alerta)
-                enviar_alerta_financas(
-                    titulo="FinancasPro - Lembretes do Dia",
-                    mensagem=texto_final_ntfy,
-                    prioridade="high",
-                    tags="moneybag,bell"
-                )
-            st.session_state['ntfy_alertas_diarios_enviado'] = True
-
-# --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
-if "💰" in st.session_state.page:
-    
-    # =========================================================================
-    # 🔔 VERIFICAÇÃO AUTOMÁTICA E NTFY DA RESERVA DE EMERGÊNCIA (REGRAS EXATAS)
-    # =========================================================================
-    import datetime as dt_mod
-    from datetime import datetime
-    import pandas as pd
-    import requests
-    
-    try:
-        from dateutil.relativedelta import relativedelta
-    except ImportError:
-        relativedelta = None
-    
-    # 1. Carrega os parâmetros atualizados salvos no Google Sheets ou no session_state
-    try:
-        ws_reserva_check = sh.worksheet("Reserva_Financeira")
-        dados_res_check = ws_reserva_check.get_all_values()
-        if len(dados_res_check) > 1:
-            val_ap_raw = str(dados_res_check[1][1]).replace('R$', '').strip()
-            if ',' in val_ap_raw and '.' in val_ap_raw:
-                val_ap_raw = val_ap_raw.replace('.', '').replace(',', '.')
-            else:
-                val_ap_raw = val_ap_raw.replace(',', '.')
-                
-            aporte_planejado = float(val_ap_raw) if val_ap_raw else 300.0
-            banco_reserva = str(dados_res_check[1][2]).strip() if len(dados_res_check[1]) > 2 and dados_res_check[1][2] else "Invest Pag. Bank"
-            dia_limite = int(float(str(dados_res_check[1][3]).replace(',', '.'))) if len(dados_res_check[1]) > 3 and dados_res_check[1][3] else 10
-        else:
-            aporte_planejado = float(st.session_state.get('reserva_aporte_mensal', 300.0))
-            banco_reserva = st.session_state.get('reserva_banco_escolhido', 'Invest Pag. Bank')
-            dia_limite = int(st.session_state.get('reserva_dia_vencimento', 10))
-    except Exception:
-        aporte_planejado = float(st.session_state.get('reserva_aporte_mensal', 300.0))
-        banco_reserva = st.session_state.get('reserva_banco_escolhido', 'Invest Pag. Bank')
-        dia_limite = int(st.session_state.get('reserva_dia_vencimento', 10))
-    
-    # 🛡️ Mês e ano de início oficial do controle solicitado (Novembro de 2026)
-    MES_INICIO_CONTROLE = 11
-    ANO_INICIO_CONTROLE = 2026
-    
-    if aporte_planejado > 0 and banco_reserva:
-        hoje_dt = datetime.now()
-        mes_atual = hoje_dt.month
-        ano_atual = hoje_dt.year
-        dia_atual = hoje_dt.day
-    
-        data_atual_tupla = (ano_atual, mes_atual)
-        data_inicio_tupla = (ANO_INICIO_CONTROLE, MES_INICIO_CONTROLE)
-    
-        exibir_alerta = False
-        tipo_alerta = None
-        falta_aportar = 0.0
-        msg_ntfy = ""
-    
-        # Só começa a rodar a inteligência a partir de Novembro/2026
-        if data_atual_tupla >= data_inicio_tupla:
-            if relativedelta is not None:
-                data_mes_anterior = hoje_dt - relativedelta(months=1)
-                mes_anterior = data_mes_anterior.month
-                ano_anterior = data_mes_anterior.year
-            else:
-                mes_anterior = 12 if mes_atual == 1 else mes_atual - 1
-                ano_anterior = ano_atual - 1 if mes_atual == 1 else ano_atual
-    
-            try:
-                # Garante o DataFrame base correto
-                if 'df' in locals():
-                    df_base_reserva = df.copy()
-                elif 'df_lancamentos' in locals():
-                    df_base_reserva = df_lancamentos.copy()
-                else:
-                    df_base_reserva = df_base.copy()
-    
-                # Flexibilidade de nome da coluna de data (DT ou Data)
-                col_dt = 'DT' if 'DT' in df_base_reserva.columns else ('Data' if 'Data' in df_base_reserva.columns else df_base_reserva.columns[0])
-                df_base_reserva['DT_Res'] = pd.to_datetime(df_base_reserva[col_dt], errors='coerce')
-                
-                # Flexibilidade de nome da coluna de valor
-                col_v = 'V_Num' if 'V_Num' in df_base_reserva.columns else ('Valor' if 'Valor' in df_base_reserva.columns else 'V_NUM')
-    
-                checar_mes_ant = (ano_anterior, mes_anterior) >= data_inicio_tupla
-                total_aportado_ant = aporte_planejado
-    
-                # Verifica mês anterior (se aplicável)
-                if checar_mes_ant:
-                    filtro_mes_ant = (
-                        (df_base_reserva['DT_Res'].dt.month == mes_anterior) & 
-                        (df_base_reserva['DT_Res'].dt.year == ano_anterior) &
-                        (df_base_reserva['Banco'].astype(str).str.strip().str.upper() == str(banco_reserva).strip().upper()) &
-                        (df_base_reserva['Descrição'].astype(str).str.contains('reserva', case=False, na=False))
+                    contas_perto_vencer.append(
+                        f"• {beneficiario}: R$ {valor_conta:,.2f} ({status_prazo})"
                     )
-                    if 'Status' in df_base_reserva.columns:
-                        filtro_mes_ant = filtro_mes_ant & ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
-                    total_aportado_ant = df_base_reserva[filtro_mes_ant][col_v].sum()
-    
-                # Verifica mês atual
-                filtro_mes_atual = (
-                    (df_base_reserva['DT_Res'].dt.month == mes_atual) & 
-                    (df_base_reserva['DT_Res'].dt.year == ano_atual) &
-                    (df_base_reserva['Banco'].astype(str).str.strip().str.upper() == str(banco_reserva).strip().upper()) &
-                    (df_base_reserva['Descrição'].astype(str).str.contains('reserva', case=False, na=False))
-                )
-                if 'Status' in df_base_reserva.columns:
-                    filtro_mes_atual = filtro_mes_atual & ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
-    
-                df_aportes_atual = df_base_reserva[filtro_mes_atual]
-                total_aportado_mes = df_aportes_atual[col_v].sum()
-                
-                data_ultimo_aporte = None
-                if not df_aportes_atual.empty:
-                    data_ultimo_aporte = df_aportes_atual['DT_Res'].max()
-                    
-            except Exception:
-                total_aportado_ant = aporte_planejado
-                total_aportado_mes = 0.0
-                data_ultimo_aporte = None
-                checar_mes_ant = False
-    
-            falta_aportar_mes = max(0.0, aporte_planejado - total_aportado_mes)
-            falta_aportar_ant = max(0.0, aporte_planejado - total_aportado_ant)
-    
-            # Regras de Negócio Estritas:
-            if checar_mes_ant and total_aportado_ant < aporte_planejado:
-                exibir_alerta = True
-                tipo_alerta = "vermelho_atrasado"
-                falta_aportar = falta_aportar_ant
-                mes_ref = f"{mes_anterior:02d}/{ano_anterior}"
-                texto_personalizado = f"🚨 **Atenção: Aporte da Reserva de {mes_ref} Pendente!**\n\nO mês anterior fechou sem a identificação total do aporte."
-                msg_ntfy = f"Aporte de Reserva ({mes_ref}) pendente! Falta R$ {falta_aportar:,.2f} no banco {banco_reserva}."
-            else:
-                if total_aportado_mes >= aporte_planejado:
-                    # Concluído: Verde fica visível por até 3 dias após o depósito, depois some o mês todo
-                    if data_ultimo_aporte is not None:
-                        dias_desde_aporte = (hoje_dt - data_ultimo_aporte).days
-                        if 0 <= dias_desde_aporte <= 3:
-                            exibir_alerta = True
-                            tipo_alerta = "verde"
-                    else:
-                        exibir_alerta = True
-                        tipo_alerta = "verde"
-                else:
-                    # Não concluído: Azul até o dia limite, Vermelho fixo após o dia limite
-                    if dia_atual <= dia_limite:
-                        exibir_alerta = True
-                        tipo_alerta = "azul"
-                        falta_aportar = falta_aportar_mes
-                        msg_ntfy = f"Lembrete: Aporte da Reserva de R$ {falta_aportar:,.2f} vence dia {dia_limite}/{mes_atual:02d} ({banco_reserva})."
-                    else:
-                        exibir_alerta = True
-                        tipo_alerta = "vermelho_atual"
-                        falta_aportar = falta_aportar_mes
-                        msg_ntfy = f"ATENÇÃO: Aporte da Reserva atrasado! Falta R$ {falta_aportar:,.2f} no banco {banco_reserva}."
-    
-            # Exibição dos Alertas Visuais na tela
-            if exibir_alerta:
-                if tipo_alerta == "verde":
-                    st.success(f"🎉 **Aporte do mês concluído!**\n\n• **Banco:** {banco_reserva}\n• **Planejado:** R$ {aporte_planejado:,.2f}\n• **Aportado:** R$ {total_aportado_mes:,.2f}")
-                elif tipo_alerta == "azul":
-                    st.info(f"⏳ **Aporte em andamento (Vencimento: Dia {dia_limite}):**\n\n• **Banco:** {banco_reserva}\n• **Aportado até agora:** R$ {total_aportado_mes:,.2f} / R$ {aporte_planejado:,.2f}\n• **Falta aportar:** R$ {falta_aportar:,.2f} até o dia {dia_limite}/{mes_atual:02d}.")
-                elif tipo_alerta == "vermelho_atual":
-                    st.warning(f"🚨 **Atenção: Aporte da Reserva Pendente!**\n\nO dia limite ({dia_limite}/{mes_atual:02d}) já passou.\n• **Banco:** {banco_reserva}\n• **Aportado:** R$ {total_aportado_mes:,.2f}\n• **Falta:** R$ {falta_aportar:,.2f}")
-                elif tipo_alerta == "vermelho_atrasado":
-                    st.error(f"{texto_personalizado}\n\n• **Banco:** {banco_reserva}\n• **Falta pagar:** R$ {falta_aportar:,.2f}")
-    
-                # 📲 DISPARO DO NOTIFICATION NTFY
-                if msg_ntfy and tipo_alerta in ["azul", "vermelho_atual", "vermelho_atrasado"]:
-                    if 'ntfy_disparado_hoje' not in st.session_state:
-                        try:
-                            TOPICO_NTFY = st.session_state.get('topico_ntfy', 'financaspro_wilson')
-                            requests.post(
-                                f"https://ntfy.sh/{TOPICO_NTFY}",
-                                data=msg_ntfy.encode('utf-8'),
-                                headers={"Title": "FinançasPro - Alerta de Reserva", "Priority": "high"}
-                            )
-                            st.session_state['ntfy_disparado_hoje'] = True
-                        except Exception:
-                            pass
-        
+                    total_geral_prestes_vencer += valor_conta
+
         # ==========================================
         # 🔔 ENVIAR NOTIFICAÇÃO CONSOLIDADA NO CELULAR
         # ==========================================
@@ -902,7 +681,7 @@ if not df_bancos_info.empty:
 else:
     bancos_disponiveis = ["Santander", "Itaú", "Inter", "Nubank", "Dinheiro", "Pix", "XP", "Mercado Pago", "PicPay", "PagBank", "CEF"]
 
-from datetime import datetime
+mes_atual = datetime.now().strftime('%m/%y')
 
 def m_fmt(n): return f"R$ {n:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
@@ -2020,18 +1799,16 @@ if "💰" in st.session_state.page:
                 )
             else:
                 st.info("Aguardando dados para o período...")
-                        
-        
+                
+
 # 6. NOVO: GRÁFICO DE METAS
         st.subheader("🎯 Metas vs Realizado (Despesas)")
         
         df_metas_graph = df_m[(df_m['Tipo'] == 'Despesa') & (df_m['Categoria'] != 'Transferência')].groupby('Categoria')['V_Num'].sum().reset_index()
         
         if not df_metas_graph.empty:
-            # Pega a meta direto do session_state (mesmo padrão dos inputs de configuração)
             df_metas_graph['Meta'] = df_metas_graph['Categoria'].apply(lambda cat: st.session_state.get(f"m_{cat}", 0.0))
-
-            # 2. Desenha o gráfico
+            
             fig_m = go.Figure()
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['V_Num'], name='Realizado', marker_color='#e74c3c'))
             fig_m.add_trace(go.Bar(x=df_metas_graph['Categoria'], y=df_metas_graph['Meta'], name='Meta Estipulada', marker_color='#2ecc71', opacity=0.4))
@@ -2047,28 +1824,10 @@ if "💰" in st.session_state.page:
                     'displayModeBar': False
                 }
             )
-
-          # 🚨 3. ALERTAS DE METAS ULTRAPASSADAS
-            df_estouradas = df_metas_graph[
-                (df_metas_graph['Meta'] > 0) & 
-                (df_metas_graph['V_Num'] > df_metas_graph['Meta'])
-            ]
-
-            if not df_estouradas.empty:
-                for _, linha in df_estouradas.iterrows():
-                    cat = linha['Categoria']
-                    gasto = float(linha['V_Num'])
-                    meta = float(linha['Meta'])
-                    excedente = gasto - meta
-                    percentual = (gasto / meta) * 100
-
-                    st.error(
-                        f"🚨 **Alerta de Teto:** A categoria **{cat}** ultrapassou a meta!  \n"
-                        f"📊 Gastos: **R$ {gasto:,.2f}** | Meta: **R$ {meta:,.2f}** "
-                        f"({percentual:.0f}% - Excedente: **R$ {excedente:,.2f}**)"
-                    )
         else:
-            st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")        
+            st.info(f"O gráfico está vazio. Verifique se existem lançamentos do tipo 'Despesa' em {mes_atual}.")
+
+        
         # =========================================================================
         # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO)
         # =========================================================================
@@ -2732,114 +2491,90 @@ elif "Pendências" in aba:
                     key="banco_origem_pagamento_pend"
                 )
 
-        if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_final"):
+            if st.button("✅ BAIXAR SELECIONADOS", key="btn_baixa_final"):
+                headers = ws_base.row_values(1)
+                idx_status = headers.index('Status') + 1
+                idx_venc = [i for i, h in enumerate(headers) if 'VENC' in h.upper() or 'DATA' in h.upper()][0] + 1
                 
-                # --- IDENTIFICAÇÃO DE CARTÃO DE CRÉDITO NAS PENDÊNCIAS SELECIONADAS ---
-                tem_cartao_nas_pendencias = False
-                if not df_v.empty and 'Banco' in df_v.columns:
-                    for b_item in df_v['Banco'].astype(str).str.upper():
-                        if "CARTA" in b_item or "CART" in b_item or "CRÉD" in b_item:
-                            tem_cartao_nas_pendencias = True
-                            break
+                sucessos = 0
+                for idx_df, row in df_v.iterrows():
+                    linha_sheets = int(idx_df) + 2
+                    ws_base.update_cell(linha_sheets, idx_status, "Pago")
+                    ws_base.update_cell(linha_sheets, idx_venc, f"'{nova_data.strftime('%d/%m/%Y')}")
+                    sucessos += 1
                 
-                # --- TRAVA CIRÚRGICA DE SEGURANÇA ---
-                if tem_cartao_nas_pendencias and not banco_origem_pagamento:
-                    st.error("🚨 **Atenção, Wilson!** Você está baixando faturas de **Cartão de Crédito**, mas esqueceu de selecionar o **Banco** de onde vai sair o dinheiro para pagar! Selecione o banco pagador acima para continuar. 💳❌")
-                else:
+                # --- MÁGICA DA TRANSFERÊNCIA AUTOMÁTICA SE ESCOLHEU UM BANCO ---
+                if banco_origem_pagamento and not df_v.empty:
+                    # Agrupa os valores por cartão/banco presente nas pendências selecionadas
+                    soma_por_cartao = df_v.groupby('Banco')['V_Num'].sum().reset_index()
+                    
+                    # Descobre o próximo ID disponível na planilha para evitar conflito
                     try:
-                        headers = ws_base.row_values(1)
-                        # Busca segura pelo índice da coluna de Status e Vencimento
-                        idx_status = headers.index('Status') + 1 if 'Status' in headers else headers.index('STATUS') + 1
+                        raw_data_id = ws_base.get_all_values()
+                        header_id = [str(c).strip() for c in raw_data_id[0]]
+                        idx_id_col = header_id.index('ID') if 'ID' in header_id else -1
                         
-                        # Procura de forma exata a coluna de Vencimento
-                        if 'Vencimento' in headers:
-                            idx_venc = headers.index('Vencimento') + 1
-                        elif 'VENCIMENTO' in headers:
-                            idx_venc = headers.index('VENCIMENTO') + 1
-                        else:
-                            idx_venc = [i + 1 for i, h in enumerate(headers) if 'VENC' in h.upper()][0]
+                        max_id = 1
+                        if idx_id_col != -1 and len(raw_data_id) > 1:
+                            ids_existentes = []
+                            for r in raw_data_id[1:]:
+                                if len(r) > idx_id_col and r[idx_id_col].strip():
+                                    try:
+                                        ids_existentes.append(int(float(r[idx_id_col])))
+                                    except:
+                                        pass
+                            if ids_existentes:
+                                max_id = max(ids_existentes) + 1
+                    except:
+                        max_id = 9999
+                
+                    data_str_fmt = nova_data.strftime("%d/%m/%Y")
+                    
+                    for idx_c, row_c in soma_por_cartao.iterrows():
+                        cartao_destino = row_c['Banco']
+                        valor_total_fatura = row_c['V_Num']
                         
-                        sucessos = 0
-                        for idx_df, row in df_v.iterrows():
-                            linha_sheets = int(idx_df) + 2
-                            ws_base.update_cell(linha_sheets, idx_status, "Pago")
-                            ws_base.update_cell(linha_sheets, idx_venc, f"'{nova_data.strftime('%d/%m/%Y')}")
-                            sucessos += 1
-                        
-                        # --- MÁGICA DA TRANSFERÊNCIA AUTOMÁTICA SE ESCOLHEU UM BANCO ---
-                        if banco_origem_pagamento and not df_v.empty:
-                            soma_por_cartao = df_v.groupby('Banco')['V_Num'].sum().reset_index()
+                        if valor_total_fatura <= 0:
+                            continue
                             
-                            try:
-                                raw_data_id = ws_base.get_all_values()
-                                header_id = [str(c).strip() for c in raw_data_id[0]]
-                                idx_id_col = header_id.index('ID') if 'ID' in header_id else -1
-                                
-                                max_id = 1
-                                if idx_id_col != -1 and len(raw_data_id) > 1:
-                                    ids_existentes = []
-                                    for r in raw_data_id[1:]:
-                                        if len(r) > idx_id_col and r[idx_id_col].strip():
-                                            try:
-                                                ids_existentes.append(int(float(r[idx_id_col])))
-                                            except:
-                                                pass
-                                    if ids_existentes:
-                                        max_id = max(ids_existentes) + 1
-                            except:
-                                max_id = 9999
+                        val_str_fmt = f"{valor_total_fatura:.2f}".replace('.', ',')
                         
-                            data_str_fmt = nova_data.strftime("%d/%m/%Y")
-                            
-                            for idx_c, row_c in soma_por_cartao.iterrows():
-                                cartao_destino = row_c['Banco']
-                                valor_total_fatura = row_c['V_Num']
-                                
-                                if valor_total_fatura <= 0:
-                                    continue
-                                    
-                                val_str_fmt = f"{valor_total_fatura:.2f}".replace('.', ',')
-                                
-                                # 1. Lançamento de SAÍDA (Débito) no Banco escolhido
-                                ws_base.append_row([
-                                    data_str_fmt,            # Data
-                                    val_str_fmt,             # Valor
-                                    f"Pgto Fatura {cartao_destino}", # Descrição
-                                    "Transferência",         # Categoria
-                                    "Despesa",               # Tipo
-                                    banco_origem_pagamento,  # Banco de saída
-                                    "Pago",                  # Status
-                                    data_str_fmt,            # Data Compra
-                                    max_id,                  # ID
-                                    "Titular",               # Beneficiário
-                                    "", "",                  # Km / Litros
-                                ])
-                                
-                                max_id += 1
-                                
-                                # 2. Lançamento de ENTRADA (Crédito) no Cartão
-                                ws_base.append_row([
-                                    data_str_fmt,            # Data
-                                    val_str_fmt,             # Valor
-                                    f"Recebimento Pgto Fatura", # Descrição
-                                    "Transferência",         # Categoria
-                                    "Recebimento",           # Tipo
-                                    cartao_destino,          # Banco/Cartão de entrada
-                                    "Pago",                  # Status
-                                    data_str_fmt,            # Data Compra
-                                    max_id,                  # ID
-                                    "Titular",               # Beneficiário
-                                    "", "",                  # Km / Litros
-                                ])
-                                max_id += 1
+                        # 1. Lançamento de SAÍDA (Débito) no Banco escolhido
+                        ws_base.append_row([
+                            data_str_fmt,           # Data
+                            val_str_fmt,            # Valor
+                            f"Pgto Fatura {cartao_destino}", # Descrição
+                            "Transferência",        # Categoria (ajuste se necessário)
+                            "Despesa",              # Tipo
+                            banco_origem_pagamento, # Banco de saída
+                            "Pago",                 # Status
+                            data_str_fmt,           # Data Compra
+                            max_id,                 # ID
+                            "Titular",              # Beneficiário
+                            "", "",                 # Km / Litros
+                        ])
                         
-                        st.toast(f"✅ {sucessos} itens baixados e transferência gerada com sucesso!", icon="💰")
-                        if 'atualizar_sessao' in globals():
-                            atualizar_sessao()
-                        st.rerun()
+                        max_id += 1
                         
-                    except Exception as e:
-                        st.error(f"⚠️ Ocorreu um erro ao processar a baixa na planilha: {e}")
+                        # 2. Lançamento de ENTRADA (Crédito) no Cartão
+                        ws_base.append_row([
+                            data_str_fmt,           # Data
+                            val_str_fmt,            # Valor
+                            f"Recebimento Pgto Fatura", # Descrição
+                            "Transferência",        # Categoria
+                            "Recendimento",         # Tipo (ou Receita, dependendo da sua regra de cartão)
+                            cartao_destino,         # Banco/Cartão de entrada
+                            "Pago",                 # Status
+                            data_str_fmt,           # Data Compra
+                            max_id,                 # ID
+                            "Titular",              # Beneficiário
+                            "", "",                 # Km / Litros
+                        ])
+                        max_id += 1
+
+                st.toast(f"✅ {sucessos} itens baixados e transferência gerada com sucesso!", icon="💰")
+                atualizar_sessao()
+                st.rerun()
         else:
             st.info("Nenhum lançamento encontrado neste período.")
     
@@ -2881,27 +2616,14 @@ elif "Pendências" in aba:
     df_v_display['Valor'] = df_v['V_Num'].apply(m_fmt)
     
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
-
-
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
     
-    # --- BLINDAGEM DE SEGURANÇA PARA A VARIÁVEL MES_ATUAL ---
-    if 'mes_atual' not in locals():
-        if 'filtro_mes' in locals():
-            mes_atual = filtro_mes
-        elif 'df_base' in locals() and not df_base.empty and 'Mes_Ano' in df_base.columns:
-            mes_atual = df_base['Mes_Ano'].iloc[-1]  # Pega o último mês disponível
-        else:
-            from datetime import datetime
-            mes_atual = datetime.now().strftime("%m/%Y")  # Fallback de emergência
-            
     df_pet = df_base[df_base['Categoria'].str.contains('Pet|Milo|Bolt', case=False, na=False) | 
                      df_base['Descrição'].str.contains('Pet|Milo|Bolt', case=False, na=False)].copy()
     
     if not df_pet.empty:
-        # Filtra os dados com segurança
-        df_pet_mes = df_pet[(df_pet['Mes_Ano'] == mes_atual) & (df_pet['Status'].str.lower() == 'pago')]
+        df_pet_mes = df_pet[(df_pet['Mes_Ano'] == mes_atual) & (df_pet['Status'] == 'Pago')]
         gasto_total_mes = df_pet_mes['V_Num'].sum()
         
         df_milo = df_pet[df_pet['Descrição'].str.contains('Milo', case=False, na=False) | 
@@ -2909,8 +2631,8 @@ elif "🐾" in aba:
         df_bolt = df_pet[df_pet['Descrição'].str.contains('Bolt', case=False, na=False) | 
                           df_pet['Categoria'].str.contains('Bolt', case=False, na=False)]
         
-        m_milo = df_milo[(df_milo['Mes_Ano'] == mes_atual) & (df_milo['Status'].str.lower() == 'pago')]['V_Num'].sum()
-        m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'].str.lower() == 'pago')]['V_Num'].sum()
+        m_milo = df_milo[(df_milo['Mes_Ano'] == mes_atual) & (df_milo['Status'] == 'Pago')]['V_Num'].sum()
+        m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'] == 'Pago')]['V_Num'].sum()
         
         c_p1, c_p2, c_p3 = st.columns(3)
         c_p1.metric("📈 Gasto Total (Mês)", m_fmt(gasto_total_mes))
@@ -2944,7 +2666,6 @@ elif "🐾" in aba:
         st.dataframe(df_show_display.iloc[::-1], use_container_width=True, hide_index=True)
     else:
         st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
-        
 
 elif "🚗" in aba:
         st.title("🚗 Gestão do Veículo")
@@ -3954,128 +3675,6 @@ if aba == "📊 Análises & Configurações":
             st.success(f"✅ Enviado com sucesso! (HTTP: {resultado}). Veja o celular.")
         else:
             st.error(f"❌ Erro no envio: {resultado}")
-
-    # =========================================================================
-    # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
-    # =========================================================================
-    st.markdown("---")
-    st.subheader("🎯 Planejamento de Reserva Financeira")
-    st.write("Acompanhe o progresso da sua segurança financeira com base nos seus lançamentos.")
-
-    # Tenta carregar ou criar a aba 'Reserva_Financeira' no Google Sheets
-    try:
-        ws_reserva = sh.worksheet("Reserva_Financeira")
-    except:
-        ws_reserva = sh.add_worksheet(title="Reserva_Financeira", rows="10", cols="5")
-        ws_reserva.append_row(["Meta_Reserva", "Aporte_Mensal", "Banco", "Dia_Limite"])
-        ws_reserva.append_row(["0.0", "300.00", "Invest Pag. Bank", "10"])
-
-    # Pega os dados da aba de reserva
-    dados_reserva = ws_reserva.get_all_values()
-    meta_atual = 0.0
-
-    if len(dados_reserva) > 1:
-        try:
-            val_meta_raw = str(dados_reserva[1][0]).replace('R$', '').strip()
-            if ',' in val_meta_raw and '.' in val_meta_raw:
-                val_meta_raw = val_meta_raw.replace('.', '').replace(',', '.')
-            else:
-                val_meta_raw = val_meta_raw.replace(',', '.')
-            meta_atual = float(val_meta_raw)
-        except:
-            meta_atual = 0.0
-
-    # =========================================================================
-    # 🆕 NOVO BLOCO: CADASTRO DE APORTE DA RESERVA DE EMERGÊNCIA (FIXO NO GOOGLE SHEETS)
-    # =========================================================================
-    st.markdown("### 🛡️ Nova Reserva de Emergência")
-    
-    # 1. Carrega a lista dos bancos disponíveis no seu sistema
-    lista_bancos_disponiveis = []
-    try:
-        if 'df_bancos_info' in locals() and not df_bancos_info.empty:
-            lista_bancos_disponiveis = df_bancos_info.iloc[:, 0].dropna().unique().tolist()
-    except:
-        pass
-    
-    if not lista_bancos_disponiveis:
-        lista_bancos_disponiveis = ["Nubank", "Inter", "Sofisa", "Invest Pag. Bank", "Outro"]
-
-    # 2. Lê os valores salvos na aba Reserva_Financeira (se já existirem na planilha)
-    aporte_salvo = 300.00
-    banco_salvo = lista_bancos_disponiveis[0] if lista_bancos_disponiveis else "Nubank"
-    dia_salvo = 10
-
-    if len(dados_reserva) > 1:
-        try:
-            # 🛡️ TRATAMENTO SEGURO DE CONVERSÃO DECIMAL (EVITA 3000.00)
-            if len(dados_reserva[1]) > 1 and dados_reserva[1][1]:
-                val_raw = str(dados_reserva[1][1]).replace('R$', '').strip()
-                if ',' in val_raw and '.' in val_raw:
-                    val_raw = val_raw.replace('.', '').replace(',', '.')
-                else:
-                    val_raw = val_raw.replace(',', '.')
-                aporte_salvo = float(val_raw)
-                
-            if len(dados_reserva[1]) > 2 and dados_reserva[1][2]:
-                banco_salvo = str(dados_reserva[1][2]).strip()
-                
-            if len(dados_reserva[1]) > 3 and dados_reserva[1][3]:
-                dia_salvo = int(float(str(dados_reserva[1][3]).replace(',', '.')))
-        except:
-            aporte_salvo = 300.00
-
-    # 3. Formulário de Cadastro e Alteração
-    with st.form("form_nova_reserva_emergencia"):
-        col_ne1, col_ne2, col_ne3 = st.columns(3)
-        
-        with col_ne1:
-            nova_reserva_valor = st.number_input(
-                "Valor do Aporte Mensal (R$):",
-                value=float(aporte_salvo),
-                step=50.0,
-                format="%.2f"
-            )
-            
-        with col_ne2:
-            idx_banco = lista_bancos_disponiveis.index(banco_salvo) if banco_salvo in lista_bancos_disponiveis else 0
-            banco_escolhido = st.selectbox(
-                "Banco de Aplicação:",
-                options=lista_bancos_disponiveis,
-                index=idx_banco
-            )
-            
-        with col_ne3:
-            dia_limite_aporte = st.number_input(
-                "Dia Limite / Vencimento:",
-                min_value=1,
-                max_value=31,
-                value=int(dia_salvo)
-            )
-            
-        salvar_nova_reserva = st.form_submit_button("💾 Salvar Parâmetros da Reserva de Emergência")
-        
-        if salvar_nova_reserva:
-            # Garante que a meta anterior seja mantida
-            meta_para_salvar = f"{meta_atual:.2f}"
-            
-            # 🛡️ Formata o valor fixo com duas casas decimais e ponto (ex: "300.00")
-            aporte_para_salvar = f"{nova_reserva_valor:.2f}"
-            
-            # Grava FIXO nas colunas A2:D2 da planilha
-            ws_reserva.update(
-                range_name='A2:D2',
-                values=[[meta_para_salvar, aporte_para_salvar, str(banco_escolhido), str(dia_limite_aporte)]]
-            )
-            
-            # Salva também na memória para atualização imediata na tela
-            st.session_state['reserva_aporte_mensal'] = nova_reserva_valor
-            st.session_state['reserva_banco_escolhido'] = banco_escolhido
-            st.session_state['reserva_dia_vencimento'] = dia_limite_aporte
-            
-            st.toast(f"✅ Configurações salvas e FIXADAS no banco de dados! Banco: {banco_escolhido}", icon="🛡️")
-            st.rerun()
-    st.markdown("---")
     
    # =========================================================================
     # 💰 PAINEL DE RESERVA FINANCEIRA (SIMPLES E AUTOMÁTICO)
@@ -4196,52 +3795,26 @@ if aba == "📊 Análises & Configurações":
         subtotal_contas_invest_brl = guardado_atual + saldo_outras_brl
         subtotal_invest_usd_geral = total_invest_usd + saldo_outras_usd
         subtotal_invest_eur_geral = total_invest_eur + saldo_outras_eur
+
     except Exception as e:
         st.error(f"Erro ao calcular os saldos: {e}")
-
-    # =========================================================================
-    # 🎯 LEITURA E FORMULÁRIO DA META TOTAL DA RESERVA (VERSÃO LIMPA)
-    # =========================================================================
-    meta_atual = 0.0
-    if 'dados_reserva' in locals() and len(dados_reserva) > 1:
-        if len(dados_reserva[1]) > 0 and dados_reserva[1][0]:
-            val_meta_raw = str(dados_reserva[1][0]).replace('R$', '').strip()
-            if ',' in val_meta_raw and '.' in val_meta_raw:
-                val_meta_raw = val_meta_raw.replace('.', '').replace(',', '.')
-            else:
-                val_meta_raw = val_meta_raw.replace(',', '.')
-            try:
-                meta_atual = float(val_meta_raw)
-            except:
-                meta_atual = 0.0
-
-    # Formulário para Salvar/Alterar a Meta
+        
+    # Formulário para salvar a meta
     with st.form("form_reserva_financeira"):
-        nova_meta_input = st.number_input(
-            "Definir Meta Total da Reserva (R$):",
-            value=float(meta_atual),
-            step=1000.0,
-            format="%.2f"
-        )
+        meta_str_input = st.text_input("Definir Meta Total da Reserva (R$):", value=f"{meta_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         salvar_reserva = st.form_submit_button("💾 Salvar Meta")
         
         if salvar_reserva:
             try:
-                meta_para_salvar = f"{nova_meta_input:.2f}"
+                meta_limpa = meta_str_input.replace('R$', '').strip()
+                meta_limpa = meta_limpa.replace('.', '').replace(',', '.')
+                nova_meta = float(meta_limpa)
                 
-                aporte_p = f"{aporte_salvo:.2f}" if 'aporte_salvo' in locals() else "300.00"
-                banco_p = str(banco_salvo) if 'banco_salvo' in locals() else "Nubank"
-                dia_p = str(dia_salvo) if 'dia_salvo' in locals() else "10"
-
-                ws_reserva.update(
-                    range_name='A2:D2',
-                    values=[[meta_para_salvar, aporte_p, banco_p, dia_p]]
-                )
-                
+                ws_reserva.update(values=[[str(nova_meta)]], range_name='A2:A2')
                 st.toast("✅ Meta da reserva salva com sucesso!", icon="🎯")
                 st.rerun()
-            except Exception as ex:
-                st.error(f"⚠️ Erro ao salvar meta: {ex}")
+            except ValueError:
+                st.error("⚠️ Formato de valor inválido. Use o formato como 300000 ou 300.000,00")
 
     # Exibição de Métricas e Progresso Visual
     if meta_atual > 0:
@@ -4378,140 +3951,7 @@ if aba == "📊 Análises & Configurações":
 
     st.divider()
   
-   
-    # =====================================================================
-    # 🔮 MÓDULO 2: FLUXO DE CAIXA FUTURO (PREVISÃO 30, 60 E 90 DIAS)
-    # =====================================================================
-    st.subheader("🔮 Previsão de Fluxo de Caixa Futuro")
-    
-    dias_projecao = st.radio(
-        "Selecione a janela de previsão:", 
-        [30, 60, 90], 
-        horizontal=True,
-        key="radio_fluxo_futuro"
-    )
-    
-    hoje_dt = pd.Timestamp.today().normalize()
-    limite_dt = hoje_dt + pd.Timedelta(days=dias_projecao)
-
-    # Garante a existência do DataFrame principal
-    if 'df_base' in locals() and not df_base.empty:
-        # Prepara datas e status
-        df_base['DT_Proj'] = pd.to_datetime(df_base['DT'], errors='coerce')
-        
-        # Filtra lançamentos pendentes dentro da janela escolhida
-        mask_futuro = (
-            (df_base['Status'].astype(str).str.upper() == 'PENDENTE') & 
-            (df_base['DT_Proj'] >= hoje_dt) & 
-            (df_base['DT_Proj'] <= limite_dt)
-        )
-        df_futuro = df_base[mask_futuro].sort_values('DT_Proj')
-
-        rec_futura = df_futuro[df_futuro['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-        desp_futura = df_futuro[df_futuro['Tipo'] == 'Despesa']['V_Num'].sum()
-        resultado_projetado = rec_futura - desp_futura
-
-        f1, f2, f3 = st.columns(3)
-        f1.metric(f"Receitas a Receber ({dias_projecao}d)", m_fmt(rec_futura))
-        f2.metric(f"Despesas a Pagar ({dias_projecao}d)", m_fmt(desp_futura))
-        f3.metric("Saldo Projetado", m_fmt(resultado_projetado), delta=m_fmt(resultado_projetado))
-
-        if not df_futuro.empty:
-            st.markdown(f"**📋 Lançamentos Pendentes Próximos {dias_projecao} Dias:**")
-            
-            # Seleciona e limpa colunas para exibição bonita
-            cols_exibicao = [c for c in ['Vencimento', 'Descrição', 'Tipo', 'V_Num', 'Banco'] if c in df_futuro.columns]
-            st.dataframe(
-                df_futuro[cols_exibicao],
-                use_container_width=True,
-                hide_index=True
-            )
-        else:
-            st.success(f"🎉 Nenhum lançamento pendente encontrado para os próximos {dias_projecao} dias!")
-    else:
-        st.info("Carregue os dados da planilha para visualizar o Fluxo de Caixa Futuro.")
-
-    st.divider()
-
-   
-    # =====================================================================
-    # 🟢 MÓDULO 4: COMPARATIVO MENSAL COMPLETO & EVOLUÇÃO HISTÓRICA
-    # =====================================================================
-    st.subheader("📊 Comparativo Mensal Completo & Evolução Histórica")
-
-    if 'df_base' in locals() and not df_base.empty:
-        # Garante a coluna de Mes/Ano formatada
-        df_base['DT_Comp'] = pd.to_datetime(df_base['DT'], errors='coerce')
-        df_base['Mes_Ano_Str'] = df_base['DT_Comp'].dt.strftime('%m/%y')
-        
-        meses_disponiveis = sorted([m for m in df_base['Mes_Ano_Str'].dropna().unique()], reverse=True)
-
-        if len(meses_disponiveis) >= 2:
-            # Padrão: 09/26 e 10/26 (ou os dois mais recentes)
-            idx_m1 = meses_disponiveis.index('09/26') if '09/26' in meses_disponiveis else 1
-            idx_m2 = meses_disponiveis.index('10/26') if '10/26' in meses_disponiveis else 0
-
-            col_cm1, col_cm2 = st.columns(2)
-            with col_cm1:
-                mes_escolhido_1 = st.selectbox("Selecione o 1º Mês para Comparar:", meses_disponiveis, index=idx_m1, key="sel_mes_1")
-            with col_cm2:
-                mes_escolhido_2 = st.selectbox("Selecione o 2º Mês para Comparar:", meses_disponiveis, index=idx_m2, key="sel_mes_2")
-
-            # Filtros básicos dos meses
-            df_comp1 = df_base[df_base['Mes_Ano_Str'] == mes_escolhido_1]
-            df_comp2 = df_base[df_base['Mes_Ano_Str'] == mes_escolhido_2]
-
-            # --- BLINDAGEM CONTRA TRANSFERÊNCIAS INTERNAS ---
-            # Remove linhas que sejam Transferências para não inflar as receitas e despesas reais
-            if 'Categoria' in df_comp1.columns:
-                df_comp1 = df_comp1[~df_comp1['Categoria'].str.contains('Transferência|Transf', case=False, na=False)]
-            if 'Tipo' in df_comp1.columns:
-                df_comp1 = df_comp1[~df_comp1['Tipo'].str.contains('Transferência|Transf', case=False, na=False)]
-
-            if 'Categoria' in df_comp2.columns:
-                df_comp2 = df_comp2[~df_comp2['Categoria'].str.contains('Transferência|Transf', case=False, na=False)]
-            if 'Tipo' in df_comp2.columns:
-                df_comp2 = df_comp2[~df_comp2['Tipo'].str.contains('Transferência|Transf', case=False, na=False)]
-            # -----------------------------------------------
-
-            rec_1 = df_comp1[df_comp1['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            desp_1 = df_comp1[df_comp1['Tipo'] == 'Despesa']['V_Num'].sum()
-            sobra_1 = rec_1 - desp_1
-
-            rec_2 = df_comp2[df_comp2['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            desp_2 = df_comp2[df_comp2['Tipo'] == 'Despesa']['V_Num'].sum()
-            sobra_2 = rec_2 - desp_2
-
-            st.markdown(f"### ⚔️ Confronto Direto: {mes_escolhido_1} vs. {mes_escolhido_2}")
-            
-            mc1, mc2, mc3 = st.columns(3)
-            mc1.metric(f"Receitas ({mes_escolhido_1} ➔ {mes_escolhido_2})", m_fmt(rec_2), delta=m_fmt(rec_2 - rec_1))
-            mc2.metric(f"Despesas ({mes_escolhido_1} ➔ {mes_escolhido_2})", m_fmt(desp_2), delta=m_fmt(desp_2 - desp_1), delta_color="inverse")
-            mc3.metric(f"Sobra Líquida ({mes_escolhido_1} ➔ {mes_escolhido_2})", m_fmt(sobra_2), delta=m_fmt(sobra_2 - sobra_1))
-
-            # Gráfico de Barras Agrupadas com Plotly
-            import plotly.graph_objects as go
-            fig_evolucao = go.Figure(data=[
-                go.Bar(name='Receitas', x=[mes_escolhido_1, mes_escolhido_2], y=[rec_1, rec_2], marker_color='#2ecc71'),
-                go.Bar(name='Despesas', x=[mes_escolhido_1, mes_escolhido_2], y=[desp_1, desp_2], marker_color='#e74c3c'),
-                go.Bar(name='Sobra Líquida', x=[mes_escolhido_1, mes_escolhido_2], y=[sobra_1, sobra_2], marker_color='#3498db')
-            ])
-            fig_evolucao.update_layout(
-                barmode='group', 
-                title=f"Evolução Gráfica: {mes_escolhido_1} x {mes_escolhido_2}", 
-                template="plotly_dark",
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)'
-            )
-            st.plotly_chart(fig_evolucao, use_container_width=True)
-        else:
-            st.info("Cadastre lançamentos em pelo menos 2 meses diferentes para habilitar o comparativo histórico completo.")
-    else:
-        st.warning("Dados indisponíveis para o comparativo.")
-
-    st.divider()
-
-     # 3. DATAFRAME: BANCOS E CARTÕES
+    # 3. DATAFRAME: BANCOS E CARTÕES
     st.subheader("🏦 Informações de Contas e Cartões")
     if not df_bancos_info.empty:
         st.dataframe(df_bancos_info, use_container_width=True, hide_index=True)
@@ -4519,8 +3959,6 @@ if aba == "📊 Análises & Configurações":
         st.info("ℹ️ Preencha a aba 'Bancos' no Google Sheets para visualizar os dados.")
         
     st.divider()
-
-    
     
  # 4. FORMULÁRIO: CONFIGURAR METAS E LIMITES DE CARTÃO
     with st.expander("🎯 Configurar Metas e Limites de Cartões", expanded=False):
