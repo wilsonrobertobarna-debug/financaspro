@@ -2242,72 +2242,14 @@ if "💰" in st.session_state.page:
             st.markdown("##### 🚦 Status de Utilização dos Cartões")
             cols_status = st.columns(len(lista_cartoes_controle))
             
-            # Descobre o mês e ano atual do sistema (Outubro de 2026)
-            mes_atual_sistema = hoje_br.month
-            ano_atual_sistema = hoje_br.year
-            
             for idx, row in df_cartoes_graph.iterrows():
                 cartao_nome = row['Nome do Banco']
                 gasto_real = row['V_Num']
                 meta_teto = row['Meta']
                 
-
-                # 1. BUSCA O DIA DE FECHAMENTO CADASTRADO NA PLANILHA DE BANCOS DE FORMA ROBUSTA
-                dia_fechamento_cartao = 1  # Padrão seguro
-                if not df_bancos_info.empty:
-                    for _, r_banco in df_bancos_info.iterrows():
-                        banco_planilha = str(r_banco.iloc[0]).strip().upper()
-                        banco_atual = str(cartao_nome).strip().upper()
-                        # Verifica se o nome do banco bate (ex: INTER na planilha bate com Mastercard - Inter)
-                        if banco_atual in banco_planilha or banco_planilha in banco_atual:
-                            try:
-                                if len(r_banco) >= 4:
-                                    f_raw = str(r_banco.iloc[3]).replace('R$', '').replace(' ', '').strip()
-                                    dia_fechamento_cartao = int(float(f_raw)) if f_raw and f_raw != 'nan' else 1
-                            except:
-                                pass
-                            break
-        
-                # 2. LÓGICA INTELIGENTE DE CICLO (Lendo direto do mês escolhido no pills)
-
-                try:
-                    m_sel = int(mes_map_cartao.get(mes_escolhido_cartao, mes_atual_sistema))
-                    a_sel = ano_atual_sistema
-                except:
-                    m_sel = mes_atual_sistema
-                    a_sel = ano_atual_sistema
-        
-                # Compara a competência selecionada com a atual
-                if (a_sel > ano_atual_sistema) or (a_sel == ano_atual_sistema and m_sel > mes_atual_sistema):
-                    ciclo_fatura = "Aberta"
-                elif (a_sel == ano_atual_sistema and m_sel == mes_atual_sistema):
-                    dia_atual = hoje_br.day
-                    # Se o dia de hoje for estritamente menor que o fechamento, está Aberta.
-                    # Se hoje for igual ou maior que o fechamento, está Fechada.
-                    if dia_atual < dia_fechamento_cartao:
-                        ciclo_fatura = "Aberta"
-                    else:
-                        ciclo_fatura = "Fechada"
-                else:
-                    ciclo_fatura = "Fechada"
-        
-                # Status de pagamento vindo da base de dados (Pago / Pendente)
-                status_pagamento = status_cartoes_mes.get(cartao_nome, "Pendente")
-                
-                # Cores e emojis dinâmicos
-                if status_pagamento.upper() == 'PAGO':
-                    cor_status = "#2e7d32"
-                    emoji_status = "✅"
-                    texto_exibicao = "Pago"
-                else:
-                    if ciclo_fatura == "Aberta":
-                        cor_status = "#1565c0"  # Azul para aberta
-                        emoji_status = "🔓"
-                        texto_exibicao = "Fatura Aberta"
-                    else:
-                        cor_status = "#d32f2f"  # Vermelho para fechada aguardando pagamento
-                        emoji_status = "🔒"
-                        texto_exibicao = "Fatura Fechada"
+                status_fatura = status_cartoes_mes.get(cartao_nome, "Pendente")
+                cor_status = "#2e7d32" if status_fatura == 'Pago' else "#d32f2f"
+                emoji_status = "✅" if status_fatura == 'Pago' else "⏳"
                 
                 if meta_teto > 0:
                     percentual = (gasto_real / meta_teto) * 100
@@ -2332,7 +2274,7 @@ if "💰" in st.session_state.page:
                     )
                     st.markdown(
                         f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 10px; color: {cor_status}; font-weight: bold;'>"
-                        f"{emoji_status} {texto_exibicao}"
+                        f"{emoji_status} {status_fatura}"
                         f"</div>", 
                         unsafe_allow_html=True
                     )
