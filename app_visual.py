@@ -812,15 +812,28 @@ if "💰" in st.session_state.page:
                         falta_aportar = falta_aportar_mes
                         msg_ntfy = f"ATENÇÃO: Aporte da Reserva atrasado! Falta R$ {falta_aportar:,.2f} no banco {banco_reserva}."
     
-            # --- TRAVA DE EXIBIÇÃO: Só mostra a tarja visual se a tela estiver no MÊS ATUAL ---
-            # (Verifica se o mês/ano selecionado no filtro é o mês/ano vigente)
-            mes_em_exibicao = locals().get('mes_selecionado', mes_atual)
-            ano_em_exibicao = locals().get('ano_selecionado', ano_atual)
+            ## --- TRAVA ABSOLUTA: O aporte de reserva só existe de Novembro/2026 em diante ---
+            # Vamos capturar o mês e ano que estão selecionados na tela do seu app
+            mes_exibicao = locals().get('mes_selecionado', locals().get('mes_filtro', mes_atual))
+            ano_exibicao = locals().get('ano_selecionado', locals().get('ano_filtro', ano_atual))
             
-            estabaco_no_mes_atual = (mes_em_exibicao == mes_atual) and (ano_em_exibicao == ano_atual)
+            # Converte para int por segurança caso venha como string
+            try:
+                mes_exibicao = int(mes_exibicao)
+                ano_exibicao = int(ano_exibicao)
+            except:
+                mes_exibicao = mes_atual
+                ano_exibicao = ano_atual
 
-            # Exibição dos Alertas Visuais na tela (Apenas se o usuário estiver navegando no mês atual)
-            if exibir_alerta and estabaco_no_mes_atual:
+            # Trava: Se o ano for menor que 2026, ou (se for 2026 e o mês for menor que 11), PROIBIDO exibir!
+            esta_no_periodo_valido = True
+            if ano_exibicao < 2026:
+                esta_no_periodo_valido = False
+            elif ano_exibicao == 2026 and mes_exibicao < 11:
+                esta_no_periodo_valido = False
+
+            # Exibição dos Alertas Visuais na tela (Apenas se o período for Novembro/2026 em diante E houver alerta)
+            if exibir_alerta and esta_no_periodo_valido:
                 if tipo_alerta == "verde":
                     st.success(f"🎉 **Aporte do mês concluído!**\n\n• **Banco:** {banco_reserva}\n• **Planejado:** R$ {aporte_planejado:,.2f}\n• **Aportado:** R$ {total_aportado_mes:,.2f}")
                 elif tipo_alerta == "azul":
