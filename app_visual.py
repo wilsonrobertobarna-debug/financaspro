@@ -2239,7 +2239,7 @@ if "💰" in st.session_state.page:
             )
                        
             
-            st.markdown("##### 🚦 Status de Utilização dos Cartões")
+          st.markdown("##### 🚦 Status de Utilização dos Cartões")
             cols_status = st.columns(len(lista_cartoes_controle))
             
             for idx, row in df_cartoes_graph.iterrows():
@@ -2247,9 +2247,16 @@ if "💰" in st.session_state.page:
                 gasto_real = row['V_Num']
                 meta_teto = row['Meta']
                 
-                status_fatura = status_cartoes_mes.get(cartao_nome, "Pendente")
-                cor_status = "#2e7d32" if status_fatura == 'Pago' else "#d32f2f"
-                emoji_status = "✅" if status_fatura == 'Pago' else "⏳"
+                # Regra inteligente: se não estiver explicitamente 'Pago', assume 'Aberta' para o mês atual
+                status_bruto = status_cartoes_mes.get(cartao_nome, "")
+                if str(status_bruto).strip().lower() == 'pago':
+                    status_fatura = 'Pago'
+                    cor_status = "#2e7d32"
+                    emoji_status = "✅"
+                else:
+                    status_fatura = 'Aberta'
+                    cor_status = "#1976d2"
+                    emoji_status = "🔓"
                 
                 if meta_teto > 0:
                     percentual = (gasto_real / meta_teto) * 100
