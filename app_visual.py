@@ -659,8 +659,8 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in st.session_state.page:
     
-   # =========================================================================
-    # 🔔 VERIFICAÇÃO AUTOMÁTICA E NTFY DA RESERVA DE EMERGÊNCIA (CORRIGIDO)
+  # =========================================================================
+    # 🔔 VERIFICAÇÃO AUTOMÁTICA E NTFY DA RESERVA DE EMERGÊNCIA (COM PEELLS TOPO)
     # =========================================================================
     import datetime as dt_mod
     from datetime import datetime
@@ -676,16 +676,17 @@ if "💰" in st.session_state.page:
     MES_INICIO_CONTROLE = 11
     ANO_INICIO_CONTROLE = 2026
 
-    # 🔍 1. IDENTIFICA O MÊS E ANO QUE O USUÁRIO ESTÁ VISUALIZANDO NA TELA
-    mes_exibicao = locals().get('mes_selecionado', locals().get('mes_filtro', st.session_state.get('mes_selecionado', st.session_state.get('mes_filtro', datetime.now().month))))
-    ano_exibicao = locals().get('ano_selecionado', locals().get('ano_filtro', st.session_state.get('ano_selecionado', st.session_state.get('ano_filtro', datetime.now().year))))
+    # 🔍 CAPTURA CORRETA DO MÊS ATRAVÉS DO st.pills DO TOPO ("Jan", "Fev", ..., "Nov")
+    mapa_meses_num = {
+        "Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6, 
+        "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12
+    }
 
-    try:
-        mes_exibicao = int(mes_exibicao)
-        ano_exibicao = int(ano_exibicao)
-    except:
-        mes_exibicao = datetime.now().month
-        ano_exibicao = datetime.now().year
+    mes_selecionado_txt = st.session_state.get('pills_topo', 'Nov')
+    mes_exibicao = mapa_meses_num.get(mes_selecionado_txt, 11)
+    
+    # Se você tiver um seletor de ano na tela, ele pega aqui. Se não, assume 2026 por padrão
+    ano_exibicao = int(st.session_state.get('ano_selecionado', st.session_state.get('ano_filtro', 2026)))
 
     # 🛑 TRAVA ABSOLUTA: Só roda e calcula se a tela estiver exibindo Novembro/2026 em diante!
     periodo_valido_exibicao = True
@@ -837,7 +838,7 @@ if "💰" in st.session_state.page:
                 if msg_ntfy and tipo_alerta in ["azul", "vermelho_atual", "vermelho_atrasado"] and mes_exibicao == mes_atual:
                     if 'ntfy_disparado_hoje' not in st.session_state:
                         try:
-                            TOPICO_NTFY = st.session_state.get('topico_ntfy', 'financaspro_wilson')
+                            TOPICO_NTFY = st.session_state.get('topico_ntfy', 'finançaspro_wilson')
                             requests.post(
                                 f"https://ntfy.sh/{TOPICO_NTFY}",
                                 data=msg_ntfy.encode('utf-8'),
