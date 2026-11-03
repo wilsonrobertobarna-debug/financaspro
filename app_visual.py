@@ -580,12 +580,26 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
 
                         saldo_atual = saldo_inicial + entradas - saidas
                         icone = "💰" if "INVEST" in tipo_c else "🏦"
+                        is_investimento = "INVEST" in tipo_c
+
+                        # Formata o valor base
+                        val_fmt = formatar_moeda(saldo_atual, simb_moeda)
+
+                        # Regra de cor: Apenas para BANCOS (não investimentos), se for negativo, pinta de vermelho
+                        if not is_investimento and saldo_atual < 0:
+                            # Injeta HTML customizado no value do metric para ficar vermelho escuro
+                            val_exibicao_banco = f"<span style='color: #d32f2f;'>{val_fmt}</span>"
+                            # Opcional: Joga um alerta no delta também para destacar
+                            delta_banco = "Negativo 🔴"
+                        else:
+                            val_exibicao_banco = val_fmt
+                            delta_banco = None
 
                         st.metric(
                             label=f"{icone} {nome_banco}",
-                            value=formatar_moeda(saldo_atual, simb_moeda),
+                            value=val_exibicao_banco,
+                            delta=delta_banco
                         )
-
        
         # --- 2. VARREDURA DOS LANÇAMENTOS, BOLETOS E RECEITAS (DESPESAS E RECEITAS PENDENTES) ---
         # Filtra lançamentos com Status PENDENTE (Despesas e Receitas)
