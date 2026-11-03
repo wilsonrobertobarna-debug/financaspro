@@ -582,23 +582,26 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                         icone = "💰" if "INVEST" in tipo_c else "🏦"
                         is_investimento = "INVEST" in tipo_c
 
-                        # Formata o valor base
                         val_fmt = formatar_moeda(saldo_atual, simb_moeda)
 
-                        # Regra de cor: Apenas para BANCOS (não investimentos), se for negativo, pinta de vermelho
+                        # Exibe o card limpo usando st.markdown com HTML puro para garantir que a cor funcione
                         if not is_investimento and saldo_atual < 0:
-                            # Injeta HTML customizado no value do metric para ficar vermelho escuro
-                            val_exibicao_banco = f"<span style='color: #d32f2f;'>{val_fmt}</span>"
-                            # Opcional: Joga um alerta no delta também para destacar
-                            delta_banco = "Negativo 🔴"
+                            cor_texto = "#d32f2f"  # Vermelho para banco negativo
+                            alerta_extra = " 🔴"
                         else:
-                            val_exibicao_banco = val_fmt
-                            delta_banco = None
+                            cor_texto = "inherit"  # Cor padrão do tema
+                            alerta_extra = ""
 
-                        st.metric(
-                            label=f"{icone} {nome_banco}",
-                            value=val_exibicao_banco,
-                            delta=delta_banco
+                        st.markdown(
+                            f"""
+                            <div style="background-color: transparent; padding: 4px 0px; border-radius: 4px;">
+                                <div style="font-size: 14px; color: gray; margin-bottom: 2px;">{icone} {nome_banco}</div>
+                                <div style="font-size: 24px; font-weight: 600; color: {cor_texto};">
+                                    {val_fmt}{alerta_extra}
+                                </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
                         )
        
         # --- 2. VARREDURA DOS LANÇAMENTOS, BOLETOS E RECEITAS (DESPESAS E RECEITAS PENDENTES) ---
