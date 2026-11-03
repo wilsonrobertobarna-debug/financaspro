@@ -584,19 +584,20 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
 
                         val_fmt = formatar_moeda(saldo_atual, simb_moeda)
 
-                        # Exibe o card limpo usando st.markdown com HTML puro para garantir que a cor funcione
+                        # Regra de cor para banco negativo
                         if not is_investimento and saldo_atual < 0:
-                            cor_texto = "#d32f2f"  # Vermelho para banco negativo
+                            cor_texto = "#d32f2f"  # Vermelho
                             alerta_extra = " 🔴"
                         else:
-                            cor_texto = "inherit"  # Cor padrão do tema
+                            cor_texto = "inherit"  # Cor padrão
                             alerta_extra = ""
 
+                        # Ajustado para 18px para ficar no tamanho ideal e harmonioso
                         st.markdown(
                             f"""
-                            <div style="background-color: transparent; padding: 4px 0px; border-radius: 4px;">
-                                <div style="font-size: 14px; color: gray; margin-bottom: 2px;">{icone} {nome_banco}</div>
-                                <div style="font-size: 24px; font-weight: 600; color: {cor_texto};">
+                            <div style="background-color: transparent; padding: 2px 0px; border-radius: 4px;">
+                                <div style="font-size: 13px; color: gray; margin-bottom: 2px;">{icone} {nome_banco}</div>
+                                <div style="font-size: 18px; font-weight: 600; color: {cor_texto};">
                                     {val_fmt}{alerta_extra}
                                 </div>
                             </div>
