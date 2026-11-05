@@ -2268,7 +2268,7 @@ if "💰" in st.session_state.page:
             )
                        
             
-   st.markdown("##### 🚦 Status de Utilização dos Cartões")
+    st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
     hoje_dt = pd.Timestamp.today().normalize()
