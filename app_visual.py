@@ -2272,6 +2272,7 @@ if "💰" in st.session_state.page:
     cols_status = st.columns(len(lista_cartoes_controle))
     
     hoje_dt = pd.Timestamp.today().normalize()
+    dia_hoje = hoje_dt.day  # Dia de hoje (hoje é dia 5)
     
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = row['Nome do Banco']
@@ -2286,13 +2287,11 @@ if "💰" in st.session_state.page:
             if val_venc_raw.isdigit():
                 dia_venc = int(val_venc_raw)
 
-        # Monta a data de vencimento e calcula o fechamento (7 dias antes do vencimento)
-        try:
-            dt_vencimento = pd.Timestamp(year=hoje_dt.year, month=hoje_dt.month, day=min(max(dia_venc, 1), 28))
-            dt_fechamento = dt_vencimento - pd.Timedelta(days=7)
-        except:
-            dt_vencimento = hoje_dt
-            dt_fechamento = hoje_dt
+        # O fechamento costuma ser 7 dias antes do vencimento
+        # Ex: Vencimento dia 10 -> Fechamento dia 3
+        dia_fechamento = dia_venc - 7
+        if dia_fechamento <= 0:
+            dia_fechamento = 1  # Segurança para dias muito no início do mês
 
         status_bruto = str(status_cartoes_mes.get(cartao_nome, "")).strip().lower()
         
@@ -2300,18 +2299,18 @@ if "💰" in st.session_state.page:
             status_fatura = 'Pago'
             cor_status = "#2e7d32" # Verde
             emoji_status = "✅"
-        elif hoje_dt >= dt_vencimento:
-            # Se já passou da data de vencimento e não foi pago
+        elif dia_hoje >= dia_venc:
+            # Já passou do dia do vencimento deste mês e não foi pago
             status_fatura = 'Fechada'
             cor_status = "#e65100" # Laranja / Âmbar
             emoji_status = "🔒"
-        elif hoje_dt >= dt_fechamento:
-            # Se passou do fechamento mas ainda não chegou no vencimento
+        elif dia_hoje >= dia_fechamento:
+            # Passou do fechamento mas ainda não chegou no vencimento
             status_fatura = 'Fechada'
             cor_status = "#e65100" # Laranja / Âmbar
             emoji_status = "🔒"
         else:
-            # Se ainda está antes da data de fechamento
+            # Ainda está antes do fechamento
             status_fatura = 'Aberta'
             cor_status = "#1976d2" # Azul
             emoji_status = "🔓"
