@@ -2274,45 +2274,51 @@ if "💰" in st.session_state.page:
     hoje_dt = pd.Timestamp.today().normalize()
     dia_hoje = hoje_dt.day  # Hoje é dia 5
     
+    # MAPEAMENTO MANUAL EXATO DOS DIAS DE FECHAMENTO (Com todas as suas datas reais)
+    dias_fechamento_map = {
+        'mastercard - inter': 14,
+        'inter': 14,
+        'mastercard - 8112': 15,
+        '8112': 15,
+        'visa gold - 0132': 5,
+        '0132': 5,
+        'visa gold': 5,
+        'visa - mercado pago': 18,
+        'mercado pago': 18,
+        'itau gold': 19,
+        'itaú gold': 19,
+        'itau': 19
+    }
+    
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = row['Nome do Banco']
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        dia_fechamento = 1
-        dia_vencimento = 10
+        cartao_limpo = str(cartao_nome).strip().lower()
+        dia_fechamento = 15  # Padrão caso não ache
         
-        # Busca blindada no df_bancos usando a Coluna D (índice 3) para Fechamento e Coluna E (índice 4) para Vencimento
-        if not df_bancos.empty:
-            for _, r_banco in df_bancos.iterrows():
-                nome_banco_cad = str(r_banco.iloc[0]).strip().lower()
-                cartao_atual_limpo = str(cartao_nome).strip().lower()
-                
-                if nome_banco_cad in cartao_atual_limpo or cartao_atual_limpo in nome_banco_cad or any(palavra in cartao_atual_limpo for palavra in nome_banco_cad.split() if len(palavra) > 3):
-                    # Coluna D = Índice 3 (Dia de Fechamento)
-                    if len(r_banco) > 3:
-                        f_raw = "".join(filter(str.isdigit, str(r_banco.iloc[3])))
-                        if f_raw: dia_fechamento = int(f_raw)
-                    # Coluna E = Índice 4 (Dia de Vencimento)
-                    if len(r_banco) > 4:
-                        v_raw = "".join(filter(str.isdigit, str(r_banco.iloc[4])))
-                        if v_raw: dia_vencimento = int(v_raw)
-                    break
+        for chave, dia_fch in dias_fechamento_map.items():
+            if chave in cartao_limpo:
+                dia_fechamento = dia_fch
+                break
 
         status_bruto = str(status_cartoes_mes.get(cartao_nome, "")).strip().lower()
         
-        # A Regra cega e direta
+        # Regra de 3 estados
         if 'pago' in status_bruto and 'não' not in status_bruto:
             status_fatura = 'Pago'
-            cor_status = "#2e7d32"
+            cor_status = "#2e7d32" # Verde
             emoji_status = "✅"
         elif dia_hoje >= dia_fechamento:
+            # Apenas o Visa Gold (dia 5) entra aqui hoje
             status_fatura = 'Fechada'
-            cor_status = "#e65100"
+            cor_status = "#e65100" # Laranja / Âmbar
             emoji_status = "🔒"
         else:
+            # Inter (14), 8112 (15), Mercado Pago (18) e Itaú Gold (19) entram aqui (Abertas!)
             status_fatura = 'Aberta'
-            cor_status = "#1976d2"
+            cor_status = "#1976d2" # Azul
             emoji_status = "🔓"
         
         if meta_teto > 0:
@@ -2337,13 +2343,11 @@ if "💰" in st.session_state.page:
                 delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
             )
             st.markdown(
-                f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 2px; color: {cor_status}; font-weight: bold;'>"
+                f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 10px; color: {cor_status}; font-weight: bold;'>"
                 f"{emoji_status} Fatura {status_fatura}"
                 f"</div>", 
                 unsafe_allow_html=True
             )
-            # DEBUG COM A COLUNA D CERTINHA
-            st.caption(f"DEBUG -> Col.D(Fech): {dia_fechamento} | Col.E(Venc): {dia_vencimento} | Hoje: {dia_hoje}")
     else:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
             
