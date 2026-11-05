@@ -2268,52 +2268,80 @@ if "💰" in st.session_state.page:
             )
                        
             
-            st.markdown("##### 🚦 Status de Utilização dos Cartões")
-            cols_status = st.columns(len(lista_cartoes_controle))
-            
-            for idx, row in df_cartoes_graph.iterrows():
-                cartao_nome = row['Nome do Banco']
-                gasto_real = row['V_Num']
-                meta_teto = row['Meta']
-                
-                # Regra inteligente: se não estiver explicitamente 'Pago', assume 'Aberta' para o mês atual
-                status_bruto = status_cartoes_mes.get(cartao_nome, "")
-                if str(status_bruto).strip().lower() == 'pago':
-                    status_fatura = 'Pago'
-                    cor_status = "#2e7d32"
-                    emoji_status = "✅"
-                else:
-                    status_fatura = 'Aberta'
-                    cor_status = "#1976d2"
-                    emoji_status = "🔓"
-                
-                if meta_teto > 0:
-                    percentual = (gasto_real / meta_teto) * 100
-                else:
-                    percentual = 0.0 if gasto_real == 0 else 100.0
-                
-                if percentual <= 80:
-                    bolinha = "🟢"
-                    status_txt = "OK"
-                elif percentual <= 100:
-                    bolinha = "🟡"
-                    status_txt = "Atenção"
-                else:
-                    bolinha = "🔴"
-                    status_txt = "Tô na lona"
-                
-                with cols_status[idx % len(cols_status)]:
-                    st.metric(
-                        label=cartao_nome,
-                        value=f"R$ {gasto_real:,.2f}",
-                        delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
-                    )
-                    st.markdown(
-                        f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 10px; color: {cor_status}; font-weight: bold;'>"
-                        f"{emoji_status} {status_fatura}"
-                        f"</div>", 
-                        unsafe_allow_html=True
-                    )
+          st.markdown("##### 🚦 Status de Utilização dos Cartões")
+    cols_status = st.columns(len(lista_cartoes_controle))
+    
+    # Data de hoje para comparar com o fechamento
+    hoje_dt = pd.Timestamp.today()
+    
+    for idx, row in df_cartoes_graph.iterrows():
+        cartao_nome = row['Nome do Banco']
+        gasto_real = row['V_Num']
+        meta_teto = row['Meta']
+        
+        # Pega a linha correspondente no df_bancos para ler o dia de fechamento/vencimento
+        # (Ajuste conforme o índice da sua coluna de fechamento, aqui usamos a lógica padrão)
+        row_banco_info = df_bancos[df_bancos.iloc[:, 0].astype(str).str.strip().str.upper() == str(cartao_nome).strip().upper()]
+        
+        dia_fechamento = 1 # Valor padrão caso não ache
+        if not row_banco_info.empty and len(row_banco_info.columns) > 4:
+            val_venc_raw = str(row_banco_info.iloc[0, 4]).strip()
+            if val_venc_raw.isdigit():
+                # Exemplo: se o vencimento é dia 10, o fechamento costuma ser uns 7 a 10 dias antes, 
+                # ou você pode usar o dia exato se a coluna for de fechamento. 
+                # Vamos usar o dia extraído ou uma regra segura:
+                dia_fechamento = int(val_venc_raw)
+
+        # Cria a data de fechamento para o mês atual
+        try:
+            # Se a coluna for o dia de fechamento direto:
+            dt_fechamento = pd.Timestamp(year=hoje_dt.year, month=hoje_dt.month, day=min(dia_fechamento, 28))
+        except:
+            dt_fechamento = hoje_dt
+
+        # Verifica status bruto informado
+        status_bruto = str(status_cartoes_mes.get(cartao_nome, "")).strip().lower()
+        
+        if status_bruto == 'pago':
+            status_fatura = 'Pago'
+            cor_status = "#2e7d32" # Verde
+            emoji_status = "✅"
+        elif hoje_dt >= dt_fechamento:
+            status_fatura = 'Fechada'
+            cor_status = "#e65100" # Laranja / Ambar para fatura fechada aguardando pagamento
+            emoji_status = "🔒"
+        else:
+            status_fatura = 'Aberta'
+            cor_status = "#1976d2" # Azul
+            emoji_status = "🔓"
+        
+        if meta_teto > 0:
+            percentual = (gasto_real / meta_teto) * 100
+        else:
+            percentual = 0.0 if gasto_real == 0 else 100.0
+        
+        if percentual <= 80:
+            bolinha = "🟢"
+            status_txt = "OK"
+        elif percentual <= 100:
+            bolinha = "🟡"
+            status_txt = "Atenção"
+        else:
+            bolinha = "🔴"
+            status_txt = "Tô na lona"
+        
+        with cols_status[idx % len(cols_status)]:
+            st.metric(
+                label=cartao_nome,
+                value=f"R$ {gasto_real:,.2f}",
+                delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
+            )
+            st.markdown(
+                f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 10px; color: {cor_status}; font-weight: bold;'>"
+                f"{emoji_status} Fatura {status_fatura}"
+                f"</div>", 
+                unsafe_allow_html=True
+            )
         else:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
             
