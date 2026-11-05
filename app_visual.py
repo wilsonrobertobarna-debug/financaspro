@@ -2282,38 +2282,37 @@ if "💰" in st.session_state.page:
         dia_fechamento = 1
         dia_vencimento = 10
         
-        # Garante a leitura correta das colunas do banco/cartão
+        # Busca blindada no df_bancos usando a Coluna D (índice 3) para Fechamento e Coluna E (índice 4) para Vencimento
         if not df_bancos.empty:
             for _, r_banco in df_bancos.iterrows():
                 nome_banco_cad = str(r_banco.iloc[0]).strip().lower()
                 cartao_atual_limpo = str(cartao_nome).strip().lower()
                 
                 if nome_banco_cad in cartao_atual_limpo or cartao_atual_limpo in nome_banco_cad or any(palavra in cartao_atual_limpo for palavra in nome_banco_cad.split() if len(palavra) > 3):
-                    if len(r_banco) > 4:
-                        f_raw = "".join(filter(str.isdigit, str(r_banco.iloc[4])))
+                    # Coluna D = Índice 3 (Dia de Fechamento)
+                    if len(r_banco) > 3:
+                        f_raw = "".join(filter(str.isdigit, str(r_banco.iloc[3])))
                         if f_raw: dia_fechamento = int(f_raw)
-                    if len(r_banco) > 5:
-                        v_raw = "".join(filter(str.isdigit, str(r_banco.iloc[5])))
+                    # Coluna E = Índice 4 (Dia de Vencimento)
+                    if len(r_banco) > 4:
+                        v_raw = "".join(filter(str.isdigit, str(r_banco.iloc[4])))
                         if v_raw: dia_vencimento = int(v_raw)
                     break
 
-        # Lê o status bruto da planilha de forma segura
         status_bruto = str(status_cartoes_mes.get(cartao_nome, "")).strip().lower()
         
-        # Regra de 3 estados blindada:
+        # A Regra cega e direta
         if 'pago' in status_bruto and 'não' not in status_bruto:
             status_fatura = 'Pago'
-            cor_status = "#2e7d32" # Verde
+            cor_status = "#2e7d32"
             emoji_status = "✅"
         elif dia_hoje >= dia_fechamento:
-            # REGRA EXATA: Se o dia de hoje (5) for IGUAL ou MAIOR que o fechamento -> Fatura Fechada!
             status_fatura = 'Fechada'
-            cor_status = "#e65100" # Laranja / Âmbar
+            cor_status = "#e65100"
             emoji_status = "🔒"
         else:
-            # Caso contrário -> Aberta
             status_fatura = 'Aberta'
-            cor_status = "#1976d2" # Azul
+            cor_status = "#1976d2"
             emoji_status = "🔓"
         
         if meta_teto > 0:
@@ -2338,11 +2337,13 @@ if "💰" in st.session_state.page:
                 delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
             )
             st.markdown(
-                f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 10px; color: {cor_status}; font-weight: bold;'>"
+                f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 2px; color: {cor_status}; font-weight: bold;'>"
                 f"{emoji_status} Fatura {status_fatura}"
                 f"</div>", 
                 unsafe_allow_html=True
             )
+            # DEBUG COM A COLUNA D CERTINHA
+            st.caption(f"DEBUG -> Col.D(Fech): {dia_fechamento} | Col.E(Venc): {dia_vencimento} | Hoje: {dia_hoje}")
     else:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
             
