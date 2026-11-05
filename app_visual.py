@@ -2102,179 +2102,175 @@ if "💰" in st.session_state.page:
         # 💳 CONTROLE E GRÁFICO DE CARTÕES DE CRÉDITO (SINCRONIZADO)
         # =========================================================================
         
-        st.markdown("---")
-        st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
-        
-        meses_abreviados_cartao = [
-            "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
-            "Jul", "Ago", "Set", "Out", "Nov", "Dez"
-        ]
-        
-        mes_map_cartao = {
-            "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
-            "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
-        }
-        
-        # Callback quando clica na barrinha dos cartões
-        def sync_cartoes():
-            st.session_state['pills_topo'] = st.session_state['pills_cartoes']
+    st.markdown("---")
+    st.subheader("💳 Metas vs Realizado (Cartões de Crédito)")
+    
+    meses_abreviados_cartao = [
+        "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
+        "Jul", "Ago", "Set", "Out", "Nov", "Dez"
+    ]
+    
+    mes_map_cartao = {
+        "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06", 
+        "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12"
+    }
+    
+    # Callback quando clica na barrinha dos cartões
+    def sync_cartoes():
+        st.session_state['pills_topo'] = st.session_state['pills_cartoes']
 
-        mes_escolhido_cartao = st.pills(
-            "Período dos Cartões:",
-            meses_abreviados_cartao,
-            selection_mode="single",
-            key="pills_cartoes",
-            on_change=sync_cartoes
-        )
+    mes_escolhido_cartao = st.pills(
+        "Período dos Cartões:",
+        meses_abreviados_cartao,
+        selection_mode="single",
+        key="pills_cartoes",
+        on_change=sync_cartoes
+    )
+    
+    if not mes_escolhido_cartao or mes_escolhido_cartao not in mes_map_cartao:
+        mes_escolhido_cartao = st.session_state.get('pills_cartoes', 'Nov')
         
-        if not mes_escolhido_cartao or mes_escolhido_cartao not in mes_map_cartao:
-            mes_escolhido_cartao = st.session_state.get('pills_cartoes', 'Out')
-            
-        # Filtra o DataFrame base especificamente para o mês escolhido
-        filtro_mes_cartao = f"{mes_map_cartao.get(mes_escolhido_cartao, '10')}/26"
-        df_m_cartoes = df_base[df_base['Mes_Ano'] == filtro_mes_cartao].copy() if not df_base.empty else pd.DataFrame()
-        
-        
-        coluna_banco = next((col for col in ['Nome do Banco', 'Banco', 'Instituição', 'Conta'] if col in df_m_cartoes.columns), None)
-        
-        mapeamento_cartoes = {
-            "Mastercard - Inter": "Inter",
-            "Mastercard - 8112": "8112",
-            "Visa Gold - 0132": "0132",
-            "Visa - Mercado Pago": "Mercado Pago",
-            "Itau Gold": "itau"  # Busca o termo "itau" com segurança para o Itaú Gold
-        }
-        
-        lista_cartoes_controle = list(mapeamento_cartoes.keys())
-        dados_cartoes_calculados = []
-        status_cartoes_mes = {}
-        
-        if coluna_banco and not df_m_cartoes.empty:
-            for nome_oficial, termo_busca in mapeamento_cartoes.items():
-               # Máscara base: pega apenas o que é Despesa e do banco correto
-               mask = (df_m_cartoes['Tipo'] == 'Despesa') & (df_m_cartoes[coluna_banco].astype(str).str.contains(termo_busca, case=False, na=False))
-               
-               # BLINDA CONTRA TRANSFERÊNCIAS E PAGAMENTOS:
-               if 'Descrição' in df_m_cartoes.columns:
-                   mask = mask & (~df_m_cartoes['Descrição'].astype(str).str.contains("Pagamento|Fatura|Pgto|cartão de credito|Transferência|Transf", case=False, na=False))
-               
-               if 'Categoria' in df_m_cartoes.columns:
-                   mask = mask & (~df_m_cartoes['Categoria'].astype(str).str.contains("Transferência|Transf|Cartão", case=False, na=False))
-               
-               # BLINDA CARTÕES ESPECÍFICOS (Inter e Mercado Pago)
-               if termo_busca == "Inter":
-                   mask = mask & (df_m_cartoes[coluna_banco].astype(str).str.contains("Cartão", case=False, na=False)) & (~df_m_cartoes[coluna_banco].astype(str).str.contains("Pendência|Boleto|Empréstimo", case=False, na=False))
-               elif termo_busca == "Mercado Pago":
-                   mask = mask & (df_m_cartoes[coluna_banco].astype(str).str.contains("Cartão|Visa", case=False, na=False))                
-               
-               gasto_total = df_m_cartoes[mask]['V_Num'].sum()
-               dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total})
-               
-               sub_df = df_m_cartoes[mask]
-               if not sub_df.empty:
-                   coluna_status = next((col for col in ['Status', 'Situação', 'Estado'] if col in sub_df.columns), None)
-                   if coluna_status:
-                       status_valores = sub_df[coluna_status].astype(str).str.strip().str.lower()
-                       todos_pagos = all(status_valores.str.contains("pag", na=False)) and len(status_valores) > 0
-                       status_cartoes_mes[nome_oficial] = "Pago" if todos_pagos else "Pendente"
-                   else:
-                       status_cartoes_mes[nome_oficial] = "Pendente"
+    # Filtra o DataFrame base especificamente para o mês escolhido
+    filtro_mes_cartao = f"{mes_map_cartao.get(mes_escolhido_cartao, '11')}/26"
+    df_m_cartoes = df_base[df_base['Mes_Ano'] == filtro_mes_cartao].copy() if not df_base.empty else pd.DataFrame()
+    
+    coluna_banco = next((col for col in ['Nome do Banco', 'Banco', 'Instituição', 'Conta'] if col in df_m_cartoes.columns), None)
+    
+    mapeamento_cartoes = {
+        "Mastercard - Inter": "Inter",
+        "Mastercard - 8112": "8112",
+        "Visa Gold - 0132": "0132",
+        "Visa - Mercado Pago": "Mercado Pago",
+        "Itau Gold": "itau"  # Busca o termo "itau" com segurança para o Itaú Gold
+    }
+    
+    lista_cartoes_controle = list(mapeamento_cartoes.keys())
+    dados_cartoes_calculados = []
+    status_cartoes_mes = {}
+    
+    if coluna_banco and not df_m_cartoes.empty:
+        for nome_oficial, termo_busca in mapeamento_cartoes.items():
+           # Máscara base: pega apenas o que é Despesa e do banco correto
+           mask = (df_m_cartoes['Tipo'] == 'Despesa') & (df_m_cartoes[coluna_banco].astype(str).str.contains(termo_busca, case=False, na=False))
+           
+           # BLINDA CONTRA TRANSFERÊNCIAS E PAGAMENTOS:
+           if 'Descrição' in df_m_cartoes.columns:
+               mask = mask & (~df_m_cartoes['Descrição'].astype(str).str.contains("Pagamento|Fatura|Pgto|cartão de credito|Transferência|Transf", case=False, na=False))
+           
+           if 'Categoria' in df_m_cartoes.columns:
+               mask = mask & (~df_m_cartoes['Categoria'].astype(str).str.contains("Transferência|Transf|Cartão", case=False, na=False))
+           
+           # BLINDA CARTÕES ESPECÍFICOS (Inter e Mercado Pago)
+           if termo_busca == "Inter":
+               mask = mask & (df_m_cartoes[coluna_banco].astype(str).str.contains("Cartão", case=False, na=False)) & (~df_m_cartoes[coluna_banco].astype(str).str.contains("Pendência|Boleto|Empréstimo", case=False, na=False))
+           elif termo_busca == "Mercado Pago":
+               mask = mask & (df_m_cartoes[coluna_banco].astype(str).str.contains("Cartão|Visa", case=False, na=False))                
+           
+           gasto_total = df_m_cartoes[mask]['V_Num'].sum()
+           dados_cartoes_calculados.append({'Nome do Banco': nome_oficial, 'V_Num': gasto_total})
+           
+           sub_df = df_m_cartoes[mask]
+           if not sub_df.empty:
+               coluna_status = next((col for col in ['Status', 'Situação', 'Estado'] if col in sub_df.columns), None)
+               if coluna_status:
+                   status_valores = sub_df[coluna_status].astype(str).str.strip().str.lower()
+                   todos_pagos = all(status_valores.str.contains("pag", na=False)) and len(status_valores) > 0
+                   status_cartoes_mes[nome_oficial] = "Pago" if todos_pagos else "Pendente"
                else:
                    status_cartoes_mes[nome_oficial] = "Pendente"
-        else:
-            dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle]
-            for c in lista_cartoes_controle:
-                status_cartoes_mes[c] = "Pendente"
-            
-      # =========================================================================
-        # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (COM VALORES ABREVIADOS EM 'k')
-        # =========================================================================
-        df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
+           else:
+               status_cartoes_mes[nome_oficial] = "Pendente"
+    else:
+        dados_cartoes_calculados = [{'Nome do Banco': c, 'V_Num': 0.0} for c in lista_cartoes_controle]
+        for c in lista_cartoes_controle:
+            status_cartoes_mes[c] = "Pendente"
         
-        if 'dict_metas_cartoes' not in st.session_state:
-            st.session_state['dict_metas_cartoes'] = {}
+    # =========================================================================
+    # 💳 RENDERIZAÇÃO DO GRÁFICO DE CARTÕES (COM VALORES ABREVIADOS EM 'k')
+    # =========================================================================
+    df_cartoes_graph = pd.DataFrame(dados_cartoes_calculados)
+    
+    if 'dict_metas_cartoes' not in st.session_state:
+        st.session_state['dict_metas_cartoes'] = {}
 
-        dict_metas = st.session_state['dict_metas_cartoes']
+    dict_metas = st.session_state['dict_metas_cartoes']
 
-        if not dict_metas:
-            try:
-                ws_metas = sh.worksheet("Metas_Cartoes")
-                dados_metas = ws_metas.get_all_values()
-                if len(dados_metas) > 1:
-                    for linha in dados_metas[1:]:
-                        if len(linha) >= 2:
-                            c_nome = str(linha[0]).strip()
-                            c_val_str = str(linha[1]).strip().replace('R$', '').replace(' ', '')
-                            if ',' in c_val_str and '.' in c_val_str:
-                                c_val_str = c_val_str.replace('.', '').replace(',', '.')
-                            elif ',' in c_val_str:
-                                c_val_str = c_val_str.replace(',', '.')
-                            try:
-                                dict_metas[c_nome] = float(c_val_str)
-                            except:
-                                pass
-            except:
-                pass
+    if not dict_metas:
+        try:
+            ws_metas = sh.worksheet("Metas_Cartoes")
+            dados_metas = ws_metas.get_all_values()
+            if len(dados_metas) > 1:
+                for linha in dados_metas[1:]:
+                    if len(linha) >= 2:
+                        c_nome = str(linha[0]).strip()
+                        c_val_str = str(linha[1]).strip().replace('R$', '').replace(' ', '')
+                        if ',' in c_val_str and '.' in c_val_str:
+                            c_val_str = c_val_str.replace('.', '').replace(',', '.')
+                        elif ',' in c_val_str:
+                            c_val_str = c_val_str.replace(',', '.')
+                        try:
+                            dict_metas[c_nome] = float(c_val_str)
+                        except:
+                            pass
+        except:
+            pass
 
-        df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
+    df_cartoes_graph['Meta'] = df_cartoes_graph['Nome do Banco'].map(dict_metas).fillna(0.0)
 
-        if not df_cartoes_graph.empty:
-            # Função auxiliar para formatar em formato curto (ex: 12.5k, 3k)
-            def formata_valor_k(valor):
-                if valor >= 1000 or valor <= -1000:
-                    return f"{valor/1000:.1f}k".replace('.0k', 'k')
-                else:
-                    return f"{valor:.0f}"
+    if not df_cartoes_graph.empty:
+        def formata_valor_k(valor):
+            if valor >= 1000 or valor <= -1000:
+                return f"{valor/1000:.1f}k".replace('.0k', 'k')
+            else:
+                return f"{valor:.0f}"
 
-            textos_realizado = [formata_valor_k(val) for val in df_cartoes_graph['V_Num']]
-            textos_meta = [formata_valor_k(val) for val in df_cartoes_graph['Meta']]
+        textos_realizado = [formata_valor_k(val) for val in df_cartoes_graph['V_Num']]
+        textos_meta = [formata_valor_k(val) for val in df_cartoes_graph['Meta']]
 
-            fig_cartoes = go.Figure()
-            
-            # Adiciona barra de Realizado com valores abreviados
-            fig_cartoes.add_trace(go.Bar(
-                x=df_cartoes_graph['Nome do Banco'], 
-                y=df_cartoes_graph['V_Num'], 
-                name='Realizado', 
-                marker_color='#e74c3c',
-                text=textos_realizado,
-                textposition='auto'
-            ))
-            
-            # Adiciona barra de Meta Estipulada com valores abreviados
-            fig_cartoes.add_trace(go.Bar(
-                x=df_cartoes_graph['Nome do Banco'], 
-                y=df_cartoes_graph['Meta'], 
-                name='Meta Estipulada', 
-                marker_color='#2ecc71', 
-                opacity=0.4,
-                text=textos_meta,
-                textposition='auto'
-            ))
-            
-            fig_cartoes.update_layout(
-                barmode='group', 
-                height=380, 
-                margin=dict(t=40, b=10, l=0, r=0)
-            )
-            
-            st.plotly_chart(
-                fig_cartoes, 
-                use_container_width=True,
-                config={
-                    'staticPlot': True,
-                    'displayModeBar': False
-                }
-            )
-                       
-            
+        fig_cartoes = go.Figure()
+        
+        fig_cartoes.add_trace(go.Bar(
+            x=df_cartoes_graph['Nome do Banco'], 
+            y=df_cartoes_graph['V_Num'], 
+            name='Realizado', 
+            marker_color='#e74c3c',
+            text=textos_realizado,
+            textposition='auto'
+        ))
+        
+        fig_cartoes.add_trace(go.Bar(
+            x=df_cartoes_graph['Nome do Banco'], 
+            y=df_cartoes_graph['Meta'], 
+            name='Meta Estipulada', 
+            marker_color='#2ecc71', 
+            opacity=0.4,
+            text=textos_meta,
+            textposition='auto'
+        ))
+        
+        fig_cartoes.update_layout(
+            barmode='group', 
+            height=380, 
+            margin=dict(t=40, b=10, l=0, r=0)
+        )
+        
+        st.plotly_chart(
+            fig_cartoes, 
+            use_container_width=True,
+            config={
+                'staticPlot': True,
+                'displayModeBar': False
+            }
+        )
+             
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
     hoje_dt = pd.Timestamp.today().normalize()
     dia_hoje = hoje_dt.day  # Hoje é dia 5
+    mes_atual_str = "Nov"   # Mês atual para validar o fechamento
     
-    # MAPEAMENTO MANUAL EXATO DOS DIAS DE FECHAMENTO (Com todas as suas datas reais)
+    # MAPEAMENTO MANUAL EXATO DOS DIAS DE FECHAMENTO
     dias_fechamento_map = {
         'mastercard - inter': 14,
         'inter': 14,
@@ -2296,7 +2292,7 @@ if "💰" in st.session_state.page:
         meta_teto = row['Meta']
         
         cartao_limpo = str(cartao_nome).strip().lower()
-        dia_fechamento = 15  # Padrão caso não ache
+        dia_fechamento = 15  
         
         for chave, dia_fch in dias_fechamento_map.items():
             if chave in cartao_limpo:
@@ -2305,18 +2301,18 @@ if "💰" in st.session_state.page:
 
         status_bruto = str(status_cartoes_mes.get(cartao_nome, "")).strip().lower()
         
-        # Regra de 3 estados
+        # Regra de 3 estados blindada com o mês atual (Novembro)
         if 'pago' in status_bruto and 'não' not in status_bruto:
             status_fatura = 'Pago'
             cor_status = "#2e7d32" # Verde
             emoji_status = "✅"
-        elif dia_hoje >= dia_fechamento:
-            # Apenas o Visa Gold (dia 5) entra aqui hoje
+        elif mes_escolhido_cartao == mes_atual_str and dia_hoje >= dia_fechamento:
+            # Só fecha se estiver em novembro e o dia atual já passou do fechamento
             status_fatura = 'Fechada'
             cor_status = "#e65100" # Laranja / Âmbar
             emoji_status = "🔒"
         else:
-            # Inter (14), 8112 (15), Mercado Pago (18) e Itaú Gold (19) entram aqui (Abertas!)
+            # Meses futuros (Dezembro) ou antes do fechamento -> Aberta
             status_fatura = 'Aberta'
             cor_status = "#1976d2" # Azul
             emoji_status = "🔓"
@@ -2348,7 +2344,6 @@ if "💰" in st.session_state.page:
                 f"</div>", 
                 unsafe_allow_html=True
             )
-
             
      # =========================================================================
      # =========================================================================
