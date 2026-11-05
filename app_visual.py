@@ -2279,41 +2279,47 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # Busca a linha correspondente no df_bancos
-        mask_banco = df_bancos.iloc[:, 0].astype(str).str.strip().str.lower() == str(cartao_nome).strip().lower()
-        row_banco_info = df_bancos[mask_banco]
+        # Procura os dias de fechamento e vencimento diretamente no DataFrame de gráficos/cartões (df_cartoes_graph ou df_bancos)
+        # Vamos tentar extrair das colunas do próprio row se elas existirem, ou buscar com tolerância no df_bancos
+        dia_fechamento = 1
+        dia_vencimento = 10
         
-        dia_fechamento = 1  # Padrão de segurança
-        dia_vencimento = 10 # Padrão de segurança
-        
-        if not row_banco_info.empty:
-            # Coluna 4 (índice 4) = Dia de Fechamento
-            if len(row_banco_info.columns) > 4:
-                val_fech_raw = "".join(filter(str.isdigit, str(row_banco_info.iloc[0, 4])))
-                if val_fech_raw:
-                    dia_fechamento = int(val_fech_raw)
+        try:
+            # Tenta buscar na linha atual se o DataFrame já trouxer as colunas de data
+            if 'Fechamento' in row and str(row['Fechamento']).strip().isdigit():
+                dia_fechamento = int(row['Fechamento'])
+            if 'Vencimento' in row and str(row['Vencimento']).strip().isdigit():
+                dia_vencimento = int(row['Vencimento'])
+        except:
+            pass
             
-            # Coluna 5 (índice 5) = Dia de Vencimento
-            if len(row_banco_info.columns) > 5:
-                val_venc_raw = "".join(filter(str.isdigit, str(row_banco_info.iloc[0, 5])))
-                if val_venc_raw:
-                    dia_vencimento = int(val_venc_raw)
+        # Se não achou na linha, busca no df_bancos limpando os textos (ignorando maiúsculas e espaços)
+        if dia_fechamento == 1 and not df_bancos.empty:
+            for _, r_banco in df_bancos.iterrows():
+                nome_banco_cad = str(r_banco.iloc[0]).strip().lower()
+                if str(cartao_nome).strip().lower() in nome_banco_cad or nome_banco_cad in str(cartao_nome).strip().lower():
+                    # Achou o banco! Pega a coluna 4 e 5 com segurança
+                    if len(r_banco) > 4:
+                        f_raw = "".join(filter(str.isdigit, str(r_banco.iloc[4])))
+                        if f_raw: dia_fechamento = int(f_raw)
+                    if len(r_banco) > 5:
+                        v_raw = "".join(filter(str.isdigit, str(r_banco.iloc[5])))
+                        if v_raw: dia_vencimento = int(v_raw)
+                    break
 
-        # Lê o status bruto da planilha (ex: "Pago", "Não Pago", etc.)
+        # Lê o status bruto da planilha (ex: "Pago", "Não Pago")
         status_bruto = str(status_cartoes_mes.get(cartao_nome, "")).strip().lower()
         
-        # Regra refinada: Se estiver marcado explicitamente como pago
+        # Regra de 3 estados
         if 'pago' in status_bruto and 'não' not in status_bruto:
             status_fatura = 'Pago'
             cor_status = "#2e7d32" # Verde
             emoji_status = "✅"
         elif dia_hoje >= dia_fechamento:
-            # Se já passou do dia de fechamento e não está pago -> Fechada
             status_fatura = 'Fechada'
             cor_status = "#e65100" # Laranja / Âmbar
             emoji_status = "🔒"
         else:
-            # Se ainda não chegou no dia de fechamento -> Aberta
             status_fatura = 'Aberta'
             cor_status = "#1976d2" # Azul
             emoji_status = "🔓"
@@ -2340,13 +2346,11 @@ if "💰" in st.session_state.page:
                 delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
             )
             st.markdown(
-                f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 2px; color: {cor_status}; font-weight: bold;'>"
+                f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 10px; color: {cor_status}; font-weight: bold;'>"
                 f"{emoji_status} Fatura {status_fatura}"
                 f"</div>", 
                 unsafe_allow_html=True
             )
-            # Debug limpo para conferência
-            st.caption(f"Fech. dia {dia_fechamento} | Venc. dia {dia_vencimento}")
     else:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
             
