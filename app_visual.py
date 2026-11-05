@@ -2279,26 +2279,16 @@ if "💰" in st.session_state.page:
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        # Procura os dias de fechamento e vencimento diretamente no DataFrame de gráficos/cartões (df_cartoes_graph ou df_bancos)
-        # Vamos tentar extrair das colunas do próprio row se elas existirem, ou buscar com tolerância no df_bancos
         dia_fechamento = 1
         dia_vencimento = 10
         
-        try:
-            # Tenta buscar na linha atual se o DataFrame já trouxer as colunas de data
-            if 'Fechamento' in row and str(row['Fechamento']).strip().isdigit():
-                dia_fechamento = int(row['Fechamento'])
-            if 'Vencimento' in row and str(row['Vencimento']).strip().isdigit():
-                dia_vencimento = int(row['Vencimento'])
-        except:
-            pass
-            
-        # Se não achou na linha, busca no df_bancos limpando os textos (ignorando maiúsculas e espaços)
-        if dia_fechamento == 1 and not df_bancos.empty:
+        # Busca os dias de fechamento e vencimento de forma flexível no df_bancos
+        if not df_bancos.empty:
             for _, r_banco in df_bancos.iterrows():
                 nome_banco_cad = str(r_banco.iloc[0]).strip().lower()
-                if str(cartao_nome).strip().lower() in nome_banco_cad or nome_banco_cad in str(cartao_nome).strip().lower():
-                    # Achou o banco! Pega a coluna 4 e 5 com segurança
+                cartao_atual_limpo = str(cartao_nome).strip().lower()
+                
+                if nome_banco_cad in cartao_atual_limpo or cartao_atual_limpo in nome_banco_cad or any(palavra in cartao_atual_limpo for palavra in nome_banco_cad.split() if len(palavra) > 3):
                     if len(r_banco) > 4:
                         f_raw = "".join(filter(str.isdigit, str(r_banco.iloc[4])))
                         if f_raw: dia_fechamento = int(f_raw)
@@ -2310,16 +2300,18 @@ if "💰" in st.session_state.page:
         # Lê o status bruto da planilha (ex: "Pago", "Não Pago")
         status_bruto = str(status_cartoes_mes.get(cartao_nome, "")).strip().lower()
         
-        # Regra de 3 estados
+        # Regra refinada de 3 estados:
         if 'pago' in status_bruto and 'não' not in status_bruto:
             status_fatura = 'Pago'
             cor_status = "#2e7d32" # Verde
             emoji_status = "✅"
-        elif dia_hoje >= dia_fechamento:
+        elif dia_hoje >= dia_vencimento or dia_hoje >= dia_fechamento:
+            # Se hoje atingiu/passou o dia do vencimento OU já passou do fechamento -> Fatura Fechada!
             status_fatura = 'Fechada'
             cor_status = "#e65100" # Laranja / Âmbar
             emoji_status = "🔒"
         else:
+            # Se ainda não chegou nem no fechamento nem no vencimento -> Aberta
             status_fatura = 'Aberta'
             cor_status = "#1976d2" # Azul
             emoji_status = "🔓"
