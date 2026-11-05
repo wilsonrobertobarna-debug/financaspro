@@ -2272,45 +2272,48 @@ if "💰" in st.session_state.page:
     cols_status = st.columns(len(lista_cartoes_controle))
     
     hoje_dt = pd.Timestamp.today().normalize()
-    dia_hoje = hoje_dt.day  # Dia de hoje (hoje é dia 5)
+    dia_hoje = hoje_dt.day  # Hoje é dia 5
     
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = row['Nome do Banco']
         gasto_real = row['V_Num']
         meta_teto = row['Meta']
         
-        row_banco_info = df_bancos[df_bancos.iloc[:, 0].astype(str).str.strip().str.upper() == str(cartao_nome).strip().upper()]
+        # Busca a linha correspondente no df_bancos
+        mask_banco = df_bancos.iloc[:, 0].astype(str).str.strip().str.lower() == str(cartao_nome).strip().lower()
+        row_banco_info = df_bancos[mask_banco]
         
-        dia_venc = 10 # Padrão caso não ache
-        if not row_banco_info.empty and len(row_banco_info.columns) > 4:
-            val_venc_raw = str(row_banco_info.iloc[0, 4]).strip()
-            if val_venc_raw.isdigit():
-                dia_venc = int(val_venc_raw)
+        dia_fechamento = 1  # Padrão de segurança
+        dia_vencimento = 10 # Padrão de segurança
+        
+        if not row_banco_info.empty:
+            # Coluna 4 (índice 4) = Dia de Fechamento
+            if len(row_banco_info.columns) > 4:
+                val_fech_raw = "".join(filter(str.isdigit, str(row_banco_info.iloc[0, 4])))
+                if val_fech_raw:
+                    dia_fechamento = int(val_fech_raw)
+            
+            # Coluna 5 (índice 5) = Dia de Vencimento
+            if len(row_banco_info.columns) > 5:
+                val_venc_raw = "".join(filter(str.isdigit, str(row_banco_info.iloc[0, 5])))
+                if val_venc_raw:
+                    dia_vencimento = int(val_venc_raw)
 
-        # O fechamento costuma ser 7 dias antes do vencimento
-        # Ex: Vencimento dia 10 -> Fechamento dia 3
-        dia_fechamento = dia_venc - 7
-        if dia_fechamento <= 0:
-            dia_fechamento = 1  # Segurança para dias muito no início do mês
-
+        # Lê o status bruto da planilha (ex: "Pago", "Não Pago", etc.)
         status_bruto = str(status_cartoes_mes.get(cartao_nome, "")).strip().lower()
         
-        if status_bruto == 'pago':
+        # Regra refinada: Se estiver marcado explicitamente como pago
+        if 'pago' in status_bruto and 'não' not in status_bruto:
             status_fatura = 'Pago'
             cor_status = "#2e7d32" # Verde
             emoji_status = "✅"
-        elif dia_hoje >= dia_venc:
-            # Já passou do dia do vencimento deste mês e não foi pago
-            status_fatura = 'Fechada'
-            cor_status = "#e65100" # Laranja / Âmbar
-            emoji_status = "🔒"
         elif dia_hoje >= dia_fechamento:
-            # Passou do fechamento mas ainda não chegou no vencimento
+            # Se já passou do dia de fechamento e não está pago -> Fechada
             status_fatura = 'Fechada'
             cor_status = "#e65100" # Laranja / Âmbar
             emoji_status = "🔒"
         else:
-            # Ainda está antes do fechamento
+            # Se ainda não chegou no dia de fechamento -> Aberta
             status_fatura = 'Aberta'
             cor_status = "#1976d2" # Azul
             emoji_status = "🔓"
@@ -2337,11 +2340,13 @@ if "💰" in st.session_state.page:
                 delta=f"{bolinha} {percentual:.1f}% da meta ({status_txt})"
             )
             st.markdown(
-                f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 10px; color: {cor_status}; font-weight: bold;'>"
+                f"<div style='font-size: 12px; margin-top: -10px; margin-bottom: 2px; color: {cor_status}; font-weight: bold;'>"
                 f"{emoji_status} Fatura {status_fatura}"
                 f"</div>", 
                 unsafe_allow_html=True
             )
+            # Debug limpo para conferência
+            st.caption(f"Fech. dia {dia_fechamento} | Venc. dia {dia_vencimento}")
     else:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
             
