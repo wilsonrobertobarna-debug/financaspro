@@ -2286,11 +2286,13 @@ if "💰" in st.session_state.page:
             if val_venc_raw.isdigit():
                 dia_venc = int(val_venc_raw)
 
-        # Monta a data de vencimento/fechamento para o mês atual
+        # Monta a data de vencimento e calcula o fechamento (7 dias antes do vencimento)
         try:
-            dt_vencimento = pd.Timestamp(year=hoje_dt.year, month=hoje_dt.month, day=min(dia_venc, 28))
+            dt_vencimento = pd.Timestamp(year=hoje_dt.year, month=hoje_dt.month, day=min(max(dia_venc, 1), 28))
+            dt_fechamento = dt_vencimento - pd.Timedelta(days=7)
         except:
             dt_vencimento = hoje_dt
+            dt_fechamento = hoje_dt
 
         status_bruto = str(status_cartoes_mes.get(cartao_nome, "")).strip().lower()
         
@@ -2298,13 +2300,18 @@ if "💰" in st.session_state.page:
             status_fatura = 'Pago'
             cor_status = "#2e7d32" # Verde
             emoji_status = "✅"
-        elif hoje_dt > dt_vencimento:
-            # Se a data de hoje já passou do dia de vencimento da fatura e não foi paga
+        elif hoje_dt >= dt_vencimento:
+            # Se já passou da data de vencimento e não foi pago
+            status_fatura = 'Fechada'
+            cor_status = "#e65100" # Laranja / Âmbar
+            emoji_status = "🔒"
+        elif hoje_dt >= dt_fechamento:
+            # Se passou do fechamento mas ainda não chegou no vencimento
             status_fatura = 'Fechada'
             cor_status = "#e65100" # Laranja / Âmbar
             emoji_status = "🔒"
         else:
-            # Se ainda não chegou no dia de vencimento deste mês
+            # Se ainda está antes da data de fechamento
             status_fatura = 'Aberta'
             cor_status = "#1976d2" # Azul
             emoji_status = "🔓"
