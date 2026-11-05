@@ -2268,7 +2268,7 @@ if "💰" in st.session_state.page:
             )
                        
             
-    st.markdown("##### 🚦 Status de Utilização dos Cartões")
+   st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
     hoje_dt = pd.Timestamp.today().normalize()
@@ -2282,7 +2282,7 @@ if "💰" in st.session_state.page:
         dia_fechamento = 1
         dia_vencimento = 10
         
-        # Busca os dias de fechamento e vencimento de forma flexível no df_bancos
+        # Garante a leitura correta das colunas do banco/cartão
         if not df_bancos.empty:
             for _, r_banco in df_bancos.iterrows():
                 nome_banco_cad = str(r_banco.iloc[0]).strip().lower()
@@ -2297,21 +2297,21 @@ if "💰" in st.session_state.page:
                         if v_raw: dia_vencimento = int(v_raw)
                     break
 
-        # Lê o status bruto da planilha (ex: "Pago", "Não Pago")
+        # Lê o status bruto da planilha de forma segura
         status_bruto = str(status_cartoes_mes.get(cartao_nome, "")).strip().lower()
         
-        # Regra definitiva de 3 estados:
+        # Regra de 3 estados blindada:
         if 'pago' in status_bruto and 'não' not in status_bruto:
             status_fatura = 'Pago'
             cor_status = "#2e7d32" # Verde
             emoji_status = "✅"
         elif dia_hoje >= dia_fechamento:
-            # Se o dia de hoje for igual ou passou da data de fechamento -> Fatura Fechada!
+            # REGRA EXATA: Se o dia de hoje (5) for IGUAL ou MAIOR que o fechamento -> Fatura Fechada!
             status_fatura = 'Fechada'
             cor_status = "#e65100" # Laranja / Âmbar
             emoji_status = "🔒"
         else:
-            # Se o dia de hoje for menor que o fechamento -> Aberta
+            # Caso contrário -> Aberta
             status_fatura = 'Aberta'
             cor_status = "#1976d2" # Azul
             emoji_status = "🔓"
