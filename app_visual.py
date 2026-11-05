@@ -2271,7 +2271,7 @@ if "💰" in st.session_state.page:
     st.markdown("##### 🚦 Status de Utilização dos Cartões")
     cols_status = st.columns(len(lista_cartoes_controle))
     
-    hoje_dt = pd.Timestamp.today()
+    hoje_dt = pd.Timestamp.today().normalize()
     
     for idx, row in df_cartoes_graph.iterrows():
         cartao_nome = row['Nome do Banco']
@@ -2286,14 +2286,11 @@ if "💰" in st.session_state.page:
             if val_venc_raw.isdigit():
                 dia_venc = int(val_venc_raw)
 
-        # Regra do Cartão: O fechamento costuma ser 7 dias antes do vencimento
+        # Monta a data de vencimento/fechamento para o mês atual
         try:
-            # Cria a data de vencimento do mês atual
             dt_vencimento = pd.Timestamp(year=hoje_dt.year, month=hoje_dt.month, day=min(dia_venc, 28))
-            # O fechamento é 7 dias antes do vencimento
-            dt_fechamento = dt_vencimento - pd.Timedelta(days=7)
         except:
-            dt_fechamento = hoje_dt
+            dt_vencimento = hoje_dt
 
         status_bruto = str(status_cartoes_mes.get(cartao_nome, "")).strip().lower()
         
@@ -2301,11 +2298,13 @@ if "💰" in st.session_state.page:
             status_fatura = 'Pago'
             cor_status = "#2e7d32" # Verde
             emoji_status = "✅"
-        elif hoje_dt >= dt_fechamento:
+        elif hoje_dt > dt_vencimento:
+            # Se a data de hoje já passou do dia de vencimento da fatura e não foi paga
             status_fatura = 'Fechada'
             cor_status = "#e65100" # Laranja / Âmbar
             emoji_status = "🔒"
         else:
+            # Se ainda não chegou no dia de vencimento deste mês
             status_fatura = 'Aberta'
             cor_status = "#1976d2" # Azul
             emoji_status = "🔓"
@@ -2336,7 +2335,7 @@ if "💰" in st.session_state.page:
                 f"{emoji_status} Fatura {status_fatura}"
                 f"</div>", 
                 unsafe_allow_html=True
-            )        
+            )
     else:
             st.info("Nenhum lançamento encontrado para os cartões neste mês.")
             
