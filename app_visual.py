@@ -2300,18 +2300,18 @@ if "💰" in st.session_state.page:
         # Lê o status bruto da planilha (ex: "Pago", "Não Pago")
         status_bruto = str(status_cartoes_mes.get(cartao_nome, "")).strip().lower()
         
-        # Regra refinada de 3 estados:
+        # Regra definitiva de 3 estados:
         if 'pago' in status_bruto and 'não' not in status_bruto:
             status_fatura = 'Pago'
             cor_status = "#2e7d32" # Verde
             emoji_status = "✅"
-        elif dia_hoje >= dia_vencimento or dia_hoje >= dia_fechamento:
-            # Se hoje atingiu/passou o dia do vencimento OU já passou do fechamento -> Fatura Fechada!
+        elif dia_hoje >= dia_fechamento:
+            # Se o dia de hoje for igual ou passou da data de fechamento -> Fatura Fechada!
             status_fatura = 'Fechada'
             cor_status = "#e65100" # Laranja / Âmbar
             emoji_status = "🔒"
         else:
-            # Se ainda não chegou nem no fechamento nem no vencimento -> Aberta
+            # Se o dia de hoje for menor que o fechamento -> Aberta
             status_fatura = 'Aberta'
             cor_status = "#1976d2" # Azul
             emoji_status = "🔓"
