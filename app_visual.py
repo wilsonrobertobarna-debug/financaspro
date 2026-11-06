@@ -3029,6 +3029,8 @@ elif "🐾" in aba:
 
 elif "🚗" in aba:
     st.title("🚗 Central Tática Veicular • VW T-Cross")
+elif "🚗" in aba:
+    st.title("🚗 Central Tática Veicular • VW T-Cross")
     
     # --- BLINDAGEM DE SEGURANÇA PARA A VARIÁVEL MES_ATUAL ---
     if 'mes_atual' not in locals():
@@ -3050,19 +3052,23 @@ elif "🚗" in aba:
             "renavam": "01238747016",
             "ano": "2020/2021",
             "cor": "Branca",
-            "combustivel": "Álcool / Gasolina"
+            "combustivel": "Álcool / Gasolina",
+            "venc_seguro": "21/11/2026",
+            "seguradora": "Porto Seguro"
         }
 
     # Botão expansível para editar os dados direto no formulário
     with st.expander("🛠️ Configurações e Alteração de Dados do Veículo"):
         with st.form("form_edicao_carro"):
-            st.markdown("### ✏️ Atualizar Ficha Técnica do Possante")
+            st.markdown("### ✏️ Atualizar Ficha Técnica & Seguro")
             f_mod = st.text_input("Modelo", value=st.session_state.car_config["modelo"])
             f_pla = st.text_input("Placa", value=st.session_state.car_config["placa"])
             f_ren = st.text_input("RENAVAM", value=st.session_state.car_config["renavam"])
             f_ano = st.text_input("Ano", value=st.session_state.car_config["ano"])
             f_cor = st.text_input("Cor", value=st.session_state.car_config["cor"])
             f_com = st.text_input("Combustível", value=st.session_state.car_config["combustivel"])
+            f_seg = st.text_input("Seguradora", value=st.session_state.car_config["seguradora"])
+            f_vseg = st.text_input("Vencimento do Seguro (DD/MM/AAAA)", value=st.session_state.car_config["venc_seguro"])
             
             btn_salvar = st.form_submit_button("💾 Salvar Alterações")
             if btn_salvar:
@@ -3072,7 +3078,9 @@ elif "🚗" in aba:
                 st.session_state.car_config["ano"] = f_ano
                 st.session_state.car_config["cor"] = f_cor
                 st.session_state.car_config["combustivel"] = f_com
-                st.success("✅ Dados do veículo atualizados com sucesso!")
+                st.session_state.car_config["seguradora"] = f_seg
+                st.session_state.car_config["venc_seguro"] = f_vseg
+                st.success("✅ Dados do veículo e seguro atualizados com sucesso!")
                 st.rerun()
 
     cfg = st.session_state.car_config
@@ -3105,6 +3113,12 @@ elif "🚗" in aba:
     ano_lic = hoje.year if (hoje.month < mes_lic or (hoje.month == mes_lic and hoje.day <= 31)) else hoje.year + 1
     data_lic_formatada = f"{dia_mes_lic}/{ano_lic}"
 
+    # Converte data do seguro cadastrada
+    try:
+        seguro_ultima_parc = pd.to_datetime(cfg['venc_seguro'], dayfirst=True)
+    except:
+        seguro_ultima_parc = pd.to_datetime("2026-11-21")
+
     # =========================================================================
     # 🚘 FICHA TÉCNICA & CALENDÁRIO DE OBRIGAÇÕES
     # =========================================================================
@@ -3123,17 +3137,18 @@ elif "🚗" in aba:
     with c_f2:
         with st.container(border=True):
             st.markdown("### 🛡️ Calendário de Obrigações")
-            seguro_ultima_parc = pd.to_datetime("2026-11-21")
             
             st.write("📄 **IPVA:** Vencimento no Mês de **Janeiro**")
             st.write(f"📄 **Licenciamento (Final {cfg['placa'][-1]}):** Vencimento em **{data_lic_formatada}**")
-            st.write("🛡️ **Seguro (Porto Seguro):** Parcela Final em **21/11/2026**")
+            st.write(f"🛡️ **Seguro ({cfg['seguradora']}):** Parcela Final/Renovação em **{seguro_ultima_parc.strftime('%d/%m/%Y')}**")
             
             dias_seguro = (seguro_ultima_parc - hoje).days
-            if dias_seguro >= 0:
-                st.warning(f"🟡 Atenção: Última parcela do seguro vence em {dias_seguro} dias ({seguro_ultima_parc.strftime('%d/%m/%Y')})!")
+            if dias_seguro > 30:
+                st.success(f"🟢 Seguro em dia! Faltam {dias_seguro} dias para a renovação.")
+            elif dias_seguro >= 0:
+                st.warning(f"🟡 Atenção: Seguro vence em {dias_seguro} dias ({seguro_ultima_parc.strftime('%d/%m/%Y')})!")
             else:
-                st.success("🟢 Seguro quitado para este ciclo! Aguardando renovação.")
+                st.error(f"🔴 Vencido/Atrasado há {abs(dias_seguro)} dias! Atualize a data do seguro no formulário.")
 
     st.divider()
 
