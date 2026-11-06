@@ -2890,7 +2890,7 @@ elif "Pendências" in aba:
 
    
 elif "🐾" in aba:
-    st.title("🐾 Gestão Milo & Bolt")
+    st.title("🐾 Central Tática • Milo & Bolt")
     
     # --- BLINDAGEM DE SEGURANÇA PARA A VARIÁVEL MES_ATUAL ---
     if 'mes_atual' not in locals():
@@ -2919,101 +2919,118 @@ elif "🐾" in aba:
         m_bolt = df_bolt[(df_bolt['Mes_Ano'] == mes_atual) & (df_bolt['Status'].str.lower() == 'pago')]['V_Num'].sum()
         
         c_p1, c_p2, c_p3 = st.columns(3)
-        c_p1.metric("📈 Gasto Total (Mês)", m_fmt(gasto_total_mes))
-        c_p2.metric("🐶 Com o Milo (Mês)", m_fmt(m_milo))
-        c_p3.metric("🐱 Com o Bolt (Mês)", m_fmt(m_bolt))
+        c_p1.metric("📈 Fluxo Total (Mês)", m_fmt(gasto_total_mes))
+        c_p2.metric("🐶 Milo (Mês)", m_fmt(m_milo))
+        c_p3.metric("🐕 Bolt (Mês)", m_fmt(m_bolt))
         
         st.divider()
-        st.subheader("📋 Controle de Saúde e Ração")
+        st.subheader("📋 Status Operacional & Ração")
         c_v1, c_v2 = st.columns(2)
         with c_v1:
-            st.markdown("**💊 Vacinas, Vermífugos e Veterinário**")
-            st.info("💡 *Dica: Ao lançar na descrição, coloque o nome do pet (ex: Vacina V10 Milo).*")
+            st.markdown("**💊 Prontuário & Imunização**")
+            st.info("💡 *Protocolo: Ao lançar na descrição, inclua o nome do pet (ex: Vacina V10 Milo).*")
         with c_v2:
-            st.markdown("**🛍️ Controle de Ração e PetShop**")
-            st.info("💡 *Dica: Use a categoria 'Pet: Milo' ou 'Pet: Bolt' para facilitar a separação!*")
+            st.markdown("**🛍️ Suprimentos & PetShop**")
+            st.info("💡 *Protocolo: Utilize a categoria 'Pet: Milo' ou 'Pet: Bolt' para telemetria correta.*")
             
         # =========================================================================
-        # 🐾 CARD DE SAÚDE E ANIVERSÁRIOS DOS PETS (MILO & BOLT)
+        # 🛸 PRONTUÁRIO FUTURISTA DE SAÚDE & ANIVERSÁRIOS (AUTOMATIZADO)
         # =========================================================================
-        st.markdown("##### 📅 Prontuário de Saúde & Aniversários")
+        st.markdown("##### 🛰️ Telemetria de Saúde & Cronograma Biológico")
         
         col_milo, col_bolt = st.columns(2)
         hoje = pd.Timestamp.today().normalize()
         
+        # Função futurista para varrer a planilha e buscar a última vacina real lançada
+        def buscar_ultima_vacina_automatico(df_sub, pet_nome, data_padrao_fallback):
+            try:
+                if 'Descrição' in df_sub.columns and 'Vencimento' in df_sub.columns:
+                    mask_vac = df_sub['Descrição'].astype(str).str.contains("vacina|v10|antirrábica|dose|imuniza", case=False, na=False) & \
+                               df_sub['Descrição'].astype(str).str.contains(pet_nome, case=False, na=False)
+                    df_vacinas_encontradas = df_sub[mask_vac]
+                    if not df_vacinas_encontradas.empty:
+                        # Pega a data mais recente lançada
+                        df_vacinas_encontradas['Dt_Parsed'] = pd.to_datetime(df_vacinas_encontradas['Vencimento'], errors='coerce')
+                        df_vacinas_encontradas = df_vacinas_encontradas.sort_values(by='Dt_Parsed', ascending=False)
+                        ultima_encontrada = df_vacinas_encontradas['Dt_Parsed'].iloc[0]
+                        if pd.notna(ultima_encontrada):
+                            proxima_calculada = ultima_encontrada + pd.DateOffset(years=1) # Ciclo padrão de 1 ano
+                            return ultima_encontrada, proxima_calculada
+            except:
+                pass
+            return data_padrao_fallback, data_padrao_fallback + pd.DateOffset(years=1)
+
         # --- DADOS DO MILO ---
         nasc_milo = pd.to_datetime("2025-08-11")
-        vac_milo_ult = pd.to_datetime("2026-11-05")
-        vac_milo_prox = pd.to_datetime("2027-11-05")
+        # Busca automática na base de dados do Milo, com fallback seguro para 05/11/2026
+        vac_milo_ult, vac_milo_prox = buscar_ultima_vacina_automatico(df_pet, "Milo", pd.to_datetime("2026-11-05"))
         
         diff_milo = (hoje.year - nasc_milo.year) * 12 + (hoje.month - nasc_milo.month)
         if hoje.day < nasc_milo.day:
             diff_milo -= 1
         milo_anos = max(0, diff_milo // 12)
         milo_meses_rest = max(0, diff_milo % 12)
-        
         txt_idade_milo = f"{milo_anos} ano{'s' if milo_anos > 1 else ''} e {milo_meses_rest} meses" if milo_anos > 0 else f"{milo_meses_rest} meses"
         if milo_anos > 0 and milo_meses_rest == 0:
             txt_idade_milo = f"{milo_anos} ano{'s' if milo_anos > 1 else ''}"
         
         # --- DADOS DO BOLT ---
         nasc_bolt = pd.to_datetime("2021-03-11")
-        vac_bolt_ult = pd.to_datetime("2026-03-26")
-        vac_bolt_prox = pd.to_datetime("2027-03-26")
+        # Busca automática na base de dados do Bolt, com fallback seguro para 26/03/2026
+        vac_bolt_ult, vac_bolt_prox = buscar_ultima_vacina_automatico(df_pet, "Bolt", pd.to_datetime("2026-03-26"))
         
         diff_bolt = (hoje.year - nasc_bolt.year) * 12 + (hoje.month - nasc_bolt.month)
         if hoje.day < nasc_bolt.day:
             diff_bolt -= 1
         bolt_anos = max(0, diff_bolt // 12)
         bolt_meses_rest = max(0, diff_bolt % 12)
-        
         txt_idade_bolt = f"{bolt_anos} anos e {bolt_meses_rest} meses" if bolt_anos > 0 else f"{bolt_meses_rest} meses"
         if bolt_anos > 0 and bolt_meses_rest == 0:
             txt_idade_bolt = f"{bolt_anos} anos"
         
-        # CARD MILO
+        # CARD MILO (ESTILO HUD / FUTURISTA)
         with col_milo:
             with st.container(border=True):
-                st.markdown("### 🐶 Milo")
+                st.markdown("### 🐶 Milo [ID: 01]")
                 st.write(f"🎂 **Nascimento:** 11/08/2025")
-                st.info(f"💡 **Idade atual:** {txt_idade_milo}")
+                st.info(f"⚡ **Idade Cronológica:** {txt_idade_milo}")
                 st.markdown("---")
-                st.markdown("**💉 Controle de Vacinação:**")
+                st.markdown("**🛡️ Sincronização de Vacina:**")
                 st.write(f"✅ **Última Dose:** {vac_milo_ult.strftime('%d/%m/%Y')}")
                 st.write(f"⏳ **Próxima Dose:** {vac_milo_prox.strftime('%d/%m/%Y')}")
                 
                 dias_milo = (vac_milo_prox - hoje).days
                 if dias_milo > 30:
-                    st.success(f"🟢 Vacinas em dia! (Faltam {dias_milo} dias)")
+                    st.success(f"🟢 Status: Ótimo ({dias_milo} dias para o ciclo)")
                 elif dias_milo >= 0:
-                    st.warning(f"🟡 Atenção: Próxima dose em {dias_milo} dias!")
+                    st.warning(f"🟡 Alerta: Renovação em {dias_milo} dias!")
                 else:
-                    st.error(f"🔴 Vacina atrasada há {abs(dias_milo)} dias!")
+                    st.error(f"🔴 Crítico: Vencido há {abs(dias_milo)} dias!")
 
-        # CARD BOLT
+        # CARD BOLT (ESTILO HUD / FUTURISTA)
         with col_bolt:
             with st.container(border=True):
-                st.markdown("### 🐕 Bolt")
+                st.markdown("### 🐕 Bolt [ID: 02]")
                 st.write(f"🎂 **Nascimento:** 11/03/2021")
-                st.info(f"💡 **Idade atual:** {txt_idade_bolt}")
+                st.info(f"⚡ **Idade Cronológica:** {txt_idade_bolt}")
                 st.markdown("---")
-                st.markdown("**💉 Controle de Vacinação:**")
+                st.markdown("**🛡️ Sincronização de Vacina:**")
                 st.write(f"✅ **Última Dose:** {vac_bolt_ult.strftime('%d/%m/%Y')}")
                 st.write(f"⏳ **Próxima Dose:** {vac_bolt_prox.strftime('%d/%m/%Y')}")
                 
                 dias_bolt = (vac_bolt_prox - hoje).days
                 if dias_bolt > 30:
-                    st.success(f"🟢 Vacinas em dia! (Faltam {dias_bolt} dias)")
+                    st.success(f"🟢 Status: Ótimo ({dias_bolt} dias para o ciclo)")
                 elif dias_bolt >= 0:
-                    st.warning(f"🟡 Atenção: Próxima dose em {dias_bolt} dias!")
+                    st.warning(f"🟡 Alerta: Renovação em {dias_bolt} dias!")
                 else:
-                    st.error(f"🔴 Vacina atrasada há {abs(dias_bolt)} dias!")
+                    st.error(f"🔴 Crítico: Vencido há {abs(dias_bolt)} dias!")
 
         st.divider()
-        st.subheader("🔍 Lançamentos dos Meninos")
+        st.subheader("🔍 Logs & Lançamentos dos Meninos")
         
         c_f1, c_f2 = st.columns([1, 2])
-        pet_escolha = c_f1.radio("Filtrar por Pet:", ["Todos", "Milo", "Bolt"], horizontal=True)
+        pet_escolha = c_f1.radio("Filtro Tático:", ["Todos", "Milo", "Bolt"], horizontal=True)
         
         df_show = df_pet.copy()
         if pet_escolha == "Milo":
@@ -3025,8 +3042,7 @@ elif "🐾" in aba:
         df_show_display['Valor'] = df_show['V_Num'].apply(m_fmt)
         st.dataframe(df_show_display.iloc[::-1], use_container_width=True, hide_index=True)
     else:
-        st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")
-        
+        st.info("Nenhum registro de telemetria encontrado para os meninos ainda. Faça um lançamento utilizando a categoria Pet!")        
 
 elif "🚗" in aba:
         st.title("🚗 Gestão do Veículo")
