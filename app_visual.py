@@ -3026,6 +3026,7 @@ elif "🐾" in aba:
         st.info("Nenhum lançamento encontrado para os meninos ainda. Faça um lançamento usando a categoria Pet!")    
 
 
+
 elif "🚗" in aba:
     st.title("🚗 Central Tática Veicular • VW T-Cross")
     
@@ -3040,7 +3041,44 @@ elif "🚗" in aba:
             mes_atual = datetime.now().strftime("%m/%Y")
 
     # =========================================================================
-    # 🚘 FICHA TÉCNICA & CALENDÁRIO DE OBRIGAÇÕES (T-CROSS DKU8J28)
+    # ⚙️ MEMÓRIA DE CONFIGURAÇÃO DO VEÍCULO (SESSION STATE)
+    # =========================================================================
+    if 'car_config' not in st.session_state:
+        st.session_state.car_config = {
+            "modelo": "VW/T CROSS TSI ADA",
+            "placa": "DKU8J28",
+            "renavam": "01238747016",
+            "ano": "2020/2021",
+            "cor": "Branca",
+            "combustivel": "Álcool / Gasolina"
+        }
+
+    # Botão expansível para editar os dados direto no formulário
+    with st.expander("🛠️ Configurações e Alteração de Dados do Veículo"):
+        with st.form("form_edicao_carro"):
+            st.markdown("### ✏️ Atualizar Ficha Técnica do Possante")
+            f_mod = st.text_input("Modelo", value=st.session_state.car_config["modelo"])
+            f_pla = st.text_input("Placa", value=st.session_state.car_config["placa"])
+            f_ren = st.text_input("RENAVAM", value=st.session_state.car_config["renavam"])
+            f_ano = st.text_input("Ano", value=st.session_state.car_config["ano"])
+            f_cor = st.text_input("Cor", value=st.session_state.car_config["cor"])
+            f_com = st.text_input("Combustível", value=st.session_state.car_config["combustivel"])
+            
+            btn_salvar = st.form_submit_button("💾 Salvar Alterações")
+            if btn_salvar:
+                st.session_state.car_config["modelo"] = f_mod
+                st.session_state.car_config["placa"] = f_pla
+                st.session_state.car_config["renavam"] = f_ren
+                st.session_state.car_config["ano"] = f_ano
+                st.session_state.car_config["cor"] = f_cor
+                st.session_state.car_config["combustivel"] = f_com
+                st.success("✅ Dados do veículo atualizados com sucesso!")
+                st.rerun()
+
+    cfg = st.session_state.car_config
+
+    # =========================================================================
+    # 🚘 FICHA TÉCNICA & CALENDÁRIO DE OBRIGAÇÕES (EXIBIÇÃO DINÂMICA)
     # =========================================================================
     st.markdown("##### 📄 Ficha Técnica & Vencimentos Oficiais")
     
@@ -3049,11 +3087,11 @@ elif "🚗" in aba:
     
     with c_f1:
         with st.container(border=True):
-            st.markdown("### 🚘 VW T-Cross TSI")
-            st.write("📋 **Modelo:** VW/T CROSS TSI ADA")
-            st.write("🔢 **Placa:** `DKU8J28` | **Renavam:** `01238747016`")
-            st.write("🎨 **Ano:** 2020/2021 | **Cor:** Branca")
-            st.write("⛽ **Combustível:** Álcool / Gasolina")
+            st.markdown(f"### 🚘 {cfg['modelo']}")
+            st.write(f"📋 **Modelo:** {cfg['modelo']}")
+            st.write(f"🔢 **Placa:** `{cfg['placa']}` | **Renavam:** `{cfg['renavam']}`")
+            st.write(f"🎨 **Ano:** {cfg['ano']} | **Cor:** {cfg['cor']}")
+            st.write(f"⛽ **Combustível:** {cfg['combustivel']}")
             
     with c_f2:
         with st.container(border=True):
@@ -3088,11 +3126,10 @@ elif "🚗" in aba:
     st.divider()
     
     # =========================================================================
-    # ⚙️ CONTROLE DE TROCA DE ÓLEO (COM DETECÇÃO AUTOMÁTICA DE KM)
+    # ⚙️ CONTROLE DE TROCA DE ÓLEO
     # =========================================================================
     st.subheader("⚙️ Controle de Troca de Óleo")
     
-    # Pega automaticamente a maior KM registrada no df_base se existir
     km_auto_detectada = 0
     if not df_base.empty and 'Km' in df_base.columns:
         try:
@@ -3135,44 +3172,39 @@ elif "🚗" in aba:
     st.divider()
 
     # =========================================================================
-    # 📊 HISTÓRICO E LANÇAMENTOS DO VEÍCULO (SUA LÓGICA INTELIGENTE)
+    # 📊 HISTÓRICO E LANÇAMENTOS DO VEÍCULO
     # =========================================================================
     st.subheader("📊 Histórico e Lançamentos do Veículo")
 
     if not df_base.empty:
         df_veiculo = df_base.copy()
 
-        # Blindagem automática de colunas
         if 'Km' not in df_veiculo.columns:
             df_veiculo['Km'] = 0.0
         if 'Litros' not in df_veiculo.columns:
             df_veiculo['Litros'] = 0.0
 
-        # Padroniza categoria para facilitar a busca
         df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
         
-        # Pega inicialmente tudo que envolve veículo, combustível ou manutenção
-        df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção"])].copy()
+        # Inclui Transporte (pedágios) e demais categorias do veículo
+        df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção", "Transporte"])].copy()
 
         if not df_veiculo.empty:
             col_filtro1, col_filtro2 = st.columns(2)
             
             with col_filtro1:
-                tipos_disponiveis = ["Todos", "Combustível", "Manutenção", "Veículo"]
+                tipos_disponiveis = ["Todos", "Combustível", "Manutenção", "Veículo", "Transporte"]
                 filtro_escolhido = st.selectbox("🔍 Filtrar por Categoria:", tipos_disponiveis, key="filtro_aba_veiculo")
 
             with col_filtro2:
-                busca_texto = st.text_input("🔎 Buscar por Veículo/Descrição (ex: Tcross, Lead):", "", key="busca_veiculo_texto")
+                busca_texto = st.text_input("🔎 Buscar por Veículo/Descrição (ex: Tcross, Pedágio):", "", key="busca_veiculo_texto")
 
-            # Aplica o filtro de Categoria
             if filtro_escolhido != "Todos":
                 df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'] == filtro_escolhido]
 
-            # Aplica o filtro de texto na coluna Descrição
             if busca_texto:
                 df_veiculo = df_veiculo[df_veiculo['Descrição'].astype(str).str.contains(busca_texto, case=False, na=False)]
 
-            # --- ORDENAÇÃO POR HODÔMETRO ---
             df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], dayfirst=True, errors='coerce')
             
             def converter_para_float(val):
@@ -3192,10 +3224,8 @@ elif "🚗" in aba:
             df_veiculo['Litros'] = df_veiculo['Litros'].apply(converter_para_float)
             df_veiculo['V_Num'] = df_veiculo['V_Num'].apply(converter_para_float)
 
-            # Ordena pelo Km (do menor para o maior)
             df_veiculo = df_veiculo.sort_values(by='Km', ascending=True).reset_index(drop=True)
 
-            # --- CÁLCULOS DO T-CROSS BLINDADOS ---
             df_veiculo['Km_Valido'] = df_veiculo['Km'].apply(lambda x: x if x > 0 else pd.NA)
             df_veiculo['Km_Valido'] = df_veiculo['Km_Valido'].ffill()
             df_veiculo['Km_Rodados'] = df_veiculo['Km_Valido'].diff()
@@ -3250,8 +3280,7 @@ elif "🚗" in aba:
             else:
                 st.info("Nenhum lançamento encontrado com esses filtros.")
         else:
-            st.info("Nenhum lançamento de veículo encontrado na base.")
-        
+            st.info("Nenhum lançamento de veículo encontrado na base.")        
 
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
