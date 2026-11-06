@@ -3078,12 +3078,39 @@ elif "🚗" in aba:
     cfg = st.session_state.car_config
 
     # =========================================================================
-    # 🚘 FICHA TÉCNICA & CALENDÁRIO DE OBRIGAÇÕES (EXIBIÇÃO DINÂMICA)
+    # 🛡️ CÁLCULO DINÂMICO DE LICENCIAMENTO (REGRA DETRAN-SP PELA PLACA)
+    # =========================================================================
+    def obter_mes_licenciamento_sp(placa_str):
+        numeros = [char for char in str(placa_str) if char.isdigit()]
+        if not numeros:
+            return 10, "31/10"
+        
+        ultimo_digito = int(numeros[-1])
+        mapa_sp = {
+            1: (7, "31/07"),
+            2: (8, "31/08"),
+            3: (9, "30/09"),
+            4: (10, "31/10"),
+            5: (11, "30/11"),
+            6: (11, "30/11"),
+            7: (12, "31/12"),
+            8: (10, "31/10"),
+            9: (12, "31/12"),
+            0: (12, "31/12")
+        }
+        return mapa_sp.get(ultimo_digito, (10, "31/10"))
+
+    hoje = pd.Timestamp.today().normalize()
+    mes_lic, dia_mes_lic = obter_mes_licenciamento_sp(cfg['placa'])
+    ano_lic = hoje.year if (hoje.month < mes_lic or (hoje.month == mes_lic and hoje.day <= 31)) else hoje.year + 1
+    data_lic_formatada = f"{dia_mes_lic}/{ano_lic}"
+
+    # =========================================================================
+    # 🚘 FICHA TÉCNICA & CALENDÁRIO DE OBRIGAÇÕES
     # =========================================================================
     st.markdown("##### 📄 Ficha Técnica & Vencimentos Oficiais")
     
     c_f1, c_f2 = st.columns(2)
-    hoje = pd.Timestamp.today().normalize()
     
     with c_f1:
         with st.container(border=True):
@@ -3096,11 +3123,10 @@ elif "🚗" in aba:
     with c_f2:
         with st.container(border=True):
             st.markdown("### 🛡️ Calendário de Obrigações")
-            licenciamento_prox = pd.to_datetime(f"{hoje.year}-10-31" if (hoje.month < 10 or (hoje.month == 10 and hoje.day <= 31)) else f"{hoje.year + 1}-10-31")
             seguro_ultima_parc = pd.to_datetime("2026-11-21")
             
             st.write("📄 **IPVA:** Vencimento no Mês de **Janeiro**")
-            st.write(f"📄 **Licenciamento:** Vencimento em **31/10/{licenciamento_prox.year}**")
+            st.write(f"📄 **Licenciamento (Final {cfg['placa'][-1]}):** Vencimento em **{data_lic_formatada}**")
             st.write("🛡️ **Seguro (Porto Seguro):** Parcela Final em **21/11/2026**")
             
             dias_seguro = (seguro_ultima_parc - hoje).days
@@ -3186,7 +3212,7 @@ elif "🚗" in aba:
 
         df_veiculo['Categoria_Clean'] = df_veiculo['Categoria'].astype(str).str.strip().str.title()
         
-        # Inclui Transporte (pedágios) e demais categorias do veículo
+        # Pega combustível, veículo, manutenção e transporte (pedágios)
         df_veiculo = df_veiculo[df_veiculo['Categoria_Clean'].isin(["Combustível", "Veículo", "Manutenção", "Transporte"])].copy()
 
         if not df_veiculo.empty:
@@ -3280,7 +3306,7 @@ elif "🚗" in aba:
             else:
                 st.info("Nenhum lançamento encontrado com esses filtros.")
         else:
-            st.info("Nenhum lançamento de veículo encontrado na base.")        
+            st.info("Nenhum lançamento de veículo encontrado na base.")     
 
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
