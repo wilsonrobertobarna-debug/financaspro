@@ -2888,7 +2888,7 @@ elif "Pendências" in aba:
     
     st.dataframe(df_v_display.iloc[::-1], use_container_width=True, hide_index=True)
 
-
+   
 elif "🐾" in aba:
     st.title("🐾 Gestão Milo & Bolt")
     
@@ -2933,6 +2933,82 @@ elif "🐾" in aba:
             st.markdown("**🛍️ Controle de Ração e PetShop**")
             st.info("💡 *Dica: Use a categoria 'Pet: Milo' ou 'Pet: Bolt' para facilitar a separação!*")
             
+        # =========================================================================
+        # 🐾 CARD DE SAÚDE E ANIVERSÁRIOS DOS PETS (MILO & BOLT)
+        # =========================================================================
+        st.markdown("##### 📅 Prontuário de Saúde & Aniversários")
+        
+        col_milo, col_bolt = st.columns(2)
+        hoje = pd.Timestamp.today().normalize()
+        
+        # --- DADOS DO MILO ---
+        nasc_milo = pd.to_datetime("2025-08-11")
+        vac_milo_ult = pd.to_datetime("2026-11-05")
+        vac_milo_prox = pd.to_datetime("2027-11-05")
+        
+        diff_milo = (hoje.year - nasc_milo.year) * 12 + (hoje.month - nasc_milo.month)
+        if hoje.day < nasc_milo.day:
+            diff_milo -= 1
+        milo_anos = max(0, diff_milo // 12)
+        milo_meses_rest = max(0, diff_milo % 12)
+        
+        txt_idade_milo = f"{milo_anos} ano{'s' if milo_anos > 1 else ''} e {milo_meses_rest} meses" if milo_anos > 0 else f"{milo_meses_rest} meses"
+        if milo_anos > 0 and milo_meses_rest == 0:
+            txt_idade_milo = f"{milo_anos} ano{'s' if milo_anos > 1 else ''}"
+        
+        # --- DADOS DO BOLT ---
+        nasc_bolt = pd.to_datetime("2021-03-11")
+        vac_bolt_ult = pd.to_datetime("2026-03-26")
+        vac_bolt_prox = pd.to_datetime("2027-03-26")
+        
+        diff_bolt = (hoje.year - nasc_bolt.year) * 12 + (hoje.month - nasc_bolt.month)
+        if hoje.day < nasc_bolt.day:
+            diff_bolt -= 1
+        bolt_anos = max(0, diff_bolt // 12)
+        bolt_meses_rest = max(0, diff_bolt % 12)
+        
+        txt_idade_bolt = f"{bolt_anos} anos e {bolt_meses_rest} meses" if bolt_anos > 0 else f"{bolt_meses_rest} meses"
+        if bolt_anos > 0 and bolt_meses_rest == 0:
+            txt_idade_bolt = f"{bolt_anos} anos"
+        
+        # CARD MILO
+        with col_milo:
+            with st.container(border=True):
+                st.markdown("### 🐶 Milo")
+                st.write(f"🎂 **Nascimento:** 11/08/2025")
+                st.info(f"💡 **Idade atual:** {txt_idade_milo}")
+                st.markdown("---")
+                st.markdown("**💉 Controle de Vacinação:**")
+                st.write(f"✅ **Última Dose:** {vac_milo_ult.strftime('%d/%m/%Y')}")
+                st.write(f"⏳ **Próxima Dose:** {vac_milo_prox.strftime('%d/%m/%Y')}")
+                
+                dias_milo = (vac_milo_prox - hoje).days
+                if dias_milo > 30:
+                    st.success(f"🟢 Vacinas em dia! (Faltam {dias_milo} dias)")
+                elif dias_milo >= 0:
+                    st.warning(f"🟡 Atenção: Próxima dose em {dias_milo} dias!")
+                else:
+                    st.error(f"🔴 Vacina atrasada há {abs(dias_milo)} dias!")
+
+        # CARD BOLT
+        with col_bolt:
+            with st.container(border=True):
+                st.markdown("### 🐕 Bolt")
+                st.write(f"🎂 **Nascimento:** 11/03/2021")
+                st.info(f"💡 **Idade atual:** {txt_idade_bolt}")
+                st.markdown("---")
+                st.markdown("**💉 Controle de Vacinação:**")
+                st.write(f"✅ **Última Dose:** {vac_bolt_ult.strftime('%d/%m/%Y')}")
+                st.write(f"⏳ **Próxima Dose:** {vac_bolt_prox.strftime('%d/%m/%Y')}")
+                
+                dias_bolt = (vac_bolt_prox - hoje).days
+                if dias_bolt > 30:
+                    st.success(f"🟢 Vacinas em dia! (Faltam {dias_bolt} dias)")
+                elif dias_bolt >= 0:
+                    st.warning(f"🟡 Atenção: Próxima dose em {dias_bolt} dias!")
+                else:
+                    st.error(f"🔴 Vacina atrasada há {abs(dias_bolt)} dias!")
+
         st.divider()
         st.subheader("🔍 Lançamentos dos Meninos")
         
