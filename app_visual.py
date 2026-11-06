@@ -3029,8 +3029,6 @@ elif "🐾" in aba:
 
 elif "🚗" in aba:
     st.title("🚗 Central Tática Veicular • VW T-Cross")
-elif "🚗" in aba:
-    st.title("🚗 Central Tática Veicular • VW T-Cross")
     
     # --- BLINDAGEM DE SEGURANÇA PARA A VARIÁVEL MES_ATUAL ---
     if 'mes_atual' not in locals():
