@@ -788,18 +788,18 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     # --- FILTRO INTELIGENTE E FLEXÍVEL (BUSCA POR BANCO OU DESCRIÇÃO) ---
                     termo_banco = str(banco_reserva).strip().lower()
                      
-                     if checar_mes_ant:
-                         filtro_mes_ant = (
-                             (df_base_reserva['DT_Res'].dt.month == mes_anterior) & 
-                             (df_base_reserva['DT_Res'].dt.year == ano_anterior) &
-                             (
-                                 (df_base_reserva['Banco'].astype(str).str.lower().str.contains(termo_banco, na=False)) |
-                                 (df_base_reserva['Descrição'].astype(str).str.lower().str.contains('reserva|aporte|invest', case=False, na=False))
-                             )
-                         )
-                         if 'Status' in df_base_reserva.columns:
-                             filtro_mes_ant = filtro_mes_ant & ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
-                         total_aportado_ant = df_base_reserva[filtro_mes_ant][col_v].sum()
+                    if checar_mes_ant:
+                        filtro_mes_ant = (
+                            (df_base_reserva['DT_Res'].dt.month == mes_anterior) & 
+                            (df_base_reserva['DT_Res'].dt.year == ano_anterior) &
+                            (
+                                (df_base_reserva['Banco'].astype(str).str.lower().str.contains(termo_banco, na=False)) |
+                                (df_base_reserva['Descrição'].astype(str).str.lower().str.contains('reserva|aporte|invest', case=False, na=False))
+                            )
+                        )
+                        if 'Status' in df_base_reserva.columns:
+                            filtro_mes_ant = filtro_mes_ant & ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
+                        total_aportado_ant = df_base_reserva[filtro_mes_ant][col_v].sum()
     
                      filtro_mes_atual = (
                          (df_base_reserva['DT_Res'].dt.month == mes_atual) & 
