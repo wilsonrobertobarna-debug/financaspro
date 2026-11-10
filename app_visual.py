@@ -675,8 +675,8 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
             st.session_state['ntfy_alertas_diarios_enviado'] = True
             
     
-   # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
-   if "💰" in st.session_state.page:
+    # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
+    if "💰" in st.session_state.page:
     
     # =========================================================================
     # 🔔 VERIFICAÇÃO AUTOMÁTICA E NTFY DA RESERVA DE EMERGÊNCIA (COM PILLS TOPO)
