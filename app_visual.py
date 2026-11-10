@@ -3027,7 +3027,7 @@ elif "🐾" in aba:
 
 
 
- elif "🚗" in aba:
+elif "🚗" in aba:
     # --- BLINDAGEM DE SEGURANÇA PARA A VARIÁVEL MES_ATUAL ---
     if 'mes_atual' not in locals():
         if 'filtro_mes' in locals():
@@ -3321,7 +3321,6 @@ elif "🐾" in aba:
                 st.info("Nenhum lançamento encontrado com esses filtros.")
         else:
             st.info("Nenhum lançamento de veículo encontrado na base.")
-
 
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
