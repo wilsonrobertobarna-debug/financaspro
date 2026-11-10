@@ -673,140 +673,185 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     tags="moneybag,bell"
                 )
             st.session_state['ntfy_alertas_diarios_enviado'] = True
-            
 
- # --- BARRINHA 2: TRANSFERÊNCIA (SIDEBAR BLINDADA) ---
-with st.sidebar.expander("💸 Transferência", expanded=False):
+# --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
+if "💰" in st.session_state.page:
     
+  # =========================================================================
+    # 🔔 VERIFICAÇÃO AUTOMÁTICA E NTFY DA RESERVA DE EMERGÊNCIA (COM PEELLS TOPO)
+    # =========================================================================
+    import datetime as dt_mod
     from datetime import datetime
-    from zoneinfo import ZoneInfo
-    data_hoje_br = datetime.now(ZoneInfo("America/Sao_Paulo")).date()
-
-    # 🛡️ Garante que a lista de bancos sempre exista para evitar o NameError
-    try:
-        if 'ws_bancos' in globals() or 'ws_bancos' in locals():
-            dados_bancos_sb = ws_bancos.get_all_values()
-            bancos_disponiveis = [linha[0] for linha in dados_bancos_sb[1:] if len(linha) > 0 and linha[0].strip()]
-        else:
-            bancos_disponiveis = ["PagBank", "Invest Pag. Bank", "Itaú", "Nubank"]
-    except Exception:
-        bancos_disponiveis = ["PagBank", "Invest Pag. Bank", "Itaú", "Nubank"]
-
-    if not bancos_disponiveis:
-        bancos_disponiveis = ["PagBank", "Invest Pag. Bank", "Itaú", "Nubank"]
-
-    if st.session_state.get("gatilho_limpar_transf", False):
-        st.session_state["t_val_key"] = 0.0
-        st.session_state["input_nota_transf"] = ""
-        st.session_state["input_meses_transf"] = 1
-        st.session_state["taxa_cambio_val"] = 1.0
-        if bancos_disponiveis:
-            st.session_state["transf_destino_select"] = bancos_disponiveis[0]
-        st.session_state["gatilho_limpar_transf"] = False
-
-    t_dat = st.date_input("Data Inicial", value=data_hoje_br, format="DD/MM/YYYY", key="t_dat_key")
-    t_val = st.number_input("Valor", min_value=0.0, step=0.01, format="%.2f", key="t_val_key")
-    t_orig = st.selectbox("Origem (Sai):", bancos_disponiveis, key="transf_origem_select")
-    
-    st.markdown("")
-    t_dest = st.selectbox("Destino (Entra):", bancos_disponiveis, key="transf_destino_select")
+    import pandas as pd
+    import requests
     
     try:
-        dict_moedas_bancos = {}
-        for linha in dados_bancos_sb[1:]:
-            if len(linha) >= 1:
-                nome_banco = linha[0]
-                moeda_banco = linha[5].strip().upper() if len(linha) > 5 and linha[5].strip() else "BRL"
-                dict_moedas_bancos[nome_banco] = moeda_banco
-    except:
-        dict_moedas_bancos = {}
+        from dateutil.relativedelta import relativedelta
+    except ImportError:
+        relativedelta = None
 
-    moeda_origem = dict_moedas_bancos.get(t_orig, "BRL")
-    moeda_destino = dict_moedas_bancos.get(t_dest, "BRL")
+    # 🛡️ Mês e ano de início oficial do controle solicitado (Novembro de 2026)
+    MES_INICIO_CONTROLE = 11
+    ANO_INICIO_CONTROLE = 2026
 
-    t_valor_final = t_val
-    t_taxa = 1.0
+    # 🔍 CAPTURA CORRETA DO MÊS ATRAVÉS DO st.pills DO TOPO ("Jan", "Fev", ..., "Nov")
+    mapa_meses_num = {
+        "Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6, 
+        "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12
+    }
 
-    if moeda_origem != moeda_destino:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown(f"💱 **Câmbio Detectado: {moeda_origem} ➔ {moeda_destino}**")
-        
-        if "taxa_cambio_val" not in st.session_state:
-            st.session_state["taxa_cambio_val"] = 1.0
-
-        t_taxa = st.number_input("Taxa de Câmbio", min_value=0.0001, format="%.4f", key="taxa_cambio_val")
-        
-        if moeda_origem == "BRL" and moeda_destino != "BRL":
-            t_valor_final = t_val / t_taxa if t_taxa > 0 else t_val
-        elif moeda_origem != "BRL" and moeda_destino == "BRL":
-            t_valor_final = t_val * t_taxa
-        else:
-            t_valor_final = t_val * t_taxa if moeda_origem == "BRL" else t_val / t_taxa
-
-        st.info(f"💡 Valor convertido calculado para o destino: **{t_valor_final:.2f} {moeda_destino}**")
+    mes_selecionado_txt = st.session_state.get('pills_topo', 'Nov')
+    mes_exibicao = mapa_meses_num.get(mes_selecionado_txt, 11)
     
-    st.markdown("")
-    t_desc = st.text_input("Nota / Detalhe (Opcional)", key="input_nota_transf")
-    
-    st.markdown("")
-    t_meses = st.number_input("Repetir por quantos meses? (1 = Única)", min_value=1, max_value=60, step=1, key="input_meses_transf")
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    if st.button("TRANSFERIR", key="btn_executar_transferencia_sidebar"):
-        if t_orig == t_dest: 
-            st.error("Escolha bancos diferentes!")
-        else:
-            import pandas as pd
-            from dateutil.relativedelta import relativedelta
-            
-            todos_dados = ws_base.get_all_records()
-            if todos_dados:
-                df_temp = pd.DataFrame(todos_dados)
-                if 'ID' in df_temp.columns and not df_temp['ID'].isna().all():
-                    proximo_id = int(df_temp['ID'].max()) + 1
+    # Se você tiver um seletor de ano na tela, ele pega aqui. Se não, assume 2026 por padrão
+    ano_exibicao = int(st.session_state.get('ano_selecionado', st.session_state.get('ano_filtro', 2026)))
+
+    # 🛑 TRAVA ABSOLUTA: Só roda e calcula se a tela estiver exibindo Novembro/2026 em diante!
+    periodo_valido_exibicao = True
+    if ano_exibicao < ANO_INICIO_CONTROLE:
+        periodo_valido_exibicao = False
+    elif ano_exibicao == ANO_INICIO_CONTROLE and mes_exibicao < MES_INICIO_CONTROLE:
+        periodo_valido_exibicao = False
+
+    # Apenas executa a lógica se o mês exibido for igual ou posterior a Novembro/2026
+    if periodo_valido_exibicao:
+
+        # 2. Carrega os parâmetros atualizados salvos no Google Sheets ou no session_state
+        try:
+            ws_reserva_check = sh.worksheet("Reserva_Financeira")
+            dados_res_check = ws_reserva_check.get_all_values()
+            if len(dados_res_check) > 1:
+                val_ap_raw = str(dados_res_check[1][1]).replace('R$', '').strip()
+                if ',' in val_ap_raw and '.' in val_ap_raw:
+                    val_ap_raw = val_ap_raw.replace('.', '').replace(',', '.')
                 else:
-                    proximo_id = 1
+                    val_ap_raw = val_ap_raw.replace(',', '.')
+                    
+                aporte_planejado = float(val_ap_raw) if val_ap_raw else 300.0
+                banco_reserva = str(dados_res_check[1][2]).strip() if len(dados_res_check[1]) > 2 and dados_res_check[1][2] else "Invest Pag. Bank"
+                dia_limite = int(float(str(dados_res_check[1][3]).replace(',', '.'))) if len(dados_res_check[1]) > 3 and dados_res_check[1][3] else 10
             else:
-                proximo_id = 1
-            
-            for i in range(t_meses):
-                data_atual = t_dat + relativedelta(months=i)
-                
-                v_str_orig = f"{t_val:.2f}".replace('.', ',')
-                v_str_dest = f"{t_valor_final:.2f}".replace('.', ',')
-                d_str = data_atual.strftime("%d/%m/%Y")
-                
-                if data_atual > data_hoje_br or t_meses > 1:
-                    status_transf = "Pendente"
-                else:
-                    status_transf = "Pago"
-                
-                base_desc = f"TR: {t_orig} ➔ {t_dest}"
-                if t_desc and t_desc.strip():
-                    base_desc += f" - {t_desc.strip()}"
+                aporte_planejado = float(st.session_state.get('reserva_aporte_mensal', 300.0))
+                banco_reserva = st.session_state.get('reserva_banco_escolhido', 'Invest Pag. Bank')
+                dia_limite = int(st.session_state.get('reserva_dia_vencimento', 10))
+        except Exception:
+            aporte_planejado = float(st.session_state.get('reserva_aporte_mensal', 300.0))
+            banco_reserva = st.session_state.get('reserva_banco_escolhido', 'Invest Pag. Bank')
+            dia_limite = int(st.session_state.get('reserva_dia_vencimento', 10))
+        
+        if aporte_planejado > 0 and banco_reserva:
+            hoje_dt = datetime.now()
+            mes_atual = hoje_dt.month
+            ano_atual = hoje_dt.year
+            dia_atual = hoje_dt.day
 
-                if t_meses > 1:
-                    desc_transf = f"TR ({i+1}/{t_meses}): {base_desc[4:]}"
-                else:
-                    desc_transf = base_desc
-                
-                id_transferencia = proximo_id
-                proximo_id += 1 
-                
-                ws_base.append_row([d_str, v_str_orig, desc_transf, "Transferência", "Despesa", t_orig, status_transf, d_str, id_transferencia, "Titular"])
-                ws_base.append_row([d_str, v_str_dest, desc_transf, "Transferência", "Receita", t_dest, status_transf, d_str, id_transferencia, "Titular"])
-            
-            if t_meses > 1:
-                st.toast(f"✅ {t_meses} transferências recorrentes geradas com ID único!", icon="💰")
+            exibir_alerta = False
+            tipo_alerta = None
+            falta_aportar = 0.0
+            msg_ntfy = ""
+
+            if relativedelta is not None:
+                data_mes_anterior = hoje_dt - relativedelta(months=1)
+                mes_anterior = data_mes_anterior.month
+                ano_anterior = data_mes_anterior.year
             else:
-                st.toast("✅ Transferência sincronizada com ID único!", icon="💰")
-            
-            st.session_state["gatilho_limpar_transf"] = True
-            atualizar_sessao()
-            st.rerun()
+                mes_anterior = 12 if mes_atual == 1 else mes_atual - 1
+                ano_anterior = ano_atual - 1 if mes_atual == 1 else ano_atual
 
-            
+            try:
+                # Garante o DataFrame base correto
+                if 'df' in locals():
+                    df_base_reserva = df.copy()
+                elif 'df_lancamentos' in locals():
+                    df_base_reserva = df_lancamentos.copy()
+                else:
+                    df_base_reserva = df_base.copy()
+
+                col_dt = 'DT' if 'DT' in df_base_reserva.columns else ('Data' if 'Data' in df_base_reserva.columns else df_base_reserva.columns[0])
+                df_base_reserva['DT_Res'] = pd.to_datetime(df_base_reserva[col_dt], errors='coerce')
+                
+                col_v = 'V_Num' if 'V_Num' in df_base_reserva.columns else ('Valor' if 'Valor' in df_base_reserva.columns else 'V_NUM')
+
+                checar_mes_ant = (ano_anterior, mes_anterior) >= (ANO_INICIO_CONTROLE, MES_INICIO_CONTROLE)
+                total_aportado_ant = aporte_planejado
+
+                if checar_mes_ant:
+                    filtro_mes_ant = (
+                        (df_base_reserva['DT_Res'].dt.month == mes_anterior) & 
+                        (df_base_reserva['DT_Res'].dt.year == ano_anterior) &
+                        (df_base_reserva['Banco'].astype(str).str.strip().str.upper() == str(banco_reserva).strip().upper()) &
+                        (df_base_reserva['Descrição'].astype(str).str.contains('reserva', case=False, na=False))
+                    )
+                    if 'Status' in df_base_reserva.columns:
+                        filtro_mes_ant = filtro_mes_ant & ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
+                    total_aportado_ant = df_base_reserva[filtro_mes_ant][col_v].sum()
+
+                filtro_mes_atual = (
+                    (df_base_reserva['DT_Res'].dt.month == mes_atual) & 
+                    (df_base_reserva['DT_Res'].dt.year == ano_atual) &
+                    (df_base_reserva['Banco'].astype(str).str.strip().str.upper() == str(banco_reserva).strip().upper()) &
+                    (df_base_reserva['Descrição'].astype(str).str.contains('reserva', case=False, na=False))
+                )
+                if 'Status' in df_base_reserva.columns:
+                    filtro_mes_atual = filtro_mes_atual & ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
+
+                df_aportes_atual = df_base_reserva[filtro_mes_atual]
+                total_aportado_mes = df_aportes_atual[col_v].sum()
+                
+                data_ultimo_aporte = None
+                if not df_aportes_atual.empty:
+                    data_ultimo_aporte = df_aportes_atual['DT_Res'].max()
+                    
+            except Exception:
+                total_aportado_ant = aporte_planejado
+                total_aportado_mes = 0.0
+                data_ultimo_aporte = None
+                checar_mes_ant = False
+
+            falta_aportar_mes = max(0.0, aporte_planejado - total_aportado_mes)
+            falta_aportar_ant = max(0.0, aporte_planejado - total_aportado_ant)
+
+            # Regras de Negócio:
+            if checar_mes_ant and total_aportado_ant < aporte_planejado:
+                exibir_alerta = True
+                tipo_alerta = "vermelho_atrasado"
+                falta_aportar = falta_aportar_ant
+                mes_ref = f"{mes_anterior:02d}/{ano_anterior}"
+                texto_personalizado = f"🚨 **Atenção: Aporte da Reserva de {mes_ref} Pendente!**\n\nO mês anterior fechou sem a identificação total do aporte."
+                msg_ntfy = f"Aporte de Reserva ({mes_ref}) pendente! Falta R$ {falta_aportar:,.2f} no banco {banco_reserva}."
+            else:
+                if total_aportado_mes >= aporte_planejado:
+                    if data_ultimo_aporte is not None:
+                        dias_desde_aporte = (hoje_dt - data_ultimo_aporte).days
+                        if 0 <= dias_desde_aporte <= 3:
+                            exibir_alerta = True
+                            tipo_alerta = "verde"
+                    else:
+                        exibir_alerta = True
+                        tipo_alerta = "verde"
+                else:
+                    if dia_atual <= dia_limite:
+                        exibir_alerta = True
+                        tipo_alerta = "azul"
+                        falta_aportar = falta_aportar_mes
+                        msg_ntfy = f"Lembrete: Aporte da Reserva de R$ {falta_aportar:,.2f} vence dia {dia_limite}/{mes_atual:02d} ({banco_reserva})."
+                    else:
+                        exibir_alerta = True
+                        tipo_alerta = "vermelho_atual"
+                        falta_aportar = falta_aportar_mes
+                        msg_ntfy = f"ATENÇÃO: Aporte da Reserva atrasado! Falta R$ {falta_aportar:,.2f} no banco {banco_reserva}."
+
+            # Exibição dos Alertas Visuais na tela
+            if exibir_alerta:
+                if tipo_alerta == "verde":
+                    st.success(f"🎉 **Aporte do mês concluído!**\n\n• **Banco:** {banco_reserva}\n• **Planejado:** R$ {aporte_planejado:,.2f}\n• **Aportado:** R$ {total_aportado_mes:,.2f}")
+                elif tipo_alerta == "azul":
+                    st.info(f"⏳ **Aporte em andamento (Vencimento: Dia {dia_limite}):**\n\n• **Banco:** {banco_reserva}\n• **Aportado até agora:** R$ {total_aportado_mes:,.2f} / R$ {aporte_planejado:,.2f}\n• **Falta aportar:** R$ {falta_aportar:,.2f} até o dia {dia_limite}/{mes_atual:02d}.")
+                elif tipo_alerta == "vermelho_atual":
+                    st.warning(f"🚨 **Atenção: Aporte da Reserva Pendente!**\n\nO dia limite ({dia_limite}/{mes_atual:02d}) já passou.\n• **Banco:** {banco_reserva}\n• **Aportado:** R$ {total_aportado_mes:,.2f}\n• **Falta:** R$ {falta_aportar:,.2f}")
+                elif tipo_alerta == "vermelho_atrasado":
+                    st.error(f"{texto_personalizado}\n\n• **Banco:** {banco_reserva}\n• **Falta pagar:** R$ {falta_aportar:,.2f}")
+
                 # 📲 DISPARO DO NTFY (Apenas no mês corrente real)
                 if msg_ntfy and tipo_alerta in ["azul", "vermelho_atual", "vermelho_atrasado"] and mes_exibicao == mes_atual:
                     if 'ntfy_disparado_hoje' not in st.session_state:
@@ -1364,6 +1409,8 @@ with st.sidebar.expander("📢 Central de Notificações"):
             st.sidebar.error(f"❌ Erro ao enviar e-mail: {e}")            
        
 # --- BARRINHA 2: TRANSFERÊNCIA ---
+    #with st.sidebar.expander("💸 Transferência", expanded=False):
+    # --- BARRINHA 2: TRANSFERÊNCIA ---
 with st.sidebar.expander("💸 Transferência", expanded=False):
     
     # GARANTE A DATA ATUAL NO FUSO DE SÃO PAULO USANDO NATIVO DO PYTHON
@@ -1429,7 +1476,7 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
         st.info(f"💡 Valor convertido calculado para o destino: **{t_valor_final:.2f} {moeda_destino}**")
     
     st.markdown("")
-    t_desc = st.text_input("Nota / Detalhe (Opcional)", key="input_nota_transf")
+    t_desc = st.text_input("Nota", key="input_nota_transf")
     
     st.markdown("")
     t_meses = st.number_input("Repetir por quantos meses? (1 = Única)", min_value=1, max_value=60, step=1, key="input_meses_transf")
@@ -1466,19 +1513,15 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
                 else:
                     status_transf = "Pago"
                 
-                # 🎯 MONTAGEM AUTOMÁTICA DA DESCRIÇÃO (Origem ➔ Destino + Nota Opcional)
-                base_desc = f"TR: {t_orig} ➔ {t_dest}"
-                if t_desc and t_desc.strip():
-                    base_desc += f" - {t_desc.strip()}"
-
                 if t_meses > 1:
-                    desc_transf = f"TR ({i+1}/{t_meses}): {base_desc[4:]}"
+                    desc_transf = f"TR ({i+1}/{t_meses}): {t_desc}".strip() if t_desc else f"TR ({i+1}/{t_meses}): Transferência recorrente"
                 else:
-                    desc_transf = base_desc
+                    desc_transf = f"TR: {t_desc}".strip() if t_desc else "TR: Transferência entre contas"
                 
                 id_transferencia = proximo_id
                 proximo_id += 1 
                 
+                # 🎯 CIRURGIA AQUI: O último campo das duas linhas agora grava "Titular" em vez de vazio!
                 ws_base.append_row([d_str, v_str_orig, desc_transf, "Transferência", "Despesa", t_orig, status_transf, d_str, id_transferencia, "Titular"])
                 ws_base.append_row([d_str, v_str_dest, desc_transf, "Transferência", "Receita", t_dest, status_transf, d_str, id_transferencia, "Titular"])
             
@@ -1489,7 +1532,8 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
             
             st.session_state["gatilho_limpar_transf"] = True
             atualizar_sessao()
-            st.rerun()           
+            st.rerun()
+           
 
   
 
@@ -2984,6 +3028,8 @@ elif "🐾" in aba:
 
 
 elif "🚗" in aba:
+    st.title("🚗 Central Tática Veicular • VW T-Cross")
+    
     # --- BLINDAGEM DE SEGURANÇA PARA A VARIÁVEL MES_ATUAL ---
     if 'mes_atual' not in locals():
         if 'filtro_mes' in locals():
@@ -3008,11 +3054,6 @@ elif "🚗" in aba:
             "venc_seguro": "21/11/2026",
             "seguradora": "Porto Seguro"
         }
-
-    cfg = st.session_state.car_config
-
-    # TÍTULO DINÂMICO QUE ACOMPANHA O MODELO DO CARRO
-    st.title(f"🚗 Central Tática Veicular • {cfg['modelo']}")
 
     # Botão expansível para editar os dados direto no formulário
     with st.expander("🛠️ Configurações e Alteração de Dados do Veículo"):
@@ -3039,6 +3080,8 @@ elif "🚗" in aba:
                 st.session_state.car_config["venc_seguro"] = f_vseg
                 st.success("✅ Dados do veículo e seguro atualizados com sucesso!")
                 st.rerun()
+
+    cfg = st.session_state.car_config
 
     # =========================================================================
     # 🛡️ CÁLCULO DINÂMICO DE LICENCIAMENTO (REGRA DETRAN-SP PELA PLACA)
@@ -3276,7 +3319,7 @@ elif "🚗" in aba:
             else:
                 st.info("Nenhum lançamento encontrado com esses filtros.")
         else:
-            st.info("Nenhum lançamento de veículo encontrado na base.")
+            st.info("Nenhum lançamento de veículo encontrado na base.")     
 
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
