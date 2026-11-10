@@ -3027,9 +3027,7 @@ elif "🐾" in aba:
 
 
 
-elif "🚗" in aba:
-    st.title("🚗 Central Tática Veicular • VW T-Cross")
-    
+ elif "🚗" in aba:
     # --- BLINDAGEM DE SEGURANÇA PARA A VARIÁVEL MES_ATUAL ---
     if 'mes_atual' not in locals():
         if 'filtro_mes' in locals():
@@ -3054,6 +3052,11 @@ elif "🚗" in aba:
             "venc_seguro": "21/11/2026",
             "seguradora": "Porto Seguro"
         }
+
+    cfg = st.session_state.car_config
+
+    # TÍTULO DINÂMICO QUE ACOMPANHA O MODELO DO CARRO
+    st.title(f"🚗 Central Tática Veicular • {cfg['modelo']}")
 
     # Botão expansível para editar os dados direto no formulário
     with st.expander("🛠️ Configurações e Alteração de Dados do Veículo"):
@@ -3080,8 +3083,6 @@ elif "🚗" in aba:
                 st.session_state.car_config["venc_seguro"] = f_vseg
                 st.success("✅ Dados do veículo e seguro atualizados com sucesso!")
                 st.rerun()
-
-    cfg = st.session_state.car_config
 
     # =========================================================================
     # 🛡️ CÁLCULO DINÂMICO DE LICENCIAMENTO (REGRA DETRAN-SP PELA PLACA)
@@ -3319,7 +3320,8 @@ elif "🚗" in aba:
             else:
                 st.info("Nenhum lançamento encontrado com esses filtros.")
         else:
-            st.info("Nenhum lançamento de veículo encontrado na base.")     
+            st.info("Nenhum lançamento de veículo encontrado na base.")
+
 
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
