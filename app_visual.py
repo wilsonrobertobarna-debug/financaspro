@@ -675,7 +675,7 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
             st.session_state['ntfy_alertas_diarios_enviado'] = True
             
     
-# --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
+    # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in st.session_state.page:
     
     # =========================================================================
@@ -786,7 +786,7 @@ if "💰" in st.session_state.page:
                 total_aportado_ant = aporte_planejado
 
                 # --- FILTRO INTELIGENTE E FLEXÍVEL (BUSCA POR BANCO OU DESCRIÇÃO) ---
-                termo_banco = str(banco_reserva).strip().lower()
+                 termo_banco = str(banco_reserva).strip().lower()
                  
                  if checar_mes_ant:
                      filtro_mes_ant = (
