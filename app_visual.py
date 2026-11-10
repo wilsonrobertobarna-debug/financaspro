@@ -676,7 +676,7 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
             
     
     # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
-if "💰" in st.session_state.page:
+    if "💰" in st.session_state.page:
     
     # =========================================================================
     # 🔔 VERIFICAÇÃO AUTOMÁTICA E NTFY DA RESERVA DE EMERGÊNCIA (COM PILLS TOPO)
