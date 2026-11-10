@@ -673,12 +673,13 @@ with st.expander("📊 Clique aqui para ver o Relatório Bancário Completo"):
                     tags="moneybag,bell"
                 )
             st.session_state['ntfy_alertas_diarios_enviado'] = True
-
+            
+    
 # --- INÍCIO DA ABA: 💰 Finanças & Bancos (COM GRÁFICO DE METAS) ---
 if "💰" in st.session_state.page:
     
-  # =========================================================================
-    # 🔔 VERIFICAÇÃO AUTOMÁTICA E NTFY DA RESERVA DE EMERGÊNCIA (COM PEELLS TOPO)
+    # =========================================================================
+    # 🔔 VERIFICAÇÃO AUTOMÁTICA E NTFY DA RESERVA DE EMERGÊNCIA (COM PILLS TOPO)
     # =========================================================================
     import datetime as dt_mod
     from datetime import datetime
@@ -772,36 +773,52 @@ if "💰" in st.session_state.page:
                 
                 col_v = 'V_Num' if 'V_Num' in df_base_reserva.columns else ('Valor' if 'Valor' in df_base_reserva.columns else 'V_NUM')
 
+                # Converte coluna de valor para número com segurança
+                def limpa_val(v):
+                    try:
+                        return float(str(v).replace('R$', '').replace('.', '').replace(',', '.').strip())
+                    except:
+                        return 0.0
+                
+                df_base_reserva[col_v] = df_base_reserva[col_v].apply(limpa_val)
+
                 checar_mes_ant = (ano_anterior, mes_anterior) >= (ANO_INICIO_CONTROLE, MES_INICIO_CONTROLE)
                 total_aportado_ant = aporte_planejado
 
-                if checar_mes_ant:
-                    filtro_mes_ant = (
-                        (df_base_reserva['DT_Res'].dt.month == mes_anterior) & 
-                        (df_base_reserva['DT_Res'].dt.year == ano_anterior) &
-                        (df_base_reserva['Banco'].astype(str).str.strip().str.upper() == str(banco_reserva).strip().upper()) &
-                        (df_base_reserva['Descrição'].astype(str).str.contains('reserva', case=False, na=False))
-                    )
-                    if 'Status' in df_base_reserva.columns:
-                        filtro_mes_ant = filtro_mes_ant & ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
-                    total_aportado_ant = df_base_reserva[filtro_mes_ant][col_v].sum()
+                # --- FILTRO INTELIGENTE E FLEXÍVEL (BUSCA POR BANCO OU DESCRIÇÃO) ---
+                 termo_banco = str(banco_reserva).strip().lower()
+                 
+                 if checar_mes_ant:
+                     filtro_mes_ant = (
+                         (df_base_reserva['DT_Res'].dt.month == mes_anterior) & 
+                         (df_base_reserva['DT_Res'].dt.year == ano_anterior) &
+                         (
+                             (df_base_reserva['Banco'].astype(str).str.lower().str.contains(termo_banco, na=False)) |
+                             (df_base_reserva['Descrição'].astype(str).str.lower().str.contains('reserva|aporte|invest', case=False, na=False))
+                         )
+                     )
+                     if 'Status' in df_base_reserva.columns:
+                         filtro_mes_ant = filtro_mes_ant & ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
+                     total_aportado_ant = df_base_reserva[filtro_mes_ant][col_v].sum()
 
-                filtro_mes_atual = (
-                    (df_base_reserva['DT_Res'].dt.month == mes_atual) & 
-                    (df_base_reserva['DT_Res'].dt.year == ano_atual) &
-                    (df_base_reserva['Banco'].astype(str).str.strip().str.upper() == str(banco_reserva).strip().upper()) &
-                    (df_base_reserva['Descrição'].astype(str).str.contains('reserva', case=False, na=False))
-                )
-                if 'Status' in df_base_reserva.columns:
-                    filtro_mes_atual = filtro_mes_atual & ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
+                 filtro_mes_atual = (
+                     (df_base_reserva['DT_Res'].dt.month == mes_atual) & 
+                     (df_base_reserva['DT_Res'].dt.year == ano_atual) &
+                     (
+                         (df_base_reserva['Banco'].astype(str).str.lower().str.contains(termo_banco, na=False)) |
+                         (df_base_reserva['Descrição'].astype(str).str.lower().str.contains('reserva|aporte|invest', case=False, na=False))
+                     )
+                 )
+                 if 'Status' in df_base_reserva.columns:
+                     filtro_mes_atual = filtro_mes_atual & ((df_base_reserva['Status'].str.upper() == 'PAGO') | (df_base_reserva['Status'] == ''))
 
-                df_aportes_atual = df_base_reserva[filtro_mes_atual]
-                total_aportado_mes = df_aportes_atual[col_v].sum()
-                
-                data_ultimo_aporte = None
-                if not df_aportes_atual.empty:
-                    data_ultimo_aporte = df_aportes_atual['DT_Res'].max()
-                    
+                 df_aportes_atual = df_base_reserva[filtro_mes_atual]
+                 total_aportado_mes = df_aportes_atual[col_v].sum()
+                 
+                 data_ultimo_aporte = None
+                 if not df_aportes_atual.empty:
+                     data_ultimo_aporte = df_aportes_atual['DT_Res'].max()
+                     
             except Exception:
                 total_aportado_ant = aporte_planejado
                 total_aportado_mes = 0.0
@@ -811,7 +828,9 @@ if "💰" in st.session_state.page:
             falta_aportar_mes = max(0.0, aporte_planejado - total_aportado_mes)
             falta_aportar_ant = max(0.0, aporte_planejado - total_aportado_ant)
 
-            # Regras de Negócio:
+            # =========================================================================
+            # 💡 REGRAS DE NEGÓCIO ATUALIZADAS (APORTE REALIZADO X PENDENTE)
+            # =========================================================================
             if checar_mes_ant and total_aportado_ant < aporte_planejado:
                 exibir_alerta = True
                 tipo_alerta = "vermelho_atrasado"
@@ -821,21 +840,28 @@ if "💰" in st.session_state.page:
                 msg_ntfy = f"Aporte de Reserva ({mes_ref}) pendente! Falta R$ {falta_aportar:,.2f} no banco {banco_reserva}."
             else:
                 if total_aportado_mes >= aporte_planejado:
+                    # SE JÁ APORTOU: Exibe mensagem VERDE de sucesso nos primeiros 3 dias após o aporte.
+                    # Após 3 dias do aporte (ou a partir do dia 14), O CÓDIGO OCULTA O BANNER AUTOMATICAMENTE.
                     if data_ultimo_aporte is not None:
                         dias_desde_aporte = (hoje_dt - data_ultimo_aporte).days
                         if 0 <= dias_desde_aporte <= 3:
                             exibir_alerta = True
                             tipo_alerta = "verde"
+                        else:
+                            exibir_alerta = False # Oculta mensagem pois já cumpriu e passaram 3 dias!
                     else:
                         exibir_alerta = True
                         tipo_alerta = "verde"
                 else:
+                    # SE AINDA NÃO APORTOU TOTALMENTE:
                     if dia_atual <= dia_limite:
+                        # Do dia 01 ao dia 10: Mostra em AZUL o andamento e o limite
                         exibir_alerta = True
                         tipo_alerta = "azul"
                         falta_aportar = falta_aportar_mes
                         msg_ntfy = f"Lembrete: Aporte da Reserva de R$ {falta_aportar:,.2f} vence dia {dia_limite}/{mes_atual:02d} ({banco_reserva})."
                     else:
+                        # Passou do dia 10 e NÃO pagou: Mostra em VERMELHO cobrando em atraso!
                         exibir_alerta = True
                         tipo_alerta = "vermelho_atual"
                         falta_aportar = falta_aportar_mes
@@ -844,7 +870,7 @@ if "💰" in st.session_state.page:
             # Exibição dos Alertas Visuais na tela
             if exibir_alerta:
                 if tipo_alerta == "verde":
-                    st.success(f"🎉 **Aporte do mês concluído!**\n\n• **Banco:** {banco_reserva}\n• **Planejado:** R$ {aporte_planejado:,.2f}\n• **Aportado:** R$ {total_aportado_mes:,.2f}")
+                    st.success(f"🎉 **Aporte do mês concluído com sucesso!**\n\n• **Banco:** {banco_reserva}\n• **Planejado:** R$ {aporte_planejado:,.2f}\n• **Aportado:** R$ {total_aportado_mes:,.2f}")
                 elif tipo_alerta == "azul":
                     st.info(f"⏳ **Aporte em andamento (Vencimento: Dia {dia_limite}):**\n\n• **Banco:** {banco_reserva}\n• **Aportado até agora:** R$ {total_aportado_mes:,.2f} / R$ {aporte_planejado:,.2f}\n• **Falta aportar:** R$ {falta_aportar:,.2f} até o dia {dia_limite}/{mes_atual:02d}.")
                 elif tipo_alerta == "vermelho_atual":
