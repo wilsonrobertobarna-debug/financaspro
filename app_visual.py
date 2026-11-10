@@ -1409,8 +1409,6 @@ with st.sidebar.expander("📢 Central de Notificações"):
             st.sidebar.error(f"❌ Erro ao enviar e-mail: {e}")            
        
 # --- BARRINHA 2: TRANSFERÊNCIA ---
-    #with st.sidebar.expander("💸 Transferência", expanded=False):
-    # --- BARRINHA 2: TRANSFERÊNCIA ---
 with st.sidebar.expander("💸 Transferência", expanded=False):
     
     # GARANTE A DATA ATUAL NO FUSO DE SÃO PAULO USANDO NATIVO DO PYTHON
@@ -1513,15 +1511,19 @@ with st.sidebar.expander("💸 Transferência", expanded=False):
                 else:
                     status_transf = "Pago"
                 
+                # --- MONTAGEM AUTOMÁTICA DA DESCRIÇÃO (Origem ➔ Destino) ---
+                base_desc = f"TR: {t_orig} ➔ {t_dest}"
+                if t_desc and t_desc.strip():
+                    base_desc += f" - {t_desc.strip()}"
+
                 if t_meses > 1:
-                    desc_transf = f"TR ({i+1}/{t_meses}): {t_desc}".strip() if t_desc else f"TR ({i+1}/{t_meses}): Transferência recorrente"
+                    desc_transf = f"TR ({i+1}/{t_meses}): {base_desc[4:]}"
                 else:
-                    desc_transf = f"TR: {t_desc}".strip() if t_desc else "TR: Transferência entre contas"
+                    desc_transf = base_desc
                 
                 id_transferencia = proximo_id
                 proximo_id += 1 
                 
-                # 🎯 CIRURGIA AQUI: O último campo das duas linhas agora grava "Titular" em vez de vazio!
                 ws_base.append_row([d_str, v_str_orig, desc_transf, "Transferência", "Despesa", t_orig, status_transf, d_str, id_transferencia, "Titular"])
                 ws_base.append_row([d_str, v_str_dest, desc_transf, "Transferência", "Receita", t_dest, status_transf, d_str, id_transferencia, "Titular"])
             
