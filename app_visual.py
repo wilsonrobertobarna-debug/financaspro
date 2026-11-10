@@ -3723,8 +3723,9 @@ if aba == "📋 Relatório PDF":
         opcoes_tipo_rel = ["Todos"] + list(tipos_disponiveis)
         busca_tipo = st.selectbox("🏷️ Filtrar Tipo:", opcoes_tipo_rel, key="sb_rel_tipo")
         st.markdown("---")
-       
-    # Botão para processar e gerar o documento / visualizar
+
+    
+   # Botão para processar e gerar o documento / visualizar
     if st.button("📄 Gerar PDF", key="btn_gerar_pdf"):
         try:
             if isinstance(periodo_pdf, (list, tuple)):
@@ -3734,6 +3735,13 @@ if aba == "📋 Relatório PDF":
                     b_ini = b_fim = periodo_pdf[0]
             else:
                 b_ini = b_fim = periodo_pdf
+
+            # 🛡️ Função auxiliar para limpar setinhas/emojis e evitar erro de encoding no PDF
+            def limpar_texto_para_pdf(texto):
+                if not isinstance(texto, str):
+                    texto = str(texto)
+                texto = texto.replace('➔', '->').replace('•', '-')
+                return texto.encode('latin-1', 'ignore').decode('latin-1')
 
             # ========================================================
             # INICIALIZAÇÃO DO PDF
@@ -3828,11 +3836,8 @@ if aba == "📋 Relatório PDF":
             # ========================================================
             base_inicial = 0.0
             
-            # Identifica se o usuário selecionou um Banco/Cartão específico no relatório
-            # (Se for "Todos", significa que é um relatório geral, por beneficiário, categoria, etc.)
             eh_relatorio_de_banco_especifico = (banco_relatorio != "Todos" and banco_relatorio != "" and banco_relatorio is not None)
 
-            # SÓ BUSCA SALDO ANTERIOR SE FOR RELATÓRIO DE BANCO/CARTÃO ESPECÍFICO
             if eh_relatorio_de_banco_especifico:
                 try:
                     saldo_sistema_abril = 0.0
@@ -3906,7 +3911,6 @@ if aba == "📋 Relatório PDF":
                 except:
                     base_inicial = 0.0
             else:
-                # SE FOR POR BENEFICIÁRIO, CATEGORIA, TIPO OU GERAL: Começa zerado!
                 base_inicial = 0.0
 
             saldo_anterior = base_inicial
@@ -3929,6 +3933,7 @@ if aba == "📋 Relatório PDF":
                 saldos_lista.append(corrente)
             
             df_report['Saldo_Acum'] = saldos_lista
+
             # ========================================================
             # 5. MONTAGEM DO CABEÇALHO DO PDF
             # ========================================================
@@ -3938,7 +3943,7 @@ if aba == "📋 Relatório PDF":
             val_benef = str(locals().get('busca_benef', 'Todos')).strip()
             if val_benef and val_benef.upper() != "TODOS" and val_benef != "---":
                 pdf.set_font("Arial", 'B', 10)
-                pdf.cell(200, 6, txt=f"BENEFICIARIO: {val_benef.upper()}", ln=1, align="L")
+                pdf.cell(200, 6, txt=limpar_texto_para_pdf(f"BENEFICIARIO: {val_benef.upper()}"), ln=1, align="L")
             
             pdf.ln(2)
             pdf.set_font("Arial", '', 10)
@@ -3946,7 +3951,7 @@ if aba == "📋 Relatório PDF":
             p_fim = pd.to_datetime(b_fim).strftime('%d/%m/%Y')
             
             pdf.set_font("Arial", 'B', 10)
-            pdf.cell(200, 6, txt=f"BANCO / CARTAO: {str(banco_nome).upper()}", ln=1, align="L")
+            pdf.cell(200, 6, txt=limpar_texto_para_pdf(f"BANCO / CARTAO: {str(banco_nome).upper()}"), ln=1, align="L")
         
             if eh_cartao_geral:
                 dt_fim_obj = pd.to_datetime(b_fim)
@@ -3975,18 +3980,18 @@ if aba == "📋 Relatório PDF":
             pdf.cell(200, 6, txt=f"SALDO ANTERIOR / ABERTURA: {txt_saldo_ini}", ln=1, align="L")
             pdf.ln(5)
             
-            # --- TÍTULO DA COLUNA DINÂMICO (Reduzido para abrir espaço para a Descrição) ---
+            # --- TÍTULO DA COLUNA ---
             nome_coluna_data_pdf = "Dt Compra" if eh_cartao_geral else "Dt Venc"
 
-            pdf.set_font("Arial", 'B', 8)  # Fonte levemente menor para caber melhor nos títulos
-            pdf.cell(18, 7, nome_coluna_data_pdf, 1)  # Data (18mm)
-            pdf.cell(14, 7, "Tipo", 1)               # Tipo (14mm)
-            pdf.cell(26, 7, "Categoria", 1)          # Categoria (26mm)
-            pdf.cell(32, 7, "Beneficiario", 1)       # Beneficiário (32mm)
-            pdf.cell(38, 7, "Descricao", 1)          # Descrição adicionada! (38mm)
-            pdf.cell(20, 7, "Valor", 1)              # Valor (20mm)
-            pdf.cell(26, 7, "Saldo Acum.", 1)        # Saldo Acumulado (26mm)
-            pdf.cell(20, 7, "Status", 1)             # Status (20mm) -> Total = 194mm exatos da página!
+            pdf.set_font("Arial", 'B', 8)
+            pdf.cell(18, 7, nome_coluna_data_pdf, 1)
+            pdf.cell(14, 7, "Tipo", 1)
+            pdf.cell(26, 7, "Categoria", 1)
+            pdf.cell(32, 7, "Beneficiario", 1)
+            pdf.cell(38, 7, "Descricao", 1)
+            pdf.cell(20, 7, "Valor", 1)
+            pdf.cell(26, 7, "Saldo Acum.", 1)
+            pdf.cell(20, 7, "Status", 1)
             pdf.ln()
 
             # ========================================================
@@ -3994,13 +3999,10 @@ if aba == "📋 Relatório PDF":
             # ========================================================
             if not df_report.empty:
                 col_benef_real = df_report.columns[9] if len(df_report.columns) > 9 else 'Beneficiario'
-                
-                # Identifica qual coluna é a Descrição de verdade no seu df_base
                 col_desc_real = next((c for c in df_report.columns if c.upper() in ['DESCRIÇÃO', 'DESCRICAO', 'NOTA']), None)
 
-            pdf.set_font("Arial", '', 8)  # Fonte 8 nas linhas para caber perfeitamente
+            pdf.set_font("Arial", '', 8)
             for index, row in df_report.iterrows():
-                # Para cartão, força exibir a Data da Compra na linha da tabela
                 b_linha_atual = str(row.get(col_banco_df, '')).upper()
                 is_cartao_linha = "CARTAO" in b_linha_atual or "CARTÃO" in b_linha_atual
                 
@@ -4009,22 +4011,20 @@ if aba == "📋 Relatório PDF":
                 else:
                     data_str = str(row.get(col_data_df, '---'))
                 
-                tipo_str = str(row.get('Tipo', '---')).strip()[:6]  # Abrevia um pouco se precisar (ex: Despesa/Receita)
-                cat_val = str(row.get('Categoria', 'Geral'))[:14]   # Corta com limite seguro para 14 caracteres
+                tipo_str = str(row.get('Tipo', '---')).strip()[:6]
+                cat_val = limpar_texto_para_pdf(str(row.get('Categoria', 'Geral'))[:14])
                 
-                # Pega o Beneficiário
                 desc_base = str(row.get(col_benef_real, row.get('Beneficiario', 'Sem nome'))).strip()
                 p_atual = row.get('_parc_atual', 1)
                 p_total = row.get('_parc_total', 1)
                 
                 if int(p_total) > 1:
-                    benef_val = f"{desc_base} {int(p_atual)}/{int(p_total)}"[:16]
+                    benef_val = limpar_texto_para_pdf(f"{desc_base} {int(p_atual)}/{int(p_total)}"[:16])
                 else:
-                    benef_val = desc_base[:16]
+                    benef_val = limpar_texto_para_pdf(desc_base[:16])
 
-                # Pega a Descrição real (caso exista a coluna)
                 if col_desc_real:
-                    desc_val = str(row.get(col_desc_real, '')).strip()[:20]
+                    desc_val = limpar_texto_para_pdf(str(row.get(col_desc_real, '')).strip()[:20])
                 else:
                     desc_val = ""
 
@@ -4033,10 +4033,9 @@ if aba == "📋 Relatório PDF":
                 saldo_val = row.get('Saldo_Acum', 0.0)
                 status_val = str(row.get('Status', '-'))[:10]
                 
-                # --- VALORES NEGATIVOS DESTACADOS EM VERMELHO COM SINAL ---
                 if "DESPESA" in tipo_str.upper() or "GASTO" in tipo_str.upper() or valor_val < 0:
                     texto_valor = f"- R$ {abs(valor_val):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                    cor_valor = (255, 0, 0) # Vermelho
+                    cor_valor = (255, 0, 0)
                 else:
                     texto_valor = f"R$ {valor_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                     cor_valor = (0, 0, 0)
@@ -4044,12 +4043,11 @@ if aba == "📋 Relatório PDF":
                 texto_saldo = f"R$ {saldo_val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                 cor_saldo = (255, 0, 0) if saldo_val < 0 else (0, 0, 0)
 
-                # Impressão das colunas com larguras proporcionais somando exatos 194mm
                 pdf.cell(18, 6, data_str, 1)
                 pdf.cell(14, 6, tipo_str, 1)
                 pdf.cell(26, 6, cat_val, 1)
                 pdf.cell(32, 6, benef_val, 1)
-                pdf.cell(38, 6, desc_val, 1)  # Nova coluna de descrição encaixada!
+                pdf.cell(38, 6, desc_val, 1)
                 
                 pdf.set_text_color(*cor_valor)
                 pdf.cell(20, 6, texto_valor, 1)
