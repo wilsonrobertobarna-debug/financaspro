@@ -2573,15 +2573,29 @@ if "💰" in st.session_state.page:
     st.divider()
 
             
-    
-    # 7. TABELA FINAL (COM ORDENAÇÃO FORÇADA PARA O MAIOR ID NO TOPO)
+    # 7. TABELA FINAL (APENAS PAGOS + TRANSFERÊNCIAS - MAIOR ID NO TOPO)
     st.write("---")
     st.subheader("🔍 Lançamentos do Mês")
     
     if 'df_m_br' in locals() and not df_m_br.empty:
         df_exibicao = df_m_br.copy()
         
-        # Converte o ID para numérico para garantir a ordenação correta do maior para o menor
+        # 1. FILTRO: Apenas Status Pago/Recebido OU Categoria de Transferência
+        col_status_ex = next((c for c in df_exibicao.columns if c.upper() == 'STATUS'), None)
+        col_cat_ex = next((c for c in df_exibicao.columns if c.upper() == 'CATEGORIA'), None)
+        
+        cond_pago = False
+        if col_status_ex:
+            cond_pago = df_exibicao[col_status_ex].astype(str).str.upper().str.strip().isin(['PAGO', 'RECEBIDO', 'LIQUIDADO', 'OK'])
+            
+        cond_transf = False
+        if col_cat_ex:
+            cond_transf = df_exibicao[col_cat_ex].astype(str).str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)
+            
+        # Aplica o filtro combinando as duas regras
+        df_exibicao = df_exibicao[cond_pago | cond_transf]
+        
+        # 2. ORDENAÇÃO: Maior ID no topo (últimos lançamentos primeiro)
         if 'ID' in df_exibicao.columns:
             df_exibicao['ID_num'] = pd.to_numeric(df_exibicao['ID'], errors='coerce')
             df_exibicao = df_exibicao.sort_values(by='ID_num', ascending=False, na_position='last')
@@ -2592,13 +2606,17 @@ if "💰" in st.session_state.page:
         # Garante que as colunas exibidas existam no dataframe para evitar erros
         colunas_disponiveis = [col for col in ['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status', 'Tipo'] if col in df_exibicao.columns]
         
-        st.dataframe(
-            df_exibicao[colunas_disponiveis], 
-            use_container_width=True, 
-            hide_index=True
-        )
+        if not df_exibicao.empty:
+            st.dataframe(
+                df_exibicao[colunas_disponiveis], 
+                use_container_width=True, 
+                hide_index=True
+            )
+        else:
+            st.info("Nenhum lançamento pago ou transferência registrada neste mês.")
     else:
         st.warning("A base de dados está vazia para este mês.")
+        
 
 elif "Pendências" in aba:
     st.title("📋 Lançamentos Pendentes")        
