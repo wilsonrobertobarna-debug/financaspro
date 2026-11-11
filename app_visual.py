@@ -4162,7 +4162,7 @@ if aba == "📋 Relatório PDF":
     if not df_tela_limpo.empty:
         st.dataframe(df_tela_limpo, use_container_width=True, hide_index=True)
         
-        # --- CÁLCULO EXATO DO SALDO INICIAL (IGUALZINHO AO PDF) ---
+        # --- CÁLCULO BLINDADO DE SALDO INICIAL (BANCO VS CARTÃO) ---
         col_tipo = next((c for c in df_tela.columns if c.upper() == 'TIPO'), None)
         col_valor = next((c for c in df_tela.columns if c.upper() == 'VALOR'), None)
         col_data_calc = next((c for c in df_base.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
@@ -4185,39 +4185,47 @@ if aba == "📋 Relatório PDF":
         base_inicial = 0.0
         banco_nome_tela = banco_relatorio if banco_relatorio != "Todos" else ""
         eh_relatorio_banco_esp = (banco_relatorio != "Todos" and banco_relatorio != "" and banco_relatorio is not None)
+        eh_cartao_tela = "CARTAO" in str(banco_nome_tela).upper() or "CARTÃO" in str(banco_nome_tela).upper()
 
         if eh_relatorio_banco_esp and col_data_calc and col_tipo and col_valor and 'periodo_pdf' in locals() and isinstance(periodo_pdf, (list, tuple)) and len(periodo_pdf) == 2:
             try:
-                saldo_sistema_abril = 0.0
-                try:
-                    ws_bancos = sh.worksheet("Bancos")
-                    dados_bancos = ws_bancos.get_all_values()
-                    df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
-                    
-                    col_banco_cad = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
-                    col_saldo_cad = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
-                    
-                    linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome_tela.upper()]
-                    if not linha_banco.empty:
-                        val_cru = str(linha_banco.iloc[0][col_saldo_cad]).strip()
-                        import re
-                        val_limpo = re.sub(r'[^\d.,-]', '', val_cru)
-                        if '.' in val_limpo and ',' in val_limpo:
-                            val_limpo = val_limpo.replace('.', '').replace(',', '.')
-                        elif ',' in val_limpo:
-                            val_limpo = val_limpo.replace(',', '.')
-                        saldo_sistema_abril = float(val_limpo)
-                except:
-                    saldo_sistema_abril = 0.0
+                t_ini_filtro = pd.to_datetime(periodo_pdf[0])
+                
+                saldo_sistema_banco = 0.0
+                if not eh_cartao_tela:
+                    try:
+                        ws_bancos = sh.worksheet("Bancos")
+                        dados_bancos = ws_bancos.get_all_values()
+                        df_bancos_cad = pd.DataFrame(dados_bancos[1:], columns=dados_bancos[0])
+                        
+                        col_banco_cad = [c for c in df_bancos_cad.columns if 'BANCO' in c.upper()][0]
+                        col_saldo_cad = [c for c in df_bancos_cad.columns if 'SALDO' in c.upper()][0]
+                        
+                        linha_banco = df_bancos_cad[df_bancos_cad[col_banco_cad].str.upper().str.strip() == banco_nome_tela.upper()]
+                        if not linha_banco.empty:
+                            val_cru = str(linha_banco.iloc[0][col_saldo_cad]).strip()
+                            import re
+                            val_limpo = re.sub(r'[^\d.,-]', '', val_cru)
+                            if '.' in val_limpo and ',' in val_limpo:
+                                val_limpo = val_limpo.replace('.', '').replace(',', '.')
+                            elif ',' in val_limpo:
+                                val_limpo = val_limpo.replace(',', '.')
+                            saldo_sistema_banco = float(val_limpo)
+                    except:
+                        saldo_sistema_banco = 0.0
 
                 df_historico = df_base.copy()
                 df_historico['DT_HIST'] = pd.to_datetime(df_historico[col_data_calc], format="%d/%m/%Y", errors='coerce')
-                t_ini_filtro = pd.to_datetime(periodo_pdf[0])
                 
                 if col_banco_df:
                     df_historico = df_historico[df_historico[col_banco_df].str.upper().str.strip() == str(banco_nome_tela).upper()]
                 
-                df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini_filtro]
+                # Para cartão de crédito, acumula tudo o que aconteceu antes da data inicial do período 
+                # (respeitando faturas anteriores não liquidadas ou saldos anteriores acumulados)
+                if eh_cartao_tela:
+                    df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini_filtro]
+                else:
+                    df_antes_do_periodo = df_historico[df_historico['DT_HIST'] < t_ini_filtro]
                 
                 saldo_acumulado_passado = 0.0
                 for _, r_pass in df_antes_do_periodo.iterrows():
@@ -4230,7 +4238,10 @@ if aba == "📋 Relatório PDF":
                     else:
                         saldo_acumulado_passado += val_p
                 
-                base_inicial = saldo_sistema_abril + saldo_acumulado_passado
+                if eh_cartao_tela:
+                    base_inicial = saldo_acumulado_passado
+                else:
+                    base_inicial = saldo_sistema_banco + saldo_acumulado_passado
             except:
                 base_inicial = 0.0
 
@@ -4244,17 +4255,15 @@ if aba == "📋 Relatório PDF":
             
             total_receitas = df_calc[~df_calc['TIPO_UP'].str.contains('DESPESA|GASTO', na=False)]['VALOR_NUM'].sum()
             total_despesas = df_calc[df_calc['TIPO_UP'].str.contains('DESPESA|GASTO', na=False)]['VALOR_NUM'].sum()
-            
-            # Como nos lançamentos filtrados os rendimentos costumam entrar junto das receitas ou separados, mantemos sua regra ou o somatório limpo:
             total_rendimentos = df_calc[df_calc['TIPO_UP'].str.contains('RENDIMENTO|JUROS|INVESTIMENTO', na=False)]['VALOR_NUM'].sum()
             
-            # Fórmula final exata: Saldo Inicial + Receitas + Rendimentos - Despesas
+            # Fórmula final exata
             saldo_final = saldo_inicial + total_receitas - total_despesas
             
             def fmt(v):
                 return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             
-            # Exibe os cartões lado a lado idênticos ao PDF
+            # Exibe os cartões na tela
             st.markdown("---")
             c1, c2, c3, c4, c5 = st.columns(5)
             c1.metric("🏦 Saldo Inicial", fmt(saldo_inicial))
