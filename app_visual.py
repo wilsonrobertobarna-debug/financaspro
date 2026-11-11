@@ -4183,15 +4183,20 @@ if aba == "📋 Relatório PDF":
             except:
                 return 0.0
 
-        # 1. Calcula o Saldo Inicial (tudo o que aconteceu ANTES da data de início do período filtrado)
+        # 1. Calcula o Saldo Inicial (Respeitando o banco selecionado no filtro)
         saldo_inicial = 0.0
         if col_data_calc and col_tipo and col_valor and 'periodo_pdf' in locals() and isinstance(periodo_pdf, (list, tuple)) and len(periodo_pdf) == 2:
             df_base_hist = df_base.copy()
             df_base_hist['DT_HIST'] = pd.to_datetime(df_base_hist[col_data_calc], format="%d/%m/%Y", errors='coerce')
             data_inicio_filtro = pd.to_datetime(periodo_pdf[0])
             
-            # Filtra lançamentos estritamente anteriores ao início do mês/período
+            # Filtra lançamentos anteriores ao início do mês
             df_anterior = df_base_hist[df_base_hist['DT_HIST'] < data_inicio_filtro]
+            
+            # Se o usuário escolheu um banco específico no relatório, filtra o histórico só desse banco!
+            if 'banco_relatorio' in locals() and banco_relatorio != "Todos" and col_banco_df in df_anterior.columns:
+                df_anterior = df_anterior[df_anterior[col_banco_df].str.upper().str.strip() == str(banco_relatorio).upper()]
+            
             if not df_anterior.empty:
                 df_anterior['VALOR_NUM'] = df_anterior[col_valor].apply(limpar_valor)
                 df_anterior['TIPO_UP'] = df_anterior[col_tipo].astype(str).str.upper().str.strip()
