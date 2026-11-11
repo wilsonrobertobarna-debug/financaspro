@@ -4144,7 +4144,6 @@ if aba == "📋 Relatório PDF":
 
     # --- ORDENAÇÃO POR VENCIMENTO (Menor data / dia 1 no topo) ---
     if col_data_df and col_data_df in df_tela.columns:
-        # Garante a coluna auxiliar de data ordenada de forma crescente (ascending=True)
         df_tela['DT_ORDEM_TELA'] = pd.to_datetime(df_tela[col_data_df], format="%d/%m/%Y", errors='coerce')
         df_tela = df_tela.sort_values(by='DT_ORDEM_TELA', ascending=True, na_position='last')
         df_tela = df_tela.drop(columns=['DT_ORDEM_TELA'])
@@ -4159,11 +4158,38 @@ if aba == "📋 Relatório PDF":
     
     df_tela_limpo = df_tela[colunas_visiveis]
 
-    # Exibe os dados
+    # Exibe os dados e o Saldo Total logo abaixo
     if not df_tela_limpo.empty:
         st.dataframe(df_tela_limpo, use_container_width=True, hide_index=True)
+        
+        # --- CÁLCULO DO SALDO TOTAL (Receitas + Rendimentos - Despesas) ---
+        col_tipo = next((c for c in df_tela.columns if c.upper() == 'TIPO'), None)
+        col_valor = next((c for c in df_tela.columns if c.upper() == 'VALOR'), None)
+        
+        if col_tipo and col_valor:
+            # Garante valor numérico
+            df_calc = df_tela.copy()
+            df_calc['VALOR_NUM'] = pd.to_numeric(df_calc[col_valor], errors='coerce').fillna(0.0)
+            df_calc['TIPO_UP'] = df_calc[col_tipo].astype(str).str.upper().str.strip()
+            
+            # Soma separada por tipo (ajuste os termos conforme seus tipos cadastrados: ex. Receita, Rendimento, Despesa)
+            total_receitas = df_calc[df_calc['TIPO_UP'].str.contains('RECEITA', na=False)]['VALOR_NUM'].sum()
+            total_rendimentos = df_calc[df_calc['TIPO_UP'].str.contains('RENDIMENTO|JUROS|INVESTIMENTO', na=False)]['VALOR_NUM'].sum()
+            total_despesas = df_calc[df_calc['TIPO_UP'].str.contains('DESPESA|GASTO|PAGAMENTO', na=False)]['VALOR_NUM'].sum()
+            
+            # Fórmula solicitada: Receitas + Rendimentos - Despesas
+            saldo_total = total_receitas + total_rendimentos - total_despesas
+            
+            # Exibe métrica ou card limpo logo abaixo da tabela
+            st.markdown("---")
+            col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+            col_m1.metric("➕ Receitas", f"R$ {total_receitas:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+            col_m2.metric("📈 Rendimentos", f"R$ {total_rendimentos:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+            col_m3.metric("➖ Despesas", f"R$ {total_despesas:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+            col_m4.metric("💰 Saldo Total", f"R$ {saldo_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
     else:
         st.info("Nenhum lançamento encontrado para os filtros aplicados.")
+
 
 # =========================================================================
 # NOVA ABA: 📊 ANÁLISES & CONFIGURAÇÕES
