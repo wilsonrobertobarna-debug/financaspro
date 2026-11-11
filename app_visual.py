@@ -4142,9 +4142,12 @@ if aba == "📋 Relatório PDF":
     if modo_geral_tela and 'Categoria' in df_tela.columns:
         df_tela = df_tela[~df_tela['Categoria'].str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)]
 
-    
-    # --- FAXINA RIGOROSA ---
-    colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
+    # --- ORDENAÇÃO POR VENCIMENTO (Menor data / dia 1 no topo) ---
+    if col_data_df and col_data_df in df_tela.columns:
+        # Garante a coluna auxiliar de data ordenada de forma crescente (ascending=True)
+        df_tela['DT_ORDEM_TELA'] = pd.to_datetime(df_tela[col_data_df], format="%d/%m/%Y", errors='coerce')
+        df_tela = df_tela.sort_values(by='DT_ORDEM_TELA', ascending=True, na_position='last')
+        df_tela = df_tela.drop(columns=['DT_ORDEM_TELA'])
 
     # --- FAXINA RIGOROSA ---
     colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
@@ -4158,10 +4161,9 @@ if aba == "📋 Relatório PDF":
 
     # Exibe os dados
     if not df_tela_limpo.empty:
-        st.dataframe(df_tela_limpo, use_container_width=True)
+        st.dataframe(df_tela_limpo, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhum lançamento encontrado para os filtros aplicados.")
-
 
 # =========================================================================
 # NOVA ABA: 📊 ANÁLISES & CONFIGURAÇÕES
