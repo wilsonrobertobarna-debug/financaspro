@@ -2573,29 +2573,24 @@ if "💰" in st.session_state.page:
     st.divider()
 
             
-    # 7. TABELA FINAL (APENAS PAGOS + TRANSFERÊNCIAS - MAIOR ID NO TOPO)
+    # 7. TABELA FINAL (APENAS PAGOS/RECEBIDOS E TRANSFERÊNCIAS PAGAS - MAIOR ID NO TOPO)
     st.write("---")
     st.subheader("🔍 Lançamentos do Mês")
     
     if 'df_m_br' in locals() and not df_m_br.empty:
         df_exibicao = df_m_br.copy()
         
-        # 1. FILTRO: Apenas Status Pago/Recebido OU Categoria de Transferência
+        # 1. FILTRA APENAS STATUS PAGO/RECEBIDO PARA TUDO (Inclusive transferências)
         col_status_ex = next((c for c in df_exibicao.columns if c.upper() == 'STATUS'), None)
-        col_cat_ex = next((c for c in df_exibicao.columns if c.upper() == 'CATEGORIA'), None)
         
-        cond_pago = False
         if col_status_ex:
-            cond_pago = df_exibicao[col_status_ex].astype(str).str.upper().str.strip().isin(['PAGO', 'RECEBIDO', 'LIQUIDADO', 'OK'])
+            # Mantém estritamente o que já foi liquidado (Pago, Recebido, Liquidado, OK)
+            df_exibicao = df_exibicao[df_exibicao[col_status_ex].astype(str).str.upper().str.strip().isin(['PAGO', 'RECEBIDO', 'LIQUIDADO', 'OK'])]
+        else:
+            # Caso improvável de não achar a coluna de status, garante um DataFrame vazio para segurança
+            df_exibicao = df_exibicao.iloc[0:0]
             
-        cond_transf = False
-        if col_cat_ex:
-            cond_transf = df_exibicao[col_cat_ex].astype(str).str.upper().str.contains("TRANSFERÊNCIA|TRANSFERENCIA", na=False)
-            
-        # Aplica o filtro combinando as duas regras
-        df_exibicao = df_exibicao[cond_pago | cond_transf]
-        
-        # 2. ORDENAÇÃO: Maior ID no topo (últimos lançamentos primeiro)
+        # 2. ORDENAÇÃO: Maior ID no topo (últimos lançamentos cadastrados primeiro)
         if 'ID' in df_exibicao.columns:
             df_exibicao['ID_num'] = pd.to_numeric(df_exibicao['ID'], errors='coerce')
             df_exibicao = df_exibicao.sort_values(by='ID_num', ascending=False, na_position='last')
@@ -2613,7 +2608,7 @@ if "💰" in st.session_state.page:
                 hide_index=True
             )
         else:
-            st.info("Nenhum lançamento pago ou transferência registrada neste mês.")
+            st.info("Nenhum lançamento pago registrado neste mês.")
     else:
         st.warning("A base de dados está vazia para este mês.")
         
