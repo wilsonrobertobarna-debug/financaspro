@@ -4162,20 +4162,19 @@ if aba == "📋 Relatório PDF":
     if not df_tela_limpo.empty:
         st.dataframe(df_tela_limpo, use_container_width=True, hide_index=True)
         
-        # --- CÁLCULO DO SALDO TOTAL COM LIMPEZA ROBUSTA DE MOEDA ---
+        # --- CÁLCULO DO SALDO TOTAL (Blindado contra erros de digitação e tipos variados) ---
         col_tipo = next((c for c in df_tela.columns if c.upper() == 'TIPO'), None)
         col_valor = next((c for c in df_tela.columns if c.upper() == 'VALOR'), None)
         
         if col_tipo and col_valor:
             df_calc = df_tela.copy()
             
-            # Função para limpar string de dinheiro (ex: "R$ 1.250,50" -> 1250.50)
+            # Função para limpar string de dinheiro
             def limpar_valor(val):
                 if pd.isna(val):
                     return 0.0
                 if isinstance(val, (int, float)):
                     return float(val)
-                # Remove R$, espaços, troca ponto de milhar por vazio e vírgula decimal por ponto
                 s = str(val).replace('R$', '').replace(' ', '')
                 if '.' in s and ',' in s:
                     s = s.replace('.', '').replace(',', '.')
@@ -4187,12 +4186,18 @@ if aba == "📋 Relatório PDF":
                     return 0.0
 
             df_calc['VALOR_NUM'] = df_calc[col_valor].apply(limpar_valor)
+            
+            # Padroniza o texto do Tipo para maiúsculo e remove espaços
             df_calc['TIPO_UP'] = df_calc[col_tipo].astype(str).str.upper().str.strip()
             
-            # Soma separada por tipo
-            total_receitas = df_calc[df_calc['TIPO_UP'].str.contains('RECEITA', na=False)]['VALOR_NUM'].sum()
-            total_rendimentos = df_calc[df_calc['TIPO_UP'].str.contains('RENDIMENTO|JUROS|INVESTIMENTO', na=False)]['VALOR_NUM'].sum()
-            total_despesas = df_calc[df_calc['TIPO_UP'].str.contains('DESPESA|GASTO|PAGAMENTO', na=False)]['VALOR_NUM'].sum()
+            # 🔍 CAPTURA AMPLA: Pega Receita, Recebimento, Recendimento, etc., sem deixar nada para trás
+            mask_receitas = df_calc['TIPO_UP'].str.contains('RECEITA|RECEBIMENTO|RECENDIMENTO', na=False)
+            mask_rendimentos = df_calc['TIPO_UP'].str.contains('RENDIMENTO|JUROS|INVESTIMENTO', na=False)
+            mask_despesas = df_calc['TIPO_UP'].str.contains('DESPESA|GASTO|PAGAMENTO', na=False)
+            
+            total_receitas = df_calc[mask_receitas]['VALOR_NUM'].sum()
+            total_rendimentos = df_calc[mask_rendimentos]['VALOR_NUM'].sum()
+            total_despesas = df_calc[mask_despesas]['VALOR_NUM'].sum()
             
             # Fórmula solicitada: Receitas + Rendimentos - Despesas
             saldo_total = total_receitas + total_rendimentos - total_despesas
@@ -4206,7 +4211,6 @@ if aba == "📋 Relatório PDF":
             col_m4.metric("💰 Saldo Total", f"R$ {saldo_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
     else:
         st.info("Nenhum lançamento encontrado para os filtros aplicados.")
-
 
 # =========================================================================
 # NOVA ABA: 📊 ANÁLISES & CONFIGURAÇÕES
