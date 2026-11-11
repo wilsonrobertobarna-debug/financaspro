@@ -4162,17 +4162,34 @@ if aba == "📋 Relatório PDF":
     if not df_tela_limpo.empty:
         st.dataframe(df_tela_limpo, use_container_width=True, hide_index=True)
         
-        # --- CÁLCULO DO SALDO TOTAL (Receitas + Rendimentos - Despesas) ---
+        # --- CÁLCULO DO SALDO TOTAL COM LIMPEZA ROBUSTA DE MOEDA ---
         col_tipo = next((c for c in df_tela.columns if c.upper() == 'TIPO'), None)
         col_valor = next((c for c in df_tela.columns if c.upper() == 'VALOR'), None)
         
         if col_tipo and col_valor:
-            # Garante valor numérico
             df_calc = df_tela.copy()
-            df_calc['VALOR_NUM'] = pd.to_numeric(df_calc[col_valor], errors='coerce').fillna(0.0)
+            
+            # Função para limpar string de dinheiro (ex: "R$ 1.250,50" -> 1250.50)
+            def limpar_valor(val):
+                if pd.isna(val):
+                    return 0.0
+                if isinstance(val, (int, float)):
+                    return float(val)
+                # Remove R$, espaços, troca ponto de milhar por vazio e vírgula decimal por ponto
+                s = str(val).replace('R$', '').replace(' ', '')
+                if '.' in s and ',' in s:
+                    s = s.replace('.', '').replace(',', '.')
+                elif ',' in s:
+                    s = s.replace(',', '.')
+                try:
+                    return float(s)
+                except:
+                    return 0.0
+
+            df_calc['VALOR_NUM'] = df_calc[col_valor].apply(limpar_valor)
             df_calc['TIPO_UP'] = df_calc[col_tipo].astype(str).str.upper().str.strip()
             
-            # Soma separada por tipo (ajuste os termos conforme seus tipos cadastrados: ex. Receita, Rendimento, Despesa)
+            # Soma separada por tipo
             total_receitas = df_calc[df_calc['TIPO_UP'].str.contains('RECEITA', na=False)]['VALOR_NUM'].sum()
             total_rendimentos = df_calc[df_calc['TIPO_UP'].str.contains('RENDIMENTO|JUROS|INVESTIMENTO', na=False)]['VALOR_NUM'].sum()
             total_despesas = df_calc[df_calc['TIPO_UP'].str.contains('DESPESA|GASTO|PAGAMENTO', na=False)]['VALOR_NUM'].sum()
@@ -4180,7 +4197,7 @@ if aba == "📋 Relatório PDF":
             # Fórmula solicitada: Receitas + Rendimentos - Despesas
             saldo_total = total_receitas + total_rendimentos - total_despesas
             
-            # Exibe métrica ou card limpo logo abaixo da tabela
+            # Exibe os cartões com os valores corretos
             st.markdown("---")
             col_m1, col_m2, col_m3, col_m4 = st.columns(4)
             col_m1.metric("➕ Receitas", f"R$ {total_receitas:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
