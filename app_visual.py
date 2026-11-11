@@ -4163,10 +4163,9 @@ if aba == "📋 Relatório PDF":
     if not df_tela_limpo.empty:
         st.dataframe(df_tela_limpo, use_container_width=True, hide_index=True)
         
-        # --- CÁLCULO DO SALDO INICIAL E DOS TOTAIS DO PERÍODO ---
+        # --- CÁLCULO DOS TOTAIS DA TELA ---
         col_tipo = next((c for c in df_tela.columns if c.upper() == 'TIPO'), None)
         col_valor = next((c for c in df_tela.columns if c.upper() == 'VALOR'), None)
-        col_data_calc = next((c for c in df_base.columns if c.upper() in ['VENCIMENTO', 'DATA', 'DT']), None)
         
         def limpar_valor(val):
             if pd.isna(val):
@@ -4183,55 +4182,34 @@ if aba == "📋 Relatório PDF":
             except:
                 return 0.0
 
-        # 1. Calcula o Saldo Inicial (Respeitando o banco selecionado no filtro)
-        saldo_inicial = 0.0
-        if col_data_calc and col_tipo and col_valor and 'periodo_pdf' in locals() and isinstance(periodo_pdf, (list, tuple)) and len(periodo_pdf) == 2:
-            df_base_hist = df_base.copy()
-            df_base_hist['DT_HIST'] = pd.to_datetime(df_base_hist[col_data_calc], format="%d/%m/%Y", errors='coerce')
-            data_inicio_filtro = pd.to_datetime(periodo_pdf[0])
-            
-            # Filtra lançamentos anteriores ao início do mês
-            df_anterior = df_base_hist[df_base_hist['DT_HIST'] < data_inicio_filtro]
-            
-            # Se o usuário escolheu um banco específico no relatório, filtra o histórico só desse banco!
-            if 'banco_relatorio' in locals() and banco_relatorio != "Todos" and col_banco_df in df_anterior.columns:
-                df_anterior = df_anterior[df_anterior[col_banco_df].str.upper().str.strip() == str(banco_relatorio).upper()]
-            
-            if not df_anterior.empty:
-                df_anterior['VALOR_NUM'] = df_anterior[col_valor].apply(limpar_valor)
-                df_anterior['TIPO_UP'] = df_anterior[col_tipo].astype(str).str.upper().str.strip()
-                
-                hist_rec = df_anterior[df_anterior['TIPO_UP'].str.contains('RECEITA|RECEBIMENTO|RECENDIMENTO', na=False)]['VALOR_NUM'].sum()
-                hist_rend = df_anterior[df_anterior['TIPO_UP'].str.contains('RENDIMENTO|JUROS|INVESTIMENTO', na=False)]['VALOR_NUM'].sum()
-                hist_esp = df_anterior[df_anterior['TIPO_UP'].str.contains('DESPESA|GASTO|PAGAMENTO', na=False)]['VALOR_NUM'].sum()
-                
-                saldo_inicial = hist_rec + hist_rend - hist_esp
-
-        # 2. Calcula os totais do período filtrado atual na tela
         if col_tipo and col_valor:
             df_calc = df_tela.copy()
             df_calc['VALOR_NUM'] = df_calc[col_valor].apply(limpar_valor)
             df_calc['TIPO_UP'] = df_calc[col_tipo].astype(str).str.upper().str.strip()
             
             total_receitas = df_calc[df_calc['TIPO_UP'].str.contains('RECEITA|RECEBIMENTO|RECENDIMENTO', na=False)]['VALOR_NUM'].sum()
-            total_rendimentos = df_calc[df_calc['TIndex'] if 'TIndex' in df_calc.columns else df_calc['TIPO_UP'].str.contains('RENDIMENTO|JUROS|INVESTIMENTO', na=False)]['VALOR_NUM'].sum() if False else df_calc[df_calc['TIPO_UP'].str.contains('RENDIMENTO|JUROS|INVESTIMENTO', na=False)]['VALOR_NUM'].sum()
+            total_rendimentos = df_calc[df_calc['TIPO_UP'].str.contains('RENDIMENTO|JUROS|INVESTIMENTO', na=False)]['VALOR_NUM'].sum()
             total_despesas = df_calc[df_calc['TIPO_UP'].str.contains('DESPESA|GASTO|PAGAMENTO', na=False)]['VALOR_NUM'].sum()
+            
+            st.markdown("---")
+            
+            # Campo rápido para informar/conferir o Saldo Inicial (já sugerindo 47.78 ou o que o PDF usa)
+            col_inf1, col_inf2 = st.columns([1, 2])
+            with col_inf1:
+                saldo_inicial = st.number_input("🏦 Saldo Inicial (Abertura)", value=47.78, step=0.01, format="%.2f")
             
             # Fórmula final: Saldo Inicial + Receitas + Rendimentos - Despesas
             saldo_final = saldo_inicial + total_receitas + total_rendimentos - total_despesas
             
-            # Formatação limpa de moeda
             def fmt(v):
                 return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             
-            # Exibe os cartões lado a lado (5 colunas: Inicial, Receitas, Rendimentos, Despesas, Saldo Final)
-            st.markdown("---")
-            c1, c2, c3, c4, c5 = st.columns(5)
-            c1.metric("🏦 Saldo Inicial", fmt(saldo_inicial))
-            c2.metric("➕ Receitas", fmt(total_receitas))
-            c3.metric("📈 Rendimentos", fmt(total_rendimentos))
-            c4.metric("➖ Despesas", fmt(total_despesas))
-            c5.metric("💰 Saldo Final", fmt(saldo_final))
+            # Exibe os cartões lado a lado
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("➕ Receitas", fmt(total_receitas))
+            c2.metric("📈 Rendimentos", fmt(total_rendimentos))
+            c3.metric("➖ Despesas", fmt(total_despesas))
+            c4.metric("💰 Saldo Final", fmt(saldo_final))
     else:
         st.info("Nenhum lançamento encontrado para os filtros aplicados.")
 
