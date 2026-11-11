@@ -2573,30 +2573,31 @@ if "💰" in st.session_state.page:
     st.divider()
 
             
-    # 7. TABELA FINAL (APENAS PAGOS/RECEBIDOS E TRANSFERÊNCIAS PAGAS - MAIOR ID NO TOPO)
+    # 7. TABELA FINAL (APENAS PAGOS/RECEBIDOS - ORDENADO POR VENCIMENTO)
     st.write("---")
     st.subheader("🔍 Lançamentos do Mês")
     
     if 'df_m_br' in locals() and not df_m_br.empty:
         df_exibicao = df_m_br.copy()
         
-        # 1. FILTRA APENAS STATUS PAGO/RECEBIDO PARA TUDO (Inclusive transferências)
+        # 1. FILTRA APENAS STATUS PAGO/RECEBIDO (Garante que pendentes e transferências futuras somem)
         col_status_ex = next((c for c in df_exibicao.columns if c.upper() == 'STATUS'), None)
         
         if col_status_ex:
-            # Mantém estritamente o que já foi liquidado (Pago, Recebido, Liquidado, OK)
             df_exibicao = df_exibicao[df_exibicao[col_status_ex].astype(str).str.upper().str.strip().isin(['PAGO', 'RECEBIDO', 'LIQUIDADO', 'OK'])]
         else:
-            # Caso improvável de não achar a coluna de status, garante um DataFrame vazio para segurança
             df_exibicao = df_exibicao.iloc[0:0]
             
-        # 2. ORDENAÇÃO: Maior ID no topo (últimos lançamentos cadastrados primeiro)
-        if 'ID' in df_exibicao.columns:
+        # 2. ORDENAÇÃO POR VENCIMENTO (Da data mais recente para a mais antiga)
+        if 'Vencimento' in df_exibicao.columns:
+            # Converte para datetime temporariamente para ordenar certinho, mantendo o formato original exibido
+            df_exibicao['DT_ORDEM'] = pd.to_datetime(df_exibicao['Vencimento'], format='%d/%m/%Y', errors='coerce')
+            df_exibicao = df_exibicao.sort_values(by='DT_ORDEM', ascending=False, na_position='last')
+            df_exibicao = df_exibicao.drop(columns=['DT_ORDEM'])
+        elif 'ID' in df_exibicao.columns:
             df_exibicao['ID_num'] = pd.to_numeric(df_exibicao['ID'], errors='coerce')
             df_exibicao = df_exibicao.sort_values(by='ID_num', ascending=False, na_position='last')
             df_exibicao = df_exibicao.drop(columns=['ID_num'])
-        elif 'Vencimento' in df_exibicao.columns:
-            df_exibicao = df_exibicao.sort_values(by='Vencimento', ascending=False, na_position='last')
         
         # Garante que as colunas exibidas existam no dataframe para evitar erros
         colunas_disponiveis = [col for col in ['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status', 'Tipo'] if col in df_exibicao.columns]
