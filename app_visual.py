@@ -12,26 +12,9 @@ import streamlit.components.v1 as components
 import urllib.parse
 import urllib.request
 
-st.markdown(
-    """
-    <style>
-    /* Estiliza a barra de carregamento e o status widget com um toque especial */
-    [data-testid="stStatusWidget"] {
-        background: linear-gradient(135deg, rgba(20, 30, 48, 0.9), rgba(36, 59, 85, 0.9));
-        border-radius: 12px;
-        padding: 6px 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        border: 1px solid rgba(255,215,0,0.3);
-    }
-    
-    /* Dá um destaque suave na animação de carregamento */
-    [data-testid="stStatusWidget"] svg {
-        filter: drop-shadow(0 0 4px rgba(255, 215,0,0.6));
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+with st.spinner("✨ Pedalando em Monte Verde... Carregando dados..."):
+    # aqui roda a sua função ou o carregamento da aba
+    time.sleep(0.5) # simula o processamento se precisar
 
 
 # 1. CONFIGURAÇÃO DA PÁGINA (Deve ser SEMPRE a primeira instrução do Streamlit)
