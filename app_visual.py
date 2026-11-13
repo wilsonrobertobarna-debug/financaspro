@@ -13,8 +13,21 @@ import urllib.parse
 import urllib.request
 import time
 
-st.set_page_config(
-    page_title="Painel Wilson", layout="wide", initial_sidebar_state="collapsed"
+st.markdown(
+    """
+    <div style="display: flex; align-items: center; gap: 8px; background: rgba(255, 215, 0, 0.1); padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(255, 215, 0, 0.3); margin-bottom: 16px;">
+        <span style="font-size: 20px; animation: pulse 1.5s infinite;">✨</span>
+        <span style="font-weight: 600; color: #E0E0E0;">FinançasPro • Edição Especial Monte Verde</span>
+    </div>
+    <style>
+    @keyframes pulse {
+        0% { transform: scale(0.9); opacity: 0.7; }
+        50% { transform: scale(1.1); opacity: 1; }
+        100% { transform: scale(0.9); opacity: 0.7; }
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
 )
 
 # ==========================================
