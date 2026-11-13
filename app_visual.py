@@ -13,16 +13,9 @@ import urllib.parse
 import urllib.request
 import time
 
-with st.spinner("✨ Pedalando em Monte Verde... Carregando dados..."):
-    # aqui roda a sua função ou o carregamento da aba
-    time.sleep(0.5) # simula o processamento se precisar
-
-
-# 1. CONFIGURAÇÃO DA PÁGINA (Deve ser SEMPRE a primeira instrução do Streamlit)
 st.set_page_config(
     page_title="Painel Wilson", layout="wide", initial_sidebar_state="collapsed"
 )
-
 
 # ==========================================
 # 🔔 FUNÇÃO DE ALARME PARA O CELULAR (CORRIGIDA)
