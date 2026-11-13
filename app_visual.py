@@ -12,18 +12,42 @@ import streamlit.components.v1 as components
 import urllib.parse
 import urllib.request
 import time
-
 st.markdown(
     """
-    <div style="display: flex; align-items: center; gap: 8px; background: rgba(255, 215, 0, 0.1); padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(255, 215, 0, 0.3); margin-bottom: 16px;">
-        <span style="font-size: 20px; animation: pulse 1.5s infinite;">✨</span>
-        <span style="font-weight: 600; color: #E0E0E0;">FinançasPro • Edição Especial Monte Verde</span>
-    </div>
     <style>
-    @keyframes pulse {
-        0% { transform: scale(0.9); opacity: 0.7; }
-        50% { transform: scale(1.1); opacity: 1; }
-        100% { transform: scale(0.9); opacity: 0.7; }
+    /* Esconde apenas o desenho original (a bike/ícone) sem criar fundo preto */
+    [data-testid="stStatusWidget"] svg,
+    [data-testid="stStatusWidget"] img,
+    [data-testid="stStatusWidget"] label {
+        display: none !important;
+    }
+
+    /* Garante que o container fique 100% transparente */
+    [data-testid="stStatusWidget"] {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Coloca APENAS a estrelinha brilhando no lugar */
+    [data-testid="stStatusWidget"]::after {
+        content: "✨";
+        font-size: 24px;
+        display: inline-block;
+        animation: brilhoGemini 1.2s infinite alternate ease-in-out;
+    }
+
+    @keyframes brilhoGemini {
+        0% {
+            transform: scale(0.85) rotate(-5deg);
+            opacity: 0.5;
+            filter: drop-shadow(0 0 2px rgba(138, 180, 248, 0.4));
+        }
+        100% {
+            transform: scale(1.2) rotate(10deg);
+            opacity: 1;
+            filter: drop-shadow(0 0 10px rgba(138, 180, 248, 0.95));
+        }
     }
     </style>
     """,
