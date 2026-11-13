@@ -11,6 +11,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import urllib.parse
 import urllib.request
+import time
 
 with st.spinner("✨ Pedalando em Monte Verde... Carregando dados..."):
     # aqui roda a sua função ou o carregamento da aba
