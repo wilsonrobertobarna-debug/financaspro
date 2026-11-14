@@ -3337,13 +3337,16 @@ elif "🚗" in aba:
                 axis=1
             )
             
-            # --- ORDENAÇÃO INTELIGENTE (Hoje no topo + Categoria + Vencimento recente) ---
+            # --- ORDENAÇÃO INTELIGENTE (Último lançamento no topo + Hoje + Categoria + Vencimento) ---
             hoje = pd.to_datetime('today').normalize()
             df_veiculo['E_Hoje'] = df_veiculo['Vencimento'].dt.normalize() == hoje
 
+            # Guardamos a posição original da linha para saber qual foi o último cadastrado
+            df_veiculo['Index_Original'] = df_veiculo.index
+
             df_veiculo = df_veiculo.sort_values(
-                by=['E_Hoje', 'Categoria', 'Vencimento'], 
-                ascending=[False, True, False]
+                by=['Index_Original', 'E_Hoje', 'Categoria', 'Vencimento'], 
+                ascending=[False, False, True, False]
             ).reset_index(drop=True)
 
             df_veiculo['Vencimento'] = df_veiculo['Vencimento'].dt.strftime('%d/%m/%Y')
