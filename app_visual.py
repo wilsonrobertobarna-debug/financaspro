@@ -3262,6 +3262,7 @@ elif "🚗" in aba:
         
     st.divider()
 
+
     # =========================================================================
     # 📊 HISTÓRICO E LANÇAMENTOS DO VEÍCULO
     # =========================================================================
@@ -3315,6 +3316,7 @@ elif "🚗" in aba:
             df_veiculo['Litros'] = df_veiculo['Litros'].apply(converter_para_float)
             df_veiculo['V_Num'] = df_veiculo['V_Num'].apply(converter_para_float)
 
+            # Ordena por Km para o cálculo correto do consumo (hodômetro sequencial)
             df_veiculo = df_veiculo.sort_values(by='Km', ascending=True).reset_index(drop=True)
 
             df_veiculo['Km_Valido'] = df_veiculo['Km'].apply(lambda x: x if x > 0 else pd.NA)
@@ -3335,7 +3337,16 @@ elif "🚗" in aba:
                 axis=1
             )
             
-            df_veiculo['Vencimento'] = pd.to_datetime(df_veiculo['Vencimento'], errors='coerce').dt.strftime('%d/%m/%Y')
+            # --- ORDENAÇÃO INTELIGENTE (Hoje no topo + Categoria + Vencimento recente) ---
+            hoje = pd.to_datetime('today').normalize()
+            df_veiculo['E_Hoje'] = df_veiculo['Vencimento'].dt.normalize() == hoje
+
+            df_veiculo = df_veiculo.sort_values(
+                by=['E_Hoje', 'Categoria', 'Vencimento'], 
+                ascending=[False, True, False]
+            ).reset_index(drop=True)
+
+            df_veiculo['Vencimento'] = df_veiculo['Vencimento'].dt.strftime('%d/%m/%Y')
             df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
 
             def formata_litros_inteligente(valor):
@@ -3367,11 +3378,12 @@ elif "🚗" in aba:
             }
 
             if not df_exibicao.empty:
-                st.dataframe(df_exibicao.iloc[::-1].style.format(formatos_tabela, na_rep="-"), use_container_width=True, hide_index=True)
+                # Exibição direta sem inversão (.iloc[::-1]), pois a ordenação já está perfeita
+                st.dataframe(df_exibicao.style.format(formatos_tabela, na_rep="-"), use_container_width=True, hide_index=True)
             else:
                 st.info("Nenhum lançamento encontrado com esses filtros.")
         else:
-            st.info("Nenhum lançamento de veículo encontrado na base.")    
+            st.info("Nenhum lançamento de veículo encontrado na base.")   
 
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
