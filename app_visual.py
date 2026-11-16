@@ -2608,7 +2608,7 @@ if "💰" in st.session_state.page:
     st.divider()
 
             
-    # 7. TABELA FINAL (APENAS PAGOS/RECEBIDOS - ORDENADO POR VENCIMENTO)
+    # 7. TABELA FINAL (APENAS PAGOS/RECEBIDOS - ORDENADO POR VENCIMENTO E ID)
     st.write("---")
     st.subheader("🔍 Lançamentos do Mês")
     
@@ -2623,16 +2623,30 @@ if "💰" in st.session_state.page:
         else:
             df_exibicao = df_exibicao.iloc[0:0]
             
-        # 2. ORDENAÇÃO POR VENCIMENTO (Da data mais recente para a mais antiga)
+        # 2. ORDENAÇÃO POR VENCIMENTO E DESEMPATE PELO ID (Mais recentes no topo)
+        cols_ordenacao = []
+        ordem_crescente = []
+        cols_temp = []
+
         if 'Vencimento' in df_exibicao.columns:
-            # Converte para datetime temporariamente para ordenar certinho, mantendo o formato original exibido
             df_exibicao['DT_ORDEM'] = pd.to_datetime(df_exibicao['Vencimento'], format='%d/%m/%Y', errors='coerce')
-            df_exibicao = df_exibicao.sort_values(by='DT_ORDEM', ascending=False, na_position='last')
-            df_exibicao = df_exibicao.drop(columns=['DT_ORDEM'])
-        elif 'ID' in df_exibicao.columns:
+            cols_ordenacao.append('DT_ORDEM')
+            ordem_crescente.append(False) # Data mais recente primeiro
+            cols_temp.append('DT_ORDEM')
+
+        if 'ID' in df_exibicao.columns:
             df_exibicao['ID_num'] = pd.to_numeric(df_exibicao['ID'], errors='coerce')
-            df_exibicao = df_exibicao.sort_values(by='ID_num', ascending=False, na_position='last')
-            df_exibicao = df_exibicao.drop(columns=['ID_num'])
+            cols_ordenacao.append('ID_num')
+            ordem_crescente.append(False) # Maior ID primeiro (desempate no mesmo dia)
+            cols_temp.append('ID_num')
+
+        if cols_ordenacao:
+            df_exibicao = df_exibicao.sort_values(
+                by=cols_ordenacao, 
+                ascending=ordem_crescente, 
+                na_position='last'
+            )
+            df_exibicao = df_exibicao.drop(columns=cols_temp)
         
         # Garante que as colunas exibidas existam no dataframe para evitar erros
         colunas_disponiveis = [col for col in ['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status', 'Tipo'] if col in df_exibicao.columns]
