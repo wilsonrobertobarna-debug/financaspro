@@ -4896,19 +4896,20 @@ if aba == "📊 Análises & Configurações":
             idx_p2 = pegar_indice_padrao("09/2026", 1)
             idx_p3 = pegar_indice_padrao("10/2026", 0)
 
-            # Controles: Cartão + os 3 Meses lado a lado
-            col_f1, col_f2, col_f3, col_f4 = st.columns([2, 1, 1, 1])
+           # Linha 1: Seletor do Cartão com largura confortável
+            cartao_selecionado = st.selectbox(
+                "Selecione o Cartão:",
+                ["Todos os Cartões"] + nomes_reais_cartoes,
+                key="sel_analise_3m_cartao"
+            )
+
+            # Linha 2: Os 3 Meses bem espaçados lado a lado
+            col_f1, col_f2, col_f3 = st.columns(3)
             with col_f1:
-                cartao_selecionado = st.selectbox(
-                    "Cartão:",
-                    ["Todos os Cartões"] + nomes_reais_cartoes,
-                    key="sel_analise_3m_cartao"
-                )
-            with col_f2:
                 mes_c1 = st.selectbox("1º Mês:", lista_meses_str, index=idx_p1, key="sel_cartao_m1")
-            with col_f3:
+            with col_f2:
                 mes_c2 = st.selectbox("2º Mês:", lista_meses_str, index=idx_p2, key="sel_cartao_m2")
-            with col_f4:
+            with col_f3:
                 mes_c3 = st.selectbox("3º Mês:", lista_meses_str, index=idx_p3, key="sel_cartao_m3")
 
             # Filtra pelo cartão selecionado
