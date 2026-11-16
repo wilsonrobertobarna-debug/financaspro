@@ -5032,9 +5032,9 @@ if aba == "📊 Análises & Configurações":
         ]
 
         cartao_selecionado = st.selectbox(
-            "Selecione o cartão para analisar o trimestre:",
-            lista_cartoes_analise,
-            key="sel_analise_3m_cartao"
+                "Selecione o Cartão:",
+                ["Todos os Cartões"] + nomes_reais_cartoes,
+                key="sel_analise_cartao_trimestre_v2" # <--- CHAVE ÚNICA NOVA
         )
 
         df_cartoes = df_base.copy()
