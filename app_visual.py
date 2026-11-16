@@ -4843,80 +4843,138 @@ if aba == "📊 Análises & Configurações":
     st.divider()
 
    
-    # =====================================================================
-    # 🟢 MÓDULO 4: COMPARATIVO MENSAL COMPLETO & EVOLUÇÃO HISTÓRICA
-    # =====================================================================
-    st.subheader("📊 Comparativo Mensal Completo & Evolução Histórica")
+   # =========================================================================
+    # 💳 MÓDULO: COMPARATIVO TRIMESTRAL DE CARTÕES (ÚLTIMOS 3 MESES)
+    # =========================================================================
+    st.subheader("💳 Evolução de Gastos por Cartão (Últimos 3 Meses)")
 
     if 'df_base' in locals() and not df_base.empty:
-        # Garante a coluna de Mes/Ano formatada
-        df_base['DT_Comp'] = pd.to_datetime(df_base['DT'], errors='coerce')
-        df_base['Mes_Ano_Str'] = df_base['DT_Comp'].dt.strftime('%m/%y')
-        
-        meses_disponiveis = sorted([m for m in df_base['Mes_Ano_Str'].dropna().unique()], reverse=True)
+        # 1. Descobre automaticamente todos os cartões cadastrados na aba Bancos
+        nomes_reais_cartoes = []
+        if 'df_bancos_info' in locals() and not df_bancos_info.empty:
+            for _, row_b in df_bancos_info.iterrows():
+                nome_b = str(row_b.iloc[0]).strip() if len(row_b) > 0 else ""
+                tipo_b = str(row_b.iloc[2]).strip().upper() if len(row_b) > 2 else ""
+                if nome_b and nome_b != "nan":
+                    if "CARTA" in tipo_b or "CART" in nome_b.upper() or "MASTER" in nome_b.upper() or "VISA" in nome_b.upper() or "GOLD" in nome_b.upper():
+                        nomes_reais_cartoes.append(nome_b)
 
-        if len(meses_disponiveis) >= 2:
-            # Padrão: 09/26 e 10/26 (ou os dois mais recentes)
-            idx_m1 = meses_disponiveis.index('09/26') if '09/26' in meses_disponiveis else 1
-            idx_m2 = meses_disponiveis.index('10/26') if '10/26' in meses_disponiveis else 0
+        # Fallback caso a aba Bancos não tenha a coluna de tipo preenchida
+        if not nomes_reais_cartoes:
+            nomes_reais_cartoes = [
+                "Mastercard - Inter",
+                "Mastercard - 8112",
+                "Visa Gold - 0132",
+                "Visa - Mercado Pago",
+                "Itau Gold"
+            ]
 
-            col_cm1, col_cm2 = st.columns(2)
-            with col_cm1:
-                mes_escolhido_1 = st.selectbox("Selecione o 1º Mês para Comparar:", meses_disponiveis, index=idx_m1, key="sel_mes_1")
-            with col_cm2:
-                mes_escolhido_2 = st.selectbox("Selecione o 2º Mês para Comparar:", meses_disponiveis, index=idx_m2, key="sel_mes_2")
+        lista_cartoes_analise = ["Todos os Cartões"] + nomes_reais_cartoes
 
-            # Filtros básicos dos meses
-            df_comp1 = df_base[df_base['Mes_Ano_Str'] == mes_escolhido_1]
-            df_comp2 = df_base[df_base['Mes_Ano_Str'] == mes_escolhido_2]
+        cartao_selecionado = st.selectbox(
+            "Selecione o cartão para analisar o trimestre:",
+            lista_cartoes_analise,
+            key="sel_analise_3m_cartao"
+        )
 
-            # --- BLINDAGEM CONTRA TRANSFERÊNCIAS INTERNAS ---
-            # Remove linhas que sejam Transferências para não inflar as receitas e despesas reais
-            if 'Categoria' in df_comp1.columns:
-                df_comp1 = df_comp1[~df_comp1['Categoria'].str.contains('Transferência|Transf', case=False, na=False)]
-            if 'Tipo' in df_comp1.columns:
-                df_comp1 = df_comp1[~df_comp1['Tipo'].str.contains('Transferência|Transf', case=False, na=False)]
+        df_cartoes = df_base.copy()
+        df_cartoes['DT_Cartao'] = pd.to_datetime(df_cartoes['DT'], errors='coerce')
+        df_cartoes = df_cartoes.dropna(subset=['DT_Cartao'])
 
-            if 'Categoria' in df_comp2.columns:
-                df_comp2 = df_comp2[~df_comp2['Categoria'].str.contains('Transferência|Transf', case=False, na=False)]
-            if 'Tipo' in df_comp2.columns:
-                df_comp2 = df_comp2[~df_comp2['Tipo'].str.contains('Transferência|Transf', case=False, na=False)]
-            # -----------------------------------------------
+        # Limpa espaços invisíveis nas colunas de texto para o filtro bater 100%
+        df_cartoes['Banco_Limpo'] = df_cartoes['Banco'].astype(str).str.strip()
+        df_cartoes['Tipo_Limpo'] = df_cartoes['Tipo'].astype(str).str.strip().str.upper()
 
-            rec_1 = df_comp1[df_comp1['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            desp_1 = df_comp1[df_comp1['Tipo'] == 'Despesa']['V_Num'].sum()
-            sobra_1 = rec_1 - desp_1
+        # Filtra apenas despesas (ignora transferências)
+        df_cartoes = df_cartoes[df_cartoes['Tipo_Limpo'] == 'DESPESA']
+        if 'Categoria' in df_cartoes.columns:
+            df_cartoes = df_cartoes[~df_cartoes['Categoria'].astype(str).str.contains('Transferência|Transf', case=False, na=False)]
 
-            rec_2 = df_comp2[df_comp2['Tipo'].isin(['Receita', 'Rendimento'])]['V_Num'].sum()
-            desp_2 = df_comp2[df_comp2['Tipo'] == 'Despesa']['V_Num'].sum()
-            sobra_2 = rec_2 - desp_2
+        # Filtra pelo cartão escolhido (comparando em maiúsculo para não falhar por letra)
+        if cartao_selecionado == "Todos os Cartões":
+            cartoes_upper = [c.upper() for c in nomes_reais_cartoes]
+            df_cartoes = df_cartoes[df_cartoes['Banco_Limpo'].str.upper().isin(cartoes_upper)]
+        else:
+            df_cartoes = df_cartoes[df_cartoes['Banco_Limpo'].str.upper() == cartao_selecionado.upper()]
 
-            st.markdown(f"### ⚔️ Confronto Direto: {mes_escolhido_1} vs. {mes_escolhido_2}")
-            
-            mc1, mc2, mc3 = st.columns(3)
-            mc1.metric(f"Receitas ({mes_escolhido_1} ➔ {mes_escolhido_2})", m_fmt(rec_2), delta=m_fmt(rec_2 - rec_1))
-            mc2.metric(f"Despesas ({mes_escolhido_1} ➔ {mes_escolhido_2})", m_fmt(desp_2), delta=m_fmt(desp_2 - desp_1), delta_color="inverse")
-            mc3.metric(f"Sobra Líquida ({mes_escolhido_1} ➔ {mes_escolhido_2})", m_fmt(sobra_2), delta=m_fmt(sobra_2 - sobra_1))
+        if not df_cartoes.empty:
+            df_cartoes['Ano_Mes'] = df_cartoes['DT_Cartao'].dt.to_period('M')
+            df_mensal_cartao = (
+                df_cartoes.groupby('Ano_Mes')['V_Num']
+                .sum()
+                .reset_index()
+                .sort_values('Ano_Mes')
+            )
 
-            # Gráfico de Barras Agrupadas com Plotly
+            # Pega os últimos 3 meses disponíveis
+            df_3m = df_mensal_cartao.tail(3).copy()
+            df_3m['Mes_Label'] = df_3m['Ano_Mes'].dt.strftime('%m/%Y')
+
+            ultimo_mes_val = df_3m['V_Num'].iloc[-1]
+            ultimo_mes_nome = df_3m['Mes_Label'].iloc[-1]
+            media_3m = df_3m['V_Num'].mean()
+
+            if len(df_3m) >= 2:
+                penultimo_mes_val = df_3m['V_Num'].iloc[-2]
+                diff_mes = ultimo_mes_val - penultimo_mes_val
+            else:
+                diff_mes = 0.0
+
+            col_k1, col_k2, col_k3 = st.columns(3)
+            col_k1.metric(f"Fatura ({ultimo_mes_nome})", m_fmt(ultimo_mes_val), delta=m_fmt(diff_mes), delta_color="inverse")
+            col_k2.metric("Média (3 Meses)", m_fmt(media_3m))
+
+            # Busca a meta cadastrada (da sessão ou do dicionário)
+            metas_ref = st.session_state.get('dict_metas_cartoes', {})
+            meta_cartao_alvo = 0.0
+            if metas_ref:
+                if cartao_selecionado == "Todos os Cartões":
+                    meta_cartao_alvo = sum(metas_ref.values())
+                else:
+                    meta_cartao_alvo = metas_ref.get(cartao_selecionado, 0.0)
+
+            if meta_cartao_alvo > 0:
+                saldo_meta = meta_cartao_alvo - ultimo_mes_val
+                col_k3.metric("Meta Definida", m_fmt(meta_cartao_alvo), delta=f"{m_fmt(saldo_meta)} disponível")
+            else:
+                col_k3.metric("Total no Trimestre", m_fmt(df_3m['V_Num'].sum()))
+
             import plotly.graph_objects as go
-            fig_evolucao = go.Figure(data=[
-                go.Bar(name='Receitas', x=[mes_escolhido_1, mes_escolhido_2], y=[rec_1, rec_2], marker_color='#2ecc71'),
-                go.Bar(name='Despesas', x=[mes_escolhido_1, mes_escolhido_2], y=[desp_1, desp_2], marker_color='#e74c3c'),
-                go.Bar(name='Sobra Líquida', x=[mes_escolhido_1, mes_escolhido_2], y=[sobra_1, sobra_2], marker_color='#3498db')
-            ])
-            fig_evolucao.update_layout(
-                barmode='group', 
-                title=f"Evolução Gráfica: {mes_escolhido_1} x {mes_escolhido_2}", 
+            fig_cartao = go.Figure()
+
+            fig_cartao.add_trace(go.Bar(
+                x=df_3m['Mes_Label'],
+                y=df_3m['V_Num'],
+                text=[m_fmt(v) for v in df_3m['V_Num']],
+                textposition='outside',
+                marker_color='#3498db',
+                name='Gasto Mensal'
+            ))
+
+            if meta_cartao_alvo > 0:
+                fig_cartao.add_hline(
+                    y=meta_cartao_alvo,
+                    line_dash="dash",
+                    line_color="#e74c3c",
+                    annotation_text=f"Meta: {m_fmt(meta_cartao_alvo)}",
+                    annotation_position="top left"
+                )
+
+            max_y = max(df_3m['V_Num'].max(), meta_cartao_alvo) * 1.2
+            fig_cartao.update_layout(
+                title=f"Comparativo Trimestral — {cartao_selecionado}",
+                yaxis=dict(range=[0, max_y], title="Valor (R$)"),
+                xaxis=dict(title="Mês de Referência"),
                 template="plotly_dark",
                 plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)'
+                paper_bgcolor='rgba(0,0,0,0)',
+                height=380,
+                margin=dict(l=20, r=20, t=50, b=20)
             )
-            st.plotly_chart(fig_evolucao, use_container_width=True)
+
+            st.plotly_chart(fig_cartao, use_container_width=True)
         else:
-            st.info("Cadastre lançamentos em pelo menos 2 meses diferentes para habilitar o comparativo histórico completo.")
-    else:
-        st.warning("Dados indisponíveis para o comparativo.")
+            st.info(f"Nenhum lançamento de despesa encontrado para **{cartao_selecionado}**.")
 
     st.divider()
 
