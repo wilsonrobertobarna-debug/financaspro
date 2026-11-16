@@ -4847,6 +4847,7 @@ if aba == "📊 Análises & Configurações":
     # 💳 MÓDULO: COMPARATIVO TRIMESTRAL DE CARTÕES (PERÍODO ESCOLHIDO)
     # =========================================================================
     st.subheader("💳 Evolução de Gastos por Cartão (Comparativo 3 Meses)")
+    st.write("") # Respiro abaixo do título
 
     if 'df_base' in locals() and not df_base.empty:
         # 1. Descobre automaticamente todos os cartões cadastrados na aba Bancos
@@ -4886,7 +4887,6 @@ if aba == "📊 Análises & Configurações":
         lista_meses_str = [p.strftime('%m/%Y') for p in periodos_disponiveis]
 
         if len(lista_meses_str) >= 1:
-            # Define padrões inteligentes: tenta 08/2026, 09/2026 e 10/2026
             def pegar_indice_padrao(mes_alvo, fallback_idx):
                 if mes_alvo in lista_meses_str:
                     return lista_meses_str.index(mes_alvo)
@@ -4896,21 +4896,25 @@ if aba == "📊 Análises & Configurações":
             idx_p2 = pegar_indice_padrao("09/2026", 1)
             idx_p3 = pegar_indice_padrao("10/2026", 0)
 
-           # Linha 1: Seletor do Cartão com largura confortável
-            cartao_selecionado = st.selectbox(
-                "Selecione o Cartão:",
-                ["Todos os Cartões"] + nomes_reais_cartoes,
-                key="sel_analise_3m_cartao"
-            )
+            # BLOCO 1: FILTROS BEM ESPAÇADOS
+            with st.container(border=True):
+                cartao_selecionado = st.selectbox(
+                    "Selecione o Cartão:",
+                    ["Todos os Cartões"] + nomes_reais_cartoes,
+                    key="sel_analise_3m_cartao"
+                )
 
-            # Linha 2: Os 3 Meses bem espaçados lado a lado
-            col_f1, col_f2, col_f3 = st.columns(3)
-            with col_f1:
-                mes_c1 = st.selectbox("1º Mês:", lista_meses_str, index=idx_p1, key="sel_cartao_m1")
-            with col_f2:
-                mes_c2 = st.selectbox("2º Mês:", lista_meses_str, index=idx_p2, key="sel_cartao_m2")
-            with col_f3:
-                mes_c3 = st.selectbox("3º Mês:", lista_meses_str, index=idx_p3, key="sel_cartao_m3")
+                st.write("") # Espaço vertical entre o cartão e os 3 meses
+
+                col_f1, col_f2, col_f3 = st.columns(3, gap="medium")
+                with col_f1:
+                    mes_c1 = st.selectbox("1º Mês:", lista_meses_str, index=idx_p1, key="sel_cartao_m1")
+                with col_f2:
+                    mes_c2 = st.selectbox("2º Mês:", lista_meses_str, index=idx_p2, key="sel_cartao_m2")
+                with col_f3:
+                    mes_c3 = st.selectbox("3º Mês:", lista_meses_str, index=idx_p3, key="sel_cartao_m3")
+
+            st.write("") # Espaço vertical entre a caixa de filtros e os cards de resumo
 
             # Filtra pelo cartão selecionado
             if cartao_selecionado == "Todos os Cartões":
@@ -4921,24 +4925,26 @@ if aba == "📊 Análises & Configurações":
 
             df_filtrado_c['Mes_Str'] = df_filtrado_c['Ano_Mes'].dt.strftime('%m/%Y')
 
-            # Calcula o total exato de cada um dos 3 meses escolhidos (mantendo a ordem Mês 1 -> Mês 2 -> Mês 3)
             meses_escolhidos = [mes_c1, mes_c2, mes_c3]
-            valores_meses = []
-            for m_str in meses_escolhidos:
-                soma_m = df_filtrado_c[df_filtrado_c['Mes_Str'] == m_str]['V_Num'].sum()
-                valores_meses.append(soma_m)
+            valores_meses = [
+                df_filtrado_c[df_filtrado_c['Mes_Str'] == m_str]['V_Num'].sum()
+                for m_str in meses_escolhidos
+            ]
 
-            # Métricas rápidas baseadas nos 3 meses escolhidos
             val_m2 = valores_meses[1]
             val_m3 = valores_meses[2]
             diff_mes = val_m3 - val_m2
             media_3m = sum(valores_meses) / 3.0
 
-            col_k1, col_k2, col_k3 = st.columns(3)
-            col_k1.metric(f"Fatura ({mes_c3})", m_fmt(val_m3), delta=f"{m_fmt(diff_mes)} vs {mes_c2}", delta_color="inverse")
-            col_k2.metric("Média (3 Meses)", m_fmt(media_3m))
+            # BLOCO 2: CARDS DE RESUMO SEPARADOS E COM BORDA
+            col_k1, col_k2, col_k3 = st.columns(3, gap="medium")
+            with col_k1:
+                with st.container(border=True):
+                    st.metric(f"Fatura ({mes_c3})", m_fmt(val_m3), delta=f"{m_fmt(diff_mes)} vs {mes_c2}", delta_color="inverse")
+            with col_k2:
+                with st.container(border=True):
+                    st.metric("Média (3 Meses)", m_fmt(media_3m))
 
-            # Busca a meta cadastrada para o cartão
             metas_ref = st.session_state.get('dict_metas_cartoes', {})
             meta_cartao_alvo = 0.0
             if metas_ref:
@@ -4947,13 +4953,17 @@ if aba == "📊 Análises & Configurações":
                 else:
                     meta_cartao_alvo = metas_ref.get(cartao_selecionado, 0.0)
 
-            if meta_cartao_alvo > 0:
-                saldo_meta = meta_cartao_alvo - val_m3
-                col_k3.metric("Meta Definida", m_fmt(meta_cartao_alvo), delta=f"{m_fmt(saldo_meta)} disponível")
-            else:
-                col_k3.metric("Total no Trimestre", m_fmt(sum(valores_meses)))
+            with col_k3:
+                with st.container(border=True):
+                    if meta_cartao_alvo > 0:
+                        saldo_meta = meta_cartao_alvo - val_m3
+                        st.metric("Meta Definida", m_fmt(meta_cartao_alvo), delta=f"{m_fmt(saldo_meta)} disponível")
+                    else:
+                        st.metric("Total no Trimestre", m_fmt(sum(valores_meses)))
 
-            # Gráfico de Barras com os 3 meses escolhidos + Linha da Meta
+            st.write("") # Espaço vertical antes do gráfico
+
+            # BLOCO 3: GRÁFICO EM CONTAINER PRÓPRIO
             import plotly.graph_objects as go
             fig_cartao = go.Figure()
 
@@ -4986,12 +4996,15 @@ if aba == "📊 Análises & Configurações":
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
                 height=380,
-                margin=dict(l=20, r=20, t=50, b=20)
+                margin=dict(l=20, r=20, t=55, b=20)
             )
 
-            st.plotly_chart(fig_cartao, use_container_width=True)
+            with st.container(border=True):
+                st.plotly_chart(fig_cartao, use_container_width=True)
         else:
             st.info("Não há datas válidas de lançamento para montar o filtro de meses.")
+
+    st.divider()
 
     st.divider()
      # 3. DATAFRAME: BANCOS E CARTÕES
