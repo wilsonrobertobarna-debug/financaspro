@@ -4843,10 +4843,10 @@ if aba == "📊 Análises & Configurações":
     st.divider()
 
    
-   # =========================================================================
-    # 💳 MÓDULO: COMPARATIVO TRIMESTRAL DE CARTÕES (ÚLTIMOS 3 MESES)
     # =========================================================================
-    st.subheader("💳 Evolução de Gastos por Cartão (Últimos 3 Meses)")
+    # 💳 MÓDULO: COMPARATIVO TRIMESTRAL DE CARTÕES (PERÍODO ESCOLHIDO)
+    # =========================================================================
+    st.subheader("💳 Evolução de Gastos por Cartão (Comparativo 3 Meses)")
 
     if 'df_base' in locals() and not df_base.empty:
         # 1. Descobre automaticamente todos os cartões cadastrados na aba Bancos
@@ -4859,7 +4859,6 @@ if aba == "📊 Análises & Configurações":
                     if "CARTA" in tipo_b or "CART" in nome_b.upper() or "MASTER" in nome_b.upper() or "VISA" in nome_b.upper() or "GOLD" in nome_b.upper():
                         nomes_reais_cartoes.append(nome_b)
 
-        # Fallback caso a aba Bancos não tenha a coluna de tipo preenchida
         if not nomes_reais_cartoes:
             nomes_reais_cartoes = [
                 "Mastercard - Inter",
@@ -4869,19 +4868,10 @@ if aba == "📊 Análises & Configurações":
                 "Itau Gold"
             ]
 
-        lista_cartoes_analise = ["Todos os Cartões"] + nomes_reais_cartoes
-
-        cartao_selecionado = st.selectbox(
-            "Selecione o cartão para analisar o trimestre:",
-            lista_cartoes_analise,
-            key="sel_analise_3m_cartao"
-        )
-
         df_cartoes = df_base.copy()
         df_cartoes['DT_Cartao'] = pd.to_datetime(df_cartoes['DT'], errors='coerce')
         df_cartoes = df_cartoes.dropna(subset=['DT_Cartao'])
 
-        # Limpa espaços invisíveis nas colunas de texto para o filtro bater 100%
         df_cartoes['Banco_Limpo'] = df_cartoes['Banco'].astype(str).str.strip()
         df_cartoes['Tipo_Limpo'] = df_cartoes['Tipo'].astype(str).str.strip().str.upper()
 
@@ -4890,41 +4880,64 @@ if aba == "📊 Análises & Configurações":
         if 'Categoria' in df_cartoes.columns:
             df_cartoes = df_cartoes[~df_cartoes['Categoria'].astype(str).str.contains('Transferência|Transf', case=False, na=False)]
 
-        # Filtra pelo cartão escolhido (comparando em maiúsculo para não falhar por letra)
-        if cartao_selecionado == "Todos os Cartões":
-            cartoes_upper = [c.upper() for c in nomes_reais_cartoes]
-            df_cartoes = df_cartoes[df_cartoes['Banco_Limpo'].str.upper().isin(cartoes_upper)]
-        else:
-            df_cartoes = df_cartoes[df_cartoes['Banco_Limpo'].str.upper() == cartao_selecionado.upper()]
+        # Cria lista de todos os meses disponíveis ordenados (MM/AAAA)
+        df_cartoes['Ano_Mes'] = df_cartoes['DT_Cartao'].dt.to_period('M')
+        periodos_disponiveis = sorted(df_cartoes['Ano_Mes'].unique(), reverse=True)
+        lista_meses_str = [p.strftime('%m/%Y') for p in periodos_disponiveis]
 
-        if not df_cartoes.empty:
-            df_cartoes['Ano_Mes'] = df_cartoes['DT_Cartao'].dt.to_period('M')
-            df_mensal_cartao = (
-                df_cartoes.groupby('Ano_Mes')['V_Num']
-                .sum()
-                .reset_index()
-                .sort_values('Ano_Mes')
-            )
+        if len(lista_meses_str) >= 1:
+            # Define padrões inteligentes: tenta 08/2026, 09/2026 e 10/2026
+            def pegar_indice_padrao(mes_alvo, fallback_idx):
+                if mes_alvo in lista_meses_str:
+                    return lista_meses_str.index(mes_alvo)
+                return min(fallback_idx, len(lista_meses_str) - 1)
 
-            # Pega os últimos 3 meses disponíveis
-            df_3m = df_mensal_cartao.tail(3).copy()
-            df_3m['Mes_Label'] = df_3m['Ano_Mes'].dt.strftime('%m/%Y')
+            idx_p1 = pegar_indice_padrao("08/2026", 2)
+            idx_p2 = pegar_indice_padrao("09/2026", 1)
+            idx_p3 = pegar_indice_padrao("10/2026", 0)
 
-            ultimo_mes_val = df_3m['V_Num'].iloc[-1]
-            ultimo_mes_nome = df_3m['Mes_Label'].iloc[-1]
-            media_3m = df_3m['V_Num'].mean()
+            # Controles: Cartão + os 3 Meses lado a lado
+            col_f1, col_f2, col_f3, col_f4 = st.columns([2, 1, 1, 1])
+            with col_f1:
+                cartao_selecionado = st.selectbox(
+                    "Cartão:",
+                    ["Todos os Cartões"] + nomes_reais_cartoes,
+                    key="sel_analise_3m_cartao"
+                )
+            with col_f2:
+                mes_c1 = st.selectbox("1º Mês:", lista_meses_str, index=idx_p1, key="sel_cartao_m1")
+            with col_f3:
+                mes_c2 = st.selectbox("2º Mês:", lista_meses_str, index=idx_p2, key="sel_cartao_m2")
+            with col_f4:
+                mes_c3 = st.selectbox("3º Mês:", lista_meses_str, index=idx_p3, key="sel_cartao_m3")
 
-            if len(df_3m) >= 2:
-                penultimo_mes_val = df_3m['V_Num'].iloc[-2]
-                diff_mes = ultimo_mes_val - penultimo_mes_val
+            # Filtra pelo cartão selecionado
+            if cartao_selecionado == "Todos os Cartões":
+                cartoes_upper = [c.upper() for c in nomes_reais_cartoes]
+                df_filtrado_c = df_cartoes[df_cartoes['Banco_Limpo'].str.upper().isin(cartoes_upper)].copy()
             else:
-                diff_mes = 0.0
+                df_filtrado_c = df_cartoes[df_cartoes['Banco_Limpo'].str.upper() == cartao_selecionado.upper()].copy()
+
+            df_filtrado_c['Mes_Str'] = df_filtrado_c['Ano_Mes'].dt.strftime('%m/%Y')
+
+            # Calcula o total exato de cada um dos 3 meses escolhidos (mantendo a ordem Mês 1 -> Mês 2 -> Mês 3)
+            meses_escolhidos = [mes_c1, mes_c2, mes_c3]
+            valores_meses = []
+            for m_str in meses_escolhidos:
+                soma_m = df_filtrado_c[df_filtrado_c['Mes_Str'] == m_str]['V_Num'].sum()
+                valores_meses.append(soma_m)
+
+            # Métricas rápidas baseadas nos 3 meses escolhidos
+            val_m2 = valores_meses[1]
+            val_m3 = valores_meses[2]
+            diff_mes = val_m3 - val_m2
+            media_3m = sum(valores_meses) / 3.0
 
             col_k1, col_k2, col_k3 = st.columns(3)
-            col_k1.metric(f"Fatura ({ultimo_mes_nome})", m_fmt(ultimo_mes_val), delta=m_fmt(diff_mes), delta_color="inverse")
+            col_k1.metric(f"Fatura ({mes_c3})", m_fmt(val_m3), delta=f"{m_fmt(diff_mes)} vs {mes_c2}", delta_color="inverse")
             col_k2.metric("Média (3 Meses)", m_fmt(media_3m))
 
-            # Busca a meta cadastrada (da sessão ou do dicionário)
+            # Busca a meta cadastrada para o cartão
             metas_ref = st.session_state.get('dict_metas_cartoes', {})
             meta_cartao_alvo = 0.0
             if metas_ref:
@@ -4934,18 +4947,19 @@ if aba == "📊 Análises & Configurações":
                     meta_cartao_alvo = metas_ref.get(cartao_selecionado, 0.0)
 
             if meta_cartao_alvo > 0:
-                saldo_meta = meta_cartao_alvo - ultimo_mes_val
+                saldo_meta = meta_cartao_alvo - val_m3
                 col_k3.metric("Meta Definida", m_fmt(meta_cartao_alvo), delta=f"{m_fmt(saldo_meta)} disponível")
             else:
-                col_k3.metric("Total no Trimestre", m_fmt(df_3m['V_Num'].sum()))
+                col_k3.metric("Total no Trimestre", m_fmt(sum(valores_meses)))
 
+            # Gráfico de Barras com os 3 meses escolhidos + Linha da Meta
             import plotly.graph_objects as go
             fig_cartao = go.Figure()
 
             fig_cartao.add_trace(go.Bar(
-                x=df_3m['Mes_Label'],
-                y=df_3m['V_Num'],
-                text=[m_fmt(v) for v in df_3m['V_Num']],
+                x=meses_escolhidos,
+                y=valores_meses,
+                text=[m_fmt(v) for v in valores_meses],
                 textposition='outside',
                 marker_color='#3498db',
                 name='Gasto Mensal'
@@ -4960,11 +4974,13 @@ if aba == "📊 Análises & Configurações":
                     annotation_position="top left"
                 )
 
-            max_y = max(df_3m['V_Num'].max(), meta_cartao_alvo) * 1.2
+            maior_valor = max(max(valores_meses), meta_cartao_alvo)
+            max_y = maior_valor * 1.25 if maior_valor > 0 else 100.0
+
             fig_cartao.update_layout(
-                title=f"Comparativo Trimestral — {cartao_selecionado}",
+                title=f"Comparativo Trimestral — {cartao_selecionado} ({mes_c1}, {mes_c2} e {mes_c3})",
                 yaxis=dict(range=[0, max_y], title="Valor (R$)"),
-                xaxis=dict(title="Mês de Referência"),
+                xaxis=dict(title="Meses Selecionados", type="category"),
                 template="plotly_dark",
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
@@ -4974,10 +4990,9 @@ if aba == "📊 Análises & Configurações":
 
             st.plotly_chart(fig_cartao, use_container_width=True)
         else:
-            st.info(f"Nenhum lançamento de despesa encontrado para **{cartao_selecionado}**.")
+            st.info("Não há datas válidas de lançamento para montar o filtro de meses.")
 
     st.divider()
-
      # 3. DATAFRAME: BANCOS E CARTÕES
     st.subheader("🏦 Informações de Contas e Cartões")
     if not df_bancos_info.empty:
