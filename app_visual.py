@@ -5012,7 +5012,63 @@ if aba == "📊 Análises & Configurações":
 
     st.divider()
 
+            # =========================================================================
+            # 📂 DETALHAMENTO POR CATEGORIA NO TRIMESTRE SELECIONADO
+            # =========================================================================
+            st.markdown("---")
+            st.subheader(f"📂 Detalhamento por Categoria ({mes_c1}, {mes_c2} e {mes_c3})")
+
+            # Filtra o DataFrame apenas para os 3 meses selecionados nos seletores
+            df_trimestre_cat = df_filtrado_c[df_filtrado_c['Mes_Str'].isin(meses_escolhidos)].copy()
+
+            if not df_trimestre_cat.empty and 'Categoria' in df_trimestre_cat.columns:
+                # Agrupa por categoria somando os valores
+                df_cat_resumo = df_trimestre_cat.groupby('Categoria')['V_Num'].sum().reset_index()
+                df_cat_resumo = df_cat_resumo.sort_values(by='V_Num', ascending=False)
+
+                total_trimestre = df_cat_resumo['V_Num'].sum()
+                df_cat_resumo['% do Total'] = (df_cat_resumo['V_Num'] / total_trimestre * 100) if total_trimestre > 0 else 0.0
+
+                # Formata a coluna de valor para exibição amigável
+                df_cat_resumo['Valor Formatado'] = df_cat_resumo['V_Num'].apply(m_fmt)
+                df_cat_resumo['% Formatado'] = df_cat_resumo['% do Total'].apply(lambda x: f"{x:.1f}%")
+
+                col_tabela, col_grafico = st.columns([1.2, 1], gap="medium")
+
+                with col_tabela:
+                    with st.container(border=True):
+                        st.markdown("**Resumo por Categoria (Trimestre)**")
+                        # Exibe tabela limpa sem o índice bruto
+                        st.dataframe(
+                            df_cat_resumo[['Categoria', 'Valor Formatado', '% Formatado']],
+                            hide_index=True,
+                            use_container_width=True
+                        )
+
+                with col_grafico:
+                    with st.container(border=True):
+                        # Gráfico de Rosca (Donut) das Categorias
+                        fig_pizza = go.Figure(go.Pie(
+                            labels=df_cat_resumo['Categoria'],
+                            values=df_cat_resumo['V_Num'],
+                            hole=0.4,
+                            textinfo='label+percent'
+                        ))
+                        fig_pizza.update_layout(
+                            title="Distribuição (%)",
+                            template="plotly_dark",
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            paper_bgcolor='rgba(0,0,0,0)',
+                            height=320,
+                            margin=dict(l=10, r=10, t=40, b=10),
+                            showlegend=False
+                        )
+                        st.plotly_chart(fig_pizza, use_container_width=True)
+            else:
+                st.info("Nenhum lançamento encontrado para as categorias no período selecionado.")
+
     st.divider()
+
      # 3. DATAFRAME: BANCOS E CARTÕES
     st.subheader("🏦 Informações de Contas e Cartões")
     if not df_bancos_info.empty:
