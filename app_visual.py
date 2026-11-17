@@ -4881,28 +4881,28 @@ if aba == "📊 Análises & Configurações":
         if 'Categoria' in df_cartoes.columns:
             df_cartoes = df_cartoes[~df_cartoes['Categoria'].astype(str).str.contains('Transferência|Transf', case=False, na=False)]
 
-        # Cria lista de todos os meses disponíveis ordenados (MM/AAAA)
-        df_cartoes['Ano_Mes'] = df_cartoes['DT_Cartao'].dt.to_period('M')
-        periodos_disponiveis = sorted(df_cartoes['Ano_Mes'].unique(), reverse=True)
+        # Cria lista combinando os meses que têm lançamentos + os meses do ano atual até Dezembro
+        hoje_periodo = pd.Timestamp.today().to_period('M')
+        meses_lancados = set(df_cartoes['DT_Cartao'].dt.to_period('M').unique())
+        
+        # Garante que os últimos 3 meses (ex: 09, 10 e 11/2026) sempre existam na lista
+        for offset in range(-2, 2): # Inclui 2 meses atrás até o próximo mês
+            meses_lancados.add(hoje_periodo + offset)
+
+        periodos_disponiveis = sorted(list(meses_lancados), reverse=True)
         lista_meses_str = [p.strftime('%m/%Y') for p in periodos_disponiveis]
 
         if len(lista_meses_str) >= 1:
-            # 1. Calcula automaticamente os últimos 3 meses com base na data de hoje (janela deslizante)
-            hoje_periodo = pd.Timestamp.today().to_period('M')
-            mes_alvo_1 = (hoje_periodo - 2).strftime('%m/%Y') # 2 meses atrás (ex: 09/2026)
-            mes_alvo_2 = (hoje_periodo - 1).strftime('%m/%Y') # Mês passado (ex: 10/2026)
-            mes_alvo_3 = hoje_periodo.strftime('%m/%Y')       # Mês atual (ex: 11/2026)
+            # 1. Calcula automaticamente os últimos 3 meses com base na data de hoje
+            mes_alvo_1 = (hoje_periodo - 2).strftime('%m/%Y') # 2 meses atrás (09/2026)
+            mes_alvo_2 = (hoje_periodo - 1).strftime('%m/%Y') # Mês passado (10/2026)
+            mes_alvo_3 = hoje_periodo.strftime('%m/%Y')       # Mês atual (11/2026)
 
-            def pegar_indice_padrao(mes_alvo, fallback_idx):
-                if mes_alvo in lista_meses_str:
-                    return lista_meses_str.index(mes_alvo)
-                return min(fallback_idx, len(lista_meses_str) - 1)
+            idx_p1 = lista_meses_str.index(mes_alvo_1) if mes_alvo_1 in lista_meses_str else 0
+            idx_p2 = lista_meses_str.index(mes_alvo_2) if mes_alvo_2 in lista_meses_str else 0
+            idx_p3 = lista_meses_str.index(mes_alvo_3) if mes_alvo_3 in lista_meses_str else 0
 
-            idx_p1 = pegar_indice_padrao(mes_alvo_1, 2)
-            idx_p2 = pegar_indice_padrao(mes_alvo_2, 1)
-            idx_p3 = pegar_indice_padrao(mes_alvo_3, 0)
-
-            # BLOCO 1: FILTROS BEM ESPAÇADOS (Padrão automático + 100% editável na mão)
+            # BLOCO 1: FILTROS BEM ESPAÇADOS (Chaves renovadas para limpar o cache do navegador)
             with st.container(border=True):
                 cartao_selecionado = st.selectbox(
                     "Selecione o Cartão:",
@@ -4914,11 +4914,11 @@ if aba == "📊 Análises & Configurações":
 
                 col_f1, col_f2, col_f3 = st.columns(3, gap="medium")
                 with col_f1:
-                    mes_c1 = st.selectbox("1º Mês:", lista_meses_str, index=idx_p1, key="sel_cartao_m1")
+                    mes_c1 = st.selectbox("1º Mês:", lista_meses_str, index=idx_p1, key="sel_cartao_m1_auto")
                 with col_f2:
-                    mes_c2 = st.selectbox("2º Mês:", lista_meses_str, index=idx_p2, key="sel_cartao_m2")
+                    mes_c2 = st.selectbox("2º Mês:", lista_meses_str, index=idx_p2, key="sel_cartao_m2_auto")
                 with col_f3:
-                    mes_c3 = st.selectbox("3º Mês:", lista_meses_str, index=idx_p3, key="sel_cartao_m3")
+                    mes_c3 = st.selectbox("3º Mês:", lista_meses_str, index=idx_p3, key="sel_cartao_m3_auto")
 
             st.write("") # Espaço vertical entre a caixa de filtros e os cards de resumo
 
