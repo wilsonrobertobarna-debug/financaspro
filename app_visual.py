@@ -4875,34 +4875,34 @@ if aba == "📊 Análises & Configurações":
 
         df_cartoes['Banco_Limpo'] = df_cartoes['Banco'].astype(str).str.strip()
         df_cartoes['Tipo_Limpo'] = df_cartoes['Tipo'].astype(str).str.strip().str.upper()
+        
+        # Garante a criação da coluna Ano_Mes exigida pelos filtros e gráficos
+        df_cartoes['Ano_Mes'] = df_cartoes['DT_Cartao'].dt.to_period('M')
 
         # Filtra apenas despesas (ignora transferências)
         df_cartoes = df_cartoes[df_cartoes['Tipo_Limpo'] == 'DESPESA']
         if 'Categoria' in df_cartoes.columns:
             df_cartoes = df_cartoes[~df_cartoes['Categoria'].astype(str).str.contains('Transferência|Transf', case=False, na=False)]
 
-        # Cria lista combinando os meses que têm lançamentos + os meses do ano atual até Dezembro
+        # Cria lista combinando os meses lançados + os meses do ano atual
         hoje_periodo = pd.Timestamp.today().to_period('M')
-        meses_lancados = set(df_cartoes['DT_Cartao'].dt.to_period('M').unique())
-        
-        # Garante que os últimos 3 meses (ex: 09, 10 e 11/2026) sempre existam na lista
-        for offset in range(-2, 2): # Inclui 2 meses atrás até o próximo mês
+        meses_lancados = set(df_cartoes['Ano_Mes'].unique())
+        for offset in range(-2, 2):
             meses_lancados.add(hoje_periodo + offset)
 
         periodos_disponiveis = sorted(list(meses_lancados), reverse=True)
         lista_meses_str = [p.strftime('%m/%Y') for p in periodos_disponiveis]
 
         if len(lista_meses_str) >= 1:
-            # 1. Calcula automaticamente os últimos 3 meses com base na data de hoje
-            mes_alvo_1 = (hoje_periodo - 2).strftime('%m/%Y') # 2 meses atrás (09/2026)
-            mes_alvo_2 = (hoje_periodo - 1).strftime('%m/%Y') # Mês passado (10/2026)
-            mes_alvo_3 = hoje_periodo.strftime('%m/%Y')       # Mês atual (11/2026)
+            mes_alvo_1 = (hoje_periodo - 2).strftime('%m/%Y') # 09/2026
+            mes_alvo_2 = (hoje_periodo - 1).strftime('%m/%Y') # 10/2026
+            mes_alvo_3 = hoje_periodo.strftime('%m/%Y')       # 11/2026
 
             idx_p1 = lista_meses_str.index(mes_alvo_1) if mes_alvo_1 in lista_meses_str else 0
             idx_p2 = lista_meses_str.index(mes_alvo_2) if mes_alvo_2 in lista_meses_str else 0
             idx_p3 = lista_meses_str.index(mes_alvo_3) if mes_alvo_3 in lista_meses_str else 0
 
-            # BLOCO 1: FILTROS BEM ESPAÇADOS (Chaves renovadas para limpar o cache do navegador)
+            # BLOCO 1: FILTROS BEM ESPAÇADOS
             with st.container(border=True):
                 cartao_selecionado = st.selectbox(
                     "Selecione o Cartão:",
@@ -4910,7 +4910,7 @@ if aba == "📊 Análises & Configurações":
                     key="sel_analise_cartao_trimestre_v2"
                 )
 
-                st.write("") # Espaço vertical entre o cartão e os 3 meses
+                st.write("") 
 
                 col_f1, col_f2, col_f3 = st.columns(3, gap="medium")
                 with col_f1:
@@ -4920,7 +4920,7 @@ if aba == "📊 Análises & Configurações":
                 with col_f3:
                     mes_c3 = st.selectbox("3º Mês:", lista_meses_str, index=idx_p3, key="sel_cartao_m3_auto")
 
-            st.write("") # Espaço vertical entre a caixa de filtros e os cards de resumo
+            st.write("") 
 
             # Filtra pelo cartão selecionado
             if cartao_selecionado == "Todos os Cartões":
@@ -4967,7 +4967,7 @@ if aba == "📊 Análises & Configurações":
                     else:
                         st.metric("Total no Trimestre", m_fmt(sum(valores_meses)))
 
-            st.write("") # Espaço vertical antes do gráfico
+            st.write("") 
 
             # BLOCO 3: GRÁFICO EM CONTAINER PRÓPRIO
             import plotly.graph_objects as go
