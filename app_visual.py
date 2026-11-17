@@ -5007,10 +5007,6 @@ if aba == "📊 Análises & Configurações":
 
             with st.container(border=True):
                 st.plotly_chart(fig_cartao, use_container_width=True)
-        else:
-            st.info("Não há datas válidas de lançamento para montar o filtro de meses.")
-
-        st.divider()
 
             # =========================================================================
             # 📂 DETALHAMENTO POR CATEGORIA NO TRIMESTRE SELECIONADO
@@ -5066,8 +5062,10 @@ if aba == "📊 Análises & Configurações":
                         st.plotly_chart(fig_pizza, use_container_width=True)
             else:
                 st.info("Nenhum lançamento encontrado para as categorias no período selecionado.")
-    
-                st.divider()
+        else:
+            st.info("Não há datas válidas de lançamento para montar o filtro de meses.")
+
+    st.divider()
 
      # 3. DATAFRAME: BANCOS E CARTÕES
     st.subheader("🏦 Informações de Contas e Cartões")
