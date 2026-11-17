@@ -4887,21 +4887,27 @@ if aba == "📊 Análises & Configurações":
         lista_meses_str = [p.strftime('%m/%Y') for p in periodos_disponiveis]
 
         if len(lista_meses_str) >= 1:
+            # 1. Calcula automaticamente os últimos 3 meses com base na data de hoje (janela deslizante)
+            hoje_periodo = pd.Timestamp.today().to_period('M')
+            mes_alvo_1 = (hoje_periodo - 2).strftime('%m/%Y') # 2 meses atrás (ex: 09/2026)
+            mes_alvo_2 = (hoje_periodo - 1).strftime('%m/%Y') # Mês passado (ex: 10/2026)
+            mes_alvo_3 = hoje_periodo.strftime('%m/%Y')       # Mês atual (ex: 11/2026)
+
             def pegar_indice_padrao(mes_alvo, fallback_idx):
                 if mes_alvo in lista_meses_str:
                     return lista_meses_str.index(mes_alvo)
                 return min(fallback_idx, len(lista_meses_str) - 1)
 
-            idx_p1 = pegar_indice_padrao("08/2026", 2)
-            idx_p2 = pegar_indice_padrao("09/2026", 1)
-            idx_p3 = pegar_indice_padrao("10/2026", 0)
+            idx_p1 = pegar_indice_padrao(mes_alvo_1, 2)
+            idx_p2 = pegar_indice_padrao(mes_alvo_2, 1)
+            idx_p3 = pegar_indice_padrao(mes_alvo_3, 0)
 
-            # BLOCO 1: FILTROS BEM ESPAÇADOS
+            # BLOCO 1: FILTROS BEM ESPAÇADOS (Padrão automático + 100% editável na mão)
             with st.container(border=True):
                 cartao_selecionado = st.selectbox(
                     "Selecione o Cartão:",
                     ["Todos os Cartões"] + nomes_reais_cartoes,
-                    key="sel_analise_3m_cartao"
+                    key="sel_analise_cartao_trimestre_v2"
                 )
 
                 st.write("") # Espaço vertical entre o cartão e os 3 meses
