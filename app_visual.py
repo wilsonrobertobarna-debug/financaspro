@@ -3199,23 +3199,22 @@ elif "🚗" in aba:
                 "mensagem": f"Colunas de data/status não identificadas. Referência: {venc_fallback.strftime('%d/%m/%Y')}.",
             }
 
-        # Filtra lançamentos de seguro do veículo (ignora "seguro cartão")
-        mask_seguro = pd.Series(False, index=df_seg.index)
-        if col_desc:
-            desc_series = df_seg[col_desc].astype(str).str.lower()
-            mask_seguro = mask_seguro | (
-                desc_series.str.contains("seguro", na=False)
-                & ~desc_series.str.contains("cartão|cartao", regex=True, na=False)
-            )
-        if col_cat:
-            cat_series = df_seg[col_cat].astype(str).str.lower()
-            mask_seguro = mask_seguro | (
-                cat_series.str.contains("seguro", na=False)
-                & ~(
-                    col_desc
-                    and df_seg[col_desc].astype(str).str.lower().str.contains("cartão|cartao", regex=True, na=False)
-                )
-            )
+       # Filtra APENAS lançamentos de seguro do veículo (exclui previdência, vida/familiar, cartão etc.)
+        desc_lower = df_seg[col_desc].astype(str).str.lower() if col_desc else pd.Series("", index=df_seg.index)
+        cat_lower = df_seg[col_cat].astype(str).str.lower() if col_cat else pd.Series("", index=df_seg.index)
+        texto_combinado = desc_lower + " " + cat_lower
+
+        palavras_excluir = r"previd[êe]ncia|familiar|vida|residencial|celular|cart[ãa]o|sa[úu]de|odonto"
+        tem_exclusao = texto_combinado.str.contains(palavras_excluir, regex=True, na=False)
+
+        tem_seguro = texto_combinado.str.contains(r"\bseguro\b", regex=True, na=False)
+        tem_contexto_veiculo = texto_combinado.str.contains(
+            r"ve[íi]culo|auto|carro|t-?cross|porto|ap[óo]lice", regex=True, na=False
+        )
+
+        mask_seguro = ~tem_exclusao & (tem_seguro | (cat_lower.str.contains(r"ve[íi]culo|auto", regex=True, na=False) & tem_seguro))
+        if not mask_seguro.any():
+            mask_seguro = ~tem_exclusao & tem_seguro & tem_contexto_veiculo
 
         df_seg = df_seg[mask_seguro].copy()
         if df_seg.empty:
@@ -5412,6 +5411,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
 
