@@ -3307,6 +3307,34 @@ elif "🚗" in aba:
     df_base_seguro = globals().get("df_lancamentos")
     info_seguro = resolver_seguro_veiculo(df_base_seguro, hoje, seguro_ultima_parc)
 
+   # =========================================================================
+    # 🛡️ CÁLCULO DINÂMICO DE LICENCIAMENTO (REGRA DETRAN-SP PELA PLACA)
+    # =========================================================================
+    def obter_mes_licenciamento_sp(placa_str):
+        numeros = [char for char in str(placa_str) if char.isdigit()]
+        if not numeros:
+            return 10, "31/10"
+        
+        ultimo_digito = int(numeros[-1])
+        mapa_sp = {
+            1: (7, "31/07"),
+            2: (8, "31/08"),
+            3: (9, "30/09"),
+            4: (10, "31/10"),
+            5: (11, "30/11"),
+            6: (11, "30/11"),
+            7: (12, "31/12"),
+            8: (10, "31/10"),
+            9: (12, "31/12"),
+            0: (12, "31/12")
+        }
+        return mapa_sp.get(ultimo_digito, (10, "31/10"))
+
+    hoje_lic = pd.Timestamp.today().normalize()
+    mes_lic, dia_mes_lic = obter_mes_licenciamento_sp(cfg['placa'])
+    ano_lic = hoje_lic.year if (hoje_lic.month < mes_lic or (hoje_lic.month == mes_lic and hoje_lic.day <= 31)) else hoje_lic.year + 1
+    data_lic_formatada = f"{dia_mes_lic}/{ano_lic}"
+
     # =========================================================================
     # 🚘 FICHA TÉCNICA & CALENDÁRIO DE OBRIGAÇÕES
     # =========================================================================
@@ -3339,8 +3367,8 @@ elif "🚗" in aba:
                 st.warning(info_seguro["mensagem"])
             else:
                 st.error(info_seguro["mensagem"])
-
     st.divider()
+    
     # =========================================================================
     # ⛽ RECOMENDAÇÃO DE COMBUSTÍVEL
     # =========================================================================
@@ -5393,4 +5421,5 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
