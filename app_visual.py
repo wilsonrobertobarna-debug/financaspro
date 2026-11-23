@@ -3174,9 +3174,8 @@ elif "🚗" in aba:
 
         df_seg = df_lanc.copy()
 
-        # Localiza colunas de forma segura
         col_data = next(
-            (c for c in ["Data", "Vencimento", "Data Vencimento", "data"] if c in df_seg.columns),
+            (c for c in ["Vencimento", "Data", "Data Vencimento", "data"] if c in df_seg.columns),
             None,
         )
         col_status = next(
@@ -3239,7 +3238,7 @@ elif "🚗" in aba:
                 "mensagem": f"Datas de seguro inválidas na planilha. Referência: {venc_fallback.strftime('%d/%m/%Y')}.",
             }
 
-        # 1) Verifica se existem parcelas ainda NÃO pagas (só avança quando viram 'pago')
+        # 1) Parcelas ainda NÃO pagas (só avança quando viram 'pago')
         pendentes = df_seg[df_seg["_status_norm"] != "pago"].sort_values("_dt")
 
         if not pendentes.empty:
@@ -3297,43 +3296,34 @@ elif "🚗" in aba:
                 "mensagem": f"🔴 Vigência encerrada há {abs(dias_para_fim)} dia(s) ({dt_fim_vigencia.strftime('%d/%m/%Y')}) e não há nova renovação lançada!",
             }
 
-    # Mantém conversão manual apenas como fallback caso não haja DataFrame disponível
+    def obter_mes_licenciamento_sp(placa_str):
+        numeros = [char for char in str(placa_str) if char.isdigit()]
+        if not numeros:
+            return 10, "31/10"
+        ultimo_digito = int(numeros[-1])
+        mapa_sp = {
+            1: (7, "31/07"), 2: (8, "31/08"), 3: (9, "30/09"), 4: (10, "31/10"),
+            5: (11, "30/11"), 6: (11, "30/11"), 7: (12, "31/12"), 8: (10, "31/10"),
+            9: (12, "31/12"), 0: (12, "31/12"),
+        }
+        return mapa_sp.get(ultimo_digito, (10, "31/10"))
+
+    hoje_veiculo = pd.Timestamp.today().normalize()
+    mes_lic, dia_mes_lic = obter_mes_licenciamento_sp(cfg["placa"])
+    ano_lic = (
+        hoje_veiculo.year
+        if (hoje_veiculo.month < mes_lic or (hoje_veiculo.month == mes_lic and hoje_veiculo.day <= 31))
+        else hoje_veiculo.year + 1
+    )
+    data_lic_formatada = f"{dia_mes_lic}/{ano_lic}"
+
     try:
         seguro_ultima_parc = pd.to_datetime(cfg["venc_seguro"], dayfirst=True).normalize()
     except Exception:
         seguro_ultima_parc = pd.to_datetime("2026-11-21").normalize()
 
-    # Troque `df_lancamentos` pelo nome exato do seu DataFrame principal de lançamentos
-    df_base_seguro = globals().get("df_lancamentos")
-    info_seguro = resolver_seguro_veiculo(df_base_seguro, hoje, seguro_ultima_parc)
-
-   # =========================================================================
-    # 🛡️ CÁLCULO DINÂMICO DE LICENCIAMENTO (REGRA DETRAN-SP PELA PLACA)
-    # =========================================================================
-    def obter_mes_licenciamento_sp(placa_str):
-        numeros = [char for char in str(placa_str) if char.isdigit()]
-        if not numeros:
-            return 10, "31/10"
-        
-        ultimo_digito = int(numeros[-1])
-        mapa_sp = {
-            1: (7, "31/07"),
-            2: (8, "31/08"),
-            3: (9, "30/09"),
-            4: (10, "31/10"),
-            5: (11, "30/11"),
-            6: (11, "30/11"),
-            7: (12, "31/12"),
-            8: (10, "31/10"),
-            9: (12, "31/12"),
-            0: (12, "31/12")
-        }
-        return mapa_sp.get(ultimo_digito, (10, "31/10"))
-
-    hoje_lic = pd.Timestamp.today().normalize()
-    mes_lic, dia_mes_lic = obter_mes_licenciamento_sp(cfg['placa'])
-    ano_lic = hoje_lic.year if (hoje_lic.month < mes_lic or (hoje_lic.month == mes_lic and hoje_lic.day <= 31)) else hoje_lic.year + 1
-    data_lic_formatada = f"{dia_mes_lic}/{ano_lic}"
+    df_base_seguro = locals().get("df_base") if "df_base" in locals() else globals().get("df_base")
+    info_seguro = resolver_seguro_veiculo(df_base_seguro, hoje_veiculo, seguro_ultima_parc)
 
     # =========================================================================
     # 🚘 FICHA TÉCNICA & CALENDÁRIO DE OBRIGAÇÕES
@@ -3367,7 +3357,8 @@ elif "🚗" in aba:
                 st.warning(info_seguro["mensagem"])
             else:
                 st.error(info_seguro["mensagem"])
-    st.divider()
+
+    st.divider()    
     
     # =========================================================================
     # ⛽ RECOMENDAÇÃO DE COMBUSTÍVEL
@@ -5421,5 +5412,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
