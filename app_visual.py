@@ -3150,46 +3150,170 @@ elif "🚗" in aba:
                 st.rerun()
 
     # =========================================================================
-    # 🛡️ CÁLCULO DINÂMICO DE LICENCIAMENTO (REGRA DETRAN-SP PELA PLACA)
+    # 🛡️ LÓGICA AUTOMÁTICA DE SEGURO A PARTIR DOS LANÇAMENTOS (GATILHO: "PAGO")
     # =========================================================================
-    def obter_mes_licenciamento_sp(placa_str):
-        numeros = [char for char in str(placa_str) if char.isdigit()]
-        if not numeros:
-            return 10, "31/10"
-        
-        ultimo_digito = int(numeros[-1])
-        mapa_sp = {
-            1: (7, "31/07"),
-            2: (8, "31/08"),
-            3: (9, "30/09"),
-            4: (10, "31/10"),
-            5: (11, "30/11"),
-            6: (11, "30/11"),
-            7: (12, "31/12"),
-            8: (10, "31/10"),
-            9: (12, "31/12"),
-            0: (12, "31/12")
-        }
-        return mapa_sp.get(ultimo_digito, (10, "31/10"))
+    def resolver_seguro_veiculo(df_lanc, data_ref_hoje, venc_fallback):
+        """
+        Regras:
+        1. Filtra lançamentos ligados ao seguro do veículo (excluindo seguro de cartão).
+        2. Enquanto houver parcela com status != 'pago' (ex.: 'Pendente'), o próximo
+           vencimento fica travado na parcela pendente mais antiga.
+        3. Assim que uma parcela vira 'Pago', ela sai da fila de pendentes e o
+           sistema passa a apontar para a próxima pendente.
+        4. Se não houver mais parcelas pendentes:
+           - Se a última parcela registrada ainda não venceu -> apólice em vigência até ela.
+           - Se a última parcela já venceu e não há nova renovação lançada -> alerta vermelho!
+        """
+        if df_lanc is None or len(df_lanc) == 0:
+            return {
+                "data_exibicao": venc_fallback,
+                "rotulo_data": "Vencimento / Renovação",
+                "status_tipo": "fallback",
+                "mensagem": f"Sem lançamentos encontrados. Referência atual: {venc_fallback.strftime('%d/%m/%Y')}.",
+            }
 
-    hoje = pd.Timestamp.today().normalize()
-    mes_lic, dia_mes_lic = obter_mes_licenciamento_sp(cfg['placa'])
-    ano_lic = hoje.year if (hoje.month < mes_lic or (hoje.month == mes_lic and hoje.day <= 31)) else hoje.year + 1
-    data_lic_formatada = f"{dia_mes_lic}/{ano_lic}"
+        df_seg = df_lanc.copy()
 
-    # Converte data do seguro cadastrada
+        # Localiza colunas de forma segura
+        col_data = next(
+            (c for c in ["Data", "Vencimento", "Data Vencimento", "data"] if c in df_seg.columns),
+            None,
+        )
+        col_status = next(
+            (c for c in ["Status", "Situação", "Situacao", "status"] if c in df_seg.columns),
+            None,
+        )
+        col_desc = next(
+            (c for c in ["Descrição", "Descricao", "Histórico", "Historico", "Lancamento"] if c in df_seg.columns),
+            None,
+        )
+        col_cat = next(
+            (c for c in ["Categoria", "categoria"] if c in df_seg.columns),
+            None,
+        )
+
+        if not col_data or not col_status:
+            return {
+                "data_exibicao": venc_fallback,
+                "rotulo_data": "Vencimento / Renovação",
+                "status_tipo": "fallback",
+                "mensagem": f"Colunas de data/status não identificadas. Referência: {venc_fallback.strftime('%d/%m/%Y')}.",
+            }
+
+        # Filtra lançamentos de seguro do veículo (ignora "seguro cartão")
+        mask_seguro = pd.Series(False, index=df_seg.index)
+        if col_desc:
+            desc_series = df_seg[col_desc].astype(str).str.lower()
+            mask_seguro = mask_seguro | (
+                desc_series.str.contains("seguro", na=False)
+                & ~desc_series.str.contains("cartão|cartao", regex=True, na=False)
+            )
+        if col_cat:
+            cat_series = df_seg[col_cat].astype(str).str.lower()
+            mask_seguro = mask_seguro | (
+                cat_series.str.contains("seguro", na=False)
+                & ~(
+                    col_desc
+                    and df_seg[col_desc].astype(str).str.lower().str.contains("cartão|cartao", regex=True, na=False)
+                )
+            )
+
+        df_seg = df_seg[mask_seguro].copy()
+        if df_seg.empty:
+            return {
+                "data_exibicao": venc_fallback,
+                "rotulo_data": "Vencimento / Renovação",
+                "status_tipo": "fallback",
+                "mensagem": f"Nenhum lançamento de seguro encontrado. Referência: {venc_fallback.strftime('%d/%m/%Y')}.",
+            }
+
+        df_seg["_dt"] = pd.to_datetime(df_seg[col_data], dayfirst=True, errors="coerce").dt.normalize()
+        df_seg = df_seg.dropna(subset=["_dt"]).sort_values("_dt")
+        df_seg["_status_norm"] = df_seg[col_status].astype(str).str.strip().str.lower()
+
+        if df_seg.empty:
+            return {
+                "data_exibicao": venc_fallback,
+                "rotulo_data": "Vencimento / Renovação",
+                "status_tipo": "fallback",
+                "mensagem": f"Datas de seguro inválidas na planilha. Referência: {venc_fallback.strftime('%d/%m/%Y')}.",
+            }
+
+        # 1) Verifica se existem parcelas ainda NÃO pagas (só avança quando viram 'pago')
+        pendentes = df_seg[df_seg["_status_norm"] != "pago"].sort_values("_dt")
+
+        if not pendentes.empty:
+            prox_parc = pendentes.iloc[0]
+            dt_prox = prox_parc["_dt"]
+            dias_restantes = (dt_prox - data_ref_hoje).days
+            desc_parc = str(prox_parc[col_desc]) if col_desc else "Parcela do Seguro"
+
+            if dias_restantes > 15:
+                return {
+                    "data_exibicao": dt_prox,
+                    "rotulo_data": f"Próxima Parcela ({desc_parc})",
+                    "status_tipo": "ok",
+                    "mensagem": f"🟢 Parcela em dia ({desc_parc}). Vence em {dias_restantes} dias ({dt_prox.strftime('%d/%m/%Y')}).",
+                }
+            elif dias_restantes >= 0:
+                return {
+                    "data_exibicao": dt_prox,
+                    "rotulo_data": f"Próxima Parcela ({desc_parc})",
+                    "status_tipo": "alerta",
+                    "mensagem": f"🟡 Atenção: {desc_parc} vence em {dias_restantes} dia(s) ({dt_prox.strftime('%d/%m/%Y')}).",
+                }
+            else:
+                return {
+                    "data_exibicao": dt_prox,
+                    "rotulo_data": f"Próxima Parcela ({desc_parc})",
+                    "status_tipo": "atrasado",
+                    "mensagem": f"🔴 Parcela em aberto/atrasada há {abs(dias_restantes)} dia(s) ({dt_prox.strftime('%d/%m/%Y')}). Dê a baixa após o pagamento para avançar.",
+                }
+
+        # 2) Todas as parcelas registradas estão como 'Pago' -> avalia vigência / renovação
+        ultima_paga = df_seg.iloc[-1]
+        dt_fim_vigencia = ultima_paga["_dt"]
+        dias_para_fim = (dt_fim_vigencia - data_ref_hoje).days
+
+        if dias_para_fim > 30:
+            return {
+                "data_exibicao": dt_fim_vigencia,
+                "rotulo_data": "Vigência / Última Parcela Paga",
+                "status_tipo": "ok",
+                "mensagem": f"🟢 Seguro quitado e vigente até {dt_fim_vigencia.strftime('%d/%m/%Y')} (faltam {dias_para_fim} dias).",
+            }
+        elif dias_para_fim >= 0:
+            return {
+                "data_exibicao": dt_fim_vigencia,
+                "rotulo_data": "Vigência / Última Parcela Paga",
+                "status_tipo": "alerta",
+                "mensagem": f"🟡 Parcelas pagas. Cobertura vai até {dt_fim_vigencia.strftime('%d/%m/%Y')} ({dias_para_fim} dia(s)) — lance a renovação quando fechar.",
+            }
+        else:
+            return {
+                "data_exibicao": dt_fim_vigencia,
+                "rotulo_data": "Vigência Encerrada",
+                "status_tipo": "sem_renovacao",
+                "mensagem": f"🔴 Vigência encerrada há {abs(dias_para_fim)} dia(s) ({dt_fim_vigencia.strftime('%d/%m/%Y')}) e não há nova renovação lançada!",
+            }
+
+    # Mantém conversão manual apenas como fallback caso não haja DataFrame disponível
     try:
-        seguro_ultima_parc = pd.to_datetime(cfg['venc_seguro'], dayfirst=True)
-    except:
-        seguro_ultima_parc = pd.to_datetime("2026-11-21")
+        seguro_ultima_parc = pd.to_datetime(cfg["venc_seguro"], dayfirst=True).normalize()
+    except Exception:
+        seguro_ultima_parc = pd.to_datetime("2026-11-21").normalize()
+
+    # Troque `df_lancamentos` pelo nome exato do seu DataFrame principal de lançamentos
+    df_base_seguro = globals().get("df_lancamentos")
+    info_seguro = resolver_seguro_veiculo(df_base_seguro, hoje, seguro_ultima_parc)
 
     # =========================================================================
     # 🚘 FICHA TÉCNICA & CALENDÁRIO DE OBRIGAÇÕES
     # =========================================================================
     st.markdown("##### 📄 Ficha Técnica & Vencimentos Oficiais")
-    
+
     c_f1, c_f2 = st.columns(2)
-    
+
     with c_f1:
         with st.container(border=True):
             st.markdown(f"### 🚘 {cfg['modelo']}")
@@ -3197,25 +3321,26 @@ elif "🚗" in aba:
             st.write(f"🔢 **Placa:** `{cfg['placa']}` | **Renavam:** `{cfg['renavam']}`")
             st.write(f"🎨 **Ano:** {cfg['ano']} | **Cor:** {cfg['cor']}")
             st.write(f"⛽ **Combustível:** {cfg['combustivel']}")
-            
+
     with c_f2:
         with st.container(border=True):
             st.markdown("### 🛡️ Calendário de Obrigações")
-            
+
             st.write("📄 **IPVA:** Vencimento no Mês de **Janeiro**")
             st.write(f"📄 **Licenciamento (Final {cfg['placa'][-1]}):** Vencimento em **{data_lic_formatada}**")
-            st.write(f"🛡️ **Seguro ({cfg['seguradora']}):** Parcela Final/Renovação em **{seguro_ultima_parc.strftime('%d/%m/%Y')}**")
-            
-            dias_seguro = (seguro_ultima_parc - hoje).days
-            if dias_seguro > 30:
-                st.success(f"🟢 Seguro em dia! Faltam {dias_seguro} dias para a renovação.")
-            elif dias_seguro >= 0:
-                st.warning(f"🟡 Atenção: Seguro vence em {dias_seguro} dias ({seguro_ultima_parc.strftime('%d/%m/%Y')})!")
+            st.write(
+                f"🛡️ **Seguro ({cfg['seguradora']}) — {info_seguro['rotulo_data']}:** "
+                f"**{info_seguro['data_exibicao'].strftime('%d/%m/%Y')}**"
+            )
+
+            if info_seguro["status_tipo"] == "ok":
+                st.success(info_seguro["mensagem"])
+            elif info_seguro["status_tipo"] == "alerta":
+                st.warning(info_seguro["mensagem"])
             else:
-                st.error(f"🔴 Vencido/Atrasado há {abs(dias_seguro)} dias! Atualize a data do seguro no formulário.")
+                st.error(info_seguro["mensagem"])
 
     st.divider()
-
     # =========================================================================
     # ⛽ RECOMENDAÇÃO DE COMBUSTÍVEL
     # =========================================================================
@@ -5268,3 +5393,4 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
