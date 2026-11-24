@@ -3145,7 +3145,7 @@ elif "🚗" in aba:
                 st.session_state.car_config["cor"] = f_cor
                 st.session_state.car_config["combustivel"] = f_com
                 st.session_state.car_config["seguradora"] = f_seg
-                st.session_state.car_config["venc_seguro"] = f_vseg
+               #st.session_state.car_config["venc_seguro"] = f_vseg
                 st.success("✅ Dados do veículo e seguro atualizados com sucesso!")
                 st.rerun()
 
