@@ -3134,7 +3134,7 @@ elif "🚗" in aba:
             f_cor = st.text_input("Cor", value=st.session_state.car_config["cor"])
             f_com = st.text_input("Combustível", value=st.session_state.car_config["combustivel"])
             f_seg = st.text_input("Seguradora", value=st.session_state.car_config["seguradora"])
-            f_vseg = st.text_input("Vencimento do Seguro (DD/MM/AAAA)", value=st.session_state.car_config["venc_seguro"])
+            #f_vseg = st.text_input("Vencimento do Seguro (DD/MM/AAAA)", value=st.session_state.car_config["venc_seguro"])
             
             btn_salvar = st.form_submit_button("💾 Salvar Alterações")
             if btn_salvar:
