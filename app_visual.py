@@ -4356,7 +4356,7 @@ if aba == "📋 Relatório PDF":
         df_tela = df_tela.drop(columns=['DT_ORDEM_TELA'])
 
     # --- FAXINA RIGOROSA ---
-    colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
+    #colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
     colunas_proibidas = ['V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'vnum', 'dt', 'mesa']
     
     colunas_visiveis = [
