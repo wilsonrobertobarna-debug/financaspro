@@ -4357,6 +4357,7 @@ if aba == "📋 Relatório PDF":
 
     # --- FAXINA RIGOROSA ---
     colunas_proibidas = ['ID', 'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'id', 'vnum', 'dt', 'mesa']
+    colunas_proibidas = ['V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'vnum', 'dt', 'mesa']
     
     colunas_visiveis = [
         c for c in df_tela.columns 
