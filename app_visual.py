@@ -4360,7 +4360,7 @@ if aba == "📋 Relatório PDF":
     #colunas_proibidas = ['V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'vnum', 'dt', 'mesa']
     colunas_proibidas = [
     'V_Num', 'DT', 'DT_FILTRO', 'mesA', 'MESA', 'vnum', 'dt', 'mesa',
-    'linha_sheet', 'Linha_Sheet', 'LINHA_SHEET'
+    'linha_sheets', 'Linha_Sheets', 'LINHA_SHEETS'
     ]
     
     colunas_visiveis = [
