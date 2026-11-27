@@ -2638,7 +2638,7 @@ if "💰" in st.session_state.page:
 
     st.divider()
 
-            
+    
     # 7. TABELA FINAL (APENAS PAGOS/RECEBIDOS - ORDENADO POR VENCIMENTO E ID)
     st.write("---")
     st.subheader("🔍 Lançamentos do Mês")
@@ -2678,13 +2678,22 @@ if "💰" in st.session_state.page:
                 na_position='last'
             )
             df_exibicao = df_exibicao.drop(columns=cols_temp)
+
+        # 3. BUSCA SEGURA DA COLUNA BENEFICIÁRIO
+        col_ben_ex = next((c for c in ['Beneficiário', 'Beneficiario', 'Favorecido'] if c in df_exibicao.columns), None)
+        if col_ben_ex:
+            df_exibicao['Beneficiário_Exibicao'] = df_exibicao[col_ben_ex].fillna('').astype(str).str.strip()
+        else:
+            df_exibicao['Beneficiário_Exibicao'] = ''
         
         # Garante que as colunas exibidas existam no dataframe para evitar erros
-        colunas_disponiveis = [col for col in ['ID', 'Vencimento', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status', 'Tipo'] if col in df_exibicao.columns]
+        colunas_exibir = ['ID', 'Vencimento', 'Beneficiário_Exibicao', 'Descrição', 'Valor', 'Categoria', 'Banco', 'Status', 'Tipo']
+        colunas_disponiveis = [col for col in colunas_exibir if col in df_exibicao.columns]
         
         if not df_exibicao.empty:
+            df_final_mes = df_exibicao[colunas_disponiveis].rename(columns={'Beneficiário_Exibicao': 'Beneficiário'})
             st.dataframe(
-                df_exibicao[colunas_disponiveis], 
+                df_final_mes, 
                 use_container_width=True, 
                 hide_index=True
             )
