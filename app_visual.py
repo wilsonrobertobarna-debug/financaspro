@@ -3528,6 +3528,29 @@ elif "🚗" in aba:
                 ascending=[False, False, True, False]
             ).reset_index(drop=True)
 
+            # --- BUSCA INTELIGENTE DE COLUNAS ID E BENEFICIÁRIO ---
+            col_id_real = next((c for c in ['ID', 'Id', 'id', 'Código', 'Codigo'] if c in df_veiculo.columns), None)
+            col_ben_real = next((c for c in ['Beneficiário', 'Beneficiario', 'Favorecido'] if c in df_veiculo.columns), None)
+
+            if col_id_real:
+                def formata_id(val):
+                    if pd.isna(val) or str(val).strip() == "" or str(val).strip().lower() == "nan":
+                        return ""
+                    try:
+                        f = float(val)
+                        return str(int(f)) if f.is_integer() else str(val).strip()
+                    except:
+                        return str(val).strip()
+
+                df_veiculo['ID_Exibicao'] = df_veiculo[col_id_real].apply(formata_id)
+            else:
+                df_veiculo['ID_Exibicao'] = ""
+
+            if col_ben_real:
+                df_veiculo['Beneficiário_Exibicao'] = df_veiculo[col_ben_real].fillna("").astype(str).str.strip()
+            else:
+                df_veiculo['Beneficiário_Exibicao'] = ""
+
             df_veiculo['Vencimento'] = df_veiculo['Vencimento'].dt.strftime('%d/%m/%Y')
             df_veiculo['Valor_Formatado'] = df_veiculo['V_Num'].apply(m_fmt)
 
@@ -3547,10 +3570,31 @@ elif "🚗" in aba:
             else:
                 df_veiculo['Litros_Exibicao'] = ""
 
-            colunas_exibir = ['Vencimento', 'Categoria', 'Descrição', 'Valor_Formatado', 'Km', 'Km_Rodados', 'Litros_Exibicao', 'Km/L', 'Preço/Litro', 'Banco']
+            colunas_exibir = [
+                'ID_Exibicao',
+                'Vencimento',
+                'Categoria',
+                'Beneficiário_Exibicao',
+                'Descrição',
+                'Valor_Formatado',
+                'Km',
+                'Km_Rodados',
+                'Litros_Exibicao',
+                'Km/L',
+                'Preço/Litro',
+                'Banco'
+            ]
             colunas_exibir_disponiveis = [col for col in colunas_exibir if col in df_veiculo.columns]
             
             df_exibicao = df_veiculo[colunas_exibir_disponiveis].copy()
+
+            renomear_cols = {}
+            if 'ID_Exibicao' in df_exibicao.columns:
+                renomear_cols['ID_Exibicao'] = 'ID'
+            if 'Beneficiário_Exibicao' in df_exibicao.columns:
+                renomear_cols['Beneficiário_Exibicao'] = 'Beneficiário'
+            if renomear_cols:
+                df_exibicao = df_exibicao.rename(columns=renomear_cols)
 
             formatos_tabela = {
                 'Km': "{:,.0f} km",
@@ -3560,12 +3604,12 @@ elif "🚗" in aba:
             }
 
             if not df_exibicao.empty:
-                # Exibição direta sem inversão (.iloc[::-1]), pois a ordenação já está perfeita
                 st.dataframe(df_exibicao.style.format(formatos_tabela, na_rep="-"), use_container_width=True, hide_index=True)
             else:
                 st.info("Nenhum lançamento encontrado com esses filtros.")
         else:
-            st.info("Nenhum lançamento de veículo encontrado na base.")   
+            st.info("Nenhum lançamento de veículo encontrado na base.") 
+            
 
 elif "📄" in aba:
     st.title("📄 Relatório WhatsApp")
