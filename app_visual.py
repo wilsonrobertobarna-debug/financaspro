@@ -2519,12 +2519,12 @@ if "💰" in st.session_state.page:
     # Exibição no Streamlit
     st.dataframe(df_pivot.style.format(formatacao), use_container_width=True)
         
-        
-# --- FILTRO DE ALERTA: PENDÊNCIAS DO PERÍODO ---
+    
+    # --- FILTRO DE ALERTA: PENDÊNCIAS DO PERÍODO ---
     st.subheader("🔔 Monitor de Pendências do Período")
     
     # Filtra apenas o que está pendente E pertence ao mês selecionado (trazendo Receitas e Despesas)
-    df_pendente_mes = df_base[(df_base['Status'].str.lower() == 'pendente') & (df_base['Mes_Ano'] == filtro_mes)]
+    df_pendente_mes = df_base[(df_base['Status'].str.lower() == 'pendente') & (df_base['Mes_Ano'] == filtro_mes)].copy()
     
     if not df_pendente_mes.empty:
         # Ordena por vencimento de forma crescente (mais próximo no topo)
@@ -2532,11 +2532,42 @@ if "💰" in st.session_state.page:
         
         st.warning(f"⚠️ Atenção: Você tem {len(df_pendente_mes)} lançamento(s) pendente(s) em {mes_atual}/26!")
         
-        # Define as colunas que vão aparecer, garantindo que o 'Tipo' esteja em destaque
-        colunas_exibir = ['Tipo', 'Vencimento', 'Descrição', 'Banco', 'Valor', 'Categoria']
+        # --- BUSCA INTELIGENTE DE COLUNAS ID E BENEFICIÁRIO ---
+        col_id_real = next((c for c in ['ID', 'Id', 'id', 'Código', 'Codigo'] if c in df_pendente_mes.columns), None)
+        col_ben_real = next((c for c in ['Beneficiário', 'Beneficiario', 'Favorecido'] if c in df_pendente_mes.columns), None)
+
+        if col_id_real:
+            def formata_id_pend(val):
+                if pd.isna(val) or str(val).strip() == "" or str(val).strip().lower() == "nan":
+                    return ""
+                try:
+                    f = float(val)
+                    return str(int(f)) if f.is_integer() else str(val).strip()
+                except:
+                    return str(val).strip()
+
+            df_pendente_mes['ID_Exibicao'] = df_pendente_mes[col_id_real].apply(formata_id_pend)
+        else:
+            df_pendente_mes['ID_Exibicao'] = ""
+
+        if col_ben_real:
+            df_pendente_mes['Beneficiário_Exibicao'] = df_pendente_mes[col_ben_real].fillna("").astype(str).str.strip()
+        else:
+            df_pendente_mes['Beneficiário_Exibicao'] = ""
+
+        # Define as colunas que vão aparecer, garantindo que 'ID', 'Tipo' e 'Beneficiário' estejam visíveis
+        colunas_exibir = ['ID_Exibicao', 'Tipo', 'Vencimento', 'Beneficiário_Exibicao', 'Descrição', 'Banco', 'Valor', 'Categoria']
         colunas_disponiveis = [col for col in colunas_exibir if col in df_pendente_mes.columns]
         
         df_mostrar = df_pendente_mes[colunas_disponiveis].copy()
+
+        renomear_cols = {}
+        if 'ID_Exibicao' in df_mostrar.columns:
+            renomear_cols['ID_Exibicao'] = 'ID'
+        if 'Beneficiário_Exibicao' in df_mostrar.columns:
+            renomear_cols['Beneficiário_Exibicao'] = 'Beneficiário'
+        if renomear_cols:
+            df_mostrar = df_mostrar.rename(columns=renomear_cols)
         
         # 🎨 Função de xurumela para colorir as letras do Tipo (Receita = Verde, Despesa = Vermelho)
         def colorir_tipo(val):
@@ -2550,9 +2581,9 @@ if "💰" in st.session_state.page:
         # Aplica o estilo na coluna Tipo (se ela existir na seleção)
         if 'Tipo' in df_mostrar.columns:
             df_estilizado = df_mostrar.style.map(colorir_tipo, subset=['Tipo'])
-            st.dataframe(df_estilizado, use_container_width=True)
+            st.dataframe(df_estilizado, use_container_width=True, hide_index=True)
         else:
-            st.dataframe(df_mostrar, use_container_width=True)
+            st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
             
     else:
         st.success(f"✅ Tudo limpo! Nenhuma pendência para {mes_atual}/26.")
