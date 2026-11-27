@@ -3379,17 +3379,37 @@ elif "🚗" in aba:
     st.subheader("⚙️ Controle de Troca de Óleo")
     
     km_auto_detectada = 0
+    km_ultima_troca = 0
+
     if not df_base.empty and 'Km' in df_base.columns:
         try:
-            kms_validos = pd.to_numeric(df_base['Km'], errors='coerce').dropna()
+            df_km = df_base.copy()
+            df_km['Km_num'] = pd.to_numeric(df_km['Km'], errors='coerce').fillna(0)
+            
+            # 1. Maior Km geral (último abastecimento ou lançamento com Km)
+            kms_validos = df_km[df_km['Km_num'] > 0]['Km_num']
             if not kms_validos.empty:
                 km_auto_detectada = int(kms_validos.max())
+
+            # 2. Último Km onde houve lançamento de Troca de Óleo
+            # Ajuste os nomes das colunas abaixo se na sua planilha forem diferentes (ex: 'Categoria', 'Descricao', 'Subcategoria')
+            colunas_texto = [c for c in ['Categoria', 'Subcategoria', 'Descricao', 'Descrição', 'Beneficiario', 'Beneficiário'] if c in df_km.columns]
+            if colunas_texto:
+                mascara_oleo = pd.Series(False, index=df_km.index)
+                for col in colunas_texto:
+                    mascara_oleo = mascara_oleo | df_km[col].astype(str).str.contains(
+                        r'troca de [oó]leo|troca [oó]leo', case=False, regex=True, na=False
+                    )
+                
+                trocas_validas = df_km[mascara_oleo & (df_km['Km_num'] > 0)]['Km_num']
+                if not trocas_validas.empty:
+                    km_ultima_troca = int(trocas_validas.max())
         except:
             pass
 
     km1, km2, km3 = st.columns(3)
     km_atual = km1.number_input("Quilometragem Atual (km)", value=km_auto_detectada, step=500)
-    km_oleo = km2.number_input("Km Última Troca de Óleo", value=0, step=500)
+    km_oleo = km2.number_input("Km Última Troca de Óleo", value=km_ultima_troca, step=500)
     limite_oleo = km3.number_input("Limite de Troca (km rodados)", value=10000, step=1000)
     
     if km_atual > 0 and km_oleo > 0:
@@ -3398,6 +3418,8 @@ elif "🚗" in aba:
             st.error(f"🚨 ALERTA: Passou do limite para trocar o óleo! Rodou {km_rodados:,} km desde a última troca.")
         else:
             st.info(f"👍 Óleo em dia! Você rodou {km_rodados:,} km. Faltam {limite_oleo - km_rodados:,} km para a próxima troca.")
+    elif km_atual > 0 and km_oleo == 0:
+        st.warning("⚠️ Nenhuma troca de óleo com Km registrado encontrada nos lançamentos.")
             
     st.divider()
     
